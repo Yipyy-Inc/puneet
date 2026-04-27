@@ -24,55 +24,55 @@ const HOURS = Array.from(
 
 export const STATUS_META: Record<
   GroomingStatus,
-  { bg: string; accent: string; text: string; dot: string; label: string }
+  { bg: string; text: string; dot: string; pill: string; label: string }
 > = {
   scheduled: {
-    bg: "bg-blue-50 dark:bg-blue-950/30",
-    accent: "border-l-blue-400",
-    text: "text-blue-800 dark:text-blue-200",
-    dot: "bg-blue-400",
+    bg: "bg-blue-100 dark:bg-blue-900/40",
+    text: "text-blue-900 dark:text-blue-100",
+    dot: "bg-blue-500",
+    pill: "bg-blue-500",
     label: "Scheduled",
   },
   "checked-in": {
-    bg: "bg-sky-50 dark:bg-sky-950/30",
-    accent: "border-l-sky-400",
-    text: "text-sky-800 dark:text-sky-200",
-    dot: "bg-sky-400",
+    bg: "bg-sky-100 dark:bg-sky-900/40",
+    text: "text-sky-900 dark:text-sky-100",
+    dot: "bg-sky-500",
+    pill: "bg-sky-500",
     label: "Checked In",
   },
   "in-progress": {
-    bg: "bg-amber-50 dark:bg-amber-950/30",
-    accent: "border-l-amber-400",
-    text: "text-amber-800 dark:text-amber-200",
-    dot: "bg-amber-400",
+    bg: "bg-amber-100 dark:bg-amber-900/40",
+    text: "text-amber-900 dark:text-amber-100",
+    dot: "bg-amber-500",
+    pill: "bg-amber-500",
     label: "In Progress",
   },
   "ready-for-pickup": {
-    bg: "bg-emerald-50 dark:bg-emerald-950/30",
-    accent: "border-l-emerald-400",
-    text: "text-emerald-800 dark:text-emerald-200",
-    dot: "bg-emerald-400",
+    bg: "bg-emerald-100 dark:bg-emerald-900/40",
+    text: "text-emerald-900 dark:text-emerald-100",
+    dot: "bg-emerald-500",
+    pill: "bg-emerald-500",
     label: "Ready",
   },
   completed: {
-    bg: "bg-gray-50 dark:bg-gray-800/40",
-    accent: "border-l-gray-400",
-    text: "text-gray-500 dark:text-gray-400",
+    bg: "bg-gray-100 dark:bg-gray-700/40",
+    text: "text-gray-600 dark:text-gray-300",
     dot: "bg-gray-400",
+    pill: "bg-gray-400",
     label: "Completed",
   },
   cancelled: {
-    bg: "bg-red-50/60 dark:bg-red-950/20",
-    accent: "border-l-red-300",
+    bg: "bg-red-50 dark:bg-red-950/30",
     text: "text-red-500 dark:text-red-400",
-    dot: "bg-red-300",
+    dot: "bg-red-400",
+    pill: "bg-red-400",
     label: "Cancelled",
   },
   "no-show": {
-    bg: "bg-rose-50 dark:bg-rose-950/20",
-    accent: "border-l-rose-400",
+    bg: "bg-rose-100 dark:bg-rose-900/30",
     text: "text-rose-700 dark:text-rose-300",
-    dot: "bg-rose-400",
+    dot: "bg-rose-500",
+    pill: "bg-rose-500",
     label: "No Show",
   },
 };
@@ -121,32 +121,31 @@ function AppointmentBlock({
     <button
       onClick={() => onClick(appointment)}
       className={cn(
-        "absolute left-1 right-1 z-10 rounded-md border border-transparent border-l-[3px]",
-        "px-2 py-1 text-left transition-all",
-        "hover:shadow-md hover:brightness-[0.97] active:scale-[0.99]",
+        "absolute left-1 right-1 z-10 rounded-lg",
+        "px-2 py-1.5 text-left transition-all",
+        "hover:shadow-md hover:scale-[1.01] active:scale-[0.99]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        "overflow-hidden cursor-pointer",
+        "overflow-hidden cursor-pointer shadow-xs",
         s.bg,
-        s.accent,
         s.text,
         appointment.status === "cancelled" && "opacity-40",
-        appointment.status === "completed" && "opacity-60",
+        appointment.status === "completed" && "opacity-55",
       )}
       style={{ top: `${top}px`, height: `${height}px` }}
     >
       <div className="flex items-center gap-1.5 min-w-0">
-        <span className={cn("size-1.5 rounded-full flex-shrink-0", s.dot)} />
+        <span className={cn("size-2 rounded-full flex-shrink-0 shadow-sm", s.dot)} />
         <span className="font-semibold text-xs truncate leading-tight">
           {appointment.petName}
         </span>
       </div>
       {height > 46 && (
-        <p className="text-[11px] truncate opacity-75 mt-0.5 leading-tight pl-3">
+        <p className="text-[11px] truncate opacity-70 mt-0.5 leading-tight pl-3.5">
           {appointment.packageName}
         </p>
       )}
       {height > 66 && (
-        <p className="text-[10px] opacity-55 mt-0.5 pl-3">
+        <p className="text-[10px] opacity-55 mt-0.5 pl-3.5">
           {appointment.startTime}–{appointment.endTime}
         </p>
       )}

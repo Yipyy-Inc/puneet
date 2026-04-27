@@ -4,7 +4,6 @@ import { useState, useCallback, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  ClipboardList,
   LayoutGrid,
   BookOpen,
   ShieldAlert,
@@ -558,12 +557,16 @@ const MOCK_HISTORICAL_EXECUTIONS: TaskExecution[] = [
 
 // ── GuestJournal ──────────────────────────────────────────────────────────────
 
+export type GuestJournalScope = "daily-care" | "guest-journal";
+
 export function GuestJournal({
   initialGuestId,
   initialView,
+  scope = "daily-care",
 }: {
   initialGuestId?: string;
   initialView?: ViewMode;
+  scope?: GuestJournalScope;
 } = {}) {
   const currentGuests = useMemo(() => getCurrentGuests(), []);
 
@@ -576,7 +579,10 @@ export function GuestJournal({
   );
 
   const [executions, setExecutions] = useState<TaskExecution[]>(MOCK_HISTORICAL_EXECUTIONS);
-  const [viewMode, setViewMode] = useState<ViewMode>(initialView ?? "shift");
+  // Guest Journal scope always locks to "guest" view
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    scope === "guest-journal" ? "guest" : (initialView ?? "shift"),
+  );
   const [activeShift, setActiveShift] = useState<ShiftType>("morning");
   const [printOpen, setPrintOpen] = useState(false);
   const [selectedGuestId, setSelectedGuestId] = useState<string>(
@@ -681,7 +687,13 @@ export function GuestJournal({
         setExecutions((prev) =>
           prev.map((e) =>
             e.taskId === task.id && e.taskType === "feeding" && e.date === today
-              ? { ...e, outcome: data.outcome, notes: data.notes, executedAt: now }
+              ? {
+                  ...e,
+                  outcome: data.outcome,
+                  notes: data.notes,
+                  executedAt: now,
+                  ...(data.staffInitials ? { staffInitials: data.staffInitials } : {}),
+                }
               : e,
           ),
         );
@@ -734,6 +746,8 @@ export function GuestJournal({
     day: "numeric",
   });
 
+  const isGuestJournalScope = scope === "guest-journal";
+
   const views = [
     { id: "shift" as const, icon: LayoutGrid, label: "By Shift" },
     { id: "guest" as const, icon: BookOpen, label: "Guest Journals" },
@@ -746,50 +760,56 @@ export function GuestJournal({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <ClipboardList className="text-primary size-6" />
+            <BookOpen className="text-primary size-6" />
             <h1 className="text-2xl font-bold tracking-tight">
-              Daily Care List
+              {isGuestJournalScope ? "Guest Journals" : "Daily Care List"}
             </h1>
           </div>
           <p className="text-muted-foreground mt-0.5 text-sm">
-            {formattedDate} · {currentGuests.length} guests in house
+            {isGuestJournalScope
+              ? `Per-reservation care log · ${currentGuests.length} guests in house`
+              : `${formattedDate} · ${currentGuests.length} guests in house`}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="w-[160px]"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPrintOpen(true)}
-          >
-            <Printer className="mr-2 size-4" />
-            Print
-          </Button>
-        </div>
+        {!isGuestJournalScope && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-[160px]"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPrintOpen(true)}
+            >
+              <Printer className="mr-2 size-4" />
+              Print
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* View Mode Switcher */}
-      <div className="flex gap-1 rounded-xl border bg-muted/40 p-1">
-        {views.map(({ id, icon: Icon, label }) => (
-          <button
-            key={id}
-            onClick={() => setViewMode(id)}
-            data-active={viewMode === id}
-            className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all data-[active=false]:text-muted-foreground data-[active=true]:bg-background data-[active=true]:shadow-sm"
-          >
-            <Icon className="size-4" />
-            <span className="hidden sm:inline">{label}</span>
-          </button>
-        ))}
-      </div>
+      {/* View Mode Switcher — hidden in guest-journal scope */}
+      {!isGuestJournalScope && (
+        <div className="flex gap-1 rounded-xl border bg-muted/40 p-1">
+          {views.map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              onClick={() => setViewMode(id)}
+              data-active={viewMode === id}
+              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all data-[active=false]:text-muted-foreground data-[active=true]:bg-background data-[active=true]:shadow-sm"
+            >
+              <Icon className="size-4" />
+              <span className="hidden sm:inline">{label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Views */}
-      {viewMode === "shift" && (
+      {!isGuestJournalScope && viewMode === "shift" && (
         <>
           <ShiftView
             guests={currentGuests}
@@ -818,7 +838,7 @@ export function GuestJournal({
           />
         </>
       )}
-      {viewMode === "guest" && (
+      {(isGuestJournalScope || viewMode === "guest") && (
         <GuestTimelineView
           guests={currentGuests}
           tasks={allTasks}
@@ -829,7 +849,7 @@ export function GuestJournal({
           getExecForTask={getExecForTask}
         />
       )}
-      {viewMode === "manager" && (
+      {!isGuestJournalScope && viewMode === "manager" && (
         <ManagerView
           guests={currentGuests}
           tasks={allTasks}

@@ -22,6 +22,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimeRangeSlider } from "@/components/ui/time-range-slider";
 import { useQuery } from "@tanstack/react-query";
 import { groomingQueries } from "@/lib/api/grooming";
 import { cn } from "@/lib/utils";
@@ -55,6 +57,7 @@ const DEFAULT_FORM = {
   stylistId: "",
   date: "",
   startTime: "09:00",
+  endTime: "10:00",
   specialInstructions: "",
   notes: "",
 };
@@ -416,21 +419,29 @@ export function NewAppointmentDialog({
                 <Label className="text-xs">
                   Date <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={form.date}
-                  onChange={(e) => update("date", e.target.value)}
+                  onValueChange={(v) => update("date", v)}
+                  displayMode="dialog"
+                  placeholder="Select date"
                   className="mt-1"
                 />
               </div>
-              <div>
-                <Label className="text-xs">Start Time</Label>
-                <Input
-                  type="time"
-                  value={form.startTime}
-                  onChange={(e) => update("startTime", e.target.value)}
-                  className="mt-1"
-                />
+              <div className="col-span-2">
+                <Label className="text-xs">Appointment Time</Label>
+                <div className="mt-2">
+                  <TimeRangeSlider
+                    startTime={form.startTime}
+                    endTime={form.endTime}
+                    onTimeChange={(start, end) => {
+                      update("startTime", start);
+                      update("endTime", end);
+                    }}
+                    minTime="08:00"
+                    maxTime="19:00"
+                    defaultExpanded
+                  />
+                </div>
               </div>
             </div>
           </section>

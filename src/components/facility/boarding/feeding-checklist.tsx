@@ -44,7 +44,18 @@ function fmt12(t: string): string {
   return `${h_ % 12 || 12}:${String(m ?? 0).padStart(2, "0")} ${ampm}`;
 }
 
-type Completion = { initials: string; at: string };
+type FeedingOutcome = "ate_all" | "ate_half" | "ate_some" | "refused" | "slow_eater" | "vomited_after";
+
+const OUTCOME_OPTIONS: { value: FeedingOutcome; label: string }[] = [
+  { value: "ate_all",       label: "Ate All (100%)" },
+  { value: "ate_half",      label: "Ate Half (~50%)" },
+  { value: "ate_some",      label: "Ate Some (<50%)" },
+  { value: "slow_eater",    label: "Slow Eater" },
+  { value: "refused",       label: "Refused" },
+  { value: "vomited_after", label: "Vomited After" },
+];
+
+type Completion = { initials: string; at: string; outcome: FeedingOutcome };
 
 type SlotEntry = {
   guest: BoardingGuest;
@@ -71,6 +82,7 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
   const [completions, setCompletions] = useState<Map<string, Completion>>(new Map());
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const [pendingInitials, setPendingInitials] = useState<Record<string, string>>({});
+  const [pendingOutcome, setPendingOutcome] = useState<Record<string, FeedingOutcome>>({});
   const [simulatedRole, setSimulatedRole] = useState<UserRole>("supervisor");
 
   const canView = hasPermission(simulatedRole, "boarding.feeding.view");
@@ -128,15 +140,21 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
 
   function markFed(guestId: string) {
     const initials = (pendingInitials[guestId] ?? "").trim().toUpperCase();
-    if (!initials) return;
+    const outcome = pendingOutcome[guestId];
+    if (!initials || !outcome) return;
     const key = `${guestId}-${activeSlotId}`;
-    setCompletions((prev) => new Map(prev).set(key, { initials, at: nowTime }));
+    setCompletions((prev) => new Map(prev).set(key, { initials, at: nowTime, outcome }));
     setSkipped((prev) => {
       const s = new Set(prev);
       s.delete(key);
       return s;
     });
     setPendingInitials((prev) => {
+      const p = { ...prev };
+      delete p[guestId];
+      return p;
+    });
+    setPendingOutcome((prev) => {
       const p = { ...prev };
       delete p[guestId];
       return p;
@@ -359,7 +377,7 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
                             )}
                             {state === "done" && (
                               <span className="text-xs font-medium text-green-600 dark:text-green-400">
-                                Fed at {completion!.at} · {completion!.initials}
+                                {OUTCOME_OPTIONS.find((o) => o.value === completion!.outcome)?.label ?? "Fed"} · {completion!.at} · {completion!.initials}
                               </span>
                             )}
                             {state === "skipped" && (
@@ -411,7 +429,27 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
 
                         {/* Actions */}
                         {canManage && state === "pending" && (
-                          <div className="flex shrink-0 items-center gap-2">
+                          <div className="flex shrink-0 flex-wrap items-center gap-2">
+                            <Select
+                              value={pendingOutcome[guest.id] ?? ""}
+                              onValueChange={(v) =>
+                                setPendingOutcome((prev) => ({
+                                  ...prev,
+                                  [guest.id]: v as FeedingOutcome,
+                                }))
+                              }
+                            >
+                              <SelectTrigger className="h-8 w-40">
+                                <SelectValue placeholder="Outcome…" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {OUTCOME_OPTIONS.map((o) => (
+                                  <SelectItem key={o.value} value={o.value}>
+                                    {o.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <Input
                               value={pendingInitials[guest.id] ?? ""}
                               onChange={(e) =>
@@ -431,10 +469,13 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
                               size="sm"
                               className="h-8"
                               onClick={() => markFed(guest.id)}
-                              disabled={!(pendingInitials[guest.id] ?? "").trim()}
+                              disabled={
+                                !(pendingInitials[guest.id] ?? "").trim() ||
+                                !pendingOutcome[guest.id]
+                              }
                             >
                               <CheckCircle2 className="mr-1 size-3.5" />
-                              Fed
+                              Save
                             </Button>
                             <Button
                               size="sm"

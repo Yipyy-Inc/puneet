@@ -37,6 +37,7 @@ import {
   Globe,
   GitCompare,
   ArrowLeftRight,
+  HeartHandshake,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
@@ -196,6 +197,12 @@ export function FacilitySidebar() {
       {
         label: "Operations",
         items: [
+          {
+            title: "Daily Care",
+            url: "/facility/dashboard/daily-care",
+            icon: HeartHandshake,
+            disabled: false,
+          },
           {
             title: "Bookings",
             url: "/facility/dashboard/bookings",
