@@ -286,6 +286,7 @@ function FeedingOutcomeForm({
   onSubmit: (data: SubmitData) => void;
 }) {
   const [outcome, setOutcome] = useState<FeedingOutcome | "">("");
+  const [staffInitials, setStaffInitials] = useState("");
   const [notes, setNotes] = useState("");
 
   const options: {
@@ -337,6 +338,17 @@ function FeedingOutcomeForm({
       )}
 
       <div className="space-y-2">
+        <Label>Staff Initials</Label>
+        <Input
+          value={staffInitials}
+          onChange={(e) => setStaffInitials(e.target.value.toUpperCase())}
+          placeholder="e.g. SJ"
+          maxLength={3}
+          className="uppercase"
+        />
+      </div>
+
+      <div className="space-y-2">
         <Label>Notes (optional)</Label>
         <Textarea
           value={notes}
@@ -348,11 +360,11 @@ function FeedingOutcomeForm({
 
       <DialogFooter>
         <Button
-          disabled={!outcome}
+          disabled={!outcome || !staffInitials}
           onClick={() =>
             onSubmit({
               outcome,
-              staffInitials: "",
+              staffInitials,
               notes: notes || undefined,
             })
           }

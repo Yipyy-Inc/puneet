@@ -14,7 +14,7 @@ import {
   Bed,
   LogIn,
   DollarSign,
-  ClipboardList,
+  BookOpen,
   CreditCard,
   LayoutGrid,
   Settings,
@@ -45,9 +45,9 @@ const tabs = [
     icon: DollarSign,
   },
   {
-    name: "Daily Care",
+    name: "Guest Journals",
     href: "/facility/dashboard/services/boarding/journals",
-    icon: ClipboardList,
+    icon: BookOpen,
   },
   {
     name: "Feeding",

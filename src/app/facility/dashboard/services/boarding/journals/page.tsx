@@ -1,18 +1,17 @@
 import { GuestJournal } from "@/components/facility/boarding/guest-journal";
-import type { ViewMode } from "@/components/facility/boarding/guest-journal";
 
-export default async function JournalsPage({
+export default async function GuestJournalsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ guest?: string; view?: string }>;
+  searchParams: Promise<{ guest?: string }>;
 }) {
   const params = await searchParams;
   const initialGuestId = params.guest;
-  const rawView = params.view;
-  const initialView: ViewMode | undefined =
-    rawView === "guest" || rawView === "shift" || rawView === "manager"
-      ? rawView
-      : undefined;
 
-  return <GuestJournal initialGuestId={initialGuestId} initialView={initialView} />;
+  return (
+    <GuestJournal
+      scope="guest-journal"
+      initialGuestId={initialGuestId}
+    />
+  );
 }
