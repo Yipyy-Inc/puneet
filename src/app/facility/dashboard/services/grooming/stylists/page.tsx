@@ -25,11 +25,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Link from "next/link";
 
 import {
-  Plus,
   Edit,
-  Trash2,
   MoreHorizontal,
   Star,
   Calendar,
@@ -40,6 +39,8 @@ import {
   DollarSign,
   TrendingDown,
   Timer,
+  ExternalLink,
+  Info,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -50,13 +51,71 @@ import {
 import {
   stylists,
   stylistAvailability,
-  type Stylist,
   groomingAppointments,
 } from "@/data/grooming";
+import type { StylistCapacity, StylistSkillLevel } from "@/types/grooming";
+import { facilityStaff } from "@/data/facility-staff";
+import type { StaffProfile } from "@/types/facility-staff";
 import { toast } from "sonner";
 import { calculateStylistPerformance } from "@/lib/stylist-performance";
 
-type StylistWithRecord = Stylist;
+type MergedStylist = {
+  staffId: string;
+  stylistId: string | undefined;
+  name: string;
+  email: string;
+  phone: string;
+  photoUrl?: string;
+  status: "active" | "inactive";
+  specializations: string[];
+  certifications: string[];
+  yearsExperience: number;
+  bio: string;
+  rating: number;
+  totalAppointments: number;
+  hireDate: string;
+  capacity: StylistCapacity;
+  visibleOnline: boolean;
+  hasGroomingProfile: boolean;
+};
+
+const defaultCapacity: StylistCapacity = {
+  maxDailyAppointments: 6,
+  maxConcurrentAppointments: 1,
+  preferredPetSizes: ["small", "medium"],
+  skillLevel: "junior",
+  canHandleMatted: false,
+  canHandleAnxious: false,
+  canHandleAggressive: false,
+};
+
+function buildMergedStylists(
+  staffList: StaffProfile[],
+): MergedStylist[] {
+  const groomers = staffList.filter((s) => s.primaryRole === "groomer");
+  return groomers.map((staff) => {
+    const profile = stylists.find((s) => s.staffId === staff.id);
+    return {
+      staffId: staff.id,
+      stylistId: profile?.id,
+      name: `${staff.firstName} ${staff.lastName}`,
+      email: staff.email,
+      phone: staff.phone,
+      photoUrl: staff.avatarUrl,
+      status: staff.status === "active" ? "active" : "inactive",
+      specializations: profile?.specializations ?? [],
+      certifications: profile?.certifications ?? [],
+      yearsExperience: profile?.yearsExperience ?? 0,
+      bio: profile?.bio ?? "",
+      rating: profile?.rating ?? 0,
+      totalAppointments: profile?.totalAppointments ?? 0,
+      hireDate: profile?.hireDate ?? staff.employment.hireDate,
+      capacity: profile?.capacity ?? defaultCapacity,
+      visibleOnline: profile?.visibleOnline ?? false,
+      hasGroomingProfile: !!profile,
+    };
+  });
+}
 
 const dayNames = [
   "Sunday",
@@ -68,39 +127,32 @@ const dayNames = [
   "Saturday",
 ];
 
-const statusColors = {
-  active: { bg: "bg-green-100", text: "text-green-700" },
-  inactive: { bg: "bg-gray-100", text: "text-gray-700" },
-  "on-leave": { bg: "bg-yellow-100", text: "text-yellow-700" },
-};
-
 export default function StylistsPage() {
-  const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
-  const [editingStylist, setEditingStylist] = useState<Stylist | null>(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deletingStylist, setDeletingStylist] = useState<Stylist | null>(null);
+  const [editingGroomer, setEditingGroomer] = useState<MergedStylist | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
-  const [selectedStylist, setSelectedStylist] = useState<Stylist | null>(null);
+  const [selectedGroomer, setSelectedGroomer] = useState<MergedStylist | null>(null);
 
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
     specializations: "",
     certifications: "",
     yearsExperience: 0,
-    status: "active" as Stylist["status"],
     bio: "",
-    visibleOnline: true, // New field for online visibility
+    visibleOnline: true,
+    maxDailyAppointments: 6,
+    maxConcurrentAppointments: 1,
+    skillLevel: "junior" as StylistSkillLevel,
+    canHandleMatted: false,
+    canHandleAnxious: false,
+    canHandleAggressive: false,
   });
 
-  // State for groomer visibility (separate from form data for quick toggles)
   const [groomerVisibility, setGroomerVisibility] = useState<
     Record<string, boolean>
-  >(
+  >(() =>
     stylists.reduce(
       (acc, s) => {
-        acc[s.id] = s.visibleOnline !== false; // Default to true if not set
+        if (s.staffId) acc[s.staffId] = s.visibleOnline !== false;
         return acc;
       },
       {} as Record<string, boolean>,
@@ -119,108 +171,93 @@ export default function StylistsPage() {
     6: { isAvailable: false, startTime: "08:00", endTime: "17:00" },
   });
 
-  // Calculate performance metrics for all stylists
+  const mergedStylists = useMemo(
+    () => buildMergedStylists(facilityStaff),
+    [],
+  );
+
   const stylistMetrics = useMemo(() => {
     const metricsMap = new Map<
       string,
       ReturnType<typeof calculateStylistPerformance>
     >();
-    stylists.forEach((stylist) => {
-      const metrics = calculateStylistPerformance(
-        stylist.id,
-        groomingAppointments,
-      );
-      metricsMap.set(stylist.id, metrics);
+    mergedStylists.forEach((groomer) => {
+      if (groomer.stylistId) {
+        const metrics = calculateStylistPerformance(
+          groomer.stylistId,
+          groomingAppointments,
+        );
+        metricsMap.set(groomer.staffId, metrics);
+      }
     });
     return metricsMap;
-  }, []);
+  }, [mergedStylists]);
 
-  // Stats
-  const activeStylists = stylists.filter((s) => s.status === "active").length;
-  const totalAppointments = stylists.reduce(
+  const activeStylists = mergedStylists.filter((s) => s.status === "active").length;
+  const totalAppointments = mergedStylists.reduce(
     (sum, s) => sum + s.totalAppointments,
     0,
   );
+  const ratedStylists = mergedStylists.filter((s) => s.rating > 0);
   const avgRating =
-    stylists.reduce((sum, s) => sum + s.rating, 0) / stylists.length;
+    ratedStylists.length > 0
+      ? ratedStylists.reduce((sum, s) => sum + s.rating, 0) / ratedStylists.length
+      : 0;
+  const experiencedStylists = mergedStylists.filter((s) => s.yearsExperience > 0);
   const avgExperience =
-    stylists.reduce((sum, s) => sum + s.yearsExperience, 0) / stylists.length;
+    experiencedStylists.length > 0
+      ? experiencedStylists.reduce((sum, s) => sum + s.yearsExperience, 0) /
+        experiencedStylists.length
+      : 0;
 
-  // Performance stats
   const totalRevenue = Array.from(stylistMetrics.values()).reduce(
     (sum, m) => sum + m.totalRevenue,
     0,
   );
   const avgCancellationRate =
-    stylists.length > 0
+    stylistMetrics.size > 0
       ? Array.from(stylistMetrics.values()).reduce(
           (sum, m) => sum + m.cancellationRate,
           0,
-        ) / stylists.length
+        ) / stylistMetrics.size
       : 0;
 
-  const handleAddNew = () => {
-    setEditingStylist(null);
+  const handleEdit = (groomer: MergedStylist) => {
+    setEditingGroomer(groomer);
     setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      specializations: "",
-      certifications: "",
-      yearsExperience: 0,
-      status: "active",
-      bio: "",
-      visibleOnline: false, // New hires hidden by default
+      specializations: groomer.specializations.join(", "),
+      certifications: groomer.certifications.join(", "),
+      yearsExperience: groomer.yearsExperience,
+      bio: groomer.bio,
+      visibleOnline: groomerVisibility[groomer.staffId] ?? groomer.visibleOnline,
+      maxDailyAppointments: groomer.capacity.maxDailyAppointments,
+      maxConcurrentAppointments: groomer.capacity.maxConcurrentAppointments,
+      skillLevel: groomer.capacity.skillLevel,
+      canHandleMatted: groomer.capacity.canHandleMatted,
+      canHandleAnxious: groomer.capacity.canHandleAnxious,
+      canHandleAggressive: groomer.capacity.canHandleAggressive,
     });
-    setIsAddEditModalOpen(true);
+    setIsEditModalOpen(true);
   };
 
-  const handleEdit = (stylist: Stylist) => {
-    setEditingStylist(stylist);
-    setFormData({
-      name: stylist.name,
-      email: stylist.email,
-      phone: stylist.phone,
-      specializations: stylist.specializations.join(", "),
-      certifications: stylist.certifications.join(", "),
-      yearsExperience: stylist.yearsExperience,
-      status: stylist.status,
-      bio: stylist.bio,
-      visibleOnline: groomerVisibility[stylist.id] ?? true,
-    });
-    setIsAddEditModalOpen(true);
-  };
-
-  const toggleGroomerVisibility = (stylistId: string) => {
+  const toggleGroomerVisibility = (staffId: string) => {
     setGroomerVisibility((prev) => ({
       ...prev,
-      [stylistId]: !prev[stylistId],
+      [staffId]: !prev[staffId],
     }));
-    // TODO: Save to backend
     toast.success(
-      `Groomer ${groomerVisibility[stylistId] ? "hidden from" : "shown on"} online booking`,
+      `Groomer ${groomerVisibility[staffId] ? "hidden from" : "shown on"} online booking`,
     );
   };
 
   const handleSave = () => {
-    // In a real app, this would save to the backend
-    setIsAddEditModalOpen(false);
+    setIsEditModalOpen(false);
+    toast.success("Grooming profile updated");
   };
 
-  const handleDeleteClick = (stylist: Stylist) => {
-    setDeletingStylist(stylist);
-    setIsDeleteModalOpen(true);
-  };
+  const handleManageAvailability = (groomer: MergedStylist) => {
+    setSelectedGroomer(groomer);
 
-  const handleDeleteConfirm = () => {
-    // In a real app, this would delete from the backend
-    setIsDeleteModalOpen(false);
-  };
-
-  const handleManageAvailability = (stylist: Stylist) => {
-    setSelectedStylist(stylist);
-
-    // Load existing availability
     const existingAvailability: Record<
       number,
       { isAvailable: boolean; startTime: string; endTime: string }
@@ -234,45 +271,47 @@ export default function StylistsPage() {
       6: { isAvailable: false, startTime: "08:00", endTime: "17:00" },
     };
 
-    stylistAvailability
-      .filter((a) => a.stylistId === stylist.id)
-      .forEach((a) => {
-        existingAvailability[a.dayOfWeek] = {
-          isAvailable: a.isAvailable,
-          startTime: a.startTime,
-          endTime: a.endTime,
-        };
-      });
+    if (groomer.stylistId) {
+      stylistAvailability
+        .filter((a) => a.stylistId === groomer.stylistId)
+        .forEach((a) => {
+          existingAvailability[a.dayOfWeek] = {
+            isAvailable: a.isAvailable,
+            startTime: a.startTime,
+            endTime: a.endTime,
+          };
+        });
+    }
 
     setAvailabilityData(existingAvailability);
     setIsAvailabilityModalOpen(true);
   };
 
   const handleSaveAvailability = () => {
-    // In a real app, this would save to the backend
     setIsAvailabilityModalOpen(false);
+    toast.success("Availability updated");
   };
 
-  const columns: ColumnDef<StylistWithRecord>[] = [
+  const columns: ColumnDef<MergedStylist>[] = [
     {
       key: "name",
       label: "Stylist",
       icon: Users,
       defaultVisible: true,
-      render: (stylist) => (
+      render: (groomer) => (
         <div className="flex items-center gap-3">
           <Avatar>
-            <AvatarImage src={stylist.photoUrl} />
+            <AvatarImage src={groomer.photoUrl} />
             <AvatarFallback>
-              {stylist.name
+              {groomer.name
                 .split(" ")
                 .map((n) => n[0])
                 .join("")}
             </AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-medium">{stylist.name}</p>
-            <p className="text-muted-foreground text-sm">{stylist.email}</p>
+            <p className="font-medium">{groomer.name}</p>
+            <p className="text-muted-foreground text-sm">{groomer.email}</p>
           </div>
         </div>
       ),
@@ -282,54 +321,68 @@ export default function StylistsPage() {
       label: "Specializations",
       icon: Scissors,
       defaultVisible: true,
-      render: (stylist) => (
-        <div className="flex max-w-xs flex-wrap gap-1">
-          {stylist.specializations.slice(0, 2).map((spec, idx) => (
-            <Badge key={idx} variant="secondary" className="text-xs">
-              {spec}
-            </Badge>
-          ))}
-          {stylist.specializations.length > 2 && (
-            <Badge variant="outline" className="text-xs">
-              +{stylist.specializations.length - 2}
-            </Badge>
-          )}
-        </div>
-      ),
+      render: (groomer) =>
+        groomer.specializations.length > 0 ? (
+          <div className="flex max-w-xs flex-wrap gap-1">
+            {groomer.specializations.slice(0, 2).map((spec, idx) => (
+              <Badge key={idx} variant="secondary" className="text-xs">
+                {spec}
+              </Badge>
+            ))}
+            {groomer.specializations.length > 2 && (
+              <Badge variant="outline" className="text-xs">
+                +{groomer.specializations.length - 2}
+              </Badge>
+            )}
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-sm italic">
+            No profile yet
+          </span>
+        ),
     },
     {
       key: "yearsExperience",
       label: "Experience",
       icon: Award,
       defaultVisible: true,
-      render: (stylist) => `${stylist.yearsExperience} years`,
+      render: (groomer) =>
+        groomer.yearsExperience > 0
+          ? `${groomer.yearsExperience} years`
+          : "—",
     },
     {
       key: "rating",
       label: "Rating",
       icon: Star,
       defaultVisible: true,
-      render: (stylist) => (
-        <div className="flex items-center gap-1">
-          <Star className="size-4 fill-yellow-400 text-yellow-400" />
-          <span>{stylist.rating.toFixed(1)}</span>
-        </div>
-      ),
+      render: (groomer) =>
+        groomer.rating > 0 ? (
+          <div className="flex items-center gap-1">
+            <Star className="size-4 fill-yellow-400 text-yellow-400" />
+            <span>{groomer.rating.toFixed(1)}</span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-sm">—</span>
+        ),
     },
     {
       key: "totalAppointments",
       label: "Total Appointments",
       icon: Calendar,
       defaultVisible: true,
-      render: (stylist) => stylist.totalAppointments.toLocaleString(),
+      render: (groomer) =>
+        groomer.totalAppointments > 0
+          ? groomer.totalAppointments.toLocaleString()
+          : "—",
     },
     {
       key: "todayAppointments",
       label: "Today's Appointments",
       icon: Calendar,
       defaultVisible: true,
-      render: (stylist) => {
-        const metrics = stylistMetrics.get(stylist.id);
+      render: (groomer) => {
+        const metrics = stylistMetrics.get(groomer.staffId);
         return (
           <div className="flex items-center gap-2">
             <Badge variant={metrics?.todayAppointments ? "default" : "outline"}>
@@ -344,8 +397,8 @@ export default function StylistsPage() {
       label: "Revenue",
       icon: DollarSign,
       defaultVisible: true,
-      render: (stylist) => {
-        const metrics = stylistMetrics.get(stylist.id);
+      render: (groomer) => {
+        const metrics = stylistMetrics.get(groomer.staffId);
         return (
           <div className="font-medium">
             ${metrics?.totalRevenue.toFixed(2) || "0.00"}
@@ -358,8 +411,8 @@ export default function StylistsPage() {
       label: "Avg. Groom Time",
       icon: Timer,
       defaultVisible: true,
-      render: (stylist) => {
-        const metrics = stylistMetrics.get(stylist.id);
+      render: (groomer) => {
+        const metrics = stylistMetrics.get(groomer.staffId);
         return metrics?.averageGroomTime
           ? `${metrics.averageGroomTime} min`
           : "N/A";
@@ -370,8 +423,8 @@ export default function StylistsPage() {
       label: "Cancellation Rate",
       icon: TrendingDown,
       defaultVisible: true,
-      render: (stylist) => {
-        const metrics = stylistMetrics.get(stylist.id);
+      render: (groomer) => {
+        const metrics = stylistMetrics.get(groomer.staffId);
         const rate = metrics?.cancellationRate || 0;
         return (
           <div className="flex items-center gap-2">
@@ -399,26 +452,29 @@ export default function StylistsPage() {
       key: "status",
       label: "Status",
       defaultVisible: true,
-      render: (stylist) => {
-        const colors = statusColors[stylist.status];
-        return (
-          <Badge className={` ${colors.bg} ${colors.text} `}>
-            {stylist.status}
-          </Badge>
-        );
-      },
+      render: (groomer) => (
+        <Badge
+          className={
+            groomer.status === "active"
+              ? "bg-green-100 text-green-700"
+              : "bg-gray-100 text-gray-700"
+          }
+        >
+          {groomer.status}
+        </Badge>
+      ),
     },
     {
       key: "visibleOnline",
       label: "Online Visibility",
       defaultVisible: true,
-      render: (stylist) => {
-        const isVisible = groomerVisibility[stylist.id] ?? true;
+      render: (groomer) => {
+        const isVisible = groomerVisibility[groomer.staffId] ?? groomer.visibleOnline;
         return (
           <div className="flex items-center gap-2">
             <Switch
               checked={isVisible}
-              onCheckedChange={() => toggleGroomerVisibility(stylist.id)}
+              onCheckedChange={() => toggleGroomerVisibility(groomer.staffId)}
             />
             <span className="text-muted-foreground text-sm">
               {isVisible ? "Visible" : "Hidden"}
@@ -431,7 +487,7 @@ export default function StylistsPage() {
       key: "actions",
       label: "Actions",
       defaultVisible: true,
-      render: (stylist) => (
+      render: (groomer) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -439,20 +495,19 @@ export default function StylistsPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(stylist)}>
+            <DropdownMenuItem onClick={() => handleEdit(groomer)}>
               <Edit className="mr-2 size-4" />
-              Edit
+              Edit Grooming Profile
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleManageAvailability(stylist)}>
+            <DropdownMenuItem onClick={() => handleManageAvailability(groomer)}>
               <Clock className="mr-2 size-4" />
               Manage Availability
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleDeleteClick(stylist)}
-              className="text-red-600"
-            >
-              <Trash2 className="mr-2 size-4" />
-              Delete
+            <DropdownMenuItem asChild>
+              <Link href="/facility/dashboard/staff">
+                <ExternalLink className="mr-2 size-4" />
+                View in Staff Management
+              </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -468,7 +523,6 @@ export default function StylistsPage() {
         { value: "all", label: "All Statuses" },
         { value: "active", label: "Active" },
         { value: "inactive", label: "Inactive" },
-        { value: "on-leave", label: "On Leave" },
       ],
     },
   ];
@@ -487,7 +541,7 @@ export default function StylistsPage() {
           <CardContent>
             <div className="text-2xl font-bold">{activeStylists}</div>
             <p className="text-muted-foreground text-xs">
-              of {stylists.length} total
+              of {mergedStylists.length} total
             </p>
           </CardContent>
         </Card>
@@ -565,71 +619,51 @@ export default function StylistsPage() {
       {/* Stylists Table */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Stylists Directory</CardTitle>
-          <Button onClick={handleAddNew}>
-            <Plus className="mr-2 size-4" />
-            Add Stylist
+          <div>
+            <CardTitle>Stylists Directory</CardTitle>
+            <p className="text-muted-foreground mt-1 flex items-center gap-1.5 text-sm">
+              <Info className="size-3.5" />
+              Populated from staff with the Groomer role. Add or remove via
+              Staff Management.
+            </p>
+          </div>
+          <Button asChild variant="outline">
+            <Link href="/facility/dashboard/staff">
+              <Users className="mr-2 size-4" />
+              Manage Staff
+            </Link>
           </Button>
         </CardHeader>
         <CardContent>
           <DataTable
-            data={stylists as StylistWithRecord[]}
+            data={mergedStylists}
             columns={columns}
             filters={filters}
             searchPlaceholder="Search stylists..."
-            searchKey={"name" as keyof StylistWithRecord}
+            searchKey={"name" as keyof MergedStylist}
           />
         </CardContent>
       </Card>
 
-      {/* Add/Edit Modal */}
-      <Dialog open={isAddEditModalOpen} onOpenChange={setIsAddEditModalOpen}>
+      {/* Edit Grooming Profile Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingStylist ? "Edit Stylist" : "Add New Stylist"}
-            </DialogTitle>
+            <DialogTitle>Edit Grooming Profile — {editingGroomer?.name}</DialogTitle>
             <DialogDescription>
-              {editingStylist
-                ? "Update the stylist's information below."
-                : "Add a new grooming stylist to your team."}
+              Update grooming-specific details. To edit contact info or role,
+              go to{" "}
+              <Link
+                href="/facility/dashboard/staff"
+                className="text-primary underline"
+              >
+                Staff Management
+              </Link>
+              .
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
-                  }
-                />
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="yearsExperience">Years of Experience</Label>
                 <Input
@@ -643,6 +677,28 @@ export default function StylistsPage() {
                     })
                   }
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="skillLevel">Skill Level</Label>
+                <Select
+                  value={formData.skillLevel}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      skillLevel: value as StylistSkillLevel,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="junior">Junior</SelectItem>
+                    <SelectItem value="intermediate">Intermediate</SelectItem>
+                    <SelectItem value="senior">Senior</SelectItem>
+                    <SelectItem value="master">Master</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-2">
@@ -672,27 +728,6 @@ export default function StylistsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) =>
-                  setFormData({
-                    ...formData,
-                    status: value as Stylist["status"],
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="on-leave">On Leave</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="bio">Bio</Label>
               <Textarea
                 id="bio"
@@ -704,12 +739,69 @@ export default function StylistsPage() {
                 rows={3}
               />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="maxDailyAppointments">
+                  Max Daily Appointments
+                </Label>
+                <Input
+                  id="maxDailyAppointments"
+                  type="number"
+                  value={formData.maxDailyAppointments}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      maxDailyAppointments: parseInt(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maxConcurrentAppointments">
+                  Max Concurrent
+                </Label>
+                <Input
+                  id="maxConcurrentAppointments"
+                  type="number"
+                  value={formData.maxConcurrentAppointments}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      maxConcurrentAppointments:
+                        parseInt(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+            </div>
+            <div className="space-y-3 rounded-lg border p-4">
+              <Label>Handling Capabilities</Label>
+              <div className="flex flex-col gap-2">
+                {(
+                  [
+                    ["canHandleMatted", "Can handle matted coats"],
+                    ["canHandleAnxious", "Can handle anxious pets"],
+                    ["canHandleAggressive", "Can handle aggressive pets"],
+                  ] as [keyof typeof formData, string][]
+                ).map(([key, label]) => (
+                  <div key={key} className="flex items-center justify-between">
+                    <span className="text-sm">{label}</span>
+                    <Switch
+                      checked={formData[key] as boolean}
+                      onCheckedChange={(checked) =>
+                        setFormData({ ...formData, [key]: checked })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
                 <Label htmlFor="visibleOnline">Visible in Online Booking</Label>
                 <p className="text-muted-foreground text-sm">
                   Toggle to show/hide this groomer from customer booking
-                  options. New hires can be hidden until trained.
+                  options.
                 </p>
               </div>
               <Switch
@@ -724,13 +816,11 @@ export default function StylistsPage() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setIsAddEditModalOpen(false)}
+              onClick={() => setIsEditModalOpen(false)}
             >
               Cancel
             </Button>
-            <Button onClick={handleSave}>
-              {editingStylist ? "Save Changes" : "Add Stylist"}
-            </Button>
+            <Button onClick={handleSave}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -743,7 +833,7 @@ export default function StylistsPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              Manage Availability - {selectedStylist?.name}
+              Manage Availability — {selectedGroomer?.name}
             </DialogTitle>
             <DialogDescription>
               Set the weekly schedule for this stylist. Clients can book
@@ -854,31 +944,6 @@ export default function StylistsPage() {
               Cancel
             </Button>
             <Button onClick={handleSaveAvailability}>Save Availability</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Modal */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Stylist</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete {deletingStylist?.name}? This
-              action cannot be undone. All their appointment history will be
-              preserved but they will no longer be available for booking.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>
-              Delete
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

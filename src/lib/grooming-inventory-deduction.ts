@@ -81,7 +81,7 @@ export function deductProductsForAppointment(
       result.errors.push({
         productId: usage.productId,
         productName: usage.productName,
-        reason: `Insufficient stock. Available: ${product.currentStock} ${product.unit}, Required: ${quantityToDeduct} ${usage.unit}`,
+        reason: `Insufficient stock. Available: ${product.currentStock} ${product.measurementUnit}, Required: ${quantityToDeduct} ${usage.unit}`,
       });
       result.success = false;
       return;

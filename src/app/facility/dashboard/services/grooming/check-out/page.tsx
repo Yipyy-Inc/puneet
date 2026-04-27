@@ -1,7 +1,5 @@
-"use client";
-
-import { GroomingCheckInOutSection } from "@/components/facility/GroomingCheckInOutSection";
+import { GroomingCheckInOut } from "@/components/facility/grooming/grooming-check-in-out";
 
 export default function GroomingCheckOutPage() {
-  return <GroomingCheckInOutSection />;
+  return <GroomingCheckInOut />;
 }

@@ -38,6 +38,24 @@ export const productCategoryEnum = z.enum([
 ]);
 export type ProductCategory = z.infer<typeof productCategoryEnum>;
 
+export const measurementUnitEnum = z.enum([
+  "ml",
+  "oz",
+  "g",
+  "liter",
+  "gallon",
+  "count",
+  "pack",
+  "pair",
+]);
+export type MeasurementUnit = z.infer<typeof measurementUnitEnum>;
+
+export const itemTypeEnum = z.enum(["consumable", "tool"]);
+export type ItemType = z.infer<typeof itemTypeEnum>;
+
+export const toolConditionEnum = z.enum(["good", "needs-service", "retired"]);
+export type ToolCondition = z.infer<typeof toolConditionEnum>;
+
 export const stylistSkillLevelEnum = z.enum([
   "junior",
   "intermediate",
@@ -83,6 +101,7 @@ export type StylistCapacity = z.infer<typeof stylistCapacitySchema>;
 
 export const stylistSchema = z.object({
   id: z.string(),
+  staffId: z.string().optional(),
   name: z.string(),
   email: z.string(),
   phone: z.string(),
@@ -254,18 +273,20 @@ export const groomingProductSchema = z.object({
   category: productCategoryEnum,
   description: z.string(),
   sku: z.string(),
+  itemType: itemTypeEnum,
+  measurementUnit: measurementUnitEnum,
   currentStock: z.number(),
   minStock: z.number(),
   maxStock: z.number(),
   unitPrice: z.number(),
   costPrice: z.number(),
-  unit: z.string(),
-  usagePerGroom: z.number(),
   supplier: z.string(),
   lastRestocked: z.string(),
   expiryDate: z.string().optional(),
   isActive: z.boolean(),
   notes: z.string().optional(),
+  condition: toolConditionEnum.optional(),
+  lastServiced: z.string().optional(),
 });
 export type GroomingProduct = z.infer<typeof groomingProductSchema>;
 
