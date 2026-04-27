@@ -20,6 +20,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
 import { groomingQueries } from "@/lib/api/grooming";
@@ -30,9 +37,13 @@ import {
   Plus,
   Scissors,
   Info,
+  Package,
+  Trash2,
+  FlaskConical,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { GroomingPackage } from "@/types/grooming";
+import type { GroomingPackage, ProductUsage, MeasurementUnit } from "@/types/grooming";
+import { groomingProducts } from "@/data/grooming";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -159,6 +170,12 @@ export function ServiceDialog({
   const [newBreed, setNewBreed] = useState("");
   const [newBreedPrice, setNewBreedPrice] = useState("");
 
+  // Product usage
+  const [productsEnabled, setProductsEnabled] = useState(false);
+  const [productUsage, setProductUsage] = useState<ProductUsage[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [selectedQty, setSelectedQty] = useState("");
+
   // ── Sync form when editing ──
   useEffect(() => {
     if (!open) return;
@@ -174,6 +191,9 @@ export function ServiceDialog({
       setCoatEnabled(false);
       setBreedEnabled(false);
       setBreedOverrides({});
+      const existingUsage = editingPackage.productUsage ?? [];
+      setProductUsage(existingUsage);
+      setProductsEnabled(existingUsage.length > 0);
     } else {
       setName("");
       setDescription("");
@@ -186,6 +206,8 @@ export function ServiceDialog({
       setCoatEnabled(false);
       setBreedEnabled(false);
       setBreedOverrides({});
+      setProductUsage([]);
+      setProductsEnabled(false);
     }
   }, [open, editingPackage]);
 
@@ -211,6 +233,48 @@ export function ServiceDialog({
       delete next[breed];
       return next;
     });
+  }
+
+  function addProductUsage() {
+    if (!selectedProductId || !selectedQty) return;
+    const product = groomingProducts.find((p) => p.id === selectedProductId);
+    if (!product) return;
+    if (productUsage.some((u) => u.productId === selectedProductId)) {
+      toast.error("This product is already added");
+      return;
+    }
+    setProductUsage((prev) => [
+      ...prev,
+      {
+        productId: product.id,
+        productName: product.name,
+        quantity: parseFloat(selectedQty),
+        unit: product.measurementUnit as string,
+        isOptional: false,
+      },
+    ]);
+    setSelectedProductId("");
+    setSelectedQty("");
+  }
+
+  function removeProductUsage(productId: string) {
+    setProductUsage((prev) => prev.filter((u) => u.productId !== productId));
+  }
+
+  function toggleProductOptional(productId: string) {
+    setProductUsage((prev) =>
+      prev.map((u) =>
+        u.productId === productId ? { ...u, isOptional: !u.isOptional } : u,
+      ),
+    );
+  }
+
+  function updateProductQty(productId: string, qty: string) {
+    const n = parseFloat(qty);
+    if (isNaN(n) || n <= 0) return;
+    setProductUsage((prev) =>
+      prev.map((u) => (u.productId === productId ? { ...u, quantity: n } : u)),
+    );
   }
 
   function handleSave() {
@@ -551,6 +615,152 @@ export function ServiceDialog({
                 );
               })}
             </div>
+          </section>
+
+          <Separator />
+
+          {/* ── Products Used ── */}
+          <section>
+            <Collapsible open={productsEnabled} onOpenChange={setProductsEnabled}>
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between rounded-lg border px-4 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
+                  <div className="flex items-center gap-2.5">
+                    <FlaskConical className="size-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs font-medium">
+                        Products & Materials Used{" "}
+                        {productUsage.length > 0 && (
+                          <Badge variant="secondary" className="ml-1 text-[10px]">
+                            {productUsage.length}
+                          </Badge>
+                        )}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Auto-deducted from inventory when this service completes
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronDown
+                    className={cn(
+                      "size-4 text-muted-foreground transition-transform",
+                      productsEnabled && "rotate-180",
+                    )}
+                  />
+                </div>
+              </CollapsibleTrigger>
+
+              <CollapsibleContent>
+                <div className="mt-3 space-y-3">
+                  {/* Current product list */}
+                  {productUsage.length > 0 && (
+                    <div className="rounded-xl border overflow-hidden">
+                      <div className="bg-muted/40 px-4 py-2 border-b">
+                        <p className="text-xs font-semibold">Materials per service</p>
+                      </div>
+                      <div className="divide-y">
+                        {productUsage.map((usage) => {
+                          const product = groomingProducts.find((p) => p.id === usage.productId);
+                          return (
+                            <div key={usage.productId} className="flex items-center gap-3 px-4 py-2.5">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium truncate">{usage.productName}</p>
+                                {product && (
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {product.brand} · {product.measurementUnit}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Input
+                                  type="number"
+                                  min={0.1}
+                                  step={0.1}
+                                  value={usage.quantity}
+                                  onChange={(e) => updateProductQty(usage.productId, e.target.value)}
+                                  className="h-7 w-20 text-xs text-right"
+                                />
+                                <span className="text-xs text-muted-foreground w-8">
+                                  {usage.unit}
+                                </span>
+                                <div
+                                  className="flex items-center gap-1 cursor-pointer"
+                                  onClick={() => toggleProductOptional(usage.productId)}
+                                >
+                                  <Checkbox
+                                    checked={usage.isOptional ?? false}
+                                    className="pointer-events-none size-3"
+                                  />
+                                  <span className="text-[10px] text-muted-foreground">optional</span>
+                                </div>
+                                <button
+                                  onClick={() => removeProductUsage(usage.productId)}
+                                  className="text-destructive hover:text-destructive/80 transition-colors"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Add product row */}
+                  <div className="flex gap-2 rounded-xl border bg-muted/20 p-3">
+                    <Select
+                      value={selectedProductId}
+                      onValueChange={setSelectedProductId}
+                    >
+                      <SelectTrigger className="h-8 text-xs flex-1">
+                        <SelectValue placeholder="Choose product…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {groomingProducts
+                          .filter((p) => p.itemType === "consumable" && p.isActive)
+                          .map((p) => (
+                            <SelectItem key={p.id} value={p.id} className="text-xs">
+                              <span className="font-medium">{p.name}</span>
+                              <span className="text-muted-foreground ml-1">
+                                ({p.currentStock.toLocaleString()} {p.measurementUnit} in stock)
+                              </span>
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      min={0.1}
+                      step={0.1}
+                      placeholder="Qty"
+                      value={selectedQty}
+                      onChange={(e) => setSelectedQty(e.target.value)}
+                      className="h-8 w-20 text-xs"
+                    />
+                    {selectedProductId && (
+                      <span className="self-center text-xs text-muted-foreground w-8 shrink-0">
+                        {groomingProducts.find((p) => p.id === selectedProductId)?.measurementUnit ?? ""}
+                      </span>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-3 shrink-0"
+                      onClick={addProductUsage}
+                    >
+                      <Plus className="size-3" />
+                    </Button>
+                  </div>
+
+                  {productUsage.length > 0 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      When a groomer marks this service complete, the system deducts the above quantities automatically.
+                      Mark a product as <em>optional</em> to deduct it only when actually used.
+                    </p>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </section>
 
           {/* ── Active toggle ── */}

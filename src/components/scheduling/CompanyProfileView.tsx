@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { companyProfile as initial } from "@/data/scheduling";
 import type { CompanyProfile, FacilityLocation } from "@/types/scheduling";
 
@@ -389,26 +390,28 @@ export function CompanyProfileView() {
                       </label>
                       {h.isOpen ? (
                         <div className="flex items-center gap-2">
-                          <Input
-                            type="time"
+                          <TimePickerLux
                             value={h.openTime ?? ""}
-                            onChange={(e) =>
+                            onValueChange={(v) =>
                               setLocationHour(loc.id, h.dayOfWeek, {
-                                openTime: e.target.value,
+                                openTime: v,
                               })
                             }
-                            className="h-7 w-28 text-xs"
+                            displayMode="popover"
+                            stepMinutes={15}
+                            className="w-32"
                           />
                           <span className="text-muted-foreground">→</span>
-                          <Input
-                            type="time"
+                          <TimePickerLux
                             value={h.closeTime ?? ""}
-                            onChange={(e) =>
+                            onValueChange={(v) =>
                               setLocationHour(loc.id, h.dayOfWeek, {
-                                closeTime: e.target.value,
+                                closeTime: v,
                               })
                             }
-                            className="h-7 w-28 text-xs"
+                            displayMode="popover"
+                            stepMinutes={15}
+                            className="w-32"
                           />
                         </div>
                       ) : (
