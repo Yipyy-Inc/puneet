@@ -170,12 +170,24 @@ export const businessHoursDaySchema = z.object({
   enabled: z.boolean(),
 });
 
+export const callForwardingModeEnum = z.enum([
+  "disabled",
+  "always",
+  "on_no_answer",
+  "on_busy",
+  "on_no_answer_or_busy",
+]);
+export type CallForwardingMode = z.infer<typeof callForwardingModeEnum>;
+
 export const callingSettingsSchema = z.object({
   dispatchMode: dispatchModeEnum,
   ringTone: ringToneEnum,
   visualFlash: z.boolean(),
   mobileSync: z.boolean(),
   simultaneousCallHandling: callHandlingEnum,
+  callForwardingMode: callForwardingModeEnum,
+  callForwardingNumber: z.string(),
+  ringDurationSeconds: z.number().int().min(5).max(120),
   autoRecord: z.boolean(),
   recordingStorage: z.enum(["30_days", "90_days", "unlimited"]),
   complianceNotice: z.boolean(),

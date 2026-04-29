@@ -7,8 +7,6 @@ import {
   X,
   Search,
   SlidersHorizontal,
-  MoreHorizontal,
-  ChevronDown,
   Calendar,
   Clock,
 } from "lucide-react";
@@ -16,13 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -133,9 +125,10 @@ function SwapRow({
     <>
       <tr
         className={cn(
-          "border-t transition-colors hover:bg-muted/30",
+          "border-t cursor-pointer transition-colors hover:bg-muted/30",
           expanded && "bg-muted/20",
         )}
+        onClick={onToggle}
       >
         {/* Swap participants */}
         <td className="py-3 pl-5 pr-3">
@@ -225,55 +218,6 @@ function SwapRow({
                 </Button>
               </>
             )}
-            <Button
-              size="icon"
-              variant="ghost"
-              className="size-8"
-              onClick={onToggle}
-              aria-label={expanded ? "Collapse" : "Expand"}
-            >
-              <ChevronDown
-                className={cn(
-                  "size-4 transition-transform",
-                  expanded && "rotate-180",
-                )}
-              />
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="size-8"
-                  aria-label="More"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreHorizontal className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onToggle}>
-                  View details
-                </DropdownMenuItem>
-                {isPending && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => onDecide(swap.id, "approved", "")}
-                    >
-                      <Check className="mr-2 size-3.5 text-emerald-600" />
-                      Approve
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => onDecide(swap.id, "denied", "")}
-                    >
-                      <X className="mr-2 size-3.5 text-rose-600" />
-                      Deny
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </td>
       </tr>

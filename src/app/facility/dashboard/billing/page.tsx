@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import {
@@ -22,7 +24,6 @@ import {
 } from "@/components/ui/dialog";
 import { TakePaymentModal } from "@/components/billing/TakePaymentModal";
 import { ProcessRefundModal } from "@/components/billing/ProcessRefundModal";
-import { CreateInvoiceModal } from "@/components/billing/CreateInvoiceModal";
 import { IssueGiftCardModal } from "@/components/billing/IssueGiftCardModal";
 import { AddCustomerCreditModal } from "@/components/billing/AddCustomerCreditModal";
 import {
@@ -43,6 +44,7 @@ import {
   FileText,
   Send,
   RefreshCw,
+  ExternalLink,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -93,22 +95,20 @@ const exportPaymentsToCSV = (paymentsData: typeof payments) => {
 };
 
 export default function FacilityBillingPage() {
+  const router = useRouter();
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
 
   const [activeTab, setActiveTab] = useState("payments");
+  const [statFilter, setStatFilter] = useState<string | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<
     (typeof payments)[0] | null
-  >(null);
-  const [selectedInvoice, setSelectedInvoice] = useState<
-    (typeof invoices)[0] | null
   >(null);
   const [selectedGiftCard, setSelectedGiftCard] = useState<
     (typeof giftCards)[0] | null
   >(null);
   const [showTakePayment, setShowTakePayment] = useState(false);
   const [showProcessRefund, setShowProcessRefund] = useState(false);
-  const [showCreateInvoice, setShowCreateInvoice] = useState(false);
   const [showIssueGiftCard, setShowIssueGiftCard] = useState(false);
   const [showAddCredit, setShowAddCredit] = useState(false);
   const [refundPayment, setRefundPayment] = useState<
@@ -263,89 +263,6 @@ export default function FacilityBillingPage() {
     },
   ];
 
-  // Invoice columns
-  const invoiceColumns: ColumnDef<(typeof facilityInvoices)[0]>[] = [
-    {
-      key: "invoiceNumber",
-      label: "Invoice #",
-      icon: FileText,
-      defaultVisible: true,
-    },
-    {
-      key: "issuedDate",
-      label: "Issued",
-      icon: Calendar,
-      defaultVisible: true,
-      render: (inv) => formatDate(inv.issuedDate),
-    },
-    {
-      key: "clientId",
-      label: "Client",
-      icon: User,
-      defaultVisible: true,
-      render: (inv) =>
-        clients.find((c) => c.id === inv.clientId)?.name || "Unknown",
-    },
-    {
-      key: "total",
-      label: "Total",
-      icon: DollarSign,
-      defaultVisible: true,
-      render: (inv) => (
-        <span className="price-value">${inv.total.toFixed(2)}</span>
-      ),
-    },
-    {
-      key: "amountDue",
-      label: "Amount Due",
-      defaultVisible: true,
-      render: (inv) => (
-        <span
-          className={
-            inv.amountDue > 0
-              ? "price-value text-amber-600"
-              : "price-value text-green-600"
-          }
-        >
-          ${inv.amountDue.toFixed(2)}
-        </span>
-      ),
-    },
-    {
-      key: "status",
-      label: "Status",
-      defaultVisible: true,
-      render: (inv) => {
-        const statusColors = {
-          draft: "secondary",
-          sent: "default",
-          paid: "outline",
-          overdue: "destructive",
-          cancelled: "secondary",
-        };
-        return (
-          <Badge
-            variant={
-              statusColors[inv.status as keyof typeof statusColors] as
-                | "default"
-                | "destructive"
-                | "outline"
-                | "secondary"
-            }
-          >
-            {inv.status}
-          </Badge>
-        );
-      },
-    },
-    {
-      key: "dueDate",
-      label: "Due Date",
-      defaultVisible: true,
-      render: (inv) => formatDate(inv.dueDate),
-    },
-  ];
-
   const paymentFilters: FilterDef[] = [
     {
       key: "status",
@@ -371,30 +288,6 @@ export default function FacilityBillingPage() {
     },
   ];
 
-  const invoiceFilters: FilterDef[] = [
-    {
-      key: "status",
-      label: "Status",
-      options: [
-        { value: "all", label: "All Status" },
-        { value: "draft", label: "Draft" },
-        { value: "sent", label: "Sent" },
-        { value: "paid", label: "Paid" },
-        { value: "overdue", label: "Overdue" },
-        { value: "cancelled", label: "Cancelled" },
-      ],
-    },
-    {
-      key: "isRecurring",
-      label: "Type",
-      options: [
-        { value: "all", label: "All Types" },
-        { value: "true", label: "Recurring" },
-        { value: "false", label: "One-time" },
-      ],
-    },
-  ];
-
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
       <div className="flex items-center justify-between space-y-2">
@@ -406,10 +299,6 @@ export default function FacilityBillingPage() {
             <Plus className="mr-2 size-4" />
             Take Payment
           </Button>
-          <Button variant="outline" onClick={() => setShowCreateInvoice(true)}>
-            <FileText className="mr-2 size-4" />
-            Create Invoice
-          </Button>
           <Button
             variant="outline"
             onClick={() => exportPaymentsToCSV(facilityPayments)}
@@ -420,149 +309,174 @@ export default function FacilityBillingPage() {
         </div>
       </div>
 
-      {/* Stats Section - Revenue cards hidden based on permissions */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="price-value text-2xl text-green-600">
-              ${totalRevenue.toFixed(2)}
-            </div>
-            <p className="text-muted-foreground text-xs">
-              {paidTransactions} payments
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <TrendingUp className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="price-value text-2xl text-amber-600">
-              ${pendingRevenue.toFixed(2)}
-            </div>
-            <p className="text-muted-foreground text-xs">
-              {facilityPayments.filter((p) => p.status === "pending").length}{" "}
-              pending
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Outstanding</CardTitle>
-            <AlertCircle className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="price-value text-2xl text-red-600">
-              ${totalOutstanding.toFixed(2)}
-            </div>
-            <p className="text-muted-foreground text-xs">
-              {outstandingInvoices.length} invoices
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tips</CardTitle>
-            <Gift className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="price-value text-2xl">${totalTips.toFixed(2)}</div>
-            <p className="text-muted-foreground text-xs">
-              From {paidTransactions} transactions
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Refunded</CardTitle>
-            <TrendingDown className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="price-value text-2xl text-red-600">
-              ${refundedAmount.toFixed(2)}
-            </div>
-            <p className="text-muted-foreground text-xs">
-              {facilityPayments.filter((p) => p.status === "refunded").length}{" "}
-              refunds
-            </p>
-          </CardContent>
-        </Card>
+      {/* Stat tiles — click to filter the payments table */}
+      <div className="grid grid-cols-5 gap-3">
+        {[
+          {
+            key: "completed",
+            label: "Total Revenue",
+            icon: DollarSign,
+            value: `$${totalRevenue.toFixed(2)}`,
+            sub: `${paidTransactions} payments`,
+            color: "text-green-600",
+          },
+          {
+            key: "pending",
+            label: "Pending",
+            icon: TrendingUp,
+            value: `$${pendingRevenue.toFixed(2)}`,
+            sub: `${facilityPayments.filter((p) => p.status === "pending").length} awaiting`,
+            color: "text-amber-600",
+          },
+          {
+            key: "outstanding",
+            label: "Outstanding",
+            icon: AlertCircle,
+            value: `$${totalOutstanding.toFixed(2)}`,
+            sub: `${outstandingInvoices.length} invoices`,
+            color: "text-red-600",
+          },
+          {
+            key: "tips",
+            label: "Tips",
+            icon: Gift,
+            value: `$${totalTips.toFixed(2)}`,
+            sub: `${paidTransactions} transactions`,
+            color: "",
+          },
+          {
+            key: "refunded",
+            label: "Refunded",
+            icon: TrendingDown,
+            value: `$${refundedAmount.toFixed(2)}`,
+            sub: `${facilityPayments.filter((p) => p.status === "refunded").length} refunds`,
+            color: "text-red-600",
+          },
+        ].map(({ key, label, icon: Icon, value, sub, color }) => {
+          const isActive = statFilter === key;
+          const isFilterable = key !== "tips" && key !== "outstanding";
+          return (
+            <Card
+              key={key}
+              className={[
+                "transition-all",
+                isFilterable || key === "outstanding"
+                  ? "cursor-pointer select-none"
+                  : "",
+                isActive
+                  ? "ring-primary ring-2 ring-offset-1"
+                  : isFilterable || key === "outstanding"
+                    ? "hover:border-primary/50"
+                    : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={() => {
+                if (key === "outstanding") {
+                  setActiveTab("outstanding");
+                  return;
+                }
+                if (!isFilterable) return;
+                setStatFilter(isActive ? null : key);
+                setActiveTab("payments");
+              }}
+            >
+              <CardContent className="px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {label}
+                  </p>
+                  <Icon
+                    className={[
+                      "size-3.5",
+                      isActive ? color || "text-primary" : "text-muted-foreground",
+                    ].join(" ")}
+                  />
+                </div>
+                <p
+                  className={[
+                    "price-value mt-1 text-xl font-semibold",
+                    color,
+                  ].join(" ")}
+                >
+                  {value}
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-xs">{sub}</p>
+                {isActive && (
+                  <p className="text-primary mt-1 text-xs font-medium">
+                    Filtered ✕
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Tabbed Interface */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => {
+          setActiveTab(v);
+          if (v !== "payments") setStatFilter(null);
+        }}
+        className="w-full"
+      >
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="payments">Payments</TabsTrigger>
-          <TabsTrigger value="invoices">
-            Invoices
-            {outstandingInvoices.length > 0 && (
-              <Badge variant="destructive" className="ml-2 text-xs">
-                {outstandingInvoices.length}
-              </Badge>
-            )}
-          </TabsTrigger>
           <TabsTrigger value="giftcards">Gift Cards</TabsTrigger>
           <TabsTrigger value="credits">Credits</TabsTrigger>
           <TabsTrigger value="outstanding">Outstanding</TabsTrigger>
         </TabsList>
 
         {/* Payments Tab */}
-        <TabsContent value="payments" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+        <TabsContent value="payments" className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  Payment Method Breakdown
-                </CardTitle>
+              <CardHeader className="pb-2 pt-3 px-4">
+                <CardTitle className="text-sm font-medium">By Method</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+              <CardContent className="px-4 pb-3">
+                <div className="divide-y">
                   {Object.entries(paymentMethodStats).length > 0 ? (
                     Object.entries(paymentMethodStats).map(
-                      ([method, stats]) => (
-                        <div
-                          key={method}
-                          className="bg-muted/50 flex items-center justify-between rounded-lg p-3"
-                        >
-                          <div className="flex items-center gap-3">
+                      ([method, stats]) => {
+                        const pct =
+                          totalRevenue > 0
+                            ? (stats.amount / totalRevenue) * 100
+                            : 0;
+                        return (
+                          <div
+                            key={method}
+                            className="flex items-center gap-3 py-2"
+                          >
                             {method === "card" && (
-                              <CreditCard className="text-muted-foreground size-5" />
+                              <CreditCard className="text-muted-foreground size-3.5 shrink-0" />
                             )}
                             {method === "cash" && (
-                              <Wallet className="text-muted-foreground size-5" />
+                              <Wallet className="text-muted-foreground size-3.5 shrink-0" />
                             )}
                             {method === "gift_card" && (
-                              <Gift className="text-muted-foreground size-5" />
+                              <Gift className="text-muted-foreground size-3.5 shrink-0" />
                             )}
-                            <div>
-                              <p className="font-medium capitalize">
-                                {method.replace("_", " ")}
-                              </p>
-                              <p className="text-muted-foreground text-sm">
-                                {stats.count} payments
-                              </p>
+                            <span className="text-sm capitalize">
+                              {method.replace("_", " ")}
+                            </span>
+                            <div className="bg-muted mx-2 h-1.5 flex-1 overflow-hidden rounded-full">
+                              <div
+                                className="h-full rounded-full bg-primary"
+                                style={{ width: `${pct}%` }}
+                              />
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="price-value">
+                            <span className="text-muted-foreground w-8 text-right text-xs">
+                              {pct.toFixed(0)}%
+                            </span>
+                            <span className="price-value w-20 text-right text-sm font-medium">
                               ${stats.amount.toFixed(2)}
-                            </p>
-                            <p className="text-muted-foreground text-xs">
-                              {totalRevenue > 0
-                                ? ((stats.amount / totalRevenue) * 100).toFixed(
-                                    1,
-                                  )
-                                : 0}
-                              %
-                            </p>
+                            </span>
                           </div>
-                        </div>
-                      ),
+                        );
+                      },
                     )
                   ) : (
                     <p className="text-muted-foreground py-4 text-center text-sm">
@@ -574,11 +488,13 @@ export default function FacilityBillingPage() {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Recent Activity</CardTitle>
+              <CardHeader className="pb-2 pt-3 px-4">
+                <CardTitle className="text-sm font-medium">
+                  Recent Activity
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
+              <CardContent className="px-4 pb-3">
+                <div className="divide-y">
                   {facilityPayments.slice(0, 5).map((payment) => {
                     const client = clients.find(
                       (c) => c.id === payment.clientId,
@@ -586,23 +502,27 @@ export default function FacilityBillingPage() {
                     return (
                       <div
                         key={payment.id}
-                        className="hover:bg-muted/50 flex items-center justify-between rounded-lg p-2"
+                        className="hover:bg-muted/50 -mx-1 flex cursor-pointer items-center gap-3 rounded px-1 py-2"
+                        onClick={() => {
+                          if (payment.bookingId)
+                            router.push(
+                              `/facility/dashboard/bookings/${payment.bookingId}`,
+                            );
+                        }}
                       >
-                        <div>
-                          <p className="text-sm font-medium">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">
                             {client?.name || "Unknown"}
                           </p>
-                          <p className="text-muted-foreground text-xs">
+                          <p className="text-muted-foreground truncate text-xs">
                             {payment.description}
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="price-value text-sm">
+                        <div className="flex shrink-0 items-center gap-2">
+                          <StatusBadge type="status" value={payment.status} />
+                          <span className="price-value text-sm font-medium">
                             ${payment.totalAmount.toFixed(2)}
-                          </p>
-                          <Badge variant="outline" className="text-xs">
-                            {payment.status}
-                          </Badge>
+                          </span>
                         </div>
                       </div>
                     );
@@ -613,65 +533,34 @@ export default function FacilityBillingPage() {
           </div>
 
           <DataTable
-            data={facilityPayments}
+            data={
+              statFilter
+                ? facilityPayments.filter((p) => p.status === statFilter)
+                : facilityPayments
+            }
             columns={paymentColumns}
             filters={paymentFilters}
             searchKey="description"
             searchPlaceholder="Search payments..."
             itemsPerPage={10}
+            onRowClick={(payment) => {
+              if (payment.bookingId) {
+                router.push(
+                  `/facility/dashboard/bookings/${payment.bookingId}`,
+                );
+              } else {
+                setSelectedTransaction(payment);
+              }
+            }}
             actions={(payment) => (
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => setSelectedTransaction(payment)}
+                title="View payment details"
               >
                 <Eye className="size-4" />
               </Button>
-            )}
-          />
-        </TabsContent>
-
-        {/* Invoices Tab */}
-        <TabsContent value="invoices" className="space-y-4">
-          <DataTable
-            data={facilityInvoices}
-            columns={invoiceColumns}
-            filters={invoiceFilters}
-            searchKey="invoiceNumber"
-            searchPlaceholder="Search invoices..."
-            itemsPerPage={10}
-            actions={(invoice) => (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedInvoice(invoice)}
-                >
-                  <Eye className="size-4" />
-                </Button>
-                {invoice.status === "sent" || invoice.status === "overdue" ? (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const client = clients.find(
-                        (c) => c.id === invoice.clientId,
-                      );
-                      console.log(
-                        "Sending reminder for invoice:",
-                        invoice.invoiceNumber,
-                      );
-                      alert(
-                        `Reminder sent to ${client?.email} for invoice ${invoice.invoiceNumber}!`,
-                      );
-                    }}
-                  >
-                    <Send className="mr-1 size-4" />
-                    Remind
-                  </Button>
-                ) : null}
-              </div>
             )}
           />
         </TabsContent>
@@ -762,211 +651,207 @@ export default function FacilityBillingPage() {
         </TabsContent>
 
         {/* Credits Tab */}
-        <TabsContent value="credits" className="space-y-4">
-          <div className="mb-4 flex justify-end">
-            <Button onClick={() => setShowAddCredit(true)}>
+        <TabsContent value="credits" className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-muted-foreground text-sm">
+              {facilityCredits.length} credit
+              {facilityCredits.length !== 1 ? "s" : ""} on file
+            </p>
+            <Button size="sm" onClick={() => setShowAddCredit(true)}>
               <Plus className="mr-2 size-4" />
-              Add Customer Credit
+              Add Credit
             </Button>
           </div>
-          <div className="grid gap-4">
-            {facilityCredits.map((credit) => {
-              const client = clients.find((c) => c.id === credit.clientId);
-              return (
-                <Card key={credit.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="mb-2 flex items-center gap-2">
-                          <h4 className="font-semibold">
-                            {client?.name || "Unknown Client"}
-                          </h4>
-                          <Badge
-                            variant={
-                              credit.status === "active"
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {credit.status.replace("_", " ")}
-                          </Badge>
-                          <Badge variant="outline" className="capitalize">
-                            {credit.reason}
-                          </Badge>
-                        </div>
-                        <p className="text-muted-foreground mb-2 text-sm">
-                          {credit.description}
-                        </p>
-                        <div className="flex items-center gap-4 text-sm">
-                          <div>
-                            <span className="text-muted-foreground">
-                              Remaining:
-                            </span>
-                            <span className="price-value ml-1">
-                              ${credit.remainingAmount.toFixed(2)}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">
-                              Original:
-                            </span>
-                            <span className="price-value ml-1">
-                              ${credit.amount.toFixed(2)}
-                            </span>
-                          </div>
-                          {credit.expiryDate && (
-                            <div>
-                              <span className="text-muted-foreground">
-                                Expires:
-                              </span>
-                              <span className="ml-1">
-                                {formatDate(credit.expiryDate)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="price-value text-2xl text-green-600">
-                          ${credit.remainingAmount.toFixed(2)}
-                        </div>
-                        <p className="text-muted-foreground text-xs">
-                          {credit.amount > 0
-                            ? Math.round(
-                                (credit.remainingAmount / credit.amount) * 100,
-                              )
-                            : 0}
-                          % remaining
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </TabsContent>
-
-        {/* Outstanding Tab */}
-        <TabsContent value="outstanding" className="space-y-4">
-          {outstandingInvoices.length > 0 ? (
-            <div className="space-y-4">
-              {outstandingInvoices.map((invoice) => {
-                const client = clients.find((c) => c.id === invoice.clientId);
-                const daysOverdue =
-                  invoice.status === "overdue"
-                    ? Math.floor(
-                        (new Date().getTime() -
-                          new Date(invoice.dueDate).getTime()) /
-                          (1000 * 60 * 60 * 24),
+          <Card>
+            <div className="divide-y">
+              {facilityCredits.map((credit) => {
+                const client = clients.find((c) => c.id === credit.clientId);
+                const pct =
+                  credit.amount > 0
+                    ? Math.round(
+                        (credit.remainingAmount / credit.amount) * 100,
                       )
                     : 0;
                 return (
-                  <Card
-                    key={invoice.id}
-                    className={
-                      invoice.status === "overdue" ? "border-destructive" : ""
-                    }
+                  <div
+                    key={credit.id}
+                    className="grid grid-cols-[1fr_auto] items-center gap-x-6 px-4 py-3"
                   >
-                    <CardContent className="p-4">
-                      <div className="mb-3 flex items-start justify-between">
-                        <div>
-                          <h4 className="font-semibold">
-                            {client?.name || "Unknown Client"}
-                          </h4>
-                          <p className="text-muted-foreground text-sm">
-                            Invoice: {invoice.invoiceNumber}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <div className="price-value text-2xl text-red-600">
-                            ${invoice.amountDue.toFixed(2)}
-                          </div>
-                          <Badge
-                            variant={
-                              invoice.status === "overdue"
-                                ? "destructive"
-                                : "default"
-                            }
-                          >
-                            {invoice.status}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Issued:</p>
-                          <p className="font-medium">
-                            {formatDate(invoice.issuedDate)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Due:</p>
-                          <p className="font-medium">
-                            {formatDate(invoice.dueDate)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Total:</p>
-                          <p className="price-value">
-                            ${invoice.total.toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                      {invoice.status === "overdue" && (
-                        <div className="mt-3 flex items-center gap-2 border-t pt-3">
-                          <AlertCircle className="text-destructive size-4" />
-                          <span className="text-destructive text-sm font-medium">
-                            {daysOverdue} days overdue • {invoice.reminderCount}{" "}
-                            reminders sent
-                          </span>
-                        </div>
-                      )}
-                      <div className="mt-3 flex gap-2">
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => {
-                            const client = clients.find(
-                              (c) => c.id === invoice.clientId,
-                            );
-                            console.log(
-                              "Sending reminder for invoice:",
-                              invoice.invoiceNumber,
-                            );
-                            alert(
-                              `Reminder sent to ${client?.email} for invoice ${invoice.invoiceNumber}!`,
-                            );
-                          }}
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="truncate text-sm font-medium">
+                          {client?.name || "Unknown Client"}
+                        </span>
+                        <Badge
+                          variant={
+                            credit.status === "active" ? "default" : "secondary"
+                          }
+                          className="text-xs"
                         >
-                          <Send className="mr-1 size-4" />
-                          Send Reminder
-                        </Button>
-                        <Button
+                          {credit.status.replace("_", " ")}
+                        </Badge>
+                        <Badge
                           variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedInvoice(invoice)}
+                          className="capitalize text-xs"
                         >
-                          <Eye className="mr-1 size-4" />
-                          View
-                        </Button>
+                          {credit.reason}
+                        </Badge>
                       </div>
-                    </CardContent>
-                  </Card>
+                      <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                        {credit.description}
+                      </p>
+                      <div className="mt-1.5 flex items-center gap-1.5">
+                        <div className="bg-muted h-1.5 w-24 overflow-hidden rounded-full">
+                          <div
+                            className="h-full rounded-full bg-green-500"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className="text-muted-foreground text-xs">
+                          {pct}% of{" "}
+                          <span className="price-value">
+                            ${credit.amount.toFixed(2)}
+                          </span>{" "}
+                          remaining
+                          {credit.expiryDate &&
+                            ` · expires ${formatDate(credit.expiryDate)}`}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="price-value text-base font-semibold text-green-600">
+                        ${credit.remainingAmount.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
                 );
               })}
+              {facilityCredits.length === 0 && (
+                <div className="text-muted-foreground py-8 text-center text-sm">
+                  No credits on file
+                </div>
+              )}
             </div>
+          </Card>
+        </TabsContent>
+
+        {/* Outstanding Tab */}
+        <TabsContent value="outstanding" className="space-y-3">
+          {outstandingInvoices.length > 0 ? (
+            <>
+              <p className="text-muted-foreground text-sm">
+                {outstandingInvoices.length} unpaid invoice
+                {outstandingInvoices.length !== 1 ? "s" : ""} ·{" "}
+                <span className="price-value text-red-600 font-medium">
+                  ${totalOutstanding.toFixed(2)}
+                </span>{" "}
+                total outstanding
+              </p>
+              <Card>
+                <div className="divide-y">
+                  {outstandingInvoices.map((invoice) => {
+                    const client = clients.find(
+                      (c) => c.id === invoice.clientId,
+                    );
+                    const daysOverdue =
+                      invoice.status === "overdue"
+                        ? Math.floor(
+                            (new Date().getTime() -
+                              new Date(invoice.dueDate).getTime()) /
+                              (1000 * 60 * 60 * 24),
+                          )
+                        : 0;
+                    return (
+                      <div
+                        key={invoice.id}
+                        className="grid grid-cols-[1fr_auto] items-center gap-x-6 px-4 py-3"
+                        data-overdue={invoice.status === "overdue"}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="truncate text-sm font-medium">
+                              {client?.name || "Unknown Client"}
+                            </span>
+                            <Badge
+                              variant={
+                                invoice.status === "overdue"
+                                  ? "destructive"
+                                  : "default"
+                              }
+                              className="text-xs"
+                            >
+                              {invoice.status}
+                            </Badge>
+                            <span className="text-muted-foreground text-xs">
+                              {invoice.invoiceNumber}
+                            </span>
+                          </div>
+                          <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-3 text-xs">
+                            <span>Issued {formatDate(invoice.issuedDate)}</span>
+                            <span
+                              className={
+                                invoice.status === "overdue"
+                                  ? "text-destructive font-medium"
+                                  : ""
+                              }
+                            >
+                              Due {formatDate(invoice.dueDate)}
+                              {daysOverdue > 0 && ` · ${daysOverdue}d overdue`}
+                            </span>
+                            {invoice.reminderCount > 0 && (
+                              <span>
+                                {invoice.reminderCount} reminder
+                                {invoice.reminderCount !== 1 ? "s" : ""} sent
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="price-value text-sm font-semibold text-red-600">
+                              ${invoice.amountDue.toFixed(2)}
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              of ${invoice.total.toFixed(2)}
+                            </p>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                alert(
+                                  `Reminder sent to ${client?.email} for invoice ${invoice.invoiceNumber}!`,
+                                );
+                              }}
+                            >
+                              <Send className="size-3.5" />
+                            </Button>
+                            {invoice.bookingId && (
+                              <Button variant="outline" size="sm" asChild>
+                                <Link
+                                  href={`/facility/dashboard/bookings/${invoice.bookingId}`}
+                                >
+                                  <Eye className="size-3.5" />
+                                </Link>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            </>
           ) : (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <CheckCircle className="mx-auto mb-2 size-12 text-green-500" />
-                <h3 className="text-lg font-semibold">All Caught Up!</h3>
-                <p className="text-muted-foreground text-sm">
-                  No outstanding invoices
-                </p>
-              </CardContent>
-            </Card>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <CheckCircle className="mb-3 size-10 text-green-500" />
+              <p className="font-medium">All caught up</p>
+              <p className="text-muted-foreground mt-1 text-sm">
+                No outstanding invoices
+              </p>
+            </div>
           )}
         </TabsContent>
       </Tabs>
@@ -1026,6 +911,20 @@ export default function FacilityBillingPage() {
                             {selectedTransaction.processedBy}
                           </p>
                         </div>
+                        {selectedTransaction.bookingId && (
+                          <div>
+                            <p className="text-muted-foreground text-sm">
+                              Booking
+                            </p>
+                            <Link
+                              href={`/facility/dashboard/bookings/${selectedTransaction.bookingId}`}
+                              className="font-medium text-primary hover:underline"
+                              onClick={() => setSelectedTransaction(null)}
+                            >
+                              #{selectedTransaction.bookingId}
+                            </Link>
+                          </div>
+                        )}
                         {selectedTransaction.invoiceId && (
                           <div>
                             <p className="text-muted-foreground text-sm">
@@ -1195,12 +1094,26 @@ export default function FacilityBillingPage() {
                   )}
 
                   <div className="flex gap-2">
+                    {selectedTransaction.bookingId && (
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        asChild
+                        onClick={() => setSelectedTransaction(null)}
+                      >
+                        <Link
+                          href={`/facility/dashboard/bookings/${selectedTransaction.bookingId}`}
+                        >
+                          <ExternalLink className="mr-2 size-4" />
+                          View Booking
+                        </Link>
+                      </Button>
+                    )}
                     {selectedTransaction.receiptUrl && (
                       <Button
                         variant="outline"
                         className="flex-1"
                         onClick={() => {
-                          // Simulate receipt download
                           alert(
                             `Receipt for payment ${selectedTransaction.id} downloaded successfully!`,
                           );
@@ -1225,248 +1138,6 @@ export default function FacilityBillingPage() {
                           Process Refund
                         </Button>
                       )}
-                  </div>
-                </div>
-              );
-            })()}
-        </DialogContent>
-      </Dialog>
-
-      {/* Invoice Details Modal */}
-      <Dialog
-        open={!!selectedInvoice}
-        onOpenChange={() => setSelectedInvoice(null)}
-      >
-        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="size-5" />
-              Invoice Details
-            </DialogTitle>
-          </DialogHeader>
-          {selectedInvoice &&
-            (() => {
-              const client = clients.find(
-                (c) => c.id === selectedInvoice.clientId,
-              );
-              return (
-                <div className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-lg">
-                            {selectedInvoice.invoiceNumber}
-                          </CardTitle>
-                          <p className="text-muted-foreground mt-1 text-sm">
-                            Issued: {formatDate(selectedInvoice.issuedDate)}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={
-                            selectedInvoice.status === "paid"
-                              ? "outline"
-                              : selectedInvoice.status === "overdue"
-                                ? "destructive"
-                                : "default"
-                          }
-                        >
-                          {selectedInvoice.status}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-muted-foreground text-sm">
-                            Client
-                          </p>
-                          <p className="font-medium">
-                            {client?.name || "Unknown"}
-                          </p>
-                          <p className="text-muted-foreground text-sm">
-                            {client?.email}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground text-sm">
-                            Due Date
-                          </p>
-                          <p className="font-medium">
-                            {formatDate(selectedInvoice.dueDate)}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm font-semibold">
-                        Line Items
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {selectedInvoice.items.map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex justify-between border-b py-2 last:border-0"
-                          >
-                            <div>
-                              <p className="font-medium">{item.description}</p>
-                              <p className="text-muted-foreground text-sm">
-                                <span className="price-value">
-                                  ${item.unitPrice.toFixed(2)}
-                                </span>{" "}
-                                × {item.quantity}
-                              </p>
-                            </div>
-                            <p className="price-value">
-                              ${item.total.toFixed(2)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="mt-4 space-y-2 border-t pt-4">
-                        <div className="flex justify-between">
-                          <span className="text-sm">Subtotal:</span>
-                          <span className="price-value">
-                            ${selectedInvoice.subtotal.toFixed(2)}
-                          </span>
-                        </div>
-                        {selectedInvoice.discount > 0 && (
-                          <div className="flex justify-between text-green-600">
-                            <span className="text-sm">
-                              Discount{" "}
-                              {selectedInvoice.discountReason &&
-                                `(${selectedInvoice.discountReason})`}
-                              :
-                            </span>
-                            <span className="price-value">
-                              -${selectedInvoice.discount.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                        {selectedInvoice.tax > 0 && (
-                          <div className="flex justify-between">
-                            <span className="text-sm">
-                              Tax ({selectedInvoice.taxRate}%):
-                            </span>
-                            <span className="price-value">
-                              ${selectedInvoice.tax.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex justify-between border-t pt-2">
-                          <span className="font-bold">Total:</span>
-                          <span className="price-value text-xl">
-                            ${selectedInvoice.total.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground text-sm">
-                            Amount Paid:
-                          </span>
-                          <span className="price-value text-green-600">
-                            ${selectedInvoice.amountPaid.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-semibold">Amount Due:</span>
-                          <span className="price-value text-lg text-amber-600">
-                            ${selectedInvoice.amountDue.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {selectedInvoice.isRecurring && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                          <RefreshCw className="size-4" />
-                          Recurring Invoice
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-muted-foreground text-sm">
-                              Frequency
-                            </p>
-                            <p className="font-medium capitalize">
-                              {selectedInvoice.recurringFrequency}
-                            </p>
-                          </div>
-                          {selectedInvoice.nextInvoiceDate && (
-                            <div>
-                              <p className="text-muted-foreground text-sm">
-                                Next Invoice
-                              </p>
-                              <p className="font-medium">
-                                {formatDate(selectedInvoice.nextInvoiceDate)}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {
-                        alert(
-                          `Invoice ${selectedInvoice.invoiceNumber} PDF downloaded successfully!`,
-                        );
-                      }}
-                    >
-                      <Download className="mr-2 size-4" />
-                      Download PDF
-                    </Button>
-                    {selectedInvoice.status === "draft" && (
-                      <Button
-                        className="flex-1"
-                        onClick={() => {
-                          console.log(
-                            "Sending invoice:",
-                            selectedInvoice.invoiceNumber,
-                          );
-                          alert(
-                            `Invoice ${selectedInvoice.invoiceNumber} sent to ${clients.find((c) => c.id === selectedInvoice.clientId)?.email}!`,
-                          );
-                          setSelectedInvoice(null);
-                        }}
-                      >
-                        <Send className="mr-2 size-4" />
-                        Send Invoice
-                      </Button>
-                    )}
-                    {(selectedInvoice.status === "sent" ||
-                      selectedInvoice.status === "overdue") && (
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => {
-                          console.log(
-                            "Sending reminder for invoice:",
-                            selectedInvoice.invoiceNumber,
-                          );
-                          alert(
-                            `Reminder sent for invoice ${selectedInvoice.invoiceNumber}!`,
-                          );
-                          setSelectedInvoice(null);
-                        }}
-                      >
-                        <Send className="mr-2 size-4" />
-                        Send Reminder
-                      </Button>
-                    )}
                   </div>
                 </div>
               );
@@ -1672,16 +1343,6 @@ export default function FacilityBillingPage() {
             `Refund of $${refund.amount.toFixed(2)} processed successfully!`,
           );
           setRefundPayment(null);
-        }}
-      />
-
-      <CreateInvoiceModal
-        open={showCreateInvoice}
-        onOpenChange={setShowCreateInvoice}
-        facilityId={facilityId}
-        onSuccess={(invoice) => {
-          console.log("Invoice created:", invoice);
-          alert(`Invoice ${invoice.invoiceNumber} created successfully!`);
         }}
       />
 

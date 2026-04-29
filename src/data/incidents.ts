@@ -243,6 +243,68 @@ export const incidents: Incident[] = [
     updatedAt: "2024-02-21T15:30:00Z",
     closedBy: "Emily Brown",
   },
+  {
+    id: "INC-006",
+    type: "fight",
+    severity: "high",
+    status: "open",
+    title: "Altercation during group play — Buddy vs. Cooper",
+    description:
+      "Buddy got into an altercation with Cooper during the afternoon group play session. Buddy initiated with growling and then snapped. Cooper sustained a small scratch near his right eye. Both dogs were immediately separated and examined.",
+    internalNotes:
+      "Incident occurred at 14:20 in the outdoor play yard (South section). Staff Sarah and Mike were present and intervened within 30 seconds. Buddy had been showing escalating stress signals (stiff tail, hard stare) for ~5 minutes prior but the situation escalated quickly. Cooper has a superficial scratch near right eye — cleaned with antiseptic, no vet visit needed at this time. Buddy placed in isolated kennel for the remainder of the day. Recommend separating these two dogs for future group play sessions.",
+    clientFacingNotes:
+      "We want to let you know that Buddy had a scuffle with another dog during afternoon group play today. It was brief and our staff intervened immediately. Buddy is doing well and has been resting comfortably in his kennel. We'd love to chat with you when you come for pick-up to go over what happened.",
+    petIds: [1, 5],
+    petNames: ["Buddy", "Cooper"],
+    staffInvolved: ["Sarah Johnson", "Mike Davis"],
+    reportedBy: "Sarah Johnson",
+    incidentDate: "2026-04-28T12:20:00Z",
+    reportedDate: "2026-04-28T12:35:00Z",
+    photos: [
+      {
+        id: "photo-inc006-01",
+        url: "/images/incidents/inc006-buddy.jpg",
+        caption: "Buddy shortly after separation — calm but tense",
+        isClientVisible: false,
+      },
+      {
+        id: "photo-inc006-02",
+        url: "/images/incidents/inc006-cooper-eye.jpg",
+        caption: "Cooper — superficial scratch near right eye",
+        isClientVisible: true,
+      },
+    ],
+    followUpTasks: [
+      {
+        id: "task-inc006-01",
+        incidentId: "INC-006",
+        title: "Monitor Buddy behavior rest of stay",
+        description:
+          "Check Buddy every 2 hours and note any continued stress signals. Do not return to group play this stay.",
+        assignedTo: "Sarah Johnson",
+        dueDate: "2026-04-29T12:20:00Z",
+        status: "pending",
+      },
+      {
+        id: "task-inc006-02",
+        incidentId: "INC-006",
+        title: "Notify Buddy's owner",
+        description:
+          "Call owner to explain the incident and what steps we are taking. Offer to provide written summary on pickup.",
+        assignedTo: "Mike Davis",
+        dueDate: "2026-04-28T13:35:00Z",
+        status: "pending",
+      },
+    ],
+    managerNotified: true,
+    managersNotified: ["Emma Wilson - Manager"],
+    clientNotified: false,
+    createdAt: "2026-04-28T12:35:00Z",
+    updatedAt: "2026-04-28T12:35:00Z",
+    boardingGuestId: "buddy-001",
+    reservationId: "RES-001",
+  },
 ];
 
 // Statistics
@@ -261,6 +323,10 @@ export const getIncidentStats = () => {
 
   return { total, open, critical, thisMonth };
 };
+
+// Get incidents linked to a boarding guest
+export const getIncidentsForGuest = (boardingGuestId: string): Incident[] =>
+  incidents.filter((i) => i.boardingGuestId === boardingGuestId);
 
 // Get pending follow-up tasks
 export const getPendingFollowUpTasks = (): FollowUpTask[] => {

@@ -18,13 +18,13 @@ import type { NewBooking as BookingData } from "@/types/booking";
 import type { Client } from "@/types/client";
 import {
   Sun,
-  LogIn,
   DollarSign,
   Package,
   FileText,
   Settings,
   Plus,
   Home,
+  ClipboardList,
 } from "lucide-react";
 
 const tabs = [
@@ -32,11 +32,6 @@ const tabs = [
     name: "Dashboard",
     href: "/facility/dashboard/services/daycare",
     icon: Sun,
-  },
-  {
-    name: "Check-In/Out",
-    href: "/facility/dashboard/services/daycare/check-in",
-    icon: LogIn,
   },
   {
     name: "Rates",
@@ -52,6 +47,11 @@ const tabs = [
     name: "Rooms",
     href: "/facility/dashboard/services/daycare/rooms",
     icon: Home,
+  },
+  {
+    name: "Tasks",
+    href: "/facility/dashboard/services/daycare/tasks",
+    icon: ClipboardList,
   },
   {
     name: "Report Cards",

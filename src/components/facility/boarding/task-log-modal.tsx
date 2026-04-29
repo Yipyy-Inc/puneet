@@ -24,7 +24,6 @@ import {
   Utensils,
   Pill,
   AlertTriangle,
-  Camera,
   CheckCircle,
   Clock,
   Star,
@@ -393,8 +392,6 @@ function MedicationForm({
   const [staffInitials, setStaffInitials] = useState("");
   const [notes, setNotes] = useState("");
   const [missedReason, setMissedReason] = useState<MissedMedReason | "">("");
-  const [photoTaken, setPhotoTaken] = useState(false);
-
   const isMissed = outcome === "missed";
 
   const medOptions: {
@@ -420,10 +417,7 @@ function MedicationForm({
   const canSubmit =
     outcome &&
     staffInitials &&
-    (!isMissed || !!missedReason) &&
-    (!task.requiresPhotoProof ||
-      outcome !== "administered" ||
-      photoTaken);
+    (!isMissed || !!missedReason);
 
   return (
     <div className="space-y-4">
@@ -490,29 +484,8 @@ function MedicationForm({
         </div>
       )}
 
-      {/* Photo proof */}
-      {task.requiresPhotoProof && outcome === "administered" && (
-        <button
-          onClick={() => setPhotoTaken(!photoTaken)}
-          data-taken={photoTaken}
-          className="flex w-full cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition-all data-[taken=true]:border-green-400 data-[taken=true]:bg-green-50 data-[taken=false]:border-amber-300 data-[taken=false]:bg-amber-50/50 dark:data-[taken=true]:border-green-700 dark:data-[taken=true]:bg-green-900/20 dark:data-[taken=false]:border-amber-700 dark:data-[taken=false]:bg-amber-900/10"
-        >
-          <Camera
-            data-taken={photoTaken}
-            className="size-5 data-[taken=true]:text-green-600 data-[taken=false]:text-amber-600"
-          />
-          <div className="text-left">
-            <p className="text-sm font-semibold">
-              {photoTaken ? "✓ Photo proof taken" : "Photo proof required"}
-            </p>
-            <p className="text-muted-foreground text-xs">
-              {photoTaken ? "Tap to unmark" : "Tap to confirm photo was taken"}
-            </p>
-          </div>
-        </button>
-      )}
 
-      <div className="space-y-2">
+<div className="space-y-2">
         <Label>Staff Initials</Label>
         <Input
           value={staffInitials}

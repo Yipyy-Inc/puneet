@@ -12,15 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
-import {
-  LayoutDashboard,
-  CalendarDays,
-  LogIn,
-  DollarSign,
-  ClipboardList,
-  Settings,
-  AlertTriangle,
-} from "lucide-react";
+import { DollarSign, Settings, AlertTriangle, ClipboardList } from "lucide-react";
 
 export default function CustomServiceLayout({
   children,
@@ -63,45 +55,11 @@ export default function CustomServiceLayout({
   const basePath = `/facility/dashboard/services/custom/${serviceModule.slug}`;
   const isEnabled = serviceModule.status === "active";
 
-  // Build tabs dynamically from module config
   const tabs = [
-    {
-      name: "Dashboard",
-      href: basePath,
-      icon: LayoutDashboard,
-      always: true,
-    },
-    {
-      name: "Bookings",
-      href: `${basePath}/bookings`,
-      icon: CalendarDays,
-      show: serviceModule.calendar.enabled,
-    },
-    {
-      name: "Check-In/Out",
-      href: `${basePath}/check-in`,
-      icon: LogIn,
-      show: serviceModule.checkInOut.enabled,
-    },
-    {
-      name: "Rates",
-      href: `${basePath}/rates`,
-      icon: DollarSign,
-      always: true,
-    },
-    {
-      name: "Tasks",
-      href: `${basePath}/tasks`,
-      icon: ClipboardList,
-      show: serviceModule.staffAssignment.taskGeneration.length > 0,
-    },
-    {
-      name: "Settings",
-      href: `${basePath}/settings`,
-      icon: Settings,
-      always: true,
-    },
-  ].filter((t) => t.always || t.show);
+    { name: "Rates", href: `${basePath}/rates`, icon: DollarSign },
+    { name: "Tasks", href: `${basePath}/tasks`, icon: ClipboardList },
+    { name: "Settings", href: `${basePath}/settings`, icon: Settings },
+  ];
 
   const handleToggleEnabled = (checked: boolean) => {
     setPendingEnabled(checked);

@@ -29,10 +29,13 @@ import {
   Save,
   MapPin,
   Shuffle,
+  PhoneForwarded,
+  Timer,
 } from "lucide-react";
 import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { cn } from "@/lib/utils";
-import type { CallingSettings, DispatchMode } from "@/types/calling";
+import type { CallingSettings, CallForwardingMode, DispatchMode } from "@/types/calling";
+import { NumberPortingWizard } from "@/components/calling/NumberPortingWizard";
 
 const dispatchOptions: {
   value: DispatchMode;
@@ -103,7 +106,7 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
             />
             <Badge variant="outline" className="gap-1.5">
               <div className="size-2 rounded-full bg-green-500" />
-              Active via Twilio
+              Active
             </Badge>
           </div>
           <p className="mt-1.5 text-xs text-muted-foreground">
@@ -111,6 +114,9 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
           </p>
         </CardContent>
       </Card>
+
+      {/* Number Porting */}
+      <NumberPortingWizard />
 
       {/* Dispatch Mode */}
       <Card>
@@ -240,6 +246,90 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Call Forwarding */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <PhoneForwarded className="size-4 text-indigo-600" />
+            Call Forwarding
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">Forward calls to an external number</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label className="mb-2 block text-sm">Forwarding Mode</Label>
+            <Select
+              value={settings.callForwardingMode}
+              onValueChange={(v) => update("callForwardingMode", v as CallForwardingMode)}
+            >
+              <SelectTrigger className="max-w-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="disabled">Disabled — no forwarding</SelectItem>
+                <SelectItem value="always">Always forward all calls</SelectItem>
+                <SelectItem value="on_no_answer">Forward on no answer</SelectItem>
+                <SelectItem value="on_busy">Forward when busy</SelectItem>
+                <SelectItem value="on_no_answer_or_busy">Forward on no answer or busy</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {settings.callForwardingMode !== "disabled" && (
+            <div>
+              <Label className="mb-2 block text-sm">Forwarding Phone Number</Label>
+              <Input
+                className="max-w-xs font-mono"
+                placeholder="+1 (323) 968-7848"
+                value={settings.callForwardingNumber}
+                onChange={(e) => update("callForwardingNumber", e.target.value)}
+              />
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Enter the full phone number including country code.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Ring Duration */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Timer className="size-4 text-orange-500" />
+            Ring Duration
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            How long to ring before routing to voicemail
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 max-w-xs">
+              <input
+                type="range"
+                min={5}
+                max={120}
+                step={5}
+                value={settings.ringDurationSeconds}
+                onChange={(e) => update("ringDurationSeconds", Number(e.target.value))}
+                className="w-full accent-primary"
+              />
+              <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+                <span>5s</span>
+                <span>120s</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 rounded-lg border bg-muted/30 px-3 py-2 text-sm font-semibold tabular-nums">
+              <Timer className="size-3.5 text-muted-foreground" />
+              {settings.ringDurationSeconds}s
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            After <strong>{settings.ringDurationSeconds} seconds</strong> without an answer, the caller is sent to voicemail.
+          </p>
         </CardContent>
       </Card>
 

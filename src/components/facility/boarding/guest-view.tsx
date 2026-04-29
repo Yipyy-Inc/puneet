@@ -31,7 +31,6 @@ import {
   Stethoscope,
   CalendarDays,
   AlertTriangle,
-  Camera,
   User,
   BedDouble,
   Star,
@@ -45,6 +44,7 @@ import {
 import type { ScheduledTask, TaskExecution } from "./guest-journal";
 import { OUTCOME_LABELS } from "./task-rows";
 import type { BoardingGuest } from "@/data/boarding";
+import { ReservationIncidentPanel } from "./ReservationIncidentPanel";
 
 type Props = {
   guests: BoardingGuest[];
@@ -862,11 +862,6 @@ export function GuestTimelineView({
                         <p className="text-muted-foreground text-xs">
                           {med.frequency}{med.times.length > 0 && ` · ${med.times.join(", ")}`}
                         </p>
-                        {med.requiresPhotoProof && (
-                          <div className="mt-0.5 flex items-center gap-1 text-xs text-amber-600">
-                            <Camera className="size-3" />Photo proof required
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -886,6 +881,17 @@ export function GuestTimelineView({
               </div>
             </CardContent>
           </Card>
+
+          {/* Incident reports panel — staff view only */}
+          {!customerView && (
+            <ReservationIncidentPanel
+              guestId={guest.id}
+              reservationId={guest.bookingId}
+              petName={guest.petName}
+              petId={guest.petId}
+              ownerName={guest.ownerName}
+            />
+          )}
 
           {/* Customer View toggle */}
           <div className="flex items-center justify-between rounded-xl border bg-muted/30 px-4 py-3">

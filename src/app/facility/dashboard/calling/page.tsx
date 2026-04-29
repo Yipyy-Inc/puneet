@@ -13,8 +13,14 @@ import {
   Phone, PhoneCall, PhoneOff, PhoneIncoming, PhoneOutgoing,
   Voicemail, Play, AlertCircle, Settings, Plus,
   BarChart3, Radio, Search, Download, PhoneForwarded,
-  Clock, CheckCircle2, Pause, RefreshCw,
+  Clock, CheckCircle2, ExternalLink, User, Filter,
+  Mic, Bot, UserCheck, ChevronRight, X,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { aiCallSummaries } from "@/data/calling";
+import Link from "next/link";
 import { callLogs, routingRules } from "@/data/communications-hub";
 import { CallDetailsModal } from "@/components/communications/CallDetailsModal";
 import { RoutingRuleModal } from "@/components/communications/RoutingRuleModal";
@@ -202,7 +208,7 @@ function DialerTab() {
     <Card>
       <CardHeader>
         <CardTitle>Outbound Dialer</CardTitle>
-        <p className="text-sm text-muted-foreground">Make calls using your Twilio business number</p>
+        <p className="text-sm text-muted-foreground">Make outbound calls using your business number</p>
       </CardHeader>
       <CardContent>
         <div className="mx-auto max-w-xs space-y-4">
@@ -225,7 +231,8 @@ function DialerTab() {
             <Button variant="outline" className="flex-1" onClick={() => setPhone("")}>Clear</Button>
             <Button className="flex-1 h-12 gap-2 bg-green-600 hover:bg-green-700 text-base"
               disabled={!phone.trim()}
-              onClick={() => alert(`Dialing ${phone}… (Twilio integration pending)`)}>
+              onClick={() => alert(`Dialing ${phone}…`)}>
+
               <Phone className="size-5" />
               Dial
             </Button>
@@ -236,22 +243,210 @@ function DialerTab() {
   );
 }
 
+// ─── Call Log Detail Panel ───────────────────────────────────
+function CallLogDetail({
+  call,
+  onClose,
+}: {
+  call: (typeof callLogs)[0];
+  onClose: () => void;
+}) {
+  const aiSummary = aiCallSummaries.find((s) => s.callId === call.id);
+  const duration = { m: Math.floor(call.duration / 60), s: call.duration % 60 };
+
+  const statusConfig = {
+    completed: { label: "Completed", cls: "text-green-700 bg-green-50 border-green-200", icon: <CheckCircle2 className="size-3" /> },
+    missed:    { label: "Missed",    cls: "text-red-700 bg-red-50 border-red-200",       icon: <PhoneOff className="size-3" /> },
+    voicemail: { label: "Voicemail", cls: "text-amber-700 bg-amber-50 border-amber-200", icon: <Voicemail className="size-3" /> },
+    failed:    { label: "Failed",    cls: "text-red-700 bg-red-50 border-red-200",       icon: <PhoneOff className="size-3" /> },
+  } as const;
+  const sc = statusConfig[call.status];
+
+  const sentimentColor = !aiSummary ? "" :
+    aiSummary.sentimentScore >= 7 ? "text-green-600" :
+    aiSummary.sentimentScore >= 4 ? "text-amber-600" : "text-red-500";
+
+  return (
+    <Card className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-3 border-b">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${call.type === "inbound" ? "bg-green-50 text-green-600" : "bg-blue-50 text-blue-600"}`}>
+            {call.type === "inbound" ? <PhoneIncoming className="size-5" /> : <PhoneOutgoing className="size-5" />}
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-sm truncate">{call.clientName ?? "Unknown Caller"}</p>
+            <p className="font-mono text-[11px] text-muted-foreground">{call.from}</p>
+          </div>
+        </div>
+        <button onClick={onClose} className="shrink-0 flex size-7 items-center justify-center rounded-lg hover:bg-muted text-muted-foreground">
+          <X className="size-4" />
+        </button>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="space-y-4 p-4">
+          {/* Key metadata */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">Status</p>
+              <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${sc.cls}`}>
+                {sc.icon}{sc.label}
+              </span>
+            </div>
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">Direction</p>
+              <span className="text-sm font-medium capitalize">{call.type}</span>
+            </div>
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">Duration</p>
+              <span className="font-mono text-sm tabular-nums">
+                {call.duration === 0 ? "—" : `${duration.m}:${duration.s.toString().padStart(2, "0")}`}
+              </span>
+            </div>
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">Handled by</p>
+              <span className="inline-flex items-center gap-1 text-sm">
+                {call.aiHandled ? <><Bot className="size-3.5 text-violet-500" />AI</> : <><UserCheck className="size-3.5 text-blue-500" />Staff</>}
+              </span>
+            </div>
+            <div className="col-span-2">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">Time</p>
+              <span className="text-sm">{new Date(call.timestamp).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</span>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Recording */}
+          {call.recordingUrl && (
+            <div className="space-y-2">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Recording</p>
+              <div className="rounded-xl bg-muted/60 p-3 flex items-center gap-3">
+                <button
+                  onClick={() => alert("Playing recording…")}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                  <Play className="size-3.5 ml-0.5" />
+                </button>
+                <div className="flex-1 space-y-1">
+                  <div className="h-1.5 rounded-full bg-muted-foreground/20 overflow-hidden">
+                    <div className="h-full w-[30%] rounded-full bg-primary/60" />
+                  </div>
+                  <p className="font-mono text-[10px] text-muted-foreground">
+                    0:00 / {duration.m}:{duration.s.toString().padStart(2, "0")}
+                  </p>
+                </div>
+                <button onClick={() => alert("Downloading…")} className="flex size-7 items-center justify-center rounded-lg hover:bg-muted text-muted-foreground">
+                  <Download className="size-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Transcription */}
+          {call.transcription && (
+            <div className="space-y-2">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Transcription</p>
+              <div className="rounded-xl bg-muted/40 border border-border/60 p-3">
+                <p className="text-sm leading-relaxed text-muted-foreground italic">&ldquo;{call.transcription}&rdquo;</p>
+              </div>
+            </div>
+          )}
+
+          {/* Notes */}
+          {call.notes && (
+            <div className="space-y-2">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Staff Notes</p>
+              <p className="text-sm text-muted-foreground">{call.notes}</p>
+            </div>
+          )}
+
+          {/* Outcome */}
+          {call.outcome && (
+            <div className="space-y-2">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Outcome</p>
+              <Badge variant="secondary" className="capitalize text-xs">{call.outcome.replace(/_/g, " ")}</Badge>
+            </div>
+          )}
+
+          {/* AI Summary */}
+          {aiSummary && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Bot className="size-4 text-violet-500" />
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">AI Summary</p>
+                  <span className={`ml-auto text-xs font-semibold ${sentimentColor}`}>
+                    Sentiment {aiSummary.sentimentScore}/10
+                  </span>
+                </div>
+                <div className="rounded-xl bg-violet-50/60 border border-violet-100 p-3 space-y-2 text-sm">
+                  <p><span className="font-semibold text-violet-800">Reason: </span><span className="text-muted-foreground">{aiSummary.callReason}</span></p>
+                  {aiSummary.followUpTask && (
+                    <p><span className="font-semibold text-violet-800">Follow-up: </span><span className="text-muted-foreground">{aiSummary.followUpTask}</span></p>
+                  )}
+                  {aiSummary.riskFlag !== "none" && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700 capitalize">
+                      <AlertCircle className="size-3" />{aiSummary.riskFlag.replace(/_/g, " ")}
+                    </span>
+                  )}
+                  {aiSummary.upsellOpportunities.length > 0 && (
+                    <div>
+                      <p className="font-semibold text-violet-800 mb-1">Upsell opportunities:</p>
+                      <ul className="space-y-0.5">
+                        {aiSummary.upsellOpportunities.map((u) => (
+                          <li key={u} className="text-muted-foreground text-xs">• {u}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Client link */}
+          {call.clientId && (
+            <Link
+              href={`/facility/dashboard/clients/${call.clientId}`}
+              className="flex items-center gap-2 rounded-xl border border-border p-3 text-sm font-medium hover:bg-muted/50 transition-colors group"
+            >
+              <User className="size-4 text-muted-foreground" />
+              <span>View client profile</span>
+              <ExternalLink className="size-3.5 ml-auto text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            </Link>
+          )}
+        </div>
+      </ScrollArea>
+    </Card>
+  );
+}
+
 // ─── Main Page ──────────────────────────────────────────────
 export default function CallingPage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showRoutingModal, setShowRoutingModal] = useState(false);
   const [selectedCall, setSelectedCall] = useState<(typeof callLogs)[0] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | "inbound" | "outbound">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "missed" | "voicemail" | "failed">("all");
   const [incomingCall, setIncomingCall] = useState<ActiveCall | null>(null);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
+  const [callMinimized, setCallMinimized] = useState(false);
 
   const filteredCalls = useMemo(() => {
-    if (!searchQuery.trim()) return callLogs;
-    const q = searchQuery.toLowerCase();
-    return callLogs.filter(
-      (c) => c.clientName?.toLowerCase().includes(q) || c.from.toLowerCase().includes(q),
-    );
-  }, [searchQuery]);
+    return callLogs.filter((c) => {
+      if (typeFilter !== "all" && c.type !== typeFilter) return false;
+      if (statusFilter !== "all" && c.status !== statusFilter) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        if (!c.clientName?.toLowerCase().includes(q) && !c.from.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [searchQuery, typeFilter, statusFilter]);
 
   const voicemails = useMemo(() => callLogs.filter((c) => c.status === "voicemail"), []);
   const missedCalls = useMemo(() => callLogs.filter((c) => c.status === "missed"), []);
@@ -259,108 +454,92 @@ export default function CallingPage() {
 
   const handleAnswer = (call: ActiveCall) => {
     setIncomingCall(null);
+    setCallMinimized(false);
     setActiveCall({ ...call, status: "active", isRecording: true });
   };
 
-  const callColumns: ColumnDef<(typeof callLogs)[0]>[] = [
+  const recordingColumns: ColumnDef<(typeof callLogs)[0]>[] = [
     {
-      accessorKey: "type",
-      header: "Type",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          {row.original.type === "inbound"
-            ? <PhoneIncoming className="size-4 text-green-600" />
-            : <PhoneOutgoing className="size-4 text-blue-600" />}
-          <Badge variant={row.original.type === "inbound" ? "default" : "outline"}>
-            {row.original.type === "inbound" ? "Inbound" : "Outbound"}
-          </Badge>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "from",
+      accessorKey: "clientName",
       header: "Contact",
-      cell: ({ row }) => (
-        <div>
-          <div className="font-medium">{row.original.clientName || "Unknown Caller"}</div>
-          <div className="text-xs text-muted-foreground font-mono">{row.original.from}</div>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "duration",
-      header: "Duration",
-      cell: ({ row }) => formatDuration(row.original.duration),
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
       cell: ({ row }) => {
-        const v = { completed: "default", missed: "destructive", voicemail: "secondary", failed: "destructive" } as const;
+        const { clientId, clientName, from } = row.original;
         return (
-          <Badge variant={v[row.original.status]}>
-            {row.original.status === "missed" && <PhoneOff className="mr-1 inline size-3" />}
-            {row.original.status === "voicemail" && <Voicemail className="mr-1 inline size-3" />}
-            {row.original.status}
-          </Badge>
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <User className="size-3.5" />
+            </div>
+            <div>
+              {clientId ? (
+                <Link
+                  href={`/facility/dashboard/clients/${clientId}`}
+                  className="group flex items-center gap-1 hover:text-primary transition-colors"
+                >
+                  <span className="text-sm font-semibold leading-tight group-hover:underline underline-offset-2">
+                    {clientName || "Unknown"}
+                  </span>
+                  <ExternalLink className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
+              ) : (
+                <span className="text-sm font-semibold text-muted-foreground">{clientName || "Unknown"}</span>
+              )}
+              <div className="font-mono text-[11px] text-muted-foreground">{from}</div>
+            </div>
+          </div>
         );
       },
     },
     {
+      accessorKey: "duration",
+      header: "Duration",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1.5 text-sm">
+          <Clock className="size-3.5 text-muted-foreground" />
+          <span className="font-mono tabular-nums">{formatDuration(row.original.duration)}</span>
+        </div>
+      ),
+    },
+    {
       accessorKey: "timestamp",
-      header: "Time",
+      header: "Recorded",
       cell: ({ row }) => {
         const d = new Date(row.original.timestamp);
-        const isToday = d.toDateString() === new Date().toDateString();
         return (
           <div className="text-sm">
-            {isToday
-              ? <><div className="font-medium">Today</div><div className="text-muted-foreground text-xs">{d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div></>
-              : d.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+            <div className="font-medium">{d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}</div>
+            <div className="text-xs text-muted-foreground">{d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
           </div>
         );
       },
     },
     {
       accessorKey: "actions",
-      header: "Actions",
+      header: "",
       cell: ({ row }) => (
-        <div className="flex items-center gap-1.5">
-          {row.original.recordingUrl && (
-            <Button variant="ghost" size="sm" title="Play Recording"
-              onClick={() => alert(`Playing recording from ${row.original.from}…`)}>
-              <Play className="size-4" />
-            </Button>
+        <div className="flex items-center justify-end gap-1">
+          <button
+            onClick={() => alert("Playing…")}
+            title="Play recording"
+            className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <Play className="size-3.5" />Play
+          </button>
+          <button
+            onClick={() => alert("Downloading…")}
+            title="Download"
+            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <Download className="size-3.5" />
+          </button>
+          {row.original.clientId && (
+            <Link
+              href={`/facility/dashboard/clients/${row.original.clientId}`}
+              title="Open client file"
+              className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+            >
+              <User className="size-3.5" />
+            </Link>
           )}
-          <Button variant="ghost" size="sm" title="View Details"
-            onClick={() => { setSelectedCall(row.original); setShowDetailsModal(true); }}>
-            <AlertCircle className="size-4" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
-
-  const recordingColumns: ColumnDef<(typeof callLogs)[0]>[] = [
-    {
-      accessorKey: "clientName",
-      header: "Contact",
-      cell: ({ row }) => (
-        <div>
-          <div className="font-medium">{row.original.clientName || "Unknown"}</div>
-          <div className="text-xs text-muted-foreground font-mono">{row.original.from}</div>
-        </div>
-      ),
-    },
-    { accessorKey: "duration", header: "Duration", cell: ({ row }) => formatDuration(row.original.duration) },
-    { accessorKey: "timestamp", header: "Recorded", cell: ({ row }) => new Date(row.original.timestamp).toLocaleString() },
-    {
-      accessorKey: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-1.5">
-          <Button variant="ghost" size="sm" onClick={() => alert("Playing…")}><Play className="mr-1 size-4" />Play</Button>
-          <Button variant="ghost" size="sm" onClick={() => alert("Downloading…")}><Download className="size-4" /></Button>
         </div>
       ),
     },
@@ -375,7 +554,7 @@ export default function CallingPage() {
   ];
 
   return (
-    <div className={activeCall ? "pr-[320px]" : ""}>
+    <div>
       {/* Incoming call overlay */}
       {incomingCall && (
         <IncomingCallPanel
@@ -391,8 +570,9 @@ export default function CallingPage() {
       {activeCall && (
         <ActiveCallPanel
           call={activeCall}
-          onEnd={() => setActiveCall(null)}
+          onEnd={() => { setActiveCall(null); setCallMinimized(false); }}
           onTransfer={() => alert("Transfer UI coming soon…")}
+          onMinimizeChange={setCallMinimized}
         />
       )}
 
@@ -401,7 +581,7 @@ export default function CallingPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Calling</h1>
-            <p className="mt-1 text-muted-foreground">Phone system · Powered by Twilio</p>
+            <p className="mt-1 text-muted-foreground">Phone system</p>
           </div>
           <Button className="gap-2 bg-green-600 hover:bg-green-700" onClick={() => alert("Opening dialer…")}>
             <Phone className="size-4" />
@@ -508,42 +688,158 @@ export default function CallingPage() {
 
           {/* Call Log */}
           <TabsContent value="calls" className="space-y-4">
-            <Card>
-              <CardContent className="pt-5">
-                <div className="relative">
-                  <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by customer name or phone number…"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+            {/* Stats strip */}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {[
-                { label: "Total Calls", value: filteredCalls.length, sub: "This month" },
-                { label: "Avg Duration", value: `${filteredCalls.length > 0 ? Math.floor(filteredCalls.reduce((s, c) => s + c.duration, 0) / filteredCalls.length / 60) : 0}m`, sub: "Per call" },
-                { label: "With Recordings", value: filteredCalls.filter((c) => c.recordingUrl).length, sub: "Available" },
-              ].map(({ label, value, sub }) => (
-                <Card key={label}>
-                  <CardContent className="pt-5">
-                    <p className="text-sm text-muted-foreground">{label}</p>
-                    <p className="mt-1 text-2xl font-bold">{value}</p>
-                    <p className="text-xs text-muted-foreground">{sub}</p>
+                { label: "Total", value: callLogs.length, icon: <PhoneCall className="size-4" />, color: "" },
+                { label: "Completed", value: callLogs.filter((c) => c.status === "completed").length, icon: <CheckCircle2 className="size-4" />, color: "text-green-600" },
+                { label: "Missed", value: callLogs.filter((c) => c.status === "missed").length, icon: <PhoneOff className="size-4" />, color: "text-red-500" },
+                { label: "Voicemails", value: callLogs.filter((c) => c.status === "voicemail").length, icon: <Voicemail className="size-4" />, color: "text-amber-500" },
+              ].map(({ label, value, icon, color }) => (
+                <Card key={label} className="py-0">
+                  <CardContent className="flex items-center gap-3 py-4">
+                    <div className={`flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted ${color}`}>{icon}</div>
+                    <div>
+                      <p className="text-2xl font-bold leading-none">{value}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Call History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DataTable columns={callColumns} data={filteredCalls} searchColumn="clientName" searchPlaceholder="Search calls…" />
-              </CardContent>
-            </Card>
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative flex-1 min-w-48">
+                <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name or number…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <X className="size-4" />
+                  </button>
+                )}
+              </div>
+              <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
+                <SelectTrigger className="w-36 gap-1.5">
+                  <Filter className="size-3.5 text-muted-foreground" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All types</SelectItem>
+                  <SelectItem value="inbound">Inbound</SelectItem>
+                  <SelectItem value="outbound">Outbound</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+                <SelectTrigger className="w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="missed">Missed</SelectItem>
+                  <SelectItem value="voicemail">Voicemail</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+              {(typeFilter !== "all" || statusFilter !== "all" || searchQuery) && (
+                <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => { setTypeFilter("all"); setStatusFilter("all"); setSearchQuery(""); }}>
+                  <X className="size-3.5" /> Clear
+                </Button>
+              )}
+              <span className="ml-auto text-xs text-muted-foreground">{filteredCalls.length} result{filteredCalls.length !== 1 ? "s" : ""}</span>
+            </div>
+
+            {/* Split panel: list + detail */}
+            <div className="flex gap-4 min-h-[520px]">
+              {/* Call list */}
+              <div className="flex-1 min-w-0">
+                <Card className="h-full">
+                  <ScrollArea className="h-[560px]">
+                    {filteredCalls.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                        <PhoneCall className="size-10 mb-3 opacity-25" />
+                        <p className="text-sm">No calls match your filters</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y">
+                        {filteredCalls.map((call) => {
+                          const isSelected = selectedCall?.id === call.id;
+                          const statusStyles = {
+                            completed: "text-green-600 bg-green-50",
+                            missed:    "text-red-500 bg-red-50",
+                            voicemail: "text-amber-600 bg-amber-50",
+                            failed:    "text-red-500 bg-red-50",
+                          } as const;
+                          const d = new Date(call.timestamp);
+                          const isToday = d.toDateString() === new Date().toDateString();
+                          return (
+                            <button
+                              key={call.id}
+                              onClick={() => setSelectedCall(isSelected ? null : call)}
+                              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 ${isSelected ? "bg-primary/5 border-l-2 border-primary" : ""}`}
+                            >
+                              {/* direction icon */}
+                              <div className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${call.type === "inbound" ? "bg-green-50 text-green-600" : "bg-blue-50 text-blue-600"}`}>
+                                {call.type === "inbound" ? <PhoneIncoming className="size-4" /> : <PhoneOutgoing className="size-4" />}
+                              </div>
+
+                              {/* contact info */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-sm font-semibold truncate ${!call.clientName ? "text-muted-foreground" : ""}`}>
+                                    {call.clientName ?? "Unknown Caller"}
+                                  </span>
+                                  {call.aiHandled && <Bot className="size-3 shrink-0 text-violet-500" />}
+                                  {call.recordingUrl && <Mic className="size-3 shrink-0 text-muted-foreground/60" />}
+                                </div>
+                                <p className="font-mono text-[11px] text-muted-foreground truncate">{call.from}</p>
+                              </div>
+
+                              {/* status + time */}
+                              <div className="shrink-0 text-right space-y-1">
+                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${statusStyles[call.status]}`}>
+                                  {call.status === "completed" && <CheckCircle2 className="size-2.5" />}
+                                  {call.status === "missed" && <PhoneOff className="size-2.5" />}
+                                  {call.status === "voicemail" && <Voicemail className="size-2.5" />}
+                                  {call.status}
+                                </span>
+                                <div className="text-[10px] text-muted-foreground">
+                                  {isToday ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString([], { month: "short", day: "numeric" })}
+                                </div>
+                              </div>
+                              <ChevronRight className={`size-4 shrink-0 text-muted-foreground/40 transition-transform ${isSelected ? "rotate-90 text-primary" : ""}`} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </ScrollArea>
+                </Card>
+              </div>
+
+              {/* Detail panel */}
+              {selectedCall ? (
+                <div className="w-[380px] shrink-0">
+                  <CallLogDetail
+                    call={selectedCall}
+                    onClose={() => setSelectedCall(null)}
+                  />
+                </div>
+              ) : (
+                <div className="w-[380px] shrink-0 flex items-center justify-center rounded-xl border border-dashed text-muted-foreground">
+                  <div className="text-center space-y-2">
+                    <PhoneCall className="size-8 mx-auto opacity-20" />
+                    <p className="text-sm">Select a call to view details</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           {/* Voicemail */}

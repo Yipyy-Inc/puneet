@@ -12,7 +12,6 @@ import { Modal } from "@/components/ui/modal";
 import { useSettings } from "@/hooks/use-settings";
 import {
   Bed,
-  LogIn,
   DollarSign,
   BookOpen,
   CreditCard,
@@ -21,6 +20,8 @@ import {
   FileText,
   Building2,
   UtensilsCrossed,
+  Package,
+  ClipboardList,
 } from "lucide-react";
 
 const tabs = [
@@ -35,14 +36,14 @@ const tabs = [
     icon: Building2,
   },
   {
-    name: "Check-In/Out",
-    href: "/facility/dashboard/services/boarding/check-in",
-    icon: LogIn,
-  },
-  {
     name: "Rates",
     href: "/facility/dashboard/services/boarding/rates",
     icon: DollarSign,
+  },
+  {
+    name: "Packages",
+    href: "/facility/dashboard/services/boarding/packages",
+    icon: Package,
   },
   {
     name: "Guest Journals",
@@ -63,6 +64,11 @@ const tabs = [
     name: "Operations",
     href: "/facility/dashboard/services/boarding/ops",
     icon: LayoutGrid,
+  },
+  {
+    name: "Tasks",
+    href: "/facility/dashboard/services/boarding/tasks",
+    icon: ClipboardList,
   },
   {
     name: "Report Cards",

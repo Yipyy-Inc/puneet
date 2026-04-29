@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  Camera,
   PawPrint,
   Gamepad2,
   Scissors,
@@ -341,12 +340,6 @@ export function MedicationTaskRow({
             <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
               {task.frequencyNote}
             </span>
-          )}
-          {task.requiresPhotoProof && (
-            <div className="mt-1 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
-              <Camera className="size-3" />
-              <span>Photo proof required</span>
-            </div>
           )}
         </div>
         <div className="shrink-0">

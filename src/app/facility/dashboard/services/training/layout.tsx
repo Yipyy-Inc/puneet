@@ -14,6 +14,8 @@ import {
   LogOut,
   FileText,
   DollarSign,
+  Package,
+  ClipboardList,
 } from "lucide-react";
 
 const tabs = [
@@ -51,6 +53,16 @@ const tabs = [
     name: "Rates",
     href: "/facility/dashboard/services/training/rates",
     icon: DollarSign,
+  },
+  {
+    name: "Packages",
+    href: "/facility/dashboard/services/training/packages",
+    icon: Package,
+  },
+  {
+    name: "Tasks",
+    href: "/facility/dashboard/services/training/tasks",
+    icon: ClipboardList,
   },
   {
     name: "Report Cards",
