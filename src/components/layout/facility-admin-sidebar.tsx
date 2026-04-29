@@ -254,8 +254,8 @@ export function FacilitySidebar() {
             disabled: false,
           },
           {
-            title: "Services & Pricing",
-            url: "/facility/services",
+            title: "Memberships",
+            url: "/facility/services/memberships",
             icon: Tags,
             disabled: false,
           },

@@ -8,7 +8,6 @@ import { facilities } from "@/data/facilities";
 import type { Booking } from "@/types/booking";
 import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
 import { Card, CardContent } from "@/components/ui/card";
-import { ClickableStatCard } from "@/components/ui/ClickableStatCard";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
@@ -31,7 +30,10 @@ import {
   Hash,
   User,
   CircleDot,
+  TrendingUp,
+  Hourglass,
 } from "lucide-react";
+import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { getYipyyGoDisplayStatusForBooking } from "@/data/yipyygo-forms";
 import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
@@ -743,125 +745,119 @@ export default function FacilityBookingsPage() {
   };
 
   return (
-    <div className="flex-1 space-y-4 p-4 pt-6">
+    <div className="flex-1 space-y-5 p-4 pt-6">
       {/* Header */}
       <div className="space-y-3">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Bookings</h2>
-          <p className="text-muted-foreground text-sm">{facility.name}</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">Bookings</h2>
+            <p className="text-muted-foreground text-sm">{facility.name}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <BookingDateRangeFilter
+              rangeStart={filterStart}
+              rangeEnd={filterEnd}
+              onChange={(start, end) => {
+                setFilterStart(start);
+                setFilterEnd(end);
+              }}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportBookingsToCSV(getDataForTab())}
+            >
+              <Download className="mr-2 size-4" />
+              Export
+            </Button>
+          </div>
         </div>
         <LocationFilterBanner />
-        <div className="flex flex-wrap items-center gap-2">
-          <BookingDateRangeFilter
-            rangeStart={filterStart}
-            rangeEnd={filterEnd}
-            onChange={(start, end) => {
-              setFilterStart(start);
-              setFilterEnd(end);
-            }}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => exportBookingsToCSV(getDataForTab())}
-          >
-            <Download className="mr-2 size-4" />
-            Export
-          </Button>
-        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <ClickableStatCard
-          title="All Bookings"
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <KpiTile
+          label="All Bookings"
           value={totalBookings}
-          subtitle="Total bookings"
+          hint="Total on record"
           icon={Calendar}
-          onClick={() => setActiveTab(activeTab === "all" ? "all" : "all")}
-          isActive={activeTab === "all"}
+          tone="indigo"
+          active={activeTab === "all"}
+          onClick={() => setActiveTab("all")}
         />
-        <ClickableStatCard
-          title="Today"
+        <KpiTile
+          label="Today"
           value={todayBookings.length}
-          subtitle="Active today"
+          hint="Active today"
           icon={CalendarDays}
+          tone="amber"
+          active={activeTab === "today"}
           onClick={() => setActiveTab(activeTab === "today" ? "all" : "today")}
-          isActive={activeTab === "today"}
         />
-        <ClickableStatCard
-          title="Completed"
-          value={completedBookings}
-          subtitle="Successfully done"
-          icon={CheckCircle}
-          onClick={() =>
-            setActiveTab(activeTab === "completed" ? "all" : "completed")
-          }
-          isActive={activeTab === "completed"}
+        <KpiTile
+          label="Upcoming"
+          value={upcomingBookings.length}
+          hint="Scheduled ahead"
+          icon={Hourglass}
+          tone="violet"
+          active={activeTab === "upcoming"}
+          onClick={() => setActiveTab(activeTab === "upcoming" ? "all" : "upcoming")}
         />
-        <ClickableStatCard
-          title="Pending"
+        <KpiTile
+          label="Pending"
           value={pendingBookings.length}
-          subtitle="Awaiting action"
+          hint="Awaiting action"
           icon={Clock}
-          onClick={() =>
-            setActiveTab(activeTab === "pending" ? "all" : "pending")
-          }
-          isActive={activeTab === "pending"}
+          tone="rose"
+          active={activeTab === "pending"}
+          onClick={() => setActiveTab(activeTab === "pending" ? "all" : "pending")}
         />
-        <ClickableStatCard
-          title="Revenue"
+        <KpiTile
+          label="Revenue"
           value={`$${totalRevenue.toLocaleString()}`}
-          subtitle="Total received"
-          icon={DollarSign}
-          valueClassName="price-value"
+          hint={`$${pendingRevenue.toFixed(0)} pending`}
+          icon={TrendingUp}
+          tone="emerald"
         />
       </div>
 
       {/* Table View */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-auto">
-          <TabsTrigger value="all">
-            All
-            <span className="text-muted-foreground ml-1.5 text-xs">
-              {allBookings.length}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="today">
-            Today
-            <span className="text-muted-foreground ml-1.5 text-xs">
-              {todayBookings.length}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="upcoming">
-            Upcoming
-            <span className="text-muted-foreground ml-1.5 text-xs">
-              {upcomingBookings.length}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="past">
-            Past
-            <span className="text-muted-foreground ml-1.5 text-xs">
-              {pastBookings.length}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="pending">
-            Pending
-            <span className="text-muted-foreground ml-1.5 text-xs">
-              {pendingBookings.length}
-            </span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex items-center gap-3 overflow-x-auto pb-1">
+          <TabsList className="h-9 shrink-0 gap-0.5 bg-muted/60 p-1">
+            {(
+              [
+                { value: "all", label: "All", count: allBookings.length },
+                { value: "today", label: "Today", count: todayBookings.length },
+                { value: "upcoming", label: "Upcoming", count: upcomingBookings.length },
+                { value: "past", label: "Past", count: pastBookings.length },
+                { value: "pending", label: "Pending", count: pendingBookings.length },
+              ] as const
+            ).map(({ value, label, count }) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                className="h-7 gap-1.5 px-3 text-xs font-medium"
+              >
+                {label}
+                <span className="inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-background/70 px-1 text-[10px] font-semibold tabular-nums text-muted-foreground shadow-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                  {count}
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
         <TabsContent value={activeTab} className="mt-4">
           {getDataForTab().length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-16">
-                <CalendarX className="text-muted-foreground/50 mb-4 h-16 w-16" />
-                <h3 className="mb-2 text-lg font-semibold">
-                  {"No bookings found"}
-                </h3>
-                <p className="text-muted-foreground max-w-md text-center">
-                  {"There are no bookings in this category yet."}
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-20">
+                <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-muted/60">
+                  <CalendarX className="size-8 text-muted-foreground/50" />
+                </div>
+                <h3 className="mb-1.5 text-base font-semibold">No bookings found</h3>
+                <p className="text-muted-foreground max-w-xs text-center text-sm">
+                  There are no bookings in this category yet.
                 </p>
               </CardContent>
             </Card>

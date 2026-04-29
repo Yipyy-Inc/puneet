@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -20,19 +18,72 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import {
   CreditCard,
   Wallet,
   Gift,
   DollarSign,
-  AlertCircle,
+  Smartphone,
+  Monitor,
+  Wifi,
+  ChevronLeft,
+  CheckCircle,
 } from "lucide-react";
 import { clients } from "@/data/clients";
 import { paymentMethods, giftCards, customerCredits } from "@/data/payments";
+
+type PaymentMethodKey =
+  | "clover_terminal"
+  | "pay_on_phone"
+  | "online_card"
+  | "cash"
+  | "gift_card";
+
+interface PaymentMethodOption {
+  key: PaymentMethodKey;
+  label: string;
+  sub: string;
+  icon: React.ElementType;
+  badge?: string;
+}
+
+const METHOD_OPTIONS: PaymentMethodOption[] = [
+  {
+    key: "clover_terminal",
+    label: "Clover Terminal",
+    sub: "Swipe, tap, or insert at the counter",
+    icon: Monitor,
+    badge: "In-person",
+  },
+  {
+    key: "pay_on_phone",
+    label: "Pay on Phone",
+    sub: "Send a payment link to the client's phone",
+    icon: Smartphone,
+    badge: "Remote",
+  },
+  {
+    key: "online_card",
+    label: "Online Card",
+    sub: "Enter card details manually",
+    icon: CreditCard,
+  },
+  {
+    key: "cash",
+    label: "Cash",
+    sub: "Record a cash payment",
+    icon: Wallet,
+  },
+  {
+    key: "gift_card",
+    label: "Gift Card",
+    sub: "Redeem a gift card balance",
+    icon: Gift,
+  },
+];
 
 interface PaymentResult {
   id: string;
@@ -83,16 +134,18 @@ export function TakePaymentModal({
   invoiceId,
   onSuccess,
 }: TakePaymentModalProps) {
-  const [paymentMethod, setPaymentMethod] = useState<
-    "card" | "cash" | "gift_card"
-  >("card");
+  const [step, setStep] = useState<"method" | "details">("method");
+  const [selectedMethod, setSelectedMethod] =
+    useState<PaymentMethodKey | null>(null);
+
+  // Details form
   const [selectedClient, setSelectedClient] = useState(prefilledClient || 0);
   const [amount, setAmount] = useState(prefilledAmount || 0);
   const [tipAmount, setTipAmount] = useState(0);
   const [description, setDescription] = useState(prefilledDescription || "");
   const [notes, setNotes] = useState("");
 
-  // Card payment
+  // Online card
   const [useNewCard, setUseNewCard] = useState(true);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [cardNumber, setCardNumber] = useState("");
@@ -111,14 +164,12 @@ export function TakePaymentModal({
   const [applyCredit, setApplyCredit] = useState(false);
   const [creditAmount, setCreditAmount] = useState(0);
 
-  const facilityClients = clients.filter((c) => c.id >= 15); // Simplified
-
-  // Get saved payment methods for selected client
+  const facilityClients = clients
+    .filter((c) => c.id >= 15)
+    .filter((c, i, arr) => arr.findIndex((x) => x.id === c.id) === i);
   const clientPaymentMethods = paymentMethods.filter(
     (pm) => pm.clientId === selectedClient,
   );
-
-  // Get available credits for selected client
   const clientCredits = customerCredits.filter(
     (c) =>
       c.clientId === selectedClient &&
@@ -130,12 +181,20 @@ export function TakePaymentModal({
     0,
   );
 
-  // Calculate totals
   const subtotal = amount;
   const creditApplied = applyCredit
     ? Math.min(creditAmount, totalAvailableCredit, subtotal + tipAmount)
     : 0;
   const total = subtotal + tipAmount - creditApplied;
+
+  const handleSelectMethod = (key: PaymentMethodKey) => {
+    setSelectedMethod(key);
+    setStep("details");
+  };
+
+  const handleBack = () => {
+    setStep("method");
+  };
 
   const handleGiftCardLookup = () => {
     const gc = giftCards.find(
@@ -147,9 +206,7 @@ export function TakePaymentModal({
     if (gc) {
       setSelectedGiftCard(gc);
       if (gc.currentBalance < total) {
-        alert(
-          `Gift card balance ($${gc.currentBalance.toFixed(2)}) is less than total amount`,
-        );
+        alert(`Gift card balance ($${gc.currentBalance.toFixed(2)}) is less than total`);
       }
     } else {
       alert("Gift card not found or inactive");
@@ -158,45 +215,30 @@ export function TakePaymentModal({
   };
 
   const handleSubmit = () => {
-    if (!selectedClient) {
-      alert("Please select a client");
-      return;
+    if (!selectedClient) return alert("Please select a client");
+    if (amount <= 0) return alert("Please enter a valid amount");
+    if (!description.trim()) return alert("Please enter a description");
+
+    if (selectedMethod === "online_card" && useNewCard) {
+      if (!cardNumber || !cardExpiry || !cardCvc || !cardholderName)
+        return alert("Please fill in all card details");
     }
-    if (amount <= 0) {
-      alert("Please enter a valid amount");
-      return;
+    if (selectedMethod === "online_card" && !useNewCard) {
+      if (!selectedPaymentMethod) return alert("Please select a saved card");
     }
-    if (!description.trim()) {
-      alert("Please enter a description");
-      return;
+    if (selectedMethod === "gift_card") {
+      if (!selectedGiftCard) return alert("Please look up a valid gift card");
+      if (selectedGiftCard.currentBalance < total)
+        return alert("Insufficient gift card balance");
     }
 
-    // Validate payment method
-    if (paymentMethod === "card") {
-      if (useNewCard) {
-        if (!cardNumber || !cardExpiry || !cardCvc || !cardholderName) {
-          alert("Please fill in all card details");
-          return;
-        }
-        // In real app: validate card format, expiry, etc.
-      } else {
-        if (!selectedPaymentMethod) {
-          alert("Please select a saved card");
-          return;
-        }
-      }
-    } else if (paymentMethod === "gift_card") {
-      if (!selectedGiftCard) {
-        alert("Please look up and select a valid gift card");
-        return;
-      }
-      if (selectedGiftCard.currentBalance < total) {
-        alert("Insufficient gift card balance");
-        return;
-      }
-    }
+    const apiMethod: "card" | "cash" | "gift_card" =
+      selectedMethod === "gift_card"
+        ? "gift_card"
+        : selectedMethod === "cash"
+          ? "cash"
+          : "card";
 
-    // Create payment object
     const paymentId = crypto.randomUUID();
     const payment: PaymentResult = {
       id: `pay-${paymentId}`,
@@ -207,23 +249,22 @@ export function TakePaymentModal({
       amount: subtotal,
       tipAmount: tipAmount > 0 ? tipAmount : undefined,
       totalAmount: total,
-      currency: "USD" as const,
-      paymentMethod,
-      status: "completed" as const,
+      currency: "USD",
+      paymentMethod: apiMethod,
+      status: "completed",
       description,
       notes: notes || undefined,
       createdAt: new Date().toISOString(),
-      processedBy: "Current User", // Would come from auth
+      processedBy: "Current User",
       processedById: 1,
-      // Card details
-      ...(paymentMethod === "card" &&
+      ...(apiMethod === "card" &&
         useNewCard && {
           cardBrand: detectCardBrand(cardNumber),
           cardLast4: cardNumber.slice(-4),
-          stripeChargeId: `ch_${crypto.randomUUID().substring(0, 7)}`,
-          stripePaymentIntentId: `pi_${crypto.randomUUID().substring(0, 7)}`,
+          stripeChargeId: `ch_${paymentId.substring(0, 7)}`,
+          stripePaymentIntentId: `pi_${paymentId.substring(0, 7)}`,
         }),
-      ...(paymentMethod === "card" &&
+      ...(apiMethod === "card" &&
         !useNewCard && {
           cardBrand: clientPaymentMethods.find(
             (pm) => pm.id === selectedPaymentMethod,
@@ -231,33 +272,21 @@ export function TakePaymentModal({
           cardLast4: clientPaymentMethods.find(
             (pm) => pm.id === selectedPaymentMethod,
           )?.cardLast4,
-          stripeChargeId: `ch_${crypto.randomUUID().substring(0, 7)}`,
-          stripePaymentIntentId: `pi_${crypto.randomUUID().substring(0, 7)}`,
+          stripeChargeId: `ch_${paymentId.substring(0, 7)}`,
         }),
-      // Gift card
-      ...(paymentMethod === "gift_card" && {
-        giftCardId: selectedGiftCard?.id,
-      }),
-      // Credit
-      ...(creditApplied > 0 && {
-        creditUsed: creditApplied,
-      }),
+      ...(apiMethod === "gift_card" && { giftCardId: selectedGiftCard?.id }),
+      ...(creditApplied > 0 && { creditUsed: creditApplied }),
       receiptUrl: `/receipts/pay-${paymentId}.pdf`,
     };
 
-    console.log("Payment processed:", payment);
-
-    if (onSuccess) {
-      onSuccess(payment);
-    }
-
-    // Reset form
+    onSuccess?.(payment);
     resetForm();
     onOpenChange(false);
   };
 
   const resetForm = () => {
-    setPaymentMethod("card");
+    setStep("method");
+    setSelectedMethod(null);
     if (!prefilledClient) setSelectedClient(0);
     if (!prefilledAmount) setAmount(0);
     if (!prefilledDescription) setDescription("");
@@ -285,503 +314,486 @@ export function TakePaymentModal({
 
   const formatCardNumber = (value: string) => {
     const cleaned = value.replace(/\s/g, "");
-    const chunks = cleaned.match(/.{1,4}/g) || [];
-    return chunks.join(" ");
+    return (cleaned.match(/.{1,4}/g) || []).join(" ");
   };
 
   const formatExpiry = (value: string) => {
     const cleaned = value.replace(/\D/g, "");
-    if (cleaned.length >= 2) {
-      return cleaned.slice(0, 2) + "/" + cleaned.slice(2, 4);
-    }
-    return cleaned;
+    return cleaned.length >= 2
+      ? cleaned.slice(0, 2) + "/" + cleaned.slice(2, 4)
+      : cleaned;
   };
 
+  const activeMethodOption = METHOD_OPTIONS.find((m) => m.key === selectedMethod);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) resetForm();
+        onOpenChange(v);
+      }}
+    >
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="size-5" />
-            Take Payment
+          <DialogTitle className="flex items-center gap-2 text-base">
+            {step === "details" && (
+              <button
+                onClick={handleBack}
+                className="text-muted-foreground hover:text-foreground mr-1 rounded p-0.5 transition-colors"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+            )}
+            <DollarSign className="size-4" />
+            {step === "method" ? "Take Payment" : `Pay via ${activeMethodOption?.label}`}
           </DialogTitle>
-          <DialogDescription>
-            Process a payment for a customer
-          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Client & Amount Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold">
-                Payment Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="client">
-                    Client <span className="text-destructive">*</span>
-                  </Label>
+        {/* ── Step 1: method picker ── */}
+        {step === "method" && (
+          <div className="space-y-2 py-2">
+            <p className="text-muted-foreground text-xs">
+              Choose how the customer will pay
+            </p>
+            <div className="grid gap-2">
+              {METHOD_OPTIONS.map(({ key, label, sub, icon: Icon, badge }) => (
+                <button
+                  key={key}
+                  onClick={() => handleSelectMethod(key)}
+                  className="hover:bg-accent flex items-center gap-4 rounded-lg border px-4 py-3 text-left transition-colors"
+                >
+                  <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-md">
+                    <Icon className="size-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{label}</span>
+                      {badge && (
+                        <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                          {badge}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground text-xs">{sub}</p>
+                  </div>
+                  <ChevronLeft className="text-muted-foreground size-4 rotate-180" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 2: details ── */}
+        {step === "details" && (
+          <div className="space-y-5 py-2">
+            {/* Client & amount */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  Client <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={selectedClient.toString()}
+                  onValueChange={(v) => setSelectedClient(parseInt(v))}
+                  disabled={!!prefilledClient}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Select client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {facilityClients.map((c) => (
+                      <SelectItem key={c.id} value={c.id.toString()}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  Amount <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <DollarSign className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={amount || ""}
+                    onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                    className="h-8 pl-7 text-sm"
+                    placeholder="0.00"
+                    disabled={!!prefilledAmount}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">
+                Description <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g. Walk-in grooming, custom service…"
+                className="h-8 text-sm"
+                disabled={!!prefilledDescription}
+              />
+            </div>
+
+            <Separator />
+
+            {/* Method-specific fields */}
+            {selectedMethod === "clover_terminal" && (
+              <div className="flex flex-col items-center gap-3 py-2 text-center">
+                <div className="bg-muted flex size-14 items-center justify-center rounded-full">
+                  <Wifi className="text-muted-foreground size-6" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Waiting for terminal…</p>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    Present or tap the card on the Clover device. The payment
+                    will confirm automatically.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {selectedMethod === "pay_on_phone" && (
+              <div className="space-y-3">
+                <div className="flex flex-col items-center gap-3 py-2 text-center">
+                  <div className="bg-muted flex size-14 items-center justify-center rounded-full">
+                    <Smartphone className="text-muted-foreground size-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Send payment link</p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      The client will receive an SMS or email with a secure
+                      checkout link.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Send to</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Phone number or email"
+                      className="h-8 text-sm"
+                      defaultValue={
+                        selectedClient
+                          ? clients.find((c) => c.id === selectedClient)?.email
+                          : ""
+                      }
+                    />
+                    <Button size="sm" className="h-8 shrink-0">
+                      Send Link
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedMethod === "online_card" && (
+              <div className="space-y-3">
+                {clientPaymentMethods.length > 0 && (
+                  <div className="flex gap-4 text-sm">
+                    <label className="flex cursor-pointer items-center gap-1.5">
+                      <input
+                        type="radio"
+                        name="card-option"
+                        checked={!useNewCard}
+                        onChange={() => setUseNewCard(false)}
+                        className="accent-primary"
+                      />
+                      Saved card
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-1.5">
+                      <input
+                        type="radio"
+                        name="card-option"
+                        checked={useNewCard}
+                        onChange={() => setUseNewCard(true)}
+                        className="accent-primary"
+                      />
+                      New card
+                    </label>
+                  </div>
+                )}
+
+                {!useNewCard && (
                   <Select
-                    value={selectedClient.toString()}
-                    onValueChange={(value) =>
-                      setSelectedClient(parseInt(value))
-                    }
-                    disabled={!!prefilledClient}
+                    value={selectedPaymentMethod}
+                    onValueChange={setSelectedPaymentMethod}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select client" />
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Select saved card" />
                     </SelectTrigger>
                     <SelectContent>
-                      {facilityClients.map((client) => (
-                        <SelectItem
-                          key={client.id}
-                          value={client.id.toString()}
-                        >
-                          {client.name} - {client.email}
+                      {clientPaymentMethods.map((pm) => (
+                        <SelectItem key={pm.id} value={pm.id}>
+                          <span className="uppercase">{pm.cardBrand}</span>
+                          {" ···· "}
+                          {pm.cardLast4}
+                          {pm.isDefault && (
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              Default
+                            </Badge>
+                          )}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="amount">
-                    Amount <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="relative">
-                    <DollarSign className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                    <Input
-                      id="amount"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={amount || ""}
-                      onChange={(e) =>
-                        setAmount(parseFloat(e.target.value) || 0)
-                      }
-                      className="pl-9"
-                      placeholder="0.00"
-                      disabled={!!prefilledAmount}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">
-                  Description <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g., Daycare - Buddy"
-                  disabled={!!prefilledDescription}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="tip">Tip (Optional)</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <DollarSign className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                    <Input
-                      id="tip"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={tipAmount || ""}
-                      onChange={(e) =>
-                        setTipAmount(parseFloat(e.target.value) || 0)
-                      }
-                      className="pl-9"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setTipAmount(amount * 0.15)}
-                  >
-                    15%
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setTipAmount(amount * 0.2)}
-                  >
-                    20%
-                  </Button>
-                </div>
-              </div>
-
-              {/* Apply Credit */}
-              {totalAvailableCredit > 0 && (
-                <div className="space-y-2 rounded-lg border border-green-200 bg-green-50 p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="apply-credit"
-                        checked={applyCredit}
-                        onCheckedChange={(checked) => {
-                          setApplyCredit(!!checked);
-                          if (checked) {
-                            setCreditAmount(
-                              Math.min(
-                                totalAvailableCredit,
-                                subtotal + tipAmount,
-                              ),
-                            );
-                          } else {
-                            setCreditAmount(0);
-                          }
-                        }}
+                {useNewCard && (
+                  <div className="space-y-2.5 rounded-lg border p-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Card number</Label>
+                      <Input
+                        placeholder="1234 5678 9012 3456"
+                        value={formatCardNumber(cardNumber)}
+                        onChange={(e) =>
+                          setCardNumber(e.target.value.replace(/\s/g, ""))
+                        }
+                        maxLength={19}
+                        className="h-8 text-sm font-mono"
                       />
-                      <Label
-                        htmlFor="apply-credit"
-                        className="text-sm font-medium"
-                      >
-                        Apply Customer Credit
-                      </Label>
                     </div>
-                    <Badge variant="outline" className="bg-white">
-                      ${totalAvailableCredit.toFixed(2)} available
-                    </Badge>
-                  </div>
-                  {applyCredit && (
-                    <div className="mt-2 space-y-2">
-                      <Label htmlFor="credit-amount" className="text-sm">
-                        Credit Amount
-                      </Label>
-                      <div className="relative">
-                        <DollarSign className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Expiry</Label>
                         <Input
-                          id="credit-amount"
-                          type="number"
-                          min="0"
-                          max={Math.min(
-                            totalAvailableCredit,
-                            subtotal + tipAmount,
-                          )}
-                          step="0.01"
-                          value={creditAmount || ""}
+                          placeholder="MM/YY"
+                          value={formatExpiry(cardExpiry)}
                           onChange={(e) =>
-                            setCreditAmount(
-                              Math.min(
-                                parseFloat(e.target.value) || 0,
-                                totalAvailableCredit,
-                                subtotal + tipAmount,
-                              ),
-                            )
+                            setCardExpiry(e.target.value.replace(/\D/g, ""))
                           }
-                          className="pl-9"
+                          maxLength={5}
+                          className="h-8 text-sm font-mono"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">CVC</Label>
+                        <Input
+                          placeholder="···"
+                          value={cardCvc}
+                          onChange={(e) =>
+                            setCardCvc(e.target.value.replace(/\D/g, ""))
+                          }
+                          maxLength={4}
+                          type="password"
+                          className="h-8 text-sm font-mono"
                         />
                       </div>
                     </div>
-                  )}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Cardholder name</Label>
+                      <Input
+                        placeholder="Full name on card"
+                        value={cardholderName}
+                        onChange={(e) => setCardholderName(e.target.value)}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <label className="flex cursor-pointer items-center gap-2 text-xs">
+                      <Checkbox
+                        checked={saveCard}
+                        onCheckedChange={(v) => setSaveCard(!!v)}
+                        className="size-3.5"
+                      />
+                      Save card for future payments
+                    </label>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {selectedMethod === "cash" && (
+              <div className="flex items-center gap-3 rounded-lg border p-4">
+                <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-md">
+                  <Wallet className="size-5" />
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <div>
+                  <p className="text-sm font-medium">Cash payment</p>
+                  <p className="text-muted-foreground text-xs">
+                    Confirm once you have received the cash from the client.
+                  </p>
+                </div>
+              </div>
+            )}
 
-          {/* Payment Method Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold">
-                Payment Method
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Tabs
-                value={paymentMethod}
-                onValueChange={(v) =>
-                  setPaymentMethod(v as "card" | "cash" | "gift_card")
-                }
-              >
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="card">
-                    <CreditCard className="mr-2 size-4" />
-                    Card
-                  </TabsTrigger>
-                  <TabsTrigger value="cash">
-                    <Wallet className="mr-2 size-4" />
-                    Cash
-                  </TabsTrigger>
-                  <TabsTrigger value="gift_card">
-                    <Gift className="mr-2 size-4" />
-                    Gift Card
-                  </TabsTrigger>
-                </TabsList>
-
-                {/* Card Payment */}
-                <TabsContent value="card" className="space-y-4">
-                  {clientPaymentMethods.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            id="use-saved"
-                            name="card-option"
-                            checked={!useNewCard}
-                            onChange={() => setUseNewCard(false)}
-                          />
-                          <Label htmlFor="use-saved">Use Saved Card</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            id="use-new"
-                            name="card-option"
-                            checked={useNewCard}
-                            onChange={() => setUseNewCard(true)}
-                          />
-                          <Label htmlFor="use-new">New Card</Label>
-                        </div>
-                      </div>
-
-                      {!useNewCard && (
-                        <Select
-                          value={selectedPaymentMethod}
-                          onValueChange={setSelectedPaymentMethod}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a saved card" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {clientPaymentMethods.map((pm) => (
-                              <SelectItem key={pm.id} value={pm.id}>
-                                <div className="flex items-center gap-2">
-                                  <CreditCard className="size-4" />
-                                  <span className="uppercase">
-                                    {pm.cardBrand}
-                                  </span>
-                                  <span>•••• {pm.cardLast4}</span>
-                                  <span className="text-muted-foreground text-xs">
-                                    {pm.cardExpMonth}/{pm.cardExpYear}
-                                  </span>
-                                  {pm.isDefault && (
-                                    <Badge variant="outline">Default</Badge>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+            {selectedMethod === "gift_card" && (
+              <div className="space-y-2.5">
+                <Label className="text-xs">Gift card code</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="GIFT-XXXX-XXXX"
+                    value={giftCardCode}
+                    onChange={(e) =>
+                      setGiftCardCode(e.target.value.toUpperCase())
+                    }
+                    className="h-8 font-mono text-sm"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8"
+                    onClick={handleGiftCardLookup}
+                  >
+                    Verify
+                  </Button>
+                </div>
+                {selectedGiftCard && (
+                  <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950/30">
+                    <CheckCircle className="size-4 shrink-0 text-green-600" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{selectedGiftCard.code}</p>
+                      {selectedGiftCard.recipientName && (
+                        <p className="text-muted-foreground text-xs">
+                          {selectedGiftCard.recipientName}
+                        </p>
                       )}
                     </div>
-                  )}
-
-                  {useNewCard && (
-                    <div className="space-y-4 rounded-lg border p-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="card-number">Card Number</Label>
-                        <Input
-                          id="card-number"
-                          placeholder="1234 5678 9012 3456"
-                          value={formatCardNumber(cardNumber)}
-                          onChange={(e) =>
-                            setCardNumber(e.target.value.replace(/\s/g, ""))
-                          }
-                          maxLength={19}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="expiry">Expiry Date</Label>
-                          <Input
-                            id="expiry"
-                            placeholder="MM/YY"
-                            value={formatExpiry(cardExpiry)}
-                            onChange={(e) =>
-                              setCardExpiry(e.target.value.replace(/\D/g, ""))
-                            }
-                            maxLength={5}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="cvc">CVC</Label>
-                          <Input
-                            id="cvc"
-                            placeholder="123"
-                            value={cardCvc}
-                            onChange={(e) =>
-                              setCardCvc(e.target.value.replace(/\D/g, ""))
-                            }
-                            maxLength={4}
-                            type="password"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="cardholder">Cardholder Name</Label>
-                        <Input
-                          id="cardholder"
-                          placeholder="John Doe"
-                          value={cardholderName}
-                          onChange={(e) => setCardholderName(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="save-card"
-                          checked={saveCard}
-                          onCheckedChange={(checked) => setSaveCard(!!checked)}
-                        />
-                        <Label htmlFor="save-card" className="text-sm">
-                          Save this card for future use
-                        </Label>
-                      </div>
-
-                      <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                        <AlertCircle className="mt-0.5 size-4 text-blue-600" />
-                        <p className="text-xs text-blue-800">
-                          Payments are securely processed through Stripe. Card
-                          details are never stored on our servers.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-
-                {/* Cash Payment */}
-                <TabsContent value="cash" className="space-y-4">
-                  <div className="bg-muted/50 rounded-lg p-6 text-center">
-                    <Wallet className="text-muted-foreground mx-auto mb-3 size-12" />
-                    <h4 className="mb-1 font-semibold">Cash Payment</h4>
-                    <p className="text-muted-foreground text-sm">
-                      Record this transaction as a cash payment
+                    <p className="price-value text-sm font-semibold text-green-600 shrink-0">
+                      ${selectedGiftCard.currentBalance.toFixed(2)}
                     </p>
                   </div>
-                </TabsContent>
-
-                {/* Gift Card Payment */}
-                <TabsContent value="gift_card" className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="gift-card-code">Gift Card Code</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="gift-card-code"
-                          placeholder="GIFT-PAWS-2024-001"
-                          value={giftCardCode}
-                          onChange={(e) =>
-                            setGiftCardCode(e.target.value.toUpperCase())
-                          }
-                        />
-                        <Button type="button" onClick={handleGiftCardLookup}>
-                          Lookup
-                        </Button>
-                      </div>
-                    </div>
-
-                    {selectedGiftCard && (
-                      <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-                        <div className="mb-2 flex items-start justify-between">
-                          <div>
-                            <h4 className="font-semibold">
-                              {selectedGiftCard.code}
-                            </h4>
-                            <Badge variant="outline" className="mt-1">
-                              {selectedGiftCard.type}
-                            </Badge>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-2xl font-bold text-green-600">
-                              ${selectedGiftCard.currentBalance.toFixed(2)}
-                            </p>
-                            <p className="text-muted-foreground text-xs">
-                              Available Balance
-                            </p>
-                          </div>
-                        </div>
-                        {selectedGiftCard.recipientName && (
-                          <p className="text-muted-foreground text-sm">
-                            Recipient: {selectedGiftCard.recipientName}
-                          </p>
-                        )}
-                        {selectedGiftCard.currentBalance < total && (
-                          <div className="mt-3 rounded-sm border border-red-200 bg-red-50 p-2">
-                            <p className="text-sm text-red-800">
-                              ⚠️ Insufficient balance. This gift card cannot
-                              cover the full amount.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes (Optional)</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any additional notes..."
-              rows={2}
-            />
-          </div>
-
-          {/* Total Summary */}
-          <Card className="border-2">
-            <CardContent className="p-4">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm">Subtotal:</span>
-                  <span className="font-medium">${subtotal.toFixed(2)}</span>
-                </div>
-                {tipAmount > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-sm">Tip:</span>
-                    <span className="font-medium">
-                      +${tipAmount.toFixed(2)}
-                    </span>
-                  </div>
                 )}
-                {creditApplied > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span className="text-sm">Credit Applied:</span>
-                    <span className="font-medium">
-                      -${creditApplied.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between border-t pt-2">
-                  <span className="font-bold">Total to Charge:</span>
-                  <span className="text-2xl font-bold text-green-600">
-                    ${total.toFixed(2)}
-                  </span>
-                </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </Button>
-          <Button type="button" onClick={handleSubmit}>
-            <DollarSign className="mr-2 size-4" />
-            Process Payment ${total.toFixed(2)}
-          </Button>
-        </DialogFooter>
+            <Separator />
+
+            {/* Tip */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Tip (optional)</Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <DollarSign className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={tipAmount || ""}
+                    onChange={(e) =>
+                      setTipAmount(parseFloat(e.target.value) || 0)
+                    }
+                    className="h-8 pl-7 text-sm"
+                    placeholder="0.00"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => setTipAmount(parseFloat((amount * 0.15).toFixed(2)))}
+                >
+                  15%
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => setTipAmount(parseFloat((amount * 0.18).toFixed(2)))}
+                >
+                  18%
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => setTipAmount(parseFloat((amount * 0.2).toFixed(2)))}
+                >
+                  20%
+                </Button>
+              </div>
+            </div>
+
+            {/* Credit */}
+            {totalAvailableCredit > 0 && (
+              <label className="flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2.5">
+                <div className="flex items-center gap-2.5">
+                  <Checkbox
+                    checked={applyCredit}
+                    onCheckedChange={(v) => {
+                      setApplyCredit(!!v);
+                      setCreditAmount(
+                        v
+                          ? Math.min(totalAvailableCredit, subtotal + tipAmount)
+                          : 0,
+                      );
+                    }}
+                    className="size-3.5"
+                  />
+                  <span className="text-sm">Apply account credit</span>
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  ${totalAvailableCredit.toFixed(2)} available
+                </Badge>
+              </label>
+            )}
+
+            {/* Notes */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Notes (optional)</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Internal notes…"
+                rows={2}
+                className="resize-none text-sm"
+              />
+            </div>
+
+            {/* Total summary */}
+            <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-1.5">
+              {subtotal > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>${subtotal.toFixed(2)}</span>
+                </div>
+              )}
+              {tipAmount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Tip</span>
+                  <span>+${tipAmount.toFixed(2)}</span>
+                </div>
+              )}
+              {creditApplied > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Credit applied</span>
+                  <span>−${creditApplied.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between border-t pt-1.5">
+                <span className="font-semibold">Total</span>
+                <span className="price-value text-lg font-bold text-green-600">
+                  ${total.toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button className="flex-1" onClick={handleSubmit}>
+                Charge ${total.toFixed(2)}
+              </Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

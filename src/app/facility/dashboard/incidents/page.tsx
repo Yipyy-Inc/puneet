@@ -151,7 +151,13 @@ export default function IncidentsPage() {
       header: "Date",
       cell: ({ row }) => (
         <div className="text-sm">
-          {new Date(row.original.incidentDate).toLocaleString()}
+          {new Date(row.original.incidentDate).toLocaleDateString("en-CA", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </div>
       ),
     },

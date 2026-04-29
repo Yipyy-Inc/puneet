@@ -14,6 +14,7 @@ import {
   FileText,
   DollarSign,
   Building2,
+  ClipboardList,
 } from "lucide-react";
 
 const tabs = [
@@ -44,7 +45,7 @@ const tabs = [
     icon: Users,
   },
   {
-    name: "Services",
+    name: "Packages",
     href: "/facility/dashboard/services/grooming/packages",
     icon: Package,
   },
@@ -57,6 +58,11 @@ const tabs = [
     name: "Rates",
     href: "/facility/dashboard/services/grooming/rates",
     icon: DollarSign,
+  },
+  {
+    name: "Tasks",
+    href: "/facility/dashboard/services/grooming/tasks",
+    icon: ClipboardList,
   },
   {
     name: "Report Cards",

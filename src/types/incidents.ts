@@ -83,5 +83,7 @@ export const incidentSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   closedBy: z.string().optional(),
+  boardingGuestId: z.string().optional(),
+  reservationId: z.string().optional(),
 });
 export type Incident = z.infer<typeof incidentSchema>;
