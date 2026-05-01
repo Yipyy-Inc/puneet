@@ -207,7 +207,15 @@ function DesktopWidget({ call, timer, muted, onHold, showKeypad, notes, dtmfInpu
         {call.pets && call.pets.length > 0 && (
           <div className="flex items-center gap-2 text-[12px] text-[#CDEAF5]/50">
             <Dog className="size-3 shrink-0 text-[#F27E13]/70" />
-            <span className="truncate">{call.pets.map((p) => `${p.name} · ${p.breed}`).join(", ")}</span>
+            <div className="truncate flex items-baseline gap-1.5 flex-wrap">
+              {call.pets.map((p, i) => (
+                <span key={i} className="inline-flex items-baseline">
+                  <span className="text-[14px] text-white font-semibold">{p.name}</span>
+                  <span className="ml-1">· {p.breed}</span>
+                  {i < call.pets!.length - 1 && <span className="ml-0.5">,</span>}
+                </span>
+              ))}
+            </div>
           </div>
         )}
         {call.currentService && (
@@ -376,9 +384,15 @@ function MobileActiveCall({ call, timer, muted, onHold, showKeypad, notes, dtmfI
               </span>
             )}
             {call.pets && call.pets.length > 0 && (
-              <span className="flex items-center gap-1 rounded-full px-3 py-1 text-[11px] text-[#CDEAF5]/60"
+              <span className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] text-[#CDEAF5]/60"
                 style={{ background: "rgba(205,234,245,0.08)" }}>
-                <Dog className="size-3 text-[#F27E13]/80" />{call.pets.map((p) => p.name).join(", ")}
+                <Dog className="size-3 text-[#F27E13]/80" />
+                {call.pets.map((p, i) => (
+                  <span key={i} className="inline-flex items-baseline">
+                    <span className="text-[14px] text-white font-semibold">{p.name}</span>
+                    {i < call.pets!.length - 1 && <span className="ml-[2px]">,</span>}
+                  </span>
+                ))}
               </span>
             )}
             {call.outstandingBalance !== undefined && call.outstandingBalance > 0 && (

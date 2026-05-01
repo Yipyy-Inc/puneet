@@ -582,7 +582,7 @@ export const reportCardConfig: ReportCardConfig = {
     },
     {
       serviceId: "grooming",
-      enabled: false,
+      enabled: true,
       enabledSections: [
         "todaysVibe",
         "careMetrics",

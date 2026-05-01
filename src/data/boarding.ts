@@ -2,6 +2,7 @@
 import type {
   BoardingGuest,
   BoardingRate,
+  BoardingAddOn,
   MultiNightDiscount,
   PeakSurcharge,
   DailyCareSheet,
@@ -12,6 +13,7 @@ import type {
 export type {
   BoardingGuest,
   BoardingRate,
+  BoardingAddOn,
   MultiNightDiscount,
   PeakSurcharge,
   MedicationSchedule,
@@ -90,6 +92,15 @@ export const boardingRates: BoardingRate[] = [
       giant: 125,
     },
   },
+];
+
+export const boardingAddOns: BoardingAddOn[] = [
+  { id: "bo-ao-001", name: "Mid-Day Walk", description: "Extra 20-minute outdoor walk in the afternoon.", price: 12, duration: 20, isActive: true },
+  { id: "bo-ao-002", name: "Cuddle & Snuggle Session", description: "Staff one-on-one cuddle time for dogs that need extra comfort.", price: 15, duration: 20, isActive: true },
+  { id: "bo-ao-003", name: "Bathtime Add-on", description: "Full bath and blow-dry before checkout.", price: 30, duration: 45, isActive: true },
+  { id: "bo-ao-004", name: "Teeth Brushing", description: "Daily teeth brushing with enzymatic pet toothpaste.", price: 8, duration: 5, isActive: true },
+  { id: "bo-ao-005", name: "Webcam Check-in", description: "Owner receives a live webcam photo update once per day.", price: 5, duration: 5, isActive: true },
+  { id: "bo-ao-006", name: "Enrichment Toy Rotation", description: "A new enrichment toy brought to the kennel each morning.", price: 10, duration: 10, isActive: false },
 ];
 
 // Mock multi-night discounts

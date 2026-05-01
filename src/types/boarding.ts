@@ -217,10 +217,22 @@ export const boardingRateSchema = z
       giant: z.number(),
     }),
     color: z.string().optional(),
+    /** IDs of ServiceAddOns included free of charge with this rate */
+    includedAddOnIds: z.array(z.string()).optional(),
   })
   .catchall(z.unknown());
 
 export type BoardingRate = z.infer<typeof boardingRateSchema>;
+
+export const boardingAddOnSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  price: z.number(),
+  duration: z.number(),
+  isActive: z.boolean(),
+});
+export type BoardingAddOn = z.infer<typeof boardingAddOnSchema>;
 
 export const multiNightDiscountSchema = z
   .object({

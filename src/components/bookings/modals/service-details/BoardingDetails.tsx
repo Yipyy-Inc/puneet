@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { Button } from "@/components/ui/button";
-import { Check, PawPrint, Bed, X, AlertCircle } from "lucide-react";
+import { Check, PawPrint, Bed, X, AlertCircle, Gift } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
@@ -20,17 +20,16 @@ import { getBoardingCategoryAvailability } from "@/lib/capacity-engine";
 import { bookings as allBookings } from "@/data/bookings";
 import { useRooms } from "@/hooks/use-rooms";
 import type { ServiceAddOn } from "@/types/facility";
+import { boardingRates } from "@/data/boarding";
 
 function getAddonPriceLabel(addon: ServiceAddOn): string {
   switch (addon.pricingType) {
-    case "flat":
-      return `$${addon.price}`;
-    case "per_day":
-      return `$${addon.price}/day`;
-    case "per_session":
-      return `$${addon.price}/${addon.unitLabel || "session"}`;
-    case "per_hour":
-      return `$${addon.price}/${addon.unitLabel || "hr"}`;
+    case "flat": return `$${addon.price}`;
+    case "per_day": return `$${addon.price}/day`;
+    case "per_session": return `$${addon.price}/${addon.unitLabel || "session"}`;
+    case "per_hour": return `$${addon.price}/${addon.unitLabel || "hr"}`;
+    case "per_item": return `$${addon.price}/${addon.unitLabel || "item"}`;
+    case "percentage_of_booking": return `${addon.price}% of booking`;
   }
 }
 
@@ -276,6 +275,7 @@ export function BoardingDetails({
             extraServices={extraServices}
             setExtraServices={setExtraServices}
             selectedPets={selectedPets}
+            serviceType={serviceType}
           />
         )}
 
@@ -798,6 +798,7 @@ function BoardingAddOnsSubStep({
   extraServices,
   setExtraServices,
   selectedPets,
+  serviceType,
 }: {
   isStepAccessible: (step: number) => boolean;
   extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
@@ -805,7 +806,32 @@ function BoardingAddOnsSubStep({
     services: Array<{ serviceId: string; quantity: number; petId: number }>,
   ) => void;
   selectedPets: Pet[];
+  serviceType: string;
 }) {
+  // Auto-inject included add-ons from the selected boarding rate on first render
+  const injectedRef = useRef(false);
+  useEffect(() => {
+    if (injectedRef.current || !isStepAccessible(2) || selectedPets.length === 0) return;
+    injectedRef.current = true;
+
+    // Match the rate by category keyword in name (standard/deluxe/vip/premium/luxury)
+    const needle = serviceType.toLowerCase();
+    const matchingRate = boardingRates.find(
+      (r) => r.isActive && r.name.toLowerCase().includes(needle),
+    ) ?? boardingRates.find((r) => r.isActive);
+
+    const includedIds: string[] = matchingRate?.includedAddOnIds ?? [];
+    if (includedIds.length === 0) return;
+
+    const toInject = selectedPets.flatMap((pet) =>
+      includedIds.map((id) => ({ serviceId: id, quantity: 0, petId: pet.id })),
+    );
+    const existing = new Set(extraServices.map((es) => `${es.serviceId}:${es.petId}`));
+    const novel = toInject.filter((e) => !existing.has(`${e.serviceId}:${e.petId}`));
+    if (novel.length > 0) setExtraServices([...extraServices, ...novel]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStepAccessible, selectedPets.length]);
+
   const boardingAddOns = getStoredAddOns().filter((a) => {
     if (!a.isActive || !a.applicableServices.includes("boarding")) return false;
     if (a.petTypeFilter && selectedPets.length > 0) {
@@ -841,10 +867,14 @@ function BoardingAddOnsSubStep({
       {isStepAccessible(2) && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {boardingAddOns.map((service) => {
+            const includedEntries = extraServices.filter(
+              (es) => es.serviceId === service.id && es.quantity === 0,
+            );
+            const isIncludedFree = includedEntries.length > 0;
             const totalQuantity = extraServices
-              .filter((es) => es.serviceId === service.id)
+              .filter((es) => es.serviceId === service.id && es.quantity > 0)
               .reduce((sum, es) => sum + es.quantity, 0);
-            const isAdded = totalQuantity > 0;
+            const isAdded = isIncludedFree || totalQuantity > 0;
             const priceLabel = getAddonPriceLabel(service);
             const hasUnits = service.pricingType !== "flat";
 
@@ -853,9 +883,11 @@ function BoardingAddOnsSubStep({
                 key={service.id}
                 className={cn(
                   "group flex flex-col overflow-hidden rounded-2xl border-2 transition-all duration-200 select-none",
-                  isAdded
-                    ? "border-transparent bg-primary/5 shadow-md"
-                    : "border-border hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-lg",
+                  isIncludedFree
+                    ? "border-emerald-400 bg-emerald-50/60 shadow-md"
+                    : isAdded
+                      ? "border-transparent bg-primary/5 shadow-md"
+                      : "border-border hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-lg",
                 )}
               >
                 {/* Image area */}
@@ -875,10 +907,16 @@ function BoardingAddOnsSubStep({
                   )}
                   {/* Price badge */}
                   <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                    <div className="bg-foreground/80 text-background rounded-lg px-2 py-1 text-xs font-bold backdrop-blur-sm">
-                      {priceLabel}
-                    </div>
-                    {service.isDefault && (
+                    {isIncludedFree ? (
+                      <div className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-bold text-white">
+                        <Gift className="size-3" /> Included Free
+                      </div>
+                    ) : (
+                      <div className="bg-foreground/80 text-background rounded-lg px-2 py-1 text-xs font-bold backdrop-blur-sm">
+                        {priceLabel}
+                      </div>
+                    )}
+                    {service.isDefault && !isIncludedFree && (
                       <div className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-bold text-white">
                         Default
                       </div>
@@ -889,10 +927,14 @@ function BoardingAddOnsSubStep({
                       </div>
                     )}
                   </div>
-                  {/* Added count badge */}
-                  {isAdded && (
+                  {isAdded && !isIncludedFree && (
                     <div className="bg-primary text-primary-foreground absolute top-2.5 right-2.5 flex size-7 items-center justify-center rounded-full text-xs font-bold shadow-md">
                       {totalQuantity}
+                    </div>
+                  )}
+                  {isIncludedFree && (
+                    <div className="absolute top-2.5 right-2.5 flex size-7 items-center justify-center rounded-full bg-emerald-600 shadow-md">
+                      <Check className="size-4 text-white" />
                     </div>
                   )}
                 </div>
@@ -906,10 +948,21 @@ function BoardingAddOnsSubStep({
 
                   {/* Per-pet controls */}
                   <div className="mt-3 space-y-1.5">
-                    {selectedPets.map((pet) => {
+                    {isIncludedFree ? (
+                      <div className="flex items-center justify-between rounded-md bg-emerald-50 px-2 py-1.5">
+                        <span className="flex items-center gap-1 text-xs text-emerald-700">
+                          <Gift className="size-3" />
+                          Included with this rate
+                        </span>
+                        <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                          <Check className="size-3" /> Free
+                        </span>
+                      </div>
+                    ) : (
+                    selectedPets.map((pet) => {
                       const petService = extraServices.find(
                         (es) =>
-                          es.serviceId === service.id && es.petId === pet.id,
+                          es.serviceId === service.id && es.petId === pet.id && es.quantity > 0,
                       );
                       const quantity = petService?.quantity || 0;
 
@@ -1034,7 +1087,8 @@ function BoardingAddOnsSubStep({
                           )}
                         </div>
                       );
-                    })}
+                    })
+                    )}
                   </div>
                 </div>
               </div>

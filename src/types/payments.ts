@@ -648,6 +648,168 @@ export interface FiservRefundResponse {
 }
 
 // ============================================================================
+// Gift Card Wallet (customer balance after redeeming gift cards)
+// ============================================================================
+
+export const walletTransactionTypeEnum = z.enum([
+  "gift_card_redeem",
+  "service_payment",
+  "deposit_payment",
+  "package_payment",
+  "retail_payment",
+  "tip_payment",
+  "addon_payment",
+  "refund_in",
+  "adjustment",
+  "expiry_deduction",
+]);
+export type WalletTransactionType = z.infer<typeof walletTransactionTypeEnum>;
+
+export const walletTransactionSchema = z.object({
+  id: z.string(),
+  walletId: z.string(),
+  facilityId: z.number(),
+  clientId: z.number(),
+  type: walletTransactionTypeEnum,
+  amount: z.number(),
+  balanceAfter: z.number(),
+  description: z.string(),
+  referenceId: z.string().optional(),
+  referenceType: z.enum(["gift_card", "booking", "invoice", "adjustment"]).optional(),
+  performedBy: z.string().optional(),
+  performedById: z.number().optional(),
+  createdAt: z.string(),
+});
+export type WalletTransaction = z.infer<typeof walletTransactionSchema>;
+
+export const customerWalletSchema = z.object({
+  id: z.string(),
+  facilityId: z.number(),
+  clientId: z.number(),
+  balance: z.number(),
+  currency: currencyEnum,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  transactions: z.array(walletTransactionSchema),
+});
+export type CustomerWallet = z.infer<typeof customerWalletSchema>;
+
+// ============================================================================
+// Gift Card Settings (per facility)
+// ============================================================================
+
+export const walletUsageRulesSchema = z.object({
+  boarding: z.boolean(),
+  daycare: z.boolean(),
+  grooming: z.boolean(),
+  training: z.boolean(),
+  retail: z.boolean(),
+  packages: z.boolean(),
+  deposits: z.boolean(),
+  addons: z.boolean(),
+  tips: z.boolean(),
+});
+export type WalletUsageRules = z.infer<typeof walletUsageRulesSchema>;
+
+export const giftCardProgramSettingsSchema = z.object({
+  id: z.string(),
+  facilityId: z.number(),
+  enabled: z.boolean(),
+  digitalEnabled: z.boolean(),
+  physicalEnabled: z.boolean(),
+  expiryEnabled: z.boolean(),
+  expiryDays: z.number().optional(),
+  partialRedemptionAllowed: z.boolean(),
+  pinRequiredAbove: z.number(),
+  multiLocationRedemption: z.boolean(),
+  refundsAllowed: z.boolean(),
+  walletUsageRules: walletUsageRulesSchema,
+  presetAmounts: z.array(z.number()),
+  minAmount: z.number(),
+  maxAmount: z.number(),
+  emailBranding: z.object({
+    logoUrl: z.string().optional(),
+    primaryColor: z.string(),
+    accentColor: z.string(),
+    footerText: z.string().optional(),
+  }),
+  updatedAt: z.string(),
+});
+export type GiftCardProgramSettings = z.infer<typeof giftCardProgramSettingsSchema>;
+
+// ============================================================================
+// Physical Card Batch (inventory)
+// ============================================================================
+
+export const physicalCardStatusEnum = z.enum(["inactive", "active", "sold", "voided"]);
+
+export const physicalCardSchema = z.object({
+  id: z.string(),
+  batchId: z.string(),
+  facilityId: z.number(),
+  cardNumber: z.string(),
+  barcode: z.string(),
+  status: physicalCardStatusEnum,
+  giftCardId: z.string().optional(),
+  activatedAt: z.string().optional(),
+  soldAt: z.string().optional(),
+  soldByStaffId: z.number().optional(),
+  soldByStaff: z.string().optional(),
+});
+export type PhysicalCard = z.infer<typeof physicalCardSchema>;
+
+export const physicalCardBatchSchema = z.object({
+  id: z.string(),
+  facilityId: z.number(),
+  name: z.string(),
+  generatedAt: z.string(),
+  generatedBy: z.string(),
+  totalCards: z.number(),
+  importedAt: z.string().optional(),
+  cards: z.array(physicalCardSchema),
+});
+export type PhysicalCardBatch = z.infer<typeof physicalCardBatchSchema>;
+
+// ============================================================================
+// Gift Card Audit Log
+// ============================================================================
+
+export const giftCardAuditActionEnum = z.enum([
+  "issued_digital",
+  "issued_physical",
+  "activated",
+  "redeemed_to_wallet",
+  "wallet_used",
+  "voided",
+  "refunded",
+  "balance_adjusted",
+  "expiry_changed",
+  "batch_generated",
+  "batch_imported",
+]);
+export type GiftCardAuditAction = z.infer<typeof giftCardAuditActionEnum>;
+
+export const giftCardAuditLogSchema = z.object({
+  id: z.string(),
+  facilityId: z.number(),
+  giftCardId: z.string().optional(),
+  walletId: z.string().optional(),
+  batchId: z.string().optional(),
+  action: giftCardAuditActionEnum,
+  amount: z.number().optional(),
+  balanceBefore: z.number().optional(),
+  balanceAfter: z.number().optional(),
+  performedBy: z.string(),
+  performedById: z.number().optional(),
+  clientId: z.number().optional(),
+  clientName: z.string().optional(),
+  notes: z.string().optional(),
+  ipAddress: z.string().optional(),
+  timestamp: z.string(),
+});
+export type GiftCardAuditLog = z.infer<typeof giftCardAuditLogSchema>;
+
+// ============================================================================
 // Payment Audit
 // ============================================================================
 

@@ -7,6 +7,7 @@ import type {
   TrainerNote,
   ProgressRecord,
   TrainingPackage,
+  TrainingAddOn,
 } from "@/types/training";
 
 export type {
@@ -21,6 +22,7 @@ export type {
   ProgressRecord,
   SkillProgress,
   TrainingPackage,
+  TrainingAddOn,
 } from "@/types/training";
 
 export type { ClassType } from "@/types/base";
@@ -1112,6 +1114,14 @@ export const trainingPackages: TrainingPackage[] = [
       "Competition entry support",
     ],
   },
+];
+
+export const trainingAddOns: TrainingAddOn[] = [
+  { id: "tr-ao-001", name: "Private Session Top-Up", description: "Add a 30-min private session on top of any group class package.", price: 45, duration: 30, isActive: true },
+  { id: "tr-ao-002", name: "Behaviour Assessment", description: "Written assessment by a certified trainer after evaluating your dog.", price: 35, duration: 30, isActive: true },
+  { id: "tr-ao-003", name: "Training Kit", description: "Clicker, treat pouch, and training treats for at-home practice.", price: 25, duration: 0, isActive: true },
+  { id: "tr-ao-004", name: "Video Progress Report", description: "Short video recap of your dog's progress sent to you after each session.", price: 15, duration: 10, isActive: true },
+  { id: "tr-ao-005", name: "Follow-Up Consultation", description: "15-min phone or in-person follow-up with the trainer between sessions.", price: 20, duration: 15, isActive: false },
 ];
 
 // Helper functions

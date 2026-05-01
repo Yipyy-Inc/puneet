@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
@@ -12,6 +13,12 @@ import {
   Plus,
   Scissors,
   CalendarIcon,
+  Search,
+  Filter,
+  CheckCircle2,
+  Clock,
+  CheckSquare,
+  ActivitySquare
 } from "lucide-react";
 import { groomingQueries } from "@/lib/api/grooming";
 import type { GroomingAppointment, GroomingStatus } from "@/types/grooming";
@@ -532,159 +539,168 @@ export function GroomingCalendar() {
   }
 
   return (
-    <div className="flex flex-col gap-4 h-full">
-      {/* ── Toolbar ── */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2">
-          {/* Navigator */}
-          <div className="flex items-center rounded-lg border bg-background overflow-hidden shadow-xs">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-none h-9 w-9 border-r"
-              onClick={() => navigate(-1)}
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "rounded-none h-9 px-4 text-xs font-semibold",
-                isToday && viewMode === "day" && "text-pink-600 dark:text-pink-400",
-              )}
-              onClick={() => setSelectedDate(todayStr)}
-            >
-              Today
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-none h-9 w-9 border-l"
-              onClick={() => navigate(1)}
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-
-          {/* Date picker */}
-          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs">
-                <CalendarIcon className="size-3.5" />
-                <span className="hidden sm:inline">{getDisplayLabel()}</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={new Date(selectedDate + "T00:00:00")}
-                onSelect={(d) => {
-                  if (d) {
-                    setSelectedDate(formatISODate(d));
-                    setPickerOpen(false);
-                  }
-                }}
-              />
-            </PopoverContent>
-          </Popover>
-
-          <span className="hidden lg:block text-sm font-medium text-muted-foreground">
-            {getDisplayLabel()}
-          </span>
+    <div className="flex h-full gap-6">
+      {/* ── Left Sidebar ── */}
+      <div className="w-72 flex flex-col gap-6 flex-shrink-0">
+        <div>
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <Scissors className="h-5 w-5 text-blue-500" /> Schedule
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Operations Calendar</p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* View toggle */}
-          <div className="flex rounded-lg border bg-background overflow-hidden shadow-xs">
-            {(["day", "week", "month"] as ViewMode[]).map((v) => (
-              <Button
-                key={v}
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "rounded-none h-9 px-3 text-xs font-medium capitalize",
-                  viewMode === v
-                    ? "bg-pink-500 text-white hover:bg-pink-600 hover:text-white"
-                    : "text-muted-foreground",
-                  v !== "day" && "border-l",
-                )}
-                onClick={() => setViewMode(v)}
-              >
-                {v.charAt(0).toUpperCase() + v.slice(1)}
-              </Button>
-            ))}
-          </div>
+        {/* Mini Calendar */}
+        <div className="bg-card rounded-xl border shadow-sm p-3">
+          <Calendar
+            mode="single"
+            selected={new Date(selectedDate + "T00:00:00")}
+            onSelect={(d) => {
+              if (d) {
+                setSelectedDate(formatISODate(d));
+              }
+            }}
+            className="w-full"
+          />
+        </div>
 
-          {/* Day stats (day view only) */}
-          {viewMode === "day" && stats.total > 0 && (
-            <div className="hidden md:flex items-center gap-4">
-              <span className="text-xs text-muted-foreground">
-                {stats.total} appointment{stats.total !== 1 ? "s" : ""}
-              </span>
-              {[
-                { dot: "bg-amber-400", label: `${stats.inProgress} in progress` },
-                { dot: "bg-emerald-400", label: `${stats.ready} ready` },
-                { dot: "bg-gray-400", label: `${stats.completed} done` },
-              ].map((s) => (
-                <div key={s.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span className={cn("size-2 rounded-full", s.dot)} />
-                  {s.label}
-                </div>
-              ))}
+        {/* Today's Overview Stats */}
+        <div>
+          <h2 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3">Today's Overview</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl p-4 flex flex-col gap-1 items-start">
+              <CalendarIcon className="w-4 h-4 text-blue-600 dark:text-blue-400 mb-1" />
+              <span className="text-3xl font-bold leading-none text-blue-700 dark:text-blue-300">{stats.total}</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Bookings</span>
             </div>
-          )}
+            <div className="bg-emerald-50/50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-2xl p-4 flex flex-col gap-1 items-start">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mb-1" />
+              <span className="text-3xl font-bold leading-none text-emerald-700 dark:text-emerald-300">{stats.ready}</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Confirmed</span>
+            </div>
+            <div className="bg-purple-50/50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-2xl p-4 flex flex-col gap-1 items-start">
+              <ActivitySquare className="w-4 h-4 text-purple-600 dark:text-purple-400 mb-1" />
+              <span className="text-3xl font-bold leading-none text-purple-700 dark:text-purple-300">{stats.completed}</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Completed</span>
+            </div>
+            <div className="bg-orange-50/50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 rounded-2xl p-4 flex flex-col gap-1 items-start">
+              <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400 mb-1" />
+              <span className="text-3xl font-bold leading-none text-orange-700 dark:text-orange-300">{stats.inProgress}</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Tasks</span>
+            </div>
+          </div>
+        </div>
 
-          <Button size="sm" onClick={() => setNewDialogOpen(true)}>
-            <Plus className="size-4 mr-1.5" />
-            New Appointment
-          </Button>
+        {/* Upcoming Today */}
+        <div className="flex-1 min-h-0 flex flex-col">
+          <h2 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3">Upcoming Today</h2>
+          <div className="flex-1 overflow-y-auto pr-1 space-y-3 pb-8">
+            {dateAppointments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No appointments today.</p>
+            ) : (
+              dateAppointments.map(apt => (
+                <div key={apt.id} className="flex items-center bg-card rounded-xl border border-slate-100 dark:border-slate-800 p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex-1 flex flex-col gap-0.5 min-w-0">
+                    <span className="font-bold text-sm text-foreground truncate">{apt.petName}</span>
+                    <span className="text-xs text-muted-foreground truncate">{apt.packageName}</span>
+                  </div>
+                  <div className="text-xs font-semibold text-slate-500 bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-md">
+                    {apt.startTime}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ── Status legend (day view only) ── */}
-      {viewMode === "day" && (
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
-          {(
-            Object.entries(STATUS_META) as [
-              GroomingStatus,
-              (typeof STATUS_META)[GroomingStatus],
-            ][]
-          ).map(([, s]) => (
-            <div key={s.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className={cn("size-2 rounded-full", s.dot)} />
-              {s.label}
+      {/* ── Main View Area ── */}
+      <div className="flex-1 flex flex-col min-w-0 gap-4 bg-slate-50/50 dark:bg-slate-900/20 rounded-[2rem] p-6 border shadow-sm">
+        {/* Top Controls */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="outline" className="rounded-full px-5 shadow-sm h-10 border-slate-200 hover:bg-slate-100 bg-white" onClick={() => setSelectedDate(todayStr)}>
+              Today
+            </Button>
+            <div className="flex bg-white dark:bg-slate-950 p-1 rounded-full border shadow-sm">
+              {(["day", "week", "month"] as ViewMode[]).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setViewMode(v)}
+                  className={cn(
+                    "px-5 py-1.5 text-sm font-medium rounded-full capitalize transition-all",
+                    viewMode === v
+                      ? "bg-slate-100 dark:bg-slate-800 text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {v}
+                </button>
+              ))}
             </div>
-          ))}
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search..." className="rounded-full w-56 pl-9 h-10 shadow-sm bg-white dark:bg-slate-950 border-slate-200" />
+            </div>
+            <Button variant="outline" className="rounded-full h-10 px-4 shadow-sm gap-2 border-slate-200 hover:bg-slate-100 bg-white">
+              <Filter className="h-4 w-4" /> Filters
+            </Button>
+            <Button className="rounded-full h-10 px-5 shadow-sm bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setNewDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-1.5" /> New Event
+            </Button>
+          </div>
         </div>
-      )}
 
-      {/* ── View content ── */}
-      {viewMode === "day" && (
-        <DayView
-          selectedDate={selectedDate}
-          appointments={appointments}
-          stylists={stylistsData}
-          onBlockClick={handleBlockClick}
-          onNew={() => setNewDialogOpen(true)}
-        />
-      )}
-      {viewMode === "week" && (
-        <WeekView
-          selectedDate={selectedDate}
-          today={todayStr}
-          appointments={appointments}
-          onDayClick={handleDayClick}
-        />
-      )}
-      {viewMode === "month" && (
-        <MonthView
-          selectedDate={selectedDate}
-          today={todayStr}
-          appointments={appointments}
-          onDayClick={handleDayClick}
-        />
-      )}
+        {/* Header Title */}
+        <div className="flex items-center justify-between mt-2 mb-2">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center size-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
+              <ActivitySquare className="h-5 w-5" />
+            </div>
+            <h2 className="text-xl font-bold">Client Schedule</h2>
+          </div>
+          <div className="flex items-center gap-6">
+            <span className="flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-full px-3 py-1">
+              <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
+              {stats.total} active events
+            </span>
+            <span className="text-sm text-muted-foreground hidden lg:inline">
+              Click any date & time to create a quick appointment.
+            </span>
+          </div>
+        </div>
+
+        {/* Calendar Grid Container */}
+        <div className="flex-1 min-h-0 bg-background rounded-2xl border shadow-sm overflow-hidden flex flex-col">
+          {viewMode === "day" && (
+            <DayView
+              selectedDate={selectedDate}
+              appointments={appointments}
+              stylists={stylistsData}
+              onBlockClick={handleBlockClick}
+              onNew={() => setNewDialogOpen(true)}
+            />
+          )}
+          {viewMode === "week" && (
+            <WeekView
+              selectedDate={selectedDate}
+              today={todayStr}
+              appointments={appointments}
+              onDayClick={handleDayClick}
+            />
+          )}
+          {viewMode === "month" && (
+            <MonthView
+              selectedDate={selectedDate}
+              today={todayStr}
+              appointments={appointments}
+              onDayClick={handleDayClick}
+            />
+          )}
+        </div>
+      </div>
 
       <AppointmentPanel
         open={panelOpen}
