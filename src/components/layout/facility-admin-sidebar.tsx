@@ -38,6 +38,8 @@ import {
   GitCompare,
   ArrowLeftRight,
   HeartHandshake,
+  Gift,
+  ShieldCheck,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
@@ -276,6 +278,12 @@ export function FacilitySidebar() {
             icon: DollarSign,
             disabled: false,
           },
+          {
+            title: "Gift Cards",
+            url: "/facility/dashboard/gift-cards",
+            icon: Gift,
+            disabled: false,
+          },
         ],
       },
       {
@@ -308,6 +316,12 @@ export function FacilitySidebar() {
             title: "Loyalty Reports",
             url: "/facility/dashboard/marketing/loyalty-reports",
             icon: BarChart3,
+            disabled: false,
+          },
+          {
+            title: "Reputation Booster",
+            url: "/facility/dashboard/marketing/reputation-booster",
+            icon: ShieldCheck,
             disabled: false,
           },
         ],

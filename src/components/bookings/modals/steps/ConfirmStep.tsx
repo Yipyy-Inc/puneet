@@ -54,14 +54,12 @@ function formatAddonPrice(addon: ServiceAddOn, qty: number): string {
 
 function formatAddonUnit(addon: ServiceAddOn): string {
   switch (addon.pricingType) {
-    case "flat":
-      return "";
-    case "per_day":
-      return `/${addon.unitLabel || "day"}`;
-    case "per_session":
-      return `/${addon.unitLabel || "session"}`;
-    case "per_hour":
-      return `/${addon.unitLabel || "hr"}`;
+    case "flat": return "";
+    case "per_day": return `/${addon.unitLabel || "day"}`;
+    case "per_session": return `/${addon.unitLabel || "session"}`;
+    case "per_hour": return `/${addon.unitLabel || "hr"}`;
+    case "per_item": return `/${addon.unitLabel || "item"}`;
+    case "percentage_of_booking": return "% of booking";
   }
 }
 import type { Pet } from "@/types/pet";

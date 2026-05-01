@@ -2,12 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import {
-  petCams,
-  type PetCam,
-  mobileAppSettings,
-} from "@/data/additional-features";
+import { petCams, type PetCam, mobileAppSettings } from "@/data/additional-features";
+import { cameraIntegrationConfig, petCamAccessConfigs } from "@/data/camera-integration";
 import { bookings } from "@/data/bookings";
+import { memberships } from "@/data/services-pricing";
+import { customerPackagePurchases } from "@/data/services-pricing";
 import {
   Card,
   CardContent,
@@ -16,69 +15,220 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Camera,
   Video,
   CircleDot,
   AlertCircle,
   Clock,
-  Eye,
   Volume2,
   Moon,
   Move,
+  Eye,
+  Crown,
+  Package,
+  CalendarCheck,
+  X,
 } from "lucide-react";
 import { facilityConfig } from "@/data/facility-config";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import type { CameraRuleSet, CameraServiceType } from "@/types/camera-integration";
 
-// Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
+
+type AccessReason =
+  | { type: "active_stay"; service: CameraServiceType }
+  | { type: "membership"; planName: string }
+  | { type: "package"; packageName: string }
+  | { type: "service_customer"; service: CameraServiceType }
+  | { type: "operation_hours" };
+
+function evaluateRuleSet(
+  ruleSet: CameraRuleSet,
+  context: {
+    activeStayServices: CameraServiceType[];
+    membershipPlanIds: string[];
+    purchasedPackageIds: string[];
+    customerServiceTypes: CameraServiceType[];
+    isWithinOperatingHours: boolean;
+  },
+): { passes: boolean; reasons: AccessReason[] } {
+  if (!ruleSet.enabled || ruleSet.rules.length === 0) {
+    return { passes: false, reasons: [] };
+  }
+
+  const results: { passes: boolean; reason: AccessReason | null }[] = ruleSet.rules.map(
+    (rule) => {
+      if (rule.type === "active_stay") {
+        const matchedService = rule.services.find((s) =>
+          context.activeStayServices.includes(s),
+        );
+        return matchedService
+          ? { passes: true, reason: { type: "active_stay", service: matchedService } }
+          : { passes: false, reason: null };
+      }
+      if (rule.type === "operation_hours") {
+        return context.isWithinOperatingHours
+          ? { passes: true, reason: { type: "operation_hours" } }
+          : { passes: false, reason: null };
+      }
+      if (rule.type === "membership") {
+        const matchedPlan = rule.membershipPlanIds.find((id) =>
+          context.membershipPlanIds.includes(id),
+        );
+        return matchedPlan
+          ? { passes: true, reason: { type: "membership", planName: matchedPlan } }
+          : { passes: false, reason: null };
+      }
+      if (rule.type === "package") {
+        const matchedPkg = rule.packageIds.find((id) =>
+          context.purchasedPackageIds.includes(id),
+        );
+        return matchedPkg
+          ? { passes: true, reason: { type: "package", packageName: matchedPkg } }
+          : { passes: false, reason: null };
+      }
+      if (rule.type === "service_customer") {
+        const matchedService = rule.services.find((s) =>
+          context.customerServiceTypes.includes(s),
+        );
+        return matchedService
+          ? { passes: true, reason: { type: "service_customer", service: matchedService } }
+          : { passes: false, reason: null };
+      }
+      return { passes: false, reason: null };
+    },
+  );
+
+  const passedResults = results.filter((r) => r.passes);
+  const passes =
+    ruleSet.logic === "any" ? passedResults.length > 0 : passedResults.length === results.length;
+  const reasons = passedResults.map((r) => r.reason).filter(Boolean) as AccessReason[];
+
+  return { passes, reasons };
+}
+
+function AccessReasonBadge({ reason }: { reason: AccessReason }) {
+  if (reason.type === "active_stay") {
+    return (
+      <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs gap-1">
+        <CalendarCheck className="size-3" />
+        Active {reason.service.charAt(0).toUpperCase() + reason.service.slice(1)} Stay
+      </Badge>
+    );
+  }
+  if (reason.type === "membership") {
+    return (
+      <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs gap-1">
+        <Crown className="size-3" />
+        Member
+      </Badge>
+    );
+  }
+  if (reason.type === "package") {
+    return (
+      <Badge className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-xs gap-1">
+        <Package className="size-3" />
+        Package
+      </Badge>
+    );
+  }
+  if (reason.type === "service_customer") {
+    return (
+      <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs gap-1">
+        <Eye className="size-3" />
+        {reason.service.charAt(0).toUpperCase() + reason.service.slice(1)} Customer
+      </Badge>
+    );
+  }
+  if (reason.type === "operation_hours") {
+    return (
+      <Badge className="bg-slate-500/10 text-slate-700 dark:text-slate-400 text-xs gap-1">
+        <Clock className="size-3" />
+        Open Hours
+      </Badge>
+    );
+  }
+  return null;
+}
 
 export default function CustomerCamerasPage() {
   const { selectedFacility } = useCustomerFacility();
-  const [selectedCamera, setSelectedCamera] = useState<PetCam | null>(null);
+  const [selectedCamera, setSelectedCamera] = useState<{
+    cam: PetCam;
+    reasons: AccessReason[];
+  } | null>(null);
 
-  // Check if customer has an active stay (today within a confirmed booking at this facility)
-  const hasActiveStay = useMemo(() => {
-    if (!selectedFacility) return false;
-    const today = new Date().toISOString().split("T")[0];
-    return bookings.some(
-      (b) =>
-        b.clientId === MOCK_CUSTOMER_ID &&
-        b.facilityId === selectedFacility.id &&
-        b.status === "confirmed" &&
-        b.startDate <= today &&
-        b.endDate >= today,
-    );
-  }, [selectedFacility]);
+  // ─── Access Context ────────────────────────────────────────────
+  const today = new Date().toISOString().split("T")[0];
 
-  // TODO: Replace with real membership logic when membership data is available
-  const hasCameraMembership = false;
+  const activeStayServices = useMemo<CameraServiceType[]>(() => {
+    if (!selectedFacility) return [];
+    const serviceMap: Record<string, CameraServiceType> = {
+      boarding: "boarding",
+      daycare: "daycare",
+      grooming: "grooming",
+      training: "training",
+    };
+    return bookings
+      .filter(
+        (b) =>
+          b.clientId === MOCK_CUSTOMER_ID &&
+          b.facilityId === selectedFacility.id &&
+          b.status === "confirmed" &&
+          b.startDate <= today &&
+          b.endDate >= today,
+      )
+      .map((b) => serviceMap[b.service])
+      .filter((s): s is CameraServiceType => Boolean(s));
+  }, [selectedFacility, today]);
 
-  const hasCameraAccess = hasActiveStay || hasCameraMembership;
-
-  // Check if cameras are enabled for this facility and customer
-  const camerasEnabled = useMemo(() => {
-    if (!mobileAppSettings.enableLiveCamera) return false;
-    if (!hasCameraAccess) return false;
-
-    // Check if facility has any cameras accessible to customers
-    const customerAccessibleCameras = petCams.filter(
-      (cam) =>
-        cam.accessLevel === "public" || cam.accessLevel === "customers_only",
-    );
-    return customerAccessibleCameras.length > 0;
-  }, [hasCameraAccess]);
-
-  // Get allowed access times from facility config
-  const allowedAccessTimes = useMemo(() => {
-    // Default to facility operating hours
-    return facilityConfig.checkInOutTimes.operatingHours;
+  const membershipPlanIds = useMemo(() => {
+    return memberships
+      .filter(
+        (m) =>
+          m.customerId === String(MOCK_CUSTOMER_ID) &&
+          m.status === "active",
+      )
+      .map((m) => m.planId);
   }, []);
 
-  // Check if cameras are currently accessible based on time
-  const isWithinAccessHours = useMemo(() => {
+  const purchasedPackageIds = useMemo(() => {
+    return customerPackagePurchases
+      .filter(
+        (p) =>
+          p.customerId === String(MOCK_CUSTOMER_ID) &&
+          new Date(p.expiresAt) > new Date(),
+      )
+      .map((p) => p.packageId);
+  }, []);
+
+  const customerServiceTypes = useMemo<CameraServiceType[]>(() => {
+    if (!selectedFacility) return [];
+    const serviceMap: Record<string, CameraServiceType> = {
+      boarding: "boarding",
+      daycare: "daycare",
+      grooming: "grooming",
+      training: "training",
+    };
+    return [
+      ...new Set(
+        bookings
+          .filter(
+            (b) =>
+              b.clientId === MOCK_CUSTOMER_ID &&
+              b.facilityId === selectedFacility.id &&
+              b.status === "confirmed",
+          )
+          .map((b) => serviceMap[b.service])
+          .filter((s): s is CameraServiceType => Boolean(s)),
+      ),
+    ];
+  }, [selectedFacility]);
+
+  const isWithinOperatingHours = useMemo(() => {
     const now = new Date();
-    const currentDay = [
+    const dayKey = [
       "sunday",
       "monday",
       "tuesday",
@@ -86,39 +236,59 @@ export default function CustomerCamerasPage() {
       "thursday",
       "friday",
       "saturday",
-    ][now.getDay()] as keyof typeof allowedAccessTimes;
-
-    const hours = allowedAccessTimes[currentDay];
+    ][now.getDay()] as keyof typeof facilityConfig.checkInOutTimes.operatingHours;
+    const hours = facilityConfig.checkInOutTimes.operatingHours[dayKey];
     if (!hours) return false;
-
-    const currentTime = now.toTimeString().slice(0, 5); // HH:mm format
+    const currentTime = now.toTimeString().slice(0, 5);
     return currentTime >= hours.open && currentTime <= hours.close;
-  }, [allowedAccessTimes]);
-
-  // Filter cameras to only show customer-accessible ones
-  const customerCameras = useMemo(() => {
-    return petCams.filter(
-      (cam) =>
-        (cam.accessLevel === "public" ||
-          cam.accessLevel === "customers_only") &&
-        cam.isOnline,
-    );
   }, []);
 
-  // If cameras are not enabled, don't show the page
-  if (!camerasEnabled) {
+  const ruleContext = {
+    activeStayServices,
+    membershipPlanIds,
+    purchasedPackageIds,
+    customerServiceTypes,
+    isWithinOperatingHours,
+  };
+
+  // ─── Filter Accessible Cameras ────────────────────────────────
+  const accessibleCameras = useMemo(() => {
+    if (!cameraIntegrationConfig.isEnabled || !mobileAppSettings.enableLiveCamera) return [];
+
+    return petCams
+      .filter((cam) => {
+        const accessConfig = petCamAccessConfigs[cam.id];
+        if (!accessConfig?.isCustomerVisible) return false;
+        if (!cam.isOnline) return false;
+
+        const ruleSet = accessConfig.useGlobalRules
+          ? cameraIntegrationConfig.globalRuleSet
+          : accessConfig.customRuleSet;
+        if (!ruleSet) return false;
+
+        return evaluateRuleSet(ruleSet, ruleContext).passes;
+      })
+      .map((cam) => {
+        const accessConfig = petCamAccessConfigs[cam.id]!;
+        const ruleSet = accessConfig.useGlobalRules
+          ? cameraIntegrationConfig.globalRuleSet
+          : accessConfig.customRuleSet!;
+        const { reasons } = evaluateRuleSet(ruleSet, ruleContext);
+        return { cam, reasons };
+      });
+  }, [ruleContext]);
+
+  // ─── Feature disabled guard ────────────────────────────────────
+  if (!cameraIntegrationConfig.isEnabled || !mobileAppSettings.enableLiveCamera) {
     return (
       <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
         <div className="mx-auto max-w-4xl">
           <Card>
             <CardContent className="py-12 text-center">
-              <Camera className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-50" />
-              <h2 className="mb-2 text-2xl font-bold">
-                Live Cameras Not Available
-              </h2>
+              <Camera className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-30" />
+              <h2 className="mb-2 text-2xl font-bold">Live Cameras Not Available</h2>
               <p className="text-muted-foreground">
-                Live camera access is only available for active stays or
-                memberships at facilities that have cameras enabled.
+                Live camera access is not currently enabled at this facility.
               </p>
             </CardContent>
           </Card>
@@ -127,44 +297,25 @@ export default function CustomerCamerasPage() {
     );
   }
 
-  // If outside access hours, show message
-  if (!isWithinAccessHours) {
-    const now = new Date();
-    const currentDay = [
-      "sunday",
-      "monday",
-      "tuesday",
-      "wednesday",
-      "thursday",
-      "friday",
-      "saturday",
-    ][now.getDay()] as keyof typeof allowedAccessTimes;
-    const hours = allowedAccessTimes[currentDay];
-
+  // ─── No access guard ──────────────────────────────────────────
+  if (accessibleCameras.length === 0) {
     return (
       <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
         <div className="mx-auto max-w-4xl space-y-6">
-          <div className="space-y-2">
+          <div className="space-y-1">
             <h1 className="text-3xl font-bold">Live Cameras</h1>
             <p className="text-muted-foreground">
-              View live feeds from {selectedFacility?.name ?? "the facility"}
+              Watch your pet in real-time at {selectedFacility?.name ?? "the facility"}
             </p>
           </div>
-
           <Card>
             <CardContent className="py-12 text-center">
-              <Clock className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-50" />
-              <h2 className="mb-2 text-2xl font-bold">
-                Cameras Currently Unavailable
-              </h2>
-              <p className="text-muted-foreground mb-4">
-                Live cameras are only available during facility operating hours.
+              <Clock className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-30" />
+              <h2 className="mb-2 text-2xl font-bold">No Cameras Available</h2>
+              <p className="text-muted-foreground max-w-sm mx-auto">
+                Camera access requires an active stay, qualifying membership, or service package
+                at this facility.
               </p>
-              {hours && (
-                <p className="text-muted-foreground text-sm">
-                  Today&apos;s hours: {hours.open} - {hours.close}
-                </p>
-              )}
             </CardContent>
           </Card>
         </div>
@@ -172,163 +323,164 @@ export default function CustomerCamerasPage() {
     );
   }
 
+  // ─── Main view ────────────────────────────────────────────────
   return (
     <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Live Cameras</h1>
-          <p className="text-muted-foreground">
-            Watch your pet in real-time at{" "}
-            {selectedFacility?.name ?? "the facility"}
-          </p>
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold">Live Cameras</h1>
+            <p className="text-muted-foreground">
+              Watch your pet in real-time at{" "}
+              {selectedFacility?.name ?? "the facility"}
+            </p>
+          </div>
+          <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 gap-1.5">
+            <CircleDot className="size-2.5 animate-pulse" />
+            {accessibleCameras.length} Camera{accessibleCameras.length > 1 ? "s" : ""} Available
+          </Badge>
         </div>
 
-        {/* Privacy Notice */}
         <Alert>
-          <AlertDescription className="space-y-1 text-sm">
+          <AlertDescription className="text-sm text-muted-foreground space-y-1">
             <p>
-              Cameras are provided for your convenience while your pet is
-              staying with us. Access is limited to active stays and may be
-              unavailable outside of operating hours.
+              Cameras are provided for your peace of mind while your pet is with us. Live
+              streams are only visible to you and authorized staff — never recorded for public use.
             </p>
             <p>
-              We do not record audio on customer-facing cameras, and live
-              streams are only visible to authorized customers and staff.
-            </p>
-            <p>
-              Video quality automatically adjusts based on your network
-              connection. On slower networks, the stream may appear lower
-              resolution or pause briefly.
+              Video quality adjusts automatically based on your connection speed.
             </p>
           </AlertDescription>
         </Alert>
 
-        {customerCameras.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Camera className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-50" />
-              <h2 className="mb-2 text-2xl font-bold">No Cameras Available</h2>
-              <p className="text-muted-foreground">
-                There are currently no active cameras available for viewing.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          // One camera per row on mobile, multiple per row on larger screens
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {customerCameras.map((camera) => (
-              <Card
-                key={camera.id}
-                className="cursor-pointer overflow-hidden transition-shadow hover:shadow-lg"
-                onClick={() => setSelectedCamera(camera)}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="min-w-0 flex-1">
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        {camera.name}
-                        {camera.isOnline ? (
-                          <CircleDot className="size-4 shrink-0 animate-pulse text-green-500" />
-                        ) : (
-                          <AlertCircle className="size-4 shrink-0 text-red-500" />
-                        )}
-                      </CardTitle>
-                      <CardDescription className="mt-1 truncate text-xs">
-                        {camera.location}
-                      </CardDescription>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {accessibleCameras.map(({ cam, reasons }) => (
+            <Card
+              key={cam.id}
+              className="cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5"
+              onClick={() => setSelectedCamera({ cam, reasons })}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      {cam.name}
+                      <CircleDot className="size-4 shrink-0 animate-pulse text-green-500" />
+                    </CardTitle>
+                    <CardDescription className="mt-1 truncate text-xs">
+                      {cam.location}
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-3">
+                {/* Video Preview */}
+                <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-900">
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+                    <Video className="size-12 text-slate-600" />
+                    <div className="absolute top-2 left-2 flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs text-white">
+                      <CircleDot className="size-2 animate-pulse" />
+                      LIVE
+                    </div>
+                    <div className="absolute top-2 right-2 rounded-md bg-black/50 px-2 py-1 text-xs text-white">
+                      {cam.resolution}
                     </div>
                   </div>
-                </CardHeader>
+                </div>
 
-                <CardContent className="space-y-3">
-                  {/* Video Preview */}
-                  <div className="relative aspect-video overflow-hidden rounded-lg bg-slate-900">
-                    {camera.isOnline ? (
-                      <>
-                        {/* Simulated video feed */}
-                        <div className="absolute inset-0 flex items-center justify-center bg-linear-to-br from-slate-800 to-slate-900">
-                          <Video className="size-12 text-slate-600" />
-                          <div className="absolute top-2 left-2 flex items-center gap-1 rounded-sm bg-red-600 px-2 py-1 text-xs text-white">
-                            <CircleDot className="size-2 animate-pulse" />
-                            LIVE
-                          </div>
-                          <div className="absolute top-2 right-2 rounded-sm bg-black/50 px-2 py-1 text-xs text-white">
-                            {camera.resolution}
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-slate-800">
-                        <AlertCircle className="size-12 text-slate-600" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Camera Features */}
-                  <div className="flex flex-wrap gap-2">
-                    {camera.hasAudio && (
-                      <Badge variant="outline" className="text-xs">
-                        <Volume2 className="mr-1 size-3" />
-                        Audio
-                      </Badge>
-                    )}
-                    {camera.hasPanTilt && (
-                      <Badge variant="outline" className="text-xs">
-                        <Move className="mr-1 size-3" />
-                        Pan/Tilt
-                      </Badge>
-                    )}
-                    {camera.hasNightVision && (
-                      <Badge variant="outline" className="text-xs">
-                        <Moon className="mr-1 size-3" />
-                        Night Vision
-                      </Badge>
-                    )}
-                    <Badge variant="outline" className="text-xs">
-                      <Eye className="mr-1 size-3" />
-                      {camera.resolution}
+                {/* Feature Badges */}
+                <div className="flex flex-wrap gap-1.5">
+                  {cam.hasAudio && (
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <Volume2 className="size-3" />
+                      Audio
                     </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                  )}
+                  {cam.hasPanTilt && (
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <Move className="size-3" />
+                      Pan/Tilt
+                    </Badge>
+                  )}
+                  {cam.hasNightVision && (
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <Moon className="size-3" />
+                      Night Vision
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="text-xs gap-1">
+                    <Eye className="size-3" />
+                    {cam.resolution}
+                  </Badge>
+                </div>
 
-        {/* Full Screen Camera View Modal */}
+                {/* Access Reason */}
+                {reasons.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 border-t pt-2">
+                    <span className="text-muted-foreground text-xs self-center">Access via:</span>
+                    {reasons.slice(0, 2).map((r, i) => (
+                      <AccessReasonBadge key={i} reason={r} />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Full-Screen Modal */}
         {selectedCamera && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
             onClick={() => setSelectedCamera(null)}
           >
             <div
-              className="relative aspect-video w-full max-w-6xl rounded-lg bg-slate-900"
+              className="relative w-full max-w-5xl rounded-2xl bg-slate-900 overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <button
-                onClick={() => setSelectedCamera(null)}
-                className="absolute top-4 right-4 z-10 rounded-lg bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
-              >
-                <AlertCircle className="size-5" />
-              </button>
-
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center text-white">
-                  <Video className="mx-auto mb-4 size-24 text-slate-600" />
-                  <h3 className="mb-2 text-xl font-semibold">
-                    {selectedCamera.name}
-                  </h3>
-                  <p className="mb-4 text-sm text-slate-400">
-                    {selectedCamera.location}
-                  </p>
-                  <div className="flex items-center justify-center gap-2">
-                    <CircleDot className="size-3 animate-pulse text-green-500" />
-                    <span className="text-sm">Live Stream</span>
-                  </div>
-                  <p className="mt-4 text-xs text-slate-500">
-                    Stream URL: {selectedCamera.streamUrl}
-                  </p>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                <div>
+                  <h3 className="text-white font-semibold">{selectedCamera.cam.name}</h3>
+                  <p className="text-slate-400 text-xs">{selectedCamera.cam.location}</p>
                 </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+                    <CircleDot className="size-2.5 animate-pulse" />
+                    Live
+                  </div>
+                  <button
+                    onClick={() => setSelectedCamera(null)}
+                    className="rounded-lg bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Video area */}
+              <div className="relative aspect-video flex items-center justify-center">
+                <Video className="size-24 text-slate-700" />
+                <div className="absolute bottom-4 left-4 flex flex-wrap gap-1.5">
+                  {selectedCamera.reasons.map((r, i) => (
+                    <AccessReasonBadge key={i} reason={r} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Feature row */}
+              <div className="flex flex-wrap items-center gap-4 px-5 py-3 border-t border-white/10 text-xs text-slate-400">
+                {selectedCamera.cam.hasAudio && (
+                  <span className="flex items-center gap-1"><Volume2 className="size-3" /> Audio</span>
+                )}
+                {selectedCamera.cam.hasPanTilt && (
+                  <span className="flex items-center gap-1"><Move className="size-3" /> Pan/Tilt</span>
+                )}
+                {selectedCamera.cam.hasNightVision && (
+                  <span className="flex items-center gap-1"><Moon className="size-3" /> Night Vision</span>
+                )}
+                <span className="flex items-center gap-1"><Eye className="size-3" /> {selectedCamera.cam.resolution}</span>
               </div>
             </div>
           </div>

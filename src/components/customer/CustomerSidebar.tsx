@@ -18,6 +18,8 @@ import {
   Gift,
   UserPlus,
   Package,
+  Wallet,
+  Ticket,
 } from "lucide-react";
 import {
   GenericSidebar,
@@ -25,6 +27,9 @@ import {
 } from "@/components/ui/generic-sidebar";
 import { petCams, mobileAppSettings } from "@/data/additional-features";
 import { bookings } from "@/data/bookings";
+import { cameraIntegrationConfig, petCamAccessConfigs } from "@/data/camera-integration";
+import { memberships, customerPackagePurchases } from "@/data/services-pricing";
+import type { CameraRuleSet, CameraServiceType } from "@/types/camera-integration";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -33,37 +38,114 @@ export function CustomerSidebar() {
   const { selectedFacility } = useCustomerFacility();
   const isMounted = useHydrated();
 
-  // Check if customer has an active stay at the selected facility
-  const hasActiveStay = useMemo(() => {
-    if (!isMounted || !selectedFacility) return false;
+  // Build access context for rule evaluation (only on client after mount)
+  const accessContext = useMemo(() => {
+    if (!isMounted || !selectedFacility) return null;
+
     const today = new Date().toISOString().split("T")[0];
-    return bookings.some(
-      (b) =>
-        b.clientId === MOCK_CUSTOMER_ID &&
-        b.facilityId === selectedFacility.id &&
-        b.status === "confirmed" &&
-        b.startDate <= today &&
-        b.endDate >= today,
-    );
+    const serviceMap: Record<string, CameraServiceType> = {
+      boarding: "boarding",
+      daycare: "daycare",
+      grooming: "grooming",
+      training: "training",
+    };
+
+    const activeStayServices: CameraServiceType[] = bookings
+      .filter(
+        (b) =>
+          b.clientId === MOCK_CUSTOMER_ID &&
+          b.facilityId === selectedFacility.id &&
+          b.status === "confirmed" &&
+          b.startDate <= today &&
+          b.endDate >= today,
+      )
+      .map((b) => serviceMap[b.service])
+      .filter((s): s is CameraServiceType => Boolean(s));
+
+    const membershipPlanIds = memberships
+      .filter(
+        (m) =>
+          m.customerId === String(MOCK_CUSTOMER_ID) &&
+          m.status === "active",
+      )
+      .map((m) => m.planId);
+
+    const purchasedPackageIds = customerPackagePurchases
+      .filter(
+        (p) =>
+          p.customerId === String(MOCK_CUSTOMER_ID) &&
+          new Date(p.expiresAt) > new Date(),
+      )
+      .map((p) => p.packageId);
+
+    const customerServiceTypes: CameraServiceType[] = [
+      ...new Set(
+        bookings
+          .filter(
+            (b) =>
+              b.clientId === MOCK_CUSTOMER_ID &&
+              b.facilityId === selectedFacility.id &&
+              b.status === "confirmed",
+          )
+          .map((b) => serviceMap[b.service])
+          .filter((s): s is CameraServiceType => Boolean(s)),
+      ),
+    ];
+
+    const now = new Date();
+    const dayKey = [
+      "sunday", "monday", "tuesday", "wednesday",
+      "thursday", "friday", "saturday",
+    ][now.getDay()];
+    // Operating hours check is intentionally permissive in sidebar — just show the nav item
+    const isWithinOperatingHours = true;
+
+    return {
+      activeStayServices,
+      membershipPlanIds,
+      purchasedPackageIds,
+      customerServiceTypes,
+      isWithinOperatingHours,
+    };
   }, [isMounted, selectedFacility]);
 
-  // TODO: Replace with real membership logic when membership data is available
-  const hasCameraMembership = false;
+  function passesRuleSet(ruleSet: CameraRuleSet): boolean {
+    if (!accessContext || !ruleSet.enabled || ruleSet.rules.length === 0) return false;
+    const results = ruleSet.rules.map((rule) => {
+      if (rule.type === "active_stay") {
+        return rule.services.some((s) => accessContext.activeStayServices.includes(s));
+      }
+      if (rule.type === "operation_hours") return accessContext.isWithinOperatingHours;
+      if (rule.type === "membership") {
+        return rule.membershipPlanIds.some((id) => accessContext.membershipPlanIds.includes(id));
+      }
+      if (rule.type === "package") {
+        return rule.packageIds.some((id) => accessContext.purchasedPackageIds.includes(id));
+      }
+      if (rule.type === "service_customer") {
+        return rule.services.some((s) => accessContext.customerServiceTypes.includes(s));
+      }
+      return false;
+    });
+    return ruleSet.logic === "any" ? results.some(Boolean) : results.every(Boolean);
+  }
 
   // Check if cameras are enabled for customers (only on client)
   const camerasEnabled = useMemo(() => {
-    if (!isMounted) return false; // Safe default during SSR
+    if (!isMounted || !accessContext) return false;
     if (!mobileAppSettings.enableLiveCamera) return false;
+    if (!cameraIntegrationConfig.isEnabled) return false;
 
-    const hasCameraAccess = hasActiveStay || hasCameraMembership;
-    if (!hasCameraAccess) return false;
-
-    const customerAccessibleCameras = petCams.filter(
-      (cam) =>
-        cam.accessLevel === "public" || cam.accessLevel === "customers_only",
-    );
-    return customerAccessibleCameras.length > 0;
-  }, [isMounted, hasActiveStay, hasCameraMembership]);
+    return petCams.some((cam) => {
+      const cfg = petCamAccessConfigs[cam.id];
+      if (!cfg?.isCustomerVisible || !cam.isOnline) return false;
+      const ruleSet = cfg.useGlobalRules
+        ? cameraIntegrationConfig.globalRuleSet
+        : cfg.customRuleSet;
+      return ruleSet ? passesRuleSet(ruleSet) : false;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMounted, accessContext]);
 
   const menuSections: MenuSection[] = useMemo(() => {
     const sections: MenuSection[] = [
@@ -98,11 +180,6 @@ export function CustomerSidebar() {
           {
             title: "Training",
             url: "/customer/training",
-            icon: GraduationCap,
-          },
-          {
-            title: "Makeup Sessions",
-            url: "/customer/training/makeup",
             icon: GraduationCap,
           },
           {
@@ -147,9 +224,19 @@ export function CustomerSidebar() {
           icon: CreditCard,
         },
         {
+          title: "My Wallet",
+          url: "/customer/wallet",
+          icon: Wallet,
+        },
+        {
+          title: "Gift Cards",
+          url: "/customer/gift-cards",
+          icon: Gift,
+        },
+        {
           title: "Loyalty & Rewards",
           url: "/customer/rewards",
-          icon: Gift,
+          icon: Ticket,
         },
         {
           title: "Refer a Friend",

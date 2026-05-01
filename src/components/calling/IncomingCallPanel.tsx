@@ -121,7 +121,15 @@ function DesktopWidget({ call, onAnswer, onDecline, onVoicemail, onAnswerCreateP
           {call.pets && call.pets.length > 0 && (
             <div className="flex items-center gap-2 text-[12px] text-[#CDEAF5]/55">
               <Dog className="size-3 shrink-0 text-[#F27E13]/80" />
-              <span className="truncate">{call.pets.map((p) => `${p.name} · ${p.breed}`).join(", ")}</span>
+              <div className="truncate flex items-baseline gap-1.5 flex-wrap">
+                {call.pets.map((p, i) => (
+                  <span key={i} className="inline-flex items-baseline">
+                    <span className="text-[14px] text-white font-semibold">{p.name}</span>
+                    <span className="ml-1">· {p.breed}</span>
+                    {i < call.pets!.length - 1 && <span className="ml-0.5">,</span>}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
           {call.upcomingAppointments !== undefined && call.upcomingAppointments > 0 && (
@@ -266,9 +274,15 @@ function MobileFullscreen({ call, onAnswer, onDecline, onVoicemail, onAnswerCrea
                 </span>
               )}
               {call.pets && call.pets.length > 0 && (
-                <span className="flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-medium text-[#CDEAF5]/65"
+                <span className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium text-[#CDEAF5]/65"
                   style={{ background: "rgba(205,234,245,0.1)" }}>
-                  <Dog className="size-3 text-[#F27E13]/90" />{call.pets.map((p) => p.name).join(", ")}
+                  <Dog className="size-3 text-[#F27E13]/90" />
+                  {call.pets.map((p, i) => (
+                    <span key={i} className="inline-flex items-baseline">
+                      <span className="text-[14px] text-white font-semibold">{p.name}</span>
+                      {i < call.pets!.length - 1 && <span className="ml-[2px]">,</span>}
+                    </span>
+                  ))}
                 </span>
               )}
               {call.upcomingAppointments !== undefined && call.upcomingAppointments > 0 && (

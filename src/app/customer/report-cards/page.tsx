@@ -12,13 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Calendar,
   Dog,
@@ -27,7 +23,6 @@ import {
   Utensils,
   Droplets,
   Search,
-  Filter,
   X,
   Star,
   Bell,
@@ -37,6 +32,12 @@ import {
   Heart,
   ClipboardCheck,
   Stethoscope,
+  Sun,
+  Home,
+  Scissors,
+  GraduationCap,
+  ArrowUpDown,
+  ArrowDownUp,
 } from "lucide-react";
 import { ReportCardPhotoGallery } from "@/components/customer/ReportCardPhotoGallery";
 import { ReportCardQuickReply } from "@/components/customer/ReportCardQuickReply";
@@ -187,7 +188,33 @@ export default function CustomerReportCardsPage() {
   const [selectedServiceType, setSelectedServiceType] = useState<string>("all");
   const [dateRangeStart, setDateRangeStart] = useState<string>("");
   const [dateRangeEnd, setDateRangeEnd] = useState<string>("");
+  const [datePreset, setDatePreset] = useState<"all" | "30d" | "3m" | "year" | "custom">("all");
   const [sortBy, setSortBy] = useState<"date-desc" | "date-asc">("date-desc");
+
+  const applyDatePreset = (preset: typeof datePreset) => {
+    setDatePreset(preset);
+    const today = new Date();
+    const pad = (d: Date) => d.toISOString().split("T")[0];
+    if (preset === "all") {
+      setDateRangeStart("");
+      setDateRangeEnd("");
+    } else if (preset === "30d") {
+      const from = new Date(today);
+      from.setDate(from.getDate() - 30);
+      setDateRangeStart(pad(from));
+      setDateRangeEnd(pad(today));
+    } else if (preset === "3m") {
+      const from = new Date(today);
+      from.setMonth(from.getMonth() - 3);
+      setDateRangeStart(pad(from));
+      setDateRangeEnd(pad(today));
+    } else if (preset === "year") {
+      setDateRangeStart(`${today.getFullYear()}-01-01`);
+      setDateRangeEnd(pad(today));
+    } else {
+      // custom — keep existing values, user will fill manually
+    }
+  };
 
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
@@ -330,8 +357,7 @@ export default function CustomerReportCardsPage() {
   const hasActiveFilters =
     selectedPetId !== "all" ||
     selectedServiceType !== "all" ||
-    dateRangeStart ||
-    dateRangeEnd ||
+    datePreset !== "all" ||
     searchQuery;
 
   const clearFilters = () => {
@@ -339,8 +365,33 @@ export default function CustomerReportCardsPage() {
     setSelectedServiceType("all");
     setDateRangeStart("");
     setDateRangeEnd("");
+    setDatePreset("all");
     setSearchQuery("");
   };
+
+  const serviceOptions = [
+    { value: "all", label: "All services", Icon: null },
+    { value: "daycare", label: "Daycare", Icon: Sun },
+    { value: "boarding", label: "Boarding", Icon: Home },
+    { value: "grooming", label: "Grooming", Icon: Scissors },
+    { value: "training", label: "Training", Icon: GraduationCap },
+  ] as const;
+
+  const periodPresets = [
+    { value: "all", label: "All time" },
+    { value: "30d", label: "Last 30 days" },
+    { value: "3m", label: "Last 3 months" },
+    { value: "year", label: "This year" },
+    { value: "custom", label: "Custom range" },
+  ] as const;
+
+  const pillClass = (active: boolean) =>
+    cn(
+      "inline-flex items-center gap-1.5 h-7 rounded-full px-3.5 text-[11px] font-medium transition-all duration-150 cursor-pointer select-none",
+      active
+        ? "bg-primary text-primary-foreground shadow-sm"
+        : "border border-border bg-transparent text-muted-foreground hover:border-primary/40 hover:text-primary",
+    );
 
   return (
     <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
@@ -353,113 +404,162 @@ export default function CustomerReportCardsPage() {
         </div>
 
         {/* Filters */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Filter className="size-4" />
-                Filters & Search
-              </CardTitle>
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                  <X className="mr-1 size-4" />
-                  Clear filters
-                </Button>
+        <div className="overflow-hidden rounded-2xl border border-primary/20 bg-card shadow-sm">
+          {/* Search + Sort */}
+          <div className="flex items-center gap-3 px-5 py-3">
+            <Search className="text-primary/40 size-4 shrink-0" />
+            <Input
+              placeholder="Search by pet, notes, or activity…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-auto flex-1 border-none bg-transparent p-0 text-sm shadow-none placeholder:text-muted-foreground/40 focus-visible:ring-0"
+            />
+            <button
+              onClick={() =>
+                setSortBy(sortBy === "date-desc" ? "date-asc" : "date-desc")
+              }
+              className="text-muted-foreground hover:text-primary ml-auto flex shrink-0 items-center gap-1.5 text-xs transition-colors"
+            >
+              {sortBy === "date-desc" ? (
+                <ArrowUpDown className="size-3.5" />
+              ) : (
+                <ArrowDownUp className="size-3.5" />
               )}
+              <span className="hidden sm:inline">
+                {sortBy === "date-desc" ? "Newest first" : "Oldest first"}
+              </span>
+            </button>
+          </div>
+
+          {/* All filter rows */}
+          <Separator />
+          <div className="space-y-2 px-5 py-3">
+            {/* Pet */}
+            {customer && customer.pets.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-muted-foreground w-14 shrink-0 text-[10px] font-semibold uppercase tracking-widest">
+                  Pet
+                </span>
+                <button
+                  onClick={() => setSelectedPetId("all")}
+                  className={pillClass(selectedPetId === "all")}
+                >
+                  All
+                </button>
+                {customer.pets.map((pet) => (
+                  <button
+                    key={pet.id}
+                    onClick={() => setSelectedPetId(pet.id.toString())}
+                    className={pillClass(selectedPetId === pet.id.toString())}
+                  >
+                    <Dog className="size-3" />
+                    {pet.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Service */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-muted-foreground w-14 shrink-0 text-[10px] font-semibold uppercase tracking-widest">
+                Service
+              </span>
+              {serviceOptions.map(({ value, label, Icon }) => (
+                <button
+                  key={value}
+                  onClick={() => setSelectedServiceType(value)}
+                  className={pillClass(selectedServiceType === value)}
+                >
+                  {Icon && <Icon className="size-3" />}
+                  {label}
+                </button>
+              ))}
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {/* Search */}
-              <div className="lg:col-span-2">
-                <div className="relative">
-                  <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                  <Input
-                    placeholder="Search by pet name, notes, activities..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
+
+            {/* Period */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-muted-foreground w-14 shrink-0 text-[10px] font-semibold uppercase tracking-widest">
+                Period
+              </span>
+              {periodPresets.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => applyDatePreset(value)}
+                  className={pillClass(datePreset === value)}
+                >
+                  {value === "custom" && <Calendar className="size-3" />}
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Custom date range — only shown when selected */}
+            {datePreset === "custom" && (
+              <div className="bg-primary/5 border-primary/15 ml-[72px] flex flex-wrap items-center gap-4 rounded-xl border px-4 py-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-primary/70 text-[10px] font-semibold uppercase tracking-widest">
+                    From
+                  </span>
+                  <DatePicker
+                    value={dateRangeStart || undefined}
+                    onValueChange={(next) => setDateRangeStart(next)}
+                    max={dateRangeEnd || undefined}
+                    placeholder="Start date"
+                    displayMode="dialog"
+                    showQuickPresets={false}
+                    showManualInput={false}
+                    className="h-7 min-w-[120px] border-primary/20 bg-white/80 text-xs shadow-none hover:border-primary/50 hover:bg-white"
+                    popoverClassName="w-[296px] rounded-xl"
+                    calendarClassName="p-1"
+                  />
+                </div>
+                <span className="text-primary/30 text-xs">—</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-primary/70 text-[10px] font-semibold uppercase tracking-widest">
+                    To
+                  </span>
+                  <DatePicker
+                    value={dateRangeEnd || undefined}
+                    onValueChange={(next) => setDateRangeEnd(next)}
+                    min={dateRangeStart || undefined}
+                    placeholder="End date"
+                    displayMode="dialog"
+                    showQuickPresets={false}
+                    showManualInput={false}
+                    className="h-7 min-w-[120px] border-primary/20 bg-white/80 text-xs shadow-none hover:border-primary/50 hover:bg-white"
+                    popoverClassName="w-[296px] rounded-xl"
+                    calendarClassName="p-1"
                   />
                 </div>
               </div>
+            )}
+          </div>
 
-              {/* Pet Filter */}
-              <Select value={selectedPetId} onValueChange={setSelectedPetId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All pets" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All pets</SelectItem>
-                  {customer?.pets.map((pet) => (
-                    <SelectItem key={pet.id} value={pet.id.toString()}>
-                      {pet.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Service Type Filter */}
-              <Select
-                value={selectedServiceType}
-                onValueChange={setSelectedServiceType}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All services" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All services</SelectItem>
-                  <SelectItem value="daycare">Daycare</SelectItem>
-                  <SelectItem value="boarding">Boarding</SelectItem>
-                  <SelectItem value="grooming">Grooming</SelectItem>
-                  <SelectItem value="training">Training</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Date Range */}
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <div>
-                <label className="mb-1 block text-sm font-medium">
-                  Start Date
-                </label>
-                <Input
-                  type="date"
-                  value={dateRangeStart}
-                  onChange={(e) => setDateRangeStart(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">
-                  End Date
-                </label>
-                <Input
-                  type="date"
-                  value={dateRangeEnd}
-                  onChange={(e) => setDateRangeEnd(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">
-                  Sort By
-                </label>
-                <Select
-                  value={sortBy}
-                  onValueChange={(value) =>
-                    setSortBy(value as "date-desc" | "date-asc")
-                  }
+          {/* Active filter footer */}
+          {hasActiveFilters && (
+            <>
+              <Separator className="bg-primary/10" />
+              <div className="bg-primary/5 flex items-center justify-between px-5 py-2">
+                <p className="text-muted-foreground text-xs">
+                  <span className="text-primary font-semibold">
+                    {filteredAndSortedCards.length}
+                  </span>{" "}
+                  {filteredAndSortedCards.length === 1
+                    ? "report card"
+                    : "report cards"}{" "}
+                  found
+                </p>
+                <button
+                  onClick={clearFilters}
+                  className="text-muted-foreground hover:text-primary flex items-center gap-1 text-xs transition-colors"
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="date-desc">Newest First</SelectItem>
-                    <SelectItem value="date-asc">Oldest First</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <X className="size-3" />
+                  Clear all filters
+                </button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </>
+          )}
+        </div>
 
         {timelineItems.length === 0 ? (
           <Card>

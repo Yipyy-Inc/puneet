@@ -87,18 +87,24 @@ const SCHEDULING_LABEL: Record<string, string> = {
 };
 
 function formatPrice(addon: ServiceAddOn): string {
-  const label = {
-    flat: "",
-    per_day: "/day",
-    per_session: `/${addon.unitLabel || "session"}`,
-    per_hour: `/${addon.unitLabel || "hr"}`,
-  }[addon.pricingType];
-  return `$${addon.price}${label}`;
+  switch (addon.pricingType) {
+    case "flat": return `$${addon.price}`;
+    case "per_day": return `$${addon.price}/day`;
+    case "per_session": return `$${addon.price}/${addon.unitLabel || "session"}`;
+    case "per_hour": return `$${addon.price}/${addon.unitLabel || "hr"}`;
+    case "per_item": return `$${addon.price}/${addon.unitLabel || "item"}`;
+    case "percentage_of_booking": return `${addon.price}% of booking`;
+  }
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export function AddOnsManager() {
+interface AddOnsManagerProps {
+  /** When set, only show add-ons applicable to this service and default new ones to it */
+  serviceFilter?: string;
+}
+
+export function AddOnsManager({ serviceFilter }: AddOnsManagerProps = {}) {
   const { modules } = useCustomServices();
   const allServices = getAllServiceCategories(SERVICE_CATEGORIES, modules)
     .filter(
@@ -135,7 +141,30 @@ export function AddOnsManager() {
   }
 
   function openCreate() {
-    setEditingAddon(null);
+    if (serviceFilter) {
+      // Pre-seed applicableServices so the new add-on is scoped to this service
+      setEditingAddon({
+        id: "",
+        name: "",
+        description: "",
+        image: "",
+        category: "",
+        colorCode: "#3b82f6",
+        pricingType: "flat",
+        price: 0,
+        unitLabel: "",
+        applicableServices: [serviceFilter],
+        schedulingType: "quantity",
+        requiresScheduling: false,
+        generatesTask: true,
+        isActive: true,
+        sortOrder: 0,
+        createdAt: "",
+        updatedAt: "",
+      } as ServiceAddOn);
+    } else {
+      setEditingAddon(null);
+    }
     setDialogOpen(true);
   }
   function openEdit(addon: ServiceAddOn) {
@@ -145,7 +174,7 @@ export function AddOnsManager() {
 
   function handleSave(values: AddOnFormValues) {
     const now = new Date().toISOString();
-    if (editingAddon) {
+    if (editingAddon && editingAddon.id !== "") {
       persistAddOns(
         addOns.map((a) =>
           a.id === editingAddon.id
@@ -183,14 +212,18 @@ export function AddOnsManager() {
     );
   }
 
-  // Stats
-  const active = addOns.filter((a) => a.isActive).length;
-  const scheduled = addOns.filter(
+  // Stats (scoped to serviceFilter when set)
+  const scopedAddOns = serviceFilter
+    ? addOns.filter((a) => a.applicableServices.includes(serviceFilter))
+    : addOns;
+  const active = scopedAddOns.filter((a) => a.isActive).length;
+  const scheduled = scopedAddOns.filter(
     (a) => a.requiresScheduling || a.schedulingType === "time_slot",
   ).length;
 
   // Filtered + grouped
   const filtered = addOns
+    .filter((a) => !serviceFilter || a.applicableServices.includes(serviceFilter))
     .filter((a) => !filterCat || a.category === filterCat)
     .filter(
       (a) => !search || a.name.toLowerCase().includes(search.toLowerCase()),
@@ -244,7 +277,7 @@ export function AddOnsManager() {
         {[
           {
             label: "Total Add-Ons",
-            value: addOns.length,
+            value: scopedAddOns.length,
             color: "text-slate-700",
           },
           {

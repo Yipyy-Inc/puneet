@@ -48,6 +48,7 @@ import { EvaluationFormBuilder } from "@/components/evaluations/EvaluationFormBu
 import { EstimateFollowUpSettings } from "@/components/estimates/EstimateFollowUpSettings";
 import { StatusColorSettings } from "@/components/facility/StatusColorSettings";
 import { ServiceColorCard } from "@/components/facility/ServiceColorCard";
+import { CustomEmailDomainSettings } from "@/components/facility/CustomEmailDomainSettings";
 import { staffMembers } from "@/data/staff";
 
 const AddOnsSettings = dynamic(
@@ -75,6 +76,13 @@ const FacilityRolesStudio = dynamic(
   () =>
     import("@/components/facility/FacilityRolesStudio").then(
       (mod) => mod.FacilityRolesStudio,
+    ),
+  { ssr: false },
+);
+const CameraIntegrationSettings = dynamic(
+  () =>
+    import("@/components/camera-integration/CameraIntegrationSettings").then(
+      (mod) => mod.CameraIntegrationSettings,
     ),
   { ssr: false },
 );
@@ -4642,6 +4650,13 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {/* Custom Email Domain */}
+          {activeSection === "custom-email-domain" && (
+            <div className="space-y-6">
+              <CustomEmailDomainSettings />
+            </div>
+          )}
+
           {/* Notifications */}
           {activeSection === "notifications" && (
             <div className="space-y-6">
@@ -4896,6 +4911,11 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             </div>
+          )}
+
+          {/* Live Pet Cam */}
+          {activeSection === "live-cameras" && (
+            <CameraIntegrationSettings />
           )}
 
           {/* Mobile App */}

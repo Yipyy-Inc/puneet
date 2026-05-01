@@ -15,6 +15,7 @@ import {
   DollarSign,
   Building2,
   ClipboardList,
+  Puzzle,
 } from "lucide-react";
 
 const tabs = [
@@ -40,7 +41,7 @@ const tabs = [
     icon: LogOut,
   },
   {
-    name: "Stylists",
+    name: "Groomers",
     href: "/facility/dashboard/services/grooming/stylists",
     icon: Users,
   },
@@ -58,6 +59,11 @@ const tabs = [
     name: "Rates",
     href: "/facility/dashboard/services/grooming/rates",
     icon: DollarSign,
+  },
+  {
+    name: "Add-Ons",
+    href: "/facility/dashboard/services/grooming/add-ons",
+    icon: Puzzle,
   },
   {
     name: "Tasks",

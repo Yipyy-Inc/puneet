@@ -39,6 +39,8 @@ import {
   XCircle,
   Info,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MakeupSessionsTab } from "./_components/makeup-sessions-tab";
 import {
   type TrainingSeries,
   getDayName,
@@ -407,12 +409,19 @@ export default function CustomerTrainingPage() {
   return (
     <div className="space-y-6 p-4 md:p-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Training Classes</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Training</h2>
         <p className="text-muted-foreground">
-          Browse and enroll in training series for your pets
+          Browse classes, enroll your pets, and manage makeup sessions
         </p>
       </div>
 
+      <Tabs defaultValue="classes">
+        <TabsList>
+          <TabsTrigger value="classes">Training Classes</TabsTrigger>
+          <TabsTrigger value="makeup">Makeup Sessions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="classes" className="space-y-6 pt-2">
       {/* Search */}
       <div className="flex gap-4">
         <div className="flex-1">
@@ -923,6 +932,12 @@ export default function CustomerTrainingPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        <TabsContent value="makeup" className="pt-2">
+          <MakeupSessionsTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

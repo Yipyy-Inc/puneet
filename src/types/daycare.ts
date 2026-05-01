@@ -78,10 +78,31 @@ export const daycareRateSchema = z
       giant: z.number(),
     }),
     color: z.string().optional(),
+    /** IDs of ServiceAddOns included free of charge with this rate */
+    includedAddOnIds: z.array(z.string()).optional(),
+    /**
+     * Which daycare section IDs this rate is valid for.
+     * Empty array or undefined = available in all sections.
+     */
+    allowedSectionIds: z.array(z.string()).optional(),
   })
   .catchall(z.unknown());
 
 export type DaycareRate = z.infer<typeof daycareRateSchema>;
+
+// ============================================================================
+// Daycare Add-On
+// ============================================================================
+
+export const daycareAddOnSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  price: z.number(),
+  duration: z.number(),
+  isActive: z.boolean(),
+});
+export type DaycareAddOn = z.infer<typeof daycareAddOnSchema>;
 
 // ============================================================================
 // Daycare Package

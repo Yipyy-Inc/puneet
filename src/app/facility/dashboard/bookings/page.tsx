@@ -148,11 +148,6 @@ const isUpcoming = (dateString: string): boolean => {
   return date > today;
 };
 
-const isPast = (dateString: string): boolean => {
-  const today = new Date("2024-03-10"); // Mock today's date
-  const date = new Date(dateString);
-  return date < today && !isToday(dateString);
-};
 
 export default function FacilityBookingsPage() {
   const router = useRouter();
@@ -243,8 +238,7 @@ export default function FacilityBookingsPage() {
   const upcomingBookings = locationBookings.filter(
     (b) => isUpcoming(b.startDate) && b.status !== "cancelled",
   );
-  const pastBookings = locationBookings.filter((b) => isPast(b.startDate));
-  const pendingBookings = locationBookings.filter(
+const pendingBookings = locationBookings.filter(
     (b) => b.status === "pending",
   );
 
@@ -569,23 +563,7 @@ export default function FacilityBookingsPage() {
   };
 
   const getDataForTab = () => {
-    let base: Booking[];
-    switch (activeTab) {
-      case "today":
-        base = todayBookings;
-        break;
-      case "upcoming":
-        base = upcomingBookings;
-        break;
-      case "past":
-        base = pastBookings;
-        break;
-      case "pending":
-        base = pendingBookings;
-        break;
-      default:
-        base = allBookings;
-    }
+    const base = activeTab === "today" ? todayBookings : allBookings;
     return applyDateFilter(base);
   };
 
@@ -754,14 +732,6 @@ export default function FacilityBookingsPage() {
             <p className="text-muted-foreground text-sm">{facility.name}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <BookingDateRangeFilter
-              rangeStart={filterStart}
-              rangeEnd={filterEnd}
-              onChange={(start, end) => {
-                setFilterStart(start);
-                setFilterEnd(end);
-              }}
-            />
             <Button
               variant="outline"
               size="sm"
@@ -801,8 +771,6 @@ export default function FacilityBookingsPage() {
           hint="Scheduled ahead"
           icon={Hourglass}
           tone="violet"
-          active={activeTab === "upcoming"}
-          onClick={() => setActiveTab(activeTab === "upcoming" ? "all" : "upcoming")}
         />
         <KpiTile
           label="Pending"
@@ -810,8 +778,6 @@ export default function FacilityBookingsPage() {
           hint="Awaiting action"
           icon={Clock}
           tone="rose"
-          active={activeTab === "pending"}
-          onClick={() => setActiveTab(activeTab === "pending" ? "all" : "pending")}
         />
         <KpiTile
           label="Revenue"
@@ -830,9 +796,6 @@ export default function FacilityBookingsPage() {
               [
                 { value: "all", label: "All", count: allBookings.length },
                 { value: "today", label: "Today", count: todayBookings.length },
-                { value: "upcoming", label: "Upcoming", count: upcomingBookings.length },
-                { value: "past", label: "Past", count: pastBookings.length },
-                { value: "pending", label: "Pending", count: pendingBookings.length },
               ] as const
             ).map(({ value, label, count }) => (
               <TabsTrigger
@@ -847,6 +810,14 @@ export default function FacilityBookingsPage() {
               </TabsTrigger>
             ))}
           </TabsList>
+          <BookingDateRangeFilter
+            rangeStart={filterStart}
+            rangeEnd={filterEnd}
+            onChange={(start, end) => {
+              setFilterStart(start);
+              setFilterEnd(end);
+            }}
+          />
         </div>
         <TabsContent value={activeTab} className="mt-4">
           {getDataForTab().length === 0 ? (

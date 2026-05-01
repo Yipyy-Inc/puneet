@@ -653,6 +653,8 @@ export const addOnPricingTypeEnum = z.enum([
   "per_day",
   "per_session",
   "per_hour",
+  "per_item",
+  "percentage_of_booking",
 ]);
 export type AddOnPricingType = z.infer<typeof addOnPricingTypeEnum>;
 
@@ -691,6 +693,29 @@ export const petTypeFilterSchema = z.object({
 });
 export type PetTypeFilter = z.infer<typeof petTypeFilterSchema>;
 
+/** Whether the add-on price is charged once per booking or once per pet */
+export const addOnPetScopeEnum = z.enum(["per_booking", "per_pet"]);
+export type AddOnPetScope = z.infer<typeof addOnPetScopeEnum>;
+
+/** Extended scheduling configuration when requiresScheduling = true */
+export const addOnScheduleConfigSchema = z.object({
+  /** Who can schedule this add-on */
+  schedulableBy: z.enum(["staff_only", "customer_and_staff"]),
+  /** Show the assigned staff slot on the customer's booking summary */
+  showStaffOnSummary: z.boolean().optional(),
+  /** Max bookings of this add-on per day across the facility (0 = unlimited) */
+  maxPerDay: z.number().optional(),
+  /** Buffer time in minutes between consecutive bookings of this add-on */
+  bufferMinutes: z.number().optional(),
+  /** Show a scheduling icon on the boarding/daycare dashboard card */
+  showOnDashboard: z.boolean().optional(),
+  /** Number of schedulable slots this add-on consumes per quantity unit */
+  slotsPerUnit: z.number().optional(),
+  /** Schedule category label shown to staff (e.g. "Grooming", "Activity") */
+  scheduleCategory: z.string().optional(),
+});
+export type AddOnScheduleConfig = z.infer<typeof addOnScheduleConfigSchema>;
+
 export const serviceAddOnSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -699,18 +724,25 @@ export const serviceAddOnSchema = z.object({
   category: z.string().optional(),
   colorCode: z.string().optional(),
   pricingType: addOnPricingTypeEnum,
+  /** For percentage_of_booking: the % value (e.g. 20 = 20%). For others: dollar amount. */
   price: z.number(),
   unitLabel: z.string().optional(),
   maxQuantity: z.number().optional(),
   duration: z.number().optional(),
   taxRate: z.number().optional(),
   taxable: z.boolean().optional(),
+  /** Whether this add-on is taxable at all */
+  taxEnabled: z.boolean().optional(),
+  /** Charged once per booking or once per pet */
+  petScope: addOnPetScopeEnum.optional(),
   applicableServices: z.array(z.string()),
   /** Which facility location IDs this add-on is available at. Empty = all. */
   locationIds: z.array(z.string()).optional(),
   requiresStaff: z.boolean().optional(),
   schedulingType: addOnSchedulingTypeEnum.optional(),
   requiresScheduling: z.boolean(),
+  /** Extended scheduling options, populated when requiresScheduling = true */
+  scheduleConfig: addOnScheduleConfigSchema.optional(),
   generatesTask: z.boolean(),
   taskCategory: z.string().optional(),
   isDefault: z.boolean().optional(),

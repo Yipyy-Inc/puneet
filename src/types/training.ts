@@ -225,7 +225,23 @@ export const trainingPackageSchema = z
     popular: z.boolean().optional(),
     includes: z.array(z.string()),
     color: z.string().optional(),
+    /** IDs of ServiceAddOns included free of charge with this package */
+    includedAddOnIds: z.array(z.string()).optional(),
   })
   .catchall(z.unknown());
 
 export type TrainingPackage = z.infer<typeof trainingPackageSchema>;
+
+// ============================================================================
+// Training Add-On
+// ============================================================================
+
+export const trainingAddOnSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  price: z.number(),
+  duration: z.number(),
+  isActive: z.boolean(),
+});
+export type TrainingAddOn = z.infer<typeof trainingAddOnSchema>;

@@ -4,6 +4,7 @@ import type {
   DaycareRate,
   DaycarePackage,
   DaycareReportCard,
+  DaycareAddOn,
 } from "@/types/daycare";
 
 export type {
@@ -11,6 +12,7 @@ export type {
   DaycareRate,
   DaycarePackage,
   DaycareReportCard,
+  DaycareAddOn,
   ReportCardActivity,
   ReportCardMeal,
 } from "@/types/daycare";
@@ -194,6 +196,15 @@ export const daycareRates: DaycareRate[] = [
       giant: 52,
     },
   },
+];
+
+export const daycareAddOns: DaycareAddOn[] = [
+  { id: "dc-ao-001", name: "Enrichment Activity", description: "Puzzle feeders, sniff mats, and brain games during the session.", price: 10, duration: 20, isActive: true },
+  { id: "dc-ao-002", name: "Individual Playtime", description: "One-on-one supervised play with a staff member for focused attention.", price: 15, duration: 20, isActive: true },
+  { id: "dc-ao-003", name: "Doggy Massage", description: "Calming massage to help anxious or tired dogs wind down.", price: 18, duration: 15, isActive: true },
+  { id: "dc-ao-004", name: "Basic Brush-Out", description: "Quick brush to remove loose fur and keep coat tidy.", price: 12, duration: 10, isActive: true },
+  { id: "dc-ao-005", name: "Bandana & Photo", description: "Cute bandana and a photo sent to the owner at end of day.", price: 8, duration: 5, isActive: true },
+  { id: "dc-ao-006", name: "Report Card", description: "Detailed written report card of the day's activities and mood.", price: 5, duration: 5, isActive: false },
 ];
 
 export const daycarePackages: DaycarePackage[] = [

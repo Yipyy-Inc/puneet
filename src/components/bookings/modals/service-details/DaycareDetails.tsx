@@ -1,12 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { PawPrint, Check, Sun } from "lucide-react";
+import { PawPrint, Check, Sun, Gift } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 import type { Pet } from "@/types/pet";
@@ -21,6 +21,7 @@ import { getDaycareAvailabilitySummary } from "@/lib/capacity-engine";
 import { bookings as allBookings } from "@/data/bookings";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import type { ServiceAddOn } from "@/types/facility";
+import { daycareRates } from "@/data/daycare";
 
 interface DaycareDetailsProps {
   currentSubStep: number;
@@ -54,14 +55,12 @@ interface DaycareDetailsProps {
 
 function getAddonPriceLabel(addon: ServiceAddOn): string {
   switch (addon.pricingType) {
-    case "flat":
-      return `$${addon.price}`;
-    case "per_day":
-      return `$${addon.price}/day`;
-    case "per_session":
-      return `$${addon.price}/${addon.unitLabel || "session"}`;
-    case "per_hour":
-      return `$${addon.price}/${addon.unitLabel || "hr"}`;
+    case "flat": return `$${addon.price}`;
+    case "per_day": return `$${addon.price}/day`;
+    case "per_session": return `$${addon.price}/${addon.unitLabel || "session"}`;
+    case "per_hour": return `$${addon.price}/${addon.unitLabel || "hr"}`;
+    case "per_item": return `$${addon.price}/${addon.unitLabel || "item"}`;
+    case "percentage_of_booking": return `${addon.price}% of booking`;
   }
 }
 
@@ -235,6 +234,7 @@ export function DaycareDetails({
             setRoomAssignments={setRoomAssignments}
             daycareSelectedDates={daycareSelectedDates}
             skipEligibility={skipEligibility}
+            daycareDateTimes={daycareDateTimes}
           />
         )}
 
@@ -244,6 +244,7 @@ export function DaycareDetails({
             extraServices={extraServices}
             setExtraServices={setExtraServices}
             selectedPets={selectedPets}
+            daycareDateTimes={daycareDateTimes}
           />
         )}
 
@@ -347,6 +348,7 @@ function DaycareSectionAssignmentStep({
   setRoomAssignments,
   daycareSelectedDates,
   skipEligibility,
+  daycareDateTimes,
 }: {
   isStepAccessible: (step: number) => boolean;
   selectedPets: Pet[];
@@ -354,7 +356,21 @@ function DaycareSectionAssignmentStep({
   setRoomAssignments: (a: Array<{ petId: number; roomId: string }>) => void;
   daycareSelectedDates: Date[];
   skipEligibility?: boolean;
+  daycareDateTimes: Array<{ date: string; checkInTime: string; checkOutTime: string }>;
 }) {
+  // Derive which sections the selected rate allows (empty = all sections allowed)
+  const allowedSectionIds = React.useMemo<string[]>(() => {
+    const firstDt = daycareDateTimes[0];
+    if (!firstDt) return [];
+    const [inH, inM] = firstDt.checkInTime.split(":").map(Number);
+    const [outH, outM] = firstDt.checkOutTime.split(":").map(Number);
+    const durationHrs = (outH * 60 + outM - (inH * 60 + inM)) / 60;
+    const rateType = durationHrs <= 5 ? "half-day" : "full-day";
+    const matchingRate = daycareRates.find((r) => r.type === rateType && r.isActive);
+    return matchingRate?.allowedSectionIds ?? [];
+  }, [daycareDateTimes]);
+
+  const hasRoomRestriction = allowedSectionIds.length > 0;
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
   const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
   const [dragOverSectionId, setDragOverSectionId] = React.useState<
@@ -465,6 +481,15 @@ function DaycareSectionAssignmentStep({
           </p>
         </div>
       </div>
+
+      {hasRoomRestriction && (
+        <div className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5">
+          <Sun className="mt-0.5 size-3.5 shrink-0 text-blue-600" />
+          <p className="text-xs text-blue-800">
+            <span className="font-semibold">Rate restriction:</span> The selected rate is configured for specific rooms. Rooms outside the rate are dimmed — you can still assign them manually.
+          </p>
+        </div>
+      )}
 
       {/* Unassigned pets */}
       <div className="space-y-2">
@@ -598,6 +623,11 @@ function DaycareSectionAssignmentStep({
                             (availabilityBySectionId[section.id]?.eligible ??
                               true)));
 
+                      // Rate room restriction — dimmed but still assignable by staff
+                      const isOutsideRate =
+                        hasRoomRestriction &&
+                        !allowedSectionIds.includes(section.id);
+
                       return (
                         <div
                           key={section.id}
@@ -635,6 +665,7 @@ function DaycareSectionAssignmentStep({
                             isDisabled
                               ? "cursor-not-allowed opacity-60 ring-border/50"
                               : "ring-border/60 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:ring-border",
+                            isOutsideRate && !isDisabled && "opacity-50 grayscale-[40%]",
                             isDragOver &&
                               "ring-2 ring-primary shadow-2xl scale-[1.02]",
                             hasAssigned &&
@@ -700,6 +731,13 @@ function DaycareSectionAssignmentStep({
                             {section.description && (
                               <p className="text-muted-foreground line-clamp-1 text-xs">
                                 {section.description}
+                              </p>
+                            )}
+
+                            {/* Rate restriction badge */}
+                            {isOutsideRate && (
+                              <p className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-600 ring-1 ring-inset ring-slate-200">
+                                Not in selected rate's rooms
                               </p>
                             )}
 
@@ -842,6 +880,7 @@ function DaycareAddOnsSubStep({
   extraServices,
   setExtraServices,
   selectedPets,
+  daycareDateTimes,
 }: {
   isStepAccessible: (step: number) => boolean;
   extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
@@ -849,7 +888,38 @@ function DaycareAddOnsSubStep({
     services: Array<{ serviceId: string; quantity: number; petId: number }>,
   ) => void;
   selectedPets: Pet[];
+  daycareDateTimes: Array<{ date: string; checkInTime: string; checkOutTime: string }>;
 }) {
+  // Derive rate type from session duration to find included free add-ons
+  const injectedRef = useRef(false);
+  useEffect(() => {
+    if (injectedRef.current || !isStepAccessible(2) || selectedPets.length === 0) return;
+    injectedRef.current = true;
+
+    // Determine duration from first date-time entry
+    const firstDt = daycareDateTimes[0];
+    if (!firstDt) return;
+    const [inH, inM] = firstDt.checkInTime.split(":").map(Number);
+    const [outH, outM] = firstDt.checkOutTime.split(":").map(Number);
+    const durationHrs = (outH * 60 + outM - (inH * 60 + inM)) / 60;
+    const rateType = durationHrs <= 5 ? "half-day" : "full-day";
+
+    // Find the matching rate and its included add-on IDs
+    const matchingRate = daycareRates.find((r) => r.type === rateType && r.isActive);
+    const includedIds: string[] = matchingRate?.includedAddOnIds ?? [];
+    if (includedIds.length === 0) return;
+
+    // Inject one entry per pet per included add-on (quantity = 0 signals "free/included")
+    const toInject = selectedPets.flatMap((pet) =>
+      includedIds.map((id) => ({ serviceId: id, quantity: 0, petId: pet.id }))
+    );
+    // Only add entries that don't already exist
+    const existing = new Set(extraServices.map((es) => `${es.serviceId}:${es.petId}`));
+    const novel = toInject.filter((e) => !existing.has(`${e.serviceId}:${e.petId}`));
+    if (novel.length > 0) setExtraServices([...extraServices, ...novel]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStepAccessible, selectedPets.length]);
+
   const daycareAddOns = getStoredAddOns().filter((a) => {
     if (!a.isActive || !a.applicableServices.includes("daycare")) return false;
     // Pet eligibility filter
@@ -886,10 +956,15 @@ function DaycareAddOnsSubStep({
       {isStepAccessible(2) && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {daycareAddOns.map((service) => {
+            // quantity=0 entries are "included free" injected from the rate
+            const includedEntries = extraServices.filter(
+              (es) => es.serviceId === service.id && es.quantity === 0,
+            );
+            const isIncludedFree = includedEntries.length > 0;
             const totalQuantity = extraServices
-              .filter((es) => es.serviceId === service.id)
+              .filter((es) => es.serviceId === service.id && es.quantity > 0)
               .reduce((sum, es) => sum + es.quantity, 0);
-            const isAdded = totalQuantity > 0;
+            const isAdded = isIncludedFree || totalQuantity > 0;
             const priceLabel = getAddonPriceLabel(service);
             const hasUnits = service.pricingType !== "flat";
 
@@ -898,9 +973,11 @@ function DaycareAddOnsSubStep({
                 key={service.id}
                 className={cn(
                   "group flex flex-col overflow-hidden rounded-2xl border-2 transition-all duration-200 select-none",
-                  isAdded
-                    ? "border-transparent bg-primary/5 shadow-md"
-                    : "border-border hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-lg",
+                  isIncludedFree
+                    ? "border-emerald-400 bg-emerald-50/60 shadow-md"
+                    : isAdded
+                      ? "border-transparent bg-primary/5 shadow-md"
+                      : "border-border hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-lg",
                 )}
               >
                 {/* Image area */}
@@ -920,10 +997,16 @@ function DaycareAddOnsSubStep({
                   )}
                   {/* Price badge */}
                   <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                    <div className="bg-foreground/80 text-background rounded-lg px-2 py-1 text-xs font-bold backdrop-blur-sm">
-                      {priceLabel}
-                    </div>
-                    {service.isDefault && (
+                    {isIncludedFree ? (
+                      <div className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-bold text-white">
+                        <Gift className="size-3" /> Included Free
+                      </div>
+                    ) : (
+                      <div className="bg-foreground/80 text-background rounded-lg px-2 py-1 text-xs font-bold backdrop-blur-sm">
+                        {priceLabel}
+                      </div>
+                    )}
+                    {service.isDefault && !isIncludedFree && (
                       <div className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-bold text-white">
                         Default
                       </div>
@@ -935,9 +1018,14 @@ function DaycareAddOnsSubStep({
                     )}
                   </div>
                   {/* Added count badge */}
-                  {isAdded && (
+                  {isAdded && !isIncludedFree && (
                     <div className="bg-primary text-primary-foreground absolute top-2.5 right-2.5 flex size-7 items-center justify-center rounded-full text-xs font-bold shadow-md">
                       {totalQuantity}
+                    </div>
+                  )}
+                  {isIncludedFree && (
+                    <div className="absolute top-2.5 right-2.5 flex size-7 items-center justify-center rounded-full bg-emerald-600 shadow-md">
+                      <Check className="size-4 text-white" />
                     </div>
                   )}
                 </div>
@@ -951,10 +1039,22 @@ function DaycareAddOnsSubStep({
 
                   {/* Per-pet controls */}
                   <div className="mt-3 space-y-1.5">
-                    {selectedPets.map((pet) => {
+                    {isIncludedFree ? (
+                      // Show locked "Included" row for all pets when free
+                      <div className="flex items-center justify-between rounded-md bg-emerald-50 px-2 py-1.5">
+                        <span className="flex items-center gap-1 text-xs text-emerald-700">
+                          <Gift className="size-3" />
+                          Included with this rate
+                        </span>
+                        <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                          <Check className="size-3" /> Free
+                        </span>
+                      </div>
+                    ) : (
+                    selectedPets.map((pet) => {
                       const petService = extraServices.find(
                         (es) =>
-                          es.serviceId === service.id && es.petId === pet.id,
+                          es.serviceId === service.id && es.petId === pet.id && es.quantity > 0,
                       );
                       const quantity = petService?.quantity || 0;
 
@@ -1079,7 +1179,8 @@ function DaycareAddOnsSubStep({
                           )}
                         </div>
                       );
-                    })}
+                    })
+                    )}
                   </div>
                 </div>
               </div>

@@ -25,6 +25,7 @@ import {
   Plus,
   Home,
   ClipboardList,
+  Puzzle,
 } from "lucide-react";
 
 const tabs = [
@@ -47,6 +48,11 @@ const tabs = [
     name: "Rooms",
     href: "/facility/dashboard/services/daycare/rooms",
     icon: Home,
+  },
+  {
+    name: "Add-Ons",
+    href: "/facility/dashboard/services/daycare/add-ons",
+    icon: Puzzle,
   },
   {
     name: "Tasks",
