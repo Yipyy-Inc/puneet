@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -24,7 +22,6 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import {
   Package,
@@ -37,24 +34,10 @@ import {
   X,
   Star,
   TrendingUp,
-  Edit2,
-  Image as ImageIcon,
 } from "lucide-react";
 import { daycarePackages, DaycarePackage } from "@/data/daycare";
 
-interface AddOn {
-  id: string;
-  name: string;
-  description: string;
-  image: string;
-  hasUnits: boolean;
-  pricePerUnit?: number;
-  unit?: string;
-  basePrice?: number;
-}
-
 export default function DaycarePackagesPage() {
-  const [activeTab, setActiveTab] = useState("packages");
   const [packages, setPackages] = useState<DaycarePackage[]>(daycarePackages);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<DaycarePackage | null>(
@@ -75,52 +58,6 @@ export default function DaycarePackagesPage() {
     validityDays: 60,
     isActive: true,
     popular: false,
-  });
-
-  // Add-ons state
-  const [addOns, setAddOns] = useState<AddOn[]>([
-    {
-      id: "extended-walk",
-      name: "Extended Walk",
-      description:
-        "Additional 30-minute walk session for your pet to burn extra energy and explore",
-      image: "/images/addons/extended-walk.jpg",
-      hasUnits: true,
-      pricePerUnit: 15,
-      unit: "walk",
-    },
-    {
-      id: "playtime-plus",
-      name: "Playtime Plus",
-      description:
-        "Extra supervised play session with interactive toys and games",
-      image: "/images/addons/playtime-plus.jpg",
-      hasUnits: true,
-      pricePerUnit: 12,
-      unit: "session",
-    },
-    {
-      id: "training-session",
-      name: "Mini Training Session",
-      description:
-        "Quick 15-minute basic obedience training session during daycare",
-      image: "/images/addons/training-session.jpg",
-      hasUnits: false,
-      basePrice: 25,
-    },
-  ]);
-
-  const [addOnDialogOpen, setAddOnDialogOpen] = useState(false);
-  const [editingAddOn, setEditingAddOn] = useState<AddOn | null>(null);
-  const [addOnForm, setAddOnForm] = useState<AddOn>({
-    id: "",
-    name: "",
-    description: "",
-    image: "",
-    hasUnits: true,
-    pricePerUnit: 0,
-    unit: "",
-    basePrice: 0,
   });
 
   const handleAddNew = () => {
@@ -153,50 +90,6 @@ export default function DaycarePackagesPage() {
       popular: pkg.popular || false,
     });
     setIsModalOpen(true);
-  };
-
-  const openAddOnDialog = (addOn?: AddOn) => {
-    if (addOn) {
-      setEditingAddOn(addOn);
-      setAddOnForm(addOn);
-    } else {
-      setEditingAddOn(null);
-      setAddOnForm({
-        id: `addon-${Date.now()}`,
-        name: "",
-        description: "",
-        image: "",
-        hasUnits: true,
-        pricePerUnit: 0,
-        unit: "",
-        basePrice: 0,
-      });
-    }
-    setAddOnDialogOpen(true);
-  };
-
-  const saveAddOn = () => {
-    if (editingAddOn) {
-      setAddOns(addOns.map((a) => (a.id === addOnForm.id ? addOnForm : a)));
-    } else {
-      setAddOns([...addOns, addOnForm]);
-    }
-    setAddOnDialogOpen(false);
-  };
-
-  const deleteAddOn = (id: string) => {
-    setAddOns(addOns.filter((a) => a.id !== id));
-  };
-
-  const handleAddOnImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAddOnForm({ ...addOnForm, image: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
   const handleSave = () => {
@@ -342,15 +235,8 @@ export default function DaycarePackagesPage() {
 
   return (
     <div className="space-y-6">
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="packages">Packages</TabsTrigger>
-          <TabsTrigger value="addons">Add-ons</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="packages" className="mt-6 space-y-6">
-          {/* Summary Cards */}
-          <div className="grid gap-4 md:grid-cols-4">
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -716,229 +602,6 @@ export default function DaycarePackagesPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </TabsContent>
-
-        <TabsContent value="addons" className="mt-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">Add-on Services</h3>
-              <p className="text-muted-foreground text-sm">
-                Additional services clients can purchase with daycare
-              </p>
-            </div>
-            <Button onClick={() => openAddOnDialog()}>
-              <Plus className="mr-2 size-4" />
-              Add Service
-            </Button>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {addOns.map((addOn) => (
-              <Card key={addOn.id}>
-                <CardContent className="p-0">
-                  {addOn.image && (
-                    <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
-                      <Image
-                        src={addOn.image}
-                        alt={addOn.name}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  )}
-                  <div className="p-6">
-                    <h3 className="mb-2 text-lg font-semibold">{addOn.name}</h3>
-                    <p className="text-muted-foreground mb-4 text-sm">
-                      {addOn.description}
-                    </p>
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground text-sm">
-                          Pricing:
-                        </span>
-                        <span className="text-lg font-semibold">
-                          {addOn.hasUnits
-                            ? `$${addOn.pricePerUnit} per ${addOn.unit}`
-                            : `$${addOn.basePrice}`}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => openAddOnDialog(addOn)}
-                      >
-                        <Edit2 className="mr-2 size-4" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={() => deleteAddOn(addOn.id)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {addOns.length === 0 && (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-16">
-                <p className="text-muted-foreground mb-4">
-                  No add-on services configured yet
-                </p>
-                <Button onClick={() => openAddOnDialog()}>
-                  <Plus className="mr-2 size-4" />
-                  Add Your First Service
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Add-on Dialog */}
-          <Dialog open={addOnDialogOpen} onOpenChange={setAddOnDialogOpen}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingAddOn ? "Edit Add-on Service" : "Add Add-on Service"}
-                </DialogTitle>
-                <DialogDescription>
-                  Configure additional service details and pricing
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Service Name</Label>
-                  <Input
-                    value={addOnForm.name}
-                    onChange={(e) =>
-                      setAddOnForm({ ...addOnForm, name: e.target.value })
-                    }
-                    placeholder="e.g., Extended Walk"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea
-                    value={addOnForm.description}
-                    onChange={(e) =>
-                      setAddOnForm({
-                        ...addOnForm,
-                        description: e.target.value,
-                      })
-                    }
-                    placeholder="Brief description of the service"
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Service Image</Label>
-                  {addOnForm.image && (
-                    <div className="relative mb-2 h-32 w-full overflow-hidden rounded-lg border">
-                      <Image
-                        src={addOnForm.image}
-                        alt="Preview"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <Input
-                      value={addOnForm.image}
-                      onChange={(e) =>
-                        setAddOnForm({ ...addOnForm, image: e.target.value })
-                      }
-                      placeholder="/images/addons/..."
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() =>
-                        document.getElementById("addonImageUpload")?.click()
-                      }
-                    >
-                      <ImageIcon className="size-4" />
-                    </Button>
-                    <input
-                      id="addonImageUpload"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleAddOnImageUpload}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    checked={addOnForm.hasUnits}
-                    onCheckedChange={(checked) =>
-                      setAddOnForm({ ...addOnForm, hasUnits: checked })
-                    }
-                  />
-                  <Label>Unit-based Pricing</Label>
-                </div>
-                {addOnForm.hasUnits ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Price per Unit ($)</Label>
-                      <Input
-                        type="number"
-                        value={addOnForm.pricePerUnit || 0}
-                        onChange={(e) =>
-                          setAddOnForm({
-                            ...addOnForm,
-                            pricePerUnit: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        placeholder="15"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Unit Name</Label>
-                      <Input
-                        value={addOnForm.unit || ""}
-                        onChange={(e) =>
-                          setAddOnForm({ ...addOnForm, unit: e.target.value })
-                        }
-                        placeholder="e.g., walk, session"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label>Base Price ($)</Label>
-                    <Input
-                      type="number"
-                      value={addOnForm.basePrice || 0}
-                      onChange={(e) =>
-                        setAddOnForm({
-                          ...addOnForm,
-                          basePrice: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                      placeholder="25"
-                    />
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setAddOnDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={saveAddOn}>Save Service</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }

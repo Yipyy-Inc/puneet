@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { DatePicker } from "@/components/ui/date-picker";
 import {
   Calendar,
   Dog,
@@ -32,10 +31,6 @@ import {
   Heart,
   ClipboardCheck,
   Stethoscope,
-  Sun,
-  Home,
-  Scissors,
-  GraduationCap,
   ArrowUpDown,
   ArrowDownUp,
 } from "lucide-react";
@@ -185,36 +180,7 @@ export default function CustomerReportCardsPage() {
   const { selectedFacility } = useCustomerFacility();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPetId, setSelectedPetId] = useState<string>("all");
-  const [selectedServiceType, setSelectedServiceType] = useState<string>("all");
-  const [dateRangeStart, setDateRangeStart] = useState<string>("");
-  const [dateRangeEnd, setDateRangeEnd] = useState<string>("");
-  const [datePreset, setDatePreset] = useState<"all" | "30d" | "3m" | "year" | "custom">("all");
   const [sortBy, setSortBy] = useState<"date-desc" | "date-asc">("date-desc");
-
-  const applyDatePreset = (preset: typeof datePreset) => {
-    setDatePreset(preset);
-    const today = new Date();
-    const pad = (d: Date) => d.toISOString().split("T")[0];
-    if (preset === "all") {
-      setDateRangeStart("");
-      setDateRangeEnd("");
-    } else if (preset === "30d") {
-      const from = new Date(today);
-      from.setDate(from.getDate() - 30);
-      setDateRangeStart(pad(from));
-      setDateRangeEnd(pad(today));
-    } else if (preset === "3m") {
-      const from = new Date(today);
-      from.setMonth(from.getMonth() - 3);
-      setDateRangeStart(pad(from));
-      setDateRangeEnd(pad(today));
-    } else if (preset === "year") {
-      setDateRangeStart(`${today.getFullYear()}-01-01`);
-      setDateRangeEnd(pad(today));
-    } else {
-      // custom — keep existing values, user will fill manually
-    }
-  };
 
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
@@ -255,21 +221,6 @@ export default function CustomerReportCardsPage() {
       );
     }
 
-    // Filter by service type
-    if (selectedServiceType !== "all") {
-      filtered = filtered.filter(
-        (card) => card.serviceType === selectedServiceType,
-      );
-    }
-
-    // Filter by date range
-    if (dateRangeStart) {
-      filtered = filtered.filter((card) => card.date >= dateRangeStart);
-    }
-    if (dateRangeEnd) {
-      filtered = filtered.filter((card) => card.date <= dateRangeEnd);
-    }
-
     // Search by keyword
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -300,9 +251,6 @@ export default function CustomerReportCardsPage() {
   }, [
     customerReportCards,
     selectedPetId,
-    selectedServiceType,
-    dateRangeStart,
-    dateRangeEnd,
     searchQuery,
     sortBy,
     petById,
@@ -354,36 +302,12 @@ export default function CustomerReportCardsPage() {
     });
   };
 
-  const hasActiveFilters =
-    selectedPetId !== "all" ||
-    selectedServiceType !== "all" ||
-    datePreset !== "all" ||
-    searchQuery;
+  const hasActiveFilters = selectedPetId !== "all" || searchQuery;
 
   const clearFilters = () => {
     setSelectedPetId("all");
-    setSelectedServiceType("all");
-    setDateRangeStart("");
-    setDateRangeEnd("");
-    setDatePreset("all");
     setSearchQuery("");
   };
-
-  const serviceOptions = [
-    { value: "all", label: "All services", Icon: null },
-    { value: "daycare", label: "Daycare", Icon: Sun },
-    { value: "boarding", label: "Boarding", Icon: Home },
-    { value: "grooming", label: "Grooming", Icon: Scissors },
-    { value: "training", label: "Training", Icon: GraduationCap },
-  ] as const;
-
-  const periodPresets = [
-    { value: "all", label: "All time" },
-    { value: "30d", label: "Last 30 days" },
-    { value: "3m", label: "Last 3 months" },
-    { value: "year", label: "This year" },
-    { value: "custom", label: "Custom range" },
-  ] as const;
 
   const pillClass = (active: boolean) =>
     cn(
@@ -456,81 +380,6 @@ export default function CustomerReportCardsPage() {
                     {pet.name}
                   </button>
                 ))}
-              </div>
-            )}
-
-            {/* Service */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-muted-foreground w-14 shrink-0 text-[10px] font-semibold uppercase tracking-widest">
-                Service
-              </span>
-              {serviceOptions.map(({ value, label, Icon }) => (
-                <button
-                  key={value}
-                  onClick={() => setSelectedServiceType(value)}
-                  className={pillClass(selectedServiceType === value)}
-                >
-                  {Icon && <Icon className="size-3" />}
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {/* Period */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-muted-foreground w-14 shrink-0 text-[10px] font-semibold uppercase tracking-widest">
-                Period
-              </span>
-              {periodPresets.map(({ value, label }) => (
-                <button
-                  key={value}
-                  onClick={() => applyDatePreset(value)}
-                  className={pillClass(datePreset === value)}
-                >
-                  {value === "custom" && <Calendar className="size-3" />}
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {/* Custom date range — only shown when selected */}
-            {datePreset === "custom" && (
-              <div className="bg-primary/5 border-primary/15 ml-[72px] flex flex-wrap items-center gap-4 rounded-xl border px-4 py-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-primary/70 text-[10px] font-semibold uppercase tracking-widest">
-                    From
-                  </span>
-                  <DatePicker
-                    value={dateRangeStart || undefined}
-                    onValueChange={(next) => setDateRangeStart(next)}
-                    max={dateRangeEnd || undefined}
-                    placeholder="Start date"
-                    displayMode="dialog"
-                    showQuickPresets={false}
-                    showManualInput={false}
-                    className="h-7 min-w-[120px] border-primary/20 bg-white/80 text-xs shadow-none hover:border-primary/50 hover:bg-white"
-                    popoverClassName="w-[296px] rounded-xl"
-                    calendarClassName="p-1"
-                  />
-                </div>
-                <span className="text-primary/30 text-xs">—</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-primary/70 text-[10px] font-semibold uppercase tracking-widest">
-                    To
-                  </span>
-                  <DatePicker
-                    value={dateRangeEnd || undefined}
-                    onValueChange={(next) => setDateRangeEnd(next)}
-                    min={dateRangeStart || undefined}
-                    placeholder="End date"
-                    displayMode="dialog"
-                    showQuickPresets={false}
-                    showManualInput={false}
-                    className="h-7 min-w-[120px] border-primary/20 bg-white/80 text-xs shadow-none hover:border-primary/50 hover:bg-white"
-                    popoverClassName="w-[296px] rounded-xl"
-                    calendarClassName="p-1"
-                  />
-                </div>
               </div>
             )}
           </div>

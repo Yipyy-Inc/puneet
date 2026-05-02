@@ -45,6 +45,7 @@ import {
   Send,
   RefreshCw,
   ExternalLink,
+  Vault,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -422,11 +423,17 @@ export default function FacilityBillingPage() {
         }}
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="payments">Payments</TabsTrigger>
           <TabsTrigger value="giftcards">Gift Cards</TabsTrigger>
           <TabsTrigger value="credits">Credits</TabsTrigger>
           <TabsTrigger value="outstanding">Outstanding</TabsTrigger>
+          <TabsTrigger value="cash-drawer" asChild>
+            <Link href="/facility/dashboard/billing/cash-drawer" className="flex items-center gap-1.5">
+              <Vault className="size-3.5" />
+              Cash Drawer
+            </Link>
+          </TabsTrigger>
         </TabsList>
 
         {/* Payments Tab */}
