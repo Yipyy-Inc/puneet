@@ -9,8 +9,7 @@ import {
   Package,
   BoxesIcon,
   Settings,
-  LogIn,
-  LogOut,
+  ArrowLeftRight,
   FileText,
   DollarSign,
   Building2,
@@ -31,14 +30,13 @@ const tabs = [
     icon: Building2,
   },
   {
-    name: "Check-In",
+    name: "Check-In / Out",
     href: "/facility/dashboard/services/grooming/check-in",
-    icon: LogIn,
-  },
-  {
-    name: "Check-Out",
-    href: "/facility/dashboard/services/grooming/check-out",
-    icon: LogOut,
+    icon: ArrowLeftRight,
+    matchPaths: [
+      "/facility/dashboard/services/grooming/check-in",
+      "/facility/dashboard/services/grooming/check-out",
+    ],
   },
   {
     name: "Groomers",
@@ -88,9 +86,11 @@ export function GroomingNav() {
   return (
     <nav className="flex gap-1 overflow-x-auto px-6">
       {tabs.map((tab) => {
-        const isActive = tab.exact
-          ? pathname === tab.href
-          : pathname.startsWith(tab.href);
+        const isActive = tab.matchPaths
+          ? tab.matchPaths.some((p) => pathname.startsWith(p))
+          : tab.exact
+            ? pathname === tab.href
+            : pathname.startsWith(tab.href);
         const Icon = tab.icon;
 
         return (

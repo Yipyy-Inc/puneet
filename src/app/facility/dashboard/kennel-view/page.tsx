@@ -1046,14 +1046,14 @@ export default function KennelViewPage() {
                         )}
                         onClick={() => openKennelDialog(kennel)}
                       >
-                        {kennel.petId &&
-                          hasCriticalTags("pet", kennel.petId) && (
-                            <span className="sr-only">
-                              Critical alert for {kennel.petName}
-                            </span>
-                          )}
                         <TableCell className="font-medium">
                           {kennel.name}
+                          {kennel.petId &&
+                            hasCriticalTags("pet", kennel.petId) && (
+                              <span className="sr-only">
+                                Critical alert for {kennel.petName}
+                              </span>
+                            )}
                         </TableCell>
                         <TableCell>{getTypeLabel(kennel.type)}</TableCell>
                         <TableCell>

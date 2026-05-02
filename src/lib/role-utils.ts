@@ -393,6 +393,25 @@ const FACILITY_ROLE_COOKIE_NAME = "facility_role";
 const CUSTOM_ROLE_PERMISSIONS_KEY = "facility_custom_role_permissions";
 const USER_PERMISSION_OVERRIDES_KEY = "facility_user_permission_overrides";
 const CURRENT_USER_ID_KEY = "facility_current_user_id";
+const EMPLOYEE_STAFF_ID_COOKIE = "employee_staff_id";
+
+// Get/set which staff member is being impersonated in the employee portal
+export function getEmployeeStaffId(): string | null {
+  if (typeof document === "undefined") return null;
+  const cookies = document.cookie.split("; ");
+  const c = cookies.find((x) => x.startsWith(`${EMPLOYEE_STAFF_ID_COOKIE}=`));
+  return c ? c.split("=")[1] : null;
+}
+
+export function setEmployeeStaffId(staffId: string): void {
+  if (typeof document === "undefined") return;
+  document.cookie = `${EMPLOYEE_STAFF_ID_COOKIE}=${staffId}; path=/; max-age=31536000`;
+}
+
+export function clearEmployeeStaffId(): void {
+  if (typeof document === "undefined") return;
+  document.cookie = `${EMPLOYEE_STAFF_ID_COOKIE}=; path=/; max-age=0`;
+}
 
 // Get custom role permissions from localStorage
 export function getCustomRolePermissions(): Record<

@@ -19,9 +19,11 @@ import {
   Building2,
   Shield,
   Package,
+  Users,
 } from "lucide-react";
 import { useTransition } from "react";
 import { setUserRole } from "@/lib/role-utils";
+import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -228,6 +230,8 @@ export function CustomerHeader() {
               <Shield className="mr-2 size-4" />
               {t("Switch to Admin")}
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <EmployeePortalSwitcher standalone={false} />
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {

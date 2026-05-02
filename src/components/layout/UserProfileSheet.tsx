@@ -31,8 +31,10 @@ import {
   Settings,
   Building2,
   Shield,
+  Users,
 } from "lucide-react";
 import { getUserRole, setUserRole, type UserRole } from "@/lib/role-utils";
+import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";
 import { useUiText } from "@/hooks/use-ui-text";
 
 interface Notification {
@@ -300,6 +302,11 @@ export function UserProfileSheet({
               </DropdownMenuItem>
             </>
           )}
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs">
+            {t("Employee Portals")}
+          </DropdownMenuLabel>
+          <EmployeePortalSwitcher standalone={false} />
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={handleLogout}
