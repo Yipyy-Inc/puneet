@@ -350,6 +350,8 @@ export interface MembershipPlan {
   downgradePlanIds?: string[];
   /** Facility-configurable customer-side policy (optional; falls back to default) */
   changePolicy?: MembershipChangePolicy;
+  /** Services this plan grants instant booking for (skips the booking-request queue). */
+  instabookServices?: ("daycare" | "boarding" | "grooming")[];
 }
 
 export interface PrepaidCredits {

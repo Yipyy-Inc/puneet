@@ -3,26 +3,12 @@
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Search,
   Plus,
   MessageSquare,
   X,
-  AlertCircle,
-  Smartphone,
-  ChevronRight,
-  RefreshCw,
-  Star,
-  StarOff,
-  AlertTriangle,
-  Clock,
 } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Message } from "@/types/communications";
@@ -30,54 +16,11 @@ import type { ThreadMeta } from "@/types/messaging";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import { threadMeta as defaultThreadMeta } from "@/data/messaging";
-import { useFacilityRole } from "@/hooks/use-facility-role";
+import { threadLocationMap } from "@/data/saved-replies";
 import { getCustomerLanguageLabel } from "@/lib/language-settings";
-
-// SMS credits
-const facility = facilities.find((f) => f.id === 11);
-const credits = (facility as Record<string, unknown>)?.smsCredits as
-  | {
-      monthlyAllowance: number;
-      used: number;
-      purchased: number;
-      autoReload: boolean;
-      autoReloadThreshold: number;
-      autoReloadAmount: number;
-    }
-  | undefined;
-const smsTotal = credits ? credits.monthlyAllowance + (credits.purchased ?? 0) : 0;
-const smsRemaining = credits ? smsTotal - credits.used : 0;
-
-const SMS_PACKAGES = [
-  { amount: 100, price: 5 },
-  { amount: 500, price: 20 },
-  { amount: 1000, price: 35 },
-  { amount: 5000, price: 150 },
-];
-
-const TAG_STYLES: Record<string, string> = {
-  vip: "bg-amber-100 text-amber-700 border-amber-200",
-  new_lead: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  overdue_payment: "bg-red-100 text-red-700 border-red-200",
-  boarding_now: "bg-blue-100 text-blue-700 border-blue-200",
-  high_priority: "bg-orange-100 text-orange-700 border-orange-200",
-  needs_follow_up: "bg-violet-100 text-violet-700 border-violet-200",
-  vaccine_expired: "bg-yellow-100 text-yellow-700 border-yellow-200",
-  complaint: "bg-rose-100 text-rose-700 border-rose-200",
-  upsell_opportunity: "bg-teal-100 text-teal-700 border-teal-200",
-};
-
-const TAG_LABELS: Record<string, string> = {
-  vip: "VIP",
-  new_lead: "New Lead",
-  overdue_payment: "Overdue",
-  boarding_now: "Boarding",
-  high_priority: "High Priority",
-  needs_follow_up: "Follow-up",
-  vaccine_expired: "Vaccine Exp.",
-  complaint: "Complaint",
-  upsell_opportunity: "Upsell",
-};
+import { useLocationContext } from "@/hooks/use-location-context";
+import { ConversationRow } from "./ConversationRow";
+import { useConversationState } from "./conversation-state-context";
 
 export interface Thread {
   threadId: string;
@@ -115,33 +58,32 @@ function initials(name: string) {
     .slice(0, 2);
 }
 
-function relTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "now";
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d`;
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-type Filter = "all" | "unread" | "sms" | "email" | "chat" | "starred" | "high_priority" | "follow_up";
+type Filter =
+  | "all"
+  | "unread"
+  | "sms"
+  | "email"
+  | "chat"
+  | "starred"
+  | "high_priority"
+  | "follow_up"
+  | "assigned_me"
+  | "closed";
 
 const FILTER_ITEMS: { key: Filter; label: string }[] = [
   { key: "all", label: "All" },
   { key: "unread", label: "Unread" },
+  { key: "assigned_me", label: "Mine" },
   { key: "starred", label: "Starred" },
   { key: "high_priority", label: "Priority" },
   { key: "follow_up", label: "Follow-up" },
+  { key: "closed", label: "Closed" },
   { key: "chat", label: "Chat" },
   { key: "email", label: "Email" },
   { key: "sms", label: "SMS" },
 ];
+
+const CURRENT_USER_STAFF_ID = "staff-1";
 
 export function ContactList({
   messages,
@@ -149,22 +91,43 @@ export function ContactList({
   onSelectThread,
   mode = "facility",
   customerFacilityIds,
+  locationFilter,
 }: {
   messages: Message[];
   selectedThreadId: string | null;
   onSelectThread: (threadId: string) => void;
   mode?: "facility" | "customer";
   customerFacilityIds?: number[];
+  locationFilter?: string[];
 }) {
   const isCustomerMode = mode === "customer";
-  const { role } = useFacilityRole();
-  const canPurchase = !isCustomerMode && (role === "owner" || role === "manager");
+  const { locations } = useLocationContext();
+  const conversationState = useConversationState();
+
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [compose, setCompose] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
   const [starredIds, setStarredIds] = useState<Set<string>>(
     () => new Set(defaultThreadMeta.filter((m) => m.starred).map((m) => m.threadId)),
+  );
+  const [priorityIds, setPriorityIds] = useState<Set<string>>(
+    () =>
+      new Set(
+        defaultThreadMeta
+          .filter((m) => m.tags.includes("high_priority"))
+          .map((m) => m.threadId),
+      ),
+  );
+  const [followUpIds, setFollowUpIds] = useState<Set<string>>(
+    () =>
+      new Set(
+        defaultThreadMeta
+          .filter(
+            (m) => m.status === "follow_up" || m.tags.includes("needs_follow_up"),
+          )
+          .map((m) => m.threadId),
+      ),
   );
 
   const clientResults = useMemo(() => {
@@ -252,24 +215,51 @@ export function ContactList({
     }
 
     return [...map.values()].sort((a, b) => {
+      if (!isCustomerMode) {
+        const aPriority = priorityIds.has(a.threadId) ? 1 : 0;
+        const bPriority = priorityIds.has(b.threadId) ? 1 : 0;
+        if (aPriority !== bPriority) return bPriority - aPriority;
+      }
       const aTime = a.isPlaceholder ? 0 : new Date(a.lastMessage.timestamp).getTime();
       const bTime = b.isPlaceholder ? 0 : new Date(b.lastMessage.timestamp).getTime();
       if (bTime !== aTime) return bTime - aTime;
       return a.clientName.localeCompare(b.clientName);
     });
-  }, [customerFacilityIds, isCustomerMode, messages]);
+  }, [customerFacilityIds, isCustomerMode, messages, priorityIds]);
 
   const filtered = useMemo(() => {
     let list = threads;
+
+    // Location filter (multi-location only)
+    if (!isCustomerMode && locationFilter && locationFilter.length > 0) {
+      const locSet = new Set(locationFilter);
+      list = list.filter((t) => {
+        const loc = threadLocationMap[t.threadId];
+        return loc ? locSet.has(loc) : true;
+      });
+    }
+
+    // Closed threads hidden unless explicitly viewing them
+    if (!isCustomerMode && filter !== "closed") {
+      list = list.filter((t) => !conversationState.closed.has(t.threadId));
+    }
+
+    if (filter === "closed")
+      list = list.filter((t) => conversationState.closed.has(t.threadId));
     if (filter === "unread") list = list.filter((t) => t.unreadCount > 0);
     if (filter === "sms") list = list.filter((t) => t.channels.includes("sms"));
     if (filter === "email") list = list.filter((t) => t.channels.includes("email"));
     if (filter === "chat") list = list.filter((t) => t.channels.includes("in-app"));
     if (filter === "starred") list = list.filter((t) => starredIds.has(t.threadId));
     if (filter === "high_priority")
-      list = list.filter((t) => t.meta?.tags.includes("high_priority"));
+      list = list.filter((t) => priorityIds.has(t.threadId));
     if (filter === "follow_up")
-      list = list.filter((t) => t.meta?.tags.includes("needs_follow_up") || t.meta?.status === "follow_up");
+      list = list.filter((t) => followUpIds.has(t.threadId));
+    if (filter === "assigned_me")
+      list = list.filter(
+        (t) => conversationState.assignments[t.threadId] === CURRENT_USER_STAFF_ID,
+      );
+
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -279,20 +269,88 @@ export function ContactList({
       );
     }
     return list;
-  }, [threads, filter, search, starredIds]);
+  }, [
+    threads,
+    filter,
+    search,
+    starredIds,
+    priorityIds,
+    followUpIds,
+    isCustomerMode,
+    locationFilter,
+    conversationState.closed,
+    conversationState.assignments,
+  ]);
 
   const customerCanSwitchFacilities = isCustomerMode && threads.length > 1;
   const showSearch = !isCustomerMode || compose || customerCanSwitchFacilities;
   const showFilters = !compose && !isCustomerMode;
 
-  const toggleStar = (threadId: string, e: React.SyntheticEvent) => {
-    e.stopPropagation();
+  const toggleStar = (threadId: string) => {
     setStarredIds((prev) => {
       const next = new Set(prev);
       if (next.has(threadId)) next.delete(threadId);
       else next.add(threadId);
       return next;
     });
+  };
+
+  const togglePriority = (threadId: string) => {
+    setPriorityIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(threadId)) {
+        next.delete(threadId);
+        toast("Priority removed");
+      } else {
+        next.add(threadId);
+        toast.success("Marked as Priority");
+      }
+      return next;
+    });
+  };
+
+  const toggleFollowUp = (threadId: string) => {
+    setFollowUpIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(threadId)) {
+        next.delete(threadId);
+        toast("Follow-up cleared");
+      } else {
+        next.add(threadId);
+        toast.success("Marked for Follow-up");
+      }
+      return next;
+    });
+  };
+
+  const toggleClosed = (threadId: string) => {
+    const isCurrentlyClosed = conversationState.isClosed(threadId);
+    conversationState.setClosed(threadId, !isCurrentlyClosed);
+    toast.success(
+      isCurrentlyClosed
+        ? "Conversation reopened"
+        : "Conversation closed — moved to Closed tab",
+    );
+  };
+
+  const handleAssign = (threadId: string, staffId: string | null) => {
+    conversationState.assignTo(threadId, staffId);
+    if (staffId) {
+      const staff = conversationState.staff.find((s) => s.id === staffId);
+      toast.success(
+        `Assigned to ${staff?.name ?? "staff"} — they'll be notified`,
+      );
+    } else {
+      toast("Conversation unassigned");
+    }
+  };
+
+  const locationLabelFor = (threadId: string): string | undefined => {
+    if (isCustomerMode || locations.length <= 1) return undefined;
+    const locId = threadLocationMap[threadId];
+    if (!locId) return undefined;
+    const loc = locations.find((l) => l.id === locId);
+    return loc?.shortCode ?? loc?.name;
   };
 
   return (
@@ -309,119 +367,12 @@ export function ContactList({
               setCompose(!compose);
               setClientSearch("");
             }}
+            title={compose ? "Cancel" : "New message"}
           >
             {compose ? <X className="size-4" /> : <Plus className="size-4" />}
           </Button>
         )}
       </div>
-
-      {/* SMS credits strip */}
-      {credits && !compose && !isCustomerMode && (
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="mx-4 mb-1 flex w-[calc(100%-2rem)] items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-left transition-colors hover:bg-slate-100"
-            >
-              <Smartphone className="size-3.5 text-slate-400" />
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-medium text-slate-500">SMS Credits</span>
-                  <span
-                    className={cn(
-                      "text-[10px] font-bold tabular-nums",
-                      smsRemaining > 500
-                        ? "text-blue-600"
-                        : smsRemaining > 100
-                          ? "text-amber-600"
-                          : "text-red-500",
-                    )}
-                  >
-                    {smsRemaining.toLocaleString()} left
-                  </span>
-                </div>
-                <div className="mt-1 h-1 overflow-hidden rounded-full bg-blue-100">
-                  <div
-                    className={cn(
-                      "h-full rounded-full transition-all",
-                      smsRemaining > 500 ? "bg-blue-500" : smsRemaining > 100 ? "bg-amber-500" : "bg-red-500",
-                    )}
-                    style={{ width: `${Math.min(100, (smsRemaining / smsTotal) * 100)}%` }}
-                  />
-                </div>
-              </div>
-              <ChevronRight className="size-3 text-slate-300" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-64 rounded-xl border-slate-200 p-0 shadow-lg">
-            <div className="px-4 pt-3.5 pb-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-500">SMS Balance</span>
-                <span
-                  className={cn(
-                    "text-lg leading-none font-bold tabular-nums",
-                    smsRemaining > 500 ? "text-blue-600" : smsRemaining > 100 ? "text-amber-600" : "text-red-500",
-                  )}
-                >
-                  {smsRemaining.toLocaleString()}
-                </span>
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-blue-100">
-                <div
-                  className={cn(
-                    "h-full rounded-full",
-                    smsRemaining > 500 ? "bg-blue-500" : smsRemaining > 100 ? "bg-amber-500" : "bg-red-500",
-                  )}
-                  style={{ width: `${Math.min(100, (smsRemaining / smsTotal) * 100)}%` }}
-                />
-              </div>
-              <div className="mt-1.5 flex gap-3 text-[10px] text-slate-400">
-                <span>{credits.monthlyAllowance.toLocaleString()} plan</span>
-                <span className="text-slate-300">·</span>
-                <span>{credits.purchased.toLocaleString()} extra</span>
-                <span className="text-slate-300">·</span>
-                <span>{credits.used.toLocaleString()} used</span>
-              </div>
-              {credits.autoReload && (
-                <div className="mt-2 flex items-center gap-1.5">
-                  <RefreshCw className="size-2.5 text-blue-400" />
-                  <span className="text-[10px] text-blue-500">Auto-reload on</span>
-                </div>
-              )}
-            </div>
-
-            {canPurchase && (
-              <div className="border-t border-slate-100 px-4 pt-2.5 pb-3">
-                <p className="mb-2 text-[11px] font-semibold text-slate-500">Buy More Credits</p>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {SMS_PACKAGES.map((pkg) => {
-                    const perSms = ((pkg.price / pkg.amount) * 100).toFixed(1);
-                    return (
-                      <button
-                        key={pkg.amount}
-                        type="button"
-                        onClick={() =>
-                          toast.success(`${pkg.amount.toLocaleString()} credits purchased — $${pkg.price}`)
-                        }
-                        className="group flex flex-col items-center rounded-lg border border-slate-100 bg-slate-50/50 px-2 py-2 transition-all hover:border-blue-200 hover:bg-blue-50"
-                      >
-                        <span className="text-sm font-bold text-slate-700 group-hover:text-blue-600">
-                          {pkg.amount >= 1000 ? `${pkg.amount / 1000}K` : pkg.amount}
-                        </span>
-                        <span className="text-[9px] text-slate-400">credits</span>
-                        <span className="mt-1 rounded-full bg-blue-50 px-2 py-px text-[10px] font-semibold text-blue-600 group-hover:bg-blue-100">
-                          ${pkg.price}
-                        </span>
-                        <span className="mt-0.5 text-[9px] text-slate-400">{perSms}¢/sms</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </PopoverContent>
-        </Popover>
-      )}
 
       {/* Search */}
       {showSearch && (
@@ -431,7 +382,7 @@ export function ContactList({
             <Input
               placeholder={
                 compose
-                  ? "Search clients..."
+                  ? "Search clients or enter phone / email…"
                   : isCustomerMode
                     ? "Search facilities..."
                     : "Search by name, phone, email..."
@@ -465,33 +416,71 @@ export function ContactList({
         </div>
       )}
 
-      {/* Compose — client search */}
+      {/* Compose — client search with unknown-number support */}
       {!isCustomerMode && compose && (
         <div className="flex-1 overflow-y-auto">
-          {clientResults.map((client) => (
-            <button
-              key={client.id}
-              onClick={() => {
-                const existing = threads.find((t) => t.clientId === client.id);
-                onSelectThread(existing ? existing.threadId : `new-${client.id}`);
-                setCompose(false);
-              }}
-              className="flex w-full items-center gap-3 px-5 py-2.5 text-left transition-colors hover:bg-slate-50"
-            >
-              <div
-                className={cn(
-                  "flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
-                  avatarColor(client.name),
-                )}
+          {clientResults.length === 0 && clientSearch.trim() ? (
+            <div className="px-5 py-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                No matching client
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  const newThreadId = `new-unknown-${Date.now()}`;
+                  toast.success(
+                    `New contact draft created for "${clientSearch.trim()}". Send a message to confirm.`,
+                  );
+                  onSelectThread(newThreadId);
+                  setCompose(false);
+                  setClientSearch("");
+                }}
+                className="mt-2 flex w-full items-center gap-3 rounded-xl border border-dashed border-blue-200 bg-blue-50/40 px-3 py-3 text-left transition-colors hover:bg-blue-50"
               >
-                {initials(client.name)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate-800">{client.name}</p>
-                <p className="truncate text-xs text-slate-400">{client.email}</p>
-              </div>
-            </button>
-          ))}
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-600">
+                  <Plus className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-blue-700">
+                    Start new contact
+                  </p>
+                  <p className="truncate text-xs text-blue-500/80">
+                    Send to "{clientSearch.trim()}" — we'll create a profile.
+                  </p>
+                </div>
+              </button>
+              <p className="mt-2 text-[10px] text-slate-400">
+                Works for unknown numbers, walk-ins, and inbound inquiries.
+              </p>
+            </div>
+          ) : (
+            clientResults.map((client) => (
+              <button
+                key={client.id}
+                onClick={() => {
+                  const existing = threads.find((t) => t.clientId === client.id);
+                  onSelectThread(
+                    existing ? existing.threadId : `new-${client.id}`,
+                  );
+                  setCompose(false);
+                }}
+                className="flex w-full items-center gap-3 px-5 py-2.5 text-left transition-colors hover:bg-slate-50"
+              >
+                <div
+                  className={cn(
+                    "flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
+                    avatarColor(client.name),
+                  )}
+                >
+                  {initials(client.name)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-800">{client.name}</p>
+                  <p className="truncate text-xs text-slate-400">{client.email}</p>
+                </div>
+              </button>
+            ))
+          )}
         </div>
       )}
 
@@ -505,158 +494,33 @@ export function ContactList({
             </div>
           ) : (
             filtered.map((thread) => {
-              const sel = selectedThreadId === thread.threadId;
-              const failed = !thread.isPlaceholder && thread.lastMessage.status === "failed";
-              const isStarred = starredIds.has(thread.threadId);
-              const threadClient = !isCustomerMode ? clients.find((c) => c.id === thread.clientId) : null;
+              const threadClient = !isCustomerMode
+                ? clients.find((c) => c.id === thread.clientId)
+                : null;
               const preferredLanguageLabel = threadClient?.preferredLanguage
                 ? getCustomerLanguageLabel(threadClient.preferredLanguage)
                 : null;
-              const visibleTags = (thread.meta?.tags ?? []).slice(0, 2);
-              const status = thread.meta?.status;
 
               return (
-                <button
+                <ConversationRow
                   key={thread.threadId}
-                  onClick={() => onSelectThread(thread.threadId)}
-                  className={cn(
-                    "flex w-full items-start gap-3 px-4 py-3 text-left transition-all",
-                    sel ? "bg-slate-100" : "hover:bg-slate-50",
-                  )}
-                >
-                  {/* Avatar */}
-                  <div className="relative mt-0.5 shrink-0">
-                    {thread.clientImage ? (
-                      <img
-                        src={thread.clientImage}
-                        alt=""
-                        className="size-11 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div
-                        className={cn(
-                          "flex size-11 items-center justify-center rounded-full text-sm font-bold text-white",
-                          avatarColor(thread.clientName),
-                        )}
-                      >
-                        {initials(thread.clientName)}
-                      </div>
-                    )}
-                    {thread.unreadCount > 0 && (
-                      <div className="absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-white bg-emerald-500" />
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-1">
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <span
-                          className={cn(
-                            "truncate text-sm",
-                            thread.unreadCount > 0
-                              ? "font-bold text-slate-900"
-                              : "font-medium text-slate-700",
-                          )}
-                        >
-                          {thread.clientName}
-                        </span>
-                        {preferredLanguageLabel && (
-                          <span className="rounded-full border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[9px] leading-none font-semibold text-indigo-700">
-                            {preferredLanguageLabel}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        {isStarred && (
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            onClick={(e) => toggleStar(thread.threadId, e)}
-                            onKeyDown={(e) => e.key === "Enter" && toggleStar(thread.threadId, e)}
-                            className="text-amber-400 hover:text-amber-500 cursor-pointer"
-                            title="Unstar"
-                          >
-                            <Star className="size-3 fill-current" />
-                          </div>
-                        )}
-                        {!isStarred && sel && (
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            onClick={(e) => toggleStar(thread.threadId, e)}
-                            onKeyDown={(e) => e.key === "Enter" && toggleStar(thread.threadId, e)}
-                            className="text-slate-300 hover:text-amber-400 cursor-pointer"
-                            title="Star"
-                          >
-                            <StarOff className="size-3" />
-                          </div>
-                        )}
-                        <span
-                          className={cn(
-                            "text-[10px]",
-                            thread.unreadCount > 0 ? "font-semibold text-slate-900" : "text-slate-400",
-                          )}
-                        >
-                          {thread.isPlaceholder ? "new" : relTime(thread.lastMessage.timestamp)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-0.5 flex items-center justify-between gap-2">
-                      {failed ? (
-                        <span className="flex items-center gap-1 text-xs text-red-500">
-                          <AlertCircle className="size-3" />
-                          Failed
-                        </span>
-                      ) : (
-                        <span
-                          className={cn(
-                            "truncate text-xs",
-                            thread.unreadCount > 0 ? "text-slate-600" : "text-slate-400",
-                          )}
-                        >
-                          {thread.lastMessage.direction === "outbound" && "You: "}
-                          {thread.isPlaceholder ? "No messages yet" : thread.lastMessage.body}
-                        </span>
-                      )}
-                      {thread.unreadCount > 0 && (
-                        <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">
-                          {thread.unreadCount}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Tags row */}
-                    {(visibleTags.length > 0 || status === "follow_up" || status === "pending_client") && (
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {status === "follow_up" && (
-                          <span className="inline-flex items-center gap-0.5 rounded-full border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700">
-                            <Clock className="size-2.5" />
-                            Follow-up
-                          </span>
-                        )}
-                        {status === "pending_client" && (
-                          <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">
-                            <AlertTriangle className="size-2.5" />
-                            Pending
-                          </span>
-                        )}
-                        {visibleTags.map((tag) => (
-                          <span
-                            key={tag}
-                            className={cn(
-                              "rounded-full border px-1.5 py-0.5 text-[9px] font-semibold",
-                              TAG_STYLES[tag] ?? "bg-slate-100 text-slate-600 border-slate-200",
-                            )}
-                          >
-                            {TAG_LABELS[tag] ?? tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </button>
+                  thread={thread}
+                  selected={selectedThreadId === thread.threadId}
+                  isStarred={starredIds.has(thread.threadId)}
+                  isPriority={priorityIds.has(thread.threadId)}
+                  isFollowUp={followUpIds.has(thread.threadId)}
+                  isClosed={conversationState.closed.has(thread.threadId)}
+                  assignee={conversationState.getAssignee(thread.threadId)}
+                  staffOptions={conversationState.staff}
+                  locationLabel={locationLabelFor(thread.threadId)}
+                  preferredLanguageLabel={preferredLanguageLabel}
+                  onSelect={onSelectThread}
+                  onToggleStar={toggleStar}
+                  onTogglePriority={togglePriority}
+                  onToggleFollowUp={toggleFollowUp}
+                  onToggleClosed={toggleClosed}
+                  onAssign={handleAssign}
+                />
               );
             })
           )}

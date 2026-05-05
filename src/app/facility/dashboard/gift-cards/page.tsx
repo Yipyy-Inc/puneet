@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable, type ColumnDef, type FilterDef } from "@/components/ui/DataTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { cn } from "@/lib/utils";
 import {
   Gift,
   Plus,
@@ -34,6 +36,8 @@ import {
   FileDown,
   Upload,
   AlertTriangle,
+  ExternalLink,
+  ChevronRight,
 } from "lucide-react";
 import {
   giftCards,
@@ -77,12 +81,15 @@ const statusVariant: Record<
 };
 
 export default function FacilityGiftCardsPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
   const [sellMode, setSellMode] = useState<"digital" | "physical" | null>(null);
   const [showRedeem, setShowRedeem] = useState(false);
   const [selectedCard, setSelectedCard] = useState<GiftCard | null>(null);
   const [cardSearchQuery, setCardSearchQuery] = useState("");
   const [generatingBatch, setGeneratingBatch] = useState(false);
+  const [highlightedWalletId, setHighlightedWalletId] = useState<string | null>(null);
+  const [highlightedBatchId, setHighlightedBatchId] = useState<string | null>(null);
 
   const facilityCards = useMemo(
     () => giftCards.filter((gc) => gc.facilityId === FACILITY_ID),
@@ -132,6 +139,89 @@ export default function FacilityGiftCardsPage() {
     const active = allCards.filter((c) => c.status === "active" || c.status === "sold").length;
     return { total: allCards.length, inactive, active };
   }, [facilityBatches]);
+
+  type AuditTarget =
+    | { kind: "card"; id: string; label: string }
+    | { kind: "wallet"; id: string; label: string }
+    | { kind: "batch"; id: string; label: string }
+    | { kind: "client"; id: number; label: string }
+    | null;
+
+  const resolveAuditTarget = (log: GiftCardAuditLog): AuditTarget => {
+    if (log.giftCardId) {
+      const card = facilityCards.find((c) => c.id === log.giftCardId);
+      return {
+        kind: "card",
+        id: log.giftCardId,
+        label: card ? `Gift Card ****${card.code.slice(-4)}` : "Gift Card",
+      };
+    }
+    if (log.walletId) {
+      const wallet = facilityWallets.find((w) => w.id === log.walletId);
+      const client = wallet ? clients.find((c) => c.id === wallet.clientId) : null;
+      return {
+        kind: "wallet",
+        id: log.walletId,
+        label: client ? `${client.name}'s Wallet` : "Wallet",
+      };
+    }
+    if (log.batchId) {
+      const batch = facilityBatches.find((b) => b.id === log.batchId);
+      return {
+        kind: "batch",
+        id: log.batchId,
+        label: batch ? batch.name : "Batch",
+      };
+    }
+    if (log.clientId != null) {
+      return {
+        kind: "client",
+        id: log.clientId,
+        label: log.clientName ?? "Client",
+      };
+    }
+    return null;
+  };
+
+  const traceAuditLog = (log: GiftCardAuditLog) => {
+    const target = resolveAuditTarget(log);
+    if (!target) return;
+    if (target.kind === "card") {
+      const card = facilityCards.find((c) => c.id === target.id);
+      if (card) setSelectedCard(card);
+      return;
+    }
+    if (target.kind === "wallet") {
+      setActiveTab("wallets");
+      setHighlightedWalletId(target.id);
+      return;
+    }
+    if (target.kind === "batch") {
+      setActiveTab("inventory");
+      setHighlightedBatchId(target.id);
+      return;
+    }
+    if (target.kind === "client") {
+      router.push(`/facility/dashboard/clients/${target.id}`);
+    }
+  };
+
+  // Scroll the highlighted entity into view, then clear the highlight after a moment.
+  useEffect(() => {
+    if (!highlightedWalletId) return;
+    const el = document.getElementById(`wallet-${highlightedWalletId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const t = setTimeout(() => setHighlightedWalletId(null), 2400);
+    return () => clearTimeout(t);
+  }, [highlightedWalletId]);
+
+  useEffect(() => {
+    if (!highlightedBatchId) return;
+    const el = document.getElementById(`batch-${highlightedBatchId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const t = setTimeout(() => setHighlightedBatchId(null), 2400);
+    return () => clearTimeout(t);
+  }, [highlightedBatchId]);
 
   // Filtered cards
   const filteredCards = useMemo(() => {
@@ -306,6 +396,30 @@ export default function FacilityGiftCardsPage() {
       defaultVisible: true,
     },
     {
+      key: "linkedTo",
+      label: "Linked To",
+      defaultVisible: true,
+      render: (l) => {
+        const target = resolveAuditTarget(l);
+        if (!target) return <span className="text-muted-foreground">—</span>;
+        const kindLabel: Record<NonNullable<AuditTarget>["kind"], string> = {
+          card: "Gift Card",
+          wallet: "Wallet",
+          batch: "Batch",
+          client: "Client",
+        };
+        return (
+          <span className="text-primary inline-flex items-center gap-1 text-sm hover:underline">
+            <span className="text-muted-foreground text-xs">
+              {kindLabel[target.kind]}:
+            </span>
+            <span className="font-medium">{target.label}</span>
+            <ExternalLink className="size-3" />
+          </span>
+        );
+      },
+    },
+    {
       key: "notes",
       label: "Notes",
       defaultVisible: false,
@@ -458,8 +572,16 @@ export default function FacilityGiftCardsPage() {
                   {facilityAuditLogs.slice(0, 6).map((log) => {
                     const isPositive = ["issued_digital", "issued_physical", "batch_generated", "batch_imported", "activated"].includes(log.action);
                     const isNegative = ["voided", "refunded"].includes(log.action);
+                    const target = resolveAuditTarget(log);
                     return (
-                      <div key={log.id} className="flex items-center gap-3 py-2.5">
+                      <button
+                        key={log.id}
+                        type="button"
+                        onClick={() => traceAuditLog(log)}
+                        disabled={!target}
+                        className="hover:bg-muted/50 -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-md px-2 py-2.5 text-left transition-colors disabled:cursor-default disabled:hover:bg-transparent"
+                        title={target ? `Open ${target.label}` : undefined}
+                      >
                         <div
                           className={`flex size-8 shrink-0 items-center justify-center rounded-full ${
                             isPositive
@@ -483,19 +605,25 @@ export default function FacilityGiftCardsPage() {
                           </p>
                           <p className="text-muted-foreground truncate text-xs capitalize">
                             {log.action.replaceAll("_", " ")}
+                            {target ? ` · ${target.label}` : ""}
                           </p>
                         </div>
-                        <div className="text-right shrink-0">
-                          {log.amount != null && (
-                            <p className="price-value text-sm font-medium">
-                              ${log.amount.toFixed(2)}
+                        <div className="flex shrink-0 items-center gap-2 text-right">
+                          <div>
+                            {log.amount != null && (
+                              <p className="price-value text-sm font-medium">
+                                ${log.amount.toFixed(2)}
+                              </p>
+                            )}
+                            <p className="text-muted-foreground text-xs">
+                              {formatDate(log.timestamp)}
                             </p>
+                          </div>
+                          {target && (
+                            <ChevronRight className="text-muted-foreground size-3.5" />
                           )}
-                          <p className="text-muted-foreground text-xs">
-                            {formatDate(log.timestamp)}
-                          </p>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -651,8 +779,16 @@ export default function FacilityGiftCardsPage() {
             <div className="space-y-3">
               {facilityWallets.map((wallet) => {
                 const client = clients.find((c) => c.id === wallet.clientId);
+                const isHighlighted = highlightedWalletId === wallet.id;
                 return (
-                  <Card key={wallet.id}>
+                  <Card
+                    key={wallet.id}
+                    id={`wallet-${wallet.id}`}
+                    className={cn(
+                      "transition-shadow",
+                      isHighlighted && "ring-primary ring-2 ring-offset-2",
+                    )}
+                  >
                     <CardContent className="py-4">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
@@ -738,8 +874,16 @@ export default function FacilityGiftCardsPage() {
               const inactive = batch.cards.filter((c) => c.status === "inactive").length;
               const soldPct = batch.totalCards > 0 ? (sold / batch.totalCards) * 100 : 0;
 
+              const isBatchHighlighted = highlightedBatchId === batch.id;
               return (
-                <Card key={batch.id}>
+                <Card
+                  key={batch.id}
+                  id={`batch-${batch.id}`}
+                  className={cn(
+                    "transition-shadow",
+                    isBatchHighlighted && "ring-primary ring-2 ring-offset-2",
+                  )}
+                >
                   <CardContent className="py-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
@@ -800,13 +944,19 @@ export default function FacilityGiftCardsPage() {
 
           {/* Full audit log */}
           <div>
-            <h3 className="mb-3 font-semibold">Full Audit Trail</h3>
+            <div className="mb-3 flex items-baseline justify-between">
+              <h3 className="font-semibold">Full Audit Trail</h3>
+              <p className="text-muted-foreground text-xs">
+                Click any row to jump to its linked card, wallet, batch, or client
+              </p>
+            </div>
             <DataTable
               data={facilityAuditLogs}
               columns={auditColumns}
               searchKey="clientName"
               searchPlaceholder="Search audit log…"
               itemsPerPage={10}
+              onRowClick={traceAuditLog}
             />
           </div>
         </TabsContent>

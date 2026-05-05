@@ -19,7 +19,15 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  Pill,
+  AlertTriangle,
+  StickyNote,
+  Save,
+  User,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { useConversationState } from "./conversation-state-context";
+import { petCareAlerts } from "@/data/saved-replies";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { clients } from "@/data/clients";
@@ -261,6 +269,10 @@ export function ClientContextPanel({
 }) {
   const isCustomerMode = mode === "customer";
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [conversationNote, setConversationNote] = useState("");
+  const [savedNote, setSavedNote] = useState("");
+  const conversationState = useConversationState();
+  const assignee = threadId ? conversationState.getAssignee(threadId) : undefined;
 
   const threadEntityId = useMemo(() => {
     if (!threadId) return null;
@@ -502,6 +514,32 @@ export function ClientContextPanel({
           ))}
         </div>
 
+        {/* ── Assigned staff ── */}
+        {!isCustomerMode && (
+          <Section title="Assigned Staff" icon={User}>
+            {assignee ? (
+              <div className="flex items-center gap-2 rounded-xl bg-slate-50 p-2">
+                <span
+                  className={cn(
+                    "flex size-8 items-center justify-center rounded-full text-[11px] font-bold text-white",
+                    assignee.color,
+                  )}
+                >
+                  {assignee.initials}
+                </span>
+                <div>
+                  <p className="text-xs font-semibold text-slate-700">{assignee.name}</p>
+                  <p className="text-[10px] text-slate-400">{assignee.role}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs italic text-slate-400">
+                Not assigned yet — use the header to assign someone.
+              </p>
+            )}
+          </Section>
+        )}
+
         {/* ── Pets ── */}
         <Section title={isCustomerMode ? "My Pets" : "Pets"} icon={PawPrint}>
           <div className="space-y-1">
@@ -539,6 +577,48 @@ export function ClientContextPanel({
           </div>
         </Section>
 
+        {/* ── Pet care alerts ── */}
+        {!isCustomerMode && pets.length > 0 && (() => {
+          const alerts = petCareAlerts.filter((a) =>
+            pets.some((p) => p.id === a.petId),
+          );
+          if (alerts.length === 0) return null;
+          return (
+            <Section title="Care Alerts" icon={AlertTriangle}>
+              <div className="space-y-1.5">
+                {alerts.map((a, idx) => {
+                  const pet = pets.find((p) => p.id === a.petId);
+                  const tone =
+                    a.type === "medication"
+                      ? "border-blue-200 bg-blue-50 text-blue-700"
+                      : a.type === "allergy"
+                        ? "border-red-200 bg-red-50 text-red-700"
+                        : "border-amber-200 bg-amber-50 text-amber-700";
+                  const Icon = a.type === "medication" ? Pill : AlertTriangle;
+                  return (
+                    <div
+                      key={`${a.petId}-${idx}`}
+                      className={cn(
+                        "flex items-start gap-2 rounded-lg border px-2.5 py-2 text-[11px]",
+                        tone,
+                      )}
+                    >
+                      <Icon className="mt-0.5 size-3 shrink-0" />
+                      <div>
+                        <p className="font-semibold">
+                          {pet?.name ?? "Pet"} ·{" "}
+                          <span className="font-normal capitalize">{a.type}</span>
+                        </p>
+                        <p className="mt-0.5 text-[11px] opacity-90">{a.text}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
+          );
+        })()}
+
         {/* ── Next Appointment ── */}
         <Section title="Next Appointment" icon={Calendar}>
           {nextUpcomingBooking ? (
@@ -566,6 +646,46 @@ export function ClientContextPanel({
             </p>
           )}
         </Section>
+
+        {/* ── Conversation Notes ── */}
+        {!isCustomerMode && (
+          <Section title="Conversation Notes" icon={StickyNote}>
+            <Textarea
+              value={conversationNote}
+              onChange={(e) => setConversationNote(e.target.value)}
+              placeholder="Add a quick note about this client or conversation…"
+              className="min-h-[70px] resize-none border-slate-200 bg-slate-50 text-xs"
+            />
+            <div className="mt-1.5 flex items-center justify-between">
+              <span className="text-[10px] text-slate-400">
+                {savedNote
+                  ? `Last saved · ${new Date().toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}`
+                  : "Not saved yet"}
+              </span>
+              <Button
+                size="sm"
+                variant={
+                  conversationNote && conversationNote !== savedNote
+                    ? "default"
+                    : "outline"
+                }
+                disabled={!conversationNote || conversationNote === savedNote}
+                className="h-7 gap-1 rounded-full text-[11px]"
+                onClick={() => {
+                  setSavedNote(conversationNote);
+                  toast.success("Note saved");
+                }}
+              >
+                <Save className="size-3" />
+                Save
+              </Button>
+            </div>
+          </Section>
+        )}
 
         {/* ── Quick Links ── */}
         <Section

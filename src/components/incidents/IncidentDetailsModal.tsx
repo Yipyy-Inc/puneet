@@ -49,7 +49,7 @@ interface FollowUpTask {
   description: string;
   assignedTo: string;
   dueDate: string;
-  status: "pending" | "in_progress" | "completed";
+  status: "pending" | "in_progress" | "completed" | "skipped";
   completedDate?: string;
   completedBy?: string;
   notes?: string;

@@ -36,6 +36,87 @@ export const incidentStatusEnum = z.enum([
 ]);
 export type IncidentStatus = z.infer<typeof incidentStatusEnum>;
 
+export const contactMethodEnum = z.enum([
+  "phone",
+  "email",
+  "sms",
+  "in_person",
+  "video_call",
+  "other",
+]);
+export type ContactMethod = z.infer<typeof contactMethodEnum>;
+
+export const assigneeRoleEnum = z.enum([
+  "reporter",
+  "manager",
+  "shift_lead",
+  "owner_contact",
+  "any_staff",
+  "specific",
+]);
+export type AssigneeRole = z.infer<typeof assigneeRoleEnum>;
+
+export const customerSentimentEnum = z.enum([
+  "positive",
+  "neutral",
+  "concerned",
+  "upset",
+  "unreachable",
+]);
+export type CustomerSentiment = z.infer<typeof customerSentimentEnum>;
+
+export const followUpProtocolStepSchema = z.object({
+  id: z.string(),
+  order: z.number(),
+  title: z.string(),
+  description: z.string(),
+  instructions: z.string(),
+  daysAfterIncident: z.number(),
+  hoursAfterIncident: z.number(),
+  contactMethod: contactMethodEnum,
+  assigneeRole: assigneeRoleEnum,
+  assigneeName: z.string().optional(),
+  questionsToAsk: z.array(z.string()),
+  requiresPhoto: z.boolean(),
+  requiresClientResponse: z.boolean(),
+  escalateAfterAttempts: z.number().optional(),
+});
+export type FollowUpProtocolStep = z.infer<typeof followUpProtocolStepSchema>;
+
+export const followUpProtocolSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  severityScopes: z.array(incidentSeverityEnum),
+  typeScopes: z.array(incidentTypeEnum),
+  isDefault: z.boolean(),
+  isActive: z.boolean(),
+  steps: z.array(followUpProtocolStepSchema),
+  createdBy: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type FollowUpProtocol = z.infer<typeof followUpProtocolSchema>;
+
+export const followUpConversationEntrySchema = z.object({
+  id: z.string(),
+  loggedAt: z.string(),
+  loggedBy: z.string(),
+  contactMethod: contactMethodEnum,
+  reachedClient: z.boolean(),
+  summary: z.string(),
+  customerStatement: z.string(),
+  staffResponse: z.string(),
+  sentiment: customerSentimentEnum,
+  topics: z.array(z.string()),
+  customerRequests: z.string().optional(),
+  nextSteps: z.string().optional(),
+  durationMinutes: z.number().optional(),
+});
+export type FollowUpConversationEntry = z.infer<
+  typeof followUpConversationEntrySchema
+>;
+
 export const followUpTaskSchema = z.object({
   id: z.string(),
   incidentId: z.string(),
@@ -43,10 +124,26 @@ export const followUpTaskSchema = z.object({
   description: z.string(),
   assignedTo: z.string(),
   dueDate: z.string(),
-  status: z.enum(["pending", "in_progress", "completed"]),
+  status: z.enum(["pending", "in_progress", "completed", "skipped"]),
   completedDate: z.string().optional(),
   completedBy: z.string().optional(),
   notes: z.string().optional(),
+  // Protocol linkage (optional; populated when generated from a protocol)
+  protocolId: z.string().optional(),
+  protocolStepId: z.string().optional(),
+  protocolName: z.string().optional(),
+  stepOrder: z.number().optional(),
+  contactMethod: contactMethodEnum.optional(),
+  instructions: z.string().optional(),
+  questionsToAsk: z.array(z.string()).optional(),
+  requiresPhoto: z.boolean().optional(),
+  requiresClientResponse: z.boolean().optional(),
+  conversationLog: z.array(followUpConversationEntrySchema).optional(),
+  attemptCount: z.number().optional(),
+  escalated: z.boolean().optional(),
+  escalateAfterAttempts: z.number().optional(),
+  scheduledFor: z.string().optional(),
+  surfacedToDailyTasks: z.boolean().optional(),
 });
 export type FollowUpTask = z.infer<typeof followUpTaskSchema>;
 

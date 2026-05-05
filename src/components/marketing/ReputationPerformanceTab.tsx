@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Star,
   Trophy,
@@ -18,8 +16,11 @@ import {
   MessageSquare,
   Zap,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { reputationQueries } from "@/lib/api/reputation";
 import type { ReputationStaffStat, ReputationServiceStat } from "@/types/reputation";
+
+type LeaderboardTab = "staff" | "services";
 
 // ─── Star display ─────────────────────────────────────────────────────────────
 
@@ -27,183 +28,259 @@ function Stars({ rating, max = 5 }: { rating: number; max?: number }) {
   return (
     <div className="flex gap-0.5">
       {Array.from({ length: max }, (_, i) => (
-        <Star key={i} className={`h-4 w-4 ${i < Math.round(rating) ? "fill-amber-400 text-amber-400" : "fill-muted text-muted-foreground"}`} />
+        <Star
+          key={i}
+          className={`h-3 w-3 ${i < Math.round(rating) ? "fill-amber-400 text-amber-400" : "fill-muted text-muted-foreground"}`}
+        />
       ))}
     </div>
   );
 }
 
-// ─── Rank medal ───────────────────────────────────────────────────────────────
+// ─── Rank chip ────────────────────────────────────────────────────────────────
 
-function RankMedal({ rank }: { rank: number }) {
-  if (rank === 1) return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-400 text-white font-bold text-sm shadow-md">
-      <Trophy className="h-4 w-4" />
-    </div>
-  );
-  if (rank === 2) return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-300 text-slate-700 font-bold text-sm shadow">
-      2
-    </div>
-  );
-  if (rank === 3) return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-700/80 text-white font-bold text-sm shadow">
-      3
-    </div>
-  );
+function RankChip({ rank }: { rank: number }) {
+  const styles =
+    rank === 1
+      ? "bg-amber-400 text-white"
+      : rank === 2
+        ? "bg-slate-300 text-slate-700 dark:bg-slate-600 dark:text-slate-100"
+        : rank === 3
+          ? "bg-amber-700/80 text-white"
+          : "bg-muted text-muted-foreground";
   return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground font-semibold text-sm">
-      {rank}
-    </div>
+    <span
+      className={cn(
+        "inline-flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
+        styles,
+      )}
+    >
+      {rank === 1 ? <Trophy className="size-3" /> : rank}
+    </span>
   );
 }
 
-// ─── Rating bar ───────────────────────────────────────────────────────────────
+// ─── Rating pill ──────────────────────────────────────────────────────────────
 
-function MiniRatingBar({ value }: { value: number }) {
-  const pct = (value / 5) * 100;
-  const color = value >= 4.5 ? "bg-emerald-500" : value >= 4 ? "bg-blue-500" : value >= 3 ? "bg-amber-500" : "bg-red-500";
+function RatingPill({ value }: { value: number }) {
+  const styles =
+    value >= 4.5
+      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+      : value >= 4
+        ? "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
+        : value >= 3
+          ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+          : "bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300";
   return (
-    <div className="flex items-center gap-2 flex-1">
-      <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-sm font-bold tabular-nums w-8">{value.toFixed(1)}</span>
-    </div>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums",
+        styles,
+      )}
+    >
+      <Star className="size-3 fill-current" />
+      {value.toFixed(1)}
+    </span>
   );
 }
 
-// ─── Staff card ───────────────────────────────────────────────────────────────
+// ─── Staff row ────────────────────────────────────────────────────────────────
 
-function StaffCard({ stat, rank }: { stat: ReputationStaffStat; rank: number }) {
-  const [expanded, setExpanded] = useState(false);
-  const deltaColor = stat.ratingDelta > 0 ? "text-emerald-600" : stat.ratingDelta < 0 ? "text-red-600" : "text-muted-foreground";
+function StaffRow({
+  stat,
+  rank,
+  expanded,
+  onToggle,
+}: {
+  stat: ReputationStaffStat;
+  rank: number;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const deltaColor =
+    stat.ratingDelta > 0
+      ? "text-emerald-600"
+      : stat.ratingDelta < 0
+        ? "text-red-600"
+        : "text-muted-foreground";
+  const hasPraise = stat.praiseComments.length > 0;
 
   return (
-    <Card className={`transition-shadow hover:shadow-md ${rank === 1 ? "border-amber-300 dark:border-amber-700 ring-1 ring-amber-200 dark:ring-amber-800" : ""}`}>
-      <CardContent className="p-5">
-        <div className="flex items-start gap-4">
-          <RankMedal rank={rank} />
-
-          {/* Avatar */}
-          <div className="h-11 w-11 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center text-base font-bold text-primary shrink-0">
-            {stat.staffName.charAt(0)}
+    <>
+      <tr
+        className={cn(
+          "border-t transition-colors",
+          hasPraise && "cursor-pointer hover:bg-muted/30",
+          expanded && "bg-muted/20",
+        )}
+        onClick={hasPraise ? onToggle : undefined}
+      >
+        <td className="py-3 pl-5 pr-3">
+          <div className="flex items-center gap-2.5">
+            <RankChip rank={rank} />
+            <div className="bg-gradient-to-br from-primary/20 to-primary/40 text-primary flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold">
+              {stat.staffName.charAt(0)}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{stat.staffName}</p>
+              <p className="text-muted-foreground truncate text-[11px]">
+                {stat.role}
+              </p>
+            </div>
           </div>
+        </td>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="font-semibold leading-tight">{stat.staffName}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{stat.role}</p>
-              </div>
-              <div className="flex items-center gap-1">
-                {stat.ratingDelta > 0 && <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />}
-                {stat.ratingDelta < 0 && <TrendingDown className="h-3.5 w-3.5 text-red-500" />}
-                {stat.ratingDelta === 0 && <Minus className="h-3.5 w-3.5 text-muted-foreground" />}
-                <span className={`text-xs font-medium ${deltaColor}`}>
-                  {stat.ratingDelta > 0 ? `+${stat.ratingDelta}` : stat.ratingDelta === 0 ? "Stable" : stat.ratingDelta}
-                </span>
-              </div>
-            </div>
+        <td className="px-3 py-3">
+          <RatingPill value={stat.averageRating} />
+        </td>
 
-            <div className="mt-3 flex items-center gap-3">
-              <MiniRatingBar value={stat.averageRating} />
-            </div>
+        <td className="px-3 py-3">
+          <span className="text-foreground inline-flex items-center gap-1 text-xs">
+            <MessageSquare className="size-3 opacity-60" />
+            {stat.totalReviews}
+          </span>
+        </td>
 
-            <div className="mt-2.5 flex items-center gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <MessageSquare className="h-3 w-3" />
-                {stat.totalReviews} reviews
+        <td className="px-3 py-3">
+          <div className="flex items-center gap-3 text-xs">
+            <span className="inline-flex items-center gap-1 text-emerald-600">
+              <ThumbsUp className="size-3" />
+              {stat.positiveCount}
+            </span>
+            {stat.negativeCount > 0 && (
+              <span className="inline-flex items-center gap-1 text-red-600">
+                <ThumbsDown className="size-3" />
+                {stat.negativeCount}
               </span>
-              <span className="flex items-center gap-1 text-emerald-600">
-                <ThumbsUp className="h-3 w-3" />
-                {stat.positiveCount} positive
-              </span>
-              {stat.negativeCount > 0 && (
-                <span className="flex items-center gap-1 text-red-600">
-                  <ThumbsDown className="h-3 w-3" />
-                  {stat.negativeCount} negative
-                </span>
-              )}
-            </div>
-
-            {/* Praise comments */}
-            {stat.praiseComments.length > 0 && (
-              <div className="mt-3">
-                <button
-                  onClick={() => setExpanded((e) => !e)}
-                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                >
-                  <Award className="h-3.5 w-3.5" />
-                  {expanded ? "Hide" : "Show"} praise comments ({stat.praiseComments.length})
-                </button>
-                {expanded && (
-                  <div className="mt-2 space-y-1.5">
-                    {stat.praiseComments.map((c, i) => (
-                      <p key={i} className="text-xs bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900 rounded-lg px-3 py-1.5 italic text-muted-foreground">
-                        "{c}"
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </div>
             )}
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </td>
+
+        <td className="px-3 py-3">
+          <div className={cn("inline-flex items-center gap-1 text-xs font-medium", deltaColor)}>
+            {stat.ratingDelta > 0 && <TrendingUp className="size-3.5" />}
+            {stat.ratingDelta < 0 && <TrendingDown className="size-3.5" />}
+            {stat.ratingDelta === 0 && <Minus className="size-3.5" />}
+            <span>
+              {stat.ratingDelta > 0
+                ? `+${stat.ratingDelta}`
+                : stat.ratingDelta === 0
+                  ? "—"
+                  : stat.ratingDelta}
+            </span>
+          </div>
+        </td>
+
+        <td className="py-3 pl-3 pr-5 text-right">
+          {hasPraise ? (
+            <span className="text-primary inline-flex items-center gap-1 text-[11px] font-medium">
+              <Award className="size-3" />
+              {stat.praiseComments.length}
+            </span>
+          ) : (
+            <span className="text-muted-foreground text-xs">—</span>
+          )}
+        </td>
+      </tr>
+
+      {expanded && hasPraise && (
+        <tr className="bg-muted/10 border-t">
+          <td colSpan={6} className="px-5 py-3">
+            <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+              Praise comments
+            </p>
+            <div className="space-y-1.5">
+              {stat.praiseComments.map((c, i) => (
+                <p
+                  key={i}
+                  className="text-muted-foreground rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs italic dark:border-emerald-900 dark:bg-emerald-950/30"
+                >
+                  "{c}"
+                </p>
+              ))}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
-// ─── Service card ─────────────────────────────────────────────────────────────
+// ─── Service row ──────────────────────────────────────────────────────────────
 
-function ServiceCard({ stat, rank }: { stat: ReputationServiceStat; rank: number }) {
-  const SERVICE_ICONS: Record<string, string> = {
-    grooming: "✂️",
-    boarding: "🏠",
-    training: "🎓",
-    daycare: "☀️",
-  };
+const SERVICE_ICONS: Record<string, string> = {
+  grooming: "✂️",
+  boarding: "🏠",
+  training: "🎓",
+  daycare: "☀️",
+};
+
+function ServiceRow({ stat, rank }: { stat: ReputationServiceStat; rank: number }) {
   const icon = SERVICE_ICONS[stat.service] ?? "🐾";
-  const responseColor = stat.responseRate >= 80 ? "text-emerald-600" : stat.responseRate >= 60 ? "text-amber-600" : "text-red-600";
+  const responseColor =
+    stat.responseRate >= 80
+      ? "text-emerald-600"
+      : stat.responseRate >= 60
+        ? "text-amber-600"
+        : "text-red-600";
 
   return (
-    <Card className={`transition-shadow hover:shadow-md ${rank === 1 ? "border-amber-300 dark:border-amber-700 ring-1 ring-amber-200 dark:ring-amber-800" : ""}`}>
-      <CardContent className="p-5">
-        <div className="flex items-center gap-4">
-          <RankMedal rank={rank} />
-          <div className="h-11 w-11 rounded-xl bg-muted flex items-center justify-center text-2xl">
+    <tr className="border-t hover:bg-muted/30 transition-colors">
+      <td className="py-3 pl-5 pr-3">
+        <div className="flex items-center gap-2.5">
+          <RankChip rank={rank} />
+          <div className="bg-muted flex size-7 shrink-0 items-center justify-center rounded-lg text-base">
             {icon}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold">{stat.serviceLabel}</p>
-
-            <div className="mt-2.5 flex items-center gap-3">
-              <MiniRatingBar value={stat.averageRating} />
-            </div>
-
-            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <span>{stat.totalRequests} requests sent</span>
-              <span>{stat.totalRatings} rated</span>
-              <span className={`font-medium ${responseColor}`}>{stat.responseRate}% response rate</span>
-              <span className="text-red-600">{stat.negativeCount} negative</span>
-            </div>
-          </div>
-          <div className="text-right shrink-0">
-            <div className="text-2xl font-bold">{stat.averageRating.toFixed(1)}</div>
-            <Stars rating={stat.averageRating} />
-          </div>
+          <p className="truncate text-sm font-medium">{stat.serviceLabel}</p>
         </div>
-      </CardContent>
-    </Card>
+      </td>
+
+      <td className="px-3 py-3">
+        <RatingPill value={stat.averageRating} />
+      </td>
+
+      <td className="px-3 py-3">
+        <span className="text-muted-foreground text-xs">{stat.totalRequests}</span>
+      </td>
+
+      <td className="px-3 py-3">
+        <span className="text-muted-foreground text-xs">{stat.totalRatings}</span>
+      </td>
+
+      <td className="px-3 py-3">
+        <span className={cn("text-xs font-medium tabular-nums", responseColor)}>
+          {stat.responseRate}%
+        </span>
+      </td>
+
+      <td className="py-3 pl-3 pr-5 text-right">
+        {stat.negativeCount > 0 ? (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600">
+            <ThumbsDown className="size-3" />
+            {stat.negativeCount}
+          </span>
+        ) : (
+          <span className="text-muted-foreground text-xs">—</span>
+        )}
+      </td>
+    </tr>
   );
 }
 
 // ─── Performance tab ─────────────────────────────────────────────────────────
 
+const LEADERBOARD_TABS: { value: LeaderboardTab; label: string; icon: typeof Users }[] = [
+  { value: "staff", label: "Staff", icon: Users },
+  { value: "services", label: "Services", icon: Award },
+];
+
 export function ReputationPerformanceTab() {
   const { data: staffStats = [] } = useQuery(reputationQueries.staffStats());
   const { data: serviceStats = [] } = useQuery(reputationQueries.serviceStats());
+
+  const [tab, setTab] = useState<LeaderboardTab>("staff");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const sortedStaff = [...staffStats].sort((a, b) => b.averageRating - a.averageRating);
   const sortedServices = [...serviceStats].sort((a, b) => b.averageRating - a.averageRating);
@@ -211,23 +288,34 @@ export function ReputationPerformanceTab() {
   const topStaff = sortedStaff[0];
   const topService = sortedServices[0];
 
+  const counts = {
+    staff: sortedStaff.length,
+    services: sortedServices.length,
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Hero spotlight */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {topStaff && (
           <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-amber-400/20 flex items-center justify-center">
-                <Trophy className="h-6 w-6 text-amber-600" />
+            <CardContent className="px-3 py-2.5 flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full bg-amber-400/20 flex items-center justify-center shrink-0">
+                <Trophy className="h-4 w-4 text-amber-600" />
               </div>
-              <div>
-                <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide">⭐ Top Rated Staff</p>
-                <p className="text-lg font-bold mt-0.5">{topStaff.staffName}</p>
-                <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider leading-none">
+                  Top Rated Staff
+                </p>
+                <p className="text-sm font-semibold mt-1 truncate">{topStaff.staffName}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
                   <Stars rating={topStaff.averageRating} />
-                  <span className="text-sm font-semibold">{topStaff.averageRating.toFixed(1)}</span>
-                  <span className="text-xs text-muted-foreground">· {topStaff.totalReviews} reviews</span>
+                  <span className="text-xs font-semibold tabular-nums">
+                    {topStaff.averageRating.toFixed(1)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    · {topStaff.totalReviews} reviews
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -235,17 +323,23 @@ export function ReputationPerformanceTab() {
         )}
         {topService && (
           <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border-emerald-200 dark:border-emerald-800">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-emerald-400/20 flex items-center justify-center">
-                <Zap className="h-6 w-6 text-emerald-600" />
+            <CardContent className="px-3 py-2.5 flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full bg-emerald-400/20 flex items-center justify-center shrink-0">
+                <Zap className="h-4 w-4 text-emerald-600" />
               </div>
-              <div>
-                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">🏆 Highest Rated Service</p>
-                <p className="text-lg font-bold mt-0.5">{topService.serviceLabel}</p>
-                <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider leading-none">
+                  Highest Rated Service
+                </p>
+                <p className="text-sm font-semibold mt-1 truncate">{topService.serviceLabel}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
                   <Stars rating={topService.averageRating} />
-                  <span className="text-sm font-semibold">{topService.averageRating.toFixed(1)}</span>
-                  <span className="text-xs text-muted-foreground">· {topService.responseRate}% response rate</span>
+                  <span className="text-xs font-semibold tabular-nums">
+                    {topService.averageRating.toFixed(1)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    · {topService.responseRate}% response rate
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -253,35 +347,100 @@ export function ReputationPerformanceTab() {
         )}
       </div>
 
-      {/* Leaderboards */}
-      <Tabs defaultValue="staff">
-        <TabsList className="h-9">
-          <TabsTrigger value="staff" className="gap-2 text-sm">
-            <Users className="h-4 w-4" /> Staff Leaderboard
-          </TabsTrigger>
-          <TabsTrigger value="services" className="gap-2 text-sm">
-            <Award className="h-4 w-4" /> Service Leaderboard
-          </TabsTrigger>
-        </TabsList>
+      {/* Leaderboard tabs (shift-swaps style) */}
+      <div className="flex border-b">
+        {LEADERBOARD_TABS.map((t) => {
+          const isActive = tab === t.value;
+          const count = counts[t.value];
+          const Icon = t.icon;
+          return (
+            <button
+              key={t.value}
+              onClick={() => {
+                setTab(t.value);
+                setExpandedId(null);
+              }}
+              className={cn(
+                "relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                isActive
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icon className="size-4" />
+              {t.label}
+              {count > 0 && (
+                <span
+                  className={cn(
+                    "inline-flex size-5 items-center justify-center rounded-full text-[10px] font-bold",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {count}
+                </span>
+              )}
+              {isActive && (
+                <span className="bg-primary absolute inset-x-0 -bottom-px h-0.5" />
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-        <TabsContent value="staff" className="mt-4 space-y-3">
-          <CardDescription className="text-xs">
-            Ranked by average rating — updated in real time as ratings arrive.
-          </CardDescription>
-          {sortedStaff.map((stat, i) => (
-            <StaffCard key={stat.staffId} stat={stat} rank={i + 1} />
-          ))}
-        </TabsContent>
-
-        <TabsContent value="services" className="mt-4 space-y-3">
-          <CardDescription className="text-xs">
-            Ranked by average rating across all review requests per service.
-          </CardDescription>
-          {sortedServices.map((stat, i) => (
-            <ServiceCard key={stat.service} stat={stat} rank={i + 1} />
-          ))}
-        </TabsContent>
-      </Tabs>
+      {/* Table */}
+      <div className="overflow-hidden rounded-xl border bg-card">
+        <div className="overflow-x-auto">
+          {tab === "staff" ? (
+            <table className="w-full min-w-[800px]">
+              <thead className="bg-muted/30">
+                <tr className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+                  <th className="py-3 pl-5 pr-3 text-left">Staff</th>
+                  <th className="px-3 py-3 text-left">Avg Rating</th>
+                  <th className="px-3 py-3 text-left">Reviews</th>
+                  <th className="px-3 py-3 text-left">Sentiment</th>
+                  <th className="px-3 py-3 text-left">Trend</th>
+                  <th className="py-3 pl-3 pr-5 text-right">Praise</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedStaff.map((stat, i) => (
+                  <StaffRow
+                    key={stat.staffId}
+                    stat={stat}
+                    rank={i + 1}
+                    expanded={expandedId === stat.staffId}
+                    onToggle={() =>
+                      setExpandedId((cur) =>
+                        cur === stat.staffId ? null : stat.staffId,
+                      )
+                    }
+                  />
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full min-w-[800px]">
+              <thead className="bg-muted/30">
+                <tr className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+                  <th className="py-3 pl-5 pr-3 text-left">Service</th>
+                  <th className="px-3 py-3 text-left">Avg Rating</th>
+                  <th className="px-3 py-3 text-left">Sent</th>
+                  <th className="px-3 py-3 text-left">Rated</th>
+                  <th className="px-3 py-3 text-left">Response Rate</th>
+                  <th className="py-3 pl-3 pr-5 text-right">Negative</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedServices.map((stat, i) => (
+                  <ServiceRow key={stat.service} stat={stat} rank={i + 1} />
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

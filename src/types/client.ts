@@ -63,6 +63,69 @@ export const storeCreditSchema = z.object({
 });
 export type StoreCredit = z.infer<typeof storeCreditSchema>;
 
+export const ADDITIONAL_CONTACT_TAGS = [
+  "primary",
+  "emergency",
+  "pickup",
+  "dropoff",
+  "billing",
+] as const;
+export type AdditionalContactTag = (typeof ADDITIONAL_CONTACT_TAGS)[number];
+
+export const ADDITIONAL_CONTACT_TAG_LABELS: Record<AdditionalContactTag, string> =
+  {
+    primary: "Primary",
+    emergency: "Emergency",
+    pickup: "Pickup",
+    dropoff: "Drop-off",
+    billing: "Billing",
+  };
+
+export interface AdditionalContact {
+  id: string;
+  name: string;
+  relationship: string;
+  phone: string;
+  email: string;
+  tags: AdditionalContactTag[];
+}
+
+export const customerAutoTipSchema = z.object({
+  enabled: z.boolean(),
+  type: z.enum(["percentage", "fixed"]),
+  value: z.number(),
+});
+export type CustomerAutoTip = z.infer<typeof customerAutoTipSchema>;
+
+export const customerSettingsSchema = z.object({
+  preferredLanguage: z.string(),
+  enableThankYouEmails: z.boolean(),
+  enableReminderEmails: z.boolean(),
+  enableOngoingScheduleReminderEmails: z.boolean(),
+  applyPassesByDefault: z.boolean(),
+  copyAdditionalContactOnBookingConfirmations: z.boolean(),
+  copyAdditionalContactOnSystemEmails: z.boolean(),
+  autoTip: customerAutoTipSchema,
+  instabookDaycare: z.boolean(),
+  instabookBoarding: z.boolean(),
+  instabookGrooming: z.boolean(),
+});
+export type CustomerSettings = z.infer<typeof customerSettingsSchema>;
+
+export const defaultCustomerSettings: CustomerSettings = {
+  preferredLanguage: "en",
+  enableThankYouEmails: true,
+  enableReminderEmails: true,
+  enableOngoingScheduleReminderEmails: true,
+  applyPassesByDefault: true,
+  copyAdditionalContactOnBookingConfirmations: false,
+  copyAdditionalContactOnSystemEmails: false,
+  autoTip: { enabled: false, type: "percentage", value: 15 },
+  instabookDaycare: false,
+  instabookBoarding: false,
+  instabookGrooming: false,
+};
+
 export const clientSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -78,6 +141,9 @@ export const clientSchema = z.object({
   membership: membershipSchema.optional(),
   packages: z.array(packageSchema).optional(),
   storeCredit: storeCreditSchema.optional(),
+  customerSettings: customerSettingsSchema.optional(),
+  isBlocked: z.boolean().optional(),
+  blockedReason: z.string().optional(),
 });
 
 export type Client = z.infer<typeof clientSchema>;

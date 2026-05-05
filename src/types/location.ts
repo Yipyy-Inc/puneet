@@ -151,4 +151,12 @@ export interface HQSettings {
   sharedAutomations: boolean;
   sharedServices: string[];
   locations: string[];
+  /** When true, incident history at any location is visible from every location. */
+  sharedIncidentHistory: boolean;
+  /** When true, a waiver signed at one location stays valid at the others. */
+  sharedWaivers: boolean;
+  /** When true, loyalty points earned at any location can be redeemed elsewhere. */
+  crossLocationLoyalty: boolean;
+  /** When true, gift cards purchased at one location work at all locations. */
+  crossLocationGiftCards: boolean;
 }

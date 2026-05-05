@@ -2,16 +2,19 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import {
-  Inbox,
-  BarChart3,
-  Settings,
-  Smartphone,
-  AlertTriangle,
-} from "lucide-react";
+import { Inbox, BarChart3, Settings, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MessageCenter } from "./MessageCenter";
-import { facilities } from "@/data/facilities";
+import { ScheduledMessagesView } from "./ScheduledMessagesView";
+import { LocationScopePicker } from "@/components/hq/LocationScopePicker";
+import { useLocationContext } from "@/hooks/use-location-context";
+import { SavedRepliesProvider } from "./saved-replies-context";
+import {
+  ScheduledMessagesProvider,
+  useScheduledMessages,
+} from "./scheduled-messages-context";
+import { ConversationStateProvider } from "./conversation-state-context";
+import { SmsCreditBanner } from "./SmsCreditBanner";
 
 const MessagingAnalyticsView = dynamic(() =>
   import("./MessagingAnalyticsView").then((m) => m.MessagingAnalyticsView),
@@ -20,44 +23,30 @@ const MessagingSettingsView = dynamic(() =>
   import("./MessagingSettingsView").then((m) => m.MessagingSettingsView),
 );
 
-type HubTab = "inbox" | "analytics" | "settings";
-
-const facility = facilities.find((f) => f.id === 11);
-const credits = (facility as Record<string, unknown>)?.smsCredits as
-  | { monthlyAllowance: number; used: number; purchased: number; autoReloadThreshold: number }
-  | undefined;
-const smsTotal = credits ? credits.monthlyAllowance + (credits.purchased ?? 0) : 0;
-const smsRemaining = credits ? smsTotal - credits.used : 0;
-const smsLow = credits ? smsRemaining / smsTotal < 0.1 : false;
+type HubTab = "inbox" | "scheduled" | "analytics" | "settings";
 
 const NAV_ITEMS: { key: HubTab; label: string; icon: typeof Inbox }[] = [
   { key: "inbox", label: "Inbox", icon: Inbox },
+  { key: "scheduled", label: "Scheduled", icon: Clock },
   { key: "analytics", label: "Analytics", icon: BarChart3 },
   { key: "settings", label: "Settings", icon: Settings },
 ];
 
-export function CommunicationHub() {
+function HubInner() {
   const [tab, setTab] = useState<HubTab>("inbox");
+  const [locationFilter, setLocationFilter] = useState<string[]>([]);
+  const { locations, isMultiLocation } = useLocationContext();
+  const { count: scheduledCount } = useScheduledMessages();
 
   return (
     <div className="flex h-full flex-col">
-      {/* Low SMS credit alert */}
-      {smsLow && (
-        <div className="mx-6 mt-4 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-          <Smartphone className="size-4 shrink-0 text-red-500" />
-          <p className="flex-1 text-sm text-red-700">
-            <strong>SMS credits running low</strong> — {smsRemaining.toLocaleString()} remaining (
-            {Math.round((smsRemaining / smsTotal) * 100)}%). Auto-purchase or top up in Settings.
-          </p>
-          <AlertTriangle className="size-4 shrink-0 text-red-400" />
-        </div>
-      )}
+      <SmsCreditBanner />
 
-      {/* Sub-navigation */}
       <nav className="flex items-center gap-1 border-b bg-white px-6 pt-4">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = tab === item.key;
+          const showBadge = item.key === "scheduled" && scheduledCount > 0;
           return (
             <button
               key={item.key}
@@ -72,16 +61,46 @@ export function CommunicationHub() {
             >
               <Icon className="size-4" />
               {item.label}
+              {showBadge && (
+                <span
+                  className={cn(
+                    "ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                    active
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-200 text-slate-600",
+                  )}
+                >
+                  {scheduledCount}
+                </span>
+              )}
             </button>
           );
         })}
       </nav>
 
-      {/* Content */}
+      {isMultiLocation && tab === "inbox" && (
+        <div className="flex flex-wrap items-center gap-2 border-b bg-white/60 px-6 py-2.5">
+          <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
+            Filter by location
+          </span>
+          <LocationScopePicker
+            locations={locations}
+            value={locationFilter}
+            onChange={setLocationFilter}
+            compact
+          />
+        </div>
+      )}
+
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {tab === "inbox" && (
           <div className="flex min-h-0 w-full flex-1 overflow-hidden p-4">
-            <MessageCenter mode="facility" />
+            <MessageCenter mode="facility" locationFilter={locationFilter} />
+          </div>
+        )}
+        {tab === "scheduled" && (
+          <div className="flex-1 overflow-y-auto p-6">
+            <ScheduledMessagesView />
           </div>
         )}
         {tab === "analytics" && (
@@ -96,5 +115,17 @@ export function CommunicationHub() {
         )}
       </div>
     </div>
+  );
+}
+
+export function CommunicationHub() {
+  return (
+    <SavedRepliesProvider>
+      <ScheduledMessagesProvider>
+        <ConversationStateProvider>
+          <HubInner />
+        </ConversationStateProvider>
+      </ScheduledMessagesProvider>
+    </SavedRepliesProvider>
   );
 }

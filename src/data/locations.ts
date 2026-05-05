@@ -203,6 +203,10 @@ export const hqSettings: HQSettings = {
   sharedAutomations: false,
   sharedServices: ["daycare", "boarding", "grooming", "training"],
   locations: ["loc-dv-main", "loc-dv-ouest", "loc-dv-laval"],
+  sharedIncidentHistory: true,
+  sharedWaivers: true,
+  crossLocationLoyalty: true,
+  crossLocationGiftCards: true,
 };
 
 export function getLocationById(id: string): Location | undefined {
