@@ -10,6 +10,19 @@ import { unfinishedBookings } from "@/data/unfinished-bookings";
 import { buildResumePreselection } from "@/lib/resume-booking";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useSettings } from "@/hooks/use-settings";
+import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
+import {
+  memberships as allMemberships,
+  membershipPlans,
+} from "@/data/services-pricing";
+import { resolveInstabookEligibility } from "@/lib/instabook";
+import { toast } from "sonner";
+import type {
+  BookingRequest,
+  BookingRequestService,
+  ExtraService,
+  NewBooking,
+} from "@/types/booking";
 
 const MOCK_CUSTOMER_ID = 15;
 
@@ -19,6 +32,7 @@ export default function NewBookingPage() {
   const { selectedFacility } = useCustomerFacility();
 
   const { bookingFlow } = useSettings();
+  const { setRequests } = useBookingRequestsStore();
 
   const customer = useMemo(
     () => clients.find((client) => client.id === MOCK_CUSTOMER_ID),
@@ -121,9 +135,92 @@ export default function NewBookingPage() {
           }
           isCustomerMode={true}
           bookingRequestMessage={bookingFlow.bookingRequestConfirmationMessage}
-          onCreateBooking={() => {
-            // Booking data is recorded; the modal shows the confirmation screen.
-            // Navigation happens when the customer clicks Done (via onOpenChange).
+          onCreateBooking={(booking: NewBooking) => {
+            if (!customer || !selectedFacility) return;
+
+            const petId = Array.isArray(booking.petId)
+              ? booking.petId[0]
+              : booking.petId;
+            const pet = customer.pets?.find((p) => p.id === petId);
+
+            const validServices: BookingRequestService[] = [
+              "daycare",
+              "boarding",
+              "grooming",
+              "training",
+            ];
+            const service = validServices.includes(
+              booking.service as BookingRequestService,
+            )
+              ? (booking.service as BookingRequestService)
+              : "daycare";
+
+            const appointmentAt = booking.checkInTime
+              ? `${booking.startDate}T${booking.checkInTime}:00`
+              : `${booking.startDate}T09:00:00`;
+
+            const normalizedExtras: ExtraService[] | undefined = booking
+              .extraServices
+              ? booking.extraServices
+                  .map((es): ExtraService | null =>
+                    typeof es === "string"
+                      ? null
+                      : { serviceId: es.serviceId, quantity: es.quantity, petId: es.petId },
+                  )
+                  .filter((es): es is ExtraService => es !== null)
+              : undefined;
+
+            const customerMemberships = allMemberships.filter(
+              (m) => m.customerId === String(customer.id),
+            );
+            const instabook = resolveInstabookEligibility({
+              client: customer,
+              service,
+              customerMemberships,
+              membershipPlans,
+            });
+
+            const newRequest: BookingRequest = {
+              id: `br-${Date.now()}`,
+              facilityId: selectedFacility.id,
+              createdAt: new Date().toISOString(),
+              appointmentAt,
+              clientId: customer.id,
+              clientName: customer.name,
+              clientContact: customer.email || customer.phone || "",
+              petId: petId ?? 0,
+              petName: pet?.name ?? "",
+              services: [service],
+              // Instabook bypasses the requests queue entirely; the booking is
+              // auto-confirmed and the customer gets the same email/SMS they
+              // would receive after staff approval.
+              status: instabook.eligible ? "scheduled" : "pending",
+              notes: booking.specialRequests,
+              startDate: booking.startDate,
+              endDate: booking.endDate,
+              checkInTime: booking.checkInTime,
+              checkOutTime: booking.checkOutTime,
+              daycareDates: booking.daycareSelectedDates,
+              roomPreference: booking.unitAssignment ?? booking.kennel,
+              daycareSectionId: booking.sectionId,
+              extraServices: normalizedExtras,
+              feedingSchedule: booking.feedingSchedule,
+              medications: booking.medications,
+              notificationEmail: booking.notificationEmail,
+              notificationSMS: booking.notificationSMS,
+            };
+
+            setRequests((prev) => [newRequest, ...prev]);
+
+            if (instabook.eligible) {
+              const sourceLabel =
+                instabook.source === "membership"
+                  ? `${instabook.membershipPlanName ?? "your membership"} membership`
+                  : "instant booking";
+              toast.success(`${pet?.name ?? "Booking"} is confirmed!`, {
+                description: `Skipped staff approval (${sourceLabel}). Confirmation email & SMS sent.`,
+              });
+            }
           }}
         />
       </div>

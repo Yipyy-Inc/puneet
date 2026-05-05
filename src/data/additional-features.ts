@@ -364,11 +364,13 @@ export interface WaiverBlock {
 export interface DigitalWaiver {
   id: string;
   name: string;
+  /** Primary service tag (legacy, kept for backwards-compat). */
   type: WaiverServiceTag;
-  /** Multiple service tags this waiver applies to (defaults to [type] when absent). */
+  /** All service tags this waiver applies to. Falls back to `[type]` when absent. */
   services?: WaiverServiceTag[];
+  /** Legacy plain-text content (rendered when `blocks` is empty). */
   content: string;
-  /** Structured rich-text blocks; preferred over `content` when present. */
+  /** Structured rich content. Preferred over `content` when present. */
   blocks?: WaiverBlock[];
   version: string;
   isActive: boolean;
@@ -404,19 +406,69 @@ export const digitalWaivers: DigitalWaiver[] = [
     id: "waiver-1",
     name: "Boarding Liability Waiver",
     type: "boarding",
-    content: `**Boarding Liability Waiver**
-
-I, the undersigned, hereby acknowledge that I am the owner or authorized agent of the pet(s) listed below and have authority to execute this agreement.
-
-**Terms & Conditions:**
-1. I understand that my pet will be housed with other animals and that despite reasonable care and supervision, there are inherent risks.
-2. I agree to hold PawCare harmless from any illness, injury, or loss that may occur during boarding.
-3. I certify that my pet is current on all required vaccinations.
-4. I authorize emergency veterinary care if needed, with costs to be borne by me.
-5. I understand that photos/videos of my pet may be taken for operational purposes and shared on social media unless I opt out.
-
-**Payment Terms:**
-Full payment is due at pick-up. A 50% deposit is required for bookings over 7 days.`,
+    services: ["boarding"],
+    blocks: [
+      {
+        id: "b1-h",
+        kind: "heading",
+        text: "Boarding Liability Waiver",
+        color: "blue",
+        bold: true,
+      },
+      {
+        id: "b1-p1",
+        kind: "paragraph",
+        text: "I, {{customerName}}, hereby acknowledge that I am the owner or authorized agent of {{petName}} and have authority to execute this agreement with {{facilityName}}.",
+      },
+      {
+        id: "b1-sh1",
+        kind: "subheading",
+        text: "Terms & Conditions",
+        color: "blue",
+        bold: true,
+      },
+      {
+        id: "b1-l1",
+        kind: "bullet",
+        text: "I understand that my pet will be housed with other animals and that despite reasonable care and supervision, there are inherent risks.",
+      },
+      {
+        id: "b1-l2",
+        kind: "bullet",
+        text: "I agree to hold {{facilityName}} harmless from any illness, injury, or loss that may occur during boarding.",
+      },
+      {
+        id: "b1-l3",
+        kind: "bullet",
+        text: "I certify that my pet is current on all required vaccinations.",
+      },
+      {
+        id: "b1-l4",
+        kind: "bullet",
+        text: "I authorize emergency veterinary care if needed, with costs to be borne by me.",
+        color: "red",
+      },
+      {
+        id: "b1-l5",
+        kind: "bullet",
+        text: "I understand that photos/videos of my pet may be taken for operational purposes and shared on social media unless I opt out.",
+      },
+      {
+        id: "b1-sh2",
+        kind: "subheading",
+        text: "Payment Terms",
+        color: "blue",
+        bold: true,
+      },
+      {
+        id: "b1-p2",
+        kind: "paragraph",
+        text: "Full payment is due at pick-up. A 50% deposit is required for bookings over 7 days. Signed on {{date}}.",
+        italic: true,
+        color: "muted",
+      },
+    ],
+    content: `**Boarding Liability Waiver**\n\nI, the undersigned, hereby acknowledge that I am the owner or authorized agent of the pet(s) listed below.`,
     version: "2.1",
     isActive: true,
     requiresSignature: true,
@@ -430,6 +482,7 @@ Full payment is due at pick-up. A 50% deposit is required for bookings over 7 da
     id: "waiver-2",
     name: "Daycare General Waiver",
     type: "daycare",
+    services: ["daycare"],
     content: `**Daycare General Waiver**
 
 By signing below, I agree to the following:
@@ -455,6 +508,7 @@ If my pet displays aggressive behavior, I understand they may be removed from gr
     id: "waiver-3",
     name: "Grooming Consent Form",
     type: "grooming",
+    services: ["grooming"],
     content: `**Grooming Consent Form**
 
 I give permission for PawCare to groom my pet as discussed.
@@ -482,6 +536,7 @@ If my pet experiences a medical emergency during grooming, I authorize immediate
     id: "waiver-4",
     name: "General Terms of Service",
     type: "general",
+    services: ["general", "boarding", "daycare", "grooming", "training"],
     content: `**General Terms of Service**
 
 Welcome to PawCare! These terms govern your use of our services.

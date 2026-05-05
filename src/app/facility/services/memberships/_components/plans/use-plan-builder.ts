@@ -45,6 +45,9 @@ export interface PlanBuilderData {
   changePolicy: MembershipChangePolicy;
   upgradePlanIds: string[];
   downgradePlanIds: string[];
+
+  /** Services for which subscribers get instant-booking access (skip approval). */
+  instabookServices: ServiceCategory[];
 }
 
 export const emptyPlan: PlanBuilderData = {
@@ -79,6 +82,8 @@ export const emptyPlan: PlanBuilderData = {
   changePolicy: { ...defaultMembershipChangePolicy },
   upgradePlanIds: [],
   downgradePlanIds: [],
+
+  instabookServices: [],
 };
 
 export function planToBuilderData(plan: MembershipPlan): PlanBuilderData {
@@ -114,6 +119,8 @@ export function planToBuilderData(plan: MembershipPlan): PlanBuilderData {
     changePolicy: plan.changePolicy ?? { ...defaultMembershipChangePolicy },
     upgradePlanIds: plan.upgradePlanIds ?? [],
     downgradePlanIds: plan.downgradePlanIds ?? [],
+
+    instabookServices: plan.instabookServices ?? [],
   };
 }
 

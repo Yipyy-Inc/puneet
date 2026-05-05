@@ -36,6 +36,9 @@ import {
   defaultCallingSettings, callAnalytics, missedCallTasks,
 } from "@/data/calling";
 import type { ActiveCall } from "@/types/calling";
+import { LocationScopePicker } from "@/components/hq/LocationScopePicker";
+import { useLocationContext } from "@/hooks/use-location-context";
+import { deriveLocationId } from "@/data/locations";
 
 // ─── helpers ────────────────────────────────────────────────
 function formatDuration(s: number) {
@@ -432,6 +435,8 @@ export default function CallingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "inbound" | "outbound">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "missed" | "voicemail" | "failed">("all");
+  const [locationFilter, setLocationFilter] = useState<string[]>([]);
+  const { locations, isMultiLocation } = useLocationContext();
   const [incomingCall, setIncomingCall] = useState<ActiveCall | null>(null);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [callMinimized, setCallMinimized] = useState(false);
@@ -440,13 +445,17 @@ export default function CallingPage() {
     return callLogs.filter((c) => {
       if (typeFilter !== "all" && c.type !== typeFilter) return false;
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
+      if (locationFilter.length > 0) {
+        const callLocId = deriveLocationId(c.id);
+        if (!locationFilter.includes(callLocId)) return false;
+      }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         if (!c.clientName?.toLowerCase().includes(q) && !c.from.toLowerCase().includes(q)) return false;
       }
       return true;
     });
-  }, [searchQuery, typeFilter, statusFilter]);
+  }, [searchQuery, typeFilter, statusFilter, locationFilter]);
 
   const voicemails = useMemo(() => callLogs.filter((c) => c.status === "voicemail"), []);
   const missedCalls = useMemo(() => callLogs.filter((c) => c.status === "missed"), []);
@@ -707,6 +716,21 @@ export default function CallingPage() {
                 </Card>
               ))}
             </div>
+
+            {/* Location filter (multi-location only) */}
+            {isMultiLocation && (
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/20 px-3 py-2">
+                <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
+                  Location
+                </span>
+                <LocationScopePicker
+                  locations={locations}
+                  value={locationFilter}
+                  onChange={setLocationFilter}
+                  compact
+                />
+              </div>
+            )}
 
             {/* Filters */}
             <div className="flex flex-wrap items-center gap-2">

@@ -3,7 +3,19 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { CalendarClock, Clock, ShoppingCart } from "lucide-react";
+import {
+  Inbox,
+  Hourglass,
+  Search,
+  CheckCircle2,
+  XCircle,
+  X,
+  LayoutGrid,
+  Sun,
+  Bed,
+  Scissors,
+  GraduationCap,
+} from "lucide-react";
 
 import { type BookingRequest } from "@/data/booking-requests";
 import { getUnfinishedBookingsForFacility } from "@/data/unfinished-bookings";
@@ -14,12 +26,15 @@ import { facilities } from "@/data/facilities";
 import { buildResumePreselection } from "@/lib/resume-booking";
 import type { Client } from "@/types/client";
 import type { NewBooking } from "@/types/booking";
-import type { UnfinishedBooking } from "@/types/unfinished-booking";
-import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
+import type {
+  UnfinishedBooking,
+} from "@/types/unfinished-booking";
+import type { BookingRequestService } from "@/types/booking";
 import { UnfinishedBookingsTable } from "@/components/bookings/UnfinishedBookingsTable";
-import { Badge } from "@/components/ui/badge";
+import { BookingRequestCard } from "@/components/facility/BookingRequestCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -33,23 +48,153 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 type NotifyMode = "none" | "text" | "email" | "both";
 type ConfirmAction = "decline" | "waitlist";
+type ServiceFilter = "all" | BookingRequestService;
 
-function formatDateTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString("en-US", {
-    month: "2-digit",
-    day: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+const SERVICE_FILTERS: {
+  value: ServiceFilter;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  { value: "all", label: "All", icon: LayoutGrid },
+  { value: "daycare", label: "Daycare", icon: Sun },
+  { value: "boarding", label: "Boarding", icon: Bed },
+  { value: "grooming", label: "Grooming", icon: Scissors },
+  { value: "training", label: "Training", icon: GraduationCap },
+];
+
+function matchesQuery(r: BookingRequest, q: string): boolean {
+  if (!q) return true;
+  const hay =
+    `${r.clientName} ${r.clientContact} ${r.petName} ${r.services.join(" ")} ${r.notes ?? ""}`.toLowerCase();
+  return hay.includes(q.toLowerCase());
 }
 
-function servicesLabel(services: BookingRequest["services"]) {
-  return services.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ");
+function matchesService(r: BookingRequest, f: ServiceFilter): boolean {
+  return f === "all" || r.services.includes(f);
+}
+
+function FilterBar({
+  search,
+  onSearchChange,
+  serviceFilter,
+  onServiceFilterChange,
+  counts,
+  total,
+  shown,
+}: {
+  search: string;
+  onSearchChange: (v: string) => void;
+  serviceFilter: ServiceFilter;
+  onServiceFilterChange: (v: ServiceFilter) => void;
+  counts: Record<ServiceFilter, number>;
+  total: number;
+  shown: number;
+}) {
+  const isFiltered = search.length > 0 || serviceFilter !== "all";
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative flex-1 sm:max-w-sm">
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Input
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Search by client, pet, contact..."
+            className="h-9 px-9"
+          />
+          {search && (
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              onClick={() => onSearchChange("")}
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-1 size-7 -translate-y-1/2"
+              aria-label="Clear search"
+            >
+              <X className="size-3.5" />
+            </Button>
+          )}
+        </div>
+
+        <div className="flex flex-1 flex-wrap items-center gap-1.5">
+          {SERVICE_FILTERS.map((f) => {
+            const Icon = f.icon;
+            const active = serviceFilter === f.value;
+            const count = counts[f.value];
+            return (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => onServiceFilterChange(f.value)}
+                className={cn(
+                  "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-all duration-200 ease-out",
+                  active
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <Icon className="size-3.5" />
+                {f.label}
+                {count > 0 && (
+                  <span
+                    className={cn(
+                      "tabular-nums",
+                      active
+                        ? "text-primary-foreground/80"
+                        : "text-muted-foreground/70",
+                    )}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {isFiltered && (
+          <button
+            type="button"
+            onClick={() => {
+              onSearchChange("");
+              onServiceFilterChange("all");
+            }}
+            className="text-muted-foreground hover:text-foreground inline-flex h-8 shrink-0 items-center gap-1 text-xs font-medium transition-colors"
+          >
+            <X className="size-3.5" />
+            Clear · {shown}/{total}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+      <div className="bg-muted/60 text-muted-foreground mb-4 flex size-14 items-center justify-center rounded-2xl">
+        <Icon className="size-6" />
+      </div>
+      <div className="text-foreground text-base font-semibold">{title}</div>
+      <div className="text-muted-foreground mt-1 max-w-sm text-sm">
+        {description}
+      </div>
+    </div>
+  );
 }
 
 export default function OnlineBookingPage() {
@@ -96,6 +241,10 @@ export default function OnlineBookingPage() {
     "requests" | "waitlist" | "unfinished" | "settings"
   >("requests");
 
+  const [search, setSearch] = React.useState("");
+  const [serviceFilter, setServiceFilter] =
+    React.useState<ServiceFilter>("all");
+
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [confirmAction, setConfirmAction] =
     React.useState<ConfirmAction>("decline");
@@ -119,7 +268,6 @@ export default function OnlineBookingPage() {
     if (!facility) return;
 
     const handleCreateBooking = (booking: NewBooking) => {
-      // Mark the request as scheduled so it leaves the pending/waitlist queues.
       setRequests((prev) =>
         prev.map((r) =>
           r.id === req.id ? { ...r, status: "scheduled" } : r,
@@ -167,9 +315,6 @@ export default function OnlineBookingPage() {
   const handleScheduleUnfinished = (ub: UnfinishedBooking) => {
     if (!facility) return;
 
-    // When the session was started by an existing client, take the staff member
-    // to the client's account and resume the wizard from there — that's where
-    // they verify documents, vaccines, and card on file before confirming.
     if (ub.clientId) {
       toast.info(`Opening ${ub.clientName}'s account — resuming their booking`);
       router.push(
@@ -178,8 +323,6 @@ export default function OnlineBookingPage() {
       return;
     }
 
-    // Guest session — we have no customer profile yet, so open the wizard
-    // inline with whatever the prospect entered.
     const preselection = buildResumePreselection(ub);
     toast.info(
       `Resuming ${ub.clientName}'s abandoned session (guest — no account yet)`,
@@ -202,7 +345,6 @@ export default function OnlineBookingPage() {
     const target = confirmTarget;
 
     if (action === "decline") {
-      // MoeGo behavior: declining removes the request.
       setRequests((prev) => prev.filter((r) => r.id !== target.id));
     } else {
       setRequests((prev) =>
@@ -212,7 +354,6 @@ export default function OnlineBookingPage() {
       );
     }
 
-    // Confirm -> Notify step
     setConfirmOpen(false);
     setPostActionType(action);
     setPostActionTarget(target);
@@ -239,56 +380,56 @@ export default function OnlineBookingPage() {
     setPostActionTarget(null);
   };
 
-  const columns: ColumnDef<BookingRequest>[] = [
-    {
-      key: "createdAt",
-      label: "Submit date & time",
-      icon: Clock,
-      sortable: true,
-      sortValue: (r) => +new Date(r.createdAt),
-      render: (r) => (
-        <div className="text-xs">{formatDateTime(r.createdAt)}</div>
-      ),
-    },
-    {
-      key: "appointmentAt",
-      label: "Appt date & time",
-      icon: CalendarClock,
-      sortable: true,
-      sortValue: (r) => +new Date(r.appointmentAt),
-      render: (r) => (
-        <div className="text-xs">{formatDateTime(r.appointmentAt)}</div>
-      ),
-    },
-    {
-      key: "clientName",
-      label: "Client name",
-      sortable: true,
-      sortValue: (r) => r.clientName.toLowerCase(),
-      render: (r) => <div className="text-sm font-medium">{r.clientName}</div>,
-    },
-    {
-      key: "clientContact",
-      label: "Contact",
-      sortable: false,
-      render: (r) => (
-        <div className="text-muted-foreground text-xs">{r.clientContact}</div>
-      ),
-    },
-    {
-      key: "petName",
-      label: "Pet",
-      sortable: true,
-      sortValue: (r) => r.petName.toLowerCase(),
-      render: (r) => <div className="text-sm">{r.petName}</div>,
-    },
-  ];
+  const filteredPending = React.useMemo(
+    () =>
+      [...pending]
+        .filter(
+          (r) => matchesQuery(r, search) && matchesService(r, serviceFilter),
+        )
+        .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)),
+    [pending, search, serviceFilter],
+  );
+
+  const filteredWaitlisted = React.useMemo(
+    () =>
+      [...waitlisted]
+        .filter(
+          (r) => matchesQuery(r, search) && matchesService(r, serviceFilter),
+        )
+        .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)),
+    [waitlisted, search, serviceFilter],
+  );
+
+  const pendingServiceCounts = React.useMemo<Record<ServiceFilter, number>>(
+    () => ({
+      all: pending.length,
+      daycare: pending.filter((r) => r.services.includes("daycare")).length,
+      boarding: pending.filter((r) => r.services.includes("boarding")).length,
+      grooming: pending.filter((r) => r.services.includes("grooming")).length,
+      training: pending.filter((r) => r.services.includes("training")).length,
+    }),
+    [pending],
+  );
+
+  const waitlistedServiceCounts = React.useMemo<Record<ServiceFilter, number>>(
+    () => ({
+      all: waitlisted.length,
+      daycare: waitlisted.filter((r) => r.services.includes("daycare")).length,
+      boarding: waitlisted.filter((r) => r.services.includes("boarding"))
+        .length,
+      grooming: waitlisted.filter((r) => r.services.includes("grooming"))
+        .length,
+      training: waitlisted.filter((r) => r.services.includes("training"))
+        .length,
+    }),
+    [waitlisted],
+  );
 
   return (
-    <div className="flex-1 space-y-4 p-4 pt-6">
+    <div className="flex w-full max-w-none flex-1 flex-col gap-6 px-6 pt-6 pb-10 lg:px-8">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Booking Requests</h2>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-sm">
           Manage incoming requests, waiting list, and unfinished bookings
         </p>
       </div>
@@ -297,134 +438,138 @@ export default function OnlineBookingPage() {
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as typeof activeTab)}
       >
-        <TabsList className="grid w-full max-w-2xl grid-cols-4">
-          <TabsTrigger value="requests" className="flex items-center gap-2">
-            Booking requests
-            <Badge
-              variant={pending.length > 0 ? "warning" : "secondary"}
-              className="ml-1"
-            >
-              {pending.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="waitlist" className="flex items-center gap-2">
-            Waiting list
-            <Badge variant="secondary" className="ml-1">
-              {waitlisted.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="unfinished" className="flex items-center gap-2">
-            <ShoppingCart className="size-3.5" />
-            Unfinished
-            <Badge
-              variant={abandonedCount > 0 ? "warning" : "secondary"}
-              className="ml-1"
-            >
-              {abandonedCount}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="settings">Setting</TabsTrigger>
-        </TabsList>
+        <TabsList className="flex w-full gap-2 px-0">
+            {(
+              [
+                {
+                  value: "requests",
+                  label: "Booking requests",
+                  count: pending.length,
+                },
+                {
+                  value: "waitlist",
+                  label: "Waiting list",
+                  count: waitlisted.length,
+                },
+                {
+                  value: "unfinished",
+                  label: "Unfinished",
+                  count: abandonedCount,
+                },
+                { value: "settings", label: "Settings", count: 0 },
+              ] as const
+            ).map((t) => {
+              const active = activeTab === t.value;
+              return (
+                <TabsTrigger
+                  key={t.value}
+                  value={t.value}
+                  className="group hover:-translate-y-px hover:text-foreground hover:bg-muted/50 active:translate-y-0 data-[state=active]:hover:bg-background relative transition-all duration-200 ease-out"
+                >
+                  <span className="transition-transform duration-200 group-data-[state=active]:scale-[1.01]">
+                    {t.label}
+                  </span>
+                  {t.count > 0 && (
+                    <span
+                      className={cn(
+                        "ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-medium tabular-nums transition-all duration-300 ease-out",
+                        active
+                          ? "bg-primary/15 text-primary scale-105 shadow-[0_0_0_1px_var(--primary)]/0"
+                          : "bg-muted text-muted-foreground group-hover:bg-muted-foreground/15",
+                      )}
+                    >
+                      {t.count}
+                    </span>
+                  )}
+                  <span
+                    className={cn(
+                      "bg-primary pointer-events-none absolute inset-x-3 -bottom-px h-0.5 origin-center rounded-full transition-transform duration-300 ease-out",
+                      active ? "scale-x-100" : "scale-x-0",
+                    )}
+                    aria-hidden
+                  />
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
 
-        <TabsContent value="requests" className="mt-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Booking requests</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                data={[...pending].sort(
-                  (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
-                )}
-                columns={[
-                  ...columns,
-                  {
-                    key: "services",
-                    label: "Service(s)",
-                    sortable: false,
-                    render: (r) => (
-                      <div className="text-muted-foreground text-xs">
-                        {servicesLabel(r.services)}
-                      </div>
-                    ),
-                  },
-                ]}
-                itemsPerPage={10}
-                getSearchValue={(r) =>
-                  `${r.clientName} ${r.clientContact} ${r.petName} ${r.services.join(" ")}`.toLowerCase()
-                }
-                searchPlaceholder="Search by client, contact, pet..."
-                actions={(r) => (
-                  <div className="flex items-center justify-end gap-2">
-                    <Button size="sm" onClick={() => schedule(r)}>
-                      Schedule
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openConfirm("decline", r)}
-                    >
-                      Decline
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openConfirm("waitlist", r)}
-                    >
-                      To waitlist
-                    </Button>
-                  </div>
-                )}
-              />
-            </CardContent>
-          </Card>
+        <TabsContent value="requests" className="mt-4 space-y-4">
+          <FilterBar
+            search={search}
+            onSearchChange={setSearch}
+            serviceFilter={serviceFilter}
+            onServiceFilterChange={setServiceFilter}
+            counts={pendingServiceCounts}
+            total={pending.length}
+            shown={filteredPending.length}
+          />
+          {filteredPending.length === 0 ? (
+            <EmptyState
+              icon={Inbox}
+              title={
+                search
+                  ? "No requests match your search"
+                  : "Inbox zero — nicely done"
+              }
+              description={
+                search
+                  ? "Try a different name, pet, or service."
+                  : "New booking requests from your online form will appear here in real time."
+              }
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {filteredPending.map((r) => (
+                <BookingRequestCard
+                  key={r.id}
+                  request={r}
+                  variant="pending"
+                  onSchedule={schedule}
+                  onDecline={(req) => openConfirm("decline", req)}
+                  onWaitlist={(req) => openConfirm("waitlist", req)}
+                />
+              ))}
+            </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="waitlist" className="mt-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Waiting list</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                data={[...waitlisted].sort(
-                  (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
-                )}
-                columns={[
-                  ...columns,
-                  {
-                    key: "services",
-                    label: "Service(s)",
-                    sortable: false,
-                    render: (r) => (
-                      <div className="text-muted-foreground text-xs">
-                        {servicesLabel(r.services)}
-                      </div>
-                    ),
-                  },
-                ]}
-                itemsPerPage={10}
-                getSearchValue={(r) =>
-                  `${r.clientName} ${r.clientContact} ${r.petName} ${r.services.join(" ")}`.toLowerCase()
-                }
-                searchPlaceholder="Search by client, contact, pet..."
-                actions={(r) => (
-                  <div className="flex items-center justify-end gap-2">
-                    <Button size="sm" onClick={() => schedule(r)}>
-                      Schedule
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openConfirm("decline", r)}
-                    >
-                      Decline
-                    </Button>
-                  </div>
-                )}
-              />
-            </CardContent>
-          </Card>
+        <TabsContent value="waitlist" className="mt-4 space-y-4">
+          <FilterBar
+            search={search}
+            onSearchChange={setSearch}
+            serviceFilter={serviceFilter}
+            onServiceFilterChange={setServiceFilter}
+            counts={waitlistedServiceCounts}
+            total={waitlisted.length}
+            shown={filteredWaitlisted.length}
+          />
+          {filteredWaitlisted.length === 0 ? (
+            <EmptyState
+              icon={Hourglass}
+              title={
+                search
+                  ? "No waitlisted requests match"
+                  : "Your waitlist is clear"
+              }
+              description={
+                search
+                  ? "Try a different search term."
+                  : "When you move a request to the waitlist, it will show up here."
+              }
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {filteredWaitlisted.map((r) => (
+                <BookingRequestCard
+                  key={r.id}
+                  request={r}
+                  variant="waitlist"
+                  onSchedule={schedule}
+                  onDecline={(req) => openConfirm("decline", req)}
+                />
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="unfinished" className="mt-4">
@@ -452,20 +597,46 @@ export default function OnlineBookingPage() {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirmAction === "decline"
-                ? "Decline request?"
-                : "Move to waitlist?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This action will update the request immediately. You can choose
-              whether to notify the customer on the next step.
-            </AlertDialogDescription>
+            <div className="flex items-start gap-3">
+              <div
+                className={cn(
+                  "flex size-10 shrink-0 items-center justify-center rounded-xl",
+                  confirmAction === "decline"
+                    ? "bg-destructive/10 text-destructive"
+                    : "bg-warning/15 text-warning",
+                )}
+              >
+                {confirmAction === "decline" ? (
+                  <XCircle className="size-5" />
+                ) : (
+                  <Hourglass className="size-5" />
+                )}
+              </div>
+              <div className="flex-1">
+                <AlertDialogTitle>
+                  {confirmAction === "decline"
+                    ? "Decline this request?"
+                    : "Move to waitlist?"}
+                </AlertDialogTitle>
+                <AlertDialogDescription className="mt-1">
+                  {confirmAction === "decline"
+                    ? "The request will be removed from your queue. You can choose to notify the customer on the next step."
+                    : "This request will move to the waitlist. You can choose to notify the customer on the next step."}
+                </AlertDialogDescription>
+              </div>
+            </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={applyConfirm}>
-              Confirm
+            <AlertDialogAction
+              onClick={applyConfirm}
+              className={cn(
+                confirmAction === "decline"
+                  ? "bg-destructive hover:bg-destructive/90 text-white"
+                  : "bg-warning hover:bg-warning/90 text-warning-foreground",
+              )}
+            >
+              {confirmAction === "decline" ? "Decline" : "Move to waitlist"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -480,34 +651,50 @@ export default function OnlineBookingPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Notify customer?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {postActionTarget
-                ? `Choose how to notify ${postActionTarget.clientName} (${postActionTarget.clientContact}).`
-                : "Choose how to notify the customer."}
-            </AlertDialogDescription>
+            <div className="flex items-start gap-3">
+              <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl">
+                <CheckCircle2 className="size-5" />
+              </div>
+              <div className="flex-1">
+                <AlertDialogTitle>Notify the customer?</AlertDialogTitle>
+                <AlertDialogDescription className="mt-1">
+                  {postActionTarget
+                    ? `Choose how to notify ${postActionTarget.clientName} (${postActionTarget.clientContact}).`
+                    : "Choose how to notify the customer."}
+                </AlertDialogDescription>
+              </div>
+            </div>
           </AlertDialogHeader>
 
           <RadioGroup
             value={notifyMode}
             onValueChange={(v) => setNotifyMode(v as NotifyMode)}
+            className="grid grid-cols-2 gap-2"
           >
-            <div className="flex items-center gap-2">
-              <RadioGroupItem id="post-notify-none-online" value="none" />
-              <Label htmlFor="post-notify-none-online">None</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <RadioGroupItem id="post-notify-text-online" value="text" />
-              <Label htmlFor="post-notify-text-online">Send text</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <RadioGroupItem id="post-notify-email-online" value="email" />
-              <Label htmlFor="post-notify-email-online">Send email</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <RadioGroupItem id="post-notify-both-online" value="both" />
-              <Label htmlFor="post-notify-both-online">Send text + email</Label>
-            </div>
+            {(
+              [
+                { v: "none", label: "Don't notify" },
+                { v: "text", label: "Text only" },
+                { v: "email", label: "Email only" },
+                { v: "both", label: "Text + Email" },
+              ] as { v: NotifyMode; label: string }[]
+            ).map((opt) => (
+              <Label
+                key={opt.v}
+                htmlFor={`post-notify-online-${opt.v}`}
+                className={cn(
+                  "border-border hover:border-primary/50 flex cursor-pointer items-center gap-2 rounded-xl border bg-card p-3 text-sm transition-colors",
+                  notifyMode === opt.v &&
+                    "border-primary bg-primary/5 ring-primary/30 ring-2",
+                )}
+              >
+                <RadioGroupItem
+                  id={`post-notify-online-${opt.v}`}
+                  value={opt.v}
+                />
+                {opt.label}
+              </Label>
+            ))}
           </RadioGroup>
 
           <AlertDialogFooter>

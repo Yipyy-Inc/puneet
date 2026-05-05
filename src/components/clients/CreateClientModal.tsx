@@ -51,6 +51,8 @@ import {
   getEnabledCustomerLanguageOptions,
 } from "@/lib/language-settings";
 import { vaccinationRules } from "@/data/settings";
+import { AdditionalContactsManager } from "@/components/clients/AdditionalContactsManager";
+import type { AdditionalContact } from "@/types/client";
 
 // ========================================
 // Types
@@ -121,10 +123,6 @@ interface ClientForm {
   state: string;
   zip: string;
   country: string;
-  emergencyName: string;
-  emergencyRelationship: string;
-  emergencyPhone: string;
-  emergencyEmail: string;
   contactMethod: string;
   language: string;
   vetName: string;
@@ -151,10 +149,6 @@ const DEFAULT_CLIENT: ClientForm = {
   state: "",
   zip: "",
   country: "Canada",
-  emergencyName: "",
-  emergencyRelationship: "",
-  emergencyPhone: "",
-  emergencyEmail: "",
   contactMethod: "sms",
   language: "en",
   vetName: "",
@@ -229,6 +223,7 @@ type CreateClientDraft = {
   client?: ClientForm;
   pets?: PetForm[];
   petForm?: PetForm;
+  additionalContacts?: AdditionalContact[];
 };
 
 function loadCreateClientDraft(): CreateClientDraft {
@@ -581,12 +576,7 @@ interface CreateClientModalProps {
       country: string;
       zip: string;
     };
-    emergencyContact: {
-      name: string;
-      relationship: string;
-      phone: string;
-      email: string;
-    };
+    additionalContacts: AdditionalContact[];
     pets: Array<{
       name: string;
       type: string;
@@ -671,6 +661,9 @@ export function CreateClientModal({
     ...DEFAULT_CLIENT,
     ...(initialDraft.client ?? {}),
   });
+  const [additionalContacts, setAdditionalContacts] = useState<
+    AdditionalContact[]
+  >(initialDraft.additionalContacts ?? []);
   const selectedPreferredLanguage = showPreferredLanguageField
     ? customerLanguageOptions.some((option) => option.code === client.language)
       ? client.language
@@ -712,14 +705,20 @@ export function CreateClientModal({
       try {
         localStorage.setItem(
           STORAGE_KEY,
-          JSON.stringify({ client, pets, petForm, step }),
+          JSON.stringify({
+            client,
+            pets,
+            petForm,
+            step,
+            additionalContacts,
+          }),
         );
       } catch {
         /* ignore */
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [client, pets, petForm, step, open]);
+  }, [client, pets, petForm, step, open, additionalContacts]);
 
   // Validation
   const validateStep = (s: number): boolean => {
@@ -736,18 +735,25 @@ export function CreateClientModal({
       if (!client.city.trim()) e.city = "City is required";
       if (!client.state.trim()) e.state = "Province/State is required";
       if (!client.zip.trim()) e.zip = "Postal code is required";
-      if (!client.emergencyName.trim())
-        e.emergencyName = "Emergency contact is required";
-      if (!client.emergencyPhone.trim())
-        e.emergencyPhone = "Emergency phone is required";
-      else if (!isValidPhoneNumber(client.emergencyPhone))
-        e.emergencyPhone = "Use 10-15 digits";
-      if (
-        client.emergencyEmail.trim() &&
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(client.emergencyEmail)
-      ) {
-        e.emergencyEmail = "Invalid email format";
-      }
+
+      additionalContacts.forEach((contact, index) => {
+        const prefix = `additionalContact-${index}`;
+        if (!contact.name.trim()) {
+          e[`${prefix}-name`] = "Contact name is required";
+        }
+        if (!contact.phone.trim()) {
+          e[`${prefix}-phone`] = "Contact phone is required";
+        } else if (!isValidPhoneNumber(contact.phone)) {
+          e[`${prefix}-phone`] = "Use 10-15 digits";
+        }
+        if (
+          contact.email &&
+          contact.email.trim() &&
+          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email)
+        ) {
+          e[`${prefix}-email`] = "Invalid email format";
+        }
+      });
     }
 
     if (
@@ -843,12 +849,12 @@ export function CreateClientModal({
         zip: client.zip,
         country: client.country,
       },
-      emergencyContact: {
-        name: client.emergencyName,
-        relationship: client.emergencyRelationship,
-        phone: client.emergencyPhone,
-        email: client.emergencyEmail.trim(),
-      },
+      additionalContacts: additionalContacts.map((c) => ({
+        ...c,
+        name: c.name.trim(),
+        phone: c.phone.trim(),
+        email: c.email?.trim() ?? "",
+      })),
       pets: pets.map((p) => ({
         name: p.name,
         type: p.type,
@@ -870,6 +876,7 @@ export function CreateClientModal({
   const resetAll = () => {
     setStep(1);
     setClient({ ...DEFAULT_CLIENT });
+    setAdditionalContacts([]);
     setPetForm({ ...EMPTY_PET });
     setPets([]);
     setPetVaccines([]);
@@ -1030,55 +1037,23 @@ export function CreateClientModal({
             </div>
 
             <Separator />
-            <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Emergency Contact
-            </p>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Field label="Name" required error={errors.emergencyName}>
-                <Input
-                  value={client.emergencyName}
-                  onChange={(e) =>
-                    updateClient("emergencyName", e.target.value)
-                  }
-                  placeholder="Jane Doe"
-                />
-              </Field>
-              <Field label="Relationship">
-                <Input
-                  value={client.emergencyRelationship}
-                  onChange={(e) =>
-                    updateClient("emergencyRelationship", e.target.value)
-                  }
-                  placeholder="Spouse"
-                />
-              </Field>
-              <Field label="Phone" required error={errors.emergencyPhone}>
-                <Input
-                  type="tel"
-                  value={client.emergencyPhone}
-                  onChange={(e) =>
-                    updateClient(
-                      "emergencyPhone",
-                      normalizePhoneInput(e.target.value),
-                    )
-                  }
-                  placeholder="123-456-7891"
-                />
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Field label="Email (Optional)" error={errors.emergencyEmail}>
-                <Input
-                  type="email"
-                  value={client.emergencyEmail}
-                  onChange={(e) =>
-                    updateClient("emergencyEmail", e.target.value)
-                  }
-                  placeholder="jane.doe@example.com"
-                />
-              </Field>
-            </div>
+            <AdditionalContactsManager
+              value={additionalContacts}
+              onChange={(contacts) => {
+                setAdditionalContacts(contacts);
+                if (Object.keys(errors).some((k) => k.startsWith("additionalContact-"))) {
+                  setErrors((prev) => {
+                    const next = { ...prev };
+                    Object.keys(next).forEach((k) => {
+                      if (k.startsWith("additionalContact-")) delete next[k];
+                    });
+                    return next;
+                  });
+                }
+              }}
+              heading="Additional Contacts"
+              description="Add people who can be contacted for emergencies, pickup, or drop-off. Tag each contact with what they're authorized to do."
+            />
 
             {showPreferredLanguageField && (
               <div className="grid grid-cols-2 gap-4">
@@ -1572,11 +1547,29 @@ export function CreateClientModal({
                   {getCustomerLanguageLabel(selectedPreferredLanguage)}
                 </p>
               )}
-              <p className="text-muted-foreground mt-1 text-xs">
-                Emergency: {client.emergencyName} (
-                {client.emergencyRelationship}) · {client.emergencyPhone}
-                {client.emergencyEmail ? ` · ${client.emergencyEmail}` : ""}
-              </p>
+              {additionalContacts.length > 0 && (
+                <div className="text-muted-foreground mt-1 space-y-0.5 text-xs">
+                  <p className="font-medium">
+                    Additional contacts ({additionalContacts.length})
+                  </p>
+                  {additionalContacts.map((contact) => (
+                    <p key={contact.id}>
+                      {contact.name}
+                      {contact.relationship ? ` (${contact.relationship})` : ""}
+                      {contact.phone ? ` · ${contact.phone}` : ""}
+                      {contact.tags.length > 0
+                        ? ` — ${contact.tags
+                            .map((t) =>
+                              t === "dropoff"
+                                ? "Drop-off"
+                                : t.charAt(0).toUpperCase() + t.slice(1),
+                            )
+                            .join(", ")}`
+                        : ""}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Pets summary */}

@@ -151,12 +151,20 @@ export interface HQSettings {
   sharedAutomations: boolean;
   sharedServices: string[];
   locations: string[];
-  /** When true, incident history at any location is visible from every location. */
-  sharedIncidentHistory: boolean;
-  /** When true, a waiver signed at one location stays valid at the others. */
-  sharedWaivers: boolean;
-  /** When true, loyalty points earned at any location can be redeemed elsewhere. */
+
+  // ── Cross-location features (toggle-gated) ─────────────────────────────
+  /** Loyalty points earnable + redeemable across all locations */
   crossLocationLoyalty: boolean;
-  /** When true, gift cards purchased at one location work at all locations. */
+  /** Gift cards usable at any location regardless of where purchased */
   crossLocationGiftCards: boolean;
+  /** Sign waivers once — valid across all locations until version updated */
+  sharedWaivers: boolean;
+  /** Shared incident history visible at every location (safety-critical) */
+  sharedIncidentHistory: boolean;
+  /** Shared vaccination + medical records across all locations */
+  sharedMedicalRecords: boolean;
+  /** Primary location ID — drives default cascades */
+  primaryLocationId: string;
+  /** User IDs (other than owner) that can access HQ-level views */
+  delegatedHqAccess: string[];
 }

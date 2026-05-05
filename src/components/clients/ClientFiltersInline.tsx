@@ -72,10 +72,18 @@ export function ActiveFilterChips({
       label: `Address: ${filters.hasAddress}`,
       onRemove: () => setFilter("hasAddress", "any"),
     });
-  if (filters.hasEmergencyContact !== "any")
+  if (filters.hasAdditionalContact !== "any")
     chips.push({
-      label: `Emergency: ${filters.hasEmergencyContact}`,
-      onRemove: () => setFilter("hasEmergencyContact", "any"),
+      label: `Additional contacts: ${filters.hasAdditionalContact}`,
+      onRemove: () => setFilter("hasAdditionalContact", "any"),
+    });
+  if (filters.isBlocked !== "any")
+    chips.push({
+      label:
+        filters.isBlocked === "yes"
+          ? "Blocked clients only"
+          : "Excluding blocked clients",
+      onRemove: () => setFilter("isBlocked", "any"),
     });
   if (filters.hasPets !== "any")
     chips.push({
@@ -314,15 +322,15 @@ export function ClientFiltersInline({
       />,
     );
     add(
-      "Blocked from messaging",
+      "Blocked clients",
       "account",
       "Account Status",
       <TriToggle
-        label="Blocked from messaging"
-        value="any"
-        onChange={() => {}}
-        comingSoon
+        label="Blocked clients"
+        value={filters.isBlocked}
+        onChange={(v) => setFilter("isBlocked", v)}
       />,
+      ["block", "blocked", "messaging", "marketing"],
     );
     add(
       "Preferred language",
@@ -384,13 +392,13 @@ export function ClientFiltersInline({
       />,
     );
     add(
-      "Emergency contact",
+      "Additional contacts",
       "profile",
       "Client Profile",
       <TriToggle
-        label="Emergency contact"
-        value={filters.hasEmergencyContact}
-        onChange={(v) => setFilter("hasEmergencyContact", v)}
+        label="Additional contacts"
+        value={filters.hasAdditionalContact}
+        onChange={(v) => setFilter("hasAdditionalContact", v)}
       />,
     );
     add(

@@ -22,7 +22,7 @@ import { bookings as initialBookings } from "@/data/bookings";
 import { clients as initialClients } from "@/data/clients";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 
-import type { Client } from "@/types/client";
+import type { AdditionalContact, Client } from "@/types/client";
 import type { NewBooking, Booking } from "@/types/booking";
 import type { Pet } from "@/types/pet";
 
@@ -67,12 +67,7 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
       country: string;
       zip: string;
     };
-    emergencyContact: {
-      name: string;
-      relationship: string;
-      phone: string;
-      email: string;
-    };
+    additionalContacts: AdditionalContact[];
     pets: Omit<Pet, "id" | "imageUrl">[];
   }) => {
     // For now, just show a success message

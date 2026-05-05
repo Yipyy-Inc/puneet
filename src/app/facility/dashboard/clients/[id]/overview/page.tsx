@@ -601,14 +601,31 @@ export default function ClientOverviewPage({
                   </span>
                 </div>
               )}
-              {client.emergencyContact?.name && (
-                <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                  <p className="font-medium">Emergency Contact</p>
-                  <p className="mt-0.5">
-                    {client.emergencyContact.name} (
-                    {client.emergencyContact.relationship}) ·{" "}
-                    {client.emergencyContact.phone}
+              {client.additionalContacts && client.additionalContacts.length > 0 && (
+                <div className="mt-2 space-y-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  <p className="font-medium">
+                    Additional Contacts ({client.additionalContacts.length})
                   </p>
+                  {client.additionalContacts.map((contact) => (
+                    <div key={contact.id}>
+                      <p className="font-medium">
+                        {contact.name}
+                        {contact.relationship && ` (${contact.relationship})`}{" "}
+                        · {contact.phone}
+                      </p>
+                      {contact.tags.length > 0 && (
+                        <p className="mt-0.5 text-amber-700/80">
+                          {contact.tags
+                            .map((t) =>
+                              t === "dropoff"
+                                ? "Drop-off"
+                                : t.charAt(0).toUpperCase() + t.slice(1),
+                            )
+                            .join(" · ")}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>

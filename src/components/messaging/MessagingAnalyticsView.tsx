@@ -96,7 +96,9 @@ function KpiCard({
             <span
               className={cn(
                 "flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold",
-                trendUp ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700",
+                trendUp
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-red-50 text-red-700",
               )}
             >
               {trendUp ? (
@@ -111,7 +113,9 @@ function KpiCard({
         <p className="mt-3 text-[11px] font-semibold tracking-wider uppercase text-slate-400">
           {label}
         </p>
-        <p className="mt-0.5 text-2xl font-bold tabular-nums text-slate-800">{value}</p>
+        <p className={cn("mt-0.5 text-2xl font-bold tabular-nums text-slate-800")}>
+          {value}
+        </p>
         {sub && <p className="mt-0.5 text-[11px] text-slate-400">{sub}</p>}
       </CardContent>
     </Card>
@@ -251,7 +255,7 @@ export function MessagingAnalyticsView() {
         />
       </div>
 
-      {/* Charts bundle */}
+      {/* Charts bundle (lazy loaded) */}
       <ChartsBundle
         hourlySeries={hourlySeries}
         channelSeries={channelSeries}
@@ -259,6 +263,7 @@ export function MessagingAnalyticsView() {
         staffSeries={staffSeries}
       />
 
+      {/* Channel callouts */}
       <div className="grid gap-3 lg:grid-cols-3">
         <Card>
           <CardHeader>
@@ -306,6 +311,7 @@ export function MessagingAnalyticsView() {
         </Card>
       </div>
 
+      {/* Top tags */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Conversation tags</CardTitle>
@@ -330,6 +336,7 @@ export function MessagingAnalyticsView() {
         </CardContent>
       </Card>
 
+      {/* Staff csat list */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Staff performance</CardTitle>
@@ -364,7 +371,9 @@ export function MessagingAnalyticsView() {
                         replied
                       </span>
                       <span>
-                        <strong className="text-slate-700">{staff.avgResponseMin}m</strong>{" "}
+                        <strong className="text-slate-700">
+                          {staff.avgResponseMin}m
+                        </strong>{" "}
                         avg
                       </span>
                       <span>

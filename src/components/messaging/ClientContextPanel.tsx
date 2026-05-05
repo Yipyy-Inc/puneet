@@ -25,16 +25,16 @@ import {
   Save,
   User,
 } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
-import { useConversationState } from "./conversation-state-context";
-import { petCareAlerts } from "@/data/saved-replies";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { facilities } from "@/data/facilities";
+import { petCareAlerts } from "@/data/saved-replies";
 import { getCustomerLanguageLabel } from "@/lib/language-settings";
 import type { Message } from "@/types/communications";
+import { Textarea } from "@/components/ui/textarea";
+import { useConversationState } from "./conversation-state-context";
 
 // ── Quick-send links (staff can send these into chat) ────────────────
 
@@ -528,7 +528,9 @@ export function ClientContextPanel({
                   {assignee.initials}
                 </span>
                 <div>
-                  <p className="text-xs font-semibold text-slate-700">{assignee.name}</p>
+                  <p className="text-xs font-semibold text-slate-700">
+                    {assignee.name}
+                  </p>
                   <p className="text-[10px] text-slate-400">{assignee.role}</p>
                 </div>
               </div>
@@ -594,7 +596,12 @@ export function ClientContextPanel({
                       : a.type === "allergy"
                         ? "border-red-200 bg-red-50 text-red-700"
                         : "border-amber-200 bg-amber-50 text-amber-700";
-                  const Icon = a.type === "medication" ? Pill : AlertTriangle;
+                  const Icon =
+                    a.type === "medication"
+                      ? Pill
+                      : a.type === "allergy"
+                        ? AlertTriangle
+                        : AlertTriangle;
                   return (
                     <div
                       key={`${a.petId}-${idx}`}

@@ -13,6 +13,7 @@ import {
   Printer,
   CreditCard,
   Tag,
+  Dog,
   PawPrint,
   Phone,
   Calendar,
@@ -55,6 +56,25 @@ export const DEFAULT_PRINT_OPTIONS: PrintOptions = {
   showBehaviorTags: true,
   showWeight: true,
   showNotes: true,
+};
+
+// Collar-label-only field toggles. Boarding Sheet / Bin Label use PrintOptions above.
+export type CollarFields = {
+  petName: boolean;
+  breed: boolean;
+  age: boolean;
+  clientName: boolean;
+  lodging: boolean;
+  playgroup: boolean;
+};
+
+export const DEFAULT_COLLAR_FIELDS: CollarFields = {
+  petName: true,
+  breed: true,
+  age: true,
+  clientName: true,
+  lodging: true,
+  playgroup: true,
 };
 
 // ── Tag pill helper (print-safe, no Tailwind dark variants) ───────────────────
@@ -430,6 +450,104 @@ export function DoorCardTemplate({
   );
 }
 
+// ── Collar Label (one per pet, large readable text) ───────────────────────────
+
+/**
+ * Collar label — one label per pet. Large pet name on its own row; supporting
+ * fields (Breed, Age, Client, Lodging, Playgroup) render as a single
+ * comma-separated line so the label stays compact and readable in the collar
+ * slot. Each field is independently toggleable.
+ */
+export function CollarLabelTemplate({
+  guest,
+  fields = DEFAULT_COLLAR_FIELDS,
+}: {
+  guest: BoardingGuest;
+  fields?: CollarFields;
+}) {
+  const extras = guest as { petAge?: unknown; playgroup?: unknown };
+  const petAge = typeof extras.petAge === "number" ? extras.petAge : null;
+  const playgroup =
+    typeof extras.playgroup === "string" ? extras.playgroup : "";
+
+  const supportingParts: string[] = [];
+  if (fields.breed && guest.petBreed) supportingParts.push(guest.petBreed);
+  if (fields.clientName && guest.ownerName)
+    supportingParts.push(guest.ownerName);
+  if (fields.lodging && guest.kennelName)
+    supportingParts.push(guest.kennelName);
+  if (fields.playgroup && playgroup) supportingParts.push(playgroup);
+
+  const ageLabel = fields.age && petAge !== null ? `${petAge} yr` : null;
+
+  return (
+    <div
+      style={{
+        width: "108mm",
+        boxSizing: "border-box",
+        background: "#fff",
+        color: "#000",
+        padding: "5mm 6mm",
+        border: "1px solid #e5e7eb",
+        borderRadius: "2mm",
+        fontFamily:
+          "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+      }}
+    >
+      {fields.petName && (
+        <div
+          style={{
+            fontSize: "22pt",
+            fontWeight: 800,
+            lineHeight: 1.1,
+            letterSpacing: "-0.3pt",
+            wordBreak: "break-word",
+          }}
+        >
+          {guest.petName}
+          {ageLabel && (
+            <span
+              style={{
+                fontSize: "13pt",
+                fontWeight: 600,
+                color: "#6b7280",
+                marginLeft: "3mm",
+              }}
+            >
+              · {ageLabel}
+            </span>
+          )}
+        </div>
+      )}
+      {!fields.petName && ageLabel && (
+        <div
+          style={{
+            fontSize: "13pt",
+            fontWeight: 600,
+            color: "#6b7280",
+            lineHeight: 1.1,
+          }}
+        >
+          {ageLabel}
+        </div>
+      )}
+      {supportingParts.length > 0 && (
+        <div
+          style={{
+            marginTop: "2mm",
+            fontSize: "10pt",
+            fontWeight: 500,
+            color: "#374151",
+            lineHeight: 1.35,
+          }}
+        >
+          {supportingParts.join(", ")}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Customization panel ───────────────────────────────────────────────────────
 
 type OptionToggle = {
@@ -478,9 +596,52 @@ function CustomizePanel({
   );
 }
 
+// ── Collar fields panel ───────────────────────────────────────────────────────
+
+const COLLAR_FIELD_TOGGLES: { key: keyof CollarFields; label: string }[] = [
+  { key: "petName",    label: "Pet name" },
+  { key: "breed",      label: "Breed" },
+  { key: "age",        label: "Age" },
+  { key: "clientName", label: "Client name" },
+  { key: "lodging",    label: "Lodging" },
+  { key: "playgroup",  label: "Playgroup" },
+];
+
+function CollarFieldsPanel({
+  fields,
+  onChange,
+}: {
+  fields: CollarFields;
+  onChange: (next: CollarFields) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {COLLAR_FIELD_TOGGLES.map(({ key, label }) => {
+        const on = fields[key];
+        return (
+          <button
+            key={key}
+            onClick={() => onChange({ ...fields, [key]: !on })}
+            data-on={on}
+            className="flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm transition-all data-[on=true]:border-primary data-[on=true]:bg-primary/5 data-[on=false]:border-border data-[on=false]:text-muted-foreground data-[on=false]:hover:bg-muted/40"
+          >
+            <span
+              data-on={on}
+              className="flex size-4 shrink-0 items-center justify-center rounded data-[on=true]:bg-primary data-[on=false]:bg-muted"
+            >
+              {on && <Check className="size-3 text-primary-foreground" />}
+            </span>
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── PrintKennelCardsModal ─────────────────────────────────────────────────────
 
-type PrintFormat = "kennel" | "door";
+type PrintFormat = "kennel" | "door" | "collar";
 type PrintScope = "all" | string;
 
 type Props = {
@@ -500,6 +661,9 @@ export function PrintKennelCardsModal({
   const [format, setFormat] = useState<PrintFormat>(initialFormat ?? "kennel");
   const [scope, setScope] = useState<PrintScope>("all");
   const [options, setOptions] = useState<PrintOptions>(DEFAULT_PRINT_OPTIONS);
+  const [collarFields, setCollarFields] = useState<CollarFields>(
+    DEFAULT_COLLAR_FIELDS,
+  );
   const [showCustomize, setShowCustomize] = useState(false);
 
   const guestsToRender =
@@ -528,8 +692,10 @@ export function PrintKennelCardsModal({
           >
             {format === "kennel" ? (
               <KennelCardTemplate guest={guest} options={options} />
-            ) : (
+            ) : format === "door" ? (
               <DoorCardTemplate guest={guest} options={options} />
+            ) : (
+              <CollarLabelTemplate guest={guest} fields={collarFields} />
             )}
           </div>
         ))}
@@ -558,7 +724,7 @@ export function PrintKennelCardsModal({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Printer className="size-5" />
-              Print Boarding Sheets
+              Print Care Sheets
             </DialogTitle>
           </DialogHeader>
 
@@ -582,6 +748,14 @@ export function PrintKennelCardsModal({
                 >
                   <Tag className="size-4" />
                   Bin Label
+                </button>
+                <button
+                  data-active={format === "collar"}
+                  onClick={() => setFormat("collar")}
+                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm transition-all data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                >
+                  <Dog className="size-4" />
+                  Collar Label
                 </button>
               </div>
             </div>
@@ -619,7 +793,9 @@ export function PrintKennelCardsModal({
             >
               <span className="flex items-center gap-2">
                 <Settings className="size-4 text-muted-foreground" />
-                Customize sections
+                {format === "collar"
+                  ? "Fields to include"
+                  : "Customize sections"}
               </span>
               {showCustomize ? (
                 <ChevronUp className="size-4 text-muted-foreground" />
@@ -629,7 +805,14 @@ export function PrintKennelCardsModal({
             </button>
             {showCustomize && (
               <div className="border-t px-4 pb-4 pt-3">
-                <CustomizePanel options={options} onChange={setOptions} />
+                {format === "collar" ? (
+                  <CollarFieldsPanel
+                    fields={collarFields}
+                    onChange={setCollarFields}
+                  />
+                ) : (
+                  <CustomizePanel options={options} onChange={setOptions} />
+                )}
               </div>
             )}
           </div>
@@ -641,8 +824,10 @@ export function PrintKennelCardsModal({
                 <div key={guest.id} className="shadow-lg ring-1 ring-black/10">
                   {format === "kennel" ? (
                     <KennelCardTemplate guest={guest} options={options} />
-                  ) : (
+                  ) : format === "door" ? (
                     <DoorCardTemplate guest={guest} options={options} />
+                  ) : (
+                    <CollarLabelTemplate guest={guest} fields={collarFields} />
                   )}
                 </div>
               ))}
@@ -658,8 +843,10 @@ export function PrintKennelCardsModal({
               <Printer className="mr-2 size-4" />
               Print{" "}
               {guestsToRender.length > 1
-                ? `${guestsToRender.length} Cards`
-                : "Card"}
+                ? `${guestsToRender.length} ${format === "collar" ? "Labels" : "Cards"}`
+                : format === "collar"
+                  ? "Label"
+                  : "Card"}
             </Button>
           </div>
         </DialogContent>

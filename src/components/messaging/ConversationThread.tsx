@@ -20,9 +20,6 @@ import {
   AlertCircle,
   Archive,
   StickyNote,
-  UserPlus,
-  Lock,
-  Unlock,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,6 +39,7 @@ import { MessageBubble, DateSeparator } from "./MessageBubble";
 import { ComposeBar } from "./ComposeBar";
 import { useConversationState } from "./conversation-state-context";
 import { getCustomerLanguageLabel } from "@/lib/language-settings";
+import { UserPlus, Lock, Unlock } from "lucide-react";
 import {
   getReminderHistoryForCustomer,
   ReminderHistoryPanel,
@@ -496,12 +494,16 @@ export function ConversationThread({
                   <ChevronDown className="size-3 text-slate-400" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-56 rounded-xl p-1 shadow-lg">
+              <PopoverContent
+                align="end"
+                className="w-56 rounded-xl p-1 shadow-lg"
+              >
                 <p className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Assign conversation
                 </p>
                 {conversationState.staff.map((s) => {
-                  const active = conversationState.getAssignee(threadId)?.id === s.id;
+                  const active =
+                    conversationState.getAssignee(threadId)?.id === s.id;
                   return (
                     <button
                       key={s.id}
@@ -521,10 +523,16 @@ export function ConversationThread({
                         {s.initials}
                       </span>
                       <span className="flex-1">
-                        <span className="block font-semibold text-slate-700">{s.name}</span>
-                        <span className="block text-[10px] text-slate-400">{s.role}</span>
+                        <span className="block font-semibold text-slate-700">
+                          {s.name}
+                        </span>
+                        <span className="block text-[10px] text-slate-400">
+                          {s.role}
+                        </span>
                       </span>
-                      {active && <CheckCircle2 className="size-3.5 text-emerald-500" />}
+                      {active && (
+                        <CheckCircle2 className="size-3.5 text-emerald-500" />
+                      )}
                     </button>
                   );
                 })}

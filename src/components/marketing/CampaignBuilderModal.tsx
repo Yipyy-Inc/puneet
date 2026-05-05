@@ -55,6 +55,9 @@ import {
 } from "@/data/marketing";
 import { getContrastTextColor } from "@/lib/color-utils";
 import { clients } from "@/data/clients";
+import { LocationScopePicker } from "@/components/hq/LocationScopePicker";
+import { useLocationContext } from "@/hooks/use-location-context";
+import { Globe } from "lucide-react";
 
 interface CampaignBuilderModalProps {
   campaign?: Campaign | null;
@@ -136,6 +139,9 @@ export function CampaignBuilderModal({
   const [goal, setGoal] = useState<CampaignGoal | "">(campaign?.goal || "");
   const [segmentId, setSegmentId] = useState(campaign?.segmentId || "");
   const [templateId, setTemplateId] = useState(campaign?.templateId || "");
+  const [targetLocationIds, setTargetLocationIds] = useState<string[]>(
+    campaign?.targetLocationIds ?? [],
+  );
 
   const [overrides, setOverrides] = useState(EMPTY_OVERRIDES);
   const [sendOption, setSendOption] = useState<
@@ -189,6 +195,7 @@ export function CampaignBuilderModal({
       type: campaignType,
       goal,
       segmentId,
+      targetLocationIds,
       templateId,
       overrides,
       sendOption,
@@ -492,6 +499,11 @@ export function CampaignBuilderModal({
                   </CardContent>
                 </Card>
               )}
+
+              <CampaignLocationTarget
+                value={targetLocationIds}
+                onChange={setTargetLocationIds}
+              />
             </div>
           )}
 
@@ -966,5 +978,36 @@ export function CampaignBuilderModal({
         />
       </DialogFooter>
     </>
+  );
+}
+
+function CampaignLocationTarget({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const { locations, isMultiLocation } = useLocationContext();
+  if (!isMultiLocation) return null;
+  return (
+    <Card>
+      <CardContent className="space-y-2 py-3">
+        <div className="flex items-center gap-2">
+          <Globe className="text-muted-foreground size-4" />
+          <Label className="text-sm">Location Targeting</Label>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          Send only to clients whose primary location is selected. Leave on
+          &ldquo;All locations&rdquo; for a network-wide send.
+        </p>
+        <LocationScopePicker
+          locations={locations}
+          value={value}
+          onChange={onChange}
+          compact
+        />
+      </CardContent>
+    </Card>
   );
 }

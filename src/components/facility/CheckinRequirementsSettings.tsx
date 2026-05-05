@@ -59,7 +59,7 @@ export function CheckinRequirementsSettings() {
     feeding: defaultConfig?.sections.feeding ?? "required",
     medication: defaultConfig?.sections.medication ?? "required",
     belongings: defaultConfig?.sections.belongings ?? "optional",
-    emergencyContact: defaultConfig?.sections.emergencyContact ?? "required",
+    additionalContacts: defaultConfig?.sections.additionalContacts ?? "required",
     vaccination: defaultConfig?.sections.vaccination ?? "required",
     waiver: defaultConfig?.sections.waiver ?? "required",
   });
@@ -93,10 +93,10 @@ export function CheckinRequirementsSettings() {
       value: sections.belongings,
     },
     {
-      key: "emergencyContact",
-      label: "Emergency Contact Verification",
+      key: "additionalContacts",
+      label: "Additional Contacts Verification",
       icon: Phone,
-      value: sections.emergencyContact,
+      value: sections.additionalContacts,
     },
     {
       key: "vaccination",

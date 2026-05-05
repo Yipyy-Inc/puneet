@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,149 +78,205 @@ import { customServiceCheckIns } from "@/data/custom-service-checkins";
 import type { CustomServiceCheckIn } from "@/data/custom-service-checkins";
 import { COLOR_HEX_MAP } from "@/data/custom-services";
 import { useCustomServices } from "@/hooks/use-custom-services";
+import { roomCategories, facilityRooms } from "@/data/rooms";
+import type { OccupancyKennel } from "./_lib/calendar-types";
+import { useBookingModal } from "@/hooks/use-booking-modal";
+import { bookings as facilityBookings } from "@/data/bookings";
 
-interface Kennel {
-  id: string;
-  name: string;
-  type: "standard" | "large" | "suite" | "luxury";
-  status: KennelStatus;
-  bookingId?: number;
-  petId?: number;
-  petName?: string;
-  clientName?: string;
-  clientPhone?: string;
-  checkIn?: string;
-  checkOut?: string;
-  dailyRate: number;
+type Kennel = OccupancyKennel;
+
+function petSizeFromWeight(
+  weight: number,
+): "small" | "medium" | "large" | "xlarge" {
+  if (weight < 20) return "small";
+  if (weight < 50) return "medium";
+  if (weight < 80) return "large";
+  return "xlarge";
 }
 
-const initialKennels: Kennel[] = [
-  {
-    id: "K1",
-    name: "Kennel 1",
-    type: "standard",
+function findPetById(petId: number) {
+  for (const c of clients) {
+    const p = c.pets?.find((p) => p.id === petId);
+    if (p) return { pet: p, client: c };
+  }
+  return null;
+}
+
+// Mock booking overlays keyed by room id — demonstrates each status colour.
+// In real wiring, this would join `bookings.ts` to rooms by kennel/room id.
+const mockBookingOverlays: Record<
+  string,
+  Pick<
+    Kennel,
+    | "status"
+    | "bookingStatus"
+    | "bookingId"
+    | "petId"
+    | "petName"
+    | "clientName"
+    | "clientPhone"
+    | "checkIn"
+    | "checkOut"
+  >
+> = {
+  "room-pcs-01": {
     status: "occupied",
-    bookingId: 13,
-    petId: 1,
-    petName: "Bella",
-    clientName: "Alice Johnson",
-    clientPhone: "123-456-7890",
-    checkIn: "2024-03-12",
-    checkOut: "2024-03-15",
-    dailyRate: 45,
-  },
-  {
-    id: "K2",
-    name: "Kennel 2",
-    type: "standard",
-    status: "vacant",
-    dailyRate: 45,
-  },
-  {
-    id: "K3",
-    name: "Kennel 3",
-    type: "large",
-    status: "reserved",
-    bookingId: 18,
-    petId: 5,
-    petName: "Rex",
-    clientName: "John Doe",
-    clientPhone: "123-456-7890",
-    checkIn: "2024-03-20",
-    checkOut: "2024-03-25",
-    dailyRate: 55,
-  },
-  {
-    id: "K4",
-    name: "Kennel 4",
-    type: "large",
-    status: "occupied",
-    bookingId: 2,
-    petId: 3,
-    petName: "Charlie",
-    clientName: "Bob Smith",
-    clientPhone: "098-765-4321",
-    checkIn: "2024-03-08",
-    checkOut: "2024-03-12",
-    dailyRate: 55,
-  },
-  {
-    id: "K5",
-    name: "Kennel 5",
-    type: "suite",
-    status: "maintenance",
-    dailyRate: 75,
-  },
-  {
-    id: "K6",
-    name: "Kennel 6",
-    type: "suite",
-    status: "vacant",
-    dailyRate: 75,
-  },
-  {
-    id: "K7",
-    name: "Kennel 7",
-    type: "luxury",
-    status: "occupied",
+    bookingStatus: "checked_in",
     bookingId: 5,
     petId: 4,
     petName: "Daisy",
     clientName: "Diana Prince",
     clientPhone: "111-222-3333",
-    checkIn: "2024-03-10",
-    checkOut: "2024-03-14",
-    dailyRate: 95,
+    checkIn: "2026-04-30",
+    checkOut: "2026-05-04",
   },
-  {
-    id: "K8",
-    name: "Kennel 8",
-    type: "luxury",
-    status: "vacant",
-    dailyRate: 95,
-  },
-  {
-    id: "K9",
-    name: "Kennel 9",
-    type: "standard",
+  "room-ds-01": {
     status: "occupied",
+    bookingStatus: "checked_in",
+    bookingId: 13,
+    petId: 1,
+    petName: "Bella",
+    clientName: "Alice Johnson",
+    clientPhone: "123-456-7890",
+    checkIn: "2026-05-01",
+    checkOut: "2026-05-06",
+  },
+  "room-ds-02": {
+    status: "reserved",
+    bookingStatus: "confirmed",
+    bookingId: 18,
+    petId: 5,
+    petName: "Rex",
+    clientName: "John Doe",
+    clientPhone: "123-456-7890",
+    checkIn: "2026-05-08",
+    checkOut: "2026-05-12",
+  },
+  "room-ds-04": {
+    status: "reserved",
+    bookingStatus: "pending",
+    bookingId: 21,
+    petId: 7,
+    petName: "Luna",
+    clientName: "Sarah Wilson",
+    clientPhone: "555-111-2222",
+    checkIn: "2026-05-05",
+    checkOut: "2026-05-09",
+  },
+  "room-ds-05": {
+    // Inactive in data — shown as maintenance for demo
+    status: "maintenance",
+  },
+  "room-s-01": {
+    status: "occupied",
+    bookingStatus: "checked_in",
+    bookingId: 2,
+    petId: 3,
+    petName: "Charlie",
+    clientName: "Bob Smith",
+    clientPhone: "098-765-4321",
+    checkIn: "2026-05-02",
+    checkOut: "2026-05-07",
+  },
+  "room-s-03": {
+    status: "occupied",
+    bookingStatus: "completed",
     bookingId: 8,
     petId: 6,
     petName: "Cooper",
     clientName: "Eve Adams",
     clientPhone: "555-666-7777",
-    checkIn: "2024-03-09",
-    checkOut: "2024-03-11",
-    dailyRate: 45,
+    checkIn: "2026-04-28",
+    checkOut: "2026-05-02",
   },
-  {
-    id: "K10",
-    name: "Kennel 10",
-    type: "standard",
+  "room-s-05": {
     status: "reserved",
+    bookingStatus: "confirmed",
     bookingId: 20,
     petName: "Max",
     clientName: "Bob Smith",
     clientPhone: "098-765-4321",
-    checkIn: "2024-03-25",
-    checkOut: "2024-03-28",
-    dailyRate: 45,
+    checkIn: "2026-05-10",
+    checkOut: "2026-05-14",
   },
-  {
-    id: "K11",
-    name: "Kennel 11",
-    type: "large",
-    status: "vacant",
-    dailyRate: 55,
+  "room-s-07": {
+    status: "maintenance",
   },
-  {
-    id: "K12",
-    name: "Kennel 12",
-    type: "suite",
-    status: "vacant",
-    dailyRate: 75,
+  "room-c-01": {
+    status: "occupied",
+    bookingStatus: "checked_in",
+    bookingId: 30,
+    petName: "Buddy",
+    clientName: "Tom Harris",
+    clientPhone: "555-222-3333",
+    checkIn: "2026-05-03",
+    checkOut: "2026-05-06",
   },
-];
+  "room-c-04": {
+    status: "reserved",
+    bookingStatus: "pending",
+    petName: "Milo",
+    clientName: "Lisa Garcia",
+    clientPhone: "555-444-5555",
+    checkIn: "2026-05-07",
+    checkOut: "2026-05-11",
+  },
+  "room-c-08": {
+    status: "occupied",
+    bookingStatus: "checked_in",
+    petName: "Ginger",
+    clientName: "Nancy Taylor",
+    clientPhone: "555-444-6666",
+    checkIn: "2026-05-01",
+    checkOut: "2026-05-05",
+  },
+};
+
+function buildInitialKennels(): Kennel[] {
+  return facilityRooms
+    .filter((r) => r.active || mockBookingOverlays[r.id]?.status === "maintenance")
+    .map((room) => {
+      const category = roomCategories.find((c) => c.id === room.categoryId);
+      const overlay = mockBookingOverlays[room.id];
+      const enrichment: Partial<OccupancyKennel> = {};
+      if (overlay?.petId) {
+        const lookup = findPetById(overlay.petId);
+        if (lookup) {
+          enrichment.petPhotoUrl = lookup.pet.imageUrl;
+          enrichment.petBreed = lookup.pet.breed;
+          enrichment.petSize = petSizeFromWeight(lookup.pet.weight);
+          enrichment.petSpecies =
+            lookup.pet.type.toLowerCase() === "cat" ? "cat" : "dog";
+          enrichment.clientPhotoUrl = lookup.client.imageUrl;
+        }
+      }
+      // Find the related booking (if any) to surface care signals to the bar.
+      const related = overlay?.bookingId
+        ? facilityBookings.find((b) => b.id === overlay.bookingId)
+        : undefined;
+      if (related) {
+        enrichment.paymentStatus = related.paymentStatus;
+        enrichment.specialRequests = related.specialRequests;
+        enrichment.checkInTime = related.checkInTime;
+        enrichment.checkOutTime = related.checkOutTime;
+        enrichment.hasFeedingInstructions =
+          (related.feedingInstructions?.length ?? 0) > 0;
+        enrichment.hasMedications =
+          (related.medications?.length ?? 0) > 0;
+      }
+      return {
+        id: room.id,
+        name: room.name,
+        categoryId: room.categoryId,
+        dailyRate: category?.defaultBasePrice ?? 0,
+        ...(overlay ?? {}),
+        ...enrichment,
+        status: overlay?.status ?? ("vacant" as KennelStatus),
+      };
+    });
+}
+
+const initialKennels: Kennel[] = buildInitialKennels();
 
 // Mock daycare spots
 const initialDaycareSpots: DaycareSpot[] = [
@@ -479,6 +536,58 @@ export default function KennelViewPage() {
     initialDaycareReservations,
   );
 
+  const { openBookingModal } = useBookingModal();
+  const handleMoveBooking = useCallback(
+    (bookingId: number, fromRoomId: string, toRoomId: string) => {
+      setKennels((prev) => {
+        const source = prev.find((k) => k.id === fromRoomId);
+        if (!source) return prev;
+        return prev.map((k) => {
+          if (k.id === fromRoomId) {
+            return {
+              id: k.id,
+              name: k.name,
+              categoryId: k.categoryId,
+              dailyRate: k.dailyRate,
+              status: "vacant" as KennelStatus,
+            };
+          }
+          if (k.id === toRoomId) {
+            return {
+              ...source,
+              id: k.id,
+              name: k.name,
+              categoryId: k.categoryId,
+              dailyRate: k.dailyRate,
+            };
+          }
+          return k;
+        });
+      });
+      console.log("Moved booking", bookingId, fromRoomId, "→", toRoomId);
+    },
+    [],
+  );
+
+  const handleAddBookingFromCell = useCallback(
+    (kennelId: string, date: string) => {
+      const target = kennels.find((k) => k.id === kennelId);
+      if (!target || target.status === "maintenance") return;
+      openBookingModal({
+        clients,
+        facilityId: 11,
+        facilityName: "Pawradise Resort",
+        preSelectedService: "boarding",
+        preSelectedRoomId: kennelId,
+        preSelectedStartDate: date,
+        onCreateBooking: (newBooking) => {
+          console.log("Booking created from occupancy grid", newBooking);
+        },
+      });
+    },
+    [kennels, openBookingModal],
+  );
+
   // Booking/edit form state
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [selectedPetId, setSelectedPetId] = useState<string>("");
@@ -604,17 +713,10 @@ export default function KennelViewPage() {
     }
   };
 
-  const getTypeLabel = (type: Kennel["type"]) => {
-    switch (type) {
-      case "standard":
-        return "Standard";
-      case "large":
-        return "Large";
-      case "suite":
-        return "Suite";
-      case "luxury":
-        return "Luxury Suite";
-    }
+  const getCategoryLabel = (categoryId: string) => {
+    return (
+      roomCategories.find((c) => c.id === categoryId)?.name ?? categoryId
+    );
   };
 
   const calculateStayDuration = (checkIn: string, checkOut: string) => {
@@ -755,9 +857,7 @@ export default function KennelViewPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">
-            {serviceType === "boarding" ? "Kennel View" : "Daycare View"}
-          </h2>
+          <h2 className="text-3xl font-bold tracking-tight">Occupancy</h2>
           <p className="text-muted-foreground">
             {serviceType === "boarding"
               ? "Manage kennel occupancy and bookings"
@@ -853,121 +953,65 @@ export default function KennelViewPage() {
         <>
           {/* Status Summary */}
           <div className="grid gap-4 md:grid-cols-4">
-            <Card
-              className="cursor-pointer transition-colors hover:bg-green-50 dark:hover:bg-green-950/20"
+            <KpiTile
+              label="Vacant"
+              value={statusCounts.vacant}
+              hint="Rooms available now"
+              icon={CheckCircle}
+              tone="emerald"
+              active={filterStatus === "vacant"}
               onClick={() =>
                 setFilterStatus(filterStatus === "vacant" ? "all" : "vacant")
               }
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm font-medium">
-                      Vacant
-                    </p>
-                    <p className="text-2xl font-bold text-green-600">
-                      {statusCounts.vacant}
-                    </p>
-                  </div>
-                  <div className="flex size-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-                    <CheckCircle className="size-6 text-green-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card
-              className="cursor-pointer transition-colors hover:bg-blue-50 dark:hover:bg-blue-950/20"
+            />
+            <KpiTile
+              label="Occupied"
+              value={statusCounts.occupied}
+              hint="Pets currently checked-in"
+              icon={PawPrint}
+              tone="indigo"
+              active={filterStatus === "occupied"}
               onClick={() =>
                 setFilterStatus(
                   filterStatus === "occupied" ? "all" : "occupied",
                 )
               }
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm font-medium">
-                      Occupied
-                    </p>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {statusCounts.occupied}
-                    </p>
-                  </div>
-                  <div className="flex size-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
-                    <PawPrint className="size-6 text-blue-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card
-              className="cursor-pointer transition-colors hover:bg-yellow-50 dark:hover:bg-yellow-950/20"
+            />
+            <KpiTile
+              label="Reserved"
+              value={statusCounts.reserved}
+              hint="Upcoming bookings"
+              icon={Calendar}
+              tone="amber"
+              active={filterStatus === "reserved"}
               onClick={() =>
                 setFilterStatus(
                   filterStatus === "reserved" ? "all" : "reserved",
                 )
               }
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm font-medium">
-                      Reserved
-                    </p>
-                    <p className="text-2xl font-bold text-yellow-600">
-                      {statusCounts.reserved}
-                    </p>
-                  </div>
-                  <div className="flex size-12 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
-                    <Calendar className="size-6 text-yellow-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card
-              className="cursor-pointer transition-colors hover:bg-red-50 dark:hover:bg-red-950/20"
+            />
+            <KpiTile
+              label="Maintenance"
+              value={statusCounts.maintenance}
+              hint="Out of service"
+              icon={Wrench}
+              tone="rose"
+              active={filterStatus === "maintenance"}
               onClick={() =>
                 setFilterStatus(
                   filterStatus === "maintenance" ? "all" : "maintenance",
                 )
               }
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm font-medium">
-                      Maintenance
-                    </p>
-                    <p className="text-2xl font-bold text-red-600">
-                      {statusCounts.maintenance}
-                    </p>
-                  </div>
-                  <div className="flex size-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
-                    <Wrench className="size-6 text-red-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            />
           </div>
 
           {viewMode === "calendar" ? (
             <Card className="p-4">
               <KennelCalendarView
                 kennels={kennels}
+                facilityName="Pawradise Resort"
                 onKennelClick={(kennel) => openKennelDialog(kennel)}
-                onAddBooking={(kennelId, date) => {
-                  const kennel = kennels.find((k) => k.id === kennelId);
-                  if (kennel && kennel.status !== "maintenance") {
-                    setSelectedKennel(kennel);
-                    setSelectedClientId("");
-                    setSelectedPetId("");
-                    setFormCheckIn(date);
-                    setFormCheckOut("");
-                    setDialogOpen(true);
-                  }
-                }}
+                onAddBooking={handleAddBookingFromCell}
                 onUpdateBooking={(kennelId, checkIn, checkOut) => {
                   setKennels((prev) =>
                     prev.map((k) =>
@@ -981,6 +1025,7 @@ export default function KennelViewPage() {
                     ),
                   );
                 }}
+                onMoveBooking={handleMoveBooking}
                 customServicesMap={petServicesMap}
                 moduleColorMap={moduleColorMap}
                 showCustomServices={showCustomServices}
@@ -1055,7 +1100,7 @@ export default function KennelViewPage() {
                               </span>
                             )}
                         </TableCell>
-                        <TableCell>{getTypeLabel(kennel.type)}</TableCell>
+                        <TableCell>{getCategoryLabel(kennel.categoryId)}</TableCell>
                         <TableCell>
                           <Badge className={getStatusBadgeClass(kennel.status)}>
                             {kennel.status}
@@ -1168,105 +1213,58 @@ export default function KennelViewPage() {
         <>
           {/* Status Summary */}
           <div className="grid gap-4 md:grid-cols-4">
-            <Card
-              className="cursor-pointer transition-colors hover:bg-green-50 dark:hover:bg-green-950/20"
+            <KpiTile
+              label="Available"
+              value={daycareStatusCounts.available}
+              hint="Spots open for booking"
+              icon={CheckCircle}
+              tone="emerald"
+              active={daycareFilterStatus === "available"}
               onClick={() =>
                 setDaycareFilterStatus(
                   daycareFilterStatus === "available" ? "all" : "available",
                 )
               }
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm font-medium">
-                      Available
-                    </p>
-                    <p className="text-2xl font-bold text-green-600">
-                      {daycareStatusCounts.available}
-                    </p>
-                  </div>
-                  <div className="flex size-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-                    <CheckCircle className="size-6 text-green-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card
-              className="cursor-pointer transition-colors hover:bg-blue-50 dark:hover:bg-blue-950/20"
+            />
+            <KpiTile
+              label="Occupied"
+              value={daycareStatusCounts.occupied}
+              hint="Pets in play areas"
+              icon={PawPrint}
+              tone="indigo"
+              active={daycareFilterStatus === "occupied"}
               onClick={() =>
                 setDaycareFilterStatus(
                   daycareFilterStatus === "occupied" ? "all" : "occupied",
                 )
               }
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm font-medium">
-                      Occupied
-                    </p>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {daycareStatusCounts.occupied}
-                    </p>
-                  </div>
-                  <div className="flex size-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
-                    <PawPrint className="size-6 text-blue-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card
-              className="cursor-pointer transition-colors hover:bg-yellow-50 dark:hover:bg-yellow-950/20"
+            />
+            <KpiTile
+              label="Reserved"
+              value={daycareStatusCounts.reserved}
+              hint="Upcoming reservations"
+              icon={Calendar}
+              tone="amber"
+              active={daycareFilterStatus === "reserved"}
               onClick={() =>
                 setDaycareFilterStatus(
                   daycareFilterStatus === "reserved" ? "all" : "reserved",
                 )
               }
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm font-medium">
-                      Reserved
-                    </p>
-                    <p className="text-2xl font-bold text-yellow-600">
-                      {daycareStatusCounts.reserved}
-                    </p>
-                  </div>
-                  <div className="flex size-12 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
-                    <Calendar className="size-6 text-yellow-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card
-              className="cursor-pointer transition-colors hover:bg-red-50 dark:hover:bg-red-950/20"
+            />
+            <KpiTile
+              label="Maintenance"
+              value={daycareStatusCounts.maintenance}
+              hint="Out of service"
+              icon={Wrench}
+              tone="rose"
+              active={daycareFilterStatus === "maintenance"}
               onClick={() =>
                 setDaycareFilterStatus(
                   daycareFilterStatus === "maintenance" ? "all" : "maintenance",
                 )
               }
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm font-medium">
-                      Maintenance
-                    </p>
-                    <p className="text-2xl font-bold text-red-600">
-                      {daycareStatusCounts.maintenance}
-                    </p>
-                  </div>
-                  <div className="flex size-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
-                    <Wrench className="size-6 text-red-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            />
           </div>
 
           {viewMode === "calendar" ? (
@@ -1401,7 +1399,7 @@ export default function KennelViewPage() {
             </DialogTitle>
             <DialogDescription>
               {selectedKennel &&
-                `${getTypeLabel(selectedKennel.type)} • $${selectedKennel.dailyRate}/night`}
+                `${getCategoryLabel(selectedKennel.categoryId)} • $${selectedKennel.dailyRate}/night`}
             </DialogDescription>
           </DialogHeader>
 

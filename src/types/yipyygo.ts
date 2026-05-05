@@ -145,7 +145,7 @@ export const formTemplateConfigSchema = z.object({
     careInstructions: formSectionSchema,
     medications: formSectionSchema,
     feedingSchedule: formSectionSchema,
-    emergencyContact: formSectionSchema,
+    additionalContacts: formSectionSchema,
     specialRequests: formSectionSchema,
     customSections: z.array(formSectionSchema),
   }),

@@ -72,6 +72,8 @@ const DEFAULT_HOURS: Record<string, { open: string; close: string; closed: boole
 
 const STOP_KEYWORDS = ["STOP", "UNSUBSCRIBE", "CANCEL", "QUIT", "END"];
 
+// ── Saved-reply editor ───────────────────────────────────────────────
+
 function SavedReplyEditor({
   reply,
   onSave,
@@ -176,21 +178,27 @@ function SavedReplyEditor({
   );
 }
 
+// ── Main settings view ───────────────────────────────────────────────
+
 export function MessagingSettingsView() {
   const savedRepliesCtx = useSavedReplies();
 
+  // Business identity
   const [businessPhone, setBusinessPhone] = useState("(514) 555-0100");
   const [smsSenderId, setSmsSenderId] = useState("DOGGIEVL");
   const [emailFrom, setEmailFrom] = useState("hello@doggieville.ca");
 
+  // Auto-reply
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(true);
   const [autoReplyMessage, setAutoReplyMessage] = useState(
     "Hi! We're closed right now, but we'll get back to you first thing in the morning. For urgent boarding matters, call (514) 555-0100.",
   );
   const [autoReplyAfterHoursOnly, setAutoReplyAfterHoursOnly] = useState(true);
 
+  // Hours
   const [hours, setHours] = useState(DEFAULT_HOURS);
 
+  // Opt-out
   const [stopHandlingEnabled, setStopHandlingEnabled] = useState(true);
   const [stopConfirmation, setStopConfirmation] = useState(
     "You have been unsubscribed from Doggieville MTL messages. Reply START to re-subscribe.",
@@ -200,6 +208,7 @@ export function MessagingSettingsView() {
     "(450) 555-0917",
   ]);
 
+  // Saved replies UI state
   const [editingReply, setEditingReply] = useState<SavedReply | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<SavedReplyCategory | "all">(
@@ -223,10 +232,12 @@ export function MessagingSettingsView() {
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Messaging Settings</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Business identity, auto-reply, opt-out handling, and saved replies — all in one place.
+          Business identity, auto-reply, opt-out handling, and saved replies — all
+          in one place.
         </p>
       </div>
 
+      {/* Business identity */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -244,7 +255,9 @@ export function MessagingSettingsView() {
               value={businessPhone}
               onChange={(e) => setBusinessPhone(e.target.value)}
             />
-            <p className="text-[10px] text-slate-400">Shown as "from" on outgoing SMS.</p>
+            <p className="text-[10px] text-slate-400">
+              Shown as "from" on outgoing SMS.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label className="flex items-center gap-1.5 text-xs">
@@ -273,6 +286,7 @@ export function MessagingSettingsView() {
         </CardContent>
       </Card>
 
+      {/* Auto-reply */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -280,7 +294,10 @@ export function MessagingSettingsView() {
               <Clock className="size-4 text-violet-500" />
               Auto-reply outside business hours
             </CardTitle>
-            <Switch checked={autoReplyEnabled} onCheckedChange={setAutoReplyEnabled} />
+            <Switch
+              checked={autoReplyEnabled}
+              onCheckedChange={setAutoReplyEnabled}
+            />
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -301,7 +318,9 @@ export function MessagingSettingsView() {
           </div>
           <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
             <div>
-              <p className="text-sm font-medium text-slate-700">Only send when closed</p>
+              <p className="text-sm font-medium text-slate-700">
+                Only send when closed
+              </p>
               <p className="text-[11px] text-slate-400">
                 Leave on so your team can reply manually during open hours.
               </p>
@@ -315,6 +334,7 @@ export function MessagingSettingsView() {
         </CardContent>
       </Card>
 
+      {/* Hours */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -371,6 +391,7 @@ export function MessagingSettingsView() {
         </CardContent>
       </Card>
 
+      {/* Opt-out */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -378,7 +399,10 @@ export function MessagingSettingsView() {
               <Ban className="size-4 text-red-500" />
               SMS opt-out (STOP) handling
             </CardTitle>
-            <Switch checked={stopHandlingEnabled} onCheckedChange={setStopHandlingEnabled} />
+            <Switch
+              checked={stopHandlingEnabled}
+              onCheckedChange={setStopHandlingEnabled}
+            />
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -388,8 +412,8 @@ export function MessagingSettingsView() {
               Compliant with TCPA / CASL
             </p>
             <p className="mt-1 text-[11px] text-emerald-700/80">
-              Replying with any of these keywords automatically stops messaging this client. We log the
-              timestamp and surface it on their profile.
+              Replying with any of these keywords automatically stops messaging
+              this client. We log the timestamp and surface it on their profile.
             </p>
           </div>
 
@@ -446,6 +470,7 @@ export function MessagingSettingsView() {
         </CardContent>
       </Card>
 
+      {/* Saved replies */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -469,8 +494,8 @@ export function MessagingSettingsView() {
         <CardContent>
           <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-700">
             Tip: staff type <code className="rounded bg-blue-100 px-1 font-semibold">/</code>{" "}
-            in the compose box to bring up this menu instantly. They can also "Save as reply" from any
-            message they've drafted.
+            in the compose box to bring up this menu instantly. They can also
+            "Save as reply" from any message they've drafted.
           </div>
 
           <div className="mb-3 flex gap-1.5 flex-wrap">
@@ -523,7 +548,9 @@ export function MessagingSettingsView() {
                       >
                         {SAVED_REPLY_CATEGORY_LABELS[reply.category]}
                       </span>
-                      <span className="text-sm font-bold text-slate-800">{reply.title}</span>
+                      <span className="text-sm font-bold text-slate-800">
+                        {reply.title}
+                      </span>
                       <span className="flex items-center gap-1 text-[11px] text-slate-400">
                         <Hash className="size-2.5" />
                         {reply.shortcut}
@@ -533,7 +560,9 @@ export function MessagingSettingsView() {
                         Used {reply.useCount}×
                       </span>
                     </div>
-                    <p className="mt-1 line-clamp-2 text-[11px] text-slate-500">{reply.body}</p>
+                    <p className="mt-1 line-clamp-2 text-[11px] text-slate-500">
+                      {reply.body}
+                    </p>
                     {reply.createdBy && (
                       <p className="mt-1 text-[10px] text-slate-400">
                         Added by {reply.createdBy}
@@ -585,7 +614,9 @@ export function MessagingSettingsView() {
             {filteredReplies.length === 0 && (
               <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center">
                 <Bookmark className="mx-auto mb-3 size-8 text-slate-300" />
-                <p className="text-sm text-slate-500">No saved replies in this category</p>
+                <p className="text-sm text-slate-500">
+                  No saved replies in this category
+                </p>
                 <Button
                   variant="link"
                   className="mt-1 text-blue-600"
@@ -602,6 +633,7 @@ export function MessagingSettingsView() {
         </CardContent>
       </Card>
 
+      {/* SMS credit autotop callout */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -611,12 +643,13 @@ export function MessagingSettingsView() {
         </CardHeader>
         <CardContent className="space-y-2 text-xs text-slate-600">
           <p>
-            <strong>Auto-reload</strong> will purchase 500 credits ($20) when your balance drops below 100.
-            Toggle this in Billing.
+            <strong>Auto-reload</strong> will purchase 500 credits ($20) when your
+            balance drops below 100. Toggle this in Billing.
           </p>
           <p>
-            <strong>Send failures</strong> are surfaced as red badges on the conversation row and in the
-            Inbox banner so staff can retry or call instead.
+            <strong>Send failures</strong> are surfaced as red badges on the
+            conversation row and in the Inbox banner so staff can retry or call
+            instead.
           </p>
         </CardContent>
       </Card>

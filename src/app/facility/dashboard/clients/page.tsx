@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { CreateClientModal } from "@/components/clients/CreateClientModal";
+import type { AdditionalContact } from "@/types/client";
 import {
   ClientFiltersInline,
   ActiveFilterChips,
@@ -218,12 +219,7 @@ export default function FacilityClientsPage() {
       country: string;
       zip: string;
     };
-    emergencyContact: {
-      name: string;
-      relationship: string;
-      phone: string;
-      email: string;
-    };
+    additionalContacts: AdditionalContact[];
     pets: Array<{
       name: string;
       type: string;
@@ -256,7 +252,7 @@ export default function FacilityClientsPage() {
       status: newClient.status,
       facility: newClient.facility,
       address: newClient.address,
-      emergencyContact: newClient.emergencyContact,
+      additionalContacts: newClient.additionalContacts,
       pets: petsWithIds,
     };
     setClientsData([...clientsData, clientWithId]);

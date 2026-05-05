@@ -71,6 +71,7 @@ function dataToPlan(
     gracePeriodDays: data.gracePeriodDays,
     cancellationPolicy: data.cancellationPolicy,
     badgeColor: data.badgeColor,
+    instabookServices: data.instabookServices,
   };
 }
 

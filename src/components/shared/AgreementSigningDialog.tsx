@@ -11,12 +11,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { FileText, PawPrint, User } from "lucide-react";
 import { SignaturePad, type SignatureResult } from "./SignaturePad";
+import type { WaiverBlock } from "@/data/additional-features";
+import {
+  WaiverContentRenderer,
+  type WaiverMergeContext,
+} from "@/components/additional-features/waivers/WaiverContentRenderer";
 
 interface AgreementSigningDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   agreementContent: string;
+  /** Optional rich block content. When present, renders instead of plain `agreementContent`. */
+  agreementBlocks?: WaiverBlock[];
+  /** Values that fill in {{customerName}}, {{petName}}, etc. */
+  mergeContext?: WaiverMergeContext;
   requiresWitness?: boolean;
   onSigned: (result: SignatureResult) => void;
   clientName?: string;
@@ -29,12 +38,21 @@ export function AgreementSigningDialog({
   onOpenChange,
   title,
   agreementContent,
+  agreementBlocks,
+  mergeContext,
   requiresWitness = false,
   onSigned,
   clientName,
   petName,
   serviceName,
 }: AgreementSigningDialogProps) {
+  const ctx: WaiverMergeContext = {
+    customerName: mergeContext?.customerName ?? clientName,
+    petName: mergeContext?.petName ?? petName,
+    facilityName: mergeContext?.facilityName,
+    services: mergeContext?.services,
+    date: mergeContext?.date,
+  };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl p-0">
@@ -77,13 +95,12 @@ export function AgreementSigningDialog({
             Agreement
           </p>
           <ScrollArea className="h-[250px] rounded-xl border bg-slate-50/50">
-            <div className="prose prose-sm max-w-none p-5 text-sm/relaxed text-slate-600">
-              {agreementContent.split("\n").map((line, i) => {
-                if (line.trim() === "") {
-                  return <div key={i} className="h-2" aria-hidden="true" />;
-                }
-                return <p key={i}>{line}</p>;
-              })}
+            <div className="p-5">
+              <WaiverContentRenderer
+                blocks={agreementBlocks}
+                content={agreementContent}
+                context={ctx}
+              />
             </div>
           </ScrollArea>
         </div>

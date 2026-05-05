@@ -373,12 +373,7 @@ export default function SignUpPage() {
           zip: "",
           country: "",
         },
-        emergencyContact: {
-          name: "",
-          relationship: "",
-          phone: "",
-          email: "",
-        },
+        additionalContacts: [],
         pets: [],
       });
     }
@@ -428,12 +423,7 @@ export default function SignUpPage() {
           zip: "",
           country: "",
         },
-        emergencyContact: {
-          name: "",
-          relationship: "",
-          phone: "",
-          email: "",
-        },
+        additionalContacts: [],
         pets: [],
       });
     }

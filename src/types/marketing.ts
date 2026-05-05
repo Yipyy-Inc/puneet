@@ -12,6 +12,7 @@ export const segmentFilterCategoryEnum = z.enum([
   "compliance",
   "spending",
   "friends",
+  "location",
 ]);
 export type SegmentFilterCategory = z.infer<typeof segmentFilterCategoryEnum>;
 
@@ -150,6 +151,12 @@ export const campaignSchema = z.object({
   segmentId: z.string(),
   status: z.enum(["draft", "scheduled", "sending", "sent", "paused"]),
   goal: campaignGoalEnum.optional(),
+  /**
+   * Target locations for this campaign. Empty array or undefined = all locations.
+   * The campaign sends only to clients whose primary location is in this set
+   * (or to all clients when empty).
+   */
+  targetLocationIds: z.array(z.string()).optional(),
   scheduledAt: z.string().optional(),
   sentAt: z.string().optional(),
   stats: z.object({

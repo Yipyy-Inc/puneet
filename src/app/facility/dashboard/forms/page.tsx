@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CreateFormModal } from "@/components/forms/CreateFormModal";
+import { FormTemplatesSection } from "@/components/forms/FormTemplatesSection";
 import {
   getFormsByFacility,
   duplicateForm,
@@ -81,11 +82,6 @@ export default function IntakeFormsPage() {
             Create New
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/facility/dashboard/forms/templates">
-              From template
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
             <Link href="/facility/dashboard/forms/audit">
               <Shield className="mr-2 size-4" />
               Audit Trail
@@ -99,6 +95,8 @@ export default function IntakeFormsPage() {
           defaultCategory={category}
         />
       </div>
+
+      <FormTemplatesSection facilityId={FACILITY_ID} />
 
       <Tabs value={category} onValueChange={(v) => setCategory(v as FormType)}>
         <div className="flex flex-wrap items-center gap-2">

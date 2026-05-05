@@ -16,6 +16,7 @@ import {
   Send,
   Shield,
   TrendingUp,
+  MapPin,
 } from "lucide-react";
 import { reputationQueries } from "@/lib/api/reputation";
 import { ReputationOverviewTab } from "@/components/marketing/ReputationOverviewTab";
@@ -23,9 +24,12 @@ import { ReputationRequestsTab } from "@/components/marketing/ReputationRequests
 import { ReputationPerformanceTab } from "@/components/marketing/ReputationPerformanceTab";
 import { ReputationPublicReviewsTab } from "@/components/marketing/ReputationPublicReviewsTab";
 import { ReputationSettingsTab } from "@/components/marketing/ReputationSettingsTab";
+import { ReputationLocationsTab } from "@/components/marketing/ReputationLocationsTab";
+import { useLocationContext } from "@/hooks/use-location-context";
 
 export function ReputationBoosterShell() {
   const [activeTab, setActiveTab] = useState("overview");
+  const { isMultiLocation } = useLocationContext();
   const { data: settings } = useQuery(reputationQueries.settings());
   const { data: stats } = useQuery(reputationQueries.stats());
   const { data: requests = [] } = useQuery(reputationQueries.requests());
@@ -110,6 +114,12 @@ export function ReputationBoosterShell() {
             <Globe className="h-4 w-4" />
             Public Reviews
           </TabsTrigger>
+          {isMultiLocation && (
+            <TabsTrigger value="locations" className="gap-2 text-sm px-3">
+              <MapPin className="h-4 w-4" />
+              Locations
+            </TabsTrigger>
+          )}
           <TabsTrigger value="settings" className="gap-2 text-sm px-3">
             <Settings2 className="h-4 w-4" />
             Settings
@@ -131,6 +141,12 @@ export function ReputationBoosterShell() {
         <TabsContent value="public-reviews" className="mt-6">
           <ReputationPublicReviewsTab />
         </TabsContent>
+
+        {isMultiLocation && (
+          <TabsContent value="locations" className="mt-6">
+            <ReputationLocationsTab />
+          </TabsContent>
+        )}
 
         <TabsContent value="settings" className="mt-6">
           <ReputationSettingsTab />

@@ -6,6 +6,8 @@ import {
   stylists,
   stylistAvailability,
 } from "@/data/grooming";
+import { groomingPrepaidPackages } from "@/data/grooming-prepaid-packages";
+import type { GroomingPrepaidPackage } from "@/data/grooming-prepaid-packages";
 import type {
   GroomingAppointment,
   Stylist,
@@ -53,6 +55,10 @@ export const groomingQueries = {
   packages: () => ({
     queryKey: ["grooming", "packages"] as const,
     queryFn: async () => groomingPackages as GroomingPackage[],
+  }),
+  prepaidPackages: () => ({
+    queryKey: ["grooming", "prepaid-packages"] as const,
+    queryFn: async () => groomingPrepaidPackages as GroomingPrepaidPackage[],
   }),
   products: () => ({
     queryKey: ["grooming", "products"] as const,

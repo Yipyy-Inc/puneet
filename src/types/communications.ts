@@ -75,7 +75,12 @@ export const automationRuleSchema = z.object({
     .object({
       serviceTypes: z.array(z.string()).optional(),
       minAmount: z.number().optional(),
-      /** Empty / undefined = global rule (fires for events at any location). */
+      /**
+       * Location IDs this rule fires for. Empty array or undefined = all locations.
+       * Used to scope per-location messaging — when a booking happens at Plateau,
+       * only rules with `loc-dv-main` (or empty scope) fire, and they fire
+       * stamped with Plateau's name/phone/branding.
+       */
       locationIds: z.array(z.string()).optional(),
     })
     .optional(),

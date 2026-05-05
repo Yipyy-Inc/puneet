@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSidebar } from "@/components/ui/sidebar";
+import { locationStyles } from "@/lib/hq/location-styles";
 
 export function LocationContextSelector() {
   const { state } = useSidebar();
@@ -34,13 +35,13 @@ export function LocationContextSelector() {
     ? "All Locations"
     : (currentLocation?.name ?? "Select Location");
 
-  const shortLabel = isHQView
-    ? "HQ"
-    : (currentLocation?.shortCode ?? "??");
+  const shortLabel = isHQView ? "HQ" : (currentLocation?.shortCode ?? "??");
 
-  const dotColor = isHQView
-    ? "#0ea5e9"
-    : (currentLocation?.color ?? "#94a3b8");
+  const triggerBg = isHQView
+    ? "bg-sky-500"
+    : currentLocation
+    ? locationStyles(currentLocation).bg
+    : "bg-slate-400";
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -54,11 +55,12 @@ export function LocationContextSelector() {
           )}
           aria-label="Switch location"
         >
-          {/* Dot / Icon */}
           <div className="relative shrink-0">
             <div
-              className="flex size-6 items-center justify-center rounded-md text-[10px] font-bold text-white"
-              style={{ backgroundColor: dotColor }}
+              className={cn(
+                "flex size-6 items-center justify-center rounded-md text-[10px] font-bold text-white",
+                triggerBg,
+              )}
             >
               {isHQView ? <Globe className="size-3.5" /> : shortLabel.slice(0, 3)}
             </div>
@@ -68,9 +70,11 @@ export function LocationContextSelector() {
           {isExpanded && (
             <>
               <div className="min-w-0 flex-1 text-left">
-                <p className="truncate text-xs font-semibold leading-tight">{label}</p>
-                <p className="text-muted-foreground text-[10px] leading-tight">
-                  {isHQView ? `${locations.length} locations` : currentLocation?.city ?? ""}
+                <p className="truncate text-xs/tight font-semibold">{label}</p>
+                <p className="text-muted-foreground text-[10px]/tight">
+                  {isHQView
+                    ? `${locations.length} locations`
+                    : currentLocation?.city ?? ""}
                 </p>
               </div>
               <ChevronDown
@@ -84,18 +88,16 @@ export function LocationContextSelector() {
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent
-        align="start"
-        sideOffset={6}
-        className="w-56"
-      >
+      <DropdownMenuContent align="start" sideOffset={6} className="w-56">
         <DropdownMenuLabel className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
           Location Context
         </DropdownMenuLabel>
 
-        {/* HQ option */}
         <DropdownMenuItem
-          onClick={() => { setHQView(); setOpen(false); }}
+          onClick={() => {
+            setHQView();
+            setOpen(false);
+          }}
           className="flex items-center gap-2.5"
         >
           <div className="flex size-6 items-center justify-center rounded-md bg-sky-500 text-white">
@@ -110,18 +112,23 @@ export function LocationContextSelector() {
 
         <DropdownMenuSeparator />
 
-        {/* Individual locations */}
         {locations.map((loc) => {
           const isActive = !isHQView && currentLocation?.id === loc.id;
+          const s = locationStyles(loc);
           return (
             <DropdownMenuItem
               key={loc.id}
-              onClick={() => { setLocation(loc.id); setOpen(false); }}
+              onClick={() => {
+                setLocation(loc.id);
+                setOpen(false);
+              }}
               className="flex items-center gap-2.5"
             >
               <div
-                className="flex size-6 items-center justify-center rounded-md text-[10px] font-bold text-white"
-                style={{ backgroundColor: loc.color }}
+                className={cn(
+                  "flex size-6 items-center justify-center rounded-md text-[10px] font-bold text-white",
+                  s.bg,
+                )}
               >
                 {loc.shortCode.slice(0, 3)}
               </div>
@@ -137,9 +144,7 @@ export function LocationContextSelector() {
                 <p className="text-muted-foreground flex items-center gap-1 text-[10px]">
                   <MapPin className="size-2.5" />
                   {loc.city}
-                  {!loc.isActive && (
-                    <span className="ml-1 text-red-400">· Inactive</span>
-                  )}
+                  {!loc.isActive && <span className="ml-1 text-rose-400">· Inactive</span>}
                 </p>
               </div>
               {isActive && <Check className="text-primary size-3.5 shrink-0" />}

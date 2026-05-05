@@ -350,8 +350,13 @@ export interface MembershipPlan {
   downgradePlanIds?: string[];
   /** Facility-configurable customer-side policy (optional; falls back to default) */
   changePolicy?: MembershipChangePolicy;
-  /** Services this plan grants instant booking for (skips the booking-request queue). */
-  instabookServices?: ("daycare" | "boarding" | "grooming")[];
+  /**
+   * Grant subscribers priority instant-booking access for the listed services.
+   * When a subscriber books one of these services, the system skips the
+   * booking-requests queue and auto-confirms the reservation (room/section
+   * assigned automatically). Empty/undefined = no instant-booking benefit.
+   */
+  instabookServices?: ServiceCategory[];
 }
 
 export interface PrepaidCredits {
@@ -908,11 +913,12 @@ export const membershipPlans: MembershipPlan[] = [
     perks: [
       "15% off all services",
       "8 daycare credits/month",
-      "Priority booking",
+      "Instant booking (skip approval)",
       "Free bath & brush monthly",
       "Rollover credits (up to 4)",
     ],
     applicableServices: ["daycare", "grooming"],
+    instabookServices: ["daycare"],
     isPopular: true,
     isActive: true,
     subscriberCount: 112,

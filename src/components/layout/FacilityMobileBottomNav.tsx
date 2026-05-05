@@ -12,7 +12,7 @@ const NAV_ITEMS = [
     icon: Home,
   },
   {
-    label: "Kennel",
+    label: "Occupancy",
     href: "/facility/dashboard/kennel-view",
     icon: Grid3X3,
   },

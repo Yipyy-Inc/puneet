@@ -1,8 +1,10 @@
 "use client";
 
 import { MapPin, Globe, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { locationStyles } from "@/lib/hq/location-styles";
 
 export function LocationFilterBanner() {
   const { currentLocation, isHQView, isMultiLocation, setHQView } =
@@ -24,22 +26,18 @@ export function LocationFilterBanner() {
 
   if (!currentLocation) return null;
 
+  const s = locationStyles(currentLocation);
   return (
     <div
-      className="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm"
-      style={{
-        borderColor: `${currentLocation.color}30`,
-        backgroundColor: `${currentLocation.color}08`,
-      }}
+      className={cn(
+        "flex items-center gap-2 rounded-xl border px-3 py-2 text-sm",
+        s.borderSoft,
+        s.bgSofter,
+      )}
     >
-      <div
-        className="size-2.5 shrink-0 rounded-full"
-        style={{ backgroundColor: currentLocation.color }}
-      />
-      <MapPin className="size-3.5 shrink-0" style={{ color: currentLocation.color }} />
-      <span className="font-medium" style={{ color: currentLocation.color }}>
-        {currentLocation.name}
-      </span>
+      <span className={cn("size-2.5 shrink-0 rounded-full", s.bg)} />
+      <MapPin className={cn("size-3.5 shrink-0", s.text)} />
+      <span className={cn("font-semibold", s.text)}>{currentLocation.name}</span>
       <span className="text-muted-foreground">— filtered to this location</span>
       <button
         onClick={setHQView}

@@ -21,6 +21,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Zap } from "lucide-react";
+import { LocationScopePicker } from "@/components/hq/LocationScopePicker";
+import { useLocationContext } from "@/hooks/use-location-context";
 import {
   messageTemplates,
   type AutomationRule,
@@ -45,6 +47,7 @@ export function AutomationRuleModal({
     templateId: rule?.templateId || "",
     hoursBefore: rule?.schedule?.hoursBefore || 24,
     daysBeforeExpiry: rule?.schedule?.daysBeforeExpiry || 30,
+    locationIds: rule?.conditions?.locationIds ?? [],
   });
 
   const triggerOptions = [
@@ -183,6 +186,14 @@ export function AutomationRuleModal({
             </p>
           )}
         </div>
+
+        {/* Location Scope */}
+        <LocationScopeField
+          value={formData.locationIds}
+          onChange={(next) =>
+            setFormData({ ...formData, locationIds: next })
+          }
+        />
 
         {/* Message Type */}
         <div className="space-y-2">
@@ -368,5 +379,30 @@ export function AutomationRuleModal({
         </Button>
       </DialogFooter>
     </>
+  );
+}
+
+function LocationScopeField({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const { locations, isMultiLocation } = useLocationContext();
+  if (!isMultiLocation) return null;
+  return (
+    <div className="space-y-2">
+      <Label>Location Scope</Label>
+      <p className="text-muted-foreground text-xs">
+        Pick the locations this rule fires for. The message is stamped from
+        that location&apos;s name, phone, and branding.
+      </p>
+      <LocationScopePicker
+        locations={locations}
+        value={value}
+        onChange={onChange}
+      />
+    </div>
   );
 }

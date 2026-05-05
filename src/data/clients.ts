@@ -17,12 +17,16 @@ export const clients: Client[] = [
       zip: "62701",
       country: "USA",
     },
-    emergencyContact: {
-      name: "Robert Johnson",
-      relationship: "Spouse",
-      phone: "123-456-7891",
-      email: "robert.johnson@example.com",
-    },
+    additionalContacts: [
+      {
+        id: "ac-1",
+        name: "Robert Johnson",
+        relationship: "Spouse",
+        phone: "123-456-7891",
+        email: "robert.johnson@example.com",
+        tags: ["emergency"],
+      },
+    ],
     pets: [
       {
         id: 1,
@@ -168,12 +172,16 @@ export const clients: Client[] = [
       zip: "62702",
       country: "USA",
     },
-    emergencyContact: {
-      name: "Sarah Smith",
-      relationship: "Wife",
-      phone: "098-765-4322",
-      email: "sarah.smith@example.com",
-    },
+    additionalContacts: [
+      {
+        id: "ac-2",
+        name: "Sarah Smith",
+        relationship: "Wife",
+        phone: "098-765-4322",
+        email: "sarah.smith@example.com",
+        tags: ["emergency"],
+      },
+    ],
     pets: [
       {
         id: 3,
@@ -237,11 +245,15 @@ export const clients: Client[] = [
       zip: "62565",
       country: "USA",
     },
-    emergencyContact: {
-      name: "Lucy Brown",
-      relationship: "Sister",
-      phone: "555-123-4567",
-    },
+    additionalContacts: [
+      {
+        id: "ac-3",
+        name: "Lucy Brown",
+        relationship: "Sister",
+        phone: "555-123-4567",
+        tags: ["emergency"],
+      },
+    ],
     pets: [],
   },
   {
@@ -259,12 +271,16 @@ export const clients: Client[] = [
       zip: "10001",
       country: "USA",
     },
-    emergencyContact: {
-      name: "Steve Trevor",
-      relationship: "Partner",
-      phone: "111-222-3334",
-      email: "steve.trevor@example.com",
-    },
+    additionalContacts: [
+      {
+        id: "ac-4",
+        name: "Steve Trevor",
+        relationship: "Partner",
+        phone: "111-222-3334",
+        email: "steve.trevor@example.com",
+        tags: ["emergency"],
+      },
+    ],
     pets: [
       {
         id: 4,
@@ -301,12 +317,16 @@ export const clients: Client[] = [
       zip: "90210",
       country: "USA",
     },
-    emergencyContact: {
-      name: "Adam Adams",
-      relationship: "Husband",
-      phone: "555-987-6543",
-      email: "adam.adams@example.com",
-    },
+    additionalContacts: [
+      {
+        id: "ac-5",
+        name: "Adam Adams",
+        relationship: "Husband",
+        phone: "555-987-6543",
+        email: "adam.adams@example.com",
+        tags: ["emergency"],
+      },
+    ],
     pets: [
       {
         id: 5,
@@ -363,11 +383,15 @@ export const clients: Client[] = [
       zip: "89101",
       country: "USA",
     },
-    emergencyContact: {
-      name: "Nancy Miller",
-      relationship: "Wife",
-      phone: "444-555-6667",
-    },
+    additionalContacts: [
+      {
+        id: "ac-6",
+        name: "Nancy Miller",
+        relationship: "Wife",
+        phone: "444-555-6667",
+        tags: ["emergency"],
+      },
+    ],
     pets: [],
   },
   {
@@ -384,12 +408,16 @@ export const clients: Client[] = [
       zip: "98101",
       country: "USA",
     },
-    emergencyContact: {
-      name: "James Lee",
-      relationship: "Brother",
-      phone: "555-246-8135",
-      email: "james.lee@example.com",
-    },
+    additionalContacts: [
+      {
+        id: "ac-7",
+        name: "James Lee",
+        relationship: "Brother",
+        phone: "555-246-8135",
+        email: "james.lee@example.com",
+        tags: ["emergency"],
+      },
+    ],
     pets: [
       {
         id: 7,
@@ -427,11 +455,15 @@ export const clients: Client[] = [
       zip: "06095",
       country: "USA",
     },
-    emergencyContact: {
-      name: "Elizabeth Wilson",
-      relationship: "Mother",
-      phone: "777-888-9998",
-    },
+    additionalContacts: [
+      {
+        id: "ac-8",
+        name: "Elizabeth Wilson",
+        relationship: "Mother",
+        phone: "777-888-9998",
+        tags: ["emergency"],
+      },
+    ],
     pets: [],
   },
   {
@@ -449,12 +481,16 @@ export const clients: Client[] = [
       zip: "97201",
       country: "USA",
     },
-    emergencyContact: {
-      name: "David Chen",
-      relationship: "Husband",
-      phone: "000-111-2223",
-      email: "david.chen@example.com",
-    },
+    additionalContacts: [
+      {
+        id: "ac-9",
+        name: "David Chen",
+        relationship: "Husband",
+        phone: "000-111-2223",
+        email: "david.chen@example.com",
+        tags: ["emergency"],
+      },
+    ],
     pets: [
       {
         id: 8,
@@ -491,12 +527,16 @@ export const clients: Client[] = [
       zip: "89109",
       country: "USA",
     },
-    emergencyContact: {
-      name: "Jill Davis",
-      relationship: "Wife",
-      phone: "555-369-2580",
-      email: "jill.davis@example.com",
-    },
+    additionalContacts: [
+      {
+        id: "ac-10",
+        name: "Jill Davis",
+        relationship: "Wife",
+        phone: "555-369-2580",
+        email: "jill.davis@example.com",
+        tags: ["emergency"],
+      },
+    ],
     pets: [],
   },
   {
@@ -506,6 +546,10 @@ export const clients: Client[] = [
     phone: "333-444-5555",
     preferredLanguage: "de",
     status: "inactive",
+    isBlocked: true,
+    blockedAt: "2026-04-12",
+    blockedReason:
+      "Repeated abusive language toward staff over the phone. Manager-approved block on 2026-04-12.",
     facility: "Pet Paradise Vet",
     address: {
       street: "159 Manager Lane",
@@ -514,11 +558,15 @@ export const clients: Client[] = [
       zip: "75001",
       country: "USA",
     },
-    emergencyContact: {
-      name: "Kevin Taylor",
-      relationship: "Husband",
-      phone: "333-444-5556",
-    },
+    additionalContacts: [
+      {
+        id: "ac-11",
+        name: "Kevin Taylor",
+        relationship: "Husband",
+        phone: "333-444-5556",
+        tags: ["emergency"],
+      },
+    ],
     pets: [
       {
         id: 9,
@@ -556,12 +604,16 @@ export const clients: Client[] = [
       zip: "78201",
       country: "USA",
     },
-    emergencyContact: {
-      name: "Maria Garcia",
-      relationship: "Mother",
-      phone: "666-777-8889",
-      email: "maria.garcia@example.com",
-    },
+    additionalContacts: [
+      {
+        id: "ac-12",
+        name: "Maria Garcia",
+        relationship: "Mother",
+        phone: "666-777-8889",
+        email: "maria.garcia@example.com",
+        tags: ["emergency"],
+      },
+    ],
     pets: [
       {
         id: 10,
@@ -617,11 +669,15 @@ export const clients: Client[] = [
       zip: "33101",
       country: "USA",
     },
-    emergencyContact: {
-      name: "Carlos Rodriguez",
-      relationship: "Father",
-      phone: "555-159-7530",
-    },
+    additionalContacts: [
+      {
+        id: "ac-13",
+        name: "Carlos Rodriguez",
+        relationship: "Father",
+        phone: "555-159-7530",
+        tags: ["emergency"],
+      },
+    ],
     pets: [
       {
         id: 12,
@@ -659,12 +715,16 @@ export const clients: Client[] = [
       zip: "90001",
       country: "USA",
     },
-    emergencyContact: {
-      name: "Jane Doe",
-      relationship: "Wife",
-      phone: "123-456-7891",
-      email: "jane.doe@example.com",
-    },
+    additionalContacts: [
+      {
+        id: "ac-14",
+        name: "Jane Doe",
+        relationship: "Wife",
+        phone: "123-456-7891",
+        email: "jane.doe@example.com",
+        tags: ["emergency"],
+      },
+    ],
     pets: [
       {
         id: 13,
@@ -833,12 +893,16 @@ export const clients: Client[] = [
       zip: "90002",
       country: "USA",
     },
-    emergencyContact: {
-      name: "John Smith",
-      relationship: "Husband",
-      phone: "098-765-4320",
-      email: "john.smith@example.com",
-    },
+    additionalContacts: [
+      {
+        id: "ac-15",
+        name: "John Smith",
+        relationship: "Husband",
+        phone: "098-765-4320",
+        email: "john.smith@example.com",
+        tags: ["emergency"],
+      },
+    ],
     pets: [
       {
         id: 14,
@@ -894,12 +958,16 @@ export const clients: Client[] = [
       zip: "62703",
       country: "USA",
     },
-    emergencyContact: {
-      name: "Tom Thompson",
-      relationship: "Husband",
-      phone: "555-123-9877",
-      email: "tom.thompson@example.com",
-    },
+    additionalContacts: [
+      {
+        id: "ac-16",
+        name: "Tom Thompson",
+        relationship: "Husband",
+        phone: "555-123-9877",
+        email: "tom.thompson@example.com",
+        tags: ["emergency"],
+      },
+    ],
     pets: [
       {
         id: 15,
@@ -980,12 +1048,13 @@ export const clients: Client[] = [
   },
   // Prospect clients (auto-created from guest estimates)
   {
-    id: 30,
+    id: 34,
     name: "David Park",
     email: "david.park@gmail.com",
     phone: "(555) 999-8888",
     status: "prospect",
     facility: "Example Pet Care Facility",
+    additionalContacts: [],
     pets: [
       {
         id: 50,
@@ -1011,6 +1080,7 @@ export const clients: Client[] = [
     phone: "(555) 777-3333",
     status: "prospect",
     facility: "Example Pet Care Facility",
+    additionalContacts: [],
     pets: [
       {
         id: 51,
@@ -1044,12 +1114,16 @@ export const clients: Client[] = [
       zip: "62703",
       country: "USA",
     },
-    emergencyContact: {
-      name: "Luis Rivera",
-      relationship: "Spouse",
-      phone: "(555) 222-1011",
-      email: "luis.rivera@example.com",
-    },
+    additionalContacts: [
+      {
+        id: "ac-17",
+        name: "Luis Rivera",
+        relationship: "Spouse",
+        phone: "(555) 222-1011",
+        email: "luis.rivera@example.com",
+        tags: ["emergency"],
+      },
+    ],
     pets: [
       {
         id: 52,
@@ -1083,12 +1157,16 @@ export const clients: Client[] = [
       zip: "62704",
       country: "USA",
     },
-    emergencyContact: {
-      name: "Elena Alvarez",
-      relationship: "Sister",
-      phone: "(555) 333-2021",
-      email: "elena.alvarez@example.com",
-    },
+    additionalContacts: [
+      {
+        id: "ac-18",
+        name: "Elena Alvarez",
+        relationship: "Sister",
+        phone: "(555) 333-2021",
+        email: "elena.alvarez@example.com",
+        tags: ["emergency"],
+      },
+    ],
     pets: [
       {
         id: 53,

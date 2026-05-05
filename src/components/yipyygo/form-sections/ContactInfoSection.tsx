@@ -14,16 +14,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle2, User, Phone, Mail } from "lucide-react";
+import { AdditionalContactsManager } from "@/components/clients/AdditionalContactsManager";
+import type { AdditionalContact } from "@/types/client";
 import type { YipyyGoFormSectionProps } from "@/types/yipyygo";
 
 type ContactForm = {
   name: string;
   email: string;
   phone: string;
-  emergencyName: string;
-  emergencyRelationship: string;
-  emergencyPhone: string;
-  emergencyEmail: string;
+  additionalContacts: AdditionalContact[];
 };
 
 type ContactInfoSectionProps = YipyyGoFormSectionProps;
@@ -37,10 +36,8 @@ export function ContactInfoSection({
     name: customer.name ?? "",
     email: customer.email ?? "",
     phone: customer.phone ?? "",
-    emergencyName: customer.emergencyContact?.name ?? "",
-    emergencyRelationship: customer.emergencyContact?.relationship ?? "",
-    emergencyPhone: customer.emergencyContact?.phone ?? "",
-    emergencyEmail: customer.emergencyContact?.email ?? "",
+    additionalContacts: (customer.additionalContacts ??
+      []) as AdditionalContact[],
   }));
 
   const missing = useMemo(() => {
@@ -48,8 +45,14 @@ export function ContactInfoSection({
     if (!values.name.trim()) list.push("Full name");
     if (!values.email.trim()) list.push("Email");
     if (!values.phone.trim()) list.push("Phone number");
-    if (!values.emergencyName.trim()) list.push("Emergency contact name");
-    if (!values.emergencyPhone.trim()) list.push("Emergency contact phone");
+    values.additionalContacts.forEach((contact, idx) => {
+      if (!contact.name.trim()) {
+        list.push(`Additional contact #${idx + 1} name`);
+      }
+      if (!contact.phone.trim()) {
+        list.push(`Additional contact #${idx + 1} phone`);
+      }
+    });
     return list;
   }, [values]);
 
@@ -136,50 +139,12 @@ export function ContactInfoSection({
           </div>
         </div>
 
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold">Emergency contact</h3>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="emergency-name">Name</Label>
-              <Input
-                id="emergency-name"
-                value={values.emergencyName}
-                onChange={(e) => update({ emergencyName: e.target.value })}
-                placeholder="Emergency contact name"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="emergency-relationship">Relationship</Label>
-              <Input
-                id="emergency-relationship"
-                value={values.emergencyRelationship}
-                onChange={(e) =>
-                  update({ emergencyRelationship: e.target.value })
-                }
-                placeholder="e.g., Spouse, Sibling, Friend"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="emergency-phone">Phone</Label>
-              <Input
-                id="emergency-phone"
-                value={values.emergencyPhone}
-                onChange={(e) => update({ emergencyPhone: e.target.value })}
-                placeholder="(514) 555-0123"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="emergency-email">Email (optional)</Label>
-              <Input
-                id="emergency-email"
-                type="email"
-                value={values.emergencyEmail}
-                onChange={(e) => update({ emergencyEmail: e.target.value })}
-                placeholder="contact@example.com"
-              />
-            </div>
-          </div>
-        </div>
+        <AdditionalContactsManager
+          value={values.additionalContacts}
+          onChange={(contacts) => update({ additionalContacts: contacts })}
+          heading="Additional contacts"
+          description="Add people who can be contacted for emergencies, pickup, or drop-off. Tag each contact with what they're authorized to do."
+        />
 
         <div className="flex justify-between pt-4">
           <Button variant="outline" onClick={onBack} disabled>

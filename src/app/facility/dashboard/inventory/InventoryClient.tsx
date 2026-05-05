@@ -34,6 +34,9 @@ import { cn } from "@/lib/utils";
 import type { OpsInventoryItem, OpsSupplier, StockAdjustType } from "@/types/ops-inventory";
 import { OPS_CATEGORIES } from "@/types/ops-inventory";
 import { ItemModal } from "./ItemModal";
+import { useLocationContext } from "@/hooks/use-location-context";
+import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
+import { deriveLocationId } from "@/data/locations";
 import { StockAdjustModal } from "./StockAdjustModal";
 import { SupplierModal } from "./SupplierModal";
 
@@ -154,8 +157,21 @@ export function InventoryClient({
     setSupplierModal({ open: false, supplier: null });
   };
 
-  // Stats
-  const facilityItems = enrichedItems.filter((i) => i.facilityId === facilityId);
+  // Location scope (multi-location facilities filter by current location;
+  // HQ view shows everything across all locations)
+  const { currentLocationId, isHQView, isMultiLocation } =
+    useLocationContext();
+
+  // Stats — filtered by both facility AND current location scope
+  const allFacilityItems = enrichedItems.filter(
+    (i) => i.facilityId === facilityId,
+  );
+  const facilityItems =
+    isMultiLocation && currentLocationId && !isHQView
+      ? allFacilityItems.filter(
+          (i) => deriveLocationId(i.id) === currentLocationId,
+        )
+      : allFacilityItems;
   const lowStockItems = facilityItems.filter((i) => i.status === "low_stock");
   const outOfStockItems = facilityItems.filter((i) => i.status === "out_of_stock");
   const runningLow = facilityItems.filter(
@@ -394,6 +410,8 @@ export function InventoryClient({
 
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
+      <LocationFilterBanner />
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
