@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,9 +77,11 @@ export function LivePetCamGrid() {
                 <Camera className="mr-2 size-4" />
                 Add Camera
               </Button>
-              <Button variant="outline">
-                <Settings className="mr-2 size-4" />
-                Settings
+              <Button asChild variant="outline">
+                <Link href="/facility/dashboard/petcams/settings">
+                  <Settings className="mr-2 size-4" />
+                  Settings
+                </Link>
               </Button>
             </div>
           </div>

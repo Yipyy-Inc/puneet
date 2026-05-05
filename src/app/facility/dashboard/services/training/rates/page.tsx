@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,125 +15,354 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
-import { DataTable, ColumnDef } from "@/components/ui/DataTable";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DollarSign, GraduationCap, Plus, Edit, Trash2, Save, X, Clock, Sparkles } from "lucide-react";
-import { trainingPackages, trainingAddOns, TrainingAddOn } from "@/data/training";
-import Link from "next/link";
+import {
+  DollarSign,
+  GraduationCap,
+  Plus,
+  Edit,
+  Trash2,
+  Save,
+  X,
+  Sparkles,
+  Star,
+} from "lucide-react";
+import { trainingQueries } from "@/lib/api/training";
+import type {
+  TrainingPackage,
+  ClassType,
+  SkillLevel,
+} from "@/types/training";
+import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
+import type { ServiceAddOn } from "@/types/facility";
+import { defaultServiceAddOns } from "@/data/service-addons";
+import { toast } from "sonner";
 
-const EMPTY_ADDON = {
+function loadTrainingAddOns(): ServiceAddOn[] {
+  if (typeof window === "undefined") return defaultServiceAddOns;
+  try {
+    const raw = localStorage.getItem("settings-service-addons");
+    const all = raw ? (JSON.parse(raw) as ServiceAddOn[]) : defaultServiceAddOns;
+    return all.filter((a) => a.applicableServices.includes("training"));
+  } catch {
+    return defaultServiceAddOns.filter((a) => a.applicableServices.includes("training"));
+  }
+}
+
+interface ProgramFormState {
+  name: string;
+  description: string;
+  classType: ClassType;
+  skillLevel: SkillLevel;
+  sessions: number;
+  price: number;
+  validityDays: number;
+  isActive: boolean;
+  popular: boolean;
+  includes: string;
+}
+
+const EMPTY_PROGRAM: ProgramFormState = {
   name: "",
   description: "",
+  classType: "group",
+  skillLevel: "beginner",
+  sessions: 1,
   price: 0,
-  duration: 0,
+  validityDays: 90,
   isActive: true,
+  popular: false,
+  includes: "",
 };
 
-export default function TrainingRatesPage() {
-  const [addons, setAddons] = useState<TrainingAddOn[]>(trainingAddOns);
-
-  const [isAddonModalOpen, setIsAddonModalOpen] = useState(false);
-  const [editingAddon, setEditingAddon] = useState<TrainingAddOn | null>(null);
-  const [addonForm, setAddonForm] = useState(EMPTY_ADDON);
-  const [deletingAddon, setDeletingAddon] = useState<TrainingAddOn | null>(null);
-
-  const activeCount = trainingPackages.filter((p) => p.isActive).length;
-  const avgPrice = Math.round(
-    trainingPackages.reduce((s, p) => s + p.price, 0) / trainingPackages.length,
+function ProgramDialog({
+  open,
+  onOpenChange,
+  editing,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  editing: TrainingPackage | null;
+  onSave: (form: ProgramFormState, editing: TrainingPackage | null) => void;
+}) {
+  const [form, setForm] = useState<ProgramFormState>(() =>
+    editing
+      ? {
+          name: editing.name,
+          description: editing.description,
+          classType: editing.classType,
+          skillLevel: editing.skillLevel,
+          sessions: editing.sessions,
+          price: editing.price,
+          validityDays: editing.validityDays,
+          isActive: editing.isActive,
+          popular: editing.popular ?? false,
+          includes: editing.includes.join("\n"),
+        }
+      : EMPTY_PROGRAM,
   );
-  const activeAddons = addons.filter((a) => a.isActive).length;
-
-  // ── Add-on handlers ────────────────────────────────────────────────────────
-  const handleAddAddon = () => {
-    setEditingAddon(null);
-    setAddonForm(EMPTY_ADDON);
-    setIsAddonModalOpen(true);
-  };
-
-  const handleEditAddon = (addon: TrainingAddOn) => {
-    setEditingAddon(addon);
-    setAddonForm({
-      name: addon.name,
-      description: addon.description,
-      price: addon.price,
-      duration: addon.duration,
-      isActive: addon.isActive,
-    });
-    setIsAddonModalOpen(true);
-  };
-
-  const handleSaveAddon = () => {
-    if (editingAddon) {
-      setAddons(addons.map((a) => (a.id === editingAddon.id ? { ...a, ...addonForm } : a)));
-    } else {
-      setAddons([...addons, { id: `tr-ao-${Date.now()}`, ...addonForm }]);
-    }
-    setIsAddonModalOpen(false);
-  };
-
-  const handleDeleteAddon = () => {
-    if (deletingAddon) setAddons(addons.filter((a) => a.id !== deletingAddon.id));
-    setDeletingAddon(null);
-  };
-
-  const handleToggleAddon = (addonId: string) => {
-    setAddons(addons.map((a) => (a.id === addonId ? { ...a, isActive: !a.isActive } : a)));
-  };
-
-  const addonColumns: ColumnDef<TrainingAddOn>[] = [
-    {
-      key: "name",
-      label: "Add-on Name",
-      icon: Sparkles,
-      defaultVisible: true,
-      render: (item) => <span className="font-medium">{item.name}</span>,
-    },
-    {
-      key: "description",
-      label: "Description",
-      defaultVisible: true,
-      render: (item) => (
-        <span className="text-muted-foreground max-w-[260px] truncate text-sm">{item.description}</span>
-      ),
-    },
-    {
-      key: "price",
-      label: "Price",
-      icon: DollarSign,
-      defaultVisible: true,
-      render: (item) => <span className="font-semibold">+${item.price}</span>,
-    },
-    {
-      key: "duration",
-      label: "Duration",
-      icon: Clock,
-      defaultVisible: true,
-      render: (item) => (
-        <Badge variant="outline" className="text-xs">
-          {item.duration > 0 ? `${item.duration} min` : "—"}
-        </Badge>
-      ),
-    },
-    {
-      key: "isActive",
-      label: "Status",
-      defaultVisible: true,
-      render: (item) => (
-        <Switch checked={item.isActive} onCheckedChange={() => handleToggleAddon(item.id)} />
-      ),
-    },
-  ];
 
   return (
-    <div className="space-y-6">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {editing ? "Edit Program" : "New Training Program"}
+          </DialogTitle>
+          <DialogDescription>
+            Define a bookable training program (e.g. Puppy Starter, Basic
+            Obedience, Private 1-on-1).
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Program Name</Label>
+            <Input
+              placeholder="e.g. Puppy Starter Pack"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Textarea
+              rows={2}
+              placeholder="Shown to customers during booking."
+              value={form.description}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Class Type</Label>
+              <Select
+                value={form.classType}
+                onValueChange={(v: ClassType) =>
+                  setForm({ ...form, classType: v })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="group">Group</SelectItem>
+                  <SelectItem value="private">Private</SelectItem>
+                  <SelectItem value="board-and-train">Board & Train</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Skill Level</Label>
+              <Select
+                value={form.skillLevel}
+                onValueChange={(v: SkillLevel) =>
+                  setForm({ ...form, skillLevel: v })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="beginner">Beginner</SelectItem>
+                  <SelectItem value="intermediate">Intermediate</SelectItem>
+                  <SelectItem value="advanced">Advanced</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-2">
+              <Label>Sessions</Label>
+              <Input
+                type="number"
+                min={1}
+                value={form.sessions}
+                onChange={(e) =>
+                  setForm({ ...form, sessions: parseInt(e.target.value) || 1 })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Price ($)</Label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={form.price}
+                onChange={(e) =>
+                  setForm({ ...form, price: parseFloat(e.target.value) || 0 })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Valid Days</Label>
+              <Input
+                type="number"
+                min={1}
+                value={form.validityDays}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    validityDays: parseInt(e.target.value) || 0,
+                  })
+                }
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>What's included (one per line)</Label>
+            <Textarea
+              rows={4}
+              placeholder={"6 group sessions\nPuppy socialization\nTraining manual"}
+              value={form.includes}
+              onChange={(e) => setForm({ ...form, includes: e.target.value })}
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-lg border px-3 py-2">
+            <div>
+              <p className="text-sm font-medium">Active</p>
+              <p className="text-muted-foreground text-xs">
+                Inactive programs are hidden from booking.
+              </p>
+            </div>
+            <Switch
+              checked={form.isActive}
+              onCheckedChange={(v) => setForm({ ...form, isActive: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-lg border px-3 py-2">
+            <div>
+              <p className="text-sm font-medium">Mark as popular</p>
+              <p className="text-muted-foreground text-xs">
+                Highlights this program in booking flows.
+              </p>
+            </div>
+            <Switch
+              checked={form.popular}
+              onCheckedChange={(v) => setForm({ ...form, popular: v })}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <X className="mr-2 size-4" /> Cancel
+          </Button>
+          <Button
+            disabled={!form.name.trim()}
+            onClick={() => onSave(form, editing)}
+          >
+            <Save className="mr-2 size-4" />
+            {editing ? "Save Changes" : "Create Program"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export default function TrainingRatesPage() {
+  const queryClient = useQueryClient();
+  const { data: programs = [] } = useQuery(trainingQueries.packages());
+
+  const [trainingAddOns, setTrainingAddOns] = useState<ServiceAddOn[]>([]);
+
+  useEffect(() => {
+    const sync = () => setTrainingAddOns(loadTrainingAddOns());
+    sync();
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
+
+  const [programDialogOpen, setProgramDialogOpen] = useState(false);
+  const [editingProgram, setEditingProgram] = useState<TrainingPackage | null>(
+    null,
+  );
+  const [deletingProgram, setDeletingProgram] = useState<TrainingPackage | null>(
+    null,
+  );
+
+  const activeCount = programs.filter((p) => p.isActive).length;
+  const avgPrice = programs.length
+    ? Math.round(programs.reduce((s, p) => s + p.price, 0) / programs.length)
+    : 0;
+  const activeAddons = trainingAddOns.filter((a) => a.isActive).length;
+
+  // ── Program handlers ────────────────────────────────────────────────────
+  function handleProgramSave(
+    form: ProgramFormState,
+    editing: TrainingPackage | null,
+  ) {
+    const next: TrainingPackage = {
+      id: editing?.id ?? `tpk-${Date.now()}`,
+      name: form.name.trim(),
+      description: form.description.trim(),
+      classType: form.classType,
+      skillLevel: form.skillLevel,
+      sessions: form.sessions,
+      price: form.price,
+      validityDays: form.validityDays,
+      isActive: form.isActive,
+      popular: form.popular || undefined,
+      includes: form.includes
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean),
+      color: editing?.color,
+      includedAddOnIds: editing?.includedAddOnIds,
+    };
+
+    queryClient.setQueryData<TrainingPackage[]>(
+      ["training", "packages"],
+      (prev = []) =>
+        editing
+          ? prev.map((p) => (p.id === next.id ? next : p))
+          : [...prev, next],
+    );
+
+    toast.success(editing ? `"${next.name}" updated` : `"${next.name}" created`);
+    setProgramDialogOpen(false);
+    setEditingProgram(null);
+  }
+
+  function handleProgramDelete() {
+    if (!deletingProgram) return;
+    queryClient.setQueryData<TrainingPackage[]>(
+      ["training", "packages"],
+      (prev = []) => prev.filter((p) => p.id !== deletingProgram.id),
+    );
+    toast.success(`"${deletingProgram.name}" deleted`);
+    setDeletingProgram(null);
+  }
+
+  function toggleProgram(id: string) {
+    queryClient.setQueryData<TrainingPackage[]>(
+      ["training", "packages"],
+      (prev = []) =>
+        prev.map((p) => (p.id === id ? { ...p, isActive: !p.isActive } : p)),
+    );
+  }
+
+  return (
+    <div className="space-y-6 pb-20">
       {/* Header */}
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
         <h2 className="text-lg font-bold tracking-tight text-slate-800">
           Training Pricing & Rules
         </h2>
         <p className="text-muted-foreground mt-0.5 text-sm">
-          View program pricing and manage add-ons for training bookings.
+          Create and manage training programs, prices, and add-ons.
         </p>
       </div>
 
@@ -142,9 +372,15 @@ export default function TrainingRatesPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">Active Programs</p>
-                <p className="mt-1.5 text-3xl font-bold tabular-nums">{activeCount}</p>
-                <p className="text-muted-foreground mt-1 text-xs">of {trainingPackages.length} total</p>
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+                  Active Programs
+                </p>
+                <p className="mt-1.5 text-3xl font-bold tabular-nums">
+                  {activeCount}
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  of {programs.length} total
+                </p>
               </div>
               <div className="flex size-12 items-center justify-center rounded-2xl bg-blue-50">
                 <GraduationCap className="size-5 text-blue-600" />
@@ -156,9 +392,15 @@ export default function TrainingRatesPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">Avg. Program Price</p>
-                <p className="mt-1.5 text-3xl font-bold tabular-nums">${avgPrice}</p>
-                <p className="text-muted-foreground mt-1 text-xs">across all programs</p>
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+                  Avg. Program Price
+                </p>
+                <p className="mt-1.5 text-3xl font-bold tabular-nums">
+                  ${avgPrice}
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  across all programs
+                </p>
               </div>
               <div className="flex size-12 items-center justify-center rounded-2xl bg-slate-100">
                 <DollarSign className="size-5 text-slate-600" />
@@ -170,9 +412,15 @@ export default function TrainingRatesPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">Active Add-ons</p>
-                <p className="mt-1.5 text-3xl font-bold tabular-nums">{activeAddons}</p>
-                <p className="text-muted-foreground mt-1 text-xs">of {addons.length} total</p>
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+                  Active Add-ons
+                </p>
+                <p className="mt-1.5 text-3xl font-bold tabular-nums">
+                  {activeAddons}
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  of {trainingAddOns.length} total
+                </p>
               </div>
               <div className="flex size-12 items-center justify-center rounded-2xl bg-violet-50">
                 <Sparkles className="size-5 text-violet-600" />
@@ -182,90 +430,134 @@ export default function TrainingRatesPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="services" className="space-y-4">
+      <Tabs defaultValue="programs" className="space-y-4">
         <TabsList className="bg-slate-100 border">
-          <TabsTrigger value="services">Programs ({trainingPackages.length})</TabsTrigger>
-          <TabsTrigger value="addons">Add-ons ({addons.length})</TabsTrigger>
+          <TabsTrigger value="programs">
+            Programs ({programs.length})
+          </TabsTrigger>
+          <TabsTrigger value="addons">Add-ons ({trainingAddOns.length})</TabsTrigger>
         </TabsList>
 
-        {/* ── Services / Programs Tab ── */}
-        <TabsContent value="services" className="mt-0 space-y-4">
-          <Card className="overflow-hidden transition-shadow hover:shadow-md">
-            <div className="flex items-center justify-between border-b bg-slate-50/50 px-5 py-3">
-              <div className="flex items-center gap-2.5">
-                <div className="flex size-8 items-center justify-center rounded-lg bg-blue-100">
-                  <GraduationCap className="size-4 text-blue-700" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">Program Prices</p>
-                  <p className="text-muted-foreground text-[11px]">
-                    Edit prices in the{" "}
-                    <Link href="/facility/dashboard/services/training/courses" className="text-primary underline">
-                      Course Catalog
-                    </Link>{" "}
-                    tab
-                  </p>
-                </div>
+        {/* ── Programs Tab ── */}
+        <TabsContent value="programs" className="mt-0 space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-muted-foreground text-sm">
+              Each program is a bookable training package with sessions, price,
+              and validity period.
+            </p>
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingProgram(null);
+                setProgramDialogOpen(true);
+              }}
+            >
+              <Plus className="mr-1.5 size-4" />
+              New Program
+            </Button>
+          </div>
+          {programs.length === 0 ? (
+            <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed">
+              <GraduationCap className="text-muted-foreground/50 size-8" />
+              <div className="text-center">
+                <p className="text-sm font-medium">No programs yet</p>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  Create your first training program.
+                </p>
               </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setEditingProgram(null);
+                  setProgramDialogOpen(true);
+                }}
+              >
+                <Plus className="mr-1.5 size-4" />
+                Add Program
+              </Button>
             </div>
-            <div className="divide-y">
-              {trainingPackages.map((pkg) => (
-                <div
-                  key={pkg.id}
-                  className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-slate-50/50"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{pkg.name}</p>
-                    <p className="text-muted-foreground text-xs">
-                      {pkg.sessions} {pkg.sessions === 1 ? "session" : "sessions"} · {pkg.classType} · {pkg.skillLevel}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="text-xs tabular-nums">${pkg.price}</Badge>
-                    <Badge variant={pkg.isActive ? "default" : "secondary"} className="text-[10px]">
-                      {pkg.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  {programs.map((pkg) => (
+                    <div
+                      key={pkg.id}
+                      className="hover:bg-muted/30 flex items-center justify-between gap-4 px-5 py-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold">{pkg.name}</p>
+                          {pkg.popular && (
+                            <Badge className="border-0 bg-amber-100 text-[10px] text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                              <Star className="mr-1 size-2.5" />
+                              Popular
+                            </Badge>
+                          )}
+                          {!pkg.isActive && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              Inactive
+                            </Badge>
+                          )}
+                        </div>
+                        {pkg.description && (
+                          <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                            {pkg.description}
+                          </p>
+                        )}
+                        <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-3 text-xs">
+                          <span>
+                            {pkg.sessions}{" "}
+                            {pkg.sessions === 1 ? "session" : "sessions"}
+                          </span>
+                          <span className="capitalize">{pkg.classType}</span>
+                          <span className="capitalize">{pkg.skillLevel}</span>
+                          <span>Valid {pkg.validityDays}d</span>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <Badge
+                          variant="outline"
+                          className="text-xs tabular-nums"
+                        >
+                          ${pkg.price}
+                        </Badge>
+                        <Switch
+                          checked={pkg.isActive}
+                          onCheckedChange={() => toggleProgram(pkg.id)}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          onClick={() => {
+                            setEditingProgram(pkg);
+                            setProgramDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive size-8"
+                          onClick={() => setDeletingProgram(pkg)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* ── Add-ons Tab ── */}
         <TabsContent value="addons" className="mt-0 space-y-4">
-          <Card className="overflow-hidden transition-shadow hover:shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50">
-              <div>
-                <CardTitle className="text-base text-slate-800">Training Add-ons</CardTitle>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  Optional extras customers can add to any training package.
-                </p>
-              </div>
-              <Button size="sm" className="gap-1.5" onClick={handleAddAddon}>
-                <Plus className="size-3.5" />
-                Add Add-on
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                data={addons}
-                columns={addonColumns}
-                searchKey="name"
-                searchPlaceholder="Search add-ons..."
-                actions={(item) => (
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="size-8" onClick={() => handleEditAddon(item)}>
-                      <Edit className="size-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="size-8 text-destructive" onClick={() => setDeletingAddon(item)}>
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                )}
-              />
-            </CardContent>
-          </Card>
+          <AddOnsManager serviceFilter="training" />
         </TabsContent>
       </Tabs>
 
@@ -274,88 +566,51 @@ export default function TrainingRatesPage() {
         <p className="text-muted-foreground text-sm">
           Pricing rules are now in Settings → Pricing Rules
         </p>
-        <a href="/facility/dashboard/settings?section=pricing-rules" className="text-primary text-sm font-medium hover:underline">
+        <a
+          href="/facility/dashboard/settings?section=pricing-rules"
+          className="text-primary text-sm font-medium hover:underline"
+        >
           Go to Pricing Rules →
         </a>
       </div>
 
-      {/* ── Add-on Add/Edit Modal ── */}
-      <Dialog open={isAddonModalOpen} onOpenChange={setIsAddonModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingAddon ? "Edit Add-on" : "Add New Add-on"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Add-on Name</Label>
-              <Input
-                value={addonForm.name}
-                onChange={(e) => setAddonForm({ ...addonForm, name: e.target.value })}
-                placeholder="e.g., Private Session Top-Up"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                value={addonForm.description}
-                onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })}
-                placeholder="What does this add-on include?"
-                rows={2}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Price ($)</Label>
-                <Input
-                  type="number"
-                  value={addonForm.price}
-                  onChange={(e) => setAddonForm({ ...addonForm, price: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Duration (min)</Label>
-                <Input
-                  type="number"
-                  value={addonForm.duration}
-                  onChange={(e) => setAddonForm({ ...addonForm, duration: parseInt(e.target.value) || 0 })}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={addonForm.isActive}
-                onCheckedChange={(checked) => setAddonForm({ ...addonForm, isActive: checked })}
-              />
-              <Label>Active</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddonModalOpen(false)}>
-              <X className="mr-2 size-4" /> Cancel
-            </Button>
-            <Button onClick={handleSaveAddon} disabled={!addonForm.name}>
-              <Save className="mr-2 size-4" />
-              {editingAddon ? "Save Changes" : "Add Add-on"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Program editor */}
+      <ProgramDialog
+        key={editingProgram?.id ?? "new-program"}
+        open={programDialogOpen}
+        onOpenChange={(v) => {
+          setProgramDialogOpen(v);
+          if (!v) setEditingProgram(null);
+        }}
+        editing={editingProgram}
+        onSave={handleProgramSave}
+      />
 
-      {/* ── Add-on Delete Modal ── */}
-      <Dialog open={!!deletingAddon} onOpenChange={() => setDeletingAddon(null)}>
+      {/* Program delete confirmation */}
+      <Dialog
+        open={!!deletingProgram}
+        onOpenChange={(open) => !open && setDeletingProgram(null)}
+      >
         <DialogContent>
-          <DialogHeader><DialogTitle>Delete Add-on</DialogTitle></DialogHeader>
-          <p>Are you sure you want to delete <span className="font-semibold">{deletingAddon?.name}</span>? This action cannot be undone.</p>
+          <DialogHeader>
+            <DialogTitle>Delete Program</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold">{deletingProgram?.name}</span>?
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeletingAddon(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteAddon}>
+            <Button variant="outline" onClick={() => setDeletingProgram(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleProgramDelete}>
               <Trash2 className="mr-2 size-4" /> Delete
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

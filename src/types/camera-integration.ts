@@ -34,7 +34,7 @@ export interface CameraProviderCredentials {
     isVerified: boolean;
   };
   abckam?: {
-    moegopetId: string;
+    apiKey: string;
     isVerified: boolean;
   };
 }

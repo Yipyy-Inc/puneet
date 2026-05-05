@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { groomingQueries } from "@/lib/api/grooming";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,9 +49,22 @@ import {
   Scissors,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { GroomingPackage, GroomingAddOn } from "@/types/grooming";
-import { groomingAddOnsList } from "@/data/grooming-pricing-rules";
+import type { GroomingPackage } from "@/types/grooming";
+import type { ServiceAddOn } from "@/types/facility";
+import { defaultServiceAddOns } from "@/data/service-addons";
+import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
 import { ServiceDialog } from "./service-dialog";
+
+function loadGroomingAddOns(): ServiceAddOn[] {
+  if (typeof window === "undefined") return defaultServiceAddOns;
+  try {
+    const raw = localStorage.getItem("settings-service-addons");
+    const all = raw ? (JSON.parse(raw) as ServiceAddOn[]) : defaultServiceAddOns;
+    return all.filter((a) => a.applicableServices.includes("grooming"));
+  } catch {
+    return defaultServiceAddOns.filter((a) => a.applicableServices.includes("grooming"));
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // Service charges
@@ -219,131 +232,6 @@ function ServiceCard({
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Add-on editor dialog
-// ─────────────────────────────────────────────────────────────────────────
-
-interface AddOnFormState {
-  name: string;
-  description: string;
-  price: number;
-  duration: number;
-  isActive: boolean;
-}
-
-const EMPTY_ADDON: AddOnFormState = {
-  name: "",
-  description: "",
-  price: 0,
-  duration: 0,
-  isActive: true,
-};
-
-function AddOnEditorDialog({
-  open,
-  onOpenChange,
-  editing,
-  onSave,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  editing: GroomingAddOn | null;
-  onSave: (form: AddOnFormState, editing: GroomingAddOn | null) => void;
-}) {
-  const [form, setForm] = useState<AddOnFormState>(() =>
-    editing
-      ? {
-          name: editing.name,
-          description: editing.description,
-          price: editing.price,
-          duration: editing.duration,
-          isActive: editing.isActive,
-        }
-      : EMPTY_ADDON,
-  );
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{editing ? "Edit Add-on" : "New Add-on"}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Name</Label>
-            <Input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="e.g., Teeth Brushing"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Description</Label>
-            <Textarea
-              value={form.description}
-              rows={2}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-              placeholder="What does this add-on include?"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Price ($)</Label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={form.price}
-                onChange={(e) =>
-                  setForm({ ...form, price: parseFloat(e.target.value) || 0 })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Duration (min)</Label>
-              <Input
-                type="number"
-                min={0}
-                value={form.duration}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    duration: parseInt(e.target.value) || 0,
-                  })
-                }
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={form.isActive}
-              onCheckedChange={(v) => setForm({ ...form, isActive: v })}
-            />
-            <Label>Active</Label>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            <X className="mr-2 size-4" /> Cancel
-          </Button>
-          <Button
-            disabled={!form.name.trim()}
-            onClick={() => {
-              onSave(form, editing);
-              setForm(EMPTY_ADDON);
-            }}
-          >
-            <Save className="mr-2 size-4" />
-            {editing ? "Save Changes" : "Add Add-on"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────
 // Service charge editor dialog
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -479,6 +367,7 @@ function ChargeEditorDialog({
 // ─────────────────────────────────────────────────────────────────────────
 
 export function GroomingRates() {
+  const queryClient = useQueryClient();
   const { data: services = [] } = useQuery(groomingQueries.packages());
 
   // Services
@@ -487,11 +376,15 @@ export function GroomingRates() {
     null,
   );
 
-  // Add-ons
-  const [addOns, setAddOns] = useState<GroomingAddOn[]>(groomingAddOnsList);
-  const [addOnDialogOpen, setAddOnDialogOpen] = useState(false);
-  const [editingAddOn, setEditingAddOn] = useState<GroomingAddOn | null>(null);
-  const [deletingAddOn, setDeletingAddOn] = useState<GroomingAddOn | null>(null);
+  // Add-ons (sourced from global service-addons store)
+  const [groomingAddOns, setGroomingAddOns] = useState<ServiceAddOn[]>([]);
+
+  useEffect(() => {
+    const sync = () => setGroomingAddOns(loadGroomingAddOns());
+    sync();
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
 
   // Service charges
   const [charges, setCharges] = useState<ServiceCharge[]>(
@@ -504,7 +397,7 @@ export function GroomingRates() {
   );
 
   const activeServices = services.filter((s) => s.isActive).length;
-  const activeAddOns = addOns.filter((a) => a.isActive).length;
+  const activeAddOns = groomingAddOns.filter((a) => a.isActive).length;
   const activeCharges = charges.filter((c) => c.isActive).length;
 
   // ── Service handlers ─────────────────────────────────────────────────
@@ -517,33 +410,11 @@ export function GroomingRates() {
     setServiceDialogOpen(true);
   }
   function handleServiceDelete(pkg: GroomingPackage) {
-    toast.success(`"${pkg.name}" deleted`);
-  }
-
-  // ── Add-on handlers ──────────────────────────────────────────────────
-  function handleAddOnSave(form: AddOnFormState, editing: GroomingAddOn | null) {
-    if (editing) {
-      setAddOns((prev) =>
-        prev.map((a) => (a.id === editing.id ? { ...a, ...form } : a)),
-      );
-      toast.success(`"${form.name}" updated`);
-    } else {
-      setAddOns((prev) => [...prev, { id: `ao-${Date.now()}`, ...form }]);
-      toast.success(`"${form.name}" added`);
-    }
-    setAddOnDialogOpen(false);
-    setEditingAddOn(null);
-  }
-  function handleAddOnDelete() {
-    if (!deletingAddOn) return;
-    setAddOns((prev) => prev.filter((a) => a.id !== deletingAddOn.id));
-    toast.success(`"${deletingAddOn.name}" deleted`);
-    setDeletingAddOn(null);
-  }
-  function toggleAddOn(id: string) {
-    setAddOns((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, isActive: !a.isActive } : a)),
+    queryClient.setQueryData<GroomingPackage[]>(
+      ["grooming", "packages"],
+      (prev = []) => prev.filter((p) => p.id !== pkg.id),
     );
+    toast.success(`"${pkg.name}" deleted`);
   }
 
   // ── Service charge handlers ──────────────────────────────────────────
@@ -650,7 +521,7 @@ export function GroomingRates() {
           <TabsTrigger value="addons">
             Add-ons
             <Badge variant="secondary" className="ml-2 text-[10px]">
-              {addOns.length}
+              {groomingAddOns.length}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="charges">
@@ -703,88 +574,7 @@ export function GroomingRates() {
 
         {/* ── Add-ons tab ── */}
         <TabsContent value="addons" className="mt-0 space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between border-b">
-              <div>
-                <CardTitle className="text-base">Grooming Add-ons</CardTitle>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  Optional extras customers can attach to any grooming
-                  appointment.
-                </p>
-              </div>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditingAddOn(null);
-                  setAddOnDialogOpen(true);
-                }}
-              >
-                <Plus className="mr-1.5 size-4" />
-                New Add-on
-              </Button>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {addOns.map((ao) => (
-                  <div
-                    key={ao.id}
-                    className="hover:bg-muted/30 flex items-center justify-between gap-4 px-5 py-3"
-                  >
-                    <div className="flex min-w-0 items-start gap-3">
-                      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/20">
-                        <Sparkles className="size-3.5 text-purple-600 dark:text-purple-400" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">{ao.name}</p>
-                        <p className="text-muted-foreground mt-0.5 text-xs">
-                          {ao.description}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3">
-                      <div className="text-right">
-                        <p className="text-sm font-semibold">+${ao.price}</p>
-                        {ao.duration > 0 && (
-                          <p className="text-muted-foreground text-[10px]">
-                            {ao.duration} min
-                          </p>
-                        )}
-                      </div>
-                      <Switch
-                        checked={ao.isActive}
-                        onCheckedChange={() => toggleAddOn(ao.id)}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        onClick={() => {
-                          setEditingAddOn(ao);
-                          setAddOnDialogOpen(true);
-                        }}
-                      >
-                        <Edit className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive size-8"
-                        onClick={() => setDeletingAddOn(ao)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {addOns.length === 0 && (
-                  <div className="text-muted-foreground px-5 py-10 text-center text-sm">
-                    No add-ons yet. Create one to offer customers optional
-                    extras.
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <AddOnsManager serviceFilter="grooming" />
         </TabsContent>
 
         {/* ── Service charges tab ── */}
@@ -879,44 +669,6 @@ export function GroomingRates() {
         onOpenChange={setServiceDialogOpen}
         editingPackage={editingService}
       />
-
-      {/* Add-on editor */}
-      <AddOnEditorDialog
-        key={editingAddOn?.id ?? "new-addon"}
-        open={addOnDialogOpen}
-        onOpenChange={(v) => {
-          setAddOnDialogOpen(v);
-          if (!v) setEditingAddOn(null);
-        }}
-        editing={editingAddOn}
-        onSave={handleAddOnSave}
-      />
-
-      {/* Add-on delete confirmation */}
-      <Dialog
-        open={!!deletingAddOn}
-        onOpenChange={(open) => !open && setDeletingAddOn(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Add-on</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete{" "}
-              <span className="font-semibold">{deletingAddOn?.name}</span>? This
-              action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeletingAddOn(null)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleAddOnDelete}>
-              <Trash2 className="mr-2 size-4" />
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Charge editor */}
       <ChargeEditorDialog

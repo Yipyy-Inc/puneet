@@ -58,7 +58,7 @@ const PROVIDER_META = {
     color: "from-emerald-500 to-teal-500",
     badgeColor: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
     credentialFields: [
-      { key: "moegopetId", label: "Moegopetid", placeholder: "Enter your Moegopetid", secret: true },
+      { key: "apiKey", label: "API Key", placeholder: "Enter your abcKam API key", secret: true },
     ],
   },
 } as const;
@@ -224,7 +224,7 @@ export function CameraIntegrationSettings() {
       erpCode: initialConfig.credentials.idogcam?.erpCode ?? "",
     },
     abckam: {
-      moegopetId: initialConfig.credentials.abckam?.moegopetId ?? "",
+      apiKey: initialConfig.credentials.abckam?.apiKey ?? "",
     },
   });
   const [connecting, setConnecting] = useState(false);
@@ -249,7 +249,7 @@ export function CameraIntegrationSettings() {
         [config.provider!]: {
           ...(config.provider === "idogcam"
             ? { kennelId: credentials.idogcam.kennelId, erpCode: credentials.idogcam.erpCode, isVerified: true }
-            : { moegopetId: credentials.abckam.moegopetId, isVerified: true }),
+            : { apiKey: credentials.abckam.apiKey, isVerified: true }),
         },
       },
     }));
@@ -414,12 +414,12 @@ export function CameraIntegrationSettings() {
                   </>
                 ) : (
                   <CredentialField
-                    label="Moegopetid"
-                    placeholder="Enter your Moegopetid"
+                    label="API Key"
+                    placeholder="Enter your abcKam API key"
                     secret={true}
-                    value={credentials.abckam.moegopetId}
+                    value={credentials.abckam.apiKey}
                     onChange={(v) =>
-                      setCredentials((p) => ({ ...p, abckam: { moegopetId: v } }))
+                      setCredentials((p) => ({ ...p, abckam: { apiKey: v } }))
                     }
                   />
                 )}

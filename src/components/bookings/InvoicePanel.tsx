@@ -24,33 +24,35 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Invoice } from "@/types/booking";
+import type { Client } from "@/types/client";
+import { canEditInvoice } from "@/types/booking";
+import { InvoiceActivityLog } from "@/components/bookings/InvoiceActivityLog";
+import { AutoAppliedBenefits } from "@/components/bookings/AutoAppliedBenefits";
+import { CareCompletionInlineBanner } from "@/components/bookings/CareCompletionWarning";
+import type { PendingCareItem } from "@/lib/care-completion";
 
 const STATUS_CONFIG: Record<
   string,
   {
     label: string;
-    variant: "outline" | "secondary" | "default" | "destructive";
-    color: string;
-    bg: string;
+    badgeClass: string;
+    bannerClass: string;
   }
 > = {
   estimate: {
     label: "Estimate",
-    variant: "outline",
-    color: "text-muted-foreground",
-    bg: "bg-muted/30",
+    badgeClass: "border-zinc-300 bg-zinc-100 text-zinc-700",
+    bannerClass: "bg-zinc-100 text-zinc-600",
   },
   open: {
     label: "Open",
-    variant: "secondary",
-    color: "text-blue-600",
-    bg: "bg-blue-50",
+    badgeClass: "border-amber-300 bg-amber-100 text-amber-800",
+    bannerClass: "bg-amber-50 text-amber-700",
   },
   closed: {
     label: "Closed",
-    variant: "default",
-    color: "text-emerald-600",
-    bg: "bg-emerald-50",
+    badgeClass: "border-emerald-300 bg-emerald-100 text-emerald-800",
+    bannerClass: "bg-emerald-50 text-emerald-700",
   },
 };
 
@@ -58,8 +60,21 @@ function fmt(n: number): string {
   return n.toFixed(2);
 }
 
-export function InvoicePanel({ invoice }: { invoice: Invoice }) {
+export function InvoicePanel({
+  invoice,
+  client,
+  pendingCare,
+  hasCriticalCare,
+}: {
+  invoice: Invoice;
+  client?: Pick<Client, "membership" | "packages" | "storeCredit"> | null;
+  pendingCare?: PendingCareItem[];
+  hasCriticalCare?: boolean;
+}) {
   const status = STATUS_CONFIG[invoice.status] ?? STATUS_CONFIG.estimate;
+  const canEditBase = canEditInvoice(invoice.status, "base");
+  const canEditAddon = canEditInvoice(invoice.status, "addon");
+  const isClosed = invoice.status === "closed";
   const [addingItem, setAddingItem] = useState(false);
   const [newItemName, setNewItemName] = useState("");
   const [newItemPrice, setNewItemPrice] = useState("");
@@ -67,34 +82,54 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
   const [editName, setEditName] = useState("");
   const [editPrice, setEditPrice] = useState("");
   const [editStaff, setEditStaff] = useState("");
+  const [overrideRows, setOverrideRows] = useState<Set<number>>(new Set());
+
+  const isItemBase = (type: string | undefined) =>
+    type == null || type === "service";
+
+  const canEditItemAt = (idx: number, type: string | undefined): boolean => {
+    if (isClosed) return false;
+    if (isItemBase(type)) {
+      return canEditBase || overrideRows.has(idx);
+    }
+    return canEditAddon;
+  };
+
+  const grantOverride = (idx: number, itemName: string) => {
+    setOverrideRows((prev) => {
+      const next = new Set(prev);
+      next.add(idx);
+      return next;
+    });
+    toast.success(`Manager override granted — "${itemName}" unlocked`);
+  };
 
   return (
     <Card className="sticky top-20 overflow-hidden">
       {/* Status banner */}
       <div
         className={cn(
-          "px-4 py-2 text-center text-xs font-medium",
-          status.bg,
-          status.color,
+          "flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-medium",
+          status.bannerClass,
         )}
       >
         {invoice.status === "estimate" && (
-          <span className="flex items-center justify-center gap-1.5">
+          <>
             <FileText className="size-3.5" />
-            Price Estimate — Not yet billed
-          </span>
+            <span>Price Estimate — Not yet billed</span>
+          </>
         )}
         {invoice.status === "open" && (
-          <span className="flex items-center justify-center gap-1.5">
+          <>
             <Clock className="size-3.5" />
-            Invoice Open — Payment pending
-          </span>
+            <span>Invoice Open — Service in progress, base prices locked</span>
+          </>
         )}
         {invoice.status === "closed" && (
-          <span className="flex items-center justify-center gap-1.5">
+          <>
             <Lock className="size-3.5" />
-            Invoice Closed — Paid in full
-          </span>
+            <span>Invoice Closed — Locked. Use refund for adjustments.</span>
+          </>
         )}
       </div>
 
@@ -108,12 +143,26 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
                 ` · ${invoice.fees.length} fee${invoice.fees.length !== 1 ? "s" : ""}`}
             </p>
           </div>
-          <Badge variant={status.variant} className="capitalize">
+          <Badge
+            variant="outline"
+            className={cn(
+              "px-2.5 py-0.5 text-[11px] font-semibold tracking-wide capitalize",
+              status.badgeClass,
+            )}
+          >
             {status.label}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Care-completion warning — visible when meals/meds are pending today */}
+        {pendingCare && pendingCare.length > 0 && (
+          <CareCompletionInlineBanner
+            pending={pendingCare}
+            hasCritical={hasCriticalCare ?? false}
+          />
+        )}
+
         {/* Items */}
         {invoice.items.length > 0 && (
           <div>
@@ -205,7 +254,7 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
                       <span className="font-[tabular-nums] text-sm">
                         ${fmt(item.price)}
                       </span>
-                      {invoice.status !== "closed" && (
+                      {canEditItemAt(i, item.type) ? (
                         <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                           <button
                             className="text-muted-foreground hover:text-foreground flex size-5 items-center justify-center rounded-sm"
@@ -231,7 +280,15 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
                             <X className="size-3" />
                           </button>
                         </div>
-                      )}
+                      ) : !isClosed && isItemBase(item.type) ? (
+                        <button
+                          className="text-muted-foreground hover:text-amber-600 flex size-5 items-center justify-center rounded-sm opacity-0 transition-opacity group-hover:opacity-100"
+                          onClick={() => grantOverride(i, item.name)}
+                          title="Locked — click for manager override"
+                        >
+                          <Lock className="size-3" />
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 ),
@@ -396,99 +453,102 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
             <span>Total</span>
             <span className="font-[tabular-nums]">${fmt(invoice.total)}</span>
           </div>
-          {invoice.depositCollected > 0 && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Deposit collected</span>
-              <span className="font-[tabular-nums]">
-                -${fmt(invoice.depositCollected)}
-              </span>
+        </div>
+
+        {/* Deposit section */}
+        {((invoice.depositRequired ?? 0) > 0 ||
+          invoice.depositCollected > 0) && (
+          <div className="rounded-lg border border-border/70 bg-muted/30 px-3.5 py-3">
+            <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
+              Deposit
+            </p>
+            <div className="space-y-1.5 text-sm">
+              {(invoice.depositRequired ?? 0) > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">
+                    Required
+                    {invoice.depositRuleLabel && (
+                      <span className="text-muted-foreground/70 ml-1.5 text-[10px]">
+                        · {invoice.depositRuleLabel}
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-[tabular-nums]">
+                    ${fmt(invoice.depositRequired ?? 0)}
+                  </span>
+                </div>
+              )}
+              {invoice.depositCollected > 0 ? (
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Collected</span>
+                    <span className="font-[tabular-nums] text-emerald-700">
+                      ${fmt(invoice.depositCollected)}
+                    </span>
+                  </div>
+                  {(invoice.depositCollectedBy ||
+                    invoice.depositCollectedAt) && (
+                    <p className="text-muted-foreground/80 mt-0.5 pl-0 text-[11px]">
+                      {invoice.depositCollectedBy && (
+                        <>by {invoice.depositCollectedBy}</>
+                      )}
+                      {invoice.depositCollectedAt && (
+                        <>
+                          {invoice.depositCollectedBy ? " on " : "on "}
+                          {new Date(
+                            invoice.depositCollectedAt,
+                          ).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </>
+                      )}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                (invoice.depositRequired ?? 0) > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Collected</span>
+                    <span className="font-[tabular-nums] text-amber-700">
+                      Not yet collected
+                    </span>
+                  </div>
+                )
+              )}
+              <Separator className="my-1.5" />
+              <div
+                className={cn(
+                  "flex items-center justify-between font-medium",
+                  invoice.remainingDue > 0
+                    ? "text-destructive"
+                    : "text-emerald-700",
+                )}
+              >
+                <span>Remaining</span>
+                <span className="font-[tabular-nums]">
+                  ${fmt(invoice.remainingDue)}
+                </span>
+              </div>
             </div>
-          )}
-          {invoice.remainingDue > 0 && (
-            <div className="text-destructive flex justify-between font-medium">
+          </div>
+        )}
+
+        {/* Remaining due — fallback when no deposit context */}
+        {(invoice.depositRequired ?? 0) === 0 &&
+          invoice.depositCollected === 0 &&
+          invoice.remainingDue > 0 && (
+            <div className="text-destructive flex items-center justify-between text-sm font-medium">
               <span>Remaining due</span>
               <span className="font-[tabular-nums]">
                 ${fmt(invoice.remainingDue)}
               </span>
             </div>
           )}
-        </div>
 
-        {/* Auto-detected benefits */}
-        {invoice.status !== "closed" && (
-          <div className="space-y-1.5">
-            <p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
-              Available Benefits
-            </p>
-            {/* Package credits available */}
-            {invoice.packageCreditsUsed == null && (
-              <button
-                onClick={() =>
-                  toast.success(
-                    "Package credit applied — deducted from balance",
-                  )
-                }
-                className="flex w-full items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-left transition-all hover:bg-emerald-100"
-              >
-                <div className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-emerald-800">
-                    Package Credit
-                  </p>
-                  <p className="text-[10px] text-emerald-600">
-                    Client may have eligible package credits
-                  </p>
-                </div>
-                <span className="text-[10px] font-medium text-emerald-700">
-                  Apply →
-                </span>
-              </button>
-            )}
-            {/* Membership discount */}
-            {!invoice.membershipApplied && (
-              <button
-                onClick={() =>
-                  toast.success("Membership discount auto-applied")
-                }
-                className="flex w-full items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-2 text-left transition-all hover:bg-blue-100"
-              >
-                <div className="size-1.5 shrink-0 rounded-full bg-blue-500" />
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-blue-800">
-                    Membership Discount
-                  </p>
-                  <p className="text-[10px] text-blue-600">
-                    Check for active membership benefits
-                  </p>
-                </div>
-                <span className="text-[10px] font-medium text-blue-700">
-                  Apply →
-                </span>
-              </button>
-            )}
-            {/* Applied benefits labels */}
-            {invoice.membershipApplied && (
-              <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5">
-                <div className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
-                <span className="text-xs text-emerald-700">
-                  ✓ {invoice.membershipApplied}
-                </span>
-              </div>
-            )}
-            {invoice.packageCreditsUsed != null &&
-              invoice.packageCreditsUsed > 0 && (
-                <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5">
-                  <div className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
-                  <span className="text-xs text-emerald-700">
-                    ✓ Package Credit Used ({invoice.packageCreditsUsed})
-                  </span>
-                </div>
-              )}
-            <p className="text-muted-foreground text-[9px] italic">
-              Order: Package → Membership → Discount → Store Credit → Tax
-            </p>
-          </div>
-        )}
+        {/* Auto-applied benefits — engine evaluates eligibility, banner shows savings,
+            staff can toggle individual benefits off if needed */}
+        <AutoAppliedBenefits client={client ?? null} invoice={invoice} />
 
         {/* Actions (for non-closed invoices) */}
         {invoice.status !== "closed" && (
@@ -638,33 +698,6 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
           </>
         )}
 
-        {/* Deposit tracker */}
-        {invoice.depositCollected > 0 && (
-          <>
-            <Separator />
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-emerald-800">
-                  Deposit Collected
-                </span>
-                <span className="font-[tabular-nums] text-sm font-semibold text-emerald-700">
-                  ${fmt(invoice.depositCollected)}
-                </span>
-              </div>
-              {invoice.remainingDue > 0 && (
-                <div className="mt-1 flex items-center justify-between">
-                  <span className="text-xs text-emerald-600">
-                    Remaining Balance
-                  </span>
-                  <span className="font-[tabular-nums] text-xs font-medium text-amber-600">
-                    ${fmt(invoice.remainingDue)}
-                  </span>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
         {/* Payments */}
         {invoice.payments.length > 0 && (
           <>
@@ -674,74 +707,66 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
                 Payment History
               </p>
               <div className="space-y-1.5">
-                {invoice.payments.map((p, i) => (
-                  <div
-                    key={i}
-                    className="bg-muted/20 flex items-center justify-between rounded-md border px-2.5 py-2"
-                  >
-                    <div>
-                      <p className="text-xs font-medium capitalize">
-                        {p.method}
-                      </p>
-                      <p className="text-muted-foreground text-[10px]">
-                        {new Date(p.date).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                        {p.transactionId && ` · ${p.transactionId}`}
-                      </p>
+                {invoice.payments.map((p, i) => {
+                  const kindLabel =
+                    p.kind === "prepayment"
+                      ? "Prepayment"
+                      : p.kind === "deposit"
+                        ? "Deposit"
+                        : p.kind === "final"
+                          ? "Final payment"
+                          : null;
+                  const kindBadgeClass =
+                    p.kind === "prepayment"
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                      : p.kind === "deposit"
+                        ? "border-blue-300 bg-blue-50 text-blue-800"
+                        : "border-zinc-300 bg-zinc-100 text-zinc-700";
+                  return (
+                    <div
+                      key={i}
+                      className="bg-muted/20 flex items-center justify-between rounded-md border px-2.5 py-2"
+                    >
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-medium capitalize">
+                            {p.method}
+                          </p>
+                          {kindLabel && (
+                            <span
+                              className={cn(
+                                "rounded-full border px-1.5 py-0 text-[9px] font-semibold tracking-wide uppercase",
+                                kindBadgeClass,
+                              )}
+                            >
+                              {kindLabel}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-muted-foreground text-[10px]">
+                          {new Date(p.date).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                          {p.collectedBy && ` · by ${p.collectedBy}`}
+                          {p.transactionId && ` · ${p.transactionId}`}
+                        </p>
+                      </div>
+                      <span className="font-[tabular-nums] text-sm font-semibold">
+                        ${fmt(p.amount)}
+                      </span>
                     </div>
-                    <span className="font-[tabular-nums] text-sm font-semibold">
-                      ${fmt(p.amount)}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </>
         )}
 
-        {/* Invoice audit trail */}
+        {/* Invoice audit trail — full timestamped log with snapshot viewer */}
         <Separator />
-        <div>
-          <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wider uppercase">
-            Invoice Activity
-          </p>
-          <div className="space-y-1.5 text-[11px]">
-            <div className="text-muted-foreground flex items-center gap-2">
-              <div className="size-1.5 shrink-0 rounded-full bg-emerald-400" />
-              Invoice created
-            </div>
-            {invoice.depositCollected > 0 && (
-              <div className="text-muted-foreground flex items-center gap-2">
-                <div className="size-1.5 shrink-0 rounded-full bg-blue-400" />
-                Deposit of ${fmt(invoice.depositCollected)} collected
-              </div>
-            )}
-            {invoice.discount > 0 && (
-              <div className="text-muted-foreground flex items-center gap-2">
-                <div className="size-1.5 shrink-0 rounded-full bg-amber-400" />
-                Discount applied: ${fmt(invoice.discount)}
-              </div>
-            )}
-            {invoice.payments.map((p, i) => (
-              <div
-                key={i}
-                className="text-muted-foreground flex items-center gap-2"
-              >
-                <div className="size-1.5 shrink-0 rounded-full bg-emerald-400" />
-                Payment of ${fmt(p.amount)} via {p.method}
-              </div>
-            ))}
-            {invoice.status === "closed" && (
-              <div className="flex items-center gap-2 font-medium text-emerald-600">
-                <div className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
-                Invoice closed — paid in full
-              </div>
-            )}
-          </div>
-        </div>
+        <InvoiceActivityLog invoice={invoice} />
       </CardContent>
     </Card>
   );

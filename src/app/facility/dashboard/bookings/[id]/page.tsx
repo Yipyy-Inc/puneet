@@ -1069,7 +1069,7 @@ export default function FacilityBookingDetailPage({
         <div className="animate-in fade-in slide-in-from-right-3 duration-500">
           {invoice ? (
             <div>
-              <InvoicePanel invoice={invoice} />
+              <InvoicePanel invoice={invoice} client={client ?? null} />
               {/* Added items */}
               {addedItems.length > 0 && (
                 <Card className="mt-4">

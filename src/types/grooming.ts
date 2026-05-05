@@ -244,6 +244,8 @@ export const groomingPackageSchema = z.object({
     large: z.number(),
     giant: z.number(),
   }),
+  coatAdjustments: z.record(coatTypeEnum, z.number()).optional(),
+  breedOverrides: z.record(z.string(), z.number()).optional(),
   includes: z.array(z.string()),
   isActive: z.boolean(),
   isPopular: z.boolean().optional(),
