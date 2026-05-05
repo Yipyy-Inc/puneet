@@ -4,18 +4,11 @@ import { use, useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   PawPrint,
-  Pencil,
-  Printer,
   Send,
   CreditCard,
   Banknote,
-  ChevronDown,
-  Mail,
-  Smartphone,
-  FileText,
   ClipboardList,
   ShieldCheck,
-  RotateCcw,
   XCircle,
   Circle,
   CircleDot,
@@ -26,26 +19,28 @@ import {
   MapPin,
   AlertTriangle,
   HandCoins,
-  ShoppingBag,
   LogOut,
-  ArrowLeftRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { BookingDetailActionBar } from "@/components/bookings/BookingDetailActionBar";
 import { Separator } from "@/components/ui/separator";
 import { bookings as initialBookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import { boardingGuests, type BoardingGuest } from "@/data/boarding";
 import { PrintKennelCardsModal } from "@/components/facility/boarding/kennel-card-print";
-import { invoiceHeaderHtml } from "@/lib/invoice-header";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InvoicePanel } from "@/components/bookings/InvoicePanel";
 import { BookingNotes } from "@/components/bookings/BookingNotes";
@@ -59,11 +54,23 @@ import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { PaymentCheckoutFlow } from "@/components/bookings/PaymentCheckoutFlow";
 import { TipSplitModal } from "@/components/bookings/TipSplitModal";
 import { DepositChargeModal } from "@/components/bookings/DepositChargeModal";
+import { PrepaymentModal } from "@/components/bookings/PrepaymentModal";
+import { CareCompletionGateDialog } from "@/components/bookings/CareCompletionWarning";
+import {
+  getPendingCareItems,
+  careSectionDomIds,
+} from "@/lib/care-completion";
+import { buildInvoiceDocumentHtml } from "@/lib/invoice-document";
+import { loadInvoiceTemplate } from "@/data/invoice-template";
+import {
+  loadDepositRules,
+  findApplicableDepositRule,
+  computeDepositAmount,
+} from "@/data/deposit-rules";
 import { SendEstimateModal } from "@/components/bookings/SendEstimateModal";
 import { RefundModal } from "@/components/bookings/RefundModal";
 import { AddRetailItemModal } from "@/components/bookings/AddRetailItemModal";
 import { BookingTransferModal } from "@/components/bookings/modals/BookingTransferModal";
-import { getLocationsByFacility } from "@/data/locations";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -320,11 +327,19 @@ export default function ClientBookingDetailPage({
   const [earlyCheckoutOpen, setEarlyCheckoutOpen] = useState(false);
   const [tipSplitOpen, setTipSplitOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
+  const [prepaymentOpen, setPrepaymentOpen] = useState(false);
   const [estimateOpen, setEstimateOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [retailOpen, setRetailOpen] = useState(false);
   const [boardingSheetOpen, setBoardingSheetOpen] = useState(false);
   const [addedItems, setAddedItems] = useState<InvoiceLineItem[]>([]);
+  const [destructiveConfirm, setDestructiveConfirm] = useState<{
+    title: string;
+    description: string;
+    confirmLabel: string;
+    onConfirm: () => void;
+  } | null>(null);
+  const [careGateOpen, setCareGateOpen] = useState(false);
 
   const isBoarding = booking?.service.toLowerCase() === "boarding";
 
@@ -395,6 +410,25 @@ export default function ClientBookingDetailPage({
   const invoice = booking.invoice;
   const addedSubtotal = addedItems.reduce((s, i) => s + i.price, 0);
   const completedTasks = tasks.filter((t) => t.status === "completed").length;
+
+  const bookingTotalForDeposit = invoice?.total ?? booking.totalCost;
+  const depositRule = findApplicableDepositRule(
+    booking.service,
+    bookingTotalForDeposit,
+    loadDepositRules(),
+  );
+  const ruleDepositAmount = depositRule
+    ? computeDepositAmount(depositRule, bookingTotalForDeposit)
+    : Math.round(bookingTotalForDeposit * 0.5 * 100) / 100;
+  const ruleDepositLabel = depositRule
+    ? depositRule.label
+    : `50% of total ($${(bookingTotalForDeposit * 0.5).toFixed(2)})`;
+
+  // Care-completion check — surfaces unlogged meals/meds before checkout
+  const careStatus = getPendingCareItems(
+    booking.feedingInstructions,
+    booking.medicationInstructions,
+  );
 
   return (
     <div>
@@ -674,397 +708,127 @@ export default function ClientBookingDetailPage({
             </div>
           </div>
 
-          {/* Action bar — inside the hero */}
-          <div className="border-border/50 mt-4 flex flex-wrap items-center gap-2 border-t pt-4">
-            {/* Edit Booking — not available on finished (completed/paid) bookings */}
-            {booking.status !== "completed" && !isPaid && !isCancelled && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                onClick={() => setEditOpen(true)}
-              >
-                <Pencil className="size-3.5" />
-                Edit Booking
-              </Button>
-            )}
-
-            {/* Send/View Estimate — only for estimate invoices */}
-            {invoice?.status === "estimate" && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                onClick={() => setEstimateOpen(true)}
-              >
-                <Send className="size-3.5" />
-                {isEstimateSent ? "Resend Estimate" : "Send Estimate"}
-              </Button>
-            )}
-
-            {/* Add Item — opens retail product picker */}
-            {!isCancelled && booking.status !== "completed" && !isPaid && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                onClick={() => setRetailOpen(true)}
-              >
-                <ShoppingBag className="size-3.5" />
-                Add Item
-              </Button>
-            )}
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 text-xs"
-                >
-                  <Printer className="size-3.5" />
-                  Print
-                  <ChevronDown className="size-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem
-                  onClick={() => {
-                    const inv = invoice;
-                    const w = window.open("", "_blank", "width=600,height=800");
-                    if (!w) return;
-                    w.document
-                      .write(`<!DOCTYPE html><html><head><title>Invoice #${inv?.id ?? String(booking.id)}</title>
-<style>body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:500px;margin:0 auto}
-h1{font-size:20px;margin:0}h2{font-size:13px;color:#666;margin:4px 0 20px;font-weight:normal}
-.row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #eee}
-.row.total{border-top:2px solid #111;border-bottom:none;font-weight:700;font-size:15px;padding-top:10px}
-.row.sub{color:#666}.header{border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:16px}
-.section{margin-top:16px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
-.footer{margin-top:30px;text-align:center;font-size:11px;color:#999}
-@media print{body{padding:20px}}</style></head><body>
-${invoiceHeaderHtml(facility)}
-<div class="header"><h1>Invoice ${inv?.id ?? `#${booking.id}`}</h1>
-<h2>${client.name} · ${pet?.name ?? "Pet"} · ${booking.service}</h2></div>
-<div class="section">Services</div>
-${(
-  inv?.items ?? [
-    {
-      name: booking.service,
-      unitPrice: booking.basePrice,
-      quantity: 1,
-      price: booking.totalCost,
-    },
-  ]
-)
-  .map(
-    (item) =>
-      `<div class="row"><span>${item.name}${item.quantity > 1 ? ` × ${item.quantity}` : ""}</span><span>$${item.price.toFixed(2)}</span></div>`,
-  )
-  .join("")}
-${(inv?.fees ?? []).map((f) => `<div class="row sub"><span>${f.name}</span><span>$${f.price.toFixed(2)}</span></div>`).join("")}
-<div class="row sub"><span>Subtotal</span><span>$${(inv?.subtotal ?? booking.totalCost).toFixed(2)}</span></div>
-${(inv?.discount ?? 0) > 0 ? `<div class="row sub"><span>Discount${inv?.discountLabel ? ` (${inv.discountLabel})` : ""}</span><span>-$${(inv?.discount ?? 0).toFixed(2)}</span></div>` : ""}
-${(inv?.taxes ?? []).map((t) => `<div class="row sub"><span>${t.name} (${(t.rate * 100).toFixed(t.rate < 0.1 ? 1 : 3)}%)</span><span>$${t.amount.toFixed(2)}</span></div>`).join("")}
-${!inv?.taxes?.length && (inv?.taxAmount ?? 0) > 0 ? `<div class="row sub"><span>Tax</span><span>$${(inv?.taxAmount ?? 0).toFixed(2)}</span></div>` : ""}
-<div class="row total"><span>Total</span><span>$${(inv?.total ?? booking.totalCost).toFixed(2)}</span></div>
-${(inv?.depositCollected ?? 0) > 0 ? `<div class="row sub"><span>Deposit Paid</span><span>-$${(inv?.depositCollected ?? 0).toFixed(2)}</span></div><div class="row"><span>Remaining</span><span>$${(inv?.remainingDue ?? 0).toFixed(2)}</span></div>` : ""}
-${(inv?.tipTotal ?? 0) > 0 ? `<div class="row sub"><span>Tip</span><span>$${(inv?.tipTotal ?? 0).toFixed(2)}</span></div>` : ""}
-<div class="footer">Thank you for choosing us!<br>${facility?.name ?? "Our Facility"}</div>
-</body></html>`);
-                    w.document.close();
-                    w.print();
-                  }}
-                >
-                  <FileText className="size-4" />
-                  Invoice / Receipt
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    if (isBoarding && boardingGuestForPrint) {
-                      setBoardingSheetOpen(true);
-                    } else {
-                      toast.success("Care sheet printed");
-                    }
-                  }}
-                >
-                  <ClipboardList className="size-4" />
-                  Care Sheet
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 text-xs"
-                >
-                  <Send className="size-3.5" />
-                  Send
-                  <ChevronDown className="size-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem
-                  onClick={() => toast.success("Invoice emailed")}
-                >
-                  <Mail className="size-4" />
-                  Email Invoice
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.success("SMS sent")}>
-                  <Smartphone className="size-4" />
-                  SMS Link
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Deposit — only on estimates with no deposit yet */}
-            {invoice?.status === "estimate" &&
-              !isCancelled &&
-              (invoice?.depositCollected ?? 0) === 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 text-xs"
-                  onClick={() => setDepositOpen(true)}
-                >
-                  <Banknote className="size-3.5" />
-                  Charge Deposit
-                </Button>
-              )}
-
-            {/* Mark as Ready — for confirmed/in-progress bookings */}
-            {(booking.status === "confirmed" ||
-              booking.status === "pending") && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 gap-1.5 text-xs"
-                onClick={() => {
-                  toast.success(
-                    "Service marked as ready — proceed to checkout",
-                  );
-                  autoTransition("onCheckIn");
-                }}
-              >
-                <CheckCircle2 className="size-3.5" />
-                Mark as Ready
-              </Button>
-            )}
-
-            {/* Checkout — for open/completed bookings */}
-            {!isPaid && !isCancelled && (
-              <>
-                <Button
-                  size="sm"
-                  className="h-8 gap-1.5 text-xs"
-                  onClick={() => setCheckoutOpen(true)}
-                >
-                  <CreditCard className="size-3.5" />
-                  Proceed to Checkout
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 text-xs"
-                  onClick={() => {
-                    toast.success(
-                      "Appointment marked as finished — invoice stays open for later billing",
-                    );
-                    autoTransition("onCheckout");
-                  }}
-                >
-                  <CheckCircle2 className="size-3.5" />
-                  Finish Without Payment
-                </Button>
-              </>
-            )}
-
-            {/* Transfer — multi-location */}
-            {locations.length > 1 && !isCancelled && booking.status !== "completed" && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                onClick={() => setTransferOpen(true)}
-              >
-                <ArrowLeftRight className="size-3.5" />
-                Transfer
-              </Button>
-            )}
-
-            <div className="flex-1" />
-
-            {/* Paid booking actions */}
-            {isPaid && !isCancelled && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 text-xs"
-                  onClick={() => setTipSplitOpen(true)}
-                >
-                  Split Tips
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 text-xs"
-                  onClick={() => {
-                    const inv = invoice;
-                    const w = window.open("", "_blank", "width=600,height=800");
-                    if (!w) return;
-                    w.document
-                      .write(`<!DOCTYPE html><html><head><title>Receipt ${inv?.id ?? booking.id}</title>
-<style>body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:500px;margin:0 auto}
-h1{font-size:20px;margin:0}h2{font-size:13px;color:#666;margin:4px 0 20px;font-weight:normal}
-.row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #eee}
-.row.total{border-top:2px solid #111;border-bottom:none;font-weight:700;font-size:15px;padding-top:10px}
-.row.sub{color:#666}.header{border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:16px}
-.section{margin-top:16px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
-.footer{margin-top:30px;text-align:center;font-size:11px;color:#999}
-.paid{background:#ecfdf5;color:#059669;padding:8px 16px;border-radius:8px;text-align:center;margin-top:16px;font-weight:600}
-</style></head><body>
-${invoiceHeaderHtml(facility)}
-<div class="header"><h1>Receipt</h1><h2>${inv?.id ?? `#${booking.id}`} · ${client.name} · ${pet?.name ?? "Pet"}</h2></div>
-<div class="section">Services</div>
-${(inv?.items ?? []).map((item) => `<div class="row"><span>${item.name}${item.staffName ? ` <small style="color:#888">· ${item.staffName}</small>` : ""}</span><span>$${item.price.toFixed(2)}</span></div>`).join("")}
-${(inv?.fees ?? []).map((f) => `<div class="row sub"><span>${f.name}</span><span>$${f.price.toFixed(2)}</span></div>`).join("")}
-<div class="row sub"><span>Subtotal</span><span>$${(inv?.subtotal ?? booking.totalCost).toFixed(2)}</span></div>
-${(inv?.discount ?? 0) > 0 ? `<div class="row sub"><span>Discount</span><span>-$${(inv?.discount ?? 0).toFixed(2)}</span></div>` : ""}
-${(inv?.taxes ?? []).map((t) => `<div class="row sub"><span>${t.name}</span><span>$${t.amount.toFixed(2)}</span></div>`).join("")}
-${(inv?.tipTotal ?? 0) > 0 ? `<div class="row sub"><span>Tip</span><span>$${(inv?.tipTotal ?? 0).toFixed(2)}</span></div>` : ""}
-<div class="row total"><span>Total Charged</span><span>$${(inv?.total ?? booking.totalCost).toFixed(2)}</span></div>
-${(inv?.payments ?? []).length > 0 ? `<div class="section">Payment</div>${(inv?.payments ?? []).map((p) => `<div class="row"><span>${p.method}${p.transactionId ? ` · ${p.transactionId}` : ""}</span><span>$${p.amount.toFixed(2)}</span></div>`).join("")}` : ""}
-${
-  (inv?.tipTotal ?? 0) > 0
-    ? `<div class="section">Tip Distribution</div>${(inv?.items ?? [])
-        .filter((item) => item.price > 0 && item.type !== "package_credit")
-        .map((item) => {
-          const staffName =
-            item.staffName ?? booking.stylistPreference ?? "Staff";
-          const totalServiceValue = (inv?.items ?? [])
-            .filter((i) => i.price > 0 && i.type !== "package_credit")
-            .reduce((s, i) => s + i.price, 0);
-          const pct =
-            totalServiceValue > 0 ? item.price / totalServiceValue : 0;
-          const tipShare = Math.round((inv?.tipTotal ?? 0) * pct * 100) / 100;
-          return `<div class="row"><span>${staffName} <small style="color:#888">· ${item.name}</small></span><span>$${tipShare.toFixed(2)}</span></div>`;
-        })
-        .join("")}`
-    : ""
-}
-<div class="paid">PAYMENT COMPLETE</div>
-<div class="footer">Thank you for choosing us!<br>${booking.service} · ${new Date(booking.startDate + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div>
-</body></html>`);
-                    w.document.close();
-                  }}
-                >
-                  <FileText className="size-3.5" />
-                  View Receipt
-                </Button>
-              </>
-            )}
-
-            {isPaid && !isCancelled && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                onClick={() => setRefundOpen(true)}
-              >
-                <RotateCcw className="size-3.5" />
-                Issue Refund
-              </Button>
-            )}
-            {/* Undo Check-In — reverts to confirmed */}
-            {booking.status === "confirmed" && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                onClick={() =>
-                  toast.success(
-                    "Check-in undone — status reverted to Confirmed. Deposit remains collected.",
-                  )
-                }
-              >
-                <RotateCcw className="size-3.5" />
-                Undo Check-In
-              </Button>
-            )}
-
-            {/* Undo Confirm — reverts to pending */}
-            {booking.status === "confirmed" && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                onClick={() =>
-                  toast.success(
-                    "Confirmation undone — status reverted to Pending. Deposit remains collected.",
-                  )
-                }
-              >
-                <RotateCcw className="size-3.5" />
-                Undo Confirm
-              </Button>
-            )}
-
-            {/* Undo Checkout — reverts completed booking back to confirmed */}
-            {booking.status === "completed" && !isCancelled && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                onClick={() =>
-                  toast.success(
-                    "Checkout undone — status reverted to Confirmed",
+          {/* Action bar — primary / secondary / more / destructive */}
+          <BookingDetailActionBar
+            booking={booking}
+            invoice={invoice}
+            isPaid={isPaid}
+            isCancelled={isCancelled}
+            isEstimateSent={isEstimateSent}
+            multiLocation={locations.length > 1}
+            onCheckIn={() => {
+              toast.success("Booking checked in — service in progress");
+              autoTransition("onCheckIn");
+            }}
+            onProceedToCheckout={() => {
+              if (careStatus.pending.length > 0) {
+                setCareGateOpen(true);
+                return;
+              }
+              setCheckoutOpen(true);
+            }}
+            onTakePayment={() => {
+              if (careStatus.pending.length > 0) {
+                setCareGateOpen(true);
+                return;
+              }
+              setCheckoutOpen(true);
+            }}
+            onConfirmBooking={() => {
+              toast.success("Booking confirmed");
+            }}
+            onEdit={() => setEditOpen(true)}
+            onAddItem={() => setRetailOpen(true)}
+            onSendEstimate={() => setEstimateOpen(true)}
+            onChargeDeposit={() => setDepositOpen(true)}
+            onTakePrepayment={() => setPrepaymentOpen(true)}
+            onPrintInvoice={() => {
+              const inv = invoice;
+              const template = loadInvoiceTemplate();
+              const w = window.open("", "_blank", "width=720,height=900");
+              if (!w) return;
+              const formatDate = (d: string) =>
+                new Date(d + "T00:00:00").toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                });
+              const dateRange =
+                booking.startDate && booking.endDate &&
+                booking.startDate !== booking.endDate
+                  ? `${formatDate(booking.startDate)} – ${formatDate(booking.endDate)}`
+                  : booking.startDate
+                    ? formatDate(booking.startDate)
+                    : undefined;
+              const html = buildInvoiceDocumentHtml(template, {
+                invoiceNumber: inv?.id ?? String(booking.id),
+                invoiceStatus: inv?.status,
+                issuedDate: new Date().toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                }),
+                bookingDateRange: dateRange,
+                clientName: client.name,
+                clientEmail: client.email,
+                clientPhone: client.phone,
+                petName: pet?.name,
+                serviceLabel: booking.service,
+                items:
+                  inv?.items ?? [
                     {
-                      description: isPaid
-                        ? "Payment is already recorded — issue a refund separately if needed."
-                        : undefined,
+                      name: booking.service,
+                      unitPrice: booking.basePrice,
+                      quantity: 1,
+                      price: booking.totalCost,
                     },
-                  )
-                }
-              >
-                <RotateCcw className="size-3.5" />
-                Undo Checkout
-              </Button>
-            )}
-
-            {!isCancelled && booking.status !== "completed" && (
-              <>
-                {/* No-Show with deposit forfeit */}
-                {(invoice?.depositCollected ?? 0) > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5 text-xs text-amber-700 hover:bg-amber-50"
-                    onClick={() =>
-                      toast.success(
-                        `No-show recorded — deposit of $${(invoice?.depositCollected ?? 0).toFixed(2)} forfeited as no-show fee`,
-                      )
-                    }
-                  >
-                    <AlertTriangle className="size-3.5" />
-                    No-Show
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive hover:bg-destructive/10 h-8 gap-1.5 text-xs"
-                  onClick={() => setCancelOpen(true)}
-                >
-                  <XCircle className="size-3.5" />
-                  Cancel
-                </Button>
-              </>
-            )}
-          </div>
+                  ],
+                fees: inv?.fees,
+                subtotal: inv?.subtotal ?? booking.totalCost,
+                discount: inv?.discount,
+                discountLabel: inv?.discountLabel,
+                taxes: inv?.taxes,
+                taxAmount: inv?.taxAmount,
+                taxRate: inv?.taxRate,
+                tipTotal: inv?.tipTotal,
+                total: inv?.total ?? booking.totalCost,
+                depositCollected: inv?.depositCollected,
+                remainingDue: inv?.remainingDue,
+                payments: inv?.payments,
+                variant: inv?.status === "closed" ? "receipt" : "invoice",
+              });
+              w.document.write(html);
+              w.document.close();
+              w.print();
+            }}
+            onPrintCareSheet={() => {
+              if (isBoarding && boardingGuestForPrint) {
+                setBoardingSheetOpen(true);
+              } else {
+                toast.success("Care sheet printed");
+              }
+            }}
+            onEmailInvoice={() => toast.success("Invoice emailed")}
+            onSmsLink={() => toast.success("SMS sent")}
+            onTransfer={() => setTransferOpen(true)}
+            onMarkAsReady={() => {
+              toast.success("Service marked as ready — proceed to checkout");
+              autoTransition("onCheckIn");
+            }}
+            onEarlyCheckout={() => setEarlyCheckoutOpen(true)}
+            onFinishWithoutPayment={() => {
+              toast.success(
+                "Appointment marked as finished — invoice stays open for later billing",
+              );
+              autoTransition("onCheckout");
+            }}
+            onSplitTips={() => setTipSplitOpen(true)}
+            onIssueRefund={() => setRefundOpen(true)}
+            requestDestructiveConfirm={(payload) =>
+              setDestructiveConfirm(payload)
+            }
+            onCancelBooking={() => setCancelOpen(true)}
+          />
         </div>
 
         {/* ── Content Grid ── */}
@@ -1248,16 +1012,26 @@ ${
               return (
                 <>
                   {!isCancelled && feedingMode !== "disabled" && (
-                    <FeedingSection
-                      entries={booking.feedingInstructions ?? []}
-                      required={feedingMode === "required"}
-                    />
+                    <div
+                      id={careSectionDomIds.feeding}
+                      className="rounded-xl transition-shadow"
+                    >
+                      <FeedingSection
+                        entries={booking.feedingInstructions ?? []}
+                        required={feedingMode === "required"}
+                      />
+                    </div>
                   )}
                   {!isCancelled && medicationMode !== "disabled" && (
-                    <MedicationSection
-                      entries={booking.medicationInstructions ?? []}
-                      required={medicationMode === "required"}
-                    />
+                    <div
+                      id={careSectionDomIds.medication}
+                      className="rounded-xl transition-shadow"
+                    >
+                      <MedicationSection
+                        entries={booking.medicationInstructions ?? []}
+                        required={medicationMode === "required"}
+                      />
+                    </div>
                   )}
                   {!isCancelled && belongingsMode !== "disabled" && (
                     <BelongingsSection
@@ -1477,7 +1251,12 @@ ${
           <div className="lg:col-span-2">
             <div className="sticky top-4">
               {invoice ? (
-                <InvoicePanel invoice={invoice} />
+                <InvoicePanel
+                  invoice={invoice}
+                  client={client}
+                  pendingCare={careStatus.pending}
+                  hasCriticalCare={careStatus.hasCritical}
+                />
               ) : (
                 <Card>
                   <CardHeader className="bg-muted/30 pb-3">
@@ -1693,12 +1472,22 @@ ${
         <DepositChargeModal
           open={depositOpen}
           onOpenChange={setDepositOpen}
-          ruleAmount={Math.round(booking.totalCost * 0.5 * 100) / 100}
-          ruleLabel={`50% of total ($${(booking.totalCost * 0.5).toFixed(2)})`}
+          ruleAmount={ruleDepositAmount}
+          ruleLabel={ruleDepositLabel}
           onCharge={(amount, method) => {
             toast.success(
               `Deposit of $${amount.toFixed(2)} charged via ${method}`,
             );
+          }}
+        />
+        <PrepaymentModal
+          open={prepaymentOpen}
+          onOpenChange={setPrepaymentOpen}
+          remainingDue={invoice?.remainingDue ?? booking.totalCost}
+          invoiceTotal={invoice?.total ?? booking.totalCost}
+          alreadyCollected={invoice?.depositCollected ?? 0}
+          onConfirm={() => {
+            // Invoice stays Open; staff can still add items and run final checkout later.
           }}
         />
         <SendEstimateModal
@@ -1711,7 +1500,7 @@ ${
           discount={invoice?.discount ?? booking.discount}
           taxAmount={invoice?.taxAmount ?? 0}
           total={invoice?.total ?? booking.totalCost}
-          depositRequired={Math.round(booking.totalCost * 0.5 * 100) / 100}
+          depositRequired={ruleDepositAmount}
           onApplyDiscount={(amount, reason) => {
             toast.success(
               `Discount applied: $${amount.toFixed(2)} — ${reason}`,
@@ -1748,6 +1537,59 @@ ${
             ]);
           }}
         />
+        <CareCompletionGateDialog
+          open={careGateOpen}
+          pending={careStatus.pending}
+          hasCritical={careStatus.hasCritical}
+          onClose={() => setCareGateOpen(false)}
+          onReview={() => {
+            setCareGateOpen(false);
+            const firstId = careStatus.pending[0]?.domId;
+            if (firstId && typeof document !== "undefined") {
+              const el = document.getElementById(firstId);
+              if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          }}
+          onContinueAnyway={() => {
+            setCareGateOpen(false);
+            toast(
+              `Proceeding to checkout with ${careStatus.pending.length} unlogged care item${careStatus.pending.length > 1 ? "s" : ""}`,
+              {
+                description:
+                  "Recorded on the booking audit trail for manager review",
+              },
+            );
+            setCheckoutOpen(true);
+          }}
+        />
+        <AlertDialog
+          open={destructiveConfirm !== null}
+          onOpenChange={(open) => {
+            if (!open) setDestructiveConfirm(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {destructiveConfirm?.title ?? "Are you sure?"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {destructiveConfirm?.description}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep as is</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  destructiveConfirm?.onConfirm();
+                  setDestructiveConfirm(null);
+                }}
+              >
+                {destructiveConfirm?.confirmLabel ?? "Confirm"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

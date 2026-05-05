@@ -1111,6 +1111,25 @@ export interface CustomServiceWorkflowQuestionnaire {
 // Custom Service Module (complex — kept as interface)
 // ============================================================================
 
+export interface CustomServiceVariant {
+  id: string;
+  name: string;
+  description?: string;
+  durationMinutes: number;
+  price: number;
+  isActive: boolean;
+  isPopular?: boolean;
+}
+
+export interface CustomServiceAddOn {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  duration: number;
+  isActive: boolean;
+}
+
 export interface CustomServiceModule {
   id: string;
   facilityId: number;
@@ -1157,6 +1176,8 @@ export interface CustomServiceModule {
     model: PricingModelType;
     basePrice: number;
     durationTiers?: { durationMinutes: number; price: number }[];
+    variants?: CustomServiceVariant[];
+    addOns?: CustomServiceAddOn[];
     peakPricingRules?: {
       id: string;
       name: string;

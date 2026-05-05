@@ -65,13 +65,8 @@ export function IncludedAddOnsPicker({ serviceFilter, selectedIds, onChange }: P
 
       {addOns.length === 0 ? (
         <p className="text-muted-foreground rounded-lg border border-dashed p-3 text-center text-xs">
-          No active {serviceFilter} add-ons found.{" "}
-          <a
-            href={`/facility/dashboard/services/${serviceFilter}/add-ons`}
-            className="text-primary underline underline-offset-2"
-          >
-            Create add-ons first
-          </a>
+          No active {serviceFilter} add-ons found. Create them in the Add-ons
+          tab on this page.
         </p>
       ) : (
         <div className="rounded-lg border">

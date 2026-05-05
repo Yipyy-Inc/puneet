@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,10 +18,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
-import { DollarSign, Plus, Edit, Trash2, Save, X, Clock, Sparkles, Gift } from "lucide-react";
-import { boardingRates, BoardingRate, boardingAddOns, BoardingAddOn } from "@/data/boarding";
+import { DollarSign, Plus, Edit, Trash2, Sparkles, Gift } from "lucide-react";
+import { boardingRates, BoardingRate } from "@/data/boarding";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
 import { IncludedAddOnsPicker } from "@/components/facility/add-ons/IncludedAddOnsPicker";
+import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
+import type { ServiceAddOn } from "@/types/facility";
+import { defaultServiceAddOns } from "@/data/service-addons";
+
+function loadBoardingAddOns(): ServiceAddOn[] {
+  if (typeof window === "undefined") return defaultServiceAddOns;
+  try {
+    const raw = localStorage.getItem("settings-service-addons");
+    const all = raw ? (JSON.parse(raw) as ServiceAddOn[]) : defaultServiceAddOns;
+    return all.filter((a) => a.applicableServices.includes("boarding"));
+  } catch {
+    return defaultServiceAddOns.filter((a) => a.applicableServices.includes("boarding"));
+  }
+}
 
 const EMPTY_RATE = {
   name: "",
@@ -33,29 +47,22 @@ const EMPTY_RATE = {
   includedAddOnIds: [] as string[],
 };
 
-const EMPTY_ADDON = {
-  name: "",
-  description: "",
-  price: 0,
-  duration: 0,
-  isActive: true,
-};
-
 export default function BoardingRatesPage() {
   const [rates, setRates] = useState<BoardingRate[]>(boardingRates);
-  const [addons, setAddons] = useState<BoardingAddOn[]>(boardingAddOns);
+  const [boardingAddOns, setBoardingAddOns] = useState<ServiceAddOn[]>([]);
+
+  useEffect(() => {
+    const sync = () => setBoardingAddOns(loadBoardingAddOns());
+    sync();
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
 
   // Rate modal state
   const [isRateModalOpen, setIsRateModalOpen] = useState(false);
   const [editingRate, setEditingRate] = useState<BoardingRate | null>(null);
   const [rateForm, setRateForm] = useState(EMPTY_RATE);
   const [deletingRate, setDeletingRate] = useState<BoardingRate | null>(null);
-
-  // Add-on modal state
-  const [isAddonModalOpen, setIsAddonModalOpen] = useState(false);
-  const [editingAddon, setEditingAddon] = useState<BoardingAddOn | null>(null);
-  const [addonForm, setAddonForm] = useState(EMPTY_ADDON);
-  const [deletingAddon, setDeletingAddon] = useState<BoardingAddOn | null>(null);
 
   // ── Rate handlers ──────────────────────────────────────────────────────────
   const handleAddRate = () => {
@@ -94,43 +101,6 @@ export default function BoardingRatesPage() {
 
   const handleToggleRate = (rate: BoardingRate) => {
     setRates(rates.map((r) => (r.id === rate.id ? { ...r, isActive: !r.isActive } : r)));
-  };
-
-  // ── Add-on handlers ────────────────────────────────────────────────────────
-  const handleAddAddon = () => {
-    setEditingAddon(null);
-    setAddonForm(EMPTY_ADDON);
-    setIsAddonModalOpen(true);
-  };
-
-  const handleEditAddon = (addon: BoardingAddOn) => {
-    setEditingAddon(addon);
-    setAddonForm({
-      name: addon.name,
-      description: addon.description,
-      price: addon.price,
-      duration: addon.duration,
-      isActive: addon.isActive,
-    });
-    setIsAddonModalOpen(true);
-  };
-
-  const handleSaveAddon = () => {
-    if (editingAddon) {
-      setAddons(addons.map((a) => (a.id === editingAddon.id ? { ...a, ...addonForm } : a)));
-    } else {
-      setAddons([...addons, { id: `bo-ao-${Date.now()}`, ...addonForm }]);
-    }
-    setIsAddonModalOpen(false);
-  };
-
-  const handleDeleteAddon = () => {
-    if (deletingAddon) setAddons(addons.filter((a) => a.id !== deletingAddon.id));
-    setDeletingAddon(null);
-  };
-
-  const handleToggleAddon = (addonId: string) => {
-    setAddons(addons.map((a) => (a.id === addonId ? { ...a, isActive: !a.isActive } : a)));
   };
 
   // ── Columns ────────────────────────────────────────────────────────────────
@@ -198,51 +168,7 @@ export default function BoardingRatesPage() {
     },
   ];
 
-  const addonColumns: ColumnDef<BoardingAddOn>[] = [
-    {
-      key: "name",
-      label: "Add-on Name",
-      icon: Sparkles,
-      defaultVisible: true,
-      render: (item) => <span className="font-medium">{item.name}</span>,
-    },
-    {
-      key: "description",
-      label: "Description",
-      defaultVisible: true,
-      render: (item) => (
-        <span className="text-muted-foreground max-w-[260px] truncate text-sm">{item.description}</span>
-      ),
-    },
-    {
-      key: "price",
-      label: "Price",
-      icon: DollarSign,
-      defaultVisible: true,
-      render: (item) => <span className="font-semibold">+${item.price}</span>,
-    },
-    {
-      key: "duration",
-      label: "Duration",
-      icon: Clock,
-      defaultVisible: true,
-      render: (item) => (
-        <Badge variant="outline" className="text-xs">
-          {item.duration > 0 ? `${item.duration} min` : "—"}
-        </Badge>
-      ),
-    },
-    {
-      key: "isActive",
-      label: "Status",
-      defaultVisible: true,
-      render: (item) => (
-        <Switch checked={item.isActive} onCheckedChange={() => handleToggleAddon(item.id)} />
-      ),
-    },
-  ];
-
-  const activeAddons = addons.filter((a) => a.isActive).length;
+  const activeAddons = boardingAddOns.filter((a) => a.isActive).length;
 
   return (
     <div className="space-y-6">
@@ -294,7 +220,7 @@ export default function BoardingRatesPage() {
               <div>
                 <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">Active Add-ons</p>
                 <p className="mt-1.5 text-3xl font-bold tabular-nums">{activeAddons}</p>
-                <p className="text-muted-foreground mt-1 text-xs">of {addons.length} total</p>
+                <p className="text-muted-foreground mt-1 text-xs">of {boardingAddOns.length} total</p>
               </div>
               <div className="flex size-12 items-center justify-center rounded-2xl bg-violet-50">
                 <Sparkles className="size-5 text-violet-600" />
@@ -308,7 +234,7 @@ export default function BoardingRatesPage() {
       <Tabs defaultValue="services" className="space-y-4">
         <TabsList className="bg-slate-100 border">
           <TabsTrigger value="services">Nightly Rates ({rates.length})</TabsTrigger>
-          <TabsTrigger value="addons">Add-ons ({addons.length})</TabsTrigger>
+          <TabsTrigger value="addons">Add-ons ({boardingAddOns.length})</TabsTrigger>
         </TabsList>
 
         {/* ── Services Tab ── */}
@@ -349,43 +275,7 @@ export default function BoardingRatesPage() {
 
         {/* ── Add-ons Tab ── */}
         <TabsContent value="addons" className="mt-0 space-y-4">
-          <Card className="overflow-hidden transition-shadow hover:shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50">
-              <div>
-                <CardTitle className="flex items-center gap-2.5 text-sm font-semibold">
-                  <div className="flex size-8 items-center justify-center rounded-lg bg-violet-100">
-                    <Sparkles className="size-4 text-violet-700" />
-                  </div>
-                  Boarding Add-ons
-                </CardTitle>
-                <p className="text-muted-foreground mt-1 pl-10 text-xs">
-                  Optional extras for any boarding stay.
-                </p>
-              </div>
-              <Button onClick={handleAddAddon} size="sm" className="gap-1.5">
-                <Plus className="size-3.5" />
-                Add Add-on
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                data={addons}
-                columns={addonColumns}
-                searchKey="name"
-                searchPlaceholder="Search add-ons..."
-                actions={(item) => (
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => handleEditAddon(item)}>
-                      <Edit className="size-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeletingAddon(item)}>
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                )}
-              />
-            </CardContent>
-          </Card>
+          <AddOnsManager serviceFilter="boarding" />
         </TabsContent>
       </Tabs>
 
@@ -492,83 +382,6 @@ export default function BoardingRatesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Add-on Add/Edit Modal ── */}
-      <Dialog open={isAddonModalOpen} onOpenChange={setIsAddonModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingAddon ? "Edit Add-on" : "Add New Add-on"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Add-on Name</Label>
-              <Input
-                value={addonForm.name}
-                onChange={(e) => setAddonForm({ ...addonForm, name: e.target.value })}
-                placeholder="e.g., Mid-Day Walk"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                value={addonForm.description}
-                onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })}
-                placeholder="What does this add-on include?"
-                rows={2}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Price ($)</Label>
-                <Input
-                  type="number"
-                  value={addonForm.price}
-                  onChange={(e) => setAddonForm({ ...addonForm, price: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Duration (min)</Label>
-                <Input
-                  type="number"
-                  value={addonForm.duration}
-                  onChange={(e) => setAddonForm({ ...addonForm, duration: parseInt(e.target.value) || 0 })}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={addonForm.isActive}
-                onCheckedChange={(checked) => setAddonForm({ ...addonForm, isActive: checked })}
-              />
-              <Label>Active</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddonModalOpen(false)}>
-              <X className="mr-2 size-4" /> Cancel
-            </Button>
-            <Button onClick={handleSaveAddon} disabled={!addonForm.name}>
-              <Save className="mr-2 size-4" />
-              {editingAddon ? "Save Changes" : "Add Add-on"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Add-on Delete Modal ── */}
-      <Dialog open={!!deletingAddon} onOpenChange={() => setDeletingAddon(null)}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader><DialogTitle className="text-destructive">Confirm Deletion</DialogTitle></DialogHeader>
-          <p className="text-muted-foreground text-sm">Are you sure you want to delete this add-on? This action cannot be undone.</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeletingAddon(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteAddon}>
-              <Trash2 className="mr-2 size-4" /> Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

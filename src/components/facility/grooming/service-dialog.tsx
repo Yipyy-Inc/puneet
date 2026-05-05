@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { groomingQueries } from "@/lib/api/grooming";
 import { cn } from "@/lib/utils";
 import {
@@ -126,6 +126,7 @@ export function ServiceDialog({
   editingPackage,
 }: ServiceDialogProps) {
   const isEditing = !!editingPackage;
+  const queryClient = useQueryClient();
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
   const activeStylists = useMemo(
     () => stylistsData.filter((s) => s.status === "active"),
@@ -188,9 +189,21 @@ export function ServiceDialog({
       setRequiresEval(editingPackage.requiresEvaluation ?? false);
       setAssignedStylistIds(editingPackage.assignedStylistIds ?? []);
       setSizePricing({ ...editingPackage.sizePricing });
-      setCoatEnabled(false);
-      setBreedEnabled(false);
-      setBreedOverrides({});
+      const existingCoat = editingPackage.coatAdjustments ?? null;
+      setCoatEnabled(!!existingCoat);
+      if (existingCoat) {
+        setCoatAdjustments({
+          short: existingCoat.short ?? 0,
+          medium: existingCoat.medium ?? 0,
+          long: existingCoat.long ?? 0,
+          wire: existingCoat.wire ?? 0,
+          curly: existingCoat.curly ?? 0,
+          double: existingCoat.double ?? 0,
+        });
+      }
+      const existingBreeds = editingPackage.breedOverrides ?? {};
+      setBreedEnabled(Object.keys(existingBreeds).length > 0);
+      setBreedOverrides(existingBreeds);
       const existingUsage = editingPackage.productUsage ?? [];
       setProductUsage(existingUsage);
       setProductsEnabled(existingUsage.length > 0);
@@ -286,9 +299,47 @@ export function ServiceDialog({
       toast.error("Set at least one price");
       return;
     }
-    toast.success(
-      isEditing ? `"${name}" updated` : `"${name}" created`,
+
+    const basePrice =
+      sizePricing.medium ||
+      sizePricing.small ||
+      sizePricing.large ||
+      sizePricing.giant;
+
+    const next: GroomingPackage = {
+      id: editingPackage?.id ?? `gp-${Date.now()}`,
+      name: name.trim(),
+      description: description.trim(),
+      basePrice,
+      duration,
+      sizePricing,
+      coatAdjustments: coatEnabled ? coatAdjustments : undefined,
+      breedOverrides:
+        breedEnabled && Object.keys(breedOverrides).length > 0
+          ? breedOverrides
+          : undefined,
+      includes: editingPackage?.includes ?? [],
+      isActive,
+      isPopular: editingPackage?.isPopular,
+      purchaseCount: editingPackage?.purchaseCount ?? 0,
+      createdAt: editingPackage?.createdAt ?? new Date().toISOString(),
+      assignedStylistIds:
+        assignedStylistIds.length > 0 ? assignedStylistIds : undefined,
+      requiresEvaluation: requiresEval || undefined,
+      productUsage:
+        productsEnabled && productUsage.length > 0 ? productUsage : undefined,
+      color: editingPackage?.color,
+    };
+
+    queryClient.setQueryData<GroomingPackage[]>(
+      ["grooming", "packages"],
+      (prev = []) =>
+        isEditing
+          ? prev.map((p) => (p.id === next.id ? next : p))
+          : [...prev, next],
     );
+
+    toast.success(isEditing ? `"${name}" updated` : `"${name}" created`);
     onOpenChange(false);
   }
 

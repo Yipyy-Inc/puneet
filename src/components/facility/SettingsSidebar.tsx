@@ -24,7 +24,6 @@ import {
   ChevronDown,
   CloudSun,
   Receipt,
-  Video,
 } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import {
@@ -54,7 +53,6 @@ const STATIC_GROUPS: SettingsGroup[] = [
       { id: "custom-email-domain", label: "Custom Email Domain", icon: Bell },
       { id: "weather", label: "Yipyy Forecast", icon: CloudSun },
       { id: "integrations", label: "Integrations", icon: Plug },
-      { id: "live-cameras", label: "Live Pet Cam", icon: Video },
       { id: "mobile-app", label: "Mobile App", icon: Smartphone },
     ],
   },
@@ -110,6 +108,8 @@ const STATIC_GROUPS: SettingsGroup[] = [
         label: "Estimate Settings",
         icon: FileText,
       },
+      { id: "deposit-rules", label: "Deposit Rules", icon: DollarSign },
+      { id: "invoice-template", label: "Invoice Template", icon: FileText },
       { id: "financial", label: "Payments & Billing", icon: DollarSign },
       { id: "taxes", label: "Taxes", icon: DollarSign },
       { id: "subscription", label: "Subscription", icon: CreditCard },

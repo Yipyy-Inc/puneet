@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { PaymentMethodsTab } from "@/components/customer/billing/PaymentMethodsTab";
-import { InvoicesTab } from "@/components/customer/billing/InvoicesTab";
+import { BookingInvoicesTab } from "@/components/customer/billing/BookingInvoicesTab";
 import { BalancesTab } from "@/components/customer/billing/BalancesTab";
 import { CreditCard, FileText, Wallet } from "lucide-react";
 
@@ -52,7 +52,7 @@ export default function CustomerBillingPage() {
           </TabsContent>
 
           <TabsContent value="invoices" className="space-y-4">
-            <InvoicesTab />
+            <BookingInvoicesTab />
           </TabsContent>
 
           <TabsContent value="balances" className="space-y-4">

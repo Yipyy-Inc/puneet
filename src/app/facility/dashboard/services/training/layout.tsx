@@ -16,7 +16,6 @@ import {
   DollarSign,
   Package,
   ClipboardList,
-  Puzzle,
 } from "lucide-react";
 
 const tabs = [
@@ -54,11 +53,6 @@ const tabs = [
     name: "Rates",
     href: "/facility/dashboard/services/training/rates",
     icon: DollarSign,
-  },
-  {
-    name: "Add-Ons",
-    href: "/facility/dashboard/services/training/add-ons",
-    icon: Puzzle,
   },
   {
     name: "Packages",

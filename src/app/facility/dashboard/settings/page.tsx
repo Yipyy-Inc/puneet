@@ -72,17 +72,24 @@ const PricingRulesSettings = dynamic(
     ),
   { ssr: false },
 );
+const DepositRulesSettings = dynamic(
+  () =>
+    import("@/components/facility/DepositRulesSettings").then(
+      (mod) => mod.DepositRulesSettings,
+    ),
+  { ssr: false },
+);
+const InvoiceTemplateSettings = dynamic(
+  () =>
+    import("@/components/facility/InvoiceTemplateSettings").then(
+      (mod) => mod.InvoiceTemplateSettings,
+    ),
+  { ssr: false },
+);
 const FacilityRolesStudio = dynamic(
   () =>
     import("@/components/facility/FacilityRolesStudio").then(
       (mod) => mod.FacilityRolesStudio,
-    ),
-  { ssr: false },
-);
-const CameraIntegrationSettings = dynamic(
-  () =>
-    import("@/components/camera-integration/CameraIntegrationSettings").then(
-      (mod) => mod.CameraIntegrationSettings,
     ),
   { ssr: false },
 );
@@ -4468,6 +4475,20 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {/* Deposit Rules */}
+          {activeSection === "deposit-rules" && (
+            <div className="space-y-6">
+              <DepositRulesSettings />
+            </div>
+          )}
+
+          {/* Invoice Template */}
+          {activeSection === "invoice-template" && (
+            <div className="space-y-6">
+              <InvoiceTemplateSettings />
+            </div>
+          )}
+
           {/* Financial Settings */}
           {activeSection === "financial" && (
             <div className="space-y-6">
@@ -4911,11 +4932,6 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             </div>
-          )}
-
-          {/* Live Pet Cam */}
-          {activeSection === "live-cameras" && (
-            <CameraIntegrationSettings />
           )}
 
           {/* Mobile App */}

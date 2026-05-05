@@ -67,6 +67,15 @@ import { bookings as historicalBookings } from "@/data/bookings";
 import { getNextEstimateId } from "@/data/estimates";
 import { facilities } from "@/data/facilities";
 import { facilityConfig, isApprovalRequired } from "@/data/facility-config";
+import {
+  loadDepositRules,
+  findApplicableDepositRule,
+  computeDepositAmount,
+} from "@/data/deposit-rules";
+import {
+  BookingDepositPrompt,
+  type DepositPromptValue,
+} from "./BookingDepositPrompt";
 
 import type { Client } from "@/types/client";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
@@ -518,6 +527,13 @@ export function BookingModal({
   const [tipAmount, setTipAmount] = useState(0);
   const [showingTipStep, setShowingTipStep] = useState(false);
   const [includesEvaluation, setIncludesEvaluation] = useState(false);
+  const [depositPrompt, setDepositPrompt] = useState<DepositPromptValue>({
+    collectNow: true,
+    amount: 0,
+    method: "card",
+    ruleLabel: "",
+    required: 0,
+  });
 
   // Get current sub-steps based on selected service (estimate mode now includes feeding/medication for fee calculation)
   // Customers never see the Room Assignment sub-step (id=1): the facility auto-assigns
@@ -1188,6 +1204,35 @@ export function BookingModal({
     return isEvaluationOptionalForService(selectedService);
   }, [isEvaluationOptionalForService, selectedService]);
 
+  // Resolve any deposit rule that applies to this booking
+  const applicableDepositRule = useMemo(() => {
+    if (isEstimateMode || isCustomerMode || !selectedService) return null;
+    const rules = loadDepositRules();
+    return findApplicableDepositRule(
+      selectedService,
+      calculatePrice.total,
+      rules,
+    );
+  }, [isEstimateMode, isCustomerMode, selectedService, calculatePrice.total]);
+
+  // Sync prompt defaults when the rule or total changes
+  useEffect(() => {
+    if (!applicableDepositRule) return;
+    const required = computeDepositAmount(
+      applicableDepositRule,
+      calculatePrice.total,
+    );
+    setDepositPrompt((prev) => ({
+      collectNow: prev.ruleLabel === applicableDepositRule.label
+        ? prev.collectNow
+        : true,
+      amount: required,
+      method: prev.method ?? "card",
+      ruleLabel: applicableDepositRule.label,
+      required,
+    }));
+  }, [applicableDepositRule, calculatePrice.total]);
+
   // Validation for each step
   const canProceed = useMemo(() => {
     const currentStepId = displayedSteps[currentStep]?.id;
@@ -1482,6 +1527,15 @@ export function BookingModal({
       tipAmount: tipAmount > 0 ? tipAmount : undefined,
       includesEvaluation: includesEvaluation || undefined,
       evaluationStatus: includesEvaluation ? "pending" : undefined,
+      initialDeposit:
+        applicableDepositRule && depositPrompt.collectNow && depositPrompt.amount > 0
+          ? {
+              amount: depositPrompt.amount,
+              method: depositPrompt.method,
+              ruleLabel: applicableDepositRule.label,
+              collectedAt: new Date().toISOString(),
+            }
+          : undefined,
     };
 
     if (isEstimateMode) {
@@ -2650,6 +2704,20 @@ export function BookingModal({
                         onCheckedChange={setIncludesEvaluation}
                       />
                     </div>
+                  )}
+
+                {/* Deposit prompt — applies when a deposit rule matches this booking */}
+                {!isCustomerMode &&
+                  !showingTipStep &&
+                  displayedSteps[currentStep]?.id === "confirm" &&
+                  !(isEstimateMode && estimateCreated) &&
+                  applicableDepositRule && (
+                    <BookingDepositPrompt
+                      rule={applicableDepositRule}
+                      bookingTotal={calculatePrice.total}
+                      value={depositPrompt}
+                      onChange={setDepositPrompt}
+                    />
                   )}
 
                 {/* Customer booking request confirmation state */}

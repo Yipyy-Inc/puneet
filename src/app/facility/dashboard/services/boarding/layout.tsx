@@ -22,7 +22,6 @@ import {
   UtensilsCrossed,
   Package,
   ClipboardList,
-  Puzzle,
 } from "lucide-react";
 
 const tabs = [
@@ -40,11 +39,6 @@ const tabs = [
     name: "Rates",
     href: "/facility/dashboard/services/boarding/rates",
     icon: DollarSign,
-  },
-  {
-    name: "Add-Ons",
-    href: "/facility/dashboard/services/boarding/add-ons",
-    icon: Puzzle,
   },
   {
     name: "Packages",

@@ -326,75 +326,9 @@ const SERVICE_VARIANTS: Record<string, ServiceVariant[]> = {
   ],
 };
 
-// Available add-ons
-const GROOMING_ADD_ONS: GroomingAddOn[] = [
-  {
-    id: "nail-grinding",
-    name: "Nail Grinding",
-    description: "Smooth nail finish with grinder",
-    durationMinutes: 10,
-    price: 15,
-    enabled: true,
-  },
-  {
-    id: "teeth-brushing",
-    name: "Teeth Brushing",
-    description: "Fresh breath and clean teeth",
-    durationMinutes: 5,
-    price: 10,
-    enabled: true,
-  },
-  {
-    id: "blueberry-facial",
-    name: "Blueberry Facial",
-    description: "Deep cleansing facial treatment",
-    durationMinutes: 10,
-    price: 12,
-    enabled: true,
-  },
-  {
-    id: "paw-pad-trim",
-    name: "Paw Pad Trim",
-    description: "Trim and shape paw pads",
-    durationMinutes: 5,
-    price: 8,
-    enabled: true,
-  },
-  {
-    id: "de-shedding-treatment",
-    name: "De-shedding Treatment",
-    description: "Specialized treatment to reduce shedding",
-    durationMinutes: 20,
-    price: 25,
-    enabled: true,
-  },
-  {
-    id: "premium-shampoo",
-    name: "Premium Shampoo Upgrade",
-    description: "Luxury shampoo and conditioner",
-    durationMinutes: 0,
-    price: 5,
-    enabled: true,
-  },
-  {
-    id: "nail-polish",
-    name: "Nail Polish",
-    description: "Colorful nail polish application",
-    durationMinutes: 10,
-    price: 10,
-    hiddenForAnxious: true, // Requires stillness
-    enabled: true,
-  },
-  {
-    id: "joint-relief-massage",
-    name: "Joint Relief Massage",
-    description: "Therapeutic massage for joint comfort",
-    durationMinutes: 15,
-    price: 20,
-    suggestedForSenior: true,
-    enabled: true,
-  },
-];
+// Available add-ons are loaded at runtime from the global service-addons store
+// (see groomingAddOns memo inside the component). Add-ons created in the
+// grooming rates page Add-ons tab automatically appear here.
 
 // Mobile service zones (mock data - in production, this would come from facility config)
 interface ServiceZone {
@@ -892,18 +826,29 @@ export function GroomingBookingFlow({
     return { isAnxious, isSenior };
   }, [selectedPet]);
 
+  // Grooming add-ons sourced from the global service-addons store, scoped to
+  // the grooming module via applicableServices.
+  const groomingAddOns = useMemo<GroomingAddOn[]>(() => {
+    return getStoredServiceAddOns()
+      .filter((a) => a.isActive && a.applicableServices.includes("grooming"))
+      .map((a) => ({
+        id: a.id,
+        name: a.name,
+        description: a.description,
+        durationMinutes: a.duration ?? 0,
+        price: a.price,
+        enabled: a.isActive,
+      }));
+  }, [open]);
+
   // Get available add-ons (filtered by pet flags)
   const availableAddOns = useMemo(() => {
-    return GROOMING_ADD_ONS.filter((addon) => {
-      // Hide if disabled
+    return groomingAddOns.filter((addon) => {
       if (addon.enabled === false) return false;
-
-      // Hide nail polish for anxious pets
       if (addon.hiddenForAnxious && petFlags.isAnxious) return false;
-
       return true;
     });
-  }, [petFlags]);
+  }, [groomingAddOns, petFlags]);
 
   // Get suggested add-ons (e.g., joint relief for senior dogs)
   const suggestedAddOns = useMemo(() => {
@@ -918,28 +863,28 @@ export function GroomingBookingFlow({
     let total = calculatedDuration;
 
     selectedAddOns.forEach((addOnId) => {
-      const addOn = GROOMING_ADD_ONS.find((a) => a.id === addOnId);
+      const addOn = groomingAddOns.find((a) => a.id === addOnId);
       if (addOn) {
         total += addOn.durationMinutes;
       }
     });
 
     return total;
-  }, [calculatedDuration, selectedAddOns]);
+  }, [calculatedDuration, selectedAddOns, groomingAddOns]);
 
   // Calculate total price with add-ons
   const totalPriceWithAddOns = useMemo(() => {
     let total = calculatedPrice;
 
     selectedAddOns.forEach((addOnId) => {
-      const addOn = GROOMING_ADD_ONS.find((a) => a.id === addOnId);
+      const addOn = groomingAddOns.find((a) => a.id === addOnId);
       if (addOn) {
         total += addOn.price;
       }
     });
 
     return total;
-  }, [calculatedPrice, selectedAddOns]);
+  }, [calculatedPrice, selectedAddOns, groomingAddOns]);
 
   const storedServiceAddOns = useMemo(
     () => getStoredServiceAddOns().filter((addOn) => addOn.isActive),
@@ -1120,7 +1065,7 @@ export function GroomingBookingFlow({
     // If add-ons add significant time to a short service, show warning
     const baseDuration = category.estimatedDuration;
     const addOnDuration = selectedAddOns.reduce((sum, id) => {
-      const addOn = GROOMING_ADD_ONS.find((a) => a.id === id);
+      const addOn = groomingAddOns.find((a) => a.id === id);
       return sum + (addOn?.durationMinutes || 0);
     }, 0);
 
@@ -1133,7 +1078,7 @@ export function GroomingBookingFlow({
     }
 
     return null;
-  }, [selectedServiceCategory, selectedAddOns, totalDurationWithAddOns]);
+  }, [selectedServiceCategory, selectedAddOns, totalDurationWithAddOns, groomingAddOns]);
 
   const handleAddOnToggle = (addOnId: string) => {
     setSelectedAddOns((prev) => {
@@ -1831,7 +1776,7 @@ export function GroomingBookingFlow({
     // Get add-ons sorted by duration (largest first)
     const addOnsWithDuration = selectedAddOns
       .map((id) => {
-        const addOn = GROOMING_ADD_ONS.find((a) => a.id === id);
+        const addOn = groomingAddOns.find((a) => a.id === id);
         return addOn
           ? { id, name: addOn.name, duration: addOn.durationMinutes }
           : null;
@@ -2209,11 +2154,11 @@ export function GroomingBookingFlow({
   const selectedAddOnsList = useMemo(() => {
     return selectedAddOns
       .map((id) => {
-        const addon = GROOMING_ADD_ONS.find((a) => a.id === id);
+        const addon = groomingAddOns.find((a) => a.id === id);
         return addon;
       })
       .filter(Boolean);
-  }, [selectedAddOns]);
+  }, [selectedAddOns, groomingAddOns]);
 
   // Get location display
   const locationDisplay = useMemo(() => {

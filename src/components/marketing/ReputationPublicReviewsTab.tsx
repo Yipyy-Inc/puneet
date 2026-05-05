@@ -2,8 +2,6 @@
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Star,
@@ -27,7 +25,10 @@ function StarRow({ rating }: { rating: number }) {
   return (
     <div className="flex gap-0.5">
       {Array.from({ length: 5 }, (_, i) => (
-        <Star key={i} className={`h-4 w-4 ${i < rating ? "fill-amber-400 text-amber-400" : "fill-muted text-muted-foreground"}`} />
+        <Star
+          key={i}
+          className={`h-3 w-3 ${i < rating ? "fill-amber-400 text-amber-400" : "fill-muted text-muted-foreground"}`}
+        />
       ))}
     </div>
   );
@@ -35,14 +36,15 @@ function StarRow({ rating }: { rating: number }) {
 
 function PlatformBadge({ platform }: { platform: string }) {
   const cfg: Record<string, { label: string; color: string }> = {
-    google: { label: "Google", color: "bg-blue-100 text-blue-700" },
-    facebook: { label: "Facebook", color: "bg-indigo-100 text-indigo-700" },
-    yelp: { label: "Yelp", color: "bg-red-100 text-red-700" },
+    google: { label: "Google", color: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300" },
+    facebook: { label: "Facebook", color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300" },
+    yelp: { label: "Yelp", color: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300" },
   };
   const c = cfg[platform] ?? { label: platform, color: "bg-muted text-muted-foreground" };
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${c.color}`}>
-      <Globe className="h-3 w-3" />{c.label}
+    <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${c.color}`}>
+      <Globe className="h-2.5 w-2.5" />
+      {c.label}
     </span>
   );
 }
@@ -57,64 +59,81 @@ function ReviewCard({
   onToggleDisplay: (id: string) => void;
 }) {
   return (
-    <Card className={`flex flex-col transition-all hover:shadow-md ${req.isPubliclyDisplayed ? "border-emerald-300 dark:border-emerald-700 ring-1 ring-emerald-200 dark:ring-emerald-900" : ""}`}>
-      <CardContent className="flex flex-col gap-3 p-5 flex-1">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center text-sm font-bold text-primary">
-              {req.clientName.charAt(0)}
-            </div>
-            <div>
-              <p className="text-sm font-semibold leading-none">{req.clientName}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{req.petName} · {req.serviceLabel}</p>
-            </div>
+    <div
+      className={`flex flex-col gap-2.5 rounded-xl border bg-card p-3.5 transition-all hover:shadow-sm ${
+        req.isPubliclyDisplayed
+          ? "border-emerald-300 dark:border-emerald-800"
+          : ""
+      }`}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/40 text-xs font-bold text-primary">
+            {req.clientName.charAt(0)}
           </div>
-          {req.isPubliclyDisplayed && (
-            <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs gap-1 shrink-0">
-              <Eye className="h-3 w-3" /> Live
-            </Badge>
-          )}
-          {req.isApprovedForPublicDisplay && !req.isPubliclyDisplayed && (
-            <Badge variant="secondary" className="text-xs gap-1 shrink-0">
-              <CheckCircle2 className="h-3 w-3" /> Approved
-            </Badge>
-          )}
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold leading-none">
+              {req.clientName}
+            </p>
+            <p className="text-muted-foreground mt-0.5 truncate text-[10px]">
+              {req.petName} · {req.serviceLabel}
+            </p>
+          </div>
         </div>
-
-        {/* Rating */}
-        <div className="flex items-center gap-2">
-          <StarRow rating={req.rating!} />
-          <span className="text-xs font-bold">{req.rating}.0</span>
-          {req.publicPlatform && <PlatformBadge platform={req.publicPlatform} />}
-        </div>
-
-        {/* Comment */}
-        <p className="text-sm text-muted-foreground italic flex-1 leading-relaxed">
-          "{req.clientComment}"
-        </p>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-1 border-t gap-2">
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            {new Date(req.ratedAt!).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })}
+        {req.isPubliclyDisplayed ? (
+          <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+            <Eye className="h-2.5 w-2.5" /> Live
           </span>
-          <Button
-            variant={req.isPubliclyDisplayed ? "outline" : "default"}
-            size="sm"
-            className="h-7 text-xs gap-1"
-            onClick={() => onToggleDisplay(req.id)}
-          >
-            {req.isPubliclyDisplayed ? (
-              <><EyeOff className="h-3.5 w-3.5" /> Hide</>
-            ) : (
-              <><Eye className="h-3.5 w-3.5" /> Display</>
-            )}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+        ) : req.isApprovedForPublicDisplay ? (
+          <span className="bg-muted text-muted-foreground inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold">
+            <CheckCircle2 className="h-2.5 w-2.5" /> Approved
+          </span>
+        ) : null}
+      </div>
+
+      {/* Rating */}
+      <div className="flex items-center gap-1.5">
+        <StarRow rating={req.rating!} />
+        <span className="text-[11px] font-bold tabular-nums">
+          {req.rating}.0
+        </span>
+        {req.publicPlatform && <PlatformBadge platform={req.publicPlatform} />}
+      </div>
+
+      {/* Comment */}
+      <p className="text-muted-foreground line-clamp-3 flex-1 text-xs italic leading-relaxed">
+        "{req.clientComment}"
+      </p>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between gap-2 border-t pt-2">
+        <span className="text-muted-foreground inline-flex items-center gap-1 text-[10px]">
+          <Clock className="h-2.5 w-2.5" />
+          {new Date(req.ratedAt!).toLocaleDateString("en-CA", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })}
+        </span>
+        <Button
+          variant={req.isPubliclyDisplayed ? "outline" : "default"}
+          size="sm"
+          className="h-6 gap-1 px-2 text-[11px]"
+          onClick={() => onToggleDisplay(req.id)}
+        >
+          {req.isPubliclyDisplayed ? (
+            <>
+              <EyeOff className="h-3 w-3" /> Hide
+            </>
+          ) : (
+            <>
+              <Eye className="h-3 w-3" /> Display
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -128,31 +147,43 @@ function ReviewRow({
   onToggleDisplay: (id: string) => void;
 }) {
   return (
-    <div className={`flex items-center gap-4 rounded-xl border p-4 transition-all hover:shadow-sm
-      ${req.isPubliclyDisplayed ? "border-emerald-200 bg-emerald-50/30 dark:border-emerald-800 dark:bg-emerald-950/10" : "bg-background"}`}>
-      <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+    <div
+      className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-all hover:bg-muted/30
+      ${req.isPubliclyDisplayed ? "border-emerald-200 bg-emerald-50/30 dark:border-emerald-800 dark:bg-emerald-950/10" : "bg-card"}`}
+    >
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/40 text-xs font-bold text-primary">
         {req.clientName.charAt(0)}
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-sm font-semibold">{req.clientName}</p>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <p className="text-xs font-semibold">{req.clientName}</p>
           <StarRow rating={req.rating!} />
           {req.publicPlatform && <PlatformBadge platform={req.publicPlatform} />}
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5 truncate italic">"{req.clientComment}"</p>
+        <p className="text-muted-foreground mt-0.5 truncate text-[11px] italic">
+          "{req.clientComment}"
+        </p>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        {req.isPubliclyDisplayed && <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">Live</Badge>}
+      <div className="flex shrink-0 items-center gap-1.5">
+        {req.isPubliclyDisplayed && (
+          <span className="inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+            Live
+          </span>
+        )}
         <Button
           variant={req.isPubliclyDisplayed ? "outline" : "default"}
           size="sm"
-          className="h-7 text-xs gap-1"
+          className="h-6 gap-1 px-2 text-[11px]"
           onClick={() => onToggleDisplay(req.id)}
         >
           {req.isPubliclyDisplayed ? (
-            <><EyeOff className="h-3.5 w-3.5" /> Hide</>
+            <>
+              <EyeOff className="h-3 w-3" /> Hide
+            </>
           ) : (
-            <><Eye className="h-3.5 w-3.5" /> Display</>
+            <>
+              <Eye className="h-3 w-3" /> Display
+            </>
           )}
         </Button>
       </div>
@@ -194,64 +225,79 @@ export function ReputationPublicReviewsTab() {
   return (
     <div className="space-y-6">
       {/* Stats row */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
-          { label: "Eligible Reviews", value: eligible.length, icon: ThumbsUp, color: "text-blue-600 bg-blue-50" },
-          { label: "Live on Booking Page", value: displayed.length, icon: Eye, color: "text-emerald-600 bg-emerald-50" },
-          { label: "Approved, Not Shown", value: notDisplayed.length, icon: CheckCircle2, color: "text-amber-600 bg-amber-50" },
-          { label: "Pending Approval", value: pending.length, icon: Clock, color: "text-purple-600 bg-purple-50" },
+          { label: "Eligible", value: eligible.length, icon: ThumbsUp, color: "text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-300" },
+          { label: "Live", value: displayed.length, icon: Eye, color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/15 dark:text-emerald-300" },
+          { label: "Approved, hidden", value: notDisplayed.length, icon: CheckCircle2, color: "text-amber-600 bg-amber-50 dark:bg-amber-500/15 dark:text-amber-300" },
+          { label: "Pending", value: pending.length, icon: Clock, color: "text-purple-600 bg-purple-50 dark:bg-purple-500/15 dark:text-purple-300" },
         ].map((s) => (
-          <Card key={s.label}>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${s.color}`}>
-                <s.icon className="h-4.5 w-4.5" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground leading-none">{s.label}</p>
-                <p className="text-2xl font-bold mt-0.5">{s.value}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <div
+            key={s.label}
+            className="flex items-center gap-2.5 rounded-xl border bg-card px-3 py-2.5"
+          >
+            <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${s.color}`}>
+              <s.icon className="h-3.5 w-3.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wide leading-none">
+                {s.label}
+              </p>
+              <p className="mt-1 text-lg font-bold tabular-nums leading-none">
+                {s.value}
+              </p>
+            </div>
+          </div>
         ))}
       </div>
 
       {/* Pending approval */}
       {pending.length > 0 && (
-        <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-950/10">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2 text-amber-700 dark:text-amber-400">
-              <Sparkles className="h-4 w-4" />
-              Pending Your Approval ({pending.length})
-            </CardTitle>
-            <CardDescription>These 4–5 star reviews are waiting to be approved for public display.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <div className="rounded-xl border border-amber-200 bg-amber-50/30 p-3 dark:border-amber-800 dark:bg-amber-950/10">
+          <div className="mb-2 flex items-center gap-2 text-amber-700 dark:text-amber-400">
+            <Sparkles className="h-3.5 w-3.5" />
+            <p className="text-xs font-semibold">
+              Pending your approval ({pending.length})
+            </p>
+          </div>
+          <div className="space-y-1.5">
             {pending.map((req) => (
-              <div key={req.id} className="flex items-start gap-4 rounded-xl border bg-background p-4">
-                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+              <div
+                key={req.id}
+                className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/40 text-xs font-bold text-primary">
                   {req.clientName.charAt(0)}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold">{req.clientName}</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="text-xs font-semibold">{req.clientName}</p>
                     <div className="flex gap-0.5">
                       {Array.from({ length: req.rating! }, (_, i) => (
-                        <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                        <Star
+                          key={i}
+                          className="h-3 w-3 fill-amber-400 text-amber-400"
+                        />
                       ))}
                     </div>
-                    <span className="text-xs text-muted-foreground">· {req.serviceLabel}</span>
+                    <span className="text-muted-foreground text-[10px]">
+                      · {req.serviceLabel}
+                    </span>
                   </div>
-                  <p className="text-sm italic text-muted-foreground mt-1">"{req.clientComment}"</p>
+                  <p className="text-muted-foreground mt-0.5 truncate text-[11px] italic">
+                    "{req.clientComment}"
+                  </p>
                 </div>
-                <div className="flex gap-2 shrink-0">
-                  <Button size="sm" className="h-7 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Approve
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  className="h-6 shrink-0 gap-1 bg-emerald-600 px-2 text-[11px] hover:bg-emerald-700"
+                >
+                  <CheckCircle2 className="h-3 w-3" /> Approve
+                </Button>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Controls */}
@@ -311,14 +357,16 @@ export function ReputationPublicReviewsTab() {
       )}
 
       {/* Info banner */}
-      <Card className="bg-muted/30 border-dashed">
-        <CardContent className="p-4 flex items-start gap-3">
-          <ExternalLink className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
-          <div className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">Booking page showcase</span> — Reviews set to "Live" will appear on your public booking page automatically. You control which reviews are shown and can hide them at any time. Only reviews with a written comment are eligible.
-          </div>
-        </CardContent>
-      </Card>
+      <div className="bg-muted/30 flex items-start gap-2 rounded-xl border border-dashed px-3 py-2.5">
+        <ExternalLink className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <div className="text-muted-foreground text-xs">
+          <span className="text-foreground font-medium">
+            Booking page showcase
+          </span>{" "}
+          — Reviews set to "Live" appear on your public booking page. Only
+          reviews with a written comment are eligible.
+        </div>
+      </div>
     </div>
   );
 }

@@ -213,6 +213,15 @@ export const newBookingSchema = z.object({
   walkSchedule: z.string().optional(),
   medications: z.array(medicationItemSchema).optional(),
   extraServices: z.array(z.union([extraServiceSchema, z.string()])).optional(),
+  initialDeposit: z
+    .object({
+      amount: z.number(),
+      method: z.string(),
+      ruleLabel: z.string().optional(),
+      collectedBy: z.string().optional(),
+      collectedAt: z.string().optional(),
+    })
+    .optional(),
 });
 
 export type NewBooking = z.infer<typeof newBookingSchema>;
@@ -243,6 +252,9 @@ export const invoicePaymentSchema = z.object({
   method: z.string(),
   amount: z.number(),
   transactionId: z.string().optional(),
+  kind: z.enum(["deposit", "prepayment", "final"]).optional(),
+  collectedBy: z.string().optional(),
+  note: z.string().optional(),
 });
 export type InvoicePayment = z.infer<typeof invoicePaymentSchema>;
 
@@ -255,6 +267,64 @@ export const invoiceTaxLineSchema = z.object({
   amount: z.number(),
 });
 export type InvoiceTaxLine = z.infer<typeof invoiceTaxLineSchema>;
+
+export const invoiceAuditEventTypeEnum = z.enum([
+  "invoice_created",
+  "estimate_sent",
+  "deposit_collected",
+  "deposit_refunded",
+  "item_added",
+  "item_edited",
+  "item_removed",
+  "fee_added",
+  "fee_removed",
+  "discount_applied",
+  "discount_removed",
+  "tax_changed",
+  "tip_added",
+  "prepayment_collected",
+  "payment_processed",
+  "manager_override",
+  "status_changed",
+  "invoice_closed",
+  "refund_issued",
+]);
+export type InvoiceAuditEventType = z.infer<typeof invoiceAuditEventTypeEnum>;
+
+export interface InvoiceSnapshot {
+  status: InvoiceStatus;
+  items: InvoiceLineItem[];
+  fees: InvoiceLineItem[];
+  subtotal: number;
+  discount: number;
+  discountLabel?: string;
+  taxRate: number;
+  taxAmount: number;
+  taxes?: InvoiceTaxLine[];
+  total: number;
+  depositRequired?: number;
+  depositCollected: number;
+  depositCollectedBy?: string;
+  depositCollectedAt?: string;
+  depositRuleLabel?: string;
+  remainingDue: number;
+  payments: InvoicePayment[];
+  membershipApplied?: string;
+  packageCreditsUsed?: number;
+  tipTotal?: number;
+}
+
+export interface InvoiceAuditEvent {
+  id: string;
+  type: InvoiceAuditEventType;
+  description: string;
+  timestamp: string;
+  staffName: string;
+  amount?: number;
+  itemName?: string;
+  note?: string;
+  snapshot: InvoiceSnapshot;
+}
 
 export const invoiceSchema = z.object({
   id: z.string(),
@@ -269,14 +339,44 @@ export const invoiceSchema = z.object({
   taxAmount: z.number(),
   taxes: z.array(invoiceTaxLineSchema).optional(), // multi-tax breakdown
   total: z.number(),
+  depositRequired: z.number().optional(),
   depositCollected: z.number(),
+  depositCollectedBy: z.string().optional(),
+  depositCollectedAt: z.string().optional(),
+  depositRuleLabel: z.string().optional(),
   remainingDue: z.number(),
   payments: z.array(invoicePaymentSchema),
   membershipApplied: z.string().optional(), // "Gold — 15%"
   packageCreditsUsed: z.number().optional(),
   tipTotal: z.number().optional(),
+  auditTrail: z
+    .array(
+      z.object({
+        id: z.string(),
+        type: invoiceAuditEventTypeEnum,
+        description: z.string(),
+        timestamp: z.string(),
+        staffName: z.string(),
+        amount: z.number().optional(),
+        itemName: z.string().optional(),
+        note: z.string().optional(),
+        snapshot: z.unknown(),
+      }),
+    )
+    .optional(),
 });
 export type Invoice = z.infer<typeof invoiceSchema>;
+
+export type InvoiceEditKind = "base" | "addon" | "fee" | "discount";
+
+export function canEditInvoice(
+  status: InvoiceStatus,
+  kind: InvoiceEditKind,
+): boolean {
+  if (status === "closed") return false;
+  if (status === "open" && kind === "base") return false;
+  return true;
+}
 
 // ============================================================================
 // Estimates

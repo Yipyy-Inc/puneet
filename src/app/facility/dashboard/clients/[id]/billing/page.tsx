@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, Receipt, Gift, Award } from "lucide-react";
+import { OpenInvoicesSection } from "@/components/clients/OpenInvoicesSection";
 
 export default function ClientBillingPage({
   params,
@@ -153,6 +154,14 @@ export default function ClientBillingPage({
           </CardContent>
         </Card>
       )}
+
+      {/* Open Invoices — bulk-pay multiple unpaid invoices at once */}
+      <OpenInvoicesSection
+        clientId={clientId}
+        clientName={client.name}
+        bookings={clientBookings}
+        basePath={`/facility/dashboard/clients/${id}`}
+      />
 
       {/* Booking Invoices */}
       {bookingInvoices.length > 0 && (
