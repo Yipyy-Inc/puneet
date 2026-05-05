@@ -158,7 +158,7 @@ export function FormTemplateSection({
     { key: "careInstructions", label: "Care Instructions" },
     { key: "medications", label: "Medications" },
     { key: "feedingSchedule", label: "Feeding Schedule" },
-    { key: "emergencyContact", label: "Emergency Contact" },
+    { key: "additionalContacts", label: "Additional Contacts" },
     { key: "specialRequests", label: "Special Requests" },
   ];
 

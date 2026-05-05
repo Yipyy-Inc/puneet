@@ -20,6 +20,8 @@ import {
   ChevronLeft,
   ArrowUpRight,
   ExternalLink,
+  Settings,
+  Ban,
 } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -158,6 +160,7 @@ export function ClientFileSidebar({
   ];
 
   const adminNav = [
+    { href: `${base}/settings`, label: "Customer Settings", icon: Settings },
     { href: `${base}/tags`, label: "Tags & Notes", icon: Tags },
     { href: `${base}/audit`, label: "Audit Trail", icon: History },
   ];
@@ -239,13 +242,22 @@ export function ClientFileSidebar({
           <h3 className="mt-3 text-lg font-semibold tracking-tight">
             {client.name}
           </h3>
-          <div className="mt-1.5 flex items-center gap-2">
+          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-2">
             <Badge
               variant={client.status === "active" ? "default" : "secondary"}
               className="h-5 px-2 text-[10px] capitalize"
             >
               {client.status}
             </Badge>
+            {client.isBlocked && (
+              <Badge
+                variant="outline"
+                className="h-5 gap-1 border-red-300 bg-red-50 px-2 text-[10px] font-medium text-red-700"
+              >
+                <Ban className="size-3" />
+                Blocked
+              </Badge>
+            )}
             {client.preferredLanguage && (
               <Badge
                 variant="outline"
@@ -263,6 +275,12 @@ export function ClientFileSidebar({
               </Badge>
             )}
           </div>
+          {client.isBlocked && (
+            <p className="mt-2 max-w-60 text-center text-[11px] leading-snug text-red-700">
+              This client is excluded from messaging, marketing, and automated
+              reminders.
+            </p>
+          )}
         </div>
 
         {/* Contact */}
@@ -283,12 +301,25 @@ export function ClientFileSidebar({
 
         {/* Quick actions */}
         <div className="mt-3 flex gap-2">
-          <Button variant="outline" size="sm" className="h-9 flex-1" asChild>
-            <Link href={`${base}/messages`}>
+          {client.isBlocked ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 flex-1 cursor-not-allowed text-muted-foreground"
+              disabled
+              title="Messaging is disabled for blocked clients"
+            >
               <MessageSquare className="mr-1.5 size-4" />
               Message
-            </Link>
-          </Button>
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" className="h-9 flex-1" asChild>
+              <Link href={`${base}/messages`}>
+                <MessageSquare className="mr-1.5 size-4" />
+                Message
+              </Link>
+            </Button>
+          )}
           <Button variant="outline" size="sm" className="h-9 flex-1" asChild>
             <Link href={`/facility/dashboard/clients/${client.id}`}>
               <ExternalLink className="mr-1.5 size-4" />

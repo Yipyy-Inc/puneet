@@ -26,6 +26,9 @@ import {
   Repeat,
   Scissors,
   Search,
+  Sparkles,
+  CheckCircle2,
+  CalendarClock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +45,7 @@ import {
   type AddOnFormValues,
 } from "@/components/facility/add-ons/AddOnFormDialog";
 import { AddOnCategorySheet } from "@/components/facility/add-ons/AddOnCategorySheet";
+import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 
 // ── Storage ────────────────────────────────────────────────────────────────────
 
@@ -245,13 +249,18 @@ export function AddOnsManager({ serviceFilter }: AddOnsManagerProps = {}) {
     "Uncategorized",
   ].filter((g) => grouped[g]);
 
+  const enabledPct =
+    scopedAddOns.length === 0
+      ? 0
+      : Math.round((active / scopedAddOns.length) * 100);
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
           <h2 className="text-2xl font-bold tracking-tight">Add-Ons</h2>
-          <p className="text-muted-foreground mt-0.5 text-sm">
+          <p className="text-muted-foreground mt-1 text-sm">
             Configure optional services customers can add to their bookings.
           </p>
         </div>
@@ -260,12 +269,18 @@ export function AddOnsManager({ serviceFilter }: AddOnsManagerProps = {}) {
             variant="outline"
             size="sm"
             onClick={() => setCatSheetOpen(true)}
-            className="gap-1.5"
+            className="h-9 gap-1.5"
           >
             <FolderOpen className="size-4" />
             Categories
+            <Badge
+              variant="secondary"
+              className="ml-1 h-5 min-w-5 px-1.5 text-[10px]"
+            >
+              {categories.length}
+            </Badge>
           </Button>
-          <Button size="sm" onClick={openCreate} className="gap-1.5">
+          <Button size="sm" onClick={openCreate} className="h-9 gap-1.5">
             <Plus className="size-4" />
             Create Add-On
           </Button>
@@ -273,86 +288,89 @@ export function AddOnsManager({ serviceFilter }: AddOnsManagerProps = {}) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          {
-            label: "Total Add-Ons",
-            value: scopedAddOns.length,
-            color: "text-slate-700",
-          },
-          {
-            label: "Active",
-            value: active,
-            color: "text-emerald-600 dark:text-emerald-400",
-          },
-          {
-            label: "Scheduled",
-            value: scheduled,
-            sub: "require time slot",
-            color: "text-blue-600 dark:text-blue-400",
-          },
-        ].map(({ label, value, sub, color }) => (
-          <div key={label} className="bg-card rounded-xl border px-4 py-3">
-            <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-              {label}
-            </p>
-            <p className={cn("text-2xl font-bold", color)}>{value}</p>
-            {sub && (
-              <p className="text-muted-foreground mt-0.5 text-xs">{sub}</p>
-            )}
-          </div>
-        ))}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <KpiTile
+          label="Total Add-Ons"
+          value={scopedAddOns.length}
+          icon={Sparkles}
+          tone="violet"
+        />
+        <KpiTile
+          label="Active"
+          value={active}
+          hint={`${enabledPct}% enabled`}
+          icon={CheckCircle2}
+          tone="emerald"
+        />
+        <KpiTile
+          label="Scheduled"
+          value={scheduled}
+          hint="require a time slot"
+          icon={CalendarClock}
+          tone="indigo"
+        />
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-3">
-        <div className="relative max-w-xs flex-1">
-          <Search className="text-muted-foreground absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-sm">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search add-ons…"
-            className="h-9 pl-9 text-sm"
+            className="h-10 pl-9 text-sm"
           />
         </div>
-        <div className="flex items-center gap-1.5 overflow-x-auto">
-          <Button
-            size="sm"
-            variant={filterCat === null ? "secondary" : "ghost"}
+        <div className="flex flex-1 items-center gap-1.5 overflow-x-auto">
+          <button
+            type="button"
             onClick={() => setFilterCat(null)}
-            className="h-8 shrink-0 text-xs"
+            className={cn(
+              "h-8 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors",
+              filterCat === null
+                ? "bg-foreground text-background border-foreground"
+                : "border-transparent text-muted-foreground hover:bg-muted",
+            )}
           >
             All
-          </Button>
-          {categories.map((cat) => (
-            <Button
-              key={cat.id}
-              size="sm"
-              variant={filterCat === cat.name ? "secondary" : "ghost"}
-              onClick={() =>
-                setFilterCat(filterCat === cat.name ? null : cat.name)
-              }
-              className="h-8 shrink-0 gap-1.5 text-xs"
-            >
-              <span
-                className="size-1.5 rounded-full"
-                style={{ backgroundColor: cat.colorCode ?? "#64748b" }}
-              />
-              {cat.name}
-            </Button>
-          ))}
+          </button>
+          {categories.map((cat) => {
+            const isActive = filterCat === cat.name;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setFilterCat(isActive ? null : cat.name)}
+                className={cn(
+                  "flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
+                  isActive
+                    ? "bg-secondary text-foreground border-border"
+                    : "text-muted-foreground hover:bg-muted border-transparent",
+                )}
+              >
+                <span
+                  className="size-2 rounded-full"
+                  style={{ backgroundColor: cat.colorCode ?? "#64748b" }}
+                />
+                {cat.name}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* List */}
       {filtered.length === 0 ? (
         <div className="bg-muted/20 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-20 text-center">
-          <Package className="text-muted-foreground/30 mb-3 size-10" />
-          <p className="font-semibold text-slate-700">No add-ons found</p>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <div className="bg-background mb-3 flex size-14 items-center justify-center rounded-2xl border shadow-sm">
+            <Package className="text-muted-foreground/60 size-6" />
+          </div>
+          <p className="font-semibold">No add-ons found</p>
+          <p className="text-muted-foreground mt-1 max-w-sm text-sm">
             {search
-              ? "Try a different search term."
-              : "Create your first add-on to get started."}
+              ? "Try a different search term or clear the active filters."
+              : "Create your first add-on so customers can enhance their bookings."}
           </p>
           {!search && (
             <Button size="sm" onClick={openCreate} className="mt-4 gap-1.5">
@@ -362,49 +380,51 @@ export function AddOnsManager({ serviceFilter }: AddOnsManagerProps = {}) {
           )}
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-7">
           {groupOrder.map((groupName) => {
             const cat = categories.find((c) => c.name === groupName);
             const items = grouped[groupName] ?? [];
             return (
-              <div key={groupName} className="space-y-3">
+              <section key={groupName} className="space-y-3">
                 {/* Group header */}
-                <div className="flex items-center gap-2.5">
+                <div className="bg-muted/40 flex items-center gap-2.5 rounded-xl px-3 py-2">
                   <span
-                    className="size-2.5 rounded-full"
+                    className="size-2 shrink-0 rounded-full"
                     style={{ backgroundColor: cat?.colorCode ?? "#64748b" }}
                   />
-                  <h3 className="text-sm font-semibold text-slate-700">
-                    {groupName}
-                  </h3>
-                  <Badge variant="secondary" className="text-[10px]">
-                    {items.length}
-                  </Badge>
+                  <h3 className="text-sm font-semibold">{groupName}</h3>
+                  <span className="text-muted-foreground text-xs">
+                    {items.length} {items.length === 1 ? "add-on" : "add-ons"}
+                  </span>
+                  {cat?.description && (
+                    <span className="text-muted-foreground hidden truncate text-xs sm:inline">
+                      · {cat.description}
+                    </span>
+                  )}
                 </div>
                 {/* Cards */}
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   {items.map((addon) => {
-                    const SchedIcon =
-                      SCHEDULING_ICON[addon.schedulingType ?? "quantity"] ??
-                      Hash;
+                    const schedKey = addon.schedulingType ?? "quantity";
+                    const SchedIcon = SCHEDULING_ICON[schedKey] ?? Hash;
+                    const services =
+                      addon.applicableServices.length === 0
+                        ? ["All services"]
+                        : addon.applicableServices.map(
+                            (s) =>
+                              allServices.find((sv) => sv.id === s)?.name ??
+                              s.charAt(0).toUpperCase() + s.slice(1),
+                          );
                     return (
                       <div
                         key={addon.id}
                         className={cn(
-                          "group bg-card flex items-center gap-4 rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
-                          !addon.isActive && "opacity-55",
+                          "group bg-card relative flex items-center gap-4 rounded-2xl border p-4 transition-all duration-200 hover:border-foreground/10 hover:shadow-sm",
+                          !addon.isActive && "opacity-60",
                         )}
                       >
-                        {/* Color stripe */}
-                        <div
-                          className="w-1 shrink-0 self-stretch rounded-full"
-                          style={{
-                            backgroundColor: addon.colorCode ?? "#64748b",
-                          }}
-                        />
-
                         {/* Thumbnail */}
-                        <div className="bg-muted flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl">
+                        <div className="bg-muted border-border/60 relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border">
                           {addon.image ? (
                             <img
                               src={addon.image}
@@ -418,82 +438,76 @@ export function AddOnsManager({ serviceFilter }: AddOnsManagerProps = {}) {
 
                         {/* Content */}
                         <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-semibold">
+                          {/* Title row */}
+                          <div className="flex items-center gap-2">
+                            <span className="truncate text-sm font-semibold">
                               {addon.name}
                             </span>
-                            <Badge variant="outline" className="text-[10px]">
-                              {formatPrice(addon)}
-                            </Badge>
-                            <Badge
-                              variant="secondary"
-                              className="gap-1 text-[10px]"
-                            >
-                              <SchedIcon className="size-2.5" />
-                              {
-                                SCHEDULING_LABEL[
-                                  addon.schedulingType ?? "quantity"
-                                ]
-                              }
-                            </Badge>
-                            {addon.generatesTask && (
-                              <Badge
-                                variant="outline"
-                                className="text-muted-foreground gap-1 text-[10px]"
-                              >
-                                <ListChecks className="size-2.5" />
-                                Auto-Task
-                              </Badge>
-                            )}
-                            {addon.requiresScheduling && (
-                              <Badge
-                                variant="outline"
-                                className="text-muted-foreground gap-1 text-[10px]"
-                              >
-                                <Calendar className="size-2.5" />
-                                Scheduled
-                              </Badge>
-                            )}
                             {addon.isDefault && (
-                              <Badge className="border border-blue-200 bg-blue-50 text-[10px] text-blue-700">
+                              <Badge className="h-5 shrink-0 border-blue-200 bg-blue-50 px-1.5 text-[10px] text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300">
                                 Default
                               </Badge>
                             )}
-                            {addon.duration && (
-                              <Badge variant="outline" className="text-[10px]">
-                                {addon.duration}min
-                              </Badge>
-                            )}
+                            <span className="text-muted-foreground/40 text-xs">
+                              ·
+                            </span>
+                            <span className="text-foreground/90 text-sm font-semibold tabular-nums">
+                              {formatPrice(addon)}
+                            </span>
                           </div>
-                          <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
-                            {addon.description}
-                          </p>
-                          <p className="text-muted-foreground/60 mt-1 text-[11px]">
-                            {addon.applicableServices.length === 0
-                              ? "All services"
-                              : addon.applicableServices
-                                  .map(
-                                    (s) =>
-                                      allServices.find((sv) => sv.id === s)
-                                        ?.name ??
-                                      s.charAt(0).toUpperCase() + s.slice(1),
-                                  )
-                                  .join(", ")}
-                          </p>
+
+                          {/* Description */}
+                          {addon.description && (
+                            <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
+                              {addon.description}
+                            </p>
+                          )}
+
+                          {/* Meta row */}
+                          <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                            <span className="inline-flex items-center gap-1">
+                              <SchedIcon className="size-3" />
+                              {SCHEDULING_LABEL[schedKey]}
+                            </span>
+                            {addon.duration && (
+                              <span className="inline-flex items-center gap-1">
+                                <Clock className="size-3" />
+                                {addon.duration} min
+                              </span>
+                            )}
+                            {addon.generatesTask && (
+                              <span className="inline-flex items-center gap-1">
+                                <ListChecks className="size-3" />
+                                Auto-Task
+                              </span>
+                            )}
+                            {addon.requiresScheduling &&
+                              schedKey !== "time_slot" && (
+                                <span className="inline-flex items-center gap-1">
+                                  <Calendar className="size-3" />
+                                  Scheduled
+                                </span>
+                              )}
+                            <span className="bg-border/70 hidden h-3 w-px sm:inline" />
+                            <span className="truncate">
+                              {services.join(" · ")}
+                            </span>
+                          </div>
                         </div>
 
                         {/* Controls */}
-                        <div className="flex shrink-0 items-center gap-3">
+                        <div className="flex shrink-0 items-center gap-2">
                           <Switch
                             checked={addon.isActive}
                             onCheckedChange={() => handleToggle(addon)}
+                            aria-label={`Toggle ${addon.name}`}
                           />
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="size-8 p-0 opacity-0 transition-opacity group-hover:opacity-100"
+                                className="size-8 p-0 opacity-60 transition-opacity group-hover:opacity-100"
                               >
                                 <MoreVertical className="size-4" />
                               </Button>
@@ -517,7 +531,7 @@ export function AddOnsManager({ serviceFilter }: AddOnsManagerProps = {}) {
                     );
                   })}
                 </div>
-              </div>
+              </section>
             );
           })}
         </div>

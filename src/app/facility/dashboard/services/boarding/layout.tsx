@@ -62,7 +62,7 @@ const tabs = [
     icon: UtensilsCrossed,
   },
   {
-    name: "Kennel Cards",
+    name: "Boarding Sheets",
     href: "/facility/dashboard/services/boarding/kennel-cards",
     icon: CreditCard,
   },

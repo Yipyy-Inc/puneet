@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Percent, Tag, X } from "lucide-react";
+import { Plus, Trash2, Percent, Tag, X, Zap } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import type {
   MembershipDiscountRule,
   ServiceCategory,
@@ -71,6 +72,14 @@ export function StepBenefits({ data, update }: Props) {
       ? current.filter((c) => c !== cat)
       : [...current, cat];
     updateRule(id, { categories: next.length ? next : undefined });
+  };
+
+  const toggleInstabook = (cat: ServiceCategory) => {
+    const current = data.instabookServices;
+    const next = current.includes(cat)
+      ? current.filter((c) => c !== cat)
+      : [...current, cat];
+    update({ instabookServices: next });
   };
 
   const addPerk = (perk: string) => {
@@ -223,6 +232,65 @@ export function StepBenefits({ data, update }: Props) {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-amber-200/70 bg-amber-50/40 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2">
+            <Zap className="mt-0.5 size-4 text-amber-500" />
+            <div>
+              <h4 className="text-sm font-semibold">
+                Instant Booking (skip approval)
+              </h4>
+              <p className="text-muted-foreground mt-0.5 text-sm">
+                Subscribers&apos; bookings for the selected services bypass the
+                booking-requests queue and are auto-confirmed. Customers
+                receive the confirmation email/SMS immediately, without waiting
+                for staff approval.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">Enabled</span>
+            <Switch
+              checked={data.instabookServices.length > 0}
+              onCheckedChange={(v) =>
+                update({
+                  instabookServices: v
+                    ? data.applicableServices.length > 0
+                      ? data.applicableServices
+                      : ["daycare"]
+                    : [],
+                })
+              }
+            />
+          </div>
+        </div>
+
+        {data.instabookServices.length > 0 && (
+          <div className="space-y-1.5">
+            <Label className="text-xs">Apply instant booking to:</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {categories.map((c) => {
+                const selected = data.instabookServices.includes(c);
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => toggleInstabook(c)}
+                    className={`rounded-full border px-3 py-1 text-xs capitalize transition-colors ${
+                      selected
+                        ? "border-amber-500 bg-amber-500 text-white"
+                        : "bg-background hover:bg-muted"
+                    }`}
+                  >
+                    {c}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
       </section>

@@ -3,22 +3,22 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { hexToRgba } from "@/lib/color-utils";
 import {
   ChevronLeft,
   ChevronRight,
   Plus,
   Scissors,
-  CalendarIcon,
+  CalendarDays,
+  Sparkles,
   Search,
   Filter,
   CheckCircle2,
   Clock,
-  CheckSquare,
-  ActivitySquare
+  TrendingUp,
+  ActivitySquare,
 } from "lucide-react";
 import { groomingQueries } from "@/lib/api/grooming";
 import type { GroomingAppointment, GroomingStatus } from "@/types/grooming";
@@ -105,15 +105,6 @@ function formatISODate(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
-function formatDisplayDate(dateStr: string): string {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-CA", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
 function formatHour(h: number): string {
   if (h === 12) return "12 PM";
   return h > 12 ? `${h - 12} PM` : `${h} AM`;
@@ -148,6 +139,415 @@ function getMonthDays(dateStr: string): (Date | null)[] {
     cells.push(new Date(year, month, d));
   }
   return cells;
+}
+
+// ─── Service color palette (stable hash) ─────────────────────────────────────
+
+const SERVICE_PALETTE = [
+  "#0ea5e9", // sky
+  "#10b981", // emerald
+  "#a855f7", // purple
+  "#f97316", // orange
+  "#ec4899", // pink
+  "#6366f1", // indigo
+  "#14b8a6", // teal
+  "#eab308", // yellow
+];
+
+function colorForService(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  }
+  return SERVICE_PALETTE[Math.abs(hash) % SERVICE_PALETTE.length];
+}
+
+// ─── Sidebar (mini calendar + stats + upcoming + service breakdown) ──────────
+
+const DAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
+
+function GroomingSidebar({
+  selectedDate,
+  todayStr,
+  appointments,
+  viewMode,
+  onDateChange,
+}: {
+  selectedDate: string;
+  todayStr: string;
+  appointments: GroomingAppointment[];
+  viewMode: ViewMode;
+  onDateChange: (dateStr: string) => void;
+}) {
+  const selectedDateObj = useMemo(
+    () => new Date(selectedDate + "T00:00:00"),
+    [selectedDate],
+  );
+  const [displayMonth, setDisplayMonth] = useState(
+    () => new Date(selectedDateObj.getFullYear(), selectedDateObj.getMonth(), 1),
+  );
+
+  const calendarDays = useMemo(() => {
+    const year = displayMonth.getFullYear();
+    const month = displayMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const days: (Date | null)[] = [];
+    for (let i = 0; i < firstDay; i++) days.push(null);
+    for (let d = 1; d <= daysInMonth; d++) days.push(new Date(year, month, d));
+    return days;
+  }, [displayMonth]);
+
+  const eventCountByDate = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const apt of appointments) {
+      if (apt.status === "cancelled" || apt.status === "no-show") continue;
+      map[apt.date] = (map[apt.date] ?? 0) + 1;
+    }
+    return map;
+  }, [appointments]);
+
+  const todayAppointments = useMemo(
+    () => appointments.filter((a) => a.date === todayStr),
+    [appointments, todayStr],
+  );
+
+  const stats = useMemo(() => {
+    const active = todayAppointments.filter(
+      (a) => a.status !== "cancelled" && a.status !== "no-show",
+    );
+    return {
+      bookings: active.length,
+      confirmed: todayAppointments.filter(
+        (a) => a.status === "scheduled" || a.status === "checked-in",
+      ).length,
+      completed: todayAppointments.filter((a) => a.status === "completed")
+        .length,
+      tasks: todayAppointments.filter((a) => a.status === "in-progress").length,
+    };
+  }, [todayAppointments]);
+
+  const upcomingToday = useMemo(() => {
+    const nowMin =
+      selectedDate === todayStr
+        ? new Date().getHours() * 60 + new Date().getMinutes()
+        : 0;
+    return todayAppointments
+      .filter((a) => {
+        if (a.status === "cancelled" || a.status === "no-show") return false;
+        return timeToMinutes(a.startTime) >= nowMin;
+      })
+      .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
+      .slice(0, 4);
+  }, [todayAppointments, selectedDate, todayStr]);
+
+  const serviceBreakdown = useMemo(() => {
+    const inView = appointments.filter((a) => {
+      if (a.status === "cancelled" || a.status === "no-show") return false;
+      if (viewMode === "day") return a.date === selectedDate;
+      if (viewMode === "week") {
+        const days = getWeekDays(selectedDate).map(formatISODate);
+        return days.includes(a.date);
+      }
+      // month
+      const ref = new Date(selectedDate + "T00:00:00");
+      const aDate = new Date(a.date + "T00:00:00");
+      return (
+        aDate.getFullYear() === ref.getFullYear() &&
+        aDate.getMonth() === ref.getMonth()
+      );
+    });
+    const map: Record<string, { count: number; color: string }> = {};
+    for (const a of inView) {
+      const svc = a.packageName ?? "Other";
+      if (!map[svc]) map[svc] = { count: 0, color: colorForService(svc) };
+      map[svc].count++;
+    }
+    return Object.entries(map)
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 7);
+  }, [appointments, viewMode, selectedDate]);
+
+  const totalInView = serviceBreakdown.reduce(
+    (s, [, { count }]) => s + count,
+    0,
+  );
+
+  const monthLabel = displayMonth.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  const statTiles = [
+    {
+      label: "Bookings",
+      value: stats.bookings,
+      icon: CalendarDays,
+      bg: "bg-sky-50",
+      ring: "ring-sky-100",
+      text: "text-sky-600",
+      iconColor: "text-sky-500",
+    },
+    {
+      label: "Confirmed",
+      value: stats.confirmed,
+      icon: CheckCircle2,
+      bg: "bg-emerald-50",
+      ring: "ring-emerald-100",
+      text: "text-emerald-600",
+      iconColor: "text-emerald-500",
+    },
+    {
+      label: "Completed",
+      value: stats.completed,
+      icon: TrendingUp,
+      bg: "bg-indigo-50",
+      ring: "ring-indigo-100",
+      text: "text-indigo-600",
+      iconColor: "text-indigo-500",
+    },
+    {
+      label: "Tasks",
+      value: stats.tasks,
+      icon: Clock,
+      bg: "bg-amber-50",
+      ring: "ring-amber-100",
+      text: "text-amber-600",
+      iconColor: "text-amber-500",
+    },
+  ];
+
+  return (
+    <aside className="flex w-72 shrink-0 flex-col overflow-y-auto rounded-2xl border border-slate-200/60 bg-white">
+      {/* Header */}
+      <div className="border-b border-slate-100 px-5 pt-5 pb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-sky-100 ring-1 ring-sky-200/60">
+            <Sparkles className="size-4 text-sky-600" />
+          </div>
+          <div>
+            <span className="block text-sm leading-none font-black tracking-tight text-slate-800">
+              Schedule
+            </span>
+            <span className="mt-0.5 block text-[10px] text-slate-400">
+              Operations Calendar
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Mini calendar */}
+      <div className="p-4 pb-3">
+        <div className="mb-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() =>
+              setDisplayMonth(
+                new Date(
+                  displayMonth.getFullYear(),
+                  displayMonth.getMonth() - 1,
+                  1,
+                ),
+              )
+            }
+            aria-label="Previous month"
+            className="flex size-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+          >
+            <ChevronLeft className="size-3.5" />
+          </button>
+          <span className="text-[12px] font-bold tracking-tight text-slate-700">
+            {monthLabel}
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              setDisplayMonth(
+                new Date(
+                  displayMonth.getFullYear(),
+                  displayMonth.getMonth() + 1,
+                  1,
+                ),
+              )
+            }
+            aria-label="Next month"
+            className="flex size-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+          >
+            <ChevronRight className="size-3.5" />
+          </button>
+        </div>
+
+        <div className="mb-1.5 grid grid-cols-7">
+          {DAY_INITIALS.map((d, i) => (
+            <div key={i} className="flex h-6 items-center justify-center">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">
+                {d}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-y-0.5">
+          {calendarDays.map((date, idx) => {
+            if (!date) return <div key={`e-${idx}`} className="h-8" />;
+            const key = formatISODate(date);
+            const isToday = key === todayStr;
+            const isSelected = key === selectedDate;
+            const dotCount = eventCountByDate[key] ?? 0;
+            return (
+              <div key={key} className="flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={() => onDateChange(key)}
+                  className={cn(
+                    "flex size-7 items-center justify-center rounded-lg text-[12px] font-medium transition-all duration-150 hover:scale-110 active:scale-95",
+                    isSelected
+                      ? "bg-sky-600 font-bold text-white shadow-sm shadow-sky-800/20"
+                      : isToday
+                        ? "bg-sky-100 font-bold text-sky-700 ring-1 ring-sky-400/60"
+                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                  )}
+                >
+                  {date.getDate()}
+                </button>
+                <div className="mt-0.5 flex h-1 items-center justify-center gap-0.5">
+                  {dotCount > 0 && !isSelected && (
+                    <div className="size-1 rounded-full bg-sky-400/80" />
+                  )}
+                  {dotCount > 2 && !isSelected && (
+                    <div className="size-1 rounded-full bg-sky-500/55" />
+                  )}
+                  {dotCount > 5 && !isSelected && (
+                    <div className="size-1 rounded-full bg-slate-400/55" />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mx-4 h-px bg-slate-200/70" />
+
+      {/* Today's overview */}
+      <div className="px-4 pt-3 pb-2">
+        <p className="mb-2.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
+          Today&apos;s Overview
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {statTiles.map((s) => (
+            <div
+              key={s.label}
+              className={cn(
+                "flex items-center gap-2.5 rounded-xl border border-transparent px-3 py-2.5 ring-1 transition-all duration-200 hover:shadow-sm",
+                s.bg,
+                s.ring,
+              )}
+            >
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
+                <s.icon className={cn("size-3.5", s.iconColor)} />
+              </div>
+              <div className="min-w-0">
+                <span
+                  className={cn(
+                    "block text-xl leading-none font-black tabular-nums",
+                    s.text,
+                  )}
+                >
+                  {s.value}
+                </span>
+                <span className="mt-0.5 block text-[10px] leading-tight font-medium text-slate-500">
+                  {s.label}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Upcoming today */}
+      {upcomingToday.length > 0 && (
+        <>
+          <div className="mx-4 mt-2 h-px bg-slate-200/70" />
+          <div className="px-4 pt-3 pb-2">
+            <p className="mb-2.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
+              Upcoming Today
+            </p>
+            <div className="space-y-1.5">
+              {upcomingToday.map((apt) => {
+                const color = colorForService(apt.packageName ?? "Other");
+                return (
+                  <div
+                    key={apt.id}
+                    className="flex items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50/80 px-2.5 py-2 transition-all duration-150 hover:bg-white hover:shadow-sm"
+                    style={{ borderLeftColor: color, borderLeftWidth: 3 }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[11px] leading-tight font-bold text-slate-800">
+                        {apt.petName}
+                      </p>
+                      <p className="truncate text-[10px] text-slate-500 capitalize">
+                        {apt.packageName}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-[10px] font-semibold text-slate-500 tabular-nums">
+                      {apt.startTime}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Service breakdown */}
+      {serviceBreakdown.length > 0 && (
+        <>
+          <div className="mx-4 mt-2 h-px bg-slate-200/70" />
+          <div className="px-4 pt-3 pb-5">
+            <p className="mb-2.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
+              {viewMode === "day" ? "Today's Services" : "Services in View"}
+            </p>
+            <div className="space-y-2.5">
+              {serviceBreakdown.map(([service, { count, color }]) => {
+                const pct = totalInView > 0 ? (count / totalInView) * 100 : 0;
+                return (
+                  <div key={service}>
+                    <div className="mb-1 flex items-center justify-between">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          className="size-2.5 shrink-0 rounded-full shadow-sm"
+                          style={{
+                            backgroundColor: color,
+                            boxShadow: `0 0 4px ${hexToRgba(color, 0.5)}`,
+                          }}
+                        />
+                        <span className="truncate text-[11px] font-semibold text-slate-600 capitalize">
+                          {service}
+                        </span>
+                      </div>
+                      <span className="ml-2 shrink-0 text-[11px] font-bold text-slate-800 tabular-nums">
+                        {count}
+                      </span>
+                    </div>
+                    <div
+                      className="h-1.5 w-full overflow-hidden rounded-full"
+                      style={{ backgroundColor: hexToRgba(color, 0.12) }}
+                    >
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${pct}%`, backgroundColor: color }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </aside>
+  );
 }
 
 // ─── Appointment block (day view) ─────────────────────────────────────────────
@@ -472,7 +872,6 @@ export function GroomingCalendar() {
   const todayStr = formatISODate(new Date());
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [viewMode, setViewMode] = useState<ViewMode>("day");
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] =
     useState<GroomingAppointment | null>(null);
@@ -481,34 +880,16 @@ export function GroomingCalendar() {
   const { data: appointments = [] } = useQuery(groomingQueries.appointments());
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
 
-  const dateAppointments = useMemo(
-    () => appointments.filter((a) => a.date === selectedDate),
+  const activeEventCount = useMemo(
+    () =>
+      appointments.filter(
+        (a) =>
+          a.date === selectedDate &&
+          a.status !== "cancelled" &&
+          a.status !== "no-show",
+      ).length,
     [appointments, selectedDate],
   );
-
-  const stats = useMemo(
-    () => ({
-      total: dateAppointments.filter(
-        (a) => a.status !== "cancelled" && a.status !== "no-show",
-      ).length,
-      inProgress: dateAppointments.filter((a) => a.status === "in-progress").length,
-      ready: dateAppointments.filter((a) => a.status === "ready-for-pickup").length,
-      completed: dateAppointments.filter((a) => a.status === "completed").length,
-    }),
-    [dateAppointments],
-  );
-
-  function navigate(dir: -1 | 1) {
-    const d = new Date(selectedDate + "T00:00:00");
-    if (viewMode === "week") {
-      d.setDate(d.getDate() + dir * 7);
-    } else if (viewMode === "month") {
-      d.setMonth(d.getMonth() + dir);
-    } else {
-      d.setDate(d.getDate() + dir);
-    }
-    setSelectedDate(formatISODate(d));
-  }
 
   function handleBlockClick(apt: GroomingAppointment) {
     setSelectedAppointment(apt);
@@ -520,98 +901,15 @@ export function GroomingCalendar() {
     setViewMode("day");
   }
 
-  const isToday = selectedDate === todayStr;
-
-  function getDisplayLabel() {
-    const d = new Date(selectedDate + "T00:00:00");
-    if (viewMode === "day") return formatDisplayDate(selectedDate);
-    if (viewMode === "week") {
-      const days = getWeekDays(selectedDate);
-      const start = days[0];
-      const end = days[6];
-      const sameMonth = start.getMonth() === end.getMonth();
-      const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-      return sameMonth
-        ? `${start.toLocaleDateString("en-CA", opts)} – ${end.toLocaleDateString("en-CA", { day: "numeric" })}, ${end.getFullYear()}`
-        : `${start.toLocaleDateString("en-CA", opts)} – ${end.toLocaleDateString("en-CA", opts)}, ${end.getFullYear()}`;
-    }
-    return d.toLocaleDateString("en-CA", { month: "long", year: "numeric" });
-  }
-
   return (
     <div className="flex h-full gap-6">
-      {/* ── Left Sidebar ── */}
-      <div className="w-72 flex flex-col gap-6 flex-shrink-0">
-        <div>
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <Scissors className="h-5 w-5 text-blue-500" /> Schedule
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Operations Calendar</p>
-        </div>
-
-        {/* Mini Calendar */}
-        <div className="bg-card rounded-xl border shadow-sm p-3">
-          <Calendar
-            mode="single"
-            selected={new Date(selectedDate + "T00:00:00")}
-            onSelect={(d) => {
-              if (d) {
-                setSelectedDate(formatISODate(d));
-              }
-            }}
-            className="w-full"
-          />
-        </div>
-
-        {/* Today's Overview Stats */}
-        <div>
-          <h2 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3">Today's Overview</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl p-4 flex flex-col gap-1 items-start">
-              <CalendarIcon className="w-4 h-4 text-blue-600 dark:text-blue-400 mb-1" />
-              <span className="text-3xl font-bold leading-none text-blue-700 dark:text-blue-300">{stats.total}</span>
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Bookings</span>
-            </div>
-            <div className="bg-emerald-50/50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-2xl p-4 flex flex-col gap-1 items-start">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mb-1" />
-              <span className="text-3xl font-bold leading-none text-emerald-700 dark:text-emerald-300">{stats.ready}</span>
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Confirmed</span>
-            </div>
-            <div className="bg-purple-50/50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-2xl p-4 flex flex-col gap-1 items-start">
-              <ActivitySquare className="w-4 h-4 text-purple-600 dark:text-purple-400 mb-1" />
-              <span className="text-3xl font-bold leading-none text-purple-700 dark:text-purple-300">{stats.completed}</span>
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Completed</span>
-            </div>
-            <div className="bg-orange-50/50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 rounded-2xl p-4 flex flex-col gap-1 items-start">
-              <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400 mb-1" />
-              <span className="text-3xl font-bold leading-none text-orange-700 dark:text-orange-300">{stats.inProgress}</span>
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Tasks</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Upcoming Today */}
-        <div className="flex-1 min-h-0 flex flex-col">
-          <h2 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3">Upcoming Today</h2>
-          <div className="flex-1 overflow-y-auto pr-1 space-y-3 pb-8">
-            {dateAppointments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No appointments today.</p>
-            ) : (
-              dateAppointments.map(apt => (
-                <div key={apt.id} className="flex items-center bg-card rounded-xl border border-slate-100 dark:border-slate-800 p-4 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex-1 flex flex-col gap-0.5 min-w-0">
-                    <span className="font-bold text-sm text-foreground truncate">{apt.petName}</span>
-                    <span className="text-xs text-muted-foreground truncate">{apt.packageName}</span>
-                  </div>
-                  <div className="text-xs font-semibold text-slate-500 bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-md">
-                    {apt.startTime}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
+      <GroomingSidebar
+        selectedDate={selectedDate}
+        todayStr={todayStr}
+        appointments={appointments}
+        viewMode={viewMode}
+        onDateChange={setSelectedDate}
+      />
 
       {/* ── Main View Area ── */}
       <div className="flex-1 flex flex-col min-w-0 gap-4 bg-slate-50/50 dark:bg-slate-900/20 rounded-[2rem] p-6 border shadow-sm">
@@ -664,7 +962,7 @@ export function GroomingCalendar() {
           <div className="flex items-center gap-6">
             <span className="flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-full px-3 py-1">
               <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
-              {stats.total} active events
+              {activeEventCount} active events
             </span>
             <span className="text-sm text-muted-foreground hidden lg:inline">
               Click any date & time to create a quick appointment.

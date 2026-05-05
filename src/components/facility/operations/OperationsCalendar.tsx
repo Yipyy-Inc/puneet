@@ -47,6 +47,7 @@ import {
 import { OperationsCalendarToolbar } from "@/components/facility/operations/OperationsCalendarToolbar";
 import { useSettings } from "@/hooks/use-settings";
 import { OperationsCalendarSidePanel } from "@/components/facility/operations/OperationsCalendarSidePanel";
+import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
 import {
   type CalendarCardFieldKey,
   type CalendarAxisMode,
@@ -2815,6 +2816,7 @@ export function OperationsCalendar() {
 
       {/* Main calendar area */}
       <div className="flex min-w-0 flex-1 flex-col space-y-4 overflow-auto p-4 pt-6 md:p-6">
+        <LocationFilterBanner />
         <OperationsCalendarToolbar
           view={view}
           onViewChange={setView}

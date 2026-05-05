@@ -935,11 +935,31 @@ export default function FacilityBookingDetailPage({
                   {client.phone && (
                     <InfoRow label="Phone">{client.phone}</InfoRow>
                   )}
-                  {client.emergencyContact?.name && (
-                    <InfoRow label="Emergency">
-                      {client.emergencyContact.name} (
-                      {client.emergencyContact.relationship}) ·{" "}
-                      {client.emergencyContact.phone}
+                  {client.additionalContacts?.length > 0 && (
+                    <InfoRow label="Additional contacts">
+                      <div className="space-y-1">
+                        {client.additionalContacts.map((contact) => (
+                          <div key={contact.id}>
+                            {contact.name}
+                            {contact.relationship
+                              ? ` (${contact.relationship})`
+                              : ""}{" "}
+                            · {contact.phone}
+                            {contact.tags.length > 0 && (
+                              <span className="text-muted-foreground ml-1 text-xs">
+                                —{" "}
+                                {contact.tags
+                                  .map((t) =>
+                                    t === "dropoff"
+                                      ? "Drop-off"
+                                      : t.charAt(0).toUpperCase() + t.slice(1),
+                                  )
+                                  .join(", ")}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </InfoRow>
                   )}
                 </div>

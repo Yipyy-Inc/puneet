@@ -28,6 +28,8 @@ import { NotesButton } from "@/components/shared/NotesButton";
 import { TagsButton } from "@/components/shared/TagsButton";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { BookingCard } from "@/components/clients/BookingCard";
+import { AdditionalContactsManager } from "@/components/clients/AdditionalContactsManager";
+import { ClientServicePreferences } from "@/components/clients/ClientServicePreferences";
 import { generateInvoiceForBooking } from "@/lib/invoice-generator";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -193,12 +195,7 @@ export default function ClientDetailPage({
       zip: "",
       country: "",
     },
-    emergencyContact: client?.emergencyContact || {
-      name: "",
-      relationship: "",
-      phone: "",
-      email: "",
-    },
+    additionalContacts: client?.additionalContacts ?? [],
   });
 
   if (!client) {
@@ -418,12 +415,7 @@ export default function ClientDetailPage({
         zip: "",
         country: "",
       },
-      emergencyContact: client.emergencyContact || {
-        name: "",
-        relationship: "",
-        phone: "",
-        email: "",
-      },
+      additionalContacts: client.additionalContacts ?? [],
     });
     setIsEditing(false);
   };
@@ -830,113 +822,26 @@ export default function ClientDetailPage({
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                   <AlertTriangle className="size-4" />
-                  Emergency Contact
+                  Additional Contacts
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {isEditing ? (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="emergencyName">Name</Label>
-                      <Input
-                        id="emergencyName"
-                        value={editedClient.emergencyContact.name}
-                        onChange={(e) =>
-                          setEditedClient({
-                            ...editedClient,
-                            emergencyContact: {
-                              ...editedClient.emergencyContact,
-                              name: e.target.value,
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="emergencyRelationship">
-                        Relationship
-                      </Label>
-                      <Input
-                        id="emergencyRelationship"
-                        value={editedClient.emergencyContact.relationship}
-                        onChange={(e) =>
-                          setEditedClient({
-                            ...editedClient,
-                            emergencyContact: {
-                              ...editedClient.emergencyContact,
-                              relationship: e.target.value,
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="emergencyPhone">Phone</Label>
-                      <Input
-                        id="emergencyPhone"
-                        value={editedClient.emergencyContact.phone}
-                        onChange={(e) =>
-                          setEditedClient({
-                            ...editedClient,
-                            emergencyContact: {
-                              ...editedClient.emergencyContact,
-                              phone: e.target.value,
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="emergencyEmail">Email</Label>
-                      <Input
-                        id="emergencyEmail"
-                        type="email"
-                        value={editedClient.emergencyContact.email}
-                        onChange={(e) =>
-                          setEditedClient({
-                            ...editedClient,
-                            emergencyContact: {
-                              ...editedClient.emergencyContact,
-                              email: e.target.value,
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                  </>
-                ) : client.emergencyContact ? (
-                  <>
-                    <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-2.5">
-                      <User className="text-muted-foreground size-4" />
-                      <div>
-                        <span className="text-sm font-medium">
-                          {client.emergencyContact.name}
-                        </span>
-                        <p className="text-muted-foreground text-xs">
-                          {client.emergencyContact.relationship}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-2.5">
-                      <Phone className="text-muted-foreground size-4" />
-                      <span className="text-sm font-medium">
-                        {client.emergencyContact.phone}
-                      </span>
-                    </div>
-                    {client.emergencyContact.email && (
-                      <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-2.5">
-                        <Mail className="text-muted-foreground size-4" />
-                        <span className="text-sm font-medium">
-                          {client.emergencyContact.email}
-                        </span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-muted-foreground py-4 text-center text-sm">
-                    No emergency contact on file
-                  </p>
-                )}
+              <CardContent>
+                <AdditionalContactsManager
+                  value={
+                    isEditing
+                      ? editedClient.additionalContacts
+                      : (client.additionalContacts ?? [])
+                  }
+                  onChange={(contacts) =>
+                    setEditedClient({
+                      ...editedClient,
+                      additionalContacts: contacts,
+                    })
+                  }
+                  disabled={!isEditing}
+                  heading=""
+                  description=""
+                />
               </CardContent>
             </Card>
           </div>
@@ -1217,6 +1122,9 @@ export default function ClientDetailPage({
               )}
             </CardContent>
           </Card>
+
+          {/* Service Preferences */}
+          <ClientServicePreferences clientId={client.id} />
 
           {/* Customer Notes */}
           <Card>

@@ -43,6 +43,8 @@ import { Separator } from "@/components/ui/separator";
 import { bookings as initialBookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
+import { boardingGuests, type BoardingGuest } from "@/data/boarding";
+import { PrintKennelCardsModal } from "@/components/facility/boarding/kennel-card-print";
 import { invoiceHeaderHtml } from "@/lib/invoice-header";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InvoicePanel } from "@/components/bookings/InvoicePanel";
@@ -321,7 +323,59 @@ export default function ClientBookingDetailPage({
   const [estimateOpen, setEstimateOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [retailOpen, setRetailOpen] = useState(false);
+  const [boardingSheetOpen, setBoardingSheetOpen] = useState(false);
   const [addedItems, setAddedItems] = useState<InvoiceLineItem[]>([]);
+
+  const isBoarding = booking?.service.toLowerCase() === "boarding";
+
+  const boardingGuestForPrint = useMemo<BoardingGuest | null>(() => {
+    if (!isBoarding || !booking || !pet) return null;
+    const refId = `bk-${String(booking.id).padStart(3, "0")}`;
+    const matched = boardingGuests.find((g) => g.bookingId === refId);
+    if (matched) return matched;
+    const allergyList = pet.allergies
+      ? pet.allergies
+          .split(/[,;]/)
+          .map((a) => a.trim())
+          .filter(Boolean)
+      : [];
+    return {
+      id: `synthetic-${booking.id}`,
+      petId: pet.id,
+      bookingId: refId,
+      petName: pet.name,
+      petBreed: pet.breed,
+      petSize: "medium",
+      petWeight: pet.weight,
+      petColor: pet.color,
+      petPhotoUrl: pet.imageUrl,
+      petAge: pet.age,
+      ownerId: client?.id ?? 0,
+      ownerName: client?.name ?? "",
+      ownerPhone: client?.phone ?? "",
+      emergencyVetContact: "",
+      checkInDate: booking.startDate,
+      checkOutDate: booking.endDate,
+      kennelId: booking.kennel ?? "",
+      kennelName: booking.kennel ?? "Unassigned",
+      status: "checked-in",
+      packageType: booking.serviceType ?? "Standard",
+      totalNights: nights,
+      nightlyRate: booking.basePrice,
+      discountApplied: 0,
+      peakSurcharge: 0,
+      totalPrice: booking.totalCost,
+      allergies: allergyList,
+      feedingInstructions: booking.specialRequests ?? "",
+      foodBrand: "",
+      feedingTimes: [],
+      feedingAmount: "",
+      medications: [],
+      tags: [],
+      notes: booking.specialRequests ?? "",
+      createdAt: new Date().toISOString(),
+    } as BoardingGuest;
+  }, [isBoarding, booking, pet, client, nights]);
 
   const bookingRef = formatBookingRef(booking?.id ?? bookingId);
 
@@ -726,7 +780,13 @@ ${(inv?.tipTotal ?? 0) > 0 ? `<div class="row sub"><span>Tip</span><span>$${(inv
                   Invoice / Receipt
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => toast.success("Care sheet printed")}
+                  onClick={() => {
+                    if (isBoarding && boardingGuestForPrint) {
+                      setBoardingSheetOpen(true);
+                    } else {
+                      toast.success("Care sheet printed");
+                    }
+                  }}
                 >
                   <ClipboardList className="size-4" />
                   Care Sheet
@@ -793,22 +853,6 @@ ${(inv?.tipTotal ?? 0) > 0 ? `<div class="row sub"><span>Tip</span><span>$${(inv
                 Mark as Ready
               </Button>
             )}
-
-            {/* Early Checkout — boarding only, active bookings */}
-            {booking.service.toLowerCase() === "boarding" &&
-              !isCancelled &&
-              booking.status !== "completed" &&
-              unifiedForEarlyCheckout && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 border-amber-300 text-xs text-amber-700 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/40"
-                  onClick={() => setEarlyCheckoutOpen(true)}
-                >
-                  <LogOut className="size-3.5" />
-                  Early Checkout
-                </Button>
-              )}
 
             {/* Checkout — for open/completed bookings */}
             {!isPaid && !isCancelled && (
@@ -1067,6 +1111,22 @@ ${
                         )}
                       </span>
                     </div>
+                    {booking.service.toLowerCase() === "boarding" &&
+                      !isCancelled &&
+                      booking.status !== "completed" &&
+                      unifiedForEarlyCheckout && (
+                        <div className="flex justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1.5 border-amber-300 text-xs text-amber-700 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/40"
+                            onClick={() => setEarlyCheckoutOpen(true)}
+                          >
+                            <LogOut className="size-3.5" />
+                            Early Checkout
+                          </Button>
+                        </div>
+                      )}
                     {booking.kennel && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Room</span>
@@ -1564,6 +1624,14 @@ ${
                 `Early checkout recorded for ${bookingRef}${reason ? ` · "${reason}"` : ""}`,
               );
             }}
+          />
+        )}
+        {boardingGuestForPrint && (
+          <PrintKennelCardsModal
+            open={boardingSheetOpen}
+            onClose={() => setBoardingSheetOpen(false)}
+            guests={[boardingGuestForPrint]}
+            initialFormat="kennel"
           />
         )}
         <PaymentCheckoutFlow

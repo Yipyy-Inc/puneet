@@ -8,11 +8,11 @@ export default function WaiversPage() {
       <div className="flex items-center justify-between space-y-2">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            Digital Waivers & E-Signatures
+            Digital Waivers
           </h2>
           <p className="text-muted-foreground">
-            Manage liability waivers and collect legally-binding electronic
-            signatures
+            Manage liability waiver templates. Signed waivers are stored in
+            each customer&apos;s file.
           </p>
         </div>
       </div>

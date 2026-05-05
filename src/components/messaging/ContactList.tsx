@@ -8,7 +8,15 @@ import {
   Plus,
   MessageSquare,
   X,
+  Smartphone,
+  ChevronRight,
+  RefreshCw,
 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Message } from "@/types/communications";
@@ -16,11 +24,34 @@ import type { ThreadMeta } from "@/types/messaging";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import { threadMeta as defaultThreadMeta } from "@/data/messaging";
-import { threadLocationMap } from "@/data/saved-replies";
+import { useFacilityRole } from "@/hooks/use-facility-role";
 import { getCustomerLanguageLabel } from "@/lib/language-settings";
-import { useLocationContext } from "@/hooks/use-location-context";
 import { ConversationRow } from "./ConversationRow";
 import { useConversationState } from "./conversation-state-context";
+import { threadLocationMap } from "@/data/saved-replies";
+import { useLocationContext } from "@/hooks/use-location-context";
+
+// SMS credits
+const facility = facilities.find((f) => f.id === 11);
+const credits = (facility as Record<string, unknown>)?.smsCredits as
+  | {
+      monthlyAllowance: number;
+      used: number;
+      purchased: number;
+      autoReload: boolean;
+      autoReloadThreshold: number;
+      autoReloadAmount: number;
+    }
+  | undefined;
+const smsTotal = credits ? credits.monthlyAllowance + (credits.purchased ?? 0) : 0;
+const smsRemaining = credits ? smsTotal - credits.used : 0;
+
+const SMS_PACKAGES = [
+  { amount: 100, price: 5 },
+  { amount: 500, price: 20 },
+  { amount: 1000, price: 35 },
+  { amount: 5000, price: 150 },
+];
 
 export interface Thread {
   threadId: string;
@@ -83,7 +114,7 @@ const FILTER_ITEMS: { key: Filter; label: string }[] = [
   { key: "sms", label: "SMS" },
 ];
 
-const CURRENT_USER_STAFF_ID = "staff-1";
+const CURRENT_USER_STAFF_ID = "staff-1"; // mock: "Sarah M." is logged in
 
 export function ContactList({
   messages,
@@ -101,9 +132,10 @@ export function ContactList({
   locationFilter?: string[];
 }) {
   const isCustomerMode = mode === "customer";
+  const { role } = useFacilityRole();
   const { locations } = useLocationContext();
+  const canPurchase = !isCustomerMode && (role === "owner" || role === "manager");
   const conversationState = useConversationState();
-
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [compose, setCompose] = useState(false);
@@ -231,7 +263,11 @@ export function ContactList({
     let list = threads;
 
     // Location filter (multi-location only)
-    if (!isCustomerMode && locationFilter && locationFilter.length > 0) {
+    if (
+      !isCustomerMode &&
+      locationFilter &&
+      locationFilter.length > 0
+    ) {
       const locSet = new Set(locationFilter);
       list = list.filter((t) => {
         const loc = threadLocationMap[t.threadId];
@@ -239,7 +275,7 @@ export function ContactList({
       });
     }
 
-    // Closed threads hidden unless explicitly viewing them
+    // Default: closed threads hidden unless explicitly viewing them
     if (!isCustomerMode && filter !== "closed") {
       list = list.filter((t) => !conversationState.closed.has(t.threadId));
     }
@@ -259,7 +295,6 @@ export function ContactList({
       list = list.filter(
         (t) => conversationState.assignments[t.threadId] === CURRENT_USER_STAFF_ID,
       );
-
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -367,12 +402,119 @@ export function ContactList({
               setCompose(!compose);
               setClientSearch("");
             }}
-            title={compose ? "Cancel" : "New message"}
           >
             {compose ? <X className="size-4" /> : <Plus className="size-4" />}
           </Button>
         )}
       </div>
+
+      {/* SMS credits strip */}
+      {credits && !compose && !isCustomerMode && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="mx-4 mb-1 flex w-[calc(100%-2rem)] items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-left transition-colors hover:bg-slate-100"
+            >
+              <Smartphone className="size-3.5 text-slate-400" />
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium text-slate-500">SMS Credits</span>
+                  <span
+                    className={cn(
+                      "text-[10px] font-bold tabular-nums",
+                      smsRemaining > 500
+                        ? "text-blue-600"
+                        : smsRemaining > 100
+                          ? "text-amber-600"
+                          : "text-red-500",
+                    )}
+                  >
+                    {smsRemaining.toLocaleString()} left
+                  </span>
+                </div>
+                <div className="mt-1 h-1 overflow-hidden rounded-full bg-blue-100">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all",
+                      smsRemaining > 500 ? "bg-blue-500" : smsRemaining > 100 ? "bg-amber-500" : "bg-red-500",
+                    )}
+                    style={{ width: `${Math.min(100, (smsRemaining / smsTotal) * 100)}%` }}
+                  />
+                </div>
+              </div>
+              <ChevronRight className="size-3 text-slate-300" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64 rounded-xl border-slate-200 p-0 shadow-lg">
+            <div className="px-4 pt-3.5 pb-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-500">SMS Balance</span>
+                <span
+                  className={cn(
+                    "text-lg leading-none font-bold tabular-nums",
+                    smsRemaining > 500 ? "text-blue-600" : smsRemaining > 100 ? "text-amber-600" : "text-red-500",
+                  )}
+                >
+                  {smsRemaining.toLocaleString()}
+                </span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-blue-100">
+                <div
+                  className={cn(
+                    "h-full rounded-full",
+                    smsRemaining > 500 ? "bg-blue-500" : smsRemaining > 100 ? "bg-amber-500" : "bg-red-500",
+                  )}
+                  style={{ width: `${Math.min(100, (smsRemaining / smsTotal) * 100)}%` }}
+                />
+              </div>
+              <div className="mt-1.5 flex gap-3 text-[10px] text-slate-400">
+                <span>{credits.monthlyAllowance.toLocaleString()} plan</span>
+                <span className="text-slate-300">·</span>
+                <span>{credits.purchased.toLocaleString()} extra</span>
+                <span className="text-slate-300">·</span>
+                <span>{credits.used.toLocaleString()} used</span>
+              </div>
+              {credits.autoReload && (
+                <div className="mt-2 flex items-center gap-1.5">
+                  <RefreshCw className="size-2.5 text-blue-400" />
+                  <span className="text-[10px] text-blue-500">Auto-reload on</span>
+                </div>
+              )}
+            </div>
+
+            {canPurchase && (
+              <div className="border-t border-slate-100 px-4 pt-2.5 pb-3">
+                <p className="mb-2 text-[11px] font-semibold text-slate-500">Buy More Credits</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {SMS_PACKAGES.map((pkg) => {
+                    const perSms = ((pkg.price / pkg.amount) * 100).toFixed(1);
+                    return (
+                      <button
+                        key={pkg.amount}
+                        type="button"
+                        onClick={() =>
+                          toast.success(`${pkg.amount.toLocaleString()} credits purchased — $${pkg.price}`)
+                        }
+                        className="group flex flex-col items-center rounded-lg border border-slate-100 bg-slate-50/50 px-2 py-2 transition-all hover:border-blue-200 hover:bg-blue-50"
+                      >
+                        <span className="text-sm font-bold text-slate-700 group-hover:text-blue-600">
+                          {pkg.amount >= 1000 ? `${pkg.amount / 1000}K` : pkg.amount}
+                        </span>
+                        <span className="text-[9px] text-slate-400">credits</span>
+                        <span className="mt-1 rounded-full bg-blue-50 px-2 py-px text-[10px] font-semibold text-blue-600 group-hover:bg-blue-100">
+                          ${pkg.price}
+                        </span>
+                        <span className="mt-0.5 text-[9px] text-slate-400">{perSms}¢/sms</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
+      )}
 
       {/* Search */}
       {showSearch && (
@@ -382,7 +524,7 @@ export function ContactList({
             <Input
               placeholder={
                 compose
-                  ? "Search clients or enter phone / email…"
+                  ? "Search clients..."
                   : isCustomerMode
                     ? "Search facilities..."
                     : "Search by name, phone, email..."
@@ -416,7 +558,7 @@ export function ContactList({
         </div>
       )}
 
-      {/* Compose — client search with unknown-number support */}
+      {/* Compose — client search */}
       {!isCustomerMode && compose && (
         <div className="flex-1 overflow-y-auto">
           {clientResults.length === 0 && clientSearch.trim() ? (
@@ -445,12 +587,13 @@ export function ContactList({
                     Start new contact
                   </p>
                   <p className="truncate text-xs text-blue-500/80">
-                    Send to "{clientSearch.trim()}" — we'll create a profile.
+                    Send to “{clientSearch.trim()}” — we'll create a profile.
                   </p>
                 </div>
               </button>
               <p className="mt-2 text-[10px] text-slate-400">
-                Works for unknown numbers, walk-ins, and inbound inquiries.
+                Works for unknown numbers, walk-ins, and inbound inquiries from
+                channels we haven't matched yet.
               </p>
             </div>
           ) : (

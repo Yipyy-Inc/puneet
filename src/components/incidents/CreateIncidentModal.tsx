@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   DialogHeader,
@@ -47,10 +47,23 @@ import {
   PawPrint,
   ChevronDown,
   ChevronRight,
+  ClipboardList,
+  Phone,
+  Mail,
+  Sparkles,
+  Clock as ClockIcon,
+  Video,
+  ArrowUpRight,
 } from "lucide-react";
 import { clients } from "@/data/clients";
 import { useAiText } from "@/hooks/use-ai-text";
 import { AiGenerateButton } from "@/components/shared/AiGenerateButton";
+import {
+  followUpProtocols,
+  suggestProtocols,
+} from "@/data/follow-up-protocols";
+import { generateFollowUpTasks } from "@/lib/incidents/generate-follow-up-tasks";
+import type { ContactMethod } from "@/types/incidents";
 
 interface CreateIncidentModalProps {
   onClose: () => void;
@@ -465,6 +478,8 @@ export function CreateIncidentModal({
   const [photos, setPhotos] = useState<
     { id: string; url: string; caption: string; isClientVisible: boolean }[]
   >([]);
+  const [selectedProtocolId, setSelectedProtocolId] = useState<string | "">("");
+  const [autoSuggested, setAutoSuggested] = useState(false);
 
   const allPets = clients.flatMap((client) =>
     client.pets.map((pet) => ({
@@ -507,12 +522,91 @@ export function CreateIncidentModal({
 
   const handleSubmit = () => {
     const fullIncidentDate = incidentDate ? `${incidentDate}T${incidentTime}:00` : "";
-    console.log("Creating incident:", { incidentType, severity, title, description, internalNotes, clientFacingNotes, incidentDate: fullIncidentDate, selectedPets, staffInvolved, reportedBy, notifyManager, notifyClient }, "Photos:", photos, { reservationId, boardingGuestId });
+    const generatedTasks = selectedProtocol
+      ? generateFollowUpTasks(selectedProtocol, {
+          incidentId: `INC-${Date.now()}`,
+          incidentDate: fullIncidentDate || new Date().toISOString(),
+          reporter: reportedBy,
+        })
+      : [];
+    console.log(
+      "Creating incident:",
+      {
+        incidentType,
+        severity,
+        title,
+        description,
+        internalNotes,
+        clientFacingNotes,
+        incidentDate: fullIncidentDate,
+        selectedPets,
+        staffInvolved,
+        reportedBy,
+        notifyManager,
+        notifyClient,
+        followUpProtocolId: selectedProtocolId || undefined,
+        followUpTasks: generatedTasks,
+      },
+      "Photos:",
+      photos,
+      { reservationId, boardingGuestId },
+    );
     onClose();
+  };
+
+  const pickContactIcon = (method: ContactMethod | undefined) => {
+    switch (method) {
+      case "phone":
+        return Phone;
+      case "email":
+        return Mail;
+      case "sms":
+        return MessageSquare;
+      case "in_person":
+        return Users;
+      case "video_call":
+        return Video;
+      default:
+        return ArrowUpRight;
+    }
   };
 
   const aiDescription = useAiText({ type: "incident_description", maxWords: 100 });
   const aiClientNote = useAiText({ type: "incident_client_note", maxWords: 80 });
+
+  // Auto-suggest a protocol once we know severity + type
+  const suggestedProtocols = useMemo(() => {
+    if (!incidentType || !severity) return [];
+    return suggestProtocols(severity, incidentType);
+  }, [incidentType, severity]);
+
+  useEffect(() => {
+    if (autoSuggested) return;
+    const top = suggestedProtocols[0];
+    if (top && !selectedProtocolId) {
+      setSelectedProtocolId(top.id);
+      setAutoSuggested(true);
+    }
+  }, [suggestedProtocols, selectedProtocolId, autoSuggested]);
+
+  const selectedProtocol = useMemo(
+    () => followUpProtocols.find((p) => p.id === selectedProtocolId),
+    [selectedProtocolId],
+  );
+
+  // Preview the tasks that will be generated
+  const previewTasks = useMemo(() => {
+    if (!selectedProtocol) return [];
+    const fullDate =
+      incidentDate && incidentTime
+        ? `${incidentDate}T${incidentTime}:00`
+        : new Date().toISOString();
+    return generateFollowUpTasks(selectedProtocol, {
+      incidentId: "PREVIEW",
+      incidentDate: fullDate,
+      reporter: reportedBy || "Reporter",
+    });
+  }, [selectedProtocol, incidentDate, incidentTime, reportedBy]);
 
   const selectedSeverityMeta = SEVERITY_LEVELS.find((s) => s.value === severity);
   const isCriticalOrHigh = severity === "critical" || severity === "high";
@@ -1014,6 +1108,124 @@ export function CreateIncidentModal({
                 onCheckedChange={(v) => setNotifyClient(v as boolean)}
               />
             </label>
+          </div>
+        </div>
+
+        {/* ── Follow-Up Protocol ────────────────────────────────────────────── */}
+        <div className="space-y-3">
+          <SectionHeader
+            icon={ClipboardList}
+            label="Follow-Up Protocol"
+            iconBg="bg-indigo-100 dark:bg-indigo-900/30"
+            iconColor="text-indigo-600 dark:text-indigo-400"
+            badge={
+              suggestedProtocols.length > 0 && selectedProtocolId === suggestedProtocols[0]?.id ? (
+                <Badge variant="secondary" className="gap-1 text-[10px]">
+                  <Sparkles className="size-3" />
+                  Auto-selected
+                </Badge>
+              ) : null
+            }
+          />
+
+          <div className="rounded-xl border bg-card p-4 space-y-3">
+            <p className="text-muted-foreground text-xs">
+              Choose a procedure for the follow-up calls. Tasks will be
+              auto-generated and assigned to the right person on the right day.
+            </p>
+
+            <Select
+              value={selectedProtocolId}
+              onValueChange={(v) => {
+                setSelectedProtocolId(v);
+                setAutoSuggested(true);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="No follow-up protocol" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">
+                  <span className="text-muted-foreground">
+                    None — handle follow-up ad-hoc
+                  </span>
+                </SelectItem>
+                {suggestedProtocols.length > 0 && (
+                  <>
+                    <div className="text-muted-foreground px-2 py-1 text-[10px] font-semibold uppercase">
+                      Suggested for {severity || "this"} severity
+                    </div>
+                    {suggestedProtocols.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+                {followUpProtocols.filter(
+                  (p) => p.isActive && !suggestedProtocols.includes(p),
+                ).length > 0 && (
+                  <>
+                    <div className="text-muted-foreground px-2 py-1 text-[10px] font-semibold uppercase">
+                      Other protocols
+                    </div>
+                    {followUpProtocols
+                      .filter((p) => p.isActive && !suggestedProtocols.includes(p))
+                      .map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+
+            {selectedProtocol && (
+              <div className="space-y-2">
+                <p className="text-muted-foreground text-xs">
+                  {selectedProtocol.description}
+                </p>
+                <div className="bg-muted/40 space-y-1.5 rounded-lg p-3">
+                  <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                    {previewTasks.length} task
+                    {previewTasks.length === 1 ? "" : "s"} will be created
+                  </p>
+                  <ol className="space-y-1.5">
+                    {previewTasks.map((task) => {
+                      const due = new Date(task.dueDate);
+                      const ContactIcon = pickContactIcon(task.contactMethod);
+                      return (
+                        <li
+                          key={task.id}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <span className="bg-background flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold">
+                            {task.stepOrder}
+                          </span>
+                          <ContactIcon className="text-muted-foreground size-3 shrink-0" />
+                          <span className="truncate font-medium">
+                            {task.title}
+                          </span>
+                          <span className="text-muted-foreground ml-auto flex shrink-0 items-center gap-1 text-[10px]">
+                            <ClockIcon className="size-3" />
+                            {due.toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                            {" "}
+                            {due.toLocaleTimeString(undefined, {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

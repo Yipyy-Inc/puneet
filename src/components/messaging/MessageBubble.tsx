@@ -36,7 +36,10 @@ function ChannelIcon({
   type: string;
   outbound?: boolean;
 }) {
-  const cls = cn("size-2.5", outbound ? "text-white/60" : "text-slate-400");
+  const cls = cn(
+    "size-2.5",
+    outbound ? "text-white/60" : "text-slate-400",
+  );
   if (type === "email") return <Mail className={cls} />;
   if (type === "sms") return <Smartphone className={cls} />;
   return <MessageSquare className={cls} />;

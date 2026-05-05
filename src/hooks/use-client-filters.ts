@@ -22,7 +22,8 @@ export interface ClientFilters {
   status: string[]; // multi-select: "active", "inactive"
   preferredLanguages: string[]; // multi-select: "en", "fr", etc.
   hasAddress: TriState;
-  hasEmergencyContact: TriState;
+  hasAdditionalContact: TriState;
+  isBlocked: TriState;
 
   // Pets
   hasPets: TriState;
@@ -60,7 +61,8 @@ const DEFAULT_FILTERS: ClientFilters = {
   status: [],
   preferredLanguages: [],
   hasAddress: "any",
-  hasEmergencyContact: "any",
+  hasAdditionalContact: "any",
+  isBlocked: "any",
   hasPets: "any",
   petTypes: [],
   hasAllergies: "any",
@@ -131,7 +133,8 @@ export function useClientFilters() {
     if (filters.status.length > 0) count++;
     if (filters.preferredLanguages.length > 0) count++;
     if (filters.hasAddress !== "any") count++;
-    if (filters.hasEmergencyContact !== "any") count++;
+    if (filters.hasAdditionalContact !== "any") count++;
+    if (filters.isBlocked !== "any") count++;
     if (filters.hasPets !== "any") count++;
     if (filters.petTypes.length > 0) count++;
     if (filters.hasAllergies !== "any") count++;
@@ -181,17 +184,21 @@ export function useClientFilters() {
           return false;
         if (filters.hasAddress === "no" && client.address?.street) return false;
 
-        // Has Emergency Contact
+        // Has Additional Contact
         if (
-          filters.hasEmergencyContact === "yes" &&
-          !client.emergencyContact?.name
+          filters.hasAdditionalContact === "yes" &&
+          (client.additionalContacts ?? []).length === 0
         )
           return false;
         if (
-          filters.hasEmergencyContact === "no" &&
-          client.emergencyContact?.name
+          filters.hasAdditionalContact === "no" &&
+          (client.additionalContacts ?? []).length > 0
         )
           return false;
+
+        // Blocked
+        if (filters.isBlocked === "yes" && !client.isBlocked) return false;
+        if (filters.isBlocked === "no" && client.isBlocked) return false;
 
         // Has Pets
         if (filters.hasPets === "yes" && client.pets.length === 0) return false;

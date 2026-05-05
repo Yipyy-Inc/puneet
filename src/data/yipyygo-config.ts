@@ -100,9 +100,9 @@ export const defaultFormTemplate: FormTemplateConfig = {
       required: false,
       order: 4,
     },
-    emergencyContact: {
-      id: "emergency-contact",
-      label: "Emergency Contact",
+    additionalContacts: {
+      id: "additional-contacts",
+      label: "Additional Contacts",
       enabled: true,
       required: true,
       order: 5,

@@ -857,7 +857,7 @@ export const facilities = [
         feeding: "required" as const,
         medication: "required" as const,
         belongings: "optional" as const,
-        emergencyContact: "required" as const,
+        additionalContacts: "required" as const,
         vaccination: "required" as const,
         waiver: "required" as const,
       },

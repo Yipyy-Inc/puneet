@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { QRCodeSVG } from "qrcode.react";
 import {
   CreditCard,
@@ -33,6 +34,7 @@ import {
   RefreshCw,
   Tag,
   SkipForward,
+  Search,
 } from "lucide-react";
 import {
   getCurrentGuests,
@@ -113,6 +115,7 @@ function CheckInPrintPrompt({
 export default function KennelCardsPage() {
   const currentGuests = getCurrentGuests();
   const [selectedGuestId, setSelectedGuestId] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [printSingleId, setPrintSingleId] = useState<string | null>(null);
@@ -131,6 +134,16 @@ export default function KennelCardsPage() {
   }, []);
 
   const selectedGuest = currentGuests.find((g) => g.id === selectedGuestId);
+
+  const filteredGuests = (() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return currentGuests;
+    return currentGuests.filter((g) =>
+      [g.petName, g.petBreed, g.ownerName, g.kennelName]
+        .filter(Boolean)
+        .some((field) => field.toLowerCase().includes(q)),
+    );
+  })();
 
   const generateKennelCard = (guest: BoardingGuest): KennelCardData => {
     return {
@@ -220,7 +233,7 @@ export default function KennelCardsPage() {
           <div className="flex items-center justify-between gap-4">
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <CreditCard className="size-5" />
-              Generate Kennel Card
+              Generate Boarding Sheet
             </CardTitle>
             <Button
               variant="outline"
@@ -289,10 +302,21 @@ export default function KennelCardsPage() {
       {/* Generated Cards List */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <CreditCard className="size-5" />
-            Generated Kennel Cards
-          </CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <CreditCard className="size-5" />
+              Generated Boarding Sheets
+            </CardTitle>
+            <div className="relative w-full sm:w-72">
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by pet, breed, owner, or kennel"
+                className="pl-9"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {currentGuests.length === 0 ? (
@@ -300,9 +324,14 @@ export default function KennelCardsPage() {
               <PawPrint className="mx-auto mb-3 size-12 opacity-50" />
               <p>No boarding guests currently</p>
             </div>
+          ) : filteredGuests.length === 0 ? (
+            <div className="text-muted-foreground py-8 text-center">
+              <Search className="mx-auto mb-3 size-12 opacity-50" />
+              <p>No pets match &ldquo;{searchQuery}&rdquo;</p>
+            </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {currentGuests.map((guest) => {
+              {filteredGuests.map((guest) => {
                 const card = generatedCards.get(guest.id);
                 return (
                   <div

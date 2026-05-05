@@ -202,15 +202,27 @@ export function ComposeBar({
       {/* Extra actions row */}
       {showExtras && (
         <div className="flex items-center gap-1 border-b px-4 py-2">
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5 rounded-full text-xs text-slate-500 hover:bg-blue-50 hover:text-blue-600">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 rounded-full text-xs text-slate-500 hover:bg-blue-50 hover:text-blue-600"
+          >
             <ImageIcon className="size-4" />
             Photo
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5 rounded-full text-xs text-slate-500 hover:bg-blue-50 hover:text-blue-600">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 rounded-full text-xs text-slate-500 hover:bg-blue-50 hover:text-blue-600"
+          >
             <Paperclip className="size-4" />
             File
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5 rounded-full text-xs text-slate-500 hover:bg-blue-50 hover:text-blue-600">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 rounded-full text-xs text-slate-500 hover:bg-blue-50 hover:text-blue-600"
+          >
             <Mic className="size-4" />
             Voice
           </Button>
@@ -286,7 +298,7 @@ export function ComposeBar({
             value={text}
             onChange={(e) => handleTextChange(e.target.value)}
             onKeyDown={(e) => {
-              if (savedRepliesOpen) return;
+              if (savedRepliesOpen) return; // menu owns keys
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 handleSend();

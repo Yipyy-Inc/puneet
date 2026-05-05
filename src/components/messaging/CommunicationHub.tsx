@@ -95,7 +95,10 @@ function HubInner() {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {tab === "inbox" && (
           <div className="flex min-h-0 w-full flex-1 overflow-hidden p-4">
-            <MessageCenter mode="facility" locationFilter={locationFilter} />
+            <MessageCenter
+              mode="facility"
+              locationFilter={locationFilter}
+            />
           </div>
         )}
         {tab === "scheduled" && (

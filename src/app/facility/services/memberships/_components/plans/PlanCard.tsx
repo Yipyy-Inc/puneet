@@ -24,6 +24,7 @@ import {
   Percent,
   Infinity as InfinityIcon,
   Calendar,
+  Zap,
 } from "lucide-react";
 import type {
   MembershipPlan,
@@ -110,6 +111,15 @@ export function PlanCard({
                   <Badge className="gap-0.5 bg-amber-500 text-xs hover:bg-amber-500">
                     <Sparkles className="size-3" />
                     Popular
+                  </Badge>
+                )}
+                {plan.instabookServices && plan.instabookServices.length > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="gap-0.5 border-amber-300 bg-amber-50 text-xs text-amber-800"
+                  >
+                    <Zap className="size-3" />
+                    Instant booking
                   </Badge>
                 )}
               </div>

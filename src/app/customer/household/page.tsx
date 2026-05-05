@@ -47,12 +47,7 @@ export default function CustomerHouseholdPage() {
     name: customer?.name || "",
     email: customer?.email || "",
     phone: customer?.phone || "",
-    emergencyContact: {
-      name: customer?.emergencyContact?.name || "",
-      relationship: customer?.emergencyContact?.relationship || "",
-      phone: customer?.emergencyContact?.phone || "",
-      email: customer?.emergencyContact?.email || "",
-    },
+    additionalContacts: customer?.additionalContacts ?? [],
   });
 
   const [householdContacts, setHouseholdContacts] = useState<
@@ -69,23 +64,20 @@ export default function CustomerHouseholdPage() {
       canViewCameras: true,
     };
 
-    const secondaryFromEmergency = profileData.emergencyContact.name
-      ? ({
-          id: "secondary-1",
-          name: profileData.emergencyContact.name,
-          email: profileData.emergencyContact.email,
-          phone: profileData.emergencyContact.phone,
-          relationship:
-            profileData.emergencyContact.relationship || "Secondary contact",
-          canBook: true,
-          canPay: false,
-          canViewCameras: true,
-        } as HouseholdContact)
-      : undefined;
+    const secondaries: HouseholdContact[] = profileData.additionalContacts
+      .filter((c) => c.name.trim())
+      .map((c, idx) => ({
+        id: `secondary-${c.id ?? idx}`,
+        name: c.name,
+        email: c.email ?? "",
+        phone: c.phone,
+        relationship: c.relationship || "Additional contact",
+        canBook: true,
+        canPay: false,
+        canViewCameras: true,
+      }));
 
-    return secondaryFromEmergency
-      ? [primary, secondaryFromEmergency]
-      : [primary];
+    return [primary, ...secondaries];
   });
 
   const [newContact, setNewContact] = useState<HouseholdContact>({
@@ -123,12 +115,7 @@ export default function CustomerHouseholdPage() {
       name: customer?.name || "",
       email: customer?.email || "",
       phone: customer?.phone || "",
-      emergencyContact: {
-        name: customer?.emergencyContact?.name || "",
-        relationship: customer?.emergencyContact?.relationship || "",
-        phone: customer?.emergencyContact?.phone || "",
-        email: customer?.emergencyContact?.email || "",
-      },
+      additionalContacts: customer?.additionalContacts ?? [],
     });
     setIsEditing(false);
   };

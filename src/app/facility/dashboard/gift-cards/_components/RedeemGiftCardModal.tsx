@@ -25,6 +25,9 @@ import {
 import { cn } from "@/lib/utils";
 import { giftCards } from "@/data/gift-cards";
 import { clients } from "@/data/clients";
+import { useLocationContext } from "@/hooks/use-location-context";
+import { canRedeemGiftCard } from "@/lib/hq/redemption";
+import { deriveLocationId } from "@/data/locations";
 
 interface RedeemGiftCardModalProps {
   open: boolean;
@@ -48,6 +51,24 @@ export function RedeemGiftCardModal({
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const { currentLocation, settings, locations, isMultiLocation } =
+    useLocationContext();
+
+  // Derive the gift card's origin location (until the data model carries it)
+  const giftCardOrigin = foundCard
+    ? deriveLocationId(foundCard.id)
+    : null;
+  const giftCardOriginLocation = giftCardOrigin
+    ? locations.find((l) => l.id === giftCardOrigin)
+    : null;
+  const crossLocationCheck =
+    foundCard && currentLocation && giftCardOrigin
+      ? canRedeemGiftCard({
+          redemptionLocationId: currentLocation.id,
+          originLocationId: giftCardOrigin,
+          settings,
+        })
+      : { allowed: true, reason: null };
 
   const handleSearch = async () => {
     if (!cardCode.trim()) return;
@@ -78,7 +99,8 @@ export function RedeemGiftCardModal({
     lookupState === "found" &&
     redeemAmount > 0 &&
     redeemAmount <= (foundCard?.currentBalance ?? 0) &&
-    (!requiresPin || pin.length === 4);
+    (!requiresPin || pin.length === 4) &&
+    crossLocationCheck.allowed;
 
   const handleRedeem = async () => {
     setLoading(true);
@@ -191,6 +213,33 @@ export function RedeemGiftCardModal({
           {/* Card found */}
           {lookupState === "found" && foundCard && (
             <div className="space-y-4">
+              {/* Cross-location warning / info */}
+              {isMultiLocation &&
+                giftCardOriginLocation &&
+                currentLocation &&
+                giftCardOriginLocation.id !== currentLocation.id && (
+                  <div
+                    className={cn(
+                      "flex items-start gap-2.5 rounded-xl border px-3 py-2.5 text-xs",
+                      crossLocationCheck.allowed
+                        ? "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900 dark:bg-sky-900/20 dark:text-sky-300"
+                        : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-900/20 dark:text-rose-300",
+                    )}
+                  >
+                    <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                    <div className="flex-1">
+                      <p className="font-semibold">
+                        {crossLocationCheck.allowed
+                          ? `Cross-location redemption — purchased at ${giftCardOriginLocation.name}`
+                          : `Blocked — purchased at ${giftCardOriginLocation.name}`}
+                      </p>
+                      {crossLocationCheck.reason && (
+                        <p className="mt-0.5">{crossLocationCheck.reason}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
               {/* Card details */}
               <div className="rounded-xl border bg-gradient-to-r from-violet-50 to-purple-50 p-4 dark:from-violet-950/30 dark:to-purple-950/30">
                 <div className="flex items-start justify-between">

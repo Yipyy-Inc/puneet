@@ -32,7 +32,6 @@ import {
   GraduationCap,
   ClipboardList,
   ClipboardCheck,
-  LayoutTemplate,
   Plus,
   Globe,
   GitCompare,
@@ -40,6 +39,7 @@ import {
   HeartHandshake,
   Gift,
   ShieldCheck,
+  Boxes,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
@@ -85,7 +85,7 @@ export function FacilitySidebar() {
             disabled: false,
           },
           {
-            title: "Kennel View",
+            title: "Occupancy",
             url: "/facility/dashboard/kennel-view",
             icon: Grid3X3,
             disabled: false,
@@ -359,12 +359,6 @@ export function FacilitySidebar() {
             icon: ClipboardList,
             disabled: false,
           },
-          {
-            title: "Templates",
-            url: "/facility/dashboard/forms/templates",
-            icon: LayoutTemplate,
-            disabled: false,
-          },
         ],
       },
       ...(isMultiLocation
@@ -382,6 +376,18 @@ export function FacilitySidebar() {
                   title: "Compare Locations",
                   url: "/facility/hq/comparison",
                   icon: GitCompare,
+                  disabled: false,
+                },
+                {
+                  title: "HQ Reports",
+                  url: "/facility/hq/reports",
+                  icon: BarChart3,
+                  disabled: false,
+                },
+                {
+                  title: "Service Catalog",
+                  url: "/facility/hq/services",
+                  icon: Boxes,
                   disabled: false,
                 },
                 {

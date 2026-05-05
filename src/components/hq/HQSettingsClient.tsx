@@ -19,14 +19,29 @@ import {
   Check,
   Pencil,
   Save,
+  ChevronRight,
+  Network,
+  Plus,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import type { HQSettings, Location } from "@/types/location";
+import {
+  locationStyles,
+  styleFromKey,
+  type LocationColorKey,
+} from "@/lib/hq/location-styles";
+import { AddLocationDialog } from "@/components/hq/AddLocationDialog";
 
 interface Props {
   settings: HQSettings;
@@ -39,27 +54,25 @@ function ToggleSetting({
   icon: Icon,
   value,
   onChange,
-  accent,
+  tone = "sky",
 }: {
   label: string;
   description: string;
-  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  icon: React.ComponentType<{ className?: string }>;
   value: boolean;
   onChange: (v: boolean) => void;
-  accent?: string;
+  tone?: LocationColorKey;
 }) {
+  const s = styleFromKey(tone);
   return (
     <div className="flex items-start justify-between gap-4 py-4">
       <div className="flex items-start gap-3">
-        <div
-          className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg"
-          style={{ backgroundColor: `${accent ?? "#0ea5e9"}18` }}
-        >
-          <Icon className="size-4" style={{ color: accent ?? "#0ea5e9" }} />
+        <div className={cn("mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg", s.bgSoft)}>
+          <Icon className={cn("size-4", s.text)} />
         </div>
         <div>
-          <p className="text-sm font-medium">{label}</p>
-          <p className="text-muted-foreground text-xs leading-relaxed">{description}</p>
+          <p className="text-sm font-semibold">{label}</p>
+          <p className="text-muted-foreground mt-0.5 text-xs/relaxed">{description}</p>
         </div>
       </div>
       <button
@@ -70,6 +83,7 @@ function ToggleSetting({
         )}
         role="switch"
         aria-checked={value}
+        aria-label={label}
       >
         <span
           className={cn(
@@ -89,40 +103,38 @@ function ScopeSetting({
   value,
   options,
   onChange,
-  accent,
+  tone = "violet",
 }: {
   label: string;
   description: string;
-  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  icon: React.ComponentType<{ className?: string }>;
   value: string;
   options: { value: string; label: string }[];
   onChange: (v: string) => void;
-  accent?: string;
+  tone?: LocationColorKey;
 }) {
+  const s = styleFromKey(tone);
   return (
     <div className="flex items-start justify-between gap-4 py-4">
       <div className="flex items-start gap-3">
-        <div
-          className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg"
-          style={{ backgroundColor: `${accent ?? "#8b5cf6"}18` }}
-        >
-          <Icon className="size-4" style={{ color: accent ?? "#8b5cf6" }} />
+        <div className={cn("mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg", s.bgSoft)}>
+          <Icon className={cn("size-4", s.text)} />
         </div>
         <div>
-          <p className="text-sm font-medium">{label}</p>
-          <p className="text-muted-foreground text-xs leading-relaxed">{description}</p>
+          <p className="text-sm font-semibold">{label}</p>
+          <p className="text-muted-foreground mt-0.5 text-xs/relaxed">{description}</p>
         </div>
       </div>
-      <div className="flex gap-1 shrink-0">
+      <div className="bg-muted/40 flex shrink-0 gap-1 rounded-lg p-0.5">
         {options.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all",
+              "rounded-md px-2.5 py-1 text-xs font-medium transition-all",
               value === opt.value
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted/60",
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             {opt.label}
@@ -133,9 +145,55 @@ function ScopeSetting({
   );
 }
 
-export function HQSettingsClient({ settings, locations }: Props) {
+function ChoiceCard({
+  active,
+  onClick,
+  title,
+  description,
+  icon: Icon,
+}: {
+  active: boolean;
+  onClick: () => void;
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "group relative flex flex-col gap-2 rounded-xl border p-4 text-left transition-all",
+        active
+          ? "border-primary bg-primary/5 shadow-sm"
+          : "hover:border-border/80 hover:bg-muted/30",
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <div
+          className={cn(
+            "flex size-8 items-center justify-center rounded-lg transition-colors",
+            active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+          )}
+        >
+          <Icon className="size-4" />
+        </div>
+        {active && (
+          <div className="bg-primary flex size-5 items-center justify-center rounded-full">
+            <Check className="size-3 text-white" />
+          </div>
+        )}
+      </div>
+      <span className="text-sm font-semibold">{title}</span>
+      <span className="text-muted-foreground text-xs/relaxed">{description}</span>
+    </button>
+  );
+}
+
+export function HQSettingsClient({ settings, locations: initialLocations }: Props) {
   const [s, setS] = useState(settings);
   const [dirty, setDirty] = useState(false);
+  const [locations, setLocations] = useState(initialLocations);
+  const [addOpen, setAddOpen] = useState(false);
 
   const update = (patch: Partial<typeof s>) => {
     setS((prev) => ({ ...prev, ...patch }));
@@ -144,11 +202,25 @@ export function HQSettingsClient({ settings, locations }: Props) {
 
   const save = () => {
     setDirty(false);
-    toast.success("HQ settings saved successfully");
+    toast.success("HQ settings saved");
+  };
+
+  const handleAddLocation = (loc: Location) => {
+    setLocations((prev) => {
+      // If the new one is primary, unset the previous primary
+      const next = loc.isPrimary
+        ? prev.map((l) => ({ ...l, isPrimary: false }))
+        : prev;
+      return [...next, loc];
+    });
+    update({
+      locations: [...s.locations, loc.id],
+      ...(loc.isPrimary ? { primaryLocationId: loc.id } : {}),
+    });
   };
 
   return (
-    <div className="flex-1 space-y-8 p-4 pt-6 md:p-8">
+    <div className="flex-1 space-y-7 p-4 pt-6 md:p-8">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -158,16 +230,20 @@ export function HQSettingsClient({ settings, locations }: Props) {
             </Button>
           </Link>
           <div>
+            <div className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium">
+              <Link href="/facility/hq/overview" className="hover:text-foreground transition-colors">
+                HQ
+              </Link>
+              <ChevronRight className="size-3" />
+              <span>Settings</span>
+            </div>
             <h1 className="text-2xl font-bold tracking-tight">HQ Settings</h1>
-            <p className="text-muted-foreground text-sm">Multi-location controls & policies</p>
+            <p className="text-muted-foreground text-sm">
+              Multi-location controls, policies & data sharing
+            </p>
           </div>
         </div>
-        <Button
-          size="sm"
-          className="gap-1.5"
-          onClick={save}
-          disabled={!dirty}
-        >
+        <Button size="sm" className="gap-1.5" onClick={save} disabled={!dirty}>
           <Save className="size-3.5" />
           Save Changes
         </Button>
@@ -180,65 +256,93 @@ export function HQSettingsClient({ settings, locations }: Props) {
         </div>
       )}
 
-      {/* Locations Overview */}
-      <Card>
+      {/* Locations overview */}
+      <Card className="overflow-hidden">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Globe className="size-4" />
-            Locations
-          </CardTitle>
-          <CardDescription>All active locations in this facility network</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {locations.map((loc) => (
-            <div
-              key={loc.id}
-              className="flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors hover:bg-muted/30"
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Building2 className="size-4" />
+                Active Locations
+              </CardTitle>
+              <CardDescription>{locations.length} branches in this network</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => setAddOpen(true)}
             >
+              <Plus className="size-3.5" />
+              Add Location
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {locations.map((loc) => {
+            const ls = locationStyles(loc);
+            return (
               <div
-                className="flex size-8 items-center justify-center rounded-lg text-[11px] font-bold text-white"
-                style={{ backgroundColor: loc.color }}
+                key={loc.id}
+                className={cn(
+                  "group relative overflow-hidden rounded-xl border p-3 transition-all hover:shadow-sm",
+                  ls.borderSoft,
+                )}
               >
-                {loc.shortCode}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium truncate">{loc.name}</p>
-                  {loc.isPrimary && (
-                    <Badge variant="secondary" className="text-[10px]">Primary</Badge>
-                  )}
+                <div className={cn("absolute inset-x-0 top-0 h-0.5", ls.bg)} />
+                <div className="flex items-start gap-2.5">
+                  <div
+                    className={cn(
+                      "flex size-9 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold text-white shadow-sm",
+                      ls.bg,
+                    )}
+                  >
+                    {loc.shortCode}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="truncate text-sm font-semibold">{loc.name}</p>
+                      {loc.isPrimary && (
+                        <span className="rounded-sm bg-sky-100 px-1 py-px text-[9px] font-bold text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+                          Primary
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground flex items-center gap-1 text-[11px]">
+                      <MapPin className="size-3" />
+                      {loc.city}
+                    </p>
+                  </div>
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                      loc.isActive
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                        : "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "size-1.5 rounded-full",
+                        loc.isActive ? "bg-emerald-500" : "bg-rose-500",
+                      )}
+                    />
+                    {loc.isActive ? "Live" : "Off"}
+                  </span>
                 </div>
-                <p className="text-muted-foreground flex items-center gap-1 text-[11px]">
-                  <MapPin className="size-3" />
-                  {loc.address}, {loc.city}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="flex gap-1 flex-wrap justify-end">
+                <div className="mt-2 flex flex-wrap gap-1">
                   {loc.services.map((svc) => (
-                    <Badge key={svc} variant="outline" className="text-[10px] capitalize">{svc}</Badge>
+                    <span
+                      key={svc}
+                      className={cn("rounded-md px-1.5 py-0.5 text-[10px] capitalize", ls.badge)}
+                    >
+                      {svc}
+                    </span>
                   ))}
                 </div>
-                <div className={cn(
-                  "flex size-6 items-center justify-center rounded-full",
-                  loc.isActive ? "bg-emerald-100 dark:bg-emerald-950/40" : "bg-red-100 dark:bg-red-950/40",
-                )}>
-                  <div className={cn(
-                    "size-2 rounded-full",
-                    loc.isActive ? "bg-emerald-500" : "bg-red-500",
-                  )} />
-                </div>
               </div>
-            </div>
-          ))}
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2 w-full gap-1.5 text-xs"
-            onClick={() => toast.info("Add location — coming soon")}
-          >
-            + Add Location
-          </Button>
+            );
+          })}
         </CardContent>
       </Card>
 
@@ -254,57 +358,72 @@ export function HQSettingsClient({ settings, locations }: Props) {
         <CardContent className="divide-y">
           <ToggleSetting
             label="Centralized Customer Data"
-            description="Customers and pets exist once globally, with location-specific booking history. Disabling this creates separate customer records per location."
+            description="Customers and pets exist once globally, with location-specific booking history. Disabling creates separate customer records per location."
             icon={Users}
             value={s.centralizedCustomerData}
             onChange={(v) => update({ centralizedCustomerData: v })}
-            accent="#0ea5e9"
+            tone="sky"
           />
           <ToggleSetting
             label="Shared Staff Pool"
             description="Allow staff to be assigned to multiple locations. Enables cross-location conflict detection in scheduling."
-            icon={Users}
+            icon={Network}
             value={s.sharedStaffPool}
             onChange={(v) => update({ sharedStaffPool: v })}
-            accent="#8b5cf6"
+            tone="violet"
           />
           <ScopeSetting
             label="Agreements"
-            description="Control whether customer agreements are shared globally or signed per-location."
+            description="Whether customer agreements are shared globally or signed per-location."
             icon={FileText}
             value={s.agreementsScope}
-            options={[{ value: "global", label: "Global" }, { value: "per_location", label: "Per location" }]}
+            options={[
+              { value: "global", label: "Global" },
+              { value: "per_location", label: "Per location" },
+            ]}
             onChange={(v) => update({ agreementsScope: v as typeof s.agreementsScope })}
+            tone="emerald"
           />
           <ScopeSetting
             label="Tags"
-            description="Manage whether pet and client tags are shared across all locations or kept separate."
+            description="Whether pet and client tags are shared across all locations or kept separate."
             icon={Tags}
             value={s.tagsScope}
-            options={[{ value: "global", label: "Global" }, { value: "per_location", label: "Per location" }]}
+            options={[
+              { value: "global", label: "Global" },
+              { value: "per_location", label: "Per location" },
+            ]}
             onChange={(v) => update({ tagsScope: v as typeof s.tagsScope })}
+            tone="amber"
           />
           <ScopeSetting
             label="Payment Methods"
             description="Whether saved customer payment methods are available at all locations or just the registering location."
             icon={CreditCard}
             value={s.paymentMethodsScope}
-            options={[{ value: "global", label: "Global" }, { value: "per_location", label: "Per location" }]}
+            options={[
+              { value: "global", label: "Global" },
+              { value: "per_location", label: "Per location" },
+            ]}
             onChange={(v) => update({ paymentMethodsScope: v as typeof s.paymentMethodsScope })}
+            tone="rose"
           />
           <ScopeSetting
             label="Internal Notes"
             description="Staff notes about customers or pets — choose between shared visibility or location-scoped privacy."
             icon={StickyNote}
             value={s.internalNotesScope}
-            options={[{ value: "global", label: "Shared" }, { value: "per_location", label: "Private" }]}
+            options={[
+              { value: "global", label: "Shared" },
+              { value: "per_location", label: "Private" },
+            ]}
             onChange={(v) => update({ internalNotesScope: v as typeof s.internalNotesScope })}
-            accent="#f59e0b"
+            tone="sky"
           />
         </CardContent>
       </Card>
 
-      {/* Pricing */}
+      {/* Pricing model */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
@@ -315,39 +434,25 @@ export function HQSettingsClient({ settings, locations }: Props) {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2">
-            {(["centralized", "per_location"] as const).map((opt) => (
-              <button
-                key={opt}
-                onClick={() => update({ pricingModel: opt })}
-                className={cn(
-                  "flex flex-col gap-1 rounded-xl border p-4 text-left transition-all",
-                  s.pricingModel === opt
-                    ? "border-primary bg-primary/5"
-                    : "hover:border-border/80 hover:bg-muted/30",
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold capitalize">
-                    {opt === "centralized" ? "Centralized" : "Per location"}
-                  </span>
-                  {s.pricingModel === opt && (
-                    <div className="flex size-5 items-center justify-center rounded-full bg-primary">
-                      <Check className="size-3 text-white" />
-                    </div>
-                  )}
-                </div>
-                <p className="text-muted-foreground text-xs">
-                  {opt === "centralized"
-                    ? "One pricing structure applies to all locations. Changes propagate everywhere."
-                    : "Each location manages its own pricing independently. Allows regional variation."}
-                </p>
-              </button>
-            ))}
+            <ChoiceCard
+              active={s.pricingModel === "centralized"}
+              onClick={() => update({ pricingModel: "centralized" })}
+              icon={Globe}
+              title="Centralized"
+              description="One pricing structure applies to all locations. Changes propagate everywhere."
+            />
+            <ChoiceCard
+              active={s.pricingModel === "per_location"}
+              onClick={() => update({ pricingModel: "per_location" })}
+              icon={MapPin}
+              title="Per location"
+              description="Each location manages its own pricing. Allows regional variation."
+            />
           </div>
         </CardContent>
       </Card>
 
-      {/* Transfer Policy */}
+      {/* Transfer policy */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
@@ -359,23 +464,25 @@ export function HQSettingsClient({ settings, locations }: Props) {
         <CardContent className="divide-y">
           <ToggleSetting
             label="Require Customer Approval"
-            description="When enabled, a customer must confirm before a booking transfer is finalized. A notification is sent requesting approval."
+            description="When enabled, the customer must confirm before a booking transfer is finalized. A notification is sent requesting approval."
             icon={Shield}
             value={s.transferRequiresCustomerApproval}
             onChange={(v) => update({ transferRequiresCustomerApproval: v })}
-            accent="#ef4444"
+            tone="rose"
           />
           <div className="py-4">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-orange-500/10">
-                <DollarSign className="size-4 text-orange-500" />
+            <div className="mb-3 flex items-start gap-3">
+              <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
+                <DollarSign className="size-4 text-amber-500" />
               </div>
               <div>
-                <p className="text-sm font-medium">Transfer Pricing</p>
-                <p className="text-muted-foreground text-xs">What happens to pricing when a booking is transferred</p>
+                <p className="text-sm font-semibold">Transfer Pricing</p>
+                <p className="text-muted-foreground text-xs">
+                  What happens to pricing when a booking is transferred between locations
+                </p>
               </div>
             </div>
-            <div className="grid gap-2 sm:grid-cols-3 ml-11">
+            <div className="ml-11 grid gap-2 sm:grid-cols-3">
               {([
                 { value: "keep_original", label: "Keep original", desc: "Price doesn't change" },
                 { value: "apply_destination", label: "Apply new price", desc: "Use destination pricing" },
@@ -392,7 +499,7 @@ export function HQSettingsClient({ settings, locations }: Props) {
                   )}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">{opt.label}</span>
+                    <span className="font-semibold">{opt.label}</span>
                     {s.transferPricingPolicy === opt.value && (
                       <Check className="text-primary size-3" />
                     )}
@@ -421,7 +528,7 @@ export function HQSettingsClient({ settings, locations }: Props) {
             icon={MessageSquare}
             value={s.sharedEmailTemplates}
             onChange={(v) => update({ sharedEmailTemplates: v })}
-            accent="#0ea5e9"
+            tone="sky"
           />
           <ToggleSetting
             label="Shared Automations"
@@ -429,23 +536,140 @@ export function HQSettingsClient({ settings, locations }: Props) {
             icon={Zap}
             value={s.sharedAutomations}
             onChange={(v) => update({ sharedAutomations: v })}
-            accent="#8b5cf6"
+            tone="violet"
+          />
+        </CardContent>
+      </Card>
+
+      {/* ── Per-location booking pages ────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Globe className="size-4" />
+            Per-Location Booking Pages
+          </CardTitle>
+          <CardDescription>
+            Each location has its own public booking URL. Share these directly
+            with clients.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="divide-y">
+          {locations.map((loc) => {
+            const slug = loc.shortCode.toLowerCase();
+            const url = `/book/${slug}`;
+            return (
+              <div
+                key={loc.id}
+                className="flex flex-wrap items-center gap-3 py-2.5 first:pt-0 last:pb-0"
+              >
+                <span
+                  className="size-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: loc.color }}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">{loc.name}</p>
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:underline text-xs font-mono"
+                  >
+                    yipyy.com{url}
+                  </a>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (typeof navigator !== "undefined") {
+                      navigator.clipboard.writeText(
+                        `${typeof window !== "undefined" ? window.location.origin : ""}${url}`,
+                      );
+                      toast.success("Link copied");
+                    }
+                  }}
+                >
+                  Copy link
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <a href={url} target="_blank" rel="noopener noreferrer">
+                    Preview
+                  </a>
+                </Button>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      {/* ── Cross-location features ──────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Network className="size-4" />
+            Cross-Location Features
+          </CardTitle>
+          <CardDescription>
+            Toggle which features bridge across all locations. Off = each location operates in isolation.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="divide-y">
+          <ToggleSetting
+            label="Cross-Location Loyalty"
+            description="Loyalty points earned at one location can be redeemed at any location. Off = points stay tied to the location they were earned at."
+            icon={Shield}
+            value={s.crossLocationLoyalty}
+            onChange={(v) => update({ crossLocationLoyalty: v })}
+            tone="amber"
+          />
+          <ToggleSetting
+            label="Cross-Location Gift Cards"
+            description="Gift cards purchased at one location can be redeemed at any location."
+            icon={CreditCard}
+            value={s.crossLocationGiftCards}
+            onChange={(v) => update({ crossLocationGiftCards: v })}
+            tone="violet"
+          />
+          <ToggleSetting
+            label="Shared Waivers"
+            description="A signed waiver is valid at every location until the waiver version is updated. Off = client signs fresh at each location."
+            icon={FileText}
+            value={s.sharedWaivers}
+            onChange={(v) => update({ sharedWaivers: v })}
+            tone="sky"
+          />
+          <ToggleSetting
+            label="Shared Incident History"
+            description="Incidents at any location are visible at every other location — safety-critical, highly recommended on."
+            icon={Shield}
+            value={s.sharedIncidentHistory}
+            onChange={(v) => update({ sharedIncidentHistory: v })}
+            tone="rose"
+          />
+          <ToggleSetting
+            label="Shared Medical Records"
+            description="Vaccinations, allergies, and medications are pooled across all locations."
+            icon={Shield}
+            value={s.sharedMedicalRecords}
+            onChange={(v) => update({ sharedMedicalRecords: v })}
+            tone="emerald"
           />
         </CardContent>
       </Card>
 
       <Separator />
       <div className="flex justify-end">
-        <Button
-          size="sm"
-          className="gap-1.5"
-          onClick={save}
-          disabled={!dirty}
-        >
+        <Button size="sm" className="gap-1.5" onClick={save} disabled={!dirty}>
           <Save className="size-3.5" />
           Save HQ Settings
         </Button>
       </div>
+
+      <AddLocationDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onCreate={handleAddLocation}
+      />
     </div>
   );
 }

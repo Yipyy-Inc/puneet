@@ -175,16 +175,16 @@ const MAPPING_TARGET_GROUPS: {
       { value: "customer.address.state", label: "Address (state)" },
       { value: "customer.address.zip", label: "Address (zip)" },
       {
-        value: "customer.emergencyContact.name",
-        label: "Emergency contact name",
+        value: "customer.additionalContacts.0.name",
+        label: "Additional contact name (first)",
       },
       {
-        value: "customer.emergencyContact.phone",
-        label: "Emergency contact phone",
+        value: "customer.additionalContacts.0.phone",
+        label: "Additional contact phone (first)",
       },
       {
-        value: "customer.emergencyContact.email",
-        label: "Emergency contact email",
+        value: "customer.additionalContacts.0.email",
+        label: "Additional contact email (first)",
       },
     ],
   },

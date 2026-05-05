@@ -14,11 +14,21 @@ export const addressSchema = z.object({
   country: z.string(),
 });
 
-export const emergencyContactSchema = z.object({
+export const additionalContactTagSchema = z.enum([
+  "pickup",
+  "dropoff",
+  "emergency",
+]);
+
+export const additionalContactSchema = z.object({
+  id: z.string(),
   name: z.string(),
-  relationship: z.string(),
+  relationship: z.string().default(""),
   phone: z.string(),
-  email: z.string().email().optional(),
+  email: z
+    .union([z.string().email(), z.literal("")])
+    .optional(),
+  tags: z.array(additionalContactTagSchema).default([]),
 });
 
 export const membershipSchema = z.object({
@@ -63,67 +73,57 @@ export const storeCreditSchema = z.object({
 });
 export type StoreCredit = z.infer<typeof storeCreditSchema>;
 
-export const ADDITIONAL_CONTACT_TAGS = [
-  "primary",
-  "emergency",
-  "pickup",
-  "dropoff",
-  "billing",
-] as const;
-export type AdditionalContactTag = (typeof ADDITIONAL_CONTACT_TAGS)[number];
-
-export const ADDITIONAL_CONTACT_TAG_LABELS: Record<AdditionalContactTag, string> =
-  {
-    primary: "Primary",
-    emergency: "Emergency",
-    pickup: "Pickup",
-    dropoff: "Drop-off",
-    billing: "Billing",
-  };
-
-export interface AdditionalContact {
-  id: string;
-  name: string;
-  relationship: string;
-  phone: string;
-  email: string;
-  tags: AdditionalContactTag[];
-}
-
-export const customerAutoTipSchema = z.object({
-  enabled: z.boolean(),
-  type: z.enum(["percentage", "fixed"]),
-  value: z.number(),
-});
-export type CustomerAutoTip = z.infer<typeof customerAutoTipSchema>;
+// ============================================================================
+// Customer Settings (managed from facility-side client file or customer portal)
+// ============================================================================
 
 export const customerSettingsSchema = z.object({
-  preferredLanguage: z.string(),
-  enableThankYouEmails: z.boolean(),
-  enableReminderEmails: z.boolean(),
-  enableOngoingScheduleReminderEmails: z.boolean(),
-  applyPassesByDefault: z.boolean(),
-  copyAdditionalContactOnBookingConfirmations: z.boolean(),
-  copyAdditionalContactOnSystemEmails: z.boolean(),
-  autoTip: customerAutoTipSchema,
-  instabookDaycare: z.boolean(),
-  instabookBoarding: z.boolean(),
-  instabookGrooming: z.boolean(),
+  enableThankYouEmails: z.boolean().default(true),
+  enableReminderEmails: z.boolean().default(true),
+  enableOngoingScheduleReminderEmails: z.boolean().default(true),
+  applyPassesByDefault: z.boolean().default(true),
+  copyAdditionalContactOnBookingConfirmations: z.boolean().default(true),
+  copyAdditionalContactOnSystemEmails: z.boolean().default(true),
+  preferredLanguage: z.string().default("en"),
+  /**
+   * Allow this customer to instabook daycare instead of submitting a request.
+   * When true, the customer's daycare bookings skip the booking-requests queue
+   * and are auto-confirmed (room/section assigned automatically).
+   */
+  instabookDaycare: z.boolean().default(false),
+  /** Same as instabookDaycare but for boarding stays. */
+  instabookBoarding: z.boolean().default(false),
+  /** Same as instabookDaycare but for grooming. */
+  instabookGrooming: z.boolean().default(false),
+  /**
+   * Auto-tipping for this customer. When enabled, the configured tip is
+   * applied automatically at checkout (when a card is on file) instead of
+   * showing the tip prompt. Customers manage this from their portal; staff
+   * can toggle it on the client file when the customer asks.
+   */
+  autoTip: z
+    .object({
+      enabled: z.boolean().default(false),
+      type: z.enum(["percentage", "fixed"]).default("percentage"),
+      value: z.number().nonnegative().default(20),
+    })
+    .default({ enabled: false, type: "percentage", value: 20 }),
 });
 export type CustomerSettings = z.infer<typeof customerSettingsSchema>;
+export type CustomerAutoTip = CustomerSettings["autoTip"];
 
 export const defaultCustomerSettings: CustomerSettings = {
-  preferredLanguage: "en",
   enableThankYouEmails: true,
   enableReminderEmails: true,
   enableOngoingScheduleReminderEmails: true,
   applyPassesByDefault: true,
-  copyAdditionalContactOnBookingConfirmations: false,
-  copyAdditionalContactOnSystemEmails: false,
-  autoTip: { enabled: false, type: "percentage", value: 15 },
+  copyAdditionalContactOnBookingConfirmations: true,
+  copyAdditionalContactOnSystemEmails: true,
+  preferredLanguage: "en",
   instabookDaycare: false,
   instabookBoarding: false,
   instabookGrooming: false,
+  autoTip: { enabled: false, type: "percentage", value: 20 },
 };
 
 export const clientSchema = z.object({
@@ -137,18 +137,39 @@ export const clientSchema = z.object({
   imageUrl: z.string().optional(),
   pets: z.custom<Pet[]>(),
   address: addressSchema.optional(),
-  emergencyContact: emergencyContactSchema.optional(),
+  additionalContacts: z.array(additionalContactSchema).default([]),
   membership: membershipSchema.optional(),
   packages: z.array(packageSchema).optional(),
   storeCredit: storeCreditSchema.optional(),
   customerSettings: customerSettingsSchema.optional(),
+  // When true, the facility has blocked this client. Blocked clients cannot
+  // send messages to the facility, are excluded from marketing campaigns,
+  // reminders, and automations. The profile (history, pets, bookings) is
+  // preserved for reference.
   isBlocked: z.boolean().optional(),
+  blockedAt: z.string().optional(),
   blockedReason: z.string().optional(),
 });
 
 export type Client = z.infer<typeof clientSchema>;
 export type Address = z.infer<typeof addressSchema>;
-export type EmergencyContact = z.infer<typeof emergencyContactSchema>;
+export type AdditionalContact = z.infer<typeof additionalContactSchema>;
+export type AdditionalContactTag = z.infer<typeof additionalContactTagSchema>;
+
+export const ADDITIONAL_CONTACT_TAG_LABELS: Record<
+  AdditionalContactTag,
+  string
+> = {
+  pickup: "Pickup",
+  dropoff: "Drop-off",
+  emergency: "Emergency",
+};
+
+export const ADDITIONAL_CONTACT_TAGS: AdditionalContactTag[] = [
+  "pickup",
+  "dropoff",
+  "emergency",
+];
 
 // ============================================================================
 // Auth Form Schemas

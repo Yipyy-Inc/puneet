@@ -335,6 +335,59 @@ export const SEGMENT_FILTER_FIELDS: SegmentFilterFieldDef[] = [
     operators: ["is_true"],
     valueType: "boolean",
   },
+
+  // Location filters
+  {
+    field: "visited_location",
+    label: "Has visited location",
+    category: "location",
+    operators: ["equals", "in"],
+    valueType: "multi_select",
+    options: [
+      { value: "loc-dv-main",  label: "Plateau (PLT)" },
+      { value: "loc-dv-ouest", label: "NDG (NDG)" },
+      { value: "loc-dv-laval", label: "Laval (LVL)" },
+    ],
+  },
+  {
+    field: "never_visited_location",
+    label: "Has NEVER booked at location",
+    category: "location",
+    operators: ["equals", "in"],
+    valueType: "multi_select",
+    options: [
+      { value: "loc-dv-main",  label: "Plateau (PLT)" },
+      { value: "loc-dv-ouest", label: "NDG (NDG)" },
+      { value: "loc-dv-laval", label: "Laval (LVL)" },
+    ],
+  },
+  {
+    field: "visits_at_location_within_days",
+    label: "Visited location in last X days",
+    category: "location",
+    operators: ["less_than", "greater_than"],
+    valueType: "number",
+    unit: "days",
+  },
+  {
+    field: "primary_location",
+    label: "Primary location",
+    category: "location",
+    operators: ["equals"],
+    valueType: "select",
+    options: [
+      { value: "loc-dv-main",  label: "Plateau (PLT)" },
+      { value: "loc-dv-ouest", label: "NDG (NDG)" },
+      { value: "loc-dv-laval", label: "Laval (LVL)" },
+    ],
+  },
+  {
+    field: "multi_location_visitor",
+    label: "Has visited 2+ locations",
+    category: "location",
+    operators: ["is_true", "is_false"],
+    valueType: "boolean",
+  },
 ];
 
 export const SEGMENT_CATEGORY_LABELS: Record<SegmentFilterCategory, string> = {
@@ -345,6 +398,7 @@ export const SEGMENT_CATEGORY_LABELS: Record<SegmentFilterCategory, string> = {
   compliance: "Compliance / Status",
   spending: "Spending Level",
   friends: "Pet Friends",
+  location: "Location",
 };
 
 export const FIELD_DEF_MAP = new Map(

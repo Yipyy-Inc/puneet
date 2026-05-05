@@ -1,5 +1,5 @@
-import { ServicesSetup } from "@/components/facility/grooming/services-setup";
+import { GroomingPrepaidPackages } from "@/components/facility/grooming/grooming-prepaid-packages";
 
-export default function GroomingServicesPage() {
-  return <ServicesSetup />;
+export default function GroomingPackagesPage() {
+  return <GroomingPrepaidPackages />;
 }

@@ -36,59 +36,8 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { NotesList } from "@/components/shared/NotesList";
-
-interface IncidentPhoto {
-  id: string;
-  caption?: string;
-  isClientVisible: boolean;
-}
-
-interface FollowUpTask {
-  id: string;
-  title: string;
-  description: string;
-  assignedTo: string;
-  dueDate: string;
-  status: "pending" | "in_progress" | "completed" | "skipped";
-  completedDate?: string;
-  completedBy?: string;
-  notes?: string;
-}
-
-interface Incident {
-  id: string;
-  type:
-    | "injury"
-    | "illness"
-    | "behavioral"
-    | "accident"
-    | "escape"
-    | "fight"
-    | "other";
-  severity: "low" | "medium" | "high" | "critical";
-  status: "open" | "investigating" | "resolved" | "closed";
-  title: string;
-  description: string;
-  internalNotes: string;
-  clientFacingNotes: string;
-  petIds: number[];
-  petNames: string[];
-  staffInvolved: string[];
-  reportedBy: string;
-  incidentDate: string;
-  reportedDate: string;
-  resolvedDate?: string;
-  closedDate?: string;
-  photos: IncidentPhoto[];
-  followUpTasks: FollowUpTask[];
-  managerNotified: boolean;
-  managersNotified: string[];
-  clientNotified: boolean;
-  clientNotificationDate?: string;
-  createdAt: string;
-  updatedAt: string;
-  closedBy?: string;
-}
+import { FollowUpTaskCard } from "@/components/incidents/follow-up/FollowUpTaskCard";
+import type { FollowUpTask, Incident } from "@/types/incidents";
 
 interface IncidentDetailsModalProps {
   incident: Incident;
@@ -109,6 +58,11 @@ export function IncidentDetailsModal({
     dueDate: "",
   });
   const [showAddTask, setShowAddTask] = useState(false);
+  const [tasks, setTasks] = useState<FollowUpTask[]>(incident.followUpTasks);
+
+  const handleTaskUpdate = (next: FollowUpTask) => {
+    setTasks((prev) => prev.map((t) => (t.id === next.id ? next : t)));
+  };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -155,7 +109,24 @@ export function IncidentDetailsModal({
   };
 
   const handleAddTask = () => {
-    console.log("Adding task:", newTask);
+    if (!newTask.title.trim()) return;
+    const task: FollowUpTask = {
+      id: `task-adhoc-${Date.now()}`,
+      incidentId: incident.id,
+      title: newTask.title.trim(),
+      description: newTask.description.trim(),
+      assignedTo: newTask.assignedTo || "Unassigned",
+      dueDate: newTask.dueDate
+        ? `${newTask.dueDate}:00`
+        : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      status: "pending",
+      contactMethod: "phone",
+      conversationLog: [],
+      attemptCount: 0,
+      escalated: false,
+      surfacedToDailyTasks: true,
+    };
+    setTasks((prev) => [...prev, task]);
     setNewTask({ title: "", description: "", assignedTo: "", dueDate: "" });
     setShowAddTask(false);
   };
@@ -234,7 +205,7 @@ export function IncidentDetailsModal({
               Photos ({incident.photos.length})
             </TabsTrigger>
             <TabsTrigger value="tasks">
-              Follow-Up ({incident.followUpTasks.length})
+              Follow-Up ({tasks.length})
             </TabsTrigger>
           </TabsList>
 
@@ -555,60 +526,34 @@ export function IncidentDetailsModal({
               </Card>
             )}
 
-            {incident.followUpTasks.length > 0 ? (
+            {tasks.length > 0 ? (
               <div className="space-y-3">
-                {incident.followUpTasks.map((task) => (
-                  <Card key={task.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="mb-2 flex items-center gap-2">
-                            <CheckSquare className="size-4" />
-                            <span className="font-medium">{task.title}</span>
-                          </div>
-                          <p className="text-muted-foreground mb-3 text-sm">
-                            {task.description}
-                          </p>
-                          <div className="text-muted-foreground flex items-center gap-4 text-xs">
-                            <div>
-                              Assigned to: <strong>{task.assignedTo}</strong>
-                            </div>
-                            <div>
-                              Due: {new Date(task.dueDate).toLocaleString()}
-                            </div>
-                          </div>
-                          {task.completedDate && (
-                            <div className="mt-2 rounded-sm bg-green-50 p-2 text-xs">
-                              ✓ Completed by <strong>{task.completedBy}</strong>{" "}
-                              on {new Date(task.completedDate).toLocaleString()}
-                              {task.notes && (
-                                <div className="mt-1">{task.notes}</div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <Badge
-                          variant={
-                            task.status === "completed"
-                              ? "default"
-                              : task.status === "in_progress"
-                                ? "secondary"
-                                : "outline"
-                          }
-                          className="capitalize"
-                        >
-                          {task.status.replace("_", " ")}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                {tasks
+                  .slice()
+                  .sort(
+                    (a, b) =>
+                      new Date(a.dueDate).getTime() -
+                      new Date(b.dueDate).getTime(),
+                  )
+                  .map((task) => (
+                    <FollowUpTaskCard
+                      key={task.id}
+                      task={task}
+                      onUpdate={handleTaskUpdate}
+                      currentUser={incident.reportedBy}
+                      siblingTasks={tasks}
+                    />
+                  ))}
               </div>
             ) : (
               <Card>
                 <CardContent className="text-muted-foreground pt-6 text-center">
                   <CheckSquare className="mx-auto mb-2 size-12 opacity-20" />
                   <p>No follow-up tasks for this incident</p>
+                  <p className="mt-1 text-xs">
+                    Apply a protocol to auto-generate, or click &ldquo;Add
+                    Task&rdquo; for an ad-hoc one.
+                  </p>
                 </CardContent>
               </Card>
             )}

@@ -1,3 +1,5 @@
+import { LocationAccessGuard } from "@/components/hq/LocationAccessGuard";
+
 export default function HQLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return <LocationAccessGuard requireHq>{children}</LocationAccessGuard>;
 }

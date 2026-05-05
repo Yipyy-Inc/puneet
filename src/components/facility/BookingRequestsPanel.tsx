@@ -3,7 +3,16 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Clock, CalendarClock, ChevronRight } from "lucide-react";
+import {
+  Clock,
+  CalendarClock,
+  ChevronRight,
+  CheckCircle2,
+  XCircle,
+  Hourglass,
+} from "lucide-react";
+
+import { cn } from "@/lib/utils";
 
 import { type BookingRequest } from "@/data/booking-requests";
 import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
@@ -278,22 +287,29 @@ export function BookingRequestsPanel({
       itemsPerPage={variant === "dropdown" ? 3 : 5}
       actions={(r) => (
         <div className="flex items-center justify-end gap-2">
-          <Button size="sm" onClick={() => schedule(r)}>
+          <Button
+            size="sm"
+            onClick={() => schedule(r)}
+            className="bg-success text-success-foreground hover:bg-success/90 focus-visible:ring-success/30 shadow-sm"
+          >
+            <CheckCircle2 className="size-4" />
             Schedule
           </Button>
           <Button
             size="sm"
-            variant="outline"
-            onClick={() => openConfirm("decline", r)}
+            onClick={() => openConfirm("waitlist", r)}
+            className="bg-warning text-warning-foreground hover:bg-warning/90 focus-visible:ring-warning/30 shadow-sm"
           >
-            Decline
+            <Hourglass className="size-4" />
+            Waitlist
           </Button>
           <Button
             size="sm"
-            variant="outline"
-            onClick={() => openConfirm("waitlist", r)}
+            onClick={() => openConfirm("decline", r)}
+            className="bg-destructive hover:bg-destructive/90 focus-visible:ring-destructive/30 text-white shadow-sm"
           >
-            To Waitlist
+            <XCircle className="size-4" />
+            Decline
           </Button>
         </div>
       )}
@@ -317,21 +333,46 @@ export function BookingRequestsPanel({
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirmAction === "decline"
-                ? "Decline request?"
-                : "Move to waitlist?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This action will update the request immediately. You can choose
-              whether to notify the customer on the next step.
-            </AlertDialogDescription>
+            <div className="flex items-start gap-3">
+              <div
+                className={cn(
+                  "flex size-10 shrink-0 items-center justify-center rounded-xl",
+                  confirmAction === "decline"
+                    ? "bg-destructive/10 text-destructive"
+                    : "bg-warning/15 text-warning",
+                )}
+              >
+                {confirmAction === "decline" ? (
+                  <XCircle className="size-5" />
+                ) : (
+                  <Hourglass className="size-5" />
+                )}
+              </div>
+              <div className="flex-1">
+                <AlertDialogTitle>
+                  {confirmAction === "decline"
+                    ? "Decline this request?"
+                    : "Move to waitlist?"}
+                </AlertDialogTitle>
+                <AlertDialogDescription className="mt-1">
+                  This action will update the request immediately. You can
+                  choose whether to notify the customer on the next step.
+                </AlertDialogDescription>
+              </div>
+            </div>
           </AlertDialogHeader>
 
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={applyConfirm}>
-              Confirm
+            <AlertDialogAction
+              onClick={applyConfirm}
+              className={cn(
+                confirmAction === "decline"
+                  ? "bg-destructive hover:bg-destructive/90 text-white"
+                  : "bg-warning hover:bg-warning/90 text-warning-foreground",
+              )}
+            >
+              {confirmAction === "decline" ? "Decline" : "Move to waitlist"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
