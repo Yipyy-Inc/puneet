@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { facilityDailyCareConfig } from "@/data/boarding";
+import { useDailyCareConfig } from "@/hooks/use-daily-care-config";
 import type { FacilityDailyCareConfig, DailyCareStep, DailyCareTaskType } from "@/types/boarding";
 
 // ── Task type metadata ──────────────────────────────────────────────────────
@@ -301,9 +301,14 @@ function AddStepForm({
 // ── DailyCareSettings ──────────────────────────────────────────────────────
 
 export function DailyCareSettings() {
-  const [config, setConfig] = useState<FacilityDailyCareConfig>(facilityDailyCareConfig);
+  const { config: savedConfig, setConfig: persistConfig, reset } = useDailyCareConfig();
+  const [draft, setDraft] = useState<FacilityDailyCareConfig>(savedConfig);
   const [isEditing, setIsEditing] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+
+  // Active config is the live draft while editing, the saved store otherwise
+  const config = isEditing ? draft : savedConfig;
+  const setConfig = setDraft;
 
   const sortedSteps = [...config.steps].sort((a, b) => a.sortOrder - b.sortOrder);
 
@@ -361,17 +366,26 @@ export function DailyCareSettings() {
     setShowAddForm(false);
   }
 
+  function handleStartEdit() {
+    setDraft(savedConfig);
+    setIsEditing(true);
+  }
+
   function handleSave() {
+    persistConfig(draft);
     toast.success("Daily care schedule saved");
     setIsEditing(false);
     setShowAddForm(false);
   }
 
   function handleCancel() {
-    setConfig(facilityDailyCareConfig);
+    setDraft(savedConfig);
     setIsEditing(false);
     setShowAddForm(false);
   }
+
+  // Silence unused-binding warning for reset (exposed for future "reset to defaults" UI)
+  void reset;
 
   const enabledCount = config.steps.filter((s) => s.enabled).length;
 
@@ -388,7 +402,7 @@ export function DailyCareSettings() {
             </CardDescription>
           </div>
           {!isEditing ? (
-            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+            <Button variant="outline" size="sm" onClick={handleStartEdit}>
               <Edit className="mr-2 size-4" />
               Edit
             </Button>

@@ -46,8 +46,8 @@ const tabs = [
     icon: Package,
   },
   {
-    name: "Guest Journals",
-    href: "/facility/dashboard/services/boarding/journals",
+    name: "Daily Care",
+    href: "/facility/dashboard/daily-care",
     icon: BookOpen,
   },
   {
