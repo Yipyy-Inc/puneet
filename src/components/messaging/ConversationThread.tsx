@@ -20,6 +20,9 @@ import {
   AlertCircle,
   Archive,
   StickyNote,
+  UserPlus,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -37,6 +40,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { MessageBubble, DateSeparator } from "./MessageBubble";
 import { ComposeBar } from "./ComposeBar";
+import { useConversationState } from "./conversation-state-context";
 import { getCustomerLanguageLabel } from "@/lib/language-settings";
 import {
   getReminderHistoryForCustomer,
@@ -112,6 +116,7 @@ export function ConversationThread({
   mode?: "facility" | "customer";
 }) {
   const isCustomerMode = mode === "customer";
+  const conversationState = useConversationState();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [tabsByThreadId, setTabsByThreadId] = useState<Record<string, ReminderTab>>({});
   const [statusByThreadId, setStatusByThreadId] = useState<Record<string, ConversationStatus>>(
@@ -371,7 +376,9 @@ export function ConversationThread({
 
       <ComposeBar
         mode={mode}
+        threadId={threadId}
         clientName={counterpartyName}
+        petName={client?.pets?.[0]?.name}
         lastMessage={threadMessages[threadMessages.length - 1]?.body}
         preferredLanguageLabel={preferredLanguageLabel ?? undefined}
         activeChannel={activeChannel}
@@ -425,6 +432,118 @@ export function ConversationThread({
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Open / Closed toggle */}
+          {!isCustomerMode && threadId && (
+            <button
+              type="button"
+              onClick={() => {
+                const next = !conversationState.isClosed(threadId);
+                conversationState.setClosed(threadId, next);
+              }}
+              className={cn(
+                "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                conversationState.isClosed(threadId)
+                  ? "border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+              )}
+              title={
+                conversationState.isClosed(threadId)
+                  ? "Reopen conversation"
+                  : "Mark conversation as closed"
+              }
+            >
+              {conversationState.isClosed(threadId) ? (
+                <>
+                  <Lock className="size-3" />
+                  Closed
+                </>
+              ) : (
+                <>
+                  <Unlock className="size-3" />
+                  Open
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Assign to staff */}
+          {!isCustomerMode && threadId && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                  title="Assign to staff"
+                >
+                  {conversationState.getAssignee(threadId) ? (
+                    <>
+                      <span
+                        className={cn(
+                          "flex size-4 items-center justify-center rounded-full text-[8px] font-bold text-white",
+                          conversationState.getAssignee(threadId)!.color,
+                        )}
+                      >
+                        {conversationState.getAssignee(threadId)!.initials}
+                      </span>
+                      {conversationState.getAssignee(threadId)!.name}
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="size-3" />
+                      Assign
+                    </>
+                  )}
+                  <ChevronDown className="size-3 text-slate-400" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-56 rounded-xl p-1 shadow-lg">
+                <p className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Assign conversation
+                </p>
+                {conversationState.staff.map((s) => {
+                  const active = conversationState.getAssignee(threadId)?.id === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => conversationState.assignTo(threadId, s.id)}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs transition-colors hover:bg-slate-50",
+                        active && "bg-slate-50",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex size-7 items-center justify-center rounded-full text-[10px] font-bold text-white",
+                          s.color,
+                        )}
+                      >
+                        {s.initials}
+                      </span>
+                      <span className="flex-1">
+                        <span className="block font-semibold text-slate-700">{s.name}</span>
+                        <span className="block text-[10px] text-slate-400">{s.role}</span>
+                      </span>
+                      {active && <CheckCircle2 className="size-3.5 text-emerald-500" />}
+                    </button>
+                  );
+                })}
+                {conversationState.getAssignee(threadId) && (
+                  <>
+                    <div className="my-1 border-t border-slate-100" />
+                    <button
+                      type="button"
+                      onClick={() => conversationState.assignTo(threadId, null)}
+                      className="flex w-full items-center justify-center rounded-lg px-2 py-2 text-xs font-semibold text-red-500 hover:bg-red-50"
+                    >
+                      Unassign
+                    </button>
+                  </>
+                )}
+              </PopoverContent>
+            </Popover>
+          )}
+
           {/* Status selector */}
           {!isCustomerMode && (
             <Popover>

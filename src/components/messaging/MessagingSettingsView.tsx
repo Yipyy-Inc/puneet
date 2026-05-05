@@ -17,113 +17,117 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  FileText,
+  Phone,
+  Smartphone,
+  Mail,
+  Clock,
+  Ban,
+  ShieldCheck,
+  AlertTriangle,
+  Bookmark,
   Plus,
   Pencil,
   Trash2,
-  Smartphone,
-  Mail,
+  Hash,
   RefreshCw,
-  Settings,
-  AlertTriangle,
-  Shield,
-  MessageSquare,
+  Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { messageTemplates as defaultTemplates } from "@/data/messaging";
-import type { MessageTemplate, TemplateCategory } from "@/types/messaging";
+import { useSavedReplies } from "./saved-replies-context";
+import {
+  SAVED_REPLY_CATEGORY_COLORS,
+  SAVED_REPLY_CATEGORY_LABELS,
+  type SavedReply,
+  type SavedReplyCategory,
+} from "@/types/saved-replies";
 
-const CATEGORY_COLORS: Record<TemplateCategory, string> = {
-  booking: "bg-blue-100 text-blue-700 border-blue-200",
-  boarding: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  grooming: "bg-pink-100 text-pink-700 border-pink-200",
-  vaccination: "bg-amber-100 text-amber-700 border-amber-200",
-  payment: "bg-red-100 text-red-700 border-red-200",
-  general: "bg-slate-100 text-slate-600 border-slate-200",
-};
+const DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+] as const;
 
-const CATEGORY_LABELS: Record<TemplateCategory, string> = {
-  booking: "Booking",
-  boarding: "Boarding",
-  grooming: "Grooming",
-  vaccination: "Vaccination",
-  payment: "Payment",
-  general: "General",
-};
-
-const ALL_CATEGORIES: TemplateCategory[] = [
-  "booking",
+const CATEGORIES: SavedReplyCategory[] = [
   "boarding",
   "grooming",
-  "vaccination",
-  "payment",
+  "daycare",
+  "pricing",
   "general",
 ];
 
-const VARIABLES = ["{ClientName}", "{PetName}", "{NextAppointment}", "{Balance}", "{BookingLink}"];
+const DEFAULT_HOURS: Record<string, { open: string; close: string; closed: boolean }> = {
+  Monday: { open: "07:00", close: "19:00", closed: false },
+  Tuesday: { open: "07:00", close: "19:00", closed: false },
+  Wednesday: { open: "07:00", close: "19:00", closed: false },
+  Thursday: { open: "07:00", close: "19:00", closed: false },
+  Friday: { open: "07:00", close: "19:00", closed: false },
+  Saturday: { open: "08:00", close: "17:00", closed: false },
+  Sunday: { open: "08:00", close: "17:00", closed: true },
+};
 
-// ── Template Editor ──────────────────────────────────────────────────
+const STOP_KEYWORDS = ["STOP", "UNSUBSCRIBE", "CANCEL", "QUIT", "END"];
 
-function TemplateEditor({
-  template,
+function SavedReplyEditor({
+  reply,
   onSave,
   onClose,
 }: {
-  template: Partial<MessageTemplate> | null;
-  onSave: (t: MessageTemplate) => void;
+  reply: SavedReply | null;
+  onSave: (reply: SavedReply) => void;
   onClose: () => void;
 }) {
-  const [name, setName] = useState(template?.name ?? "");
-  const [category, setCategory] = useState<TemplateCategory>(template?.category ?? "general");
-  const [smsBody, setSmsBody] = useState(template?.smsBody ?? "");
-  const [emailSubject, setEmailSubject] = useState(template?.emailSubject ?? "");
-  const [emailBody, setEmailBody] = useState(template?.emailBody ?? "");
+  const [title, setTitle] = useState(reply?.title ?? "");
+  const [shortcut, setShortcut] = useState(reply?.shortcut ?? "");
+  const [body, setBody] = useState(reply?.body ?? "");
+  const [category, setCategory] = useState<SavedReplyCategory>(
+    reply?.category ?? "general",
+  );
 
-  const save = () => {
-    if (!name.trim() || (!smsBody.trim() && !emailBody.trim())) {
-      toast.error("Please fill in the name and at least one message body");
+  const submit = () => {
+    if (!title.trim() || !body.trim()) {
+      toast.error("Title and body are required");
       return;
     }
     onSave({
-      id: template?.id ?? `tpl-${Date.now()}`,
-      name,
+      id: reply?.id ?? `sr-${Date.now()}`,
+      title: title.trim(),
+      shortcut:
+        shortcut.trim() ||
+        title.trim().toLowerCase().replace(/\s+/g, "-").slice(0, 24),
+      body: body.trim(),
       category,
-      smsBody: smsBody || undefined,
-      emailSubject: emailSubject || undefined,
-      emailBody: emailBody || undefined,
-      variables: VARIABLES.filter(
-        (v) => smsBody.includes(v) || emailBody.includes(v),
-      ),
+      createdAt: reply?.createdAt ?? new Date().toISOString(),
+      useCount: reply?.useCount ?? 0,
+      createdBy: reply?.createdBy ?? "You",
     });
   };
 
-  const insertVar = (v: string, field: "sms" | "email") => {
-    if (field === "sms") setSmsBody((t) => t + v);
-    else setEmailBody((t) => t + v);
-  };
-
   return (
-    <div className="flex flex-col gap-4 p-6">
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-3 p-6">
+      <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label>Template Name</Label>
+          <Label className="text-xs">Title</Label>
           <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Booking Confirmation"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Boarding rates"
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Category</Label>
-          <Select value={category} onValueChange={(v) => setCategory(v as TemplateCategory)}>
+          <Label className="text-xs">Category</Label>
+          <Select value={category} onValueChange={(v) => setCategory(v as SavedReplyCategory)}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {ALL_CATEGORIES.map((c) => (
+              {CATEGORIES.map((c) => (
                 <SelectItem key={c} value={c}>
-                  {CATEGORY_LABELS[c]}
+                  {SAVED_REPLY_CATEGORY_LABELS[c]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -131,409 +135,525 @@ function TemplateEditor({
         </div>
       </div>
 
-      {/* SMS body */}
       <div className="space-y-1.5">
-        <Label className="flex items-center gap-2">
-          <Smartphone className="size-3.5 text-blue-500" />
-          SMS Body
-        </Label>
-        <Textarea
-          value={smsBody}
-          onChange={(e) => setSmsBody(e.target.value)}
-          placeholder="SMS message text..."
-          className="min-h-[80px] resize-none text-sm"
-        />
-        <div className="flex items-center justify-between text-xs text-slate-400">
-          <span>{smsBody.length} chars · {Math.ceil(smsBody.length / 160) || 0} segments</span>
-          <div className="flex gap-1">
-            {VARIABLES.map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => insertVar(v, "sms")}
-                className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-mono text-[9px] hover:border-blue-300 hover:text-blue-600"
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Email */}
-      <div className="space-y-1.5">
-        <Label className="flex items-center gap-2">
-          <Mail className="size-3.5 text-violet-500" />
-          Email Subject
-        </Label>
+        <Label className="text-xs">Shortcut</Label>
         <Input
-          value={emailSubject}
-          onChange={(e) => setEmailSubject(e.target.value)}
-          placeholder="Email subject line..."
+          value={shortcut}
+          onChange={(e) =>
+            setShortcut(e.target.value.replace(/\s+/g, "-").toLowerCase())
+          }
+          placeholder="boarding-rates"
         />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Email Body</Label>
-        <Textarea
-          value={emailBody}
-          onChange={(e) => setEmailBody(e.target.value)}
-          placeholder="Email body (plain text)..."
-          className="min-h-[100px] resize-none text-sm"
-        />
-        <div className="flex justify-end gap-1">
-          {VARIABLES.map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => insertVar(v, "email")}
-              className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-mono text-[9px] hover:border-violet-300 hover:text-violet-600"
-            >
-              {v}
-            </button>
-          ))}
-        </div>
+        <p className="text-[10px] text-slate-400">
+          Staff types <code className="rounded bg-slate-100 px-1">/{shortcut || "shortcut"}</code>{" "}
+          to insert this reply.
+        </p>
       </div>
 
-      <div className="flex justify-end gap-3 border-t pt-4">
-        <Button variant="outline" onClick={onClose}>Cancel</Button>
-        <Button onClick={save}>Save Template</Button>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Reply body</Label>
+        <Textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={5}
+          className="resize-none text-sm"
+          placeholder="Hi {ClientName}, …"
+        />
+        <p className="text-[10px] text-slate-400">
+          Use <code className="rounded bg-slate-100 px-1">{`{ClientName}`}</code>{" "}
+          and <code className="rounded bg-slate-100 px-1">{`{PetName}`}</code>{" "}
+          to personalize.
+        </p>
+      </div>
+
+      <div className="flex justify-end gap-2 border-t pt-3">
+        <Button variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button onClick={submit}>Save reply</Button>
       </div>
     </div>
   );
 }
 
-// ── Main View ────────────────────────────────────────────────────────
-
 export function MessagingSettingsView() {
-  const [templates, setTemplates] = useState<MessageTemplate[]>(defaultTemplates);
-  const [categoryFilter, setCategoryFilter] = useState<TemplateCategory | "all">("all");
-  const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
+  const savedRepliesCtx = useSavedReplies();
 
-  // General settings state
-  const [autoSMSMissedCall, setAutoSMSMissedCall] = useState(true);
-  const [autoReload, setAutoReload] = useState(true);
-  const [liveChatEnabled, setLiveChatEnabled] = useState(false);
-  const [businessHoursOnly, setBusinessHoursOnly] = useState(true);
-  const [complianceNotice, setComplianceNotice] = useState(true);
+  const [businessPhone, setBusinessPhone] = useState("(514) 555-0100");
+  const [smsSenderId, setSmsSenderId] = useState("DOGGIEVL");
+  const [emailFrom, setEmailFrom] = useState("hello@doggieville.ca");
 
-  const filtered =
+  const [autoReplyEnabled, setAutoReplyEnabled] = useState(true);
+  const [autoReplyMessage, setAutoReplyMessage] = useState(
+    "Hi! We're closed right now, but we'll get back to you first thing in the morning. For urgent boarding matters, call (514) 555-0100.",
+  );
+  const [autoReplyAfterHoursOnly, setAutoReplyAfterHoursOnly] = useState(true);
+
+  const [hours, setHours] = useState(DEFAULT_HOURS);
+
+  const [stopHandlingEnabled, setStopHandlingEnabled] = useState(true);
+  const [stopConfirmation, setStopConfirmation] = useState(
+    "You have been unsubscribed from Doggieville MTL messages. Reply START to re-subscribe.",
+  );
+  const [optedOutNumbers] = useState<string[]>([
+    "(514) 555-0182",
+    "(450) 555-0917",
+  ]);
+
+  const [editingReply, setEditingReply] = useState<SavedReply | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<SavedReplyCategory | "all">(
+    "all",
+  );
+
+  const filteredReplies =
     categoryFilter === "all"
-      ? templates
-      : templates.filter((t) => t.category === categoryFilter);
+      ? savedRepliesCtx.replies
+      : savedRepliesCtx.replies.filter((r) => r.category === categoryFilter);
 
-  const saveTemplate = (t: MessageTemplate) => {
-    setTemplates((prev) => {
-      const idx = prev.findIndex((x) => x.id === t.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = t;
-        return next;
-      }
-      return [...prev, t];
-    });
-    setEditingTemplate(null);
-    toast.success(`Template "${t.name}" saved`);
-  };
-
-  const deleteTemplate = (id: string) => {
-    setTemplates((prev) => prev.filter((t) => t.id !== id));
-    toast.success("Template deleted");
+  const updateHours = (
+    day: string,
+    patch: Partial<{ open: string; close: string; closed: boolean }>,
+  ) => {
+    setHours((prev) => ({ ...prev, [day]: { ...prev[day], ...patch } }));
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
+    <div className="mx-auto max-w-4xl space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Messaging Settings</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Configure templates, channels, and messaging behavior
+          Business identity, auto-reply, opt-out handling, and saved replies — all in one place.
         </p>
       </div>
 
-      {/* General Settings */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Settings className="size-4" />
-            General Settings
+            <Phone className="size-4 text-blue-500" />
+            Business identity
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {[
-            {
-              id: "autoSMS",
-              label: "Auto-SMS on Missed Call",
-              description: "Send an automatic SMS when a call is missed",
-              checked: autoSMSMissedCall,
-              onChange: setAutoSMSMissedCall,
-            },
-            {
-              id: "autoReload",
-              label: "Auto-Reload SMS Credits",
-              description: "Automatically top up credits when balance falls below threshold",
-              checked: autoReload,
-              onChange: setAutoReload,
-            },
-            {
-              id: "compliance",
-              label: "Compliance Recording Notice",
-              description: "Notify clients that calls may be recorded",
-              checked: complianceNotice,
-              onChange: setComplianceNotice,
-            },
-            {
-              id: "businessHours",
-              label: "Send Only During Business Hours",
-              description: "Hold scheduled messages until business hours",
-              checked: businessHoursOnly,
-              onChange: setBusinessHoursOnly,
-            },
-          ].map((setting) => (
-            <div key={setting.id} className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-700">{setting.label}</p>
-                <p className="text-xs text-slate-400">{setting.description}</p>
-              </div>
-              <Switch
-                checked={setting.checked}
-                onCheckedChange={setting.onChange}
-              />
-            </div>
-          ))}
+        <CardContent className="grid gap-4 md:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5 text-xs">
+              <Smartphone className="size-3" />
+              Business phone (SMS sender)
+            </Label>
+            <Input
+              value={businessPhone}
+              onChange={(e) => setBusinessPhone(e.target.value)}
+            />
+            <p className="text-[10px] text-slate-400">Shown as "from" on outgoing SMS.</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5 text-xs">
+              <Hash className="size-3" />
+              SMS sender ID
+            </Label>
+            <Input
+              value={smsSenderId}
+              onChange={(e) => setSmsSenderId(e.target.value.toUpperCase())}
+              maxLength={11}
+            />
+            <p className="text-[10px] text-slate-400">
+              {smsSenderId.length}/11 characters · alphanumeric
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5 text-xs">
+              <Mail className="size-3" />
+              Email "from" address
+            </Label>
+            <Input
+              value={emailFrom}
+              onChange={(e) => setEmailFrom(e.target.value)}
+            />
+          </div>
         </CardContent>
       </Card>
 
-      {/* Live Chat */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <MessageSquare className="size-4" />
-            Live Chat Widget
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-700">Enable Website Chat Widget</p>
-              <p className="text-xs text-slate-400">Add a chat widget to your facility website</p>
-            </div>
-            <Switch checked={liveChatEnabled} onCheckedChange={setLiveChatEnabled} />
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Clock className="size-4 text-violet-500" />
+              Auto-reply outside business hours
+            </CardTitle>
+            <Switch checked={autoReplyEnabled} onCheckedChange={setAutoReplyEnabled} />
           </div>
-
-          {liveChatEnabled && (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Widget Color</Label>
-                  <Input type="color" defaultValue="#3b82f6" className="h-9 cursor-pointer" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Greeting Message</Label>
-                  <Input defaultValue="Hi! How can we help? 🐾" className="text-sm" />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Offline Auto-Reply</Label>
-                <Textarea
-                  defaultValue="We're currently offline. Leave a message and we'll get back to you within 2 hours!"
-                  className="min-h-[60px] resize-none text-sm"
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-dashed border-blue-300 bg-blue-50 px-3 py-2.5">
-                <p className="text-xs text-blue-700">
-                  Copy and add this snippet to your website's{" "}
-                  <code className="rounded bg-blue-100 px-1">{`</body>`}</code> tag
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="shrink-0 border-blue-300 text-xs text-blue-700 hover:bg-blue-100"
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      `<script src="https://doggieville.ca/widget.js" data-facility="dvm" async></script>`,
-                    );
-                    toast.success("Widget code copied to clipboard!");
-                  }}
-                >
-                  Copy Code
-                </Button>
-              </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Message clients receive</Label>
+            <Textarea
+              value={autoReplyMessage}
+              onChange={(e) => setAutoReplyMessage(e.target.value)}
+              rows={3}
+              disabled={!autoReplyEnabled}
+              className="resize-none text-sm"
+            />
+            <p className="text-[10px] text-slate-400">
+              {autoReplyMessage.length} chars ·{" "}
+              {Math.ceil(autoReplyMessage.length / 160) || 0} SMS segments · sends
+              once per client per closed period
+            </p>
+          </div>
+          <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-slate-700">Only send when closed</p>
+              <p className="text-[11px] text-slate-400">
+                Leave on so your team can reply manually during open hours.
+              </p>
             </div>
-          )}
+            <Switch
+              checked={autoReplyAfterHoursOnly}
+              onCheckedChange={setAutoReplyAfterHoursOnly}
+              disabled={!autoReplyEnabled}
+            />
+          </div>
         </CardContent>
       </Card>
 
-      {/* SMS Credits */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Smartphone className="size-4" />
-            SMS Credits
+            <Clock className="size-4 text-blue-500" />
+            Business hours
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4 text-center">
-            {[
-              { label: "Plan Allowance", value: "1,000 / mo" },
-              { label: "Remaining", value: "647", color: "text-blue-600" },
-              { label: "Auto-reload", value: "ON" },
-            ].map((s) => (
-              <div key={s.label} className="rounded-xl bg-slate-50 py-4">
-                <p className={cn("text-2xl font-bold", s.color ?? "text-slate-800")}>{s.value}</p>
-                <p className="mt-1 text-xs text-slate-400">{s.label}</p>
-              </div>
-            ))}
-          </div>
-          <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <AlertTriangle className="size-4 shrink-0 text-amber-500" />
-            <p className="text-xs text-amber-700">
-              Auto-reload: when credits fall below <strong>100</strong>, add{" "}
-              <strong>500 credits ($20)</strong>
-            </p>
+        <CardContent>
+          <div className="overflow-hidden rounded-xl border border-slate-200">
+            {DAYS.map((day, idx) => {
+              const cfg = hours[day];
+              return (
+                <div
+                  key={day}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-2.5 text-sm",
+                    idx > 0 && "border-t border-slate-100",
+                    cfg.closed && "bg-slate-50",
+                  )}
+                >
+                  <span className="w-28 font-semibold text-slate-700">{day}</span>
+                  {cfg.closed ? (
+                    <span className="flex-1 text-xs text-slate-400">Closed</span>
+                  ) : (
+                    <>
+                      <Input
+                        type="time"
+                        value={cfg.open}
+                        onChange={(e) => updateHours(day, { open: e.target.value })}
+                        className="h-8 w-28 text-xs"
+                      />
+                      <span className="text-slate-400">–</span>
+                      <Input
+                        type="time"
+                        value={cfg.close}
+                        onChange={(e) => updateHours(day, { close: e.target.value })}
+                        className="h-8 w-28 text-xs"
+                      />
+                    </>
+                  )}
+                  <div className="ml-auto flex items-center gap-2">
+                    <span className="text-[11px] text-slate-400">
+                      {cfg.closed ? "" : "Open"}
+                    </span>
+                    <Switch
+                      checked={!cfg.closed}
+                      onCheckedChange={(checked) => updateHours(day, { closed: !checked })}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
 
-      {/* Templates */}
-      <div>
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">Message Templates</h3>
-            <p className="mt-0.5 text-sm text-slate-500">
-              Reusable messages with variable support
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Ban className="size-4 text-red-500" />
+              SMS opt-out (STOP) handling
+            </CardTitle>
+            <Switch checked={stopHandlingEnabled} onCheckedChange={setStopHandlingEnabled} />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+              <ShieldCheck className="size-4" />
+              Compliant with TCPA / CASL
+            </p>
+            <p className="mt-1 text-[11px] text-emerald-700/80">
+              Replying with any of these keywords automatically stops messaging this client. We log the
+              timestamp and surface it on their profile.
             </p>
           </div>
-          <Button
-            className="gap-2"
-            onClick={() => setEditingTemplate({ id: `tpl-new-${Date.now()}`, category: "general", name: "", variables: [] } as MessageTemplate)}
-          >
-            <Plus className="size-4" />
-            New Template
-          </Button>
-        </div>
 
-        {/* Category filter */}
-        <div className="mb-4 flex gap-1.5 flex-wrap">
-          {(["all", ...ALL_CATEGORIES] as const).map((c) => (
+          <div>
+            <Label className="text-xs">Trigger keywords</Label>
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {STOP_KEYWORDS.map((kw) => (
+                <span
+                  key={kw}
+                  className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-mono font-semibold text-slate-600"
+                >
+                  {kw}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Confirmation reply</Label>
+            <Textarea
+              value={stopConfirmation}
+              onChange={(e) => setStopConfirmation(e.target.value)}
+              rows={2}
+              disabled={!stopHandlingEnabled}
+              className="resize-none text-sm"
+            />
+          </div>
+
+          <div>
+            <Label className="text-xs">Currently opted out</Label>
+            <div className="mt-1.5 space-y-1">
+              {optedOutNumbers.length === 0 ? (
+                <p className="text-[11px] text-slate-400 italic">
+                  No clients have opted out.
+                </p>
+              ) : (
+                optedOutNumbers.map((n) => (
+                  <div
+                    key={n}
+                    className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2"
+                  >
+                    <span className="font-mono text-sm text-slate-700">{n}</span>
+                    <Badge
+                      variant="outline"
+                      className="border-red-200 bg-red-50 text-[10px] text-red-700"
+                    >
+                      Unsubscribed
+                    </Badge>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Bookmark className="size-4 text-emerald-500" />
+              Saved replies library
+            </CardTitle>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => {
+                setEditingReply(null);
+                setShowEditor(true);
+              }}
+            >
+              <Plus className="size-4" />
+              New saved reply
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-700">
+            Tip: staff type <code className="rounded bg-blue-100 px-1 font-semibold">/</code>{" "}
+            in the compose box to bring up this menu instantly. They can also "Save as reply" from any
+            message they've drafted.
+          </div>
+
+          <div className="mb-3 flex gap-1.5 flex-wrap">
             <button
-              key={c}
               type="button"
-              onClick={() => setCategoryFilter(c)}
+              onClick={() => setCategoryFilter("all")}
               className={cn(
-                "rounded-full px-3 py-1 text-xs font-semibold capitalize transition-all",
-                categoryFilter === c
+                "rounded-full px-3 py-1 text-xs font-semibold transition-all",
+                categoryFilter === "all"
                   ? "bg-slate-900 text-white"
                   : "bg-slate-100 text-slate-500 hover:bg-slate-200",
               )}
             >
-              {c === "all" ? "All" : CATEGORY_LABELS[c as TemplateCategory]}
+              All ({savedRepliesCtx.replies.length})
             </button>
-          ))}
-        </div>
+            {CATEGORIES.map((c) => {
+              const count = savedRepliesCtx.replies.filter((r) => r.category === c).length;
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCategoryFilter(c)}
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-semibold transition-all",
+                    categoryFilter === c
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-500 hover:bg-slate-200",
+                  )}
+                >
+                  {SAVED_REPLY_CATEGORY_LABELS[c]} ({count})
+                </button>
+              );
+            })}
+          </div>
 
-        <div className="space-y-3">
-          {filtered.map((tpl) => (
-            <Card key={tpl.id} className="group">
-              <CardContent className="pt-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-100">
-                      <FileText className="size-4 text-slate-500" />
+          <div className="space-y-2">
+            {filteredReplies.map((reply) => (
+              <div
+                key={reply.id}
+                className="group rounded-xl border border-slate-200 bg-white p-3 transition-colors hover:border-blue-200 hover:bg-blue-50/30"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={cn(
+                          "rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
+                          SAVED_REPLY_CATEGORY_COLORS[reply.category],
+                        )}
+                      >
+                        {SAVED_REPLY_CATEGORY_LABELS[reply.category]}
+                      </span>
+                      <span className="text-sm font-bold text-slate-800">{reply.title}</span>
+                      <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                        <Hash className="size-2.5" />
+                        {reply.shortcut}
+                      </span>
+                      <span className="ml-auto flex items-center gap-1 text-[10px] text-slate-400">
+                        <RefreshCw className="size-2.5" />
+                        Used {reply.useCount}×
+                      </span>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-slate-800">{tpl.name}</span>
-                        <span
-                          className={cn(
-                            "rounded-full border px-2 py-0.5 text-[10px] font-medium",
-                            CATEGORY_COLORS[tpl.category],
-                          )}
-                        >
-                          {CATEGORY_LABELS[tpl.category]}
-                        </span>
-                        <div className="flex gap-1">
-                          {tpl.smsBody && (
-                            <span className="flex items-center gap-0.5 text-[10px] text-blue-500">
-                              <Smartphone className="size-2.5" /> SMS
-                            </span>
-                          )}
-                          {tpl.emailBody && (
-                            <span className="flex items-center gap-0.5 text-[10px] text-violet-500">
-                              <Mail className="size-2.5" /> Email
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <p className="mt-1 truncate text-xs text-slate-400">
-                        {tpl.smsBody ?? tpl.emailBody}
+                    <p className="mt-1 line-clamp-2 text-[11px] text-slate-500">{reply.body}</p>
+                    {reply.createdBy && (
+                      <p className="mt-1 text-[10px] text-slate-400">
+                        Added by {reply.createdBy}
                       </p>
-                      {tpl.variables.length > 0 && (
-                        <div className="mt-1.5 flex flex-wrap gap-1">
-                          {tpl.variables.map((v) => (
-                            <span
-                              key={v}
-                              className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-mono text-[9px] text-slate-500"
-                            >
-                              {v}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
-
-                  <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-8 rounded-full"
-                      onClick={() => setEditingTemplate(tpl)}
+                      className="size-7 rounded-full text-slate-400 hover:bg-slate-100"
+                      onClick={() => {
+                        navigator.clipboard.writeText(reply.body);
+                        toast.success("Copied to clipboard");
+                      }}
+                      title="Copy"
+                    >
+                      <Copy className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 rounded-full text-slate-400 hover:bg-blue-50 hover:text-blue-600"
+                      onClick={() => {
+                        setEditingReply(reply);
+                        setShowEditor(true);
+                      }}
+                      title="Edit"
                     >
                       <Pencil className="size-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-8 rounded-full text-red-400 hover:bg-red-50 hover:text-red-600"
-                      onClick={() => deleteTemplate(tpl.id)}
+                      className="size-7 rounded-full text-slate-400 hover:bg-red-50 hover:text-red-600"
+                      onClick={() => {
+                        savedRepliesCtx.remove(reply.id);
+                        toast.success("Saved reply deleted");
+                      }}
+                      title="Delete"
                     >
                       <Trash2 className="size-3.5" />
                     </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            ))}
 
-          {filtered.length === 0 && (
-            <div className="rounded-2xl border border-dashed py-12 text-center">
-              <FileText className="mx-auto mb-3 size-10 text-slate-200" />
-              <p className="text-slate-400">No templates in this category</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Template editor dialog */}
-      <Dialog
-        open={editingTemplate !== null}
-        onOpenChange={(open) => { if (!open) setEditingTemplate(null); }}
-      >
-        <DialogContent className="max-w-2xl p-0 overflow-hidden">
-          <div className="border-b px-6 py-4">
-            <h2 className="text-lg font-bold text-slate-900">
-              {editingTemplate && defaultTemplates.find((t) => t.id === editingTemplate.id)
-                ? "Edit Template"
-                : "New Template"}
-            </h2>
+            {filteredReplies.length === 0 && (
+              <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center">
+                <Bookmark className="mx-auto mb-3 size-8 text-slate-300" />
+                <p className="text-sm text-slate-500">No saved replies in this category</p>
+                <Button
+                  variant="link"
+                  className="mt-1 text-blue-600"
+                  onClick={() => {
+                    setEditingReply(null);
+                    setShowEditor(true);
+                  }}
+                >
+                  Create one
+                </Button>
+              </div>
+            )}
           </div>
-          {editingTemplate !== null && (
-            <TemplateEditor
-              template={editingTemplate}
-              onSave={saveTemplate}
-              onClose={() => setEditingTemplate(null)}
-            />
-          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <AlertTriangle className="size-4 text-amber-500" />
+            Credit & failure handling
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-xs text-slate-600">
+          <p>
+            <strong>Auto-reload</strong> will purchase 500 credits ($20) when your balance drops below 100.
+            Toggle this in Billing.
+          </p>
+          <p>
+            <strong>Send failures</strong> are surfaced as red badges on the conversation row and in the
+            Inbox banner so staff can retry or call instead.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={showEditor}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowEditor(false);
+            setEditingReply(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-xl p-0">
+          <div className="border-b px-6 py-4">
+            <h3 className="text-lg font-bold text-slate-900">
+              {editingReply ? "Edit saved reply" : "New saved reply"}
+            </h3>
+          </div>
+          <SavedReplyEditor
+            reply={editingReply}
+            onSave={(reply) => {
+              if (editingReply) {
+                savedRepliesCtx.update(reply);
+                toast.success(`Saved "${reply.title}"`);
+              } else {
+                savedRepliesCtx.add(reply);
+                toast.success(`Created "${reply.title}"`);
+              }
+              setShowEditor(false);
+              setEditingReply(null);
+            }}
+            onClose={() => {
+              setShowEditor(false);
+              setEditingReply(null);
+            }}
+          />
         </DialogContent>
       </Dialog>
     </div>

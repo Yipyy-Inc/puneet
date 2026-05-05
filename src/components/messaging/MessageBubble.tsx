@@ -29,11 +29,24 @@ function StatusIcon({ status }: { status: Message["status"] }) {
   return null;
 }
 
-function ChannelIcon({ type }: { type: string }) {
-  if (type === "email") return <Mail className="size-2.5 text-slate-300" />;
-  if (type === "sms") return <Smartphone className="size-2.5 text-slate-300" />;
-  return <MessageSquare className="size-2.5 text-slate-300" />;
+function ChannelIcon({
+  type,
+  outbound,
+}: {
+  type: string;
+  outbound?: boolean;
+}) {
+  const cls = cn("size-2.5", outbound ? "text-white/60" : "text-slate-400");
+  if (type === "email") return <Mail className={cls} />;
+  if (type === "sms") return <Smartphone className={cls} />;
+  return <MessageSquare className={cls} />;
 }
+
+const CHANNEL_LABEL: Record<string, string> = {
+  sms: "SMS",
+  email: "Email",
+  "in-app": "Portal",
+};
 
 const AVATAR_COLORS = [
   "bg-rose-500",
@@ -123,7 +136,18 @@ export function MessageBubble({
               out ? "justify-end" : "justify-start",
             )}
           >
-            {!out && <ChannelIcon type={message.type} />}
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide",
+                out
+                  ? "bg-white/15 text-white/80"
+                  : "bg-slate-100 text-slate-500",
+              )}
+              title={`Sent via ${CHANNEL_LABEL[message.type] ?? message.type}`}
+            >
+              <ChannelIcon type={message.type} outbound={out} />
+              {CHANNEL_LABEL[message.type] ?? message.type}
+            </span>
             <span
               className={cn(
                 "text-[10px]",

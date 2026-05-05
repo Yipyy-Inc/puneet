@@ -326,11 +326,50 @@ export const smartInsights: SmartInsight[] = [
 ];
 
 // Digital Waivers & E-Signatures
+export type WaiverServiceTag =
+  | "boarding"
+  | "daycare"
+  | "grooming"
+  | "training"
+  | "vet"
+  | "retail"
+  | "general";
+
+export type WaiverBlockKind =
+  | "heading"
+  | "subheading"
+  | "paragraph"
+  | "bullet"
+  | "spacer";
+
+export type WaiverBlockColor =
+  | "default"
+  | "muted"
+  | "red"
+  | "orange"
+  | "amber"
+  | "green"
+  | "blue"
+  | "purple";
+
+export interface WaiverBlock {
+  id: string;
+  kind: WaiverBlockKind;
+  text: string;
+  color?: WaiverBlockColor;
+  bold?: boolean;
+  italic?: boolean;
+}
+
 export interface DigitalWaiver {
   id: string;
   name: string;
-  type: "boarding" | "daycare" | "grooming" | "training" | "general";
+  type: WaiverServiceTag;
+  /** Multiple service tags this waiver applies to (defaults to [type] when absent). */
+  services?: WaiverServiceTag[];
   content: string;
+  /** Structured rich-text blocks; preferred over `content` when present. */
+  blocks?: WaiverBlock[];
   version: string;
   isActive: boolean;
   requiresSignature: boolean;

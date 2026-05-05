@@ -86,9 +86,11 @@ function getCustomerFacilityIds(customerId: number): number[] {
 export function MessageCenter({
   mode = "facility",
   customerId = 15,
+  locationFilter,
 }: {
   mode?: MessageCenterMode;
   customerId?: number;
+  locationFilter?: string[];
 }) {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() =>
     mode === "customer"
@@ -175,6 +177,7 @@ export function MessageCenter({
             customerFacilityIds={
               mode === "customer" ? customerFacilityIds : undefined
             }
+            locationFilter={locationFilter}
           />
         </div>
       )}

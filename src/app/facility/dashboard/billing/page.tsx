@@ -22,6 +22,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
+import { cn } from "@/lib/utils";
 import { TakePaymentModal } from "@/components/billing/TakePaymentModal";
 import { ProcessRefundModal } from "@/components/billing/ProcessRefundModal";
 import { IssueGiftCardModal } from "@/components/billing/IssueGiftCardModal";
@@ -46,6 +48,8 @@ import {
   RefreshCw,
   ExternalLink,
   Vault,
+  Coins,
+  FileWarning,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -203,27 +207,68 @@ export default function FacilityBillingPage() {
       label: "Payment ID",
       icon: Receipt,
       defaultVisible: true,
-      render: (p) => `#${p.id.split("-")[1]}`,
+      render: (p) => (
+        <div className="flex items-center gap-3">
+          <div className="flex size-9 items-center justify-center rounded-full bg-indigo-50 ring-2 ring-indigo-100">
+            <Receipt className="size-4 text-indigo-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-800">
+              #{p.id.split("-")[1]}
+            </p>
+            <div className="mt-0.5 flex items-center gap-1.5 text-xs">
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  p.status === "completed"
+                    ? "bg-emerald-500"
+                    : p.status === "pending"
+                      ? "bg-amber-500"
+                      : p.status === "refunded" ||
+                          p.status === "partially_refunded"
+                        ? "bg-rose-500"
+                        : "bg-slate-400",
+                )}
+              />
+              <span className="text-muted-foreground capitalize">
+                {p.status.replace("_", " ")}
+              </span>
+            </div>
+          </div>
+        </div>
+      ),
     },
     {
       key: "createdAt",
       label: "Date",
       icon: Calendar,
       defaultVisible: true,
-      render: (p) => formatDate(p.createdAt),
+      render: (p) => (
+        <span className="inline-flex items-center gap-1.5 text-sm text-slate-600">
+          <Calendar className="size-3.5 text-sky-500" />
+          {formatDate(p.createdAt)}
+        </span>
+      ),
     },
     {
       key: "clientId",
       label: "Client",
       icon: User,
       defaultVisible: true,
-      render: (p) =>
-        clients.find((c) => c.id === p.clientId)?.name || "Unknown",
+      render: (p) => (
+        <span className="inline-flex items-center gap-1.5 text-sm text-slate-600">
+          <User className="size-3.5 text-emerald-500" />
+          {clients.find((c) => c.id === p.clientId)?.name || "Unknown"}
+        </span>
+      ),
     },
     {
       key: "description",
       label: "Description",
       defaultVisible: true,
+      render: (p) => (
+        <span className="text-sm text-slate-600">{p.description}</span>
+      ),
     },
     {
       key: "totalAmount",
@@ -231,13 +276,17 @@ export default function FacilityBillingPage() {
       icon: DollarSign,
       defaultVisible: true,
       render: (p) => (
-        <span
-          className={`price-value ${
-            p.status === "refunded" ? "text-destructive" : "text-green-600"
-          }`}
+        <Badge
+          variant="outline"
+          className={cn(
+            "price-value text-[11px] font-semibold",
+            p.status === "refunded" || p.status === "partially_refunded"
+              ? "border-rose-200 bg-rose-50/80 text-rose-700"
+              : "border-emerald-200 bg-emerald-50/80 text-emerald-700",
+          )}
         >
           ${p.totalAmount.toFixed(2)}
-        </span>
+        </Badge>
       ),
     },
     {
@@ -245,16 +294,36 @@ export default function FacilityBillingPage() {
       label: "Method",
       icon: CreditCard,
       defaultVisible: true,
-      render: (p) => (
-        <div className="flex items-center gap-2">
-          {p.paymentMethod === "card" && <CreditCard className="size-4" />}
-          {p.paymentMethod === "cash" && <Wallet className="size-4" />}
-          {p.paymentMethod === "gift_card" && <Gift className="size-4" />}
-          <span className="capitalize">
+      render: (p) => {
+        const Icon =
+          p.paymentMethod === "card"
+            ? CreditCard
+            : p.paymentMethod === "cash"
+              ? Wallet
+              : p.paymentMethod === "gift_card"
+                ? Gift
+                : DollarSign;
+        const tone =
+          p.paymentMethod === "card"
+            ? "border-indigo-200 bg-indigo-50/80 text-indigo-700"
+            : p.paymentMethod === "cash"
+              ? "border-emerald-200 bg-emerald-50/80 text-emerald-700"
+              : p.paymentMethod === "gift_card"
+                ? "border-violet-200 bg-violet-50/80 text-violet-700"
+                : "border-slate-200 bg-slate-50/80 text-slate-700";
+        return (
+          <Badge
+            variant="outline"
+            className={cn(
+              "gap-1.5 text-[11px] font-medium capitalize",
+              tone,
+            )}
+          >
+            <Icon className="size-3" />
             {p.paymentMethod.replace("_", " ")}
-          </span>
-        </div>
-      ),
+          </Badge>
+        );
+      },
     },
     {
       key: "status",
@@ -290,88 +359,87 @@ export default function FacilityBillingPage() {
   ];
 
   return (
-    <div className="flex-1 space-y-4 p-4 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">
-          Billing & Payments - {facility.name}
-        </h2>
-        <div className="flex items-center space-x-2">
-          <Button variant="default" onClick={() => setShowTakePayment(true)}>
-            <Plus className="mr-2 size-4" />
-            Take Payment
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => exportPaymentsToCSV(facilityPayments)}
-          >
-            <Download className="mr-2 size-4" />
-            Export
-          </Button>
+    <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
+      <div className="mx-auto w-full max-w-[1600px] space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold">Billing & Payments</h1>
+            <p className="text-muted-foreground">
+              {facility.name} · Track revenue, manage gift cards, credits, and outstanding invoices
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="default" onClick={() => setShowTakePayment(true)}>
+              <Plus className="mr-2 size-4" />
+              Take Payment
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => exportPaymentsToCSV(facilityPayments)}
+            >
+              <Download className="mr-2 size-4" />
+              Export
+            </Button>
+          </div>
         </div>
-      </div>
 
-      {/* Stat tiles — click to filter the payments table */}
-      <div className="grid grid-cols-5 gap-3">
-        {[
-          {
-            key: "completed",
-            label: "Total Revenue",
-            icon: DollarSign,
-            value: `$${totalRevenue.toFixed(2)}`,
-            sub: `${paidTransactions} payments`,
-            color: "text-green-600",
-          },
-          {
-            key: "pending",
-            label: "Pending",
-            icon: TrendingUp,
-            value: `$${pendingRevenue.toFixed(2)}`,
-            sub: `${facilityPayments.filter((p) => p.status === "pending").length} awaiting`,
-            color: "text-amber-600",
-          },
-          {
-            key: "outstanding",
-            label: "Outstanding",
-            icon: AlertCircle,
-            value: `$${totalOutstanding.toFixed(2)}`,
-            sub: `${outstandingInvoices.length} invoices`,
-            color: "text-red-600",
-          },
-          {
-            key: "tips",
-            label: "Tips",
-            icon: Gift,
-            value: `$${totalTips.toFixed(2)}`,
-            sub: `${paidTransactions} transactions`,
-            color: "",
-          },
-          {
-            key: "refunded",
-            label: "Refunded",
-            icon: TrendingDown,
-            value: `$${refundedAmount.toFixed(2)}`,
-            sub: `${facilityPayments.filter((p) => p.status === "refunded").length} refunds`,
-            color: "text-red-600",
-          },
-        ].map(({ key, label, icon: Icon, value, sub, color }) => {
+        {/* Stat tiles — click to filter the payments table */}
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+        {(
+          [
+            {
+              key: "completed",
+              label: "Total Revenue",
+              icon: DollarSign,
+              value: `$${totalRevenue.toFixed(2)}`,
+              hint: `${paidTransactions} payments`,
+              tone: "emerald",
+            },
+            {
+              key: "pending",
+              label: "Pending",
+              icon: TrendingUp,
+              value: `$${pendingRevenue.toFixed(2)}`,
+              hint: `${facilityPayments.filter((p) => p.status === "pending").length} awaiting`,
+              tone: "amber",
+            },
+            {
+              key: "outstanding",
+              label: "Outstanding",
+              icon: AlertCircle,
+              value: `$${totalOutstanding.toFixed(2)}`,
+              hint: `${outstandingInvoices.length} invoices`,
+              tone: "rose",
+            },
+            {
+              key: "tips",
+              label: "Tips",
+              icon: Gift,
+              value: `$${totalTips.toFixed(2)}`,
+              hint: `${paidTransactions} transactions`,
+              tone: "violet",
+            },
+            {
+              key: "refunded",
+              label: "Refunded",
+              icon: TrendingDown,
+              value: `$${refundedAmount.toFixed(2)}`,
+              hint: `${facilityPayments.filter((p) => p.status === "refunded").length} refunds`,
+              tone: "slate",
+            },
+          ] as const
+        ).map(({ key, label, icon, value, hint, tone }) => {
           const isActive = statFilter === key;
           const isFilterable = key !== "tips" && key !== "outstanding";
           return (
-            <Card
+            <KpiTile
               key={key}
-              className={[
-                "transition-all",
-                isFilterable || key === "outstanding"
-                  ? "cursor-pointer select-none"
-                  : "",
-                isActive
-                  ? "ring-primary ring-2 ring-offset-1"
-                  : isFilterable || key === "outstanding"
-                    ? "hover:border-primary/50"
-                    : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
+              label={label}
+              value={value}
+              hint={hint}
+              icon={icon}
+              tone={tone}
+              active={isActive}
               onClick={() => {
                 if (key === "outstanding") {
                   setActiveTab("outstanding");
@@ -381,35 +449,7 @@ export default function FacilityBillingPage() {
                 setStatFilter(isActive ? null : key);
                 setActiveTab("payments");
               }}
-            >
-              <CardContent className="px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-muted-foreground text-xs font-medium">
-                    {label}
-                  </p>
-                  <Icon
-                    className={[
-                      "size-3.5",
-                      isActive ? color || "text-primary" : "text-muted-foreground",
-                    ].join(" ")}
-                  />
-                </div>
-                <p
-                  className={[
-                    "price-value mt-1 text-xl font-semibold",
-                    color,
-                  ].join(" ")}
-                >
-                  {value}
-                </p>
-                <p className="text-muted-foreground mt-0.5 text-xs">{sub}</p>
-                {isActive && (
-                  <p className="text-primary mt-1 text-xs font-medium">
-                    Filtered ✕
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+            />
           );
         })}
       </div>
@@ -421,17 +461,32 @@ export default function FacilityBillingPage() {
           setActiveTab(v);
           if (v !== "payments") setStatFilter(null);
         }}
-        className="w-full"
+        className="space-y-4"
       >
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="payments">Payments</TabsTrigger>
-          <TabsTrigger value="giftcards">Gift Cards</TabsTrigger>
-          <TabsTrigger value="credits">Credits</TabsTrigger>
-          <TabsTrigger value="outstanding">Outstanding</TabsTrigger>
+          <TabsTrigger value="payments" className="flex items-center gap-2">
+            <Receipt className="size-4" />
+            <span className="hidden sm:inline">Payments</span>
+          </TabsTrigger>
+          <TabsTrigger value="giftcards" className="flex items-center gap-2">
+            <Gift className="size-4" />
+            <span className="hidden sm:inline">Gift Cards</span>
+          </TabsTrigger>
+          <TabsTrigger value="credits" className="flex items-center gap-2">
+            <Coins className="size-4" />
+            <span className="hidden sm:inline">Credits</span>
+          </TabsTrigger>
+          <TabsTrigger value="outstanding" className="flex items-center gap-2">
+            <FileWarning className="size-4" />
+            <span className="hidden sm:inline">Outstanding</span>
+          </TabsTrigger>
           <TabsTrigger value="cash-drawer" asChild>
-            <Link href="/facility/dashboard/billing/cash-drawer" className="flex items-center gap-1.5">
-              <Vault className="size-3.5" />
-              Cash Drawer
+            <Link
+              href="/facility/dashboard/billing/cash-drawer"
+              className="flex items-center gap-2"
+            >
+              <Vault className="size-4" />
+              <span className="hidden sm:inline">Cash Drawer</span>
             </Link>
           </TabsTrigger>
         </TabsList>
@@ -539,37 +594,80 @@ export default function FacilityBillingPage() {
             </Card>
           </div>
 
-          <DataTable
-            data={
-              statFilter
-                ? facilityPayments.filter((p) => p.status === statFilter)
-                : facilityPayments
-            }
-            columns={paymentColumns}
-            filters={paymentFilters}
-            searchKey="description"
-            searchPlaceholder="Search payments..."
-            itemsPerPage={10}
-            onRowClick={(payment) => {
-              if (payment.bookingId) {
-                router.push(
-                  `/facility/dashboard/bookings/${payment.bookingId}`,
-                );
-              } else {
-                setSelectedTransaction(payment);
-              }
-            }}
-            actions={(payment) => (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedTransaction(payment)}
-                title="View payment details"
-              >
-                <Eye className="size-4" />
-              </Button>
-            )}
-          />
+          <Card className="border border-slate-200/80 bg-white/95 shadow-sm">
+            <CardHeader className="pb-2">
+              <div className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+                <CardTitle className="text-base">Transactions</CardTitle>
+                <p className="text-muted-foreground text-xs">
+                  Showing{" "}
+                  {statFilter
+                    ? facilityPayments.filter((p) => p.status === statFilter).length
+                    : facilityPayments.length}{" "}
+                  of {facilityPayments.length} payments
+                  {statFilter && (
+                    <>
+                      {" "}· filtered by{" "}
+                      <span className="text-foreground font-medium capitalize">
+                        {statFilter}
+                      </span>
+                    </>
+                  )}
+                </p>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="relative rounded-xl border border-slate-200/80 bg-linear-to-br from-sky-50/60 via-white to-indigo-50/50 p-2.5">
+                <div className="overflow-hidden rounded-lg border border-white/90 bg-white/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                  <div className="[&_tbody_td]:py-3 [&_tbody_td]:align-middle [&_tbody_tr]:transition-colors [&_tbody_tr]:duration-200 [&_thead_th]:bg-slate-50/90 [&_thead_th]:text-[11px] [&_thead_th]:font-semibold [&_thead_th]:tracking-wide [&_thead_th]:text-slate-500 [&_thead_th]:uppercase">
+                    <DataTable
+                      data={
+                        statFilter
+                          ? facilityPayments.filter(
+                              (p) => p.status === statFilter,
+                            )
+                          : facilityPayments
+                      }
+                      columns={paymentColumns}
+                      filters={paymentFilters}
+                      searchKey="description"
+                      searchPlaceholder="Search payments..."
+                      itemsPerPage={10}
+                      onRowClick={(payment) => {
+                        if (payment.bookingId) {
+                          router.push(
+                            `/facility/dashboard/bookings/${payment.bookingId}`,
+                          );
+                        } else {
+                          setSelectedTransaction(payment);
+                        }
+                      }}
+                      rowClassName={(payment) =>
+                        cn(
+                          "border-b border-slate-100/80 [&>td]:py-3",
+                          payment.status === "refunded" ||
+                            payment.status === "partially_refunded"
+                            ? "bg-rose-50/40 !hover:bg-rose-50/70"
+                            : payment.status === "pending"
+                              ? "bg-amber-50/40 !hover:bg-amber-50/70"
+                              : "bg-white/95 !hover:bg-emerald-50/40",
+                        )
+                      }
+                      actions={(payment) => (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedTransaction(payment)}
+                          title="View payment details"
+                        >
+                          <Eye className="size-4" />
+                        </Button>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Gift Cards Tab */}
@@ -1372,6 +1470,7 @@ export default function FacilityBillingPage() {
           alert(`Credit of $${credit.amount.toFixed(2)} added successfully!`);
         }}
       />
+      </div>
     </div>
   );
 }

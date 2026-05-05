@@ -75,6 +75,8 @@ export const automationRuleSchema = z.object({
     .object({
       serviceTypes: z.array(z.string()).optional(),
       minAmount: z.number().optional(),
+      /** Empty / undefined = global rule (fires for events at any location). */
+      locationIds: z.array(z.string()).optional(),
     })
     .optional(),
   schedule: z
