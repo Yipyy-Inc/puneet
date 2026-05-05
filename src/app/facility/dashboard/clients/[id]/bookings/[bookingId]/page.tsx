@@ -83,6 +83,7 @@ import { BookingStatusDropdown } from "@/components/bookings/BookingStatusDropdo
 import { FeedingSection } from "@/components/bookings/FeedingSection";
 import { MedicationSection } from "@/components/bookings/MedicationSection";
 import { BelongingsSection } from "@/components/bookings/BelongingsSection";
+import { ReservationJournalPanel } from "@/components/guest-journal/ReservationJournalPanel";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { formatBookingRef } from "@/lib/booking-id";
 import { facilityBookingFlowConfig } from "@/data/settings";
@@ -1043,6 +1044,16 @@ export default function ClientBookingDetailPage({
                 </>
               );
             })()}
+
+            {/* Guest Journal — only for boarding (the only service with multi-day care logs) */}
+            {isBoarding && !isCancelled && (
+              <ReservationJournalPanel
+                bookingId={booking.id}
+                petIds={
+                  Array.isArray(booking.petId) ? booking.petId : [booking.petId]
+                }
+              />
+            )}
 
             {/* Notes */}
             <Card className="overflow-hidden">

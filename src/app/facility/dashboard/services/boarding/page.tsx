@@ -448,7 +448,15 @@ export default function BoardingDashboardPage() {
                         className="w-full"
                       >
                         <Link
-                          href={`/facility/dashboard/services/boarding/journals?guest=${guest.id}&view=guest`}
+                          href={(() => {
+                            const numericId = guest.bookingId
+                              ? parseInt(guest.bookingId.replace(/\D/g, ""), 10)
+                              : null;
+                            if (numericId && guest.ownerId) {
+                              return `/facility/dashboard/clients/${guest.ownerId}/bookings/${numericId}`;
+                            }
+                            return `/facility/dashboard/daily-care`;
+                          })()}
                         >
                           <BookOpen className="mr-2 size-3.5" />
                           View Journal
