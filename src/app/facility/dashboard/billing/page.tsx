@@ -43,7 +43,6 @@ import {
   Plus,
   AlertCircle,
   CheckCircle,
-  FileText,
   Send,
   RefreshCw,
   ExternalLink,
