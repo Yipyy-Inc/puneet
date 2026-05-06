@@ -44,8 +44,11 @@ import {
   Trash2,
   MoreVertical,
   Shield,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+
+type CategoryTab = FormType | "templates";
 
 const FORM_CATEGORIES: { value: FormType; label: string }[] = [
   { value: "intake", label: "Intake Forms" },
@@ -58,12 +61,15 @@ const FORM_CATEGORIES: { value: FormType; label: string }[] = [
 const FACILITY_ID = 11;
 
 export default function IntakeFormsPage() {
-  const [category, setCategory] = useState<FormType>("intake");
+  const [category, setCategory] = useState<CategoryTab>("intake");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const router = useRouter();
   const allForms = getFormsByFacility(FACILITY_ID);
-  const formsInCategory = allForms.filter((f) => f.type === category);
+  const formsInCategory =
+    category === "templates"
+      ? []
+      : allForms.filter((f) => f.type === category);
 
   const _refresh = refreshKey; // force re-render on state change
 
@@ -92,13 +98,14 @@ export default function IntakeFormsPage() {
           open={createModalOpen}
           onOpenChange={setCreateModalOpen}
           facilityId={FACILITY_ID}
-          defaultCategory={category}
+          defaultCategory={category === "templates" ? "intake" : category}
         />
       </div>
 
-      <FormTemplatesSection facilityId={FACILITY_ID} />
-
-      <Tabs value={category} onValueChange={(v) => setCategory(v as FormType)}>
+      <Tabs
+        value={category}
+        onValueChange={(v) => setCategory(v as CategoryTab)}
+      >
         <div className="flex flex-wrap items-center gap-2">
           <TabsList className="flex h-auto flex-wrap gap-1">
             {FORM_CATEGORIES.map((cat) => (
@@ -109,6 +116,10 @@ export default function IntakeFormsPage() {
                 {cat.label}
               </TabsTrigger>
             ))}
+            <TabsTrigger value="templates">
+              <Sparkles className="text-muted-foreground mr-1.5 size-3.5" />
+              Templates
+            </TabsTrigger>
           </TabsList>
           <Button variant="outline" size="sm" asChild className="shrink-0">
             <Link
@@ -116,12 +127,16 @@ export default function IntakeFormsPage() {
               className="gap-2"
             >
               <PenLine className="size-4" />
-              Form Builder
+              Create New Form
             </Link>
           </Button>
         </div>
-        <TabsContent value={category} className="mt-4">
-          {formsInCategory.length === 0 ? (
+        <TabsContent value="templates" className="mt-4">
+          <FormTemplatesSection facilityId={FACILITY_ID} embedded />
+        </TabsContent>
+        {category !== "templates" && (
+          <TabsContent value={category} className="mt-4">
+            {formsInCategory.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <p className="text-muted-foreground mb-4">
@@ -149,8 +164,9 @@ export default function IntakeFormsPage() {
                 />
               ))}
             </div>
-          )}
-        </TabsContent>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

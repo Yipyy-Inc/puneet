@@ -71,6 +71,17 @@ export function MessageBubble({
   clientImage?: string;
   showAvatar?: boolean;
 }) {
+  if (message.type === "email") {
+    return (
+      <EmailCard
+        message={message}
+        clientName={clientName}
+        clientImage={clientImage}
+        showAvatar={showAvatar}
+      />
+    );
+  }
+
   const out = message.direction === "outbound";
   const failed = message.status === "failed";
   const color =
@@ -164,6 +175,197 @@ export function MessageBubble({
         </div>
 
         {/* Failed retry */}
+        {failed && (
+          <p
+            className={cn(
+              "mt-1 text-[10px] text-red-500",
+              out ? "text-right" : "text-left",
+            )}
+          >
+            Not delivered ·{" "}
+            <button type="button" className="font-semibold underline">
+              Retry
+            </button>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EmailStatusLabel({ status }: { status: Message["status"] }) {
+  const cfg = {
+    sent: { text: "Sent", icon: <Check className="size-3 text-slate-400" /> },
+    delivered: {
+      text: "Delivered",
+      icon: <CheckCheck className="size-3 text-slate-400" />,
+    },
+    read: {
+      text: "Read",
+      icon: <CheckCheck className="size-3 text-sky-500" />,
+    },
+    failed: {
+      text: "Failed to send",
+      icon: <AlertCircle className="size-3 text-red-500" />,
+    },
+  }[status];
+  return (
+    <span
+      className={cn(
+        "flex items-center gap-1 font-medium",
+        status === "failed" ? "text-red-500" : "text-slate-500",
+      )}
+    >
+      {cfg.icon}
+      {cfg.text}
+    </span>
+  );
+}
+
+function EmailCard({
+  message,
+  clientName,
+  clientImage,
+  showAvatar = true,
+}: {
+  message: Message;
+  clientName?: string;
+  clientImage?: string;
+  showAvatar?: boolean;
+}) {
+  const out = message.direction === "outbound";
+  const failed = message.status === "failed";
+  const color =
+    AVATAR_COLORS[(clientName?.charCodeAt(0) ?? 0) % AVATAR_COLORS.length];
+
+  const senderName = out ? "You" : clientName ?? message.from;
+  const senderAddress = out ? message.from : message.from;
+
+  return (
+    <div
+      className={cn(
+        "group flex gap-2 py-2",
+        out ? "flex-row-reverse" : "flex-row",
+      )}
+    >
+      {!out && showAvatar ? (
+        clientImage ? (
+          <img
+            src={clientImage}
+            alt=""
+            className="mt-1 size-8 shrink-0 rounded-full object-cover shadow-sm"
+          />
+        ) : (
+          <div
+            className={cn(
+              "mt-1 flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-sm",
+              color,
+            )}
+          >
+            {clientName?.charAt(0).toUpperCase() ?? "?"}
+          </div>
+        )
+      ) : !out ? (
+        <div className="w-8 shrink-0" />
+      ) : null}
+
+      <div className="min-w-0 flex-1">
+        <div
+          className={cn(
+            "overflow-hidden rounded-xl border bg-white shadow-sm",
+            out ? "border-blue-200" : "border-slate-200",
+            failed && "ring-2 ring-red-400/40",
+          )}
+        >
+          {/* Email header */}
+          <div
+            className={cn(
+              "flex items-start gap-2 border-b px-4 py-2.5",
+              out
+                ? "border-blue-100 bg-blue-50/50"
+                : "border-slate-100 bg-slate-50/60",
+            )}
+          >
+            <Mail
+              className={cn(
+                "mt-0.5 size-4 shrink-0",
+                out ? "text-blue-500" : "text-slate-400",
+              )}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-1.5 text-[12px]">
+                <span className="font-semibold text-slate-800">
+                  {senderName}
+                </span>
+                <span className="truncate text-[11px] text-slate-400">
+                  &lt;{senderAddress}&gt;
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-500">
+                to{" "}
+                <span className="text-slate-600">
+                  {out ? clientName ?? message.to : "you"}
+                </span>
+                {message.to && out ? (
+                  <span className="ml-1 text-slate-400">
+                    &lt;{message.to}&gt;
+                  </span>
+                ) : null}
+              </div>
+              {message.subject && (
+                <p className="mt-1.5 text-[13.5px] font-semibold text-slate-800">
+                  {message.subject}
+                </p>
+              )}
+            </div>
+            <span className="shrink-0 text-[10px] whitespace-nowrap text-slate-400">
+              {formatTime(message.timestamp)}
+            </span>
+          </div>
+
+          {/* Email body */}
+          <div className="px-4 py-3.5">
+            <p className="text-[13.5px] leading-[1.6] whitespace-pre-wrap text-slate-700">
+              {message.body}
+            </p>
+          </div>
+
+          {/* Attachments */}
+          {message.attachments && message.attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 border-t border-slate-100 bg-slate-50/40 px-4 py-2">
+              {message.attachments.map((att) => (
+                <a
+                  key={att.id}
+                  href={att.url}
+                  className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600 hover:bg-slate-50"
+                >
+                  <Mail className="size-3 text-slate-400" />
+                  <span className="max-w-[180px] truncate">{att.name}</span>
+                  <span className="text-[10px] text-slate-400">
+                    {Math.round(att.size / 1024)} KB
+                  </span>
+                </a>
+              ))}
+            </div>
+          )}
+
+          {/* Footer */}
+          <div
+            className={cn(
+              "flex items-center justify-between border-t px-4 py-1.5 text-[10px]",
+              out
+                ? "border-blue-100 bg-blue-50/40"
+                : "border-slate-100 bg-slate-50/40",
+            )}
+          >
+            <span className="inline-flex items-center gap-1 font-semibold tracking-wide text-slate-400 uppercase">
+              <Mail className="size-2.5" />
+              Email
+            </span>
+            {out && <EmailStatusLabel status={message.status} />}
+          </div>
+        </div>
+
         {failed && (
           <p
             className={cn(

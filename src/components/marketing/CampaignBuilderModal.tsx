@@ -10,6 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import {
   Select,
   SelectContent,
@@ -57,7 +59,7 @@ import { getContrastTextColor } from "@/lib/color-utils";
 import { clients } from "@/data/clients";
 import { LocationScopePicker } from "@/components/hq/LocationScopePicker";
 import { useLocationContext } from "@/hooks/use-location-context";
-import { Globe } from "lucide-react";
+import { Globe, ShieldAlert } from "lucide-react";
 
 interface CampaignBuilderModalProps {
   campaign?: Campaign | null;
@@ -91,7 +93,9 @@ const TEMPLATES_BY_USE_CASE = (() => {
   return groups;
 })();
 
-const SAMPLE_RECIPIENTS = clients.slice(0, 5).map((c) => c.name);
+const ELIGIBLE_CLIENTS = clients.filter((c) => !c.isBlocked);
+const BLOCKED_CLIENT_COUNT = clients.length - ELIGIBLE_CLIENTS.length;
+const SAMPLE_RECIPIENTS = ELIGIBLE_CLIENTS.slice(0, 5).map((c) => c.name);
 const BRAND_TEXT_COLOR = getContrastTextColor(facilityBranding.primaryColor);
 const EMPTY_OVERRIDES = {
   subject: "",
@@ -147,7 +151,23 @@ export function CampaignBuilderModal({
   const [sendOption, setSendOption] = useState<
     "now" | "schedule" | "recurring"
   >(campaign?.scheduledAt ? "schedule" : "now");
-  const [scheduledAt, setScheduledAt] = useState(campaign?.scheduledAt || "");
+  const initialScheduled = campaign?.scheduledAt
+    ? new Date(campaign.scheduledAt)
+    : null;
+  const [scheduledDate, setScheduledDate] = useState(
+    initialScheduled
+      ? `${initialScheduled.getFullYear()}-${String(initialScheduled.getMonth() + 1).padStart(2, "0")}-${String(initialScheduled.getDate()).padStart(2, "0")}`
+      : "",
+  );
+  const [scheduledTime, setScheduledTime] = useState(
+    initialScheduled
+      ? `${String(initialScheduled.getHours()).padStart(2, "0")}:${String(initialScheduled.getMinutes()).padStart(2, "0")}`
+      : "",
+  );
+  const scheduledAt =
+    scheduledDate && scheduledTime
+      ? `${scheduledDate}T${scheduledTime}:00`
+      : "";
   const [recurringFreq, setRecurringFreq] = useState<
     "weekly" | "biweekly" | "monthly"
   >("monthly");
@@ -183,7 +203,9 @@ export function CampaignBuilderModal({
       case 2:
         return !!templateId;
       case 3:
-        return sendOption !== "schedule" || !!scheduledAt;
+        return (
+          sendOption !== "schedule" || (!!scheduledDate && !!scheduledTime)
+        );
       default:
         return true;
     }
@@ -504,6 +526,23 @@ export function CampaignBuilderModal({
                 value={targetLocationIds}
                 onChange={setTargetLocationIds}
               />
+
+              {BLOCKED_CLIENT_COUNT > 0 && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                  <ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-amber-600" />
+                  <div>
+                    <p className="font-semibold">
+                      {BLOCKED_CLIENT_COUNT} blocked{" "}
+                      {BLOCKED_CLIENT_COUNT === 1 ? "client" : "clients"} will
+                      be excluded
+                    </p>
+                    <p className="mt-0.5 text-amber-700">
+                      Blocked clients are automatically removed from every
+                      campaign send, regardless of segment.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -743,52 +782,63 @@ export function CampaignBuilderModal({
                   role="radiogroup"
                   aria-label="Send timing"
                 >
-                  {SEND_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      role="radio"
-                      aria-checked={sendOption === opt.value}
-                      className={`focus-visible:ring-ring w-full rounded-lg border p-3 px-4 text-left transition-all focus-visible:ring-2 focus-visible:outline-none ${
-                        sendOption === opt.value
-                          ? `border-primary ring-primary/20 ring-1`
-                          : `border-border`
-                      } `}
-                      onClick={() => setSendOption(opt.value)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <opt.icon className="size-4 shrink-0" />
-                        <div>
-                          <div className="text-sm font-medium">{opt.label}</div>
-                          <div className="text-muted-foreground text-xs">
-                            {opt.desc}
+                  {SEND_OPTIONS.map((opt) => {
+                    const isSelected = sendOption === opt.value;
+                    return (
+                      <div
+                        key={opt.value}
+                        className={`rounded-lg border transition-all ${
+                          isSelected
+                            ? `border-primary ring-primary/20 ring-1`
+                            : `border-border`
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={isSelected}
+                          className="focus-visible:ring-ring w-full rounded-lg p-3 px-4 text-left focus-visible:ring-2 focus-visible:outline-none"
+                          onClick={() => setSendOption(opt.value)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <opt.icon className="size-4 shrink-0" />
+                            <div>
+                              <div className="text-sm font-medium">
+                                {opt.label}
+                              </div>
+                              <div className="text-muted-foreground text-xs">
+                                {opt.desc}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                      {opt.value === "schedule" &&
-                        sendOption === "schedule" && (
-                          <div className="mt-3 ml-7">
-                            <Input
-                              type="datetime-local"
-                              value={
-                                scheduledAt
-                                  ? new Date(scheduledAt)
-                                      .toISOString()
-                                      .slice(0, 16)
-                                  : ""
-                              }
-                              onChange={(e) => setScheduledAt(e.target.value)}
-                              className="w-auto"
-                              onClick={(e) => e.stopPropagation()}
-                            />
+                        </button>
+                        {opt.value === "schedule" && isSelected && (
+                          <div className="grid gap-2 px-4 pb-3 pl-11 sm:grid-cols-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Date</Label>
+                              <DatePicker
+                                value={scheduledDate}
+                                onValueChange={(v) => setScheduledDate(v)}
+                                min={new Date().toISOString().split("T")[0]}
+                                placeholder="Pick a date"
+                                displayMode="dialog"
+                                popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
+                                calendarClassName="p-1"
+                                showQuickPresets={false}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Time</Label>
+                              <TimePickerLux
+                                value={scheduledTime}
+                                onValueChange={setScheduledTime}
+                                displayMode="dialog"
+                              />
+                            </div>
                           </div>
                         )}
-                      {opt.value === "recurring" &&
-                        sendOption === "recurring" && (
-                          <div
-                            className="mt-3 ml-7"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                        {opt.value === "recurring" && isSelected && (
+                          <div className="px-4 pb-3 pl-11">
                             <Select
                               value={recurringFreq}
                               onValueChange={(v: string) =>
@@ -810,8 +860,9 @@ export function CampaignBuilderModal({
                             </Select>
                           </div>
                         )}
-                    </button>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

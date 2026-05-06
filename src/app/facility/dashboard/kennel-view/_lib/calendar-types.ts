@@ -45,7 +45,6 @@ export interface RoomBlock {
 }
 
 export interface CalendarFilterState {
-  service: "boarding" | "daycare" | "both";
   categoryIds: string[];
   bookingStatuses: BookingWorkflowStatus[];
   petSizes: Array<"small" | "medium" | "large" | "xlarge">;
@@ -54,7 +53,6 @@ export interface CalendarFilterState {
 }
 
 export const DEFAULT_FILTER_STATE: CalendarFilterState = {
-  service: "boarding",
   categoryIds: [],
   bookingStatuses: [],
   petSizes: [],

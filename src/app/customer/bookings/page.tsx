@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useMemo, useEffect, useSyncExternalStore } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import Image from "next/image";
-import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { useSettings } from "@/hooks/use-settings";
-import { bookings } from "@/data/bookings";
-import { clients } from "@/data/clients";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import {
+  Calendar,
+  CheckCircle,
+  Clock,
+  Plus,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -14,43 +18,26 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Calendar,
-  Clock,
-  DollarSign,
-  X,
-  Edit,
-  CheckCircle,
-  Plus,
-  MapPin,
-  MessageSquare,
-  Download,
-  Calendar as CalendarIcon,
-  Dog,
-  Cat,
-  Scissors,
-  Home,
-  GraduationCap,
-} from "lucide-react";
-import Link from "next/link";
 import { CancelBookingDialog } from "@/components/customer/CancelBookingDialog";
-import { toast } from "sonner";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { TagList } from "@/components/shared/TagList";
 import { AddNoteModal } from "@/components/shared/AddNoteModal";
-import { getNotesForEntity } from "@/data/tags-notes";
-import { getUnfinishedBookingsForCustomer } from "@/data/unfinished-bookings";
 import { CustomerUnfinishedBookings } from "@/components/bookings/CustomerUnfinishedBookings";
 import { TipPromptDialog } from "@/components/bookings/TipPromptDialog";
-import { Heart } from "lucide-react";
+import { bookings } from "@/data/bookings";
+import { clients } from "@/data/clients";
+import { getUnfinishedBookingsForCustomer } from "@/data/unfinished-bookings";
+import { useCustomerFacility } from "@/hooks/use-customer-facility";
+import { useSettings } from "@/hooks/use-settings";
+import {
+  BookingFilters,
+  type ServiceFilter,
+} from "./_components/BookingFilters";
+import { UpcomingBookingCard } from "./_components/UpcomingBookingCard";
+import { PastBookingCard } from "./_components/PastBookingCard";
+import {
+  getPetForBooking,
+  type Booking,
+} from "./_components/booking-helpers";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -58,16 +45,18 @@ const MOCK_CUSTOMER_ID = 15;
 export default function CustomerBookingsPage() {
   const searchParams = useSearchParams();
   const { selectedFacility } = useCustomerFacility();
-  const router = useRouter();
   const { tipConfig } = useSettings();
-  const [tipBooking, setTipBooking] = useState<(typeof bookings)[0] | null>(
-    null,
-  );
+
+  const [tipBooking, setTipBooking] = useState<Booking | null>(null);
   const [tipsGiven, setTipsGiven] = useState<Record<string, number>>({});
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [bookingToCancel, setBookingToCancel] = useState<
-    (typeof bookings)[0] | null
-  >(null);
+  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
+  const [addNoteDialogOpen, setAddNoteDialogOpen] = useState(false);
+  const [bookingForNote, setBookingForNote] = useState<Booking | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [serviceFilter, setServiceFilter] = useState<ServiceFilter>("all");
+
   const isMounted = useSyncExternalStore(
     (cb) => {
       cb();
@@ -76,51 +65,60 @@ export default function CustomerBookingsPage() {
     () => true,
     () => false,
   );
-  const [addNoteDialogOpen, setAddNoteDialogOpen] = useState(false);
-  const [bookingForNote, setBookingForNote] = useState<
-    (typeof bookings)[0] | null
-  >(null);
 
-  // Get customer data
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
     [],
   );
+
+  const customerPets = customer?.pets ?? [];
 
   const myUnfinishedBookings = useMemo(
     () => getUnfinishedBookingsForCustomer(MOCK_CUSTOMER_ID),
     [],
   );
 
-  // Check for service query parameter to redirect to new booking page
+  // Redirect to new-booking page when ?service=... is present
   useEffect(() => {
     const service = searchParams?.get("service");
     if (service && typeof window !== "undefined") {
-      window.location.href = `/customer/bookings/new${service ? `?service=${encodeURIComponent(service)}` : ""}`;
+      window.location.href = `/customer/bookings/new?service=${encodeURIComponent(service)}`;
     }
   }, [searchParams]);
 
-  // Get customer's bookings (show all facilities — filter by facility switcher if desired)
   const customerBookings = useMemo(() => {
     const all = bookings.filter((b) => b.clientId === MOCK_CUSTOMER_ID);
     if (!selectedFacility) return all;
-    // If the selected facility has bookings, filter; otherwise show all
     const filtered = all.filter((b) => b.facilityId === selectedFacility.id);
     return filtered.length > 0 ? filtered : all;
   }, [selectedFacility]);
 
-  // Separate upcoming and past bookings (only on client to avoid hydration issues)
+  // Apply search + service filter before splitting upcoming/past
+  const filteredBookings = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return customerBookings.filter((b) => {
+      if (serviceFilter !== "all" && b.service.toLowerCase() !== serviceFilter) {
+        return false;
+      }
+      if (!q) return true;
+      const pet = getPetForBooking(b, customerPets);
+      return (
+        b.service.toLowerCase().includes(q) ||
+        b.serviceType?.toLowerCase().includes(q) ||
+        pet?.name.toLowerCase().includes(q) ||
+        false
+      );
+    });
+  }, [customerBookings, searchQuery, serviceFilter, customerPets]);
+
   const { upcomingBookings, pastBookings } = useMemo(() => {
-    if (!isMounted) {
-      // Return safe defaults during SSR
-      return { upcomingBookings: [], pastBookings: [] };
-    }
+    if (!isMounted) return { upcomingBookings: [], pastBookings: [] };
     const now = new Date();
-    const upcoming = customerBookings.filter((b) => {
+    const upcoming = filteredBookings.filter((b) => {
       const bookingDate = new Date(b.startDate);
       return bookingDate >= now && b.status !== "cancelled";
     });
-    const past = customerBookings.filter((b) => {
+    const past = filteredBookings.filter((b) => {
       const bookingDate = new Date(b.startDate);
       return (
         bookingDate < now ||
@@ -129,16 +127,15 @@ export default function CustomerBookingsPage() {
       );
     });
     return { upcomingBookings: upcoming, pastBookings: past };
-  }, [customerBookings, isMounted]);
+  }, [filteredBookings, isMounted]);
 
-  const handleCancelBooking = (booking: (typeof bookings)[0]) => {
+  const handleCancelBooking = (booking: Booking) => {
     setBookingToCancel(booking);
     setCancelDialogOpen(true);
   };
 
   const confirmCancelBooking = async () => {
     if (!bookingToCancel) return;
-
     try {
       // TODO: Replace with actual API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -152,110 +149,12 @@ export default function CustomerBookingsPage() {
     }
   };
 
-  const handleRescheduleBooking = () => {
-    router.push("/customer/bookings/new");
-  };
-
-  const formatDate = (dateString: string) => {
-    if (!isMounted) return dateString; // Return raw string during SSR
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "confirmed":
-        return <Badge variant="default">Confirmed</Badge>;
-      case "pending":
-        return <Badge variant="secondary">Pending</Badge>;
-      case "request_submitted":
-        return <Badge variant="secondary">Request Submitted</Badge>;
-      case "waitlisted":
-        return <Badge variant="outline">Waitlisted</Badge>;
-      case "completed":
-        return <Badge variant="outline">Completed</Badge>;
-      case "cancelled":
-        return <Badge variant="destructive">Cancelled</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
-  };
-
-  // Get pet for a booking
-  const getPetForBooking = (booking: (typeof bookings)[0]) => {
-    if (!customer) return null;
-    const petId = Array.isArray(booking.petId)
-      ? booking.petId[0]
-      : booking.petId;
-    return customer.pets.find((p) => p.id === petId);
-  };
-
-  // Get service icon
-  const getServiceIcon = (service: string) => {
-    switch (service.toLowerCase()) {
-      case "grooming":
-        return Scissors;
-      case "daycare":
-        return Dog;
-      case "boarding":
-        return Home;
-      case "training":
-        return GraduationCap;
-      default:
-        return Calendar;
-    }
-  };
-
-  // Generate calendar file (.ics)
-  const handleAddToCalendar = (booking: (typeof bookings)[0]) => {
-    const pet = getPetForBooking(booking);
-    const petName = pet?.name || "Pet";
-    const startDateTime = new Date(
-      `${booking.startDate}T${booking.checkInTime || "09:00"}`,
-    );
-    const endDateTime =
-      booking.endDate && booking.checkOutTime
-        ? new Date(`${booking.endDate}T${booking.checkOutTime}`)
-        : new Date(startDateTime.getTime() + 60 * 60 * 1000); // Default 1 hour
-
-    const formatICSDate = (date: Date) => {
-      return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-    };
-
-    const icsContent = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Yipyy//Booking//EN",
-      "BEGIN:VEVENT",
-      `UID:booking-${booking.id}@yipyy.com`,
-      `DTSTART:${formatICSDate(startDateTime)}`,
-      `DTEND:${formatICSDate(endDateTime)}`,
-      `SUMMARY:${booking.service.charAt(0).toUpperCase() + booking.service.slice(1)} - ${petName}`,
-      `DESCRIPTION:Service: ${booking.service}\\nPet: ${petName}\\nLocation: ${selectedFacility?.name || "Facility"}`,
-      `LOCATION:${selectedFacility?.name || "Facility"}`,
-      "END:VEVENT",
-      "END:VCALENDAR",
-    ].join("\r\n");
-
-    const blob = new Blob([icsContent], {
-      type: "text/calendar;charset=utf-8",
-    });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `booking-${booking.id}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("Calendar event downloaded");
-  };
-
-  const handleAddNote = (booking: (typeof bookings)[0]) => {
+  const handleAddNote = (booking: Booking) => {
     setBookingForNote(booking);
     setAddNoteDialogOpen(true);
   };
+
+  const filtersActive = searchQuery.trim() !== "" || serviceFilter !== "all";
 
   return (
     <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
@@ -278,55 +177,30 @@ export default function CustomerBookingsPage() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
-              <Calendar className="text-muted-foreground size-4" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {upcomingBookings.length}
-              </div>
-              <p className="text-muted-foreground text-xs">
-                Confirmed bookings
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <CheckCircle className="text-muted-foreground size-4" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {pastBookings.filter((b) => b.status === "completed").length}
-              </div>
-              <p className="text-muted-foreground text-xs">Past bookings</p>
-            </CardContent>
-          </Card>
-
+          <StatCard
+            title="Upcoming"
+            value={upcomingBookings.length}
+            subtitle="Confirmed bookings"
+            icon={Calendar}
+          />
+          <StatCard
+            title="Completed"
+            value={pastBookings.filter((b) => b.status === "completed").length}
+            subtitle="Past bookings"
+            icon={CheckCircle}
+          />
           {myUnfinishedBookings.length > 0 && (
-            <Card className="border-amber-200 dark:border-amber-800">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                  Unfinished
-                </CardTitle>
-                <Clock className="size-4 text-amber-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-amber-600">
-                  {myUnfinishedBookings.length}
-                </div>
-                <p className="text-muted-foreground text-xs">
-                  Incomplete reservations
-                </p>
-              </CardContent>
-            </Card>
+            <StatCard
+              title="Unfinished"
+              value={myUnfinishedBookings.length}
+              subtitle="Incomplete reservations"
+              icon={Clock}
+              tone="amber"
+            />
           )}
         </div>
 
-        {/* Bookings Table */}
+        {/* Bookings list */}
         <Card>
           <CardHeader>
             <CardTitle>Bookings</CardTitle>
@@ -334,7 +208,14 @@ export default function CustomerBookingsPage() {
               Manage your upcoming and past service bookings
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <BookingFilters
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              serviceFilter={serviceFilter}
+              onServiceFilterChange={setServiceFilter}
+            />
+
             <Tabs defaultValue="upcoming" className="w-full">
               <TabsList>
                 <TabsTrigger value="upcoming">
@@ -352,374 +233,80 @@ export default function CustomerBookingsPage() {
                   )}
                 </TabsTrigger>
               </TabsList>
+
               <TabsContent value="upcoming" className="space-y-4">
                 {upcomingBookings.length > 0 ? (
                   <div className="grid gap-4">
-                    {upcomingBookings.map((booking) => {
-                      const pet = getPetForBooking(booking);
-                      const ServiceIcon = getServiceIcon(booking.service);
-                      const PetIcon = pet?.type === "Cat" ? Cat : Dog;
-
-                      return (
-                        <Link
-                          key={booking.id}
-                          href={`/customer/bookings/${booking.id}`}
-                          className="block"
-                        >
-                          <Card className="cursor-pointer transition-shadow hover:shadow-lg">
-                            <CardContent className="p-6">
-                              <div className="flex items-start gap-4">
-                                {/* Pet Photo */}
-                                <div className="shrink-0">
-                                  {pet?.imageUrl ? (
-                                    <Image
-                                      src={pet.imageUrl}
-                                      alt={pet.name}
-                                      width={64}
-                                      height={64}
-                                      className="h-16 w-16 rounded-lg object-cover"
-                                    />
-                                  ) : (
-                                    <div className="bg-primary/10 flex h-16 w-16 items-center justify-center rounded-lg">
-                                      <PetIcon className="text-primary size-8" />
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Booking Details */}
-                                <div className="flex-1 space-y-3">
-                                  <div className="flex items-start justify-between">
-                                    <div>
-                                      <div className="mb-1 flex items-center gap-2">
-                                        <ServiceIcon className="text-muted-foreground size-5" />
-                                        <h3 className="text-lg font-semibold capitalize">
-                                          {booking.service}
-                                          {booking.serviceType && (
-                                            <span className="text-muted-foreground ml-2 font-normal">
-                                              •{" "}
-                                              {booking.serviceType.replace(
-                                                /_/g,
-                                                " ",
-                                              )}
-                                            </span>
-                                          )}
-                                        </h3>
-                                      </div>
-                                      <p className="text-muted-foreground text-sm">
-                                        {pet?.name || "Pet"}
-                                      </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      {getStatusBadge(booking.status)}
-                                      {booking.status ===
-                                        "request_submitted" && (
-                                        <Badge
-                                          variant="outline"
-                                          className="text-xs"
-                                        >
-                                          <Clock className="mr-1 size-3" />
-                                          Response in ~24h
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <TagList
-                                    entityType="booking"
-                                    entityId={booking.id}
-                                    compact
-                                    maxVisible={3}
-                                    isCustomerView
-                                  />
-
-                                  {/* Shared booking notes */}
-                                  {(() => {
-                                    const sharedNotes = getNotesForEntity(
-                                      "booking",
-                                      booking.id,
-                                    ).filter(
-                                      (n) =>
-                                        n.visibility === "shared_with_customer",
-                                    );
-                                    if (sharedNotes.length === 0) return null;
-                                    return (
-                                      <div className="space-y-1">
-                                        {sharedNotes.map((note) => (
-                                          <blockquote
-                                            key={note.id}
-                                            className="rounded-sm border border-blue-200 bg-blue-50 p-2 text-xs dark:border-blue-800 dark:bg-blue-950/20"
-                                            aria-label={`Staff note from ${note.createdBy}`}
-                                          >
-                                            <span className="font-medium">
-                                              {note.createdBy}:
-                                            </span>{" "}
-                                            {note.content}
-                                          </blockquote>
-                                        ))}
-                                      </div>
-                                    );
-                                  })()}
-
-                                  <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
-                                    <div className="flex items-center gap-2">
-                                      <Calendar className="text-muted-foreground size-4" />
-                                      <div>
-                                        <p className="text-muted-foreground">
-                                          Date
-                                        </p>
-                                        <p className="font-medium">
-                                          {formatDate(booking.startDate)}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <Clock className="text-muted-foreground size-4" />
-                                      <div>
-                                        <p className="text-muted-foreground">
-                                          Time
-                                        </p>
-                                        <p className="font-medium">
-                                          {booking.checkInTime || "—"}
-                                          {booking.checkOutTime &&
-                                            ` - ${booking.checkOutTime}`}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <MapPin className="text-muted-foreground size-4" />
-                                      <div>
-                                        <p className="text-muted-foreground">
-                                          Location
-                                        </p>
-                                        <p className="font-medium">
-                                          {selectedFacility?.name || "—"}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <DollarSign className="text-muted-foreground size-4" />
-                                      <div>
-                                        <p className="text-muted-foreground">
-                                          Total
-                                        </p>
-                                        <p className="font-medium">
-                                          ${booking.totalCost.toFixed(2)}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* Actions - stop propagation so clicking buttons doesn't navigate */}
-                                  <div
-                                    className="flex items-center gap-2 border-t pt-2"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {(booking.status === "confirmed" ||
-                                      booking.status === "pending") && (
-                                      <>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            handleRescheduleBooking();
-                                          }}
-                                        >
-                                          <Edit className="mr-2 size-4" />
-                                          Reschedule
-                                        </Button>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            handleCancelBooking(booking);
-                                          }}
-                                          className="text-destructive hover:text-destructive"
-                                        >
-                                          <X className="mr-2 size-4" />
-                                          Cancel
-                                        </Button>
-                                      </>
-                                    )}
-                                    {booking.status === "request_submitted" && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          window.location.href =
-                                            "/customer/messages";
-                                        }}
-                                      >
-                                        <MessageSquare className="mr-2 size-4" />
-                                        Message Facility
-                                      </Button>
-                                    )}
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="sm">
-                                          <Download className="mr-2 size-4" />
-                                          More
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        <DropdownMenuItem
-                                          onClick={() => handleAddNote(booking)}
-                                        >
-                                          <MessageSquare className="mr-2 size-4" />
-                                          Add Note/Message
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                          onClick={() =>
-                                            handleAddToCalendar(booking)
-                                          }
-                                        >
-                                          <CalendarIcon className="mr-2 size-4" />
-                                          Add to Calendar
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </Link>
-                      );
-                    })}
+                    {upcomingBookings.map((booking) => (
+                      <UpcomingBookingCard
+                        key={booking.id}
+                        booking={booking}
+                        pets={customerPets}
+                        facilityName={selectedFacility?.name}
+                        isMounted={isMounted}
+                        onCancel={handleCancelBooking}
+                        onAddNote={handleAddNote}
+                      />
+                    ))}
                   </div>
                 ) : (
-                  <div className="py-12 text-center">
-                    <Calendar className="text-muted-foreground mx-auto mb-4 size-12" />
-                    <h3 className="mb-2 text-lg font-semibold">
-                      No upcoming bookings
-                    </h3>
-                    <p className="text-muted-foreground mb-4">
-                      Book your first service to get started
-                    </p>
-                    <Button asChild>
-                      <Link href="/customer/bookings/new">
-                        <Plus className="mr-2 size-4" />
-                        Book a Service
-                      </Link>
-                    </Button>
-                  </div>
+                  <EmptyState
+                    icon={Calendar}
+                    title={
+                      filtersActive
+                        ? "No matching upcoming bookings"
+                        : "No upcoming bookings"
+                    }
+                    body={
+                      filtersActive
+                        ? "Try clearing your filters or search."
+                        : "Book your first service to get started"
+                    }
+                    showBookCTA={!filtersActive}
+                  />
                 )}
               </TabsContent>
+
               <TabsContent value="past" className="space-y-4">
                 {pastBookings.length > 0 ? (
                   <div className="grid gap-4">
                     {pastBookings.map((booking) => {
-                      const pet = getPetForBooking(booking);
-                      const ServiceIcon = getServiceIcon(booking.service);
-                      const PetIcon = pet?.type === "Cat" ? Cat : Dog;
                       const existingTip =
                         tipsGiven[booking.id] ?? booking.tipAmount ?? 0;
                       const canTip =
                         booking.status === "completed" &&
                         tipConfig.enabled &&
                         existingTip <= 0;
-
                       return (
-                        <div key={booking.id} className="space-y-2">
-                          <Link
-                            href={`/customer/bookings/${booking.id}`}
-                            className="block"
-                          >
-                            <Card className="cursor-pointer opacity-75 transition-opacity hover:opacity-90">
-                              <CardContent className="p-6">
-                                <div className="flex items-start gap-4">
-                                  <div className="shrink-0">
-                                    {pet?.imageUrl ? (
-                                      <Image
-                                        src={pet.imageUrl}
-                                        alt={pet.name}
-                                        width={64}
-                                        height={64}
-                                        className="h-16 w-16 rounded-lg object-cover"
-                                      />
-                                    ) : (
-                                      <div className="bg-primary/10 flex h-16 w-16 items-center justify-center rounded-lg">
-                                        <PetIcon className="text-primary size-8" />
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="flex-1 space-y-2">
-                                    <div className="flex items-start justify-between">
-                                      <div>
-                                        <div className="mb-1 flex items-center gap-2">
-                                          <ServiceIcon className="text-muted-foreground size-5" />
-                                          <h3 className="font-semibold capitalize">
-                                            {booking.service}
-                                          </h3>
-                                        </div>
-                                        <p className="text-muted-foreground text-sm">
-                                          {pet?.name || "Pet"} •{" "}
-                                          {formatDate(booking.startDate)}
-                                        </p>
-                                      </div>
-                                      {getStatusBadge(booking.status)}
-                                    </div>
-                                    <div className="text-muted-foreground flex items-center gap-4 text-sm">
-                                      <span>
-                                        ${booking.totalCost.toFixed(2)}
-                                      </span>
-                                      {booking.checkInTime && (
-                                        <span>{booking.checkInTime}</span>
-                                      )}
-                                      {existingTip > 0 && (
-                                        <span className="text-primary inline-flex items-center gap-1 font-medium">
-                                          <Heart className="size-3 fill-current" />
-                                          ${existingTip.toFixed(2)} tipped
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </Link>
-                          {canTip && (
-                            <button
-                              type="button"
-                              onClick={() => setTipBooking(booking)}
-                              className="border-primary/30 from-primary/10 via-primary/5 hover:border-primary/50 hover:from-primary/15 group flex w-full items-center gap-3 rounded-xl border-2 border-dashed bg-gradient-to-r to-transparent px-4 py-3 text-left transition-all"
-                            >
-                              <div className="bg-primary/15 text-primary flex size-9 items-center justify-center rounded-full">
-                                <Heart className="size-4" />
-                              </div>
-                              <div className="flex-1 text-sm">
-                                <p className="font-semibold">
-                                  Leave a tip for{" "}
-                                  {pet?.name
-                                    ? `the team that cared for ${pet.name}`
-                                    : "the care team"}
-                                </p>
-                                <p className="text-muted-foreground text-[12px]">
-                                  100% goes to the staff · takes 10 seconds
-                                </p>
-                              </div>
-                              <span className="bg-primary text-primary-foreground rounded-full px-3 py-1.5 text-[11px] font-semibold group-hover:scale-105 transition-transform">
-                                Tip now
-                              </span>
-                            </button>
-                          )}
-                        </div>
+                        <PastBookingCard
+                          key={booking.id}
+                          booking={booking}
+                          pets={customerPets}
+                          isMounted={isMounted}
+                          existingTip={existingTip}
+                          canTip={canTip}
+                          onLeaveTip={setTipBooking}
+                        />
                       );
                     })}
                   </div>
                 ) : (
-                  <div className="py-12 text-center">
-                    <Clock className="text-muted-foreground mx-auto mb-4 size-12" />
-                    <h3 className="mb-2 text-lg font-semibold">
-                      No past bookings
-                    </h3>
-                    <p className="text-muted-foreground">
-                      Your completed bookings will appear here
-                    </p>
-                  </div>
+                  <EmptyState
+                    icon={Clock}
+                    title={
+                      filtersActive
+                        ? "No matching past bookings"
+                        : "No past bookings"
+                    }
+                    body={
+                      filtersActive
+                        ? "Try clearing your filters or search."
+                        : "Your completed bookings will appear here"
+                    }
+                  />
                 )}
               </TabsContent>
+
               <TabsContent value="unfinished" className="space-y-4">
                 <CustomerUnfinishedBookings bookings={myUnfinishedBookings} />
               </TabsContent>
@@ -744,7 +331,7 @@ export default function CustomerBookingsPage() {
             setAddNoteDialogOpen(open);
             if (!open) setBookingForNote(null);
           }}
-          title={`Add Note — ${getPetForBooking(bookingForNote)?.name ?? "Booking"}`}
+          title={`Add Note — ${getPetForBooking(bookingForNote, customerPets)?.name ?? "Booking"}`}
           onSave={() => {
             toast.success("Note added to booking");
             setAddNoteDialogOpen(false);
@@ -772,16 +359,93 @@ export default function CustomerBookingsPage() {
             }
             setTipBooking(null);
           }}
-          petName={getPetForBooking(tipBooking)?.name}
+          petName={getPetForBooking(tipBooking, customerPets)?.name}
           serviceLabel={tipBooking.service}
           confirmLabel="Send tip"
           contextTitle={
-            getPetForBooking(tipBooking)?.name
-              ? `${getPetForBooking(tipBooking)!.name} is home safe 🏠`
+            getPetForBooking(tipBooking, customerPets)?.name
+              ? `${getPetForBooking(tipBooking, customerPets)!.name} is home safe 🏠`
               : "Your pet is home safe 🏠"
           }
           contextSubtitle="The team would love to hear how they did. Your tip goes straight to them."
         />
+      )}
+    </div>
+  );
+}
+
+function StatCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  tone,
+}: {
+  title: string;
+  value: number;
+  subtitle: string;
+  icon: typeof Calendar;
+  tone?: "amber";
+}) {
+  return (
+    <Card className={tone === "amber" ? "border-amber-200 dark:border-amber-800" : ""}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle
+          className={
+            tone === "amber"
+              ? "text-sm font-medium text-amber-700 dark:text-amber-400"
+              : "text-sm font-medium"
+          }
+        >
+          {title}
+        </CardTitle>
+        <Icon
+          className={
+            tone === "amber"
+              ? "size-4 text-amber-500"
+              : "text-muted-foreground size-4"
+          }
+        />
+      </CardHeader>
+      <CardContent>
+        <div
+          className={
+            tone === "amber"
+              ? "text-2xl font-bold text-amber-600"
+              : "text-2xl font-bold"
+          }
+        >
+          {value}
+        </div>
+        <p className="text-muted-foreground text-xs">{subtitle}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmptyState({
+  icon: Icon,
+  title,
+  body,
+  showBookCTA = false,
+}: {
+  icon: typeof Calendar;
+  title: string;
+  body: string;
+  showBookCTA?: boolean;
+}) {
+  return (
+    <div className="py-12 text-center">
+      <Icon className="text-muted-foreground mx-auto mb-4 size-12" />
+      <h3 className="mb-2 text-lg font-semibold">{title}</h3>
+      <p className="text-muted-foreground mb-4">{body}</p>
+      {showBookCTA && (
+        <Button asChild>
+          <Link href="/customer/bookings/new">
+            <Plus className="mr-2 size-4" />
+            Book a Service
+          </Link>
+        </Button>
       )}
     </div>
   );

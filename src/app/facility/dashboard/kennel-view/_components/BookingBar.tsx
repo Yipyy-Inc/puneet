@@ -1,16 +1,8 @@
 "use client";
 
-import {
-  AlertTriangle,
-  FileText,
-  PawPrint,
-  Pill,
-  Utensils,
-} from "lucide-react";
+import { PawPrint } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TagList } from "@/components/shared/TagList";
-import { getTagsForEntity, getNoteCount } from "@/data/tags-notes";
-import { incidents } from "@/data/incidents";
+import { getTagsForEntity } from "@/data/tags-notes";
 import {
   getBookingSurfaceClasses,
   getBookingTextClass,
@@ -24,7 +16,9 @@ interface BookingBarProps {
   startCol: number;
   span: number;
   isDragging?: boolean;
+  isGhost?: boolean;
   isPastWeek?: boolean;
+  hideResizeHandles?: boolean;
   arrivalGlow?: boolean;
   departureGlow?: boolean;
   customServices?: CustomServiceCheckIn[];
@@ -35,11 +29,15 @@ interface BookingBarProps {
   onMoveStart?: (e: React.MouseEvent) => void;
 }
 
-function hasOpenIncident(petId: number | undefined): boolean {
-  if (!petId) return false;
-  return incidents.some(
-    (i) => i.petIds.includes(petId) && i.status !== "resolved" && i.status !== "closed",
-  );
+// Parse "YYYY-MM-DD" in local time (avoid UTC drift) and render as "Apr 30".
+function formatShortDate(iso?: string): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return "";
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export function BookingBar({
@@ -47,7 +45,9 @@ export function BookingBar({
   startCol,
   span,
   isDragging,
+  isGhost,
   isPastWeek,
+  hideResizeHandles,
   arrivalGlow,
   departureGlow,
   customServices,
@@ -59,26 +59,28 @@ export function BookingBar({
 }: BookingBarProps) {
   const petTags = booking.petId ? getTagsForEntity("pet", booking.petId) : [];
   const isCritical = petTags.some((t) => t.priority === "critical");
-  const noteCount = booking.petId ? getNoteCount("pet", booking.petId) : 0;
-  const hasIncident = hasOpenIncident(booking.petId);
-  const tagTooltip = petTags.map((t) => t.name).join(", ");
 
   const barClasses = isCritical
     ? "bg-red-50/95 ring-2 ring-red-400/40 dark:bg-red-900/30 dark:ring-red-500/50"
     : getBookingSurfaceClasses(booking.bookingStatus);
   const textClass = getBookingTextClass(booking.bookingStatus);
 
+  const dateRange =
+    booking.checkIn || booking.checkOut
+      ? `${formatShortDate(booking.checkIn)} → ${formatShortDate(booking.checkOut)}`
+      : "";
+
   return (
     <div
-      title={tagTooltip || undefined}
       aria-label={`${booking.petName ?? "Booking"}${isCritical ? " — critical alert" : ""}`}
       data-bar="booking"
       className={cn(
-        "group pointer-events-auto z-10 mx-0.5 my-1.5 flex h-12 cursor-pointer items-center gap-2 overflow-hidden rounded-lg border border-black/5 px-2 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md",
+        "group pointer-events-auto z-10 mx-0.5 my-1.5 flex h-12 cursor-pointer items-center gap-2.5 overflow-hidden rounded-lg border border-black/5 px-2 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md",
         colStart(startCol + 1),
         colSpan(span),
         barClasses,
-        isDragging && "ring-primary/50 z-20 shadow-lg ring-2",
+        isDragging && !isGhost && "ring-primary/50 z-20 shadow-lg ring-2",
+        isGhost && "pointer-events-none opacity-30 saturate-50",
         arrivalGlow && "ring-2 ring-cyan-400/70 ring-offset-1",
         departureGlow && "ring-2 ring-fuchsia-400/70 ring-offset-1",
       )}
@@ -94,73 +96,33 @@ export function BookingBar({
       }}
     >
       {/* Pet photo — plain <img> so no inline left/top from next/image. */}
-      <div className="ring-background size-9 shrink-0 overflow-hidden rounded-full ring-2">
+      <div className="ring-background size-10 shrink-0 overflow-hidden rounded-full ring-2">
         {booking.petPhotoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={booking.petPhotoUrl}
             alt={booking.petName ?? ""}
-            width={36}
-            height={36}
+            width={40}
+            height={40}
             className="size-full object-cover"
           />
         ) : (
           <div className="bg-muted flex size-full items-center justify-center">
-            <PawPrint className="text-muted-foreground size-4" />
+            <PawPrint className="text-muted-foreground size-5" />
           </div>
         )}
       </div>
 
-      {/* Pet name + flags */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <span className={cn("truncate text-sm font-semibold", textClass)}>
-            {booking.petName}
+      {/* Pet name + date range */}
+      <div className="flex min-w-0 flex-1 flex-col leading-tight">
+        <span className={cn("truncate text-sm font-semibold", textClass)}>
+          {booking.petName}
+        </span>
+        {dateRange && (
+          <span className={cn("truncate text-xs opacity-75", textClass)}>
+            {dateRange}
           </span>
-          {hasIncident && (
-            <AlertTriangle
-              className="size-3.5 shrink-0 text-red-500"
-              aria-label="Open incident"
-            />
-          )}
-          {isCritical && (
-            <span
-              className="size-2 shrink-0 rounded-full bg-red-500"
-              aria-label="Critical alert"
-            />
-          )}
-        </div>
-        <div className="flex items-center gap-1 text-[10px] opacity-80">
-          {booking.petId && (
-            <TagList
-              entityType="pet"
-              entityId={booking.petId}
-              compact
-              maxVisible={2}
-            />
-          )}
-          {booking.hasFeedingInstructions && (
-            <Utensils
-              className="size-3 text-amber-600 dark:text-amber-400"
-              aria-label="Feeding instructions"
-            />
-          )}
-          {booking.hasMedications && (
-            <Pill
-              className="size-3 text-purple-600 dark:text-purple-400"
-              aria-label="Medications"
-            />
-          )}
-          {noteCount > 0 && (
-            <span
-              className="inline-flex items-center gap-0.5 text-blue-700 dark:text-blue-300"
-              aria-label={`${noteCount} notes`}
-            >
-              <FileText className="size-3" />
-              {noteCount}
-            </span>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Service indicator dots — colour mapped to Tailwind class so the bar
@@ -180,8 +142,8 @@ export function BookingBar({
         </div>
       )}
 
-      {/* Resize handles (hidden in past-week mode) */}
-      {!isPastWeek && (
+      {/* Resize handles — hidden in past-week mode and when explicitly disabled (e.g. daycare = 1-day stays) */}
+      {!isPastWeek && !hideResizeHandles && (
         <>
           <div
             data-handle="start"

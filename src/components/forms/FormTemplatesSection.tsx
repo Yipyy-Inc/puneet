@@ -102,9 +102,11 @@ function questionTypeLabel(t: string): string {
 export function FormTemplatesSection({
   facilityId,
   defaultOpen = true,
+  embedded = false,
 }: {
   facilityId: number;
   defaultOpen?: boolean;
+  embedded?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const router = useRouter();
@@ -123,33 +125,9 @@ export function FormTemplatesSection({
     }
   };
 
-  return (
-    <Collapsible open={open} onOpenChange={setOpen} className="space-y-4">
-      <Card>
-        <CollapsibleTrigger asChild>
-          <CardHeader className="hover:bg-muted/30 cursor-pointer transition-colors">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="text-primary size-5" />
-                <div>
-                  <CardTitle className="text-lg">Templates</CardTitle>
-                  <p className="text-muted-foreground text-sm">
-                    Start from a prebuilt template, duplicate, and edit. No need
-                    to build from scratch.
-                  </p>
-                </div>
-              </div>
-              <ChevronDown
-                className={`text-muted-foreground size-5 transition-transform ${
-                  open ? "rotate-180" : ""
-                }`}
-              />
-            </div>
-          </CardHeader>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <CardContent className="space-y-6">
-            <div>
+  const body = (
+    <div className="space-y-6">
+      <div>
               <h3 className="mb-3 text-sm font-semibold">Starter templates</h3>
               {starters.length === 0 ? (
                 <p className="text-muted-foreground py-4 text-sm">
@@ -294,7 +272,39 @@ export function FormTemplatesSection({
                 </div>
               </div>
             )}
-          </CardContent>
+    </div>
+  );
+
+  if (embedded) {
+    return body;
+  }
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="space-y-4">
+      <Card>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="hover:bg-muted/30 cursor-pointer transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="text-primary size-5" />
+                <div>
+                  <CardTitle className="text-lg">Templates</CardTitle>
+                  <p className="text-muted-foreground text-sm">
+                    Start from a prebuilt template, duplicate, and edit. No need
+                    to build from scratch.
+                  </p>
+                </div>
+              </div>
+              <ChevronDown
+                className={`text-muted-foreground size-5 transition-transform ${
+                  open ? "rotate-180" : ""
+                }`}
+              />
+            </div>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent>{body}</CardContent>
         </CollapsibleContent>
       </Card>
     </Collapsible>

@@ -92,6 +92,7 @@ import {
   type ServiceFrequency,
   type ServiceTypeKey,
 } from "@/data/rebook-reminders";
+import { getBlockedClientIds } from "@/lib/blocked-clients";
 
 type QueueRange = 30 | 60 | 90;
 
@@ -132,6 +133,7 @@ const channelIcon = (c: ReminderChannel, size = "size-3.5") => {
 };
 
 const BLOCK_REASON_SHORT: Record<ReminderBlockReason, string> = {
+  client_blocked: "Client blocked",
   client_opted_out: "Client opted out",
   client_inactive: "Client inactive",
   marketing_opt_out: "Marketing opt-out",
@@ -164,9 +166,17 @@ export function RebookRemindersCard() {
   const [defaults, setDefaults] = useState<DefaultServiceFrequency[]>(() =>
     defaultServiceFrequencies.map((d) => ({ ...d })),
   );
-  const [reminders, setReminders] = useState<RebookReminder[]>(() =>
-    rebookReminders.map((r) => ({ ...r })),
-  );
+  const [reminders, setReminders] = useState<RebookReminder[]>(() => {
+    const blockedIds = getBlockedClientIds();
+    return rebookReminders.map((r) => {
+      if (!blockedIds.has(r.clientId)) return { ...r };
+      const existing = r.blockedReasons ?? [];
+      const blockedReasons = existing.includes("client_blocked")
+        ? existing
+        : ["client_blocked" as const, ...existing];
+      return { ...r, blockedReasons };
+    });
+  });
 
   const [editingService, setEditingService] = useState<ServiceTypeKey | null>(
     null,

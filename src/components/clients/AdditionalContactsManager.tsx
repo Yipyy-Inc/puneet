@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Trash2, Plus, Tag, Mail, Phone, User } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -29,8 +30,9 @@ const RELATIONSHIP_OPTIONS = [
   "Child",
   "Friend",
   "Roommate",
-  "Other",
 ];
+
+const OTHER_VALUE = "__other__";
 
 export function makeAdditionalContact(
   partial: Partial<AdditionalContact> = {},
@@ -191,24 +193,11 @@ function ContactCard({
               placeholder="Full name"
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor={`${idBase}-relationship`}>Relationship</Label>
-            <Select
-              value={contact.relationship || undefined}
-              onValueChange={(v) => onUpdate({ relationship: v })}
-            >
-              <SelectTrigger id={`${idBase}-relationship`}>
-                <SelectValue placeholder="Select relationship" />
-              </SelectTrigger>
-              <SelectContent>
-                {RELATIONSHIP_OPTIONS.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <RelationshipField
+            idBase={idBase}
+            value={contact.relationship}
+            onChange={(v) => onUpdate({ relationship: v })}
+          />
           <div className="space-y-1.5">
             <Label htmlFor={`${idBase}-phone`}>Phone</Label>
             <Input
@@ -237,6 +226,58 @@ function ContactCard({
         disabled={disabled}
         onToggle={onToggleTag}
       />
+    </div>
+  );
+}
+
+function RelationshipField({
+  idBase,
+  value,
+  onChange,
+}: {
+  idBase: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const isPredefined = RELATIONSHIP_OPTIONS.includes(value);
+  const [isCustom, setIsCustom] = useState(value !== "" && !isPredefined);
+
+  const selectValue = isCustom ? OTHER_VALUE : value || undefined;
+
+  const handleSelectChange = (next: string) => {
+    if (next === OTHER_VALUE) {
+      setIsCustom(true);
+      onChange("");
+    } else {
+      setIsCustom(false);
+      onChange(next);
+    }
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={`${idBase}-relationship`}>Relationship</Label>
+      <Select value={selectValue} onValueChange={handleSelectChange}>
+        <SelectTrigger id={`${idBase}-relationship`}>
+          <SelectValue placeholder="Select relationship" />
+        </SelectTrigger>
+        <SelectContent>
+          {RELATIONSHIP_OPTIONS.map((option) => (
+            <SelectItem key={option} value={option}>
+              {option}
+            </SelectItem>
+          ))}
+          <SelectItem value={OTHER_VALUE}>Other</SelectItem>
+        </SelectContent>
+      </Select>
+      {isCustom && (
+        <Input
+          aria-label="Custom relationship"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Specify relationship"
+        />
+      )}
     </div>
   );
 }

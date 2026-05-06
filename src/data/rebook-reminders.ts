@@ -736,6 +736,7 @@ export function isClientOptedOutOfRebook(clientId: number): boolean {
 }
 
 export type ReminderBlockReason =
+  | "client_blocked"
   | "client_opted_out"
   | "client_inactive"
   | "marketing_opt_out"
@@ -749,6 +750,7 @@ export interface ReminderBlockCheck {
 }
 
 export const BLOCK_REASON_LABELS: Record<ReminderBlockReason, string> = {
+  client_blocked: "Client is blocked by the facility",
   client_opted_out: "Client opted out of rebook reminders",
   client_inactive: "Client is marked inactive",
   marketing_opt_out: "Client opted out of marketing messages",
@@ -764,6 +766,7 @@ export const BLOCK_REASON_LABELS: Record<ReminderBlockReason, string> = {
  */
 export function getReminderBlockCheck(input: {
   clientId: number;
+  clientBlocked?: boolean;
   clientStatus?: string;
   marketingOptOut?: boolean;
   hasOpenIncident?: boolean;
@@ -771,6 +774,7 @@ export function getReminderBlockCheck(input: {
   hasFutureBookingForService?: boolean;
 }): ReminderBlockCheck {
   const reasons: ReminderBlockReason[] = [];
+  if (input.clientBlocked) reasons.push("client_blocked");
   if (isClientOptedOutOfRebook(input.clientId))
     reasons.push("client_opted_out");
   if (input.clientStatus === "inactive") reasons.push("client_inactive");

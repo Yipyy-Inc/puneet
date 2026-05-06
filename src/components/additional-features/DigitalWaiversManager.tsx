@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -13,7 +12,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -31,35 +35,42 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   FileText,
   Plus,
-  Search,
   CheckCircle,
   XCircle,
   Eye,
   Edit,
   Trash2,
-  Download,
-  AlertCircle,
   Pen,
-  Fingerprint,
+  FolderOpen,
+  Layers,
+  Wand2,
+  Globe,
 } from "lucide-react";
 import {
   digitalWaivers,
-  waiverSignatures,
+  waiverTemplates as seedTemplates,
+  customWaiverCategories as seedCustomCategories,
   type DigitalWaiver,
+  type WaiverCategory,
   type WaiverServiceTag,
-  type WaiverSignature,
+  type WaiverTemplate,
 } from "@/data/additional-features";
 import { brandingSettings } from "@/data/global-settings";
-import { AgreementSigningDialog } from "@/components/shared/AgreementSigningDialog";
-import type { SignatureResult } from "@/components/shared/SignaturePad";
 import { useLocationContext } from "@/hooks/use-location-context";
-import { Globe } from "lucide-react";
 import { toast } from "sonner";
 import { WaiverEditorDialog } from "./waivers/WaiverEditorDialog";
+import { TemplateEditorDialog } from "./waivers/TemplateEditorDialog";
+import { CategoryManagerDialog } from "./waivers/CategoryManagerDialog";
 import { WaiverContentRenderer } from "./waivers/WaiverContentRenderer";
+import {
+  bucketByCategory,
+  resolveCategories,
+} from "./waivers/categories";
 
 const SERVICE_LABEL: Record<WaiverServiceTag, string> = {
   boarding: "Boarding",
@@ -81,20 +92,19 @@ const SERVICE_BADGE: Record<WaiverServiceTag, string> = {
   general: "bg-gray-500/10 text-gray-700 border-gray-200",
 };
 
-const SIG_STATUS_BADGE: Record<WaiverSignature["status"], string> = {
-  valid: "bg-green-500/10 text-green-700",
-  expired: "bg-red-500/10 text-red-700",
-  revoked: "bg-gray-500/10 text-gray-700",
-};
-
 /** Services this facility offers — drives which tags can be assigned. */
 function useFacilityServices(): WaiverServiceTag[] {
   // TODO: read from facility settings when wired to a real API.
   return ["boarding", "daycare", "grooming", "training"];
 }
 
-function getWaiverServices(w: DigitalWaiver): WaiverServiceTag[] {
-  return w.services && w.services.length > 0 ? w.services : [w.type];
+function getServices(item: {
+  type: WaiverServiceTag;
+  services?: WaiverServiceTag[];
+}): WaiverServiceTag[] {
+  return item.services && item.services.length > 0
+    ? item.services
+    : [item.type];
 }
 
 export function DigitalWaiversManager() {
@@ -102,47 +112,84 @@ export function DigitalWaiversManager() {
   const facilityName = brandingSettings.platformName;
 
   const [waivers, setWaivers] = useState<DigitalWaiver[]>(digitalWaivers);
-  const [signatures, setSignatures] =
-    useState<WaiverSignature[]>(waiverSignatures);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [editorTarget, setEditorTarget] = useState<DigitalWaiver | undefined>(
-    undefined,
+  const [templates, setTemplates] =
+    useState<WaiverTemplate[]>(seedTemplates);
+  const [customCategories, setCustomCategories] = useState<WaiverCategory[]>(
+    seedCustomCategories,
   );
-  const [previewWaiver, setPreviewWaiver] = useState<DigitalWaiver | null>(null);
-  const [signWaiver, setSignWaiver] = useState<DigitalWaiver | null>(null);
-  const [viewSignature, setViewSignature] = useState<WaiverSignature | null>(
+
+  const [tab, setTab] = useState<"waivers" | "templates">("waivers");
+  const [showEmpty, setShowEmpty] = useState(false);
+
+  // Waiver editor
+  const [waiverEditorOpen, setWaiverEditorOpen] = useState(false);
+  const [waiverEditorTarget, setWaiverEditorTarget] = useState<
+    DigitalWaiver | undefined
+  >();
+  const [waiverFromTemplate, setWaiverFromTemplate] = useState<
+    WaiverTemplate | undefined
+  >();
+
+  // Template editor
+  const [templateEditorOpen, setTemplateEditorOpen] = useState(false);
+  const [templateEditorTarget, setTemplateEditorTarget] = useState<
+    WaiverTemplate | undefined
+  >();
+
+  // Category manager
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
+
+  // Preview & delete
+  const [previewWaiver, setPreviewWaiver] = useState<DigitalWaiver | null>(
     null,
   );
-  const [deleteTarget, setDeleteTarget] = useState<DigitalWaiver | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<WaiverTemplate | null>(
+    null,
+  );
+  const [deleteWaiver, setDeleteWaiver] = useState<DigitalWaiver | null>(null);
+  const [deleteTemplate, setDeleteTemplate] = useState<WaiverTemplate | null>(
+    null,
+  );
+
+  const allCategories = useMemo(
+    () => resolveCategories(facilityServices, customCategories),
+    [facilityServices, customCategories],
+  );
+  const serviceCategories = useMemo(
+    () => allCategories.filter((c) => c.kind === "service"),
+    [allCategories],
+  );
+
+  const waiverGroups = useMemo(
+    () => bucketByCategory(waivers, allCategories),
+    [waivers, allCategories],
+  );
+  const templateGroups = useMemo(
+    () => bucketByCategory(templates, allCategories),
+    [templates, allCategories],
+  );
 
   const stats = useMemo(
     () => ({
       totalWaivers: waivers.length,
       activeWaivers: waivers.filter((w) => w.isActive).length,
-      totalSignatures: signatures.length,
-      validSignatures: signatures.filter((s) => s.status === "valid").length,
-      expiredSignatures: signatures.filter((s) => s.status === "expired").length,
+      totalTemplates: templates.length,
+      totalCategories: allCategories.length,
     }),
-    [waivers, signatures],
+    [waivers, templates, allCategories],
   );
 
-  const filteredSignatures = signatures.filter(
-    (sig) =>
-      sig.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sig.waiverName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sig.petName?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
-
-  const handleCreate = () => {
-    setEditorTarget(undefined);
-    setEditorOpen(true);
+  // Waiver handlers
+  const openCreateWaiver = () => {
+    setWaiverEditorTarget(undefined);
+    setWaiverFromTemplate(undefined);
+    setWaiverEditorOpen(true);
   };
 
-  const handleEdit = (waiver: DigitalWaiver) => {
-    setEditorTarget(waiver);
-    setEditorOpen(true);
+  const openEditWaiver = (w: DigitalWaiver) => {
+    setWaiverEditorTarget(w);
+    setWaiverFromTemplate(undefined);
+    setWaiverEditorOpen(true);
   };
 
   const handleSaveWaiver = (next: DigitalWaiver) => {
@@ -154,323 +201,245 @@ export function DigitalWaiversManager() {
       return copy;
     });
     toast.success(
-      editorTarget ? `Waiver "${next.name}" updated` : `Waiver "${next.name}" created`,
+      waiverEditorTarget
+        ? `Waiver "${next.name}" updated`
+        : `Waiver "${next.name}" created`,
     );
   };
 
-  const handleDelete = (waiver: DigitalWaiver) => {
-    setWaivers((prev) => prev.filter((w) => w.id !== waiver.id));
-    toast.success(`Waiver "${waiver.name}" deleted`);
-    setDeleteTarget(null);
+  const handleSaveAsTemplate = (next: WaiverTemplate) => {
+    setTemplates((prev) => [next, ...prev]);
+    toast.success(`Template "${next.name}" saved`);
   };
 
-  const handleCollectSignature = (result: SignatureResult) => {
-    if (!signWaiver) return;
-    const newSig: WaiverSignature = {
-      id: `sig-${Date.now()}`,
-      waiverId: signWaiver.id,
-      waiverName: signWaiver.name,
-      clientId: "walk-in",
-      clientName: result.witnessName || "Walk-in Client",
-      signatureData: result.signatureData,
-      signedAt: result.signedAt,
-      ipAddress: result.ipAddress,
-      witnessName: result.witnessName,
-      status: "valid",
-      expiresAt: signWaiver.expiryDays
-        ? new Date(Date.now() + signWaiver.expiryDays * 86400000).toISOString()
-        : undefined,
-    };
-    setSignatures((prev) => [newSig, ...prev]);
-    setSignWaiver(null);
-    toast.success(`Signature collected for "${signWaiver.name}"`);
+  const handleDeleteWaiver = (w: DigitalWaiver) => {
+    setWaivers((prev) => prev.filter((x) => x.id !== w.id));
+    toast.success(`Waiver "${w.name}" deleted`);
+    setDeleteWaiver(null);
+  };
+
+  // Template handlers
+  const openCreateTemplate = () => {
+    setTemplateEditorTarget(undefined);
+    setTemplateEditorOpen(true);
+  };
+
+  const openEditTemplate = (t: WaiverTemplate) => {
+    setTemplateEditorTarget(t);
+    setTemplateEditorOpen(true);
+  };
+
+  const applyTemplate = (t: WaiverTemplate) => {
+    setWaiverEditorTarget(undefined);
+    setWaiverFromTemplate(t);
+    setWaiverEditorOpen(true);
+  };
+
+  const handleSaveTemplate = (next: WaiverTemplate) => {
+    setTemplates((prev) => {
+      const idx = prev.findIndex((t) => t.id === next.id);
+      if (idx === -1) return [next, ...prev];
+      const copy = prev.slice();
+      copy[idx] = next;
+      return copy;
+    });
+    toast.success(
+      templateEditorTarget
+        ? `Template "${next.name}" updated`
+        : `Template "${next.name}" created`,
+    );
+  };
+
+  const handleDeleteTemplate = (t: WaiverTemplate) => {
+    setTemplates((prev) => prev.filter((x) => x.id !== t.id));
+    toast.success(`Template "${t.name}" deleted`);
+    setDeleteTemplate(null);
   };
 
   return (
     <div className="space-y-6">
       <SharedWaiversBanner />
+
       {/* Stats Row */}
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-4">
         <StatTile
           label="Total Waivers"
           value={stats.totalWaivers}
           icon={<FileText className="text-muted-foreground size-8" />}
         />
         <StatTile
-          label="Active"
+          label="Active Waivers"
           value={stats.activeWaivers}
           valueClass="text-green-600"
           icon={<CheckCircle className="size-8 text-green-500" />}
         />
         <StatTile
-          label="Total Signatures"
-          value={stats.totalSignatures}
-          icon={<Fingerprint className="text-muted-foreground size-8" />}
+          label="Templates"
+          value={stats.totalTemplates}
+          icon={<Layers className="text-muted-foreground size-8" />}
         />
         <StatTile
-          label="Valid"
-          value={stats.validSignatures}
-          valueClass="text-green-600"
-          icon={<CheckCircle className="size-8 text-green-500" />}
-        />
-        <StatTile
-          label="Expired"
-          value={stats.expiredSignatures}
-          valueClass="text-red-600"
-          icon={<AlertCircle className="size-8 text-red-500" />}
+          label="Categories"
+          value={stats.totalCategories}
+          icon={<FolderOpen className="text-muted-foreground size-8" />}
         />
       </div>
 
-      <Tabs defaultValue="templates" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="templates">Waiver Templates</TabsTrigger>
-          <TabsTrigger value="signatures">Signatures</TabsTrigger>
-        </TabsList>
+      <Tabs
+        value={tab}
+        onValueChange={(v) => setTab(v as "waivers" | "templates")}
+        className="space-y-4"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <TabsList>
+            <TabsTrigger value="waivers">Waivers</TabsTrigger>
+            <TabsTrigger value="templates">Templates</TabsTrigger>
+          </TabsList>
 
-        {/* Templates Tab */}
-        <TabsContent value="templates" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Waiver Templates</CardTitle>
-                <Button onClick={handleCreate}>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 pr-2">
+              <Switch
+                id="show-empty"
+                checked={showEmpty}
+                onCheckedChange={setShowEmpty}
+              />
+              <Label
+                htmlFor="show-empty"
+                className="text-muted-foreground text-xs"
+              >
+                Show empty categories
+              </Label>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setCategoryManagerOpen(true)}
+            >
+              <FolderOpen className="mr-2 size-4" />
+              Manage Categories
+            </Button>
+            {tab === "waivers" ? (
+              <Button onClick={openCreateWaiver}>
+                <Plus className="mr-2 size-4" />
+                Create Waiver
+              </Button>
+            ) : (
+              <Button onClick={openCreateTemplate}>
+                <Plus className="mr-2 size-4" />
+                Create Template
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <TabsContent value="waivers" className="space-y-4">
+          {waivers.length === 0 ? (
+            <EmptyState
+              icon={<FileText className="size-8 text-slate-400" />}
+              title="No waivers yet"
+              description="Create your first waiver, or apply a template from the Templates tab."
+              action={
+                <Button onClick={openCreateWaiver}>
                   <Plus className="mr-2 size-4" />
                   Create Waiver
                 </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {waivers.length === 0 ? (
-                <div className="rounded-lg border border-dashed p-10 text-center">
-                  <FileText className="mx-auto mb-2 size-8 text-slate-400" />
-                  <p className="text-sm font-medium">No waivers yet</p>
-                  <p className="text-muted-foreground mb-4 text-xs">
-                    Create your first waiver to start collecting signatures.
-                  </p>
-                  <Button onClick={handleCreate}>
-                    <Plus className="mr-2 size-4" />
-                    Create Waiver
-                  </Button>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Services</TableHead>
-                      <TableHead>Version</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Signature</TableHead>
-                      <TableHead>Expiry</TableHead>
-                      <TableHead>Updated</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {waivers.map((waiver) => {
-                      const tags = getWaiverServices(waiver);
-                      return (
-                        <TableRow key={waiver.id}>
-                          <TableCell className="font-medium">
-                            {waiver.name}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {tags.map((s) => (
-                                <Badge
-                                  key={s}
-                                  variant="outline"
-                                  className={SERVICE_BADGE[s]}
-                                >
-                                  {SERVICE_LABEL[s]}
-                                </Badge>
-                              ))}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">v{waiver.version}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            {waiver.isActive ? (
-                              <Badge className="bg-green-500/10 text-green-700">
-                                Active
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-gray-500/10 text-gray-700">
-                                Inactive
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {waiver.requiresSignature ? (
-                              <CheckCircle className="size-4 text-green-600" />
-                            ) : (
-                              <XCircle className="size-4 text-gray-400" />
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {waiver.expiryDays
-                              ? `${waiver.expiryDays} days`
-                              : "Never"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {new Date(waiver.updatedAt).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                title="Preview"
-                                onClick={() => setPreviewWaiver(waiver)}
-                              >
-                                <Eye className="size-3" />
-                              </Button>
-                              {waiver.requiresSignature && waiver.isActive && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  title="Collect Signature"
-                                  onClick={() => setSignWaiver(waiver)}
-                                >
-                                  <Pen className="size-3" />
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                title="Edit"
-                                onClick={() => handleEdit(waiver)}
-                              >
-                                <Edit className="size-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                title="Delete"
-                                className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                                onClick={() => setDeleteTarget(waiver)}
-                              >
-                                <Trash2 className="size-3" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+              }
+            />
+          ) : (
+            waiverGroups
+              .filter((g) => showEmpty || g.items.length > 0)
+              .map((group) => (
+                <CategorySection
+                  key={group.categoryId}
+                  title={group.categoryName}
+                  count={group.items.length}
+                >
+                  {group.items.length === 0 ? (
+                    <EmptyCategoryRow />
+                  ) : (
+                    <WaiverRows
+                      items={group.items}
+                      onPreview={setPreviewWaiver}
+                      onEdit={openEditWaiver}
+                      onDelete={setDeleteWaiver}
+                    />
+                  )}
+                </CategorySection>
+              ))
+          )}
         </TabsContent>
 
-        {/* Signatures Tab */}
-        <TabsContent value="signatures" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>E-Signatures</CardTitle>
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
-                    <Input
-                      placeholder="Search client, pet, waiver..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-64 pl-8"
+        <TabsContent value="templates" className="space-y-4">
+          {templates.length === 0 ? (
+            <EmptyState
+              icon={<Layers className="size-8 text-slate-400" />}
+              title="No templates yet"
+              description="Templates are reusable starting points for waivers. Create one, or save an existing waiver as a template."
+              action={
+                <Button onClick={openCreateTemplate}>
+                  <Plus className="mr-2 size-4" />
+                  Create Template
+                </Button>
+              }
+            />
+          ) : (
+            templateGroups
+              .filter((g) => showEmpty || g.items.length > 0)
+              .map((group) => (
+                <CategorySection
+                  key={group.categoryId}
+                  title={group.categoryName}
+                  count={group.items.length}
+                >
+                  {group.items.length === 0 ? (
+                    <EmptyCategoryRow />
+                  ) : (
+                    <TemplateRows
+                      items={group.items}
+                      onUse={applyTemplate}
+                      onPreview={setPreviewTemplate}
+                      onEdit={openEditTemplate}
+                      onDelete={setDeleteTemplate}
                     />
-                  </div>
-                  <Button variant="outline">
-                    <Download className="mr-2 size-4" />
-                    Export
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Waiver</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Pet</TableHead>
-                    <TableHead>Signed Date</TableHead>
-                    <TableHead>IP Address</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Expires</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSignatures.map((signature) => (
-                    <TableRow key={signature.id}>
-                      <TableCell className="font-medium">
-                        {signature.waiverName}
-                      </TableCell>
-                      <TableCell>{signature.clientName}</TableCell>
-                      <TableCell>{signature.petName || "—"}</TableCell>
-                      <TableCell className="text-sm">
-                        {new Date(signature.signedAt).toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground font-mono text-xs">
-                        {signature.ipAddress}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={SIG_STATUS_BADGE[signature.status]}>
-                          {signature.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {signature.expiresAt
-                          ? new Date(signature.expiresAt).toLocaleDateString()
-                          : "Never"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            title="View Signature"
-                            onClick={() => setViewSignature(signature)}
-                          >
-                            <Eye className="size-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            title="Download"
-                            onClick={() => {
-                              const link = document.createElement("a");
-                              link.download = `${signature.waiverName}-${signature.clientName}.png`;
-                              link.href = signature.signatureData;
-                              link.click();
-                            }}
-                          >
-                            <Download className="size-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                  )}
+                </CategorySection>
+              ))
+          )}
         </TabsContent>
       </Tabs>
 
-      {/* Editor */}
+      {/* Waiver Editor */}
       <WaiverEditorDialog
-        open={editorOpen}
-        onOpenChange={setEditorOpen}
-        waiver={editorTarget}
+        open={waiverEditorOpen}
+        onOpenChange={setWaiverEditorOpen}
+        waiver={waiverEditorTarget}
+        initialFromTemplate={waiverFromTemplate}
         availableServices={facilityServices}
         facilityName={facilityName}
+        categories={allCategories}
         onSave={handleSaveWaiver}
+        onSaveTemplate={handleSaveAsTemplate}
       />
 
-      {/* Preview */}
+      {/* Template Editor */}
+      <TemplateEditorDialog
+        open={templateEditorOpen}
+        onOpenChange={setTemplateEditorOpen}
+        template={templateEditorTarget}
+        availableServices={facilityServices}
+        categories={allCategories}
+        onSave={handleSaveTemplate}
+      />
+
+      {/* Category Manager */}
+      <CategoryManagerDialog
+        open={categoryManagerOpen}
+        onOpenChange={setCategoryManagerOpen}
+        serviceCategories={serviceCategories}
+        customCategories={customCategories}
+        onCustomCategoriesChange={setCustomCategories}
+      />
+
+      {/* Waiver Preview */}
       <Dialog
         open={!!previewWaiver}
         onOpenChange={() => setPreviewWaiver(null)}
@@ -484,7 +453,7 @@ export function DigitalWaiversManager() {
           </DialogHeader>
           <div className="flex flex-wrap items-center gap-2">
             {previewWaiver &&
-              getWaiverServices(previewWaiver).map((s) => (
+              getServices(previewWaiver).map((s) => (
                 <Badge
                   key={s}
                   variant="outline"
@@ -510,133 +479,133 @@ export function DigitalWaiversManager() {
                   customerName: "Sample Customer",
                   petName: "Buddy",
                   facilityName,
-                  services: getWaiverServices(previewWaiver),
+                  services: getServices(previewWaiver),
+                }}
+              />
+            )}
+          </ScrollArea>
+          <div className="text-muted-foreground text-xs">
+            {previewWaiver?.expiryDays
+              ? `Expires ${previewWaiver.expiryDays} days after signing`
+              : "No expiration"}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Template Preview */}
+      <Dialog
+        open={!!previewTemplate}
+        onOpenChange={() => setPreviewTemplate(null)}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="size-5" />
+              {previewTemplate?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {previewTemplate?.description && (
+            <p className="text-muted-foreground text-sm">
+              {previewTemplate.description}
+            </p>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {previewTemplate &&
+              getServices(previewTemplate).map((s) => (
+                <Badge
+                  key={s}
+                  variant="outline"
+                  className={SERVICE_BADGE[s]}
+                >
+                  {SERVICE_LABEL[s]}
+                </Badge>
+              ))}
+            {previewTemplate?.requiresSignature && (
+              <Badge className="bg-blue-500/10 text-blue-700">
+                <Pen className="mr-1 size-3" />
+                Signature Required
+              </Badge>
+            )}
+          </div>
+          <ScrollArea className="max-h-[400px] rounded-lg border bg-white p-5">
+            {previewTemplate && (
+              <WaiverContentRenderer
+                blocks={previewTemplate.blocks}
+                content={previewTemplate.content}
+                context={{
+                  customerName: "Sample Customer",
+                  petName: "Buddy",
+                  facilityName,
+                  services: getServices(previewTemplate),
                 }}
               />
             )}
           </ScrollArea>
           <div className="flex items-center justify-between">
             <div className="text-muted-foreground text-xs">
-              {previewWaiver?.expiryDays
-                ? `Expires ${previewWaiver.expiryDays} days after signing`
-                : "No expiration"}
+              {previewTemplate?.expiryDays
+                ? `Default expiry: ${previewTemplate.expiryDays} days`
+                : "Default expiry: never"}
             </div>
-            {previewWaiver?.requiresSignature && previewWaiver.isActive && (
+            {previewTemplate && (
               <Button
                 onClick={() => {
-                  setSignWaiver(previewWaiver);
-                  setPreviewWaiver(null);
+                  applyTemplate(previewTemplate);
+                  setPreviewTemplate(null);
                 }}
               >
-                <Pen className="mr-2 size-4" />
-                Collect Signature
+                <Wand2 className="mr-2 size-4" />
+                Use Template
               </Button>
             )}
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Sign */}
-      {signWaiver && (
-        <AgreementSigningDialog
-          open={!!signWaiver}
-          onOpenChange={() => setSignWaiver(null)}
-          title={signWaiver.name}
-          agreementContent={signWaiver.content}
-          agreementBlocks={signWaiver.blocks}
-          mergeContext={{
-            facilityName,
-            services: getWaiverServices(signWaiver),
-          }}
-          requiresWitness={signWaiver.requiresWitness}
-          onSigned={handleCollectSignature}
-          serviceName={getWaiverServices(signWaiver)
-            .map((s) => SERVICE_LABEL[s])
-            .join(", ")}
-        />
-      )}
-
-      {/* View Signature */}
-      <Dialog
-        open={!!viewSignature}
-        onOpenChange={() => setViewSignature(null)}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Fingerprint className="size-5" />
-              Signature Details
-            </DialogTitle>
-          </DialogHeader>
-          {viewSignature && (
-            <div className="space-y-4">
-              <div className="rounded-xl border-2 border-slate-200 bg-white p-3">
-                <img
-                  src={viewSignature.signatureData}
-                  alt="Signature"
-                  className="h-28 w-full object-contain"
-                />
-              </div>
-              <div className="space-y-2 rounded-lg bg-slate-50 p-4">
-                <SigRow label="Waiver" value={viewSignature.waiverName} />
-                <SigRow label="Client" value={viewSignature.clientName} />
-                {viewSignature.petName && (
-                  <SigRow label="Pet" value={viewSignature.petName} />
-                )}
-                <SigRow
-                  label="Signed"
-                  value={new Date(viewSignature.signedAt).toLocaleString()}
-                />
-                <SigRow
-                  label="IP Address"
-                  value={viewSignature.ipAddress}
-                  mono
-                />
-                {viewSignature.witnessName && (
-                  <SigRow label="Witness" value={viewSignature.witnessName} />
-                )}
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Status</span>
-                  <Badge className={SIG_STATUS_BADGE[viewSignature.status]}>
-                    {viewSignature.status}
-                  </Badge>
-                </div>
-                {viewSignature.expiresAt && (
-                  <SigRow
-                    label="Expires"
-                    value={new Date(
-                      viewSignature.expiresAt,
-                    ).toLocaleDateString()}
-                  />
-                )}
-              </div>
-              <p className="text-[10px] leading-relaxed text-slate-400">
-                This electronic signature was captured with full digital
-                fingerprint including IP address, device ID, user agent, and
-                timezone for legal verification purposes.
-              </p>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete confirmation */}
+      {/* Delete waiver */}
       <AlertDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        open={!!deleteWaiver}
+        onOpenChange={(open) => !open && setDeleteWaiver(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this waiver?</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteTarget?.name} will be removed. Existing signatures stay on
-              record but the template won&apos;t be available for new bookings.
+              {deleteWaiver?.name} will be removed. Existing signatures stay on
+              record but the waiver won&apos;t be available for new bookings.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteTarget && handleDelete(deleteTarget)}
+              onClick={() => deleteWaiver && handleDeleteWaiver(deleteWaiver)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete template */}
+      <AlertDialog
+        open={!!deleteTemplate}
+        onOpenChange={(open) => !open && setDeleteTemplate(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this template?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTemplate?.name} will be removed. Waivers previously created
+              from it are not affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                deleteTemplate && handleDeleteTemplate(deleteTemplate)
+              }
               className="bg-red-600 hover:bg-red-700"
             >
               Delete
@@ -645,6 +614,283 @@ export function DigitalWaiversManager() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function CategorySection({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <CardHeader className="py-3">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold">
+          {title}
+          <span className="text-muted-foreground text-xs font-normal">
+            ({count})
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">{children}</CardContent>
+    </Card>
+  );
+}
+
+function EmptyCategoryRow() {
+  return (
+    <div className="rounded-md border border-dashed bg-slate-50 px-4 py-4 text-center text-xs text-slate-500">
+      Nothing in this category yet.
+    </div>
+  );
+}
+
+function WaiverRows({
+  items,
+  onPreview,
+  onEdit,
+  onDelete,
+}: {
+  items: DigitalWaiver[];
+  onPreview: (w: DigitalWaiver) => void;
+  onEdit: (w: DigitalWaiver) => void;
+  onDelete: (w: DigitalWaiver) => void;
+}) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Name</TableHead>
+          <TableHead>Services</TableHead>
+          <TableHead>Version</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Signature</TableHead>
+          <TableHead>Expiry</TableHead>
+          <TableHead>Updated</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((waiver) => {
+          const tags = getServices(waiver);
+          return (
+            <TableRow key={waiver.id}>
+              <TableCell className="font-medium">{waiver.name}</TableCell>
+              <TableCell>
+                <div className="flex flex-wrap gap-1">
+                  {tags.map((s) => (
+                    <Badge
+                      key={s}
+                      variant="outline"
+                      className={SERVICE_BADGE[s]}
+                    >
+                      {SERVICE_LABEL[s]}
+                    </Badge>
+                  ))}
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge variant="outline">v{waiver.version}</Badge>
+              </TableCell>
+              <TableCell>
+                {waiver.isActive ? (
+                  <Badge className="bg-green-500/10 text-green-700">
+                    Active
+                  </Badge>
+                ) : (
+                  <Badge className="bg-gray-500/10 text-gray-700">
+                    Inactive
+                  </Badge>
+                )}
+              </TableCell>
+              <TableCell>
+                {waiver.requiresSignature ? (
+                  <CheckCircle className="size-4 text-green-600" />
+                ) : (
+                  <XCircle className="size-4 text-gray-400" />
+                )}
+              </TableCell>
+              <TableCell>
+                {waiver.expiryDays ? `${waiver.expiryDays} days` : "Never"}
+              </TableCell>
+              <TableCell className="text-muted-foreground text-sm">
+                {new Date(waiver.updatedAt).toLocaleDateString()}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="Preview"
+                    onClick={() => onPreview(waiver)}
+                  >
+                    <Eye className="size-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="Edit"
+                    onClick={() => onEdit(waiver)}
+                  >
+                    <Edit className="size-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="Delete"
+                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                    onClick={() => onDelete(waiver)}
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
+}
+
+function TemplateRows({
+  items,
+  onUse,
+  onPreview,
+  onEdit,
+  onDelete,
+}: {
+  items: WaiverTemplate[];
+  onUse: (t: WaiverTemplate) => void;
+  onPreview: (t: WaiverTemplate) => void;
+  onEdit: (t: WaiverTemplate) => void;
+  onDelete: (t: WaiverTemplate) => void;
+}) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Name</TableHead>
+          <TableHead>Services</TableHead>
+          <TableHead>Signature</TableHead>
+          <TableHead>Expiry</TableHead>
+          <TableHead>Updated</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((template) => {
+          const tags = getServices(template);
+          return (
+            <TableRow key={template.id}>
+              <TableCell>
+                <div className="space-y-0.5">
+                  <p className="font-medium">{template.name}</p>
+                  {template.description && (
+                    <p className="text-muted-foreground line-clamp-1 text-xs">
+                      {template.description}
+                    </p>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-wrap gap-1">
+                  {tags.map((s) => (
+                    <Badge
+                      key={s}
+                      variant="outline"
+                      className={SERVICE_BADGE[s]}
+                    >
+                      {SERVICE_LABEL[s]}
+                    </Badge>
+                  ))}
+                </div>
+              </TableCell>
+              <TableCell>
+                {template.requiresSignature ? (
+                  <CheckCircle className="size-4 text-green-600" />
+                ) : (
+                  <XCircle className="size-4 text-gray-400" />
+                )}
+              </TableCell>
+              <TableCell>
+                {template.expiryDays
+                  ? `${template.expiryDays} days`
+                  : "Never"}
+              </TableCell>
+              <TableCell className="text-muted-foreground text-sm">
+                {new Date(template.updatedAt).toLocaleDateString()}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-1">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => onUse(template)}
+                    className="h-7"
+                  >
+                    <Wand2 className="mr-1 size-3" />
+                    Use
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="Preview"
+                    onClick={() => onPreview(template)}
+                  >
+                    <Eye className="size-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="Edit"
+                    onClick={() => onEdit(template)}
+                  >
+                    <Edit className="size-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="Delete"
+                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                    onClick={() => onDelete(template)}
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
+}
+
+function EmptyState({
+  icon,
+  title,
+  description,
+  action,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  action: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+        {icon}
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-muted-foreground max-w-md text-xs">{description}</p>
+        {action}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -671,23 +917,6 @@ function StatTile({
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function SigRow({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
-  return (
-    <div className="flex justify-between text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={mono ? "font-mono text-xs" : "font-medium"}>{value}</span>
-    </div>
   );
 }
 
@@ -719,3 +948,4 @@ function SharedWaiversBanner() {
     </div>
   );
 }
+

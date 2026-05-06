@@ -140,41 +140,17 @@ export function CalendarFilters({
     onChange({ ...state, [key]: next });
   };
 
-  const setService = (service: CalendarFilterState["service"]) => {
-    onChange({ ...state, service });
-  };
-
   const activeCount =
     state.categoryIds.length +
     state.bookingStatuses.length +
     state.petSizes.length +
-    state.species.length +
-    (state.service !== "boarding" ? 1 : 0);
+    state.species.length;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
         <Filter className="size-3.5" />
         Filters
-      </div>
-
-      {/* Service toggle */}
-      <div className="flex overflow-hidden rounded-full border">
-        {(["boarding", "daycare", "both"] as const).map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setService(s)}
-            className={cn(
-              "px-3 py-1 text-xs font-medium capitalize",
-              state.service === s
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-muted",
-            )}
-          >
-            {s}
-          </button>
-        ))}
       </div>
 
       {/* Category */}

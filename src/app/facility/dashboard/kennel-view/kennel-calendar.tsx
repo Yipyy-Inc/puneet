@@ -2,7 +2,18 @@
 
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { DatePicker } from "@/components/ui/date-picker";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,7 +22,7 @@ import {
   Printer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { roomCategories } from "@/data/rooms";
+import type { RoomCategory } from "@/types/rooms";
 import type { CustomServiceCheckIn } from "@/data/custom-service-checkins";
 
 import { BookingBar } from "./_components/BookingBar";
@@ -20,6 +31,7 @@ import { RoomCell } from "./_components/RoomCell";
 import { BlockRoomDialog } from "./_components/BlockRoomDialog";
 import { CalendarFilters } from "./_components/CalendarFilters";
 import { ArrivalsDeparturesStrip } from "./_components/ArrivalsDeparturesStrip";
+import { WeekPicker } from "./_components/WeekPicker";
 import {
   toLocalISODate,
   startOfWeek,
@@ -40,18 +52,24 @@ import { printOccupancyGrid } from "./_lib/print-calendar";
 
 interface KennelCalendarViewProps {
   kennels: OccupancyKennel[];
+  categories: RoomCategory[];
   facilityName?: string;
-  onKennelClick?: (kennel: OccupancyKennel) => void;
+  /** Suffix shown next to the per-room rate, e.g. "/night" or "/day". */
+  rateSuffix?: string;
+  /** Disable the bar resize handles. Used for daycare where stays are 1-day. */
+  disableResize?: boolean;
   onAddBooking?: (kennelId: string, date: string) => void;
   onUpdateBooking?: (
     kennelId: string,
     checkIn: string,
     checkOut: string,
+    staffInitials: string,
   ) => void;
   onMoveBooking?: (
     bookingId: number,
     fromRoomId: string,
     toRoomId: string,
+    staffInitials: string,
   ) => void;
   customServicesMap?: Map<number, CustomServiceCheckIn[]>;
   moduleColorMap?: Map<string, string>;
@@ -63,10 +81,31 @@ type DragKind = "resize-start" | "resize-end" | "move";
 
 const ROOM_COL_WIDTH = 180;
 
+// "2026-04-30" → "Apr 30" (parsed in local time to avoid TZ drift).
+function formatShortDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function nightsBetween(checkIn: string, checkOut: string): number {
+  const [y1, m1, d1] = checkIn.split("-").map(Number);
+  const [y2, m2, d2] = checkOut.split("-").map(Number);
+  if (!y1 || !y2) return 0;
+  const start = new Date(y1, m1 - 1, d1).getTime();
+  const end = new Date(y2, m2 - 1, d2).getTime();
+  return Math.max(0, Math.round((end - start) / (1000 * 60 * 60 * 24)));
+}
+
 export function KennelCalendarView({
   kennels,
+  categories,
   facilityName = "Facility",
-  onKennelClick,
+  rateSuffix = "/night",
+  disableResize = false,
   onAddBooking,
   onUpdateBooking,
   onMoveBooking,
@@ -109,6 +148,23 @@ export function KennelCalendarView({
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(
     null,
   );
+  const [pendingMove, setPendingMove] = useState<{
+    bookingId: number;
+    petName: string;
+    fromRoomId: string;
+    fromRoomName: string;
+    toRoomId: string;
+    toRoomName: string;
+  } | null>(null);
+  const [pendingResize, setPendingResize] = useState<{
+    kennelId: string;
+    petName: string;
+    oldCheckIn: string;
+    oldCheckOut: string;
+    newCheckIn: string;
+    newCheckOut: string;
+  } | null>(null);
+  const [staffInitials, setStaffInitials] = useState("");
   const gridRef = useRef<HTMLDivElement>(null);
 
   const numDays = timeFrame === "1week" ? 7 : 14;
@@ -156,14 +212,13 @@ export function KennelCalendarView({
   }, [kennels, filters]);
 
   const groupedKennels = useMemo(() => {
-    return roomCategories
-      .filter((cat) => cat.service === "boarding")
+    return categories
       .map((cat) => ({
         category: cat,
         rooms: filteredKennels.filter((k) => k.categoryId === cat.id),
       }))
       .filter((g) => g.rooms.length > 0);
-  }, [filteredKennels]);
+  }, [categories, filteredKennels]);
 
   // Per-day occupancy across the visible roster (excludes blocked rooms)
   const dayOccupancy = useMemo(() => {
@@ -400,11 +455,19 @@ export function KennelCalendarView({
     }
 
     if (drag.kind === "resize-start" || drag.kind === "resize-end") {
-      onUpdateBooking?.(
-        drag.sourceRoomId,
-        dragPreview.checkIn,
-        dragPreview.checkOut,
-      );
+      const datesChanged =
+        dragPreview.checkIn !== drag.initialCheckIn ||
+        dragPreview.checkOut !== drag.initialCheckOut;
+      if (datesChanged) {
+        setPendingResize({
+          kennelId: drag.sourceRoomId,
+          petName: drag.petName,
+          oldCheckIn: drag.initialCheckIn,
+          oldCheckOut: drag.initialCheckOut,
+          newCheckIn: dragPreview.checkIn,
+          newCheckOut: dragPreview.checkOut,
+        });
+      }
     } else if (
       drag.kind === "move" &&
       dragPreview.roomId !== drag.sourceRoomId &&
@@ -419,13 +482,22 @@ export function KennelCalendarView({
         dragPreview.checkOut,
       );
       if (!conflict) {
-        onMoveBooking?.(drag.bookingId, drag.sourceRoomId, dragPreview.roomId);
+        const fromRoom = kennels.find((k) => k.id === drag.sourceRoomId);
+        const toRoom = kennels.find((k) => k.id === dragPreview.roomId);
+        setPendingMove({
+          bookingId: drag.bookingId,
+          petName: drag.petName,
+          fromRoomId: drag.sourceRoomId,
+          fromRoomName: fromRoom?.name ?? drag.sourceRoomId,
+          toRoomId: dragPreview.roomId,
+          toRoomName: toRoom?.name ?? dragPreview.roomId,
+        });
       }
     }
     setDrag(null);
     setDragPreview(null);
     setTooltipPos(null);
-  }, [drag, dragPreview, kennels, blocks, onUpdateBooking, onMoveBooking]);
+  }, [drag, dragPreview, kennels, blocks]);
 
   // Global mouseup so a drag finishes even if the cursor leaves the grid.
   useEffect(() => {
@@ -478,17 +550,12 @@ export function KennelCalendarView({
           : `${dragPreview.checkIn} → ${dragPreview.checkOut}`
       : null;
 
-  const boardingCategories = useMemo(
-    () => roomCategories.filter((c) => c.service === "boarding"),
-    [],
-  );
-
   return (
     <div className="space-y-4">
       {/* Filters */}
       <CalendarFilters
         state={filters}
-        categories={boardingCategories}
+        categories={categories}
         onChange={setFilters}
         onReset={() => setFilters(DEFAULT_FILTER_STATE)}
       />
@@ -508,11 +575,10 @@ export function KennelCalendarView({
           <Button variant="outline" size="sm" onClick={handleToday}>
             Today
           </Button>
-          <DatePicker
+          <WeekPicker
             value={toLocalISODate(startDate)}
             onValueChange={handleJumpToDate}
-            placeholder="Jump to date"
-            className="w-[170px]"
+            className="w-[180px]"
           />
         </div>
 
@@ -636,17 +702,17 @@ export function KennelCalendarView({
                   <button
                     type="button"
                     onClick={() => toggleCategory(category.id)}
-                    className="bg-muted/40 hover:bg-muted/60 flex w-full items-center gap-2 border-b px-3 py-2 text-left"
+                    className="bg-muted/70 hover:bg-muted flex w-full items-center gap-2 border-y px-3 py-3 text-left"
                   >
                     {collapsed ? (
-                      <ChevronRight className="size-4 shrink-0" />
+                      <ChevronRight className="size-5 shrink-0" />
                     ) : (
-                      <ChevronDown className="size-4 shrink-0" />
+                      <ChevronDown className="size-5 shrink-0" />
                     )}
-                    <span className="text-sm font-semibold">
+                    <span className="text-base font-bold tracking-tight">
                       {category.name}
                     </span>
-                    <span className="text-muted-foreground text-xs">
+                    <span className="text-muted-foreground text-xs font-medium">
                       {rooms.length} {rooms.length === 1 ? "room" : "rooms"}
                     </span>
                     <span className="ml-auto flex items-center gap-2 text-xs">
@@ -688,26 +754,16 @@ export function KennelCalendarView({
                           key={kennel.id}
                           data-room-row
                           data-room-id={kennel.id}
-                          className={cn(
-                            "flex border-b last:border-b-0",
-                            isDropTarget &&
-                              !dropConflict &&
-                              "bg-emerald-50/40 dark:bg-emerald-950/20",
-                            isDropTarget &&
-                              dropConflict &&
-                              "bg-red-50/40 dark:bg-red-950/20",
-                          )}
+                          className="flex border-b last:border-b-0"
                         >
                           {/* Room label */}
-                          <div
-                            className="hover:bg-muted/50 w-[180px] min-w-[180px] shrink-0 cursor-pointer border-r p-2 pl-7"
-                            onClick={() => onKennelClick?.(kennel)}
-                          >
-                            <div className="text-sm font-medium">
+                          <div className="w-[180px] min-w-[180px] shrink-0 border-r p-2 pl-9">
+                            <div className="text-muted-foreground text-xs font-normal">
                               {kennel.name}
                             </div>
-                            <div className="text-muted-foreground text-xs">
-                              ${kennel.dailyRate}/night
+                            <div className="text-muted-foreground/70 text-[11px]">
+                              ${kennel.dailyRate}
+                              {rateSuffix}
                             </div>
                           </div>
 
@@ -722,11 +778,6 @@ export function KennelCalendarView({
                                   kennel.id,
                                   dateStr,
                                 );
-                                const dropState = isDropTarget
-                                  ? dropConflict
-                                    ? "invalid"
-                                    : "valid"
-                                  : null;
 
                                 return (
                                   <div key={i} className="relative min-w-[64px]">
@@ -742,7 +793,6 @@ export function KennelCalendarView({
                                       isMaintenance={isMaint}
                                       isBlocked={!!block}
                                       blockedReason={block?.reason}
-                                      dropTargetState={dropState}
                                       onAddBooking={() =>
                                         handleAddBookingForCell(kennel.id, dateStr)
                                       }
@@ -810,24 +860,14 @@ export function KennelCalendarView({
                                   dragPreview &&
                                   dragPreview.roomId !== kennel.id
                                 ) {
-                                  // bar is being moved away — render dimmed ghost in source row
+                                  // Source row — fade the bar so the user sees it's being relocated
                                   return (
                                     <BookingBar
                                       booking={kennel}
                                       startCol={pos.startCol}
                                       span={pos.span}
-                                      isDragging
+                                      isGhost
                                       isPastWeek={isPastWeek}
-                                      arrivalGlow={
-                                        filters.arrivalDepartureFocus ===
-                                          "arrivals" &&
-                                        kennel.checkIn === todayStr
-                                      }
-                                      departureGlow={
-                                        filters.arrivalDepartureFocus ===
-                                          "departures" &&
-                                        kennel.checkOut === todayStr
-                                      }
                                       customServices={
                                         kennel.petId
                                           ? customServicesMap?.get(kennel.petId)
@@ -847,6 +887,7 @@ export function KennelCalendarView({
                                       drag?.sourceRoomId === kennel.id
                                     }
                                     isPastWeek={isPastWeek}
+                                    hideResizeHandles={disableResize}
                                     arrivalGlow={
                                       filters.arrivalDepartureFocus ===
                                         "arrivals" &&
@@ -874,11 +915,14 @@ export function KennelCalendarView({
                               })()
                             )}
 
-                            {/* Render move-target preview bar in target row */}
+                            {/* Subtle ghost preview at the proposed drop spot */}
                             {drag?.kind === "move" &&
                               dragPreview?.roomId === kennel.id &&
                               drag.sourceRoomId !== kennel.id &&
                               (() => {
+                                const sourceKennel = kennels.find(
+                                  (k) => k.id === drag.sourceRoomId,
+                                );
                                 const pos = calculateBookingPosition({
                                   checkIn: dragPreview.checkIn,
                                   checkOut: dragPreview.checkOut,
@@ -887,17 +931,36 @@ export function KennelCalendarView({
                                 return (
                                   <div
                                     className={cn(
-                                      "pointer-events-none z-20 my-1.5 mx-0.5 flex items-center justify-center rounded-lg border-2 border-dashed text-xs font-medium",
+                                      "pointer-events-none z-20 my-1.5 mx-0.5 flex h-12 items-center gap-2.5 overflow-hidden rounded-lg border border-dashed bg-background/50 px-2 backdrop-blur-sm",
                                       colStart(pos.startCol + 1),
                                       colSpan(pos.span),
                                       dropConflict
-                                        ? "border-red-500 bg-red-100/60 text-red-700 dark:bg-red-900/30 dark:text-red-200"
-                                        : "border-emerald-500 bg-emerald-100/60 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200",
+                                        ? "border-red-400/80"
+                                        : "border-foreground/30",
                                     )}
                                   >
-                                    {dropConflict
-                                      ? "Conflict"
-                                      : `Move ${drag.petName} here`}
+                                    {sourceKennel?.petPhotoUrl ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img
+                                        src={sourceKennel.petPhotoUrl}
+                                        alt=""
+                                        width={40}
+                                        height={40}
+                                        className="size-10 shrink-0 rounded-full object-cover opacity-60"
+                                      />
+                                    ) : null}
+                                    <span
+                                      className={cn(
+                                        "truncate text-sm font-medium",
+                                        dropConflict
+                                          ? "text-red-600 dark:text-red-300"
+                                          : "text-foreground/70",
+                                      )}
+                                    >
+                                      {dropConflict
+                                        ? "Can't drop here"
+                                        : (sourceKennel?.petName ?? drag.petName)}
+                                    </span>
                                   </div>
                                 );
                               })()}
@@ -976,6 +1039,187 @@ export function KennelCalendarView({
         onOpenChange={(open) => !open && setBlockDialog(null)}
         onConfirm={handleConfirmBlock}
       />
+
+      {/* Move-booking confirmation */}
+      <AlertDialog
+        open={pendingMove !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingMove(null);
+            setStaffInitials("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Move pet to another room?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingMove && (
+                <>
+                  You&apos;re about to move{" "}
+                  <span className="text-foreground font-semibold">
+                    {pendingMove.petName || "this pet"}
+                  </span>{" "}
+                  from{" "}
+                  <span className="text-foreground font-semibold">
+                    {pendingMove.fromRoomName}
+                  </span>{" "}
+                  to{" "}
+                  <span className="text-foreground font-semibold">
+                    {pendingMove.toRoomName}
+                  </span>
+                  .
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="move-staff-initials">Your initials</Label>
+            <Input
+              id="move-staff-initials"
+              value={staffInitials}
+              onChange={(e) =>
+                setStaffInitials(e.target.value.toUpperCase().slice(0, 4))
+              }
+              placeholder="e.g. JD"
+              autoFocus
+            />
+            <p className="text-muted-foreground text-xs">
+              Required so we can track who moved this pet.
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!staffInitials.trim()}
+              onClick={() => {
+                const initials = staffInitials.trim();
+                if (pendingMove && initials) {
+                  onMoveBooking?.(
+                    pendingMove.bookingId,
+                    pendingMove.fromRoomId,
+                    pendingMove.toRoomId,
+                    initials,
+                  );
+                }
+                setPendingMove(null);
+                setStaffInitials("");
+              }}
+            >
+              Move pet
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Resize-booking confirmation */}
+      <AlertDialog
+        open={pendingResize !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingResize(null);
+            setStaffInitials("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingResize
+                ? `Update ${pendingResize.petName || "this pet"}'s stay?`
+                : "Update stay?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Confirm the new check-in and check-out dates for this booking.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {pendingResize &&
+            (() => {
+              const oldNights = nightsBetween(
+                pendingResize.oldCheckIn,
+                pendingResize.oldCheckOut,
+              );
+              const newNights = nightsBetween(
+                pendingResize.newCheckIn,
+                pendingResize.newCheckOut,
+              );
+              const diff = newNights - oldNights;
+              return (
+                <div className="bg-muted/40 space-y-1 rounded-md border p-3 text-sm">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">Was</span>
+                    <span className="font-medium">
+                      {formatShortDate(pendingResize.oldCheckIn)} →{" "}
+                      {formatShortDate(pendingResize.oldCheckOut)}
+                      <span className="text-muted-foreground ml-2 font-normal">
+                        ({oldNights} {oldNights === 1 ? "night" : "nights"})
+                      </span>
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">New</span>
+                    <span className="font-medium">
+                      {formatShortDate(pendingResize.newCheckIn)} →{" "}
+                      {formatShortDate(pendingResize.newCheckOut)}
+                      <span className="text-muted-foreground ml-2 font-normal">
+                        ({newNights} {newNights === 1 ? "night" : "nights"})
+                      </span>
+                    </span>
+                  </div>
+                  {diff !== 0 && (
+                    <div className="flex justify-end pt-1">
+                      <span
+                        className={cn(
+                          "text-xs font-semibold",
+                          diff > 0 ? "text-emerald-600" : "text-amber-600",
+                        )}
+                      >
+                        {diff > 0 ? `+${diff}` : diff}{" "}
+                        {Math.abs(diff) === 1 ? "night" : "nights"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          <div className="space-y-2">
+            <Label htmlFor="resize-staff-initials">Your initials</Label>
+            <Input
+              id="resize-staff-initials"
+              value={staffInitials}
+              onChange={(e) =>
+                setStaffInitials(e.target.value.toUpperCase().slice(0, 4))
+              }
+              placeholder="e.g. JD"
+              autoFocus
+            />
+            <p className="text-muted-foreground text-xs">
+              Required so we can track who changed this stay.
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!staffInitials.trim()}
+              onClick={() => {
+                const initials = staffInitials.trim();
+                if (pendingResize && initials) {
+                  onUpdateBooking?.(
+                    pendingResize.kennelId,
+                    pendingResize.newCheckIn,
+                    pendingResize.newCheckOut,
+                    initials,
+                  );
+                }
+                setPendingResize(null);
+                setStaffInitials("");
+              }}
+            >
+              Save changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

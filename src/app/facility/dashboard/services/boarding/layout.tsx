@@ -13,13 +13,10 @@ import { useSettings } from "@/hooks/use-settings";
 import {
   Bed,
   DollarSign,
-  BookOpen,
-  CreditCard,
   LayoutGrid,
   Settings,
   FileText,
   Building2,
-  UtensilsCrossed,
   Package,
   ClipboardList,
 } from "lucide-react";
@@ -44,21 +41,6 @@ const tabs = [
     name: "Packages",
     href: "/facility/dashboard/services/boarding/packages",
     icon: Package,
-  },
-  {
-    name: "Daily Care",
-    href: "/facility/dashboard/daily-care",
-    icon: BookOpen,
-  },
-  {
-    name: "Feeding",
-    href: "/facility/dashboard/services/boarding/feeding",
-    icon: UtensilsCrossed,
-  },
-  {
-    name: "Boarding Sheets",
-    href: "/facility/dashboard/services/boarding/kennel-cards",
-    icon: CreditCard,
   },
   {
     name: "Operations",

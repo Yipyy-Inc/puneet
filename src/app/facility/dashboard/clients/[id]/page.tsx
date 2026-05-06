@@ -105,6 +105,7 @@ import {
   ShoppingBag,
   Receipt,
   Bell,
+  Settings as SettingsIcon,
 } from "lucide-react";
 
 interface Pet {
@@ -499,6 +500,12 @@ export default function ClientDetailPage({
               >
                 <Edit className="mr-1 size-4" />
                 Edit
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/facility/dashboard/clients/${client.id}/settings`}>
+                  <SettingsIcon className="mr-1 size-4" />
+                  Settings
+                </Link>
               </Button>
               <Button variant="outline" size="sm">
                 <Mail className="mr-1 size-4" />
