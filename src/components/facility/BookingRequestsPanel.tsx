@@ -290,7 +290,7 @@ export function BookingRequestsPanel({
           <Button
             size="sm"
             onClick={() => schedule(r)}
-            className="bg-success text-success-foreground hover:bg-success/90 focus-visible:ring-success/30 shadow-sm"
+            className="bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600/30 shadow-sm"
           >
             <CheckCircle2 className="size-4" />
             Schedule

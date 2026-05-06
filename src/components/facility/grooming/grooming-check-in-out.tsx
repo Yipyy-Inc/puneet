@@ -72,7 +72,7 @@ const NEXT_STATUS: Partial<Record<GroomingStatus, { next: GroomingStatus; label:
     next: "completed",
     label: "Check Out",
     icon: LogOut,
-    className: "border-violet-300 text-violet-700 hover:bg-violet-100 hover:border-violet-400",
+    className: "bg-red-600 hover:bg-red-700 text-white",
   },
 };
 
@@ -148,7 +148,6 @@ function AppointmentCard({ apt, onAction }: AppointmentCardProps) {
         <div className="shrink-0">
           <Button
             size="sm"
-            variant={apt.status === "ready-for-pickup" ? "outline" : "default"}
             className={cn("gap-1 text-xs", action.className)}
             onClick={(e) => {
               e.stopPropagation();
