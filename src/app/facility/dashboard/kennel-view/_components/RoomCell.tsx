@@ -21,7 +21,6 @@ interface RoomCellProps {
   isMaintenance?: boolean;
   isBlocked?: boolean;
   blockedReason?: string;
-  dropTargetState?: "valid" | "invalid" | null;
   onAddBooking?: () => void;
   onBlockRoom?: () => void;
   onUnblockRoom?: () => void;
@@ -35,7 +34,6 @@ export function RoomCell({
   isMaintenance,
   isBlocked,
   blockedReason,
-  dropTargetState,
   onAddBooking,
   onBlockRoom,
   onUnblockRoom,
@@ -49,8 +47,6 @@ export function RoomCell({
     isBlocked &&
       "cursor-not-allowed bg-[repeating-linear-gradient(45deg,rgba(239,68,68,0.08)_0,rgba(239,68,68,0.08)_6px,transparent_6px,transparent_12px)]",
     !disabled && "hover:bg-muted/40 cursor-pointer",
-    dropTargetState === "valid" && "bg-emerald-100/60 ring-1 ring-emerald-400 ring-inset dark:bg-emerald-900/30",
-    dropTargetState === "invalid" && "bg-red-100/60 ring-1 ring-red-400 ring-inset dark:bg-red-900/30",
   );
 
   const trigger = (

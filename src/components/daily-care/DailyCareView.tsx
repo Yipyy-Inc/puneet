@@ -3,7 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Settings, Printer } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { ArrowLeft, BookOpen, Settings, Printer } from "lucide-react";
 import { getCurrentGuests } from "@/data/boarding";
 import { useDailyCareConfig } from "@/hooks/use-daily-care-config";
 import { useDateCareLog } from "@/hooks/use-care-log";
@@ -14,6 +21,7 @@ import {
 import { ProgressHeader } from "./ProgressHeader";
 import { Section } from "./Section";
 import { TaskLogModal } from "./TaskLogModal";
+import { ReservationJournalPanel } from "@/components/guest-journal/ReservationJournalPanel";
 import { toast } from "sonner";
 import type { ScheduledTask, TaskExecution } from "@/types/care-log";
 
@@ -32,6 +40,16 @@ export function DailyCareView() {
     task: ScheduledTask | null;
     existing: TaskExecution | undefined;
   }>({ task: null, existing: undefined });
+
+  const [journalSheetOpen, setJournalSheetOpen] = useState(false);
+  const [selectedJournalGuestId, setSelectedJournalGuestId] = useState<
+    string | null
+  >(null);
+
+  const selectedJournalGuest = useMemo(
+    () => guests.find((g) => g.id === selectedJournalGuestId) ?? null,
+    [guests, selectedJournalGuestId],
+  );
 
   // Group tasks under their source step (the step that produced them).
   // Tasks without a sourceStepId fall under a synthetic "Unscheduled" bucket
@@ -138,6 +156,17 @@ export function DailyCareView() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setSelectedJournalGuestId(null);
+            setJournalSheetOpen(true);
+          }}
+        >
+          <BookOpen className="mr-2 size-4" />
+          Guest Journals
+        </Button>
         <Button variant="outline" size="sm" onClick={() => window.print()}>
           <Printer className="mr-2 size-4" />
           Print
@@ -193,6 +222,85 @@ export function DailyCareView() {
         }}
         onSubmit={handleSubmit}
       />
+
+      <Sheet open={journalSheetOpen} onOpenChange={setJournalSheetOpen}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              {selectedJournalGuest && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="-ml-2 size-7"
+                  onClick={() => setSelectedJournalGuestId(null)}
+                >
+                  <ArrowLeft className="size-4" />
+                </Button>
+              )}
+              <BookOpen className="size-4" />
+              {selectedJournalGuest
+                ? `${selectedJournalGuest.petName}'s Journal`
+                : "Guest Journals"}
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="px-4 pb-6">
+            {selectedJournalGuest ? (
+              <ReservationJournalPanel
+                bookingId={selectedJournalGuest.bookingId ?? ""}
+                petIds={[selectedJournalGuest.petId]}
+              />
+            ) : (
+              <div className="space-y-2">
+                {guests.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">
+                    No guests in house.
+                  </p>
+                ) : (
+                  guests.map((guest) => {
+                    const initial = guest.petName.charAt(0);
+                    return (
+                      <button
+                        key={guest.id}
+                        onClick={() => setSelectedJournalGuestId(guest.id)}
+                        className="flex w-full items-center gap-3 rounded-md border bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
+                      >
+                        <Avatar className="size-9 shrink-0">
+                          {guest.petPhotoUrl && (
+                            <AvatarImage
+                              src={guest.petPhotoUrl}
+                              alt={guest.petName}
+                            />
+                          )}
+                          <AvatarFallback className="text-xs font-semibold">
+                            {initial}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">
+                              {guest.petName}
+                            </span>
+                            <span className="text-muted-foreground text-xs">
+                              {guest.kennelName}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground text-xs">
+                            {guest.totalNights}{" "}
+                            {guest.totalNights === 1 ? "night" : "nights"}
+                            {guest.ownerName && ` · ${guest.ownerName}`}
+                          </p>
+                        </div>
+                        <BookOpen className="text-muted-foreground size-4 shrink-0" />
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

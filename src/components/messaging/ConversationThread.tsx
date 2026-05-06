@@ -106,12 +106,14 @@ export function ConversationThread({
   detailOpen,
   onToggleDetail,
   mode = "facility",
+  senderBlocked = false,
 }: {
   threadId: string | null;
   messages: Message[];
   detailOpen: boolean;
   onToggleDetail: () => void;
   mode?: "facility" | "customer";
+  senderBlocked?: boolean;
 }) {
   const isCustomerMode = mode === "customer";
   const conversationState = useConversationState();
@@ -372,16 +374,39 @@ export function ConversationThread({
         </div>
       </div>
 
-      <ComposeBar
-        mode={mode}
-        threadId={threadId}
-        clientName={counterpartyName}
-        petName={client?.pets?.[0]?.name}
-        lastMessage={threadMessages[threadMessages.length - 1]?.body}
-        preferredLanguageLabel={preferredLanguageLabel ?? undefined}
-        activeChannel={activeChannel}
-        onChannelChange={setActiveChannel}
-      />
+      {isCustomerMode && senderBlocked ? (
+        <div className="border-t bg-rose-50/70 px-5 py-4">
+          <div className="flex items-start gap-3">
+            <Lock className="mt-0.5 size-4 shrink-0 text-rose-600" />
+            <div className="text-xs text-rose-800">
+              <p className="font-semibold">Messaging unavailable</p>
+              <p className="mt-0.5 text-rose-700">
+                You are unable to message this facility at this time. Please
+                contact them by phone if you need to reach them.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <ComposeBar
+          mode={mode}
+          threadId={threadId}
+          clientName={counterpartyName}
+          petName={client?.pets?.[0]?.name}
+          lastMessage={threadMessages[threadMessages.length - 1]?.body}
+          preferredLanguageLabel={preferredLanguageLabel ?? undefined}
+          activeChannel={activeChannel}
+          onChannelChange={setActiveChannel}
+          recipientEmail={
+            isCustomerMode
+              ? ((counterpartyContact as Record<string, unknown>)?.email as
+                  | string
+                  | undefined) ?? null
+              : client?.email ?? null
+          }
+          senderName={isCustomerMode ? undefined : "PawCare Facility"}
+        />
+      )}
     </>
   );
 
@@ -410,6 +435,14 @@ export function ConversationThread({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-slate-800">{counterpartyName}</h3>
+              {!isCustomerMode && client?.isBlocked && (
+                <Badge
+                  variant="outline"
+                  className="border-rose-200 bg-rose-50 text-[9px] text-rose-700"
+                >
+                  Blocked
+                </Badge>
+              )}
               {preferredLanguageLabel && (
                 <Badge
                   variant="outline"

@@ -1,77 +1,21 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { DatePicker } from "@/components/ui/date-picker";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 
 import {
   PawPrint,
   Calendar,
-  Plus,
-  Minus,
   Wrench,
   CheckCircle,
-  Phone,
-  User,
-  List,
-  LayoutGrid,
   Sun,
   Moon,
-  Check,
-  ChevronsUpDown,
+  Sparkles,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { clients } from "@/data/clients";
 import { KennelCalendarView } from "./kennel-calendar";
-import {
-  DaycareCalendarView,
-  DaycareSpot,
-  DaycareReservation,
-} from "./daycare-calendar";
-import { TagList } from "@/components/shared/TagList";
-import { hasCriticalTags, getNoteCount } from "@/data/tags-notes";
-import { MessageSquare, Sparkles } from "lucide-react";
 import type { KennelStatus } from "@/types/base";
 import { Switch } from "@/components/ui/switch";
 import { customServiceCheckIns } from "@/data/custom-service-checkins";
@@ -79,6 +23,11 @@ import type { CustomServiceCheckIn } from "@/data/custom-service-checkins";
 import { COLOR_HEX_MAP } from "@/data/custom-services";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { roomCategories, facilityRooms } from "@/data/rooms";
+import {
+  daycarePlayAreas,
+  daycareSections,
+} from "@/data/daycare-areas";
+import type { RoomCategory } from "@/types/rooms";
 import type { OccupancyKennel } from "./_lib/calendar-types";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { bookings as facilityBookings } from "@/data/bookings";
@@ -278,268 +227,151 @@ function buildInitialKennels(): Kennel[] {
 
 const initialKennels: Kennel[] = buildInitialKennels();
 
-// Mock daycare spots
-const initialDaycareSpots: DaycareSpot[] = [
-  {
-    id: "D1",
-    name: "Small Play Area 1",
-    type: "small",
-    status: "available",
-    capacity: 3,
-    hourlyRate: 8,
-  },
-  {
-    id: "D2",
-    name: "Small Play Area 2",
-    type: "small",
-    status: "available",
-    capacity: 3,
-    hourlyRate: 8,
-  },
-  {
-    id: "D3",
-    name: "Medium Play Area 1",
-    type: "medium",
-    status: "available",
-    capacity: 4,
-    hourlyRate: 10,
-  },
-  {
-    id: "D4",
-    name: "Medium Play Area 2",
-    type: "medium",
-    status: "available",
-    capacity: 4,
-    hourlyRate: 10,
-  },
-  {
-    id: "D5",
-    name: "Large Play Area 1",
-    type: "large",
-    status: "available",
-    capacity: 3,
-    hourlyRate: 12,
-  },
-  {
-    id: "D6",
-    name: "Large Play Area 2",
-    type: "large",
-    status: "maintenance",
-    capacity: 5,
-    hourlyRate: 12,
-  },
-  {
-    id: "D7",
-    name: "XL Play Yard",
-    type: "xlarge",
-    status: "available",
-    capacity: 4,
-    hourlyRate: 15,
-  },
-];
+// Boarding categories — only categories tied to boarding rooms.
+const boardingCategories: RoomCategory[] = roomCategories.filter(
+  (c) => c.service === "boarding",
+);
 
-// Get today's date for mock reservations (using local timezone)
-const getTodayStr = () => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
+// Daycare uses Play Areas → Sections from the modules data. We adapt them into
+// the same RoomCategory / OccupancyKennel shapes the calendar already understands.
+const daycareCategories: RoomCategory[] = daycarePlayAreas
+  .filter((a) => a.isActive)
+  .map((a) => ({
+    id: a.id,
+    facilityId: a.facilityId,
+    service: "daycare",
+    name: a.name,
+    description: a.description,
+    color: "amber",
+    sortOrder: a.sortOrder,
+    rules: [],
+    defaultCapacity: 0,
+    visibleToClients: true,
+    imageUrl: a.imageUrl,
+  }));
 
-const initialDaycareReservations: DaycareReservation[] = [
-  // D1 - Small Dogs Play Area: 3 overlapping pets
-  {
-    id: "DR1",
-    spotId: "D1",
+// Mock daycare reservations (1-day each) keyed by section id.
+const mockDaycareOverlays: Record<
+  string,
+  Pick<
+    Kennel,
+    | "status"
+    | "bookingStatus"
+    | "bookingId"
+    | "petId"
+    | "petName"
+    | "clientName"
+    | "clientPhone"
+    | "checkIn"
+    | "checkOut"
+  >
+> = {
+  "sec-indoor-small": {
+    status: "occupied",
+    bookingStatus: "checked_in",
+    bookingId: 200,
+    petId: 1,
     petName: "Bella",
+    clientName: "Alice Johnson",
+    clientPhone: "123-456-7890",
+    checkIn: "2026-05-05",
+    checkOut: "2026-05-05",
+  },
+  "sec-indoor-medium": {
+    status: "reserved",
+    bookingStatus: "confirmed",
+    bookingId: 201,
+    petId: 3,
+    petName: "Charlie",
+    clientName: "Bob Smith",
+    clientPhone: "098-765-4321",
+    checkIn: "2026-05-06",
+    checkOut: "2026-05-06",
+  },
+  "sec-indoor-large": {
+    status: "occupied",
+    bookingStatus: "checked_in",
+    bookingId: 202,
+    petId: 5,
+    petName: "Rex",
+    clientName: "John Doe",
+    clientPhone: "123-456-7890",
+    checkIn: "2026-05-05",
+    checkOut: "2026-05-05",
+  },
+  "sec-outdoor-main": {
+    status: "reserved",
+    bookingStatus: "pending",
+    bookingId: 203,
+    petId: 7,
+    petName: "Luna",
     clientName: "Sarah Wilson",
     clientPhone: "555-111-2222",
-    date: getTodayStr(),
-    startTime: "07:00",
-    endTime: "14:00",
-    status: "checked-in",
+    checkIn: "2026-05-07",
+    checkOut: "2026-05-07",
   },
-  {
-    id: "DR2",
-    spotId: "D1",
-    petName: "Cooper",
-    clientName: "Mike Brown",
-    clientPhone: "555-333-4444",
-    date: getTodayStr(),
-    startTime: "08:00",
-    endTime: "16:00",
-    status: "checked-in",
+  "sec-outdoor-agility": {
+    status: "maintenance",
   },
-  {
-    id: "DR8",
-    spotId: "D1",
-    petName: "Peanut",
-    clientName: "Jessica Lee",
-    clientPhone: "555-888-1111",
-    date: getTodayStr(),
-    startTime: "09:00",
-    endTime: "13:00",
-    status: "checked-in",
-  },
-  // D2 - Medium Dogs Zone: 2 overlapping pets
-  {
-    id: "DR6",
-    spotId: "D2",
-    petName: "Daisy",
-    clientName: "Tom Harris",
-    clientPhone: "555-222-3333",
-    date: getTodayStr(),
-    startTime: "08:00",
-    endTime: "15:00",
-    status: "checked-in",
-  },
-  {
-    id: "DR9",
-    spotId: "D2",
-    petName: "Charlie",
-    clientName: "Rachel Green",
-    clientPhone: "555-999-2222",
-    date: getTodayStr(),
-    startTime: "10:00",
-    endTime: "17:00",
-    status: "reserved",
-  },
-  // D3 - Large Dogs Area: 4 overlapping pets
-  {
-    id: "DR3",
-    spotId: "D3",
-    petName: "Rocky",
-    clientName: "Emma Davis",
-    clientPhone: "555-555-6666",
-    date: getTodayStr(),
-    startTime: "07:00",
-    endTime: "16:00",
-    status: "checked-in",
-  },
-  {
-    id: "DR10",
-    spotId: "D3",
-    petName: "Bear",
-    clientName: "John Smith",
-    clientPhone: "555-111-3333",
-    date: getTodayStr(),
-    startTime: "08:00",
-    endTime: "14:00",
-    status: "checked-in",
-  },
-  {
-    id: "DR11",
-    spotId: "D3",
-    petName: "Thor",
-    clientName: "Amy Johnson",
-    clientPhone: "555-222-4444",
-    date: getTodayStr(),
-    startTime: "09:00",
-    endTime: "17:00",
-    status: "reserved",
-  },
-  {
-    id: "DR12",
-    spotId: "D3",
-    petName: "Bruno",
-    clientName: "David Wilson",
-    clientPhone: "555-333-5555",
-    date: getTodayStr(),
-    startTime: "11:00",
-    endTime: "18:00",
-    status: "reserved",
-  },
-  // D4 - Puppy Playroom: 1 pet (checked out)
-  {
-    id: "DR7",
-    spotId: "D4",
-    petName: "Milo",
-    clientName: "Lisa Garcia",
-    clientPhone: "555-444-5555",
-    date: getTodayStr(),
-    startTime: "07:30",
-    endTime: "11:30",
-    status: "checked-out",
-  },
-  // D5 - Senior Dogs Lounge: 2 overlapping pets
-  {
-    id: "DR4",
-    spotId: "D5",
-    petName: "Duke",
-    clientName: "Chris Miller",
-    clientPhone: "555-777-8888",
-    date: getTodayStr(),
-    startTime: "08:00",
-    endTime: "14:00",
-    status: "checked-in",
-  },
-  {
-    id: "DR13",
-    spotId: "D5",
-    petName: "Ginger",
-    clientName: "Nancy Taylor",
-    clientPhone: "555-444-6666",
-    date: getTodayStr(),
-    startTime: "10:00",
-    endTime: "16:00",
-    status: "checked-in",
-  },
-  // D7 - XL Dogs Space: 3 overlapping pets
-  {
-    id: "DR5",
-    spotId: "D7",
-    petName: "Zeus",
-    clientName: "Amanda Clark",
-    clientPhone: "555-999-0000",
-    date: getTodayStr(),
-    startTime: "06:00",
-    endTime: "18:00",
-    status: "checked-in",
-  },
-  {
-    id: "DR14",
-    spotId: "D7",
-    petName: "Titan",
-    clientName: "Mark Robinson",
-    clientPhone: "555-555-7777",
-    date: getTodayStr(),
-    startTime: "09:00",
-    endTime: "15:00",
-    status: "checked-in",
-  },
-  {
-    id: "DR15",
-    spotId: "D7",
-    petName: "Goliath",
-    clientName: "Susan White",
-    clientPhone: "555-666-8888",
-    date: getTodayStr(),
-    startTime: "12:00",
-    endTime: "19:00",
-    status: "reserved",
-  },
-];
+};
 
-type ViewMode = "list" | "calendar";
-type ServiceType = "boarding" | "daycare";
+function buildInitialDaycareKennels(): Kennel[] {
+  return daycareSections
+    .filter((s) => s.isActive)
+    .map((section) => {
+      const overlay = mockDaycareOverlays[section.id];
+      const enrichment: Partial<OccupancyKennel> = {};
+      if (overlay?.petId) {
+        const lookup = findPetById(overlay.petId);
+        if (lookup) {
+          enrichment.petPhotoUrl = lookup.pet.imageUrl;
+          enrichment.petBreed = lookup.pet.breed;
+          enrichment.petSize = petSizeFromWeight(lookup.pet.weight);
+          enrichment.petSpecies =
+            lookup.pet.type.toLowerCase() === "cat" ? "cat" : "dog";
+          enrichment.clientPhotoUrl = lookup.client.imageUrl;
+        }
+      }
+      return {
+        id: section.id,
+        name: section.name,
+        categoryId: section.playAreaId,
+        dailyRate: 35,
+        ...(overlay ?? {}),
+        ...enrichment,
+        status: overlay?.status ?? ("vacant" as KennelStatus),
+      };
+    });
+}
+
+const initialDaycareKennels: Kennel[] = buildInitialDaycareKennels();
+
+type ServiceType = "boarding" | "daycare" | "both";
 
 export default function KennelViewPage() {
   const [kennels, setKennels] = useState<Kennel[]>(initialKennels);
-  const [selectedKennel, setSelectedKennel] = useState<Kennel | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<KennelStatus | "all">("all");
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [serviceType, setServiceType] = useState<ServiceType>("boarding");
-  const [daycareSpots] = useState<DaycareSpot[]>(initialDaycareSpots);
-  const [daycareReservations] = useState<DaycareReservation[]>(
-    initialDaycareReservations,
+  const [daycareKennels, setDaycareKennels] = useState<Kennel[]>(
+    initialDaycareKennels,
   );
+  const [filterStatus, setFilterStatus] = useState<KennelStatus | "all">("all");
+  const [daycareFilterStatus, setDaycareFilterStatus] = useState<
+    KennelStatus | "all"
+  >("all");
+  const [serviceType, setServiceType] = useState<ServiceType>("boarding");
 
   const { openBookingModal } = useBookingModal();
-  const handleMoveBooking = useCallback(
-    (bookingId: number, fromRoomId: string, toRoomId: string) => {
-      setKennels((prev) => {
+
+  // Generic move handler that works for both boarding and daycare — the calendar
+  // calls it with the same kennel-id shape regardless of service.
+  const moveWithin = useCallback(
+    (
+      setList: React.Dispatch<React.SetStateAction<Kennel[]>>,
+      bookingId: number,
+      fromRoomId: string,
+      toRoomId: string,
+      staffInitials: string,
+    ) => {
+      setList((prev) => {
         const source = prev.find((k) => k.id === fromRoomId);
         if (!source) return prev;
         return prev.map((k) => {
@@ -564,9 +396,28 @@ export default function KennelViewPage() {
           return k;
         });
       });
-      console.log("Moved booking", bookingId, fromRoomId, "→", toRoomId);
+      console.log(
+        "Moved booking",
+        bookingId,
+        fromRoomId,
+        "→",
+        toRoomId,
+        "by",
+        staffInitials,
+      );
     },
     [],
+  );
+
+  const handleMoveBooking = useCallback(
+    (b: number, f: string, t: string, s: string) =>
+      moveWithin(setKennels, b, f, t, s),
+    [moveWithin],
+  );
+  const handleDaycareMoveBooking = useCallback(
+    (b: number, f: string, t: string, s: string) =>
+      moveWithin(setDaycareKennels, b, f, t, s),
+    [moveWithin],
   );
 
   const handleAddBookingFromCell = useCallback(
@@ -588,15 +439,25 @@ export default function KennelViewPage() {
     [kennels, openBookingModal],
   );
 
-  // Booking/edit form state
-  const [selectedClientId, setSelectedClientId] = useState<string>("");
-  const [selectedPetId, setSelectedPetId] = useState<string>("");
-  const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
-  const [petPopoverOpen, setPetPopoverOpen] = useState(false);
-  const [formCheckIn, setFormCheckIn] = useState("");
-  const [formCheckOut, setFormCheckOut] = useState("");
-  const [formCheckInTime, setFormCheckInTime] = useState("");
-  const [formCheckOutTime, setFormCheckOutTime] = useState("");
+  const handleAddDaycareBookingFromCell = useCallback(
+    (sectionId: string, date: string) => {
+      const target = daycareKennels.find((k) => k.id === sectionId);
+      if (!target || target.status === "maintenance") return;
+      openBookingModal({
+        clients,
+        facilityId: 11,
+        facilityName: "Pawradise Resort",
+        preSelectedService: "daycare",
+        preSelectedRoomId: sectionId,
+        preSelectedStartDate: date,
+        onCreateBooking: (newBooking) => {
+          console.log("Daycare booking created from occupancy grid", newBooking);
+        },
+      });
+    },
+    [daycareKennels, openBookingModal],
+  );
+
   const [showCustomServices, setShowCustomServices] = useState(true);
 
   // Get active modules for color mapping
@@ -624,72 +485,15 @@ export default function KennelViewPage() {
     [activeModules],
   );
 
-  // Format ISO time string to readable format
-  function formatServiceTime(isoStr: string): string {
-    return new Date(isoStr).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  }
-
-  const selectedClient = useMemo(() => {
-    return clients.find((c) => c.id.toString() === selectedClientId);
-  }, [selectedClientId]);
-
-  const availablePets = useMemo(() => {
-    return selectedClient?.pets || [];
-  }, [selectedClient]);
-
-  const filteredKennels = useMemo(() => {
-    if (filterStatus === "all") return kennels;
-    return kennels.filter((k) => k.status === filterStatus);
-  }, [kennels, filterStatus]);
-
-  const [daycareFilterStatus, setDaycareFilterStatus] = useState<
-    DaycareSpot["status"] | "all"
-  >("all");
-
-  const filteredDaycareSpots = useMemo(() => {
-    if (daycareFilterStatus === "all") return daycareSpots;
-    return daycareSpots.filter((s) => s.status === daycareFilterStatus);
-  }, [daycareSpots, daycareFilterStatus]);
-
   const daycareStatusCounts = useMemo(() => {
     return {
-      available: daycareSpots.filter((s) => s.status === "available").length,
-      occupied: daycareSpots.filter((s) => s.status === "occupied").length,
-      reserved: daycareSpots.filter((s) => s.status === "reserved").length,
-      maintenance: daycareSpots.filter((s) => s.status === "maintenance")
+      vacant: daycareKennels.filter((k) => k.status === "vacant").length,
+      occupied: daycareKennels.filter((k) => k.status === "occupied").length,
+      reserved: daycareKennels.filter((k) => k.status === "reserved").length,
+      maintenance: daycareKennels.filter((k) => k.status === "maintenance")
         .length,
     };
-  }, [daycareSpots]);
-
-  const getDaycareStatusBadgeClass = (status: DaycareSpot["status"]) => {
-    switch (status) {
-      case "available":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      case "occupied":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-      case "reserved":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-      case "maintenance":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
-    }
-  };
-
-  const getDaycareTypeLabel = (type: DaycareSpot["type"]) => {
-    switch (type) {
-      case "small":
-        return "Small Dogs";
-      case "medium":
-        return "Medium Dogs";
-      case "large":
-        return "Large Dogs";
-      case "xlarge":
-        return "XL Dogs";
-    }
-  };
+  }, [daycareKennels]);
 
   const statusCounts = useMemo(() => {
     return {
@@ -700,158 +504,6 @@ export default function KennelViewPage() {
     };
   }, [kennels]);
 
-  const getStatusBadgeClass = (status: KennelStatus) => {
-    switch (status) {
-      case "vacant":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      case "occupied":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-      case "reserved":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-      case "maintenance":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
-    }
-  };
-
-  const getCategoryLabel = (categoryId: string) => {
-    return (
-      roomCategories.find((c) => c.id === categoryId)?.name ?? categoryId
-    );
-  };
-
-  const calculateStayDuration = (checkIn: string, checkOut: string) => {
-    const start = new Date(checkIn);
-    const end = new Date(checkOut);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  const calculateTotal = () => {
-    if (!selectedKennel || !formCheckIn || !formCheckOut) return 0;
-    const nights = calculateStayDuration(formCheckIn, formCheckOut);
-    return nights * selectedKennel.dailyRate;
-  };
-
-  const openKennelDialog = (kennel: Kennel) => {
-    setSelectedKennel(kennel);
-
-    if (kennel.status === "occupied" || kennel.status === "reserved") {
-      // Pre-fill with existing booking data
-      const client = clients.find((c) => c.name === kennel.clientName);
-      if (client) {
-        setSelectedClientId(client.id.toString());
-        const pet = client.pets.find((p) => p.name === kennel.petName);
-        if (pet) {
-          setSelectedPetId(pet.id.toString());
-        }
-      }
-      setFormCheckIn(kennel.checkIn || "");
-      setFormCheckOut(kennel.checkOut || "");
-    } else {
-      // Reset form for new booking
-      setSelectedClientId("");
-      setSelectedPetId("");
-      setFormCheckIn("");
-      setFormCheckOut("");
-    }
-
-    setDialogOpen(true);
-  };
-
-  const closeDialog = () => {
-    setDialogOpen(false);
-    setSelectedKennel(null);
-    setSelectedClientId("");
-    setSelectedPetId("");
-    setClientPopoverOpen(false);
-    setPetPopoverOpen(false);
-    setFormCheckIn("");
-    setFormCheckOut("");
-    setFormCheckInTime("");
-    setFormCheckOutTime("");
-  };
-
-  const handleSaveBooking = () => {
-    if (
-      !selectedKennel ||
-      !selectedClientId ||
-      !selectedPetId ||
-      !formCheckIn ||
-      !formCheckOut
-    )
-      return;
-
-    const client = clients.find((c) => c.id.toString() === selectedClientId);
-    const pet = client?.pets.find((p) => p.id.toString() === selectedPetId);
-
-    if (!client || !pet) return;
-
-    setKennels((prev) =>
-      prev.map((k) =>
-        k.id === selectedKennel.id
-          ? {
-              ...k,
-              status: "reserved" as KennelStatus,
-              petName: pet.name,
-              clientName: client.name,
-              clientPhone: client.phone,
-              checkIn: formCheckIn,
-              checkOut: formCheckOut,
-            }
-          : k,
-      ),
-    );
-
-    closeDialog();
-  };
-
-  const handleExtendStay = (days: number) => {
-    if (!formCheckOut) return;
-
-    const currentCheckOut = new Date(formCheckOut);
-    currentCheckOut.setDate(currentCheckOut.getDate() + days);
-    setFormCheckOut(currentCheckOut.toISOString().split("T")[0]);
-  };
-
-  const handleShortenStay = () => {
-    if (!formCheckOut || !formCheckIn) return;
-
-    const currentCheckOut = new Date(formCheckOut);
-    const checkIn = new Date(formCheckIn);
-    currentCheckOut.setDate(currentCheckOut.getDate() - 1);
-
-    if (currentCheckOut > checkIn) {
-      setFormCheckOut(currentCheckOut.toISOString().split("T")[0]);
-    }
-  };
-
-  const handleMarkAvailable = () => {
-    if (!selectedKennel) return;
-
-    setKennels((prev) =>
-      prev.map((k) =>
-        k.id === selectedKennel.id
-          ? {
-              ...k,
-              status: "vacant" as KennelStatus,
-              petName: undefined,
-              clientName: undefined,
-              clientPhone: undefined,
-              checkIn: undefined,
-              checkOut: undefined,
-              bookingId: undefined,
-            }
-          : k,
-      ),
-    );
-
-    closeDialog();
-  };
-
-  const isBookingValid =
-    selectedClientId && selectedPetId && formCheckIn && formCheckOut;
-
   return (
     <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
       {/* Header */}
@@ -861,7 +513,9 @@ export default function KennelViewPage() {
           <p className="text-muted-foreground">
             {serviceType === "boarding"
               ? "Manage kennel occupancy and bookings"
-              : "Manage daycare reservations by hour"}
+              : serviceType === "daycare"
+                ? "Manage daycare play areas and reservations"
+                : "Manage kennel occupancy and daycare reservations"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -885,55 +539,17 @@ export default function KennelViewPage() {
               <Sun className="size-4" />
               Daycare
             </Button>
-          </div>
-          {/* View Mode Toggle */}
-          <div className="flex overflow-hidden rounded-lg border">
-            {serviceType === "boarding" ? (
-              <>
-                <Button
-                  variant={viewMode === "list" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="gap-2 rounded-none"
-                  onClick={() => setViewMode("list")}
-                >
-                  <List className="size-4" />
-                  List
-                </Button>
-                <Button
-                  variant={viewMode === "calendar" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="gap-2 rounded-none"
-                  onClick={() => setViewMode("calendar")}
-                >
-                  <LayoutGrid className="size-4" />
-                  Calendar
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  variant={viewMode === "list" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="gap-2 rounded-none"
-                  onClick={() => setViewMode("list")}
-                >
-                  <List className="size-4" />
-                  List
-                </Button>
-                <Button
-                  variant={viewMode === "calendar" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="gap-2 rounded-none"
-                  onClick={() => setViewMode("calendar")}
-                >
-                  <LayoutGrid className="size-4" />
-                  Calendar
-                </Button>
-              </>
-            )}
+            <Button
+              variant={serviceType === "both" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-none"
+              onClick={() => setServiceType("both")}
+            >
+              Both
+            </Button>
           </div>
           {/* Custom Services Toggle (Boarding Only) */}
-          {serviceType === "boarding" && (
+          {serviceType !== "daycare" && (
             <div className="flex items-center gap-2 rounded-lg border px-3 py-1.5">
               <Sparkles className="text-muted-foreground size-3.5" />
               <span className="text-muted-foreground text-xs font-medium whitespace-nowrap">
@@ -949,7 +565,7 @@ export default function KennelViewPage() {
         </div>
       </div>
 
-      {serviceType === "boarding" && (
+      {serviceType !== "daycare" && (
         <>
           {/* Status Summary */}
           <div className="grid gap-4 md:grid-cols-4">
@@ -1005,224 +621,57 @@ export default function KennelViewPage() {
             />
           </div>
 
-          {viewMode === "calendar" ? (
-            <Card className="p-4">
-              <KennelCalendarView
-                kennels={kennels}
-                facilityName="Pawradise Resort"
-                onKennelClick={(kennel) => openKennelDialog(kennel)}
-                onAddBooking={handleAddBookingFromCell}
-                onUpdateBooking={(kennelId, checkIn, checkOut) => {
-                  setKennels((prev) =>
-                    prev.map((k) =>
-                      k.id === kennelId
-                        ? {
-                            ...k,
-                            checkIn,
-                            checkOut,
-                          }
-                        : k,
-                    ),
-                  );
-                }}
-                onMoveBooking={handleMoveBooking}
-                customServicesMap={petServicesMap}
-                moduleColorMap={moduleColorMap}
-                showCustomServices={showCustomServices}
-              />
-            </Card>
-          ) : (
-            <>
-              {/* Filter Bar */}
-              <div className="flex items-center gap-4">
-                <Select
-                  value={filterStatus}
-                  onValueChange={(v) =>
-                    setFilterStatus(v as KennelStatus | "all")
-                  }
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Kennels</SelectItem>
-                    <SelectItem value="vacant">Vacant</SelectItem>
-                    <SelectItem value="occupied">Occupied</SelectItem>
-                    <SelectItem value="reserved">Reserved</SelectItem>
-                    <SelectItem value="maintenance">Maintenance</SelectItem>
-                  </SelectContent>
-                </Select>
-                {filterStatus !== "all" && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setFilterStatus("all")}
-                  >
-                    Clear filter
-                  </Button>
-                )}
-              </div>
-
-              {/* Kennel List */}
-              <Card>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Kennel</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Pet</TableHead>
-                      <TableHead>Client</TableHead>
-                      <TableHead>Check-In</TableHead>
-                      <TableHead>Check-Out</TableHead>
-                      <TableHead className="text-right">Rate</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredKennels.map((kennel) => (
-                      <TableRow
-                        key={kennel.id}
-                        className={cn(
-                          `hover:bg-muted/50 cursor-pointer`,
-                          kennel.petId &&
-                            hasCriticalTags("pet", kennel.petId) &&
-                            `border-l-4 border-l-red-500 bg-red-50/50 dark:border-l-red-400 dark:bg-red-950/20`,
-                        )}
-                        onClick={() => openKennelDialog(kennel)}
-                      >
-                        <TableCell className="font-medium">
-                          {kennel.name}
-                          {kennel.petId &&
-                            hasCriticalTags("pet", kennel.petId) && (
-                              <span className="sr-only">
-                                Critical alert for {kennel.petName}
-                              </span>
-                            )}
-                        </TableCell>
-                        <TableCell>{getCategoryLabel(kennel.categoryId)}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusBadgeClass(kennel.status)}>
-                            {kennel.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {kennel.petName ? (
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <PawPrint className="text-muted-foreground size-4" />
-                                {kennel.petName}
-                              </div>
-                              {kennel.petId && (
-                                <TagList
-                                  entityType="pet"
-                                  entityId={kennel.petId}
-                                  compact
-                                  maxVisible={3}
-                                />
-                              )}
-                              {(() => {
-                                const noteCount = kennel.petId
-                                  ? getNoteCount("pet", kennel.petId)
-                                  : 0;
-                                return noteCount > 0 ? (
-                                  <div className="text-muted-foreground flex items-center gap-1 text-xs">
-                                    <MessageSquare className="size-3" />
-                                    {noteCount}{" "}
-                                    {noteCount === 1 ? "note" : "notes"}
-                                  </div>
-                                ) : null;
-                              })()}
-                              {showCustomServices &&
-                                kennel.petId &&
-                                (() => {
-                                  const services =
-                                    petServicesMap.get(kennel.petId!) ?? [];
-                                  if (!services.length) return null;
-                                  return (
-                                    <div className="mt-1.5 flex flex-wrap gap-1">
-                                      {services.map((s) => {
-                                        const color =
-                                          moduleColorMap.get(s.moduleId) ??
-                                          "#6366f1";
-                                        return (
-                                          <span
-                                            key={s.id}
-                                            className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                                            style={{
-                                              backgroundColor: `${color}20`,
-                                              color,
-                                            }}
-                                          >
-                                            <Sparkles className="size-2" />
-                                            {s.moduleName} @{" "}
-                                            {formatServiceTime(s.checkInTime)}
-                                          </span>
-                                        );
-                                      })}
-                                    </div>
-                                  );
-                                })()}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {kennel.clientName || (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {kennel.checkIn || (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {kennel.checkOut || (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          ${kennel.dailyRate}/night
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openKennelDialog(kennel);
-                            }}
-                          >
-                            {kennel.status === "vacant" ? "Book" : "Manage"}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Card>
-            </>
-          )}
+          <Card className="p-4">
+            <KennelCalendarView
+              kennels={kennels}
+              categories={boardingCategories}
+              facilityName="Pawradise Resort"
+              onAddBooking={handleAddBookingFromCell}
+              onUpdateBooking={(kennelId, checkIn, checkOut, staffInitials) => {
+                setKennels((prev) =>
+                  prev.map((k) =>
+                    k.id === kennelId
+                      ? {
+                          ...k,
+                          checkIn,
+                          checkOut,
+                        }
+                      : k,
+                  ),
+                );
+                console.log(
+                  "Updated stay",
+                  kennelId,
+                  checkIn,
+                  "→",
+                  checkOut,
+                  "by",
+                  staffInitials,
+                );
+              }}
+              onMoveBooking={handleMoveBooking}
+              customServicesMap={petServicesMap}
+              moduleColorMap={moduleColorMap}
+              showCustomServices={showCustomServices}
+            />
+          </Card>
         </>
       )}
 
-      {serviceType === "daycare" && (
+      {serviceType !== "boarding" && (
         <>
           {/* Status Summary */}
           <div className="grid gap-4 md:grid-cols-4">
             <KpiTile
-              label="Available"
-              value={daycareStatusCounts.available}
-              hint="Spots open for booking"
+              label="Vacant"
+              value={daycareStatusCounts.vacant}
+              hint="Sections open today"
               icon={CheckCircle}
               tone="emerald"
-              active={daycareFilterStatus === "available"}
+              active={daycareFilterStatus === "vacant"}
               onClick={() =>
                 setDaycareFilterStatus(
-                  daycareFilterStatus === "available" ? "all" : "available",
+                  daycareFilterStatus === "vacant" ? "all" : "vacant",
                 )
               }
             />
@@ -1267,472 +716,26 @@ export default function KennelViewPage() {
             />
           </div>
 
-          {viewMode === "calendar" ? (
-            <Card className="p-4">
-              <DaycareCalendarView
-                spots={filteredDaycareSpots}
-                reservations={daycareReservations}
-                onSpotClick={(spot) => {
-                  // TODO: Handle spot click
-                  console.log("Spot clicked:", spot);
-                }}
-                onAddReservation={(spotId, date) => {
-                  // TODO: Handle add reservation
-                  console.log("Add reservation:", spotId, date);
-                }}
-                onReservationClick={(reservation) => {
-                  // TODO: Handle reservation click
-                  console.log("Reservation clicked:", reservation);
-                }}
-              />
-            </Card>
-          ) : (
-            <>
-              {/* Filter Bar */}
-              <div className="flex items-center gap-4">
-                <Select
-                  value={daycareFilterStatus}
-                  onValueChange={(v) =>
-                    setDaycareFilterStatus(v as DaycareSpot["status"] | "all")
-                  }
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Areas</SelectItem>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="occupied">Occupied</SelectItem>
-                    <SelectItem value="reserved">Reserved</SelectItem>
-                    <SelectItem value="maintenance">Maintenance</SelectItem>
-                  </SelectContent>
-                </Select>
-                {daycareFilterStatus !== "all" && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDaycareFilterStatus("all")}
-                  >
-                    Clear filter
-                  </Button>
-                )}
-              </div>
-
-              {/* Daycare Spots List */}
-              <Card>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Area</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Capacity</TableHead>
-                      <TableHead className="text-right">Rate</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredDaycareSpots.map((spot) => (
-                      <TableRow
-                        key={spot.id}
-                        className="hover:bg-muted/50 cursor-pointer"
-                        onClick={() => {
-                          // TODO: Handle spot click
-                          console.log("Spot clicked:", spot);
-                        }}
-                      >
-                        <TableCell className="font-medium">
-                          {spot.name}
-                        </TableCell>
-                        <TableCell>{getDaycareTypeLabel(spot.type)}</TableCell>
-                        <TableCell>
-                          <Badge
-                            className={getDaycareStatusBadgeClass(spot.status)}
-                          >
-                            {spot.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <PawPrint className="text-muted-foreground size-4" />
-                            {spot.capacity}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          ${spot.hourlyRate}/hr
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // TODO: Handle spot click
-                              console.log("Spot clicked:", spot);
-                            }}
-                          >
-                            {spot.status === "available" ? "Book" : "Manage"}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Card>
-            </>
-          )}
+          <Card className="p-4">
+            <KennelCalendarView
+              kennels={daycareKennels}
+              categories={daycareCategories}
+              facilityName="Pawradise Resort"
+              rateSuffix="/day"
+              disableResize
+              onAddBooking={handleAddDaycareBookingFromCell}
+              onUpdateBooking={() => {
+                // Daycare stays are 1-day; resize is disabled in the calendar.
+              }}
+              onMoveBooking={handleDaycareMoveBooking}
+              customServicesMap={petServicesMap}
+              moduleColorMap={moduleColorMap}
+              showCustomServices={false}
+            />
+          </Card>
         </>
       )}
 
-      {/* Unified Kennel Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent className="min-w-5xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {selectedKennel?.name}
-              {selectedKennel && (
-                <Badge className={getStatusBadgeClass(selectedKennel.status)}>
-                  {selectedKennel.status}
-                </Badge>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedKennel &&
-                `${getCategoryLabel(selectedKennel.categoryId)} • $${selectedKennel.dailyRate}/night`}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedKennel && (
-            <div className="space-y-4 py-4">
-              {selectedKennel.status === "maintenance" ? (
-                <div className="py-8 text-center">
-                  <Wrench className="mx-auto mb-4 size-12 text-red-600" />
-                  <p className="text-lg font-medium">Under Maintenance</p>
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    This kennel is temporarily unavailable
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={handleMarkAvailable}
-                  >
-                    Mark as Available
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  {/* Client and Pet Selection - Side by Side */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Client Selection */}
-                    <div className="space-y-2">
-                      <Label>Client</Label>
-                      <Popover
-                        open={clientPopoverOpen}
-                        onOpenChange={setClientPopoverOpen}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={clientPopoverOpen}
-                            className="w-full justify-between"
-                          >
-                            {selectedClientId ? (
-                              <div className="flex items-center gap-2">
-                                <User className="size-4" />
-                                {
-                                  clients.find(
-                                    (c) => c.id.toString() === selectedClientId,
-                                  )?.name
-                                }
-                              </div>
-                            ) : (
-                              "Select a client..."
-                            )}
-                            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-(--radix-popover-trigger-width)! p-0">
-                          <Command>
-                            <CommandInput placeholder="Search clients..." />
-                            <CommandList>
-                              <CommandEmpty>No client found.</CommandEmpty>
-                              <CommandGroup>
-                                {clients
-                                  .filter(
-                                    (c) =>
-                                      c.status === "active" &&
-                                      c.pets.length > 0,
-                                  )
-                                  .map((client) => (
-                                    <CommandItem
-                                      key={client.id}
-                                      value={client.name}
-                                      onSelect={() => {
-                                        setSelectedClientId(
-                                          client.id.toString(),
-                                        );
-                                        setSelectedPetId("");
-                                        setClientPopoverOpen(false);
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 size-4",
-                                          selectedClientId ===
-                                            client.id.toString()
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                      <User className="mr-2 size-4" />
-                                      {client.name}
-                                    </CommandItem>
-                                  ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    {/* Pet Selection */}
-                    <div className="space-y-2">
-                      <Label>Pet</Label>
-                      <Popover
-                        open={petPopoverOpen}
-                        onOpenChange={setPetPopoverOpen}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={petPopoverOpen}
-                            className="w-full justify-between"
-                            disabled={!selectedClientId}
-                          >
-                            {selectedPetId ? (
-                              <div className="flex items-center gap-2">
-                                <PawPrint className="size-4" />
-                                {(() => {
-                                  const pet = availablePets.find(
-                                    (p) => p.id.toString() === selectedPetId,
-                                  );
-                                  return pet
-                                    ? `${pet.name} (${pet.breed})`
-                                    : "";
-                                })()}
-                              </div>
-                            ) : selectedClientId ? (
-                              "Select a pet..."
-                            ) : (
-                              "Select a client first"
-                            )}
-                            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-(--radix-popover-trigger-width)! p-0">
-                          <Command>
-                            <CommandInput placeholder="Search pets..." />
-                            <CommandList>
-                              <CommandEmpty>No pet found.</CommandEmpty>
-                              <CommandGroup>
-                                {availablePets.map((pet) => (
-                                  <CommandItem
-                                    key={pet.id}
-                                    value={`${pet.name} ${pet.breed}`}
-                                    onSelect={() => {
-                                      setSelectedPetId(pet.id.toString());
-                                      setPetPopoverOpen(false);
-                                    }}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 size-4",
-                                        selectedPetId === pet.id.toString()
-                                          ? "opacity-100"
-                                          : "opacity-0",
-                                      )}
-                                    />
-                                    <PawPrint className="mr-2 size-4" />
-                                    {pet.name} ({pet.breed})
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-
-                  {/* Date Selection */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Check-In Date</Label>
-                      <DatePicker
-                        value={formCheckIn}
-                        onValueChange={(next) => {
-                          setFormCheckIn(next);
-                          if (!next) {
-                            setFormCheckOut("");
-                            return;
-                          }
-                          if (formCheckOut && formCheckOut < next) {
-                            setFormCheckOut(next);
-                          }
-                        }}
-                        placeholder="Select check-in date"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Expected Check-Out</Label>
-                      <DatePicker
-                        value={formCheckOut}
-                        min={formCheckIn || undefined}
-                        onValueChange={(next) => {
-                          if (formCheckIn && next && next < formCheckIn) return;
-                          setFormCheckOut(next);
-                        }}
-                        placeholder="Select check-out date"
-                        disabled={!formCheckIn}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Time Selection (Optional) */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>
-                        Check-In Time{" "}
-                        <span className="text-muted-foreground text-xs">
-                          (optional)
-                        </span>
-                      </Label>
-                      <Input
-                        type="time"
-                        value={formCheckInTime}
-                        onChange={(e) => setFormCheckInTime(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>
-                        Check-Out Time{" "}
-                        <span className="text-muted-foreground text-xs">
-                          (optional)
-                        </span>
-                      </Label>
-                      <Input
-                        type="time"
-                        value={formCheckOutTime}
-                        onChange={(e) => setFormCheckOutTime(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Extend/Shorten Stay Buttons (only for existing bookings) */}
-                  {(selectedKennel.status === "occupied" ||
-                    selectedKennel.status === "reserved") &&
-                    formCheckIn &&
-                    formCheckOut && (
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 gap-1"
-                          onClick={handleShortenStay}
-                          disabled={
-                            calculateStayDuration(formCheckIn, formCheckOut) <=
-                            1
-                          }
-                        >
-                          <Minus className="size-4" />
-                          Shorten
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 gap-1"
-                          onClick={() => handleExtendStay(1)}
-                        >
-                          <Plus className="size-4" />
-                          +1 Day
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 gap-1"
-                          onClick={() => handleExtendStay(7)}
-                        >
-                          <Plus className="size-4" />
-                          +1 Week
-                        </Button>
-                      </div>
-                    )}
-
-                  {/* Contact Info */}
-                  {selectedClient?.phone && (
-                    <div className="bg-muted flex items-center gap-2 rounded-lg p-3">
-                      <Phone className="text-muted-foreground size-4" />
-                      <span className="text-sm">{selectedClient.phone}</span>
-                    </div>
-                  )}
-
-                  {/* Pricing Summary */}
-                  {formCheckIn && formCheckOut && (
-                    <div className="bg-muted rounded-lg p-4">
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-muted-foreground text-sm">
-                          Duration
-                        </span>
-                        <span className="font-medium">
-                          {calculateStayDuration(formCheckIn, formCheckOut)}{" "}
-                          nights
-                        </span>
-                      </div>
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-muted-foreground text-sm">
-                          Rate
-                        </span>
-                        <span className="font-medium">
-                          ${selectedKennel.dailyRate}/night
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between border-t pt-2">
-                        <span className="font-medium">Total</span>
-                        <span className="text-lg font-bold text-green-600">
-                          ${calculateTotal()}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
-          <DialogFooter>
-            {selectedKennel?.status !== "maintenance" && (
-              <>
-                <Button variant="outline" onClick={closeDialog}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSaveBooking} disabled={!isBookingValid}>
-                  {selectedKennel?.status === "vacant"
-                    ? "Confirm Booking"
-                    : "Save Changes"}
-                </Button>
-              </>
-            )}
-            {selectedKennel?.status === "maintenance" && (
-              <Button variant="outline" onClick={closeDialog}>
-                Close
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

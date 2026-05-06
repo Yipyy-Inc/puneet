@@ -380,8 +380,42 @@ export interface DigitalWaiver {
   requireDigitalSignature: boolean;
   requiresWitness: boolean;
   expiryDays?: number;
+  /** Category this waiver belongs to. When unset, the manager auto-buckets
+   *  by the first matching service category. */
+  categoryId?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Reusable preset that can be applied to create a new waiver. */
+export interface WaiverTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  type: WaiverServiceTag;
+  services?: WaiverServiceTag[];
+  content: string;
+  blocks?: WaiverBlock[];
+  // Default settings inherited when applied to a new waiver:
+  requiresSignature: boolean;
+  requireDigitalSignature: boolean;
+  requiresWitness: boolean;
+  expiryDays?: number;
+  categoryId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A grouping bucket for waivers and templates.
+ *  Service categories are derived at runtime from the facility's services
+ *  and not stored. Custom categories are persisted. */
+export interface WaiverCategory {
+  id: string;
+  name: string;
+  kind: "service" | "custom";
+  /** When kind === "service", the matching service tag. */
+  serviceTag?: WaiverServiceTag;
+  createdAt: string;
 }
 
 export interface WaiverSignature {
@@ -632,6 +666,129 @@ export const waiverSignatures: WaiverSignature[] = [
     ipAddress: "192.168.1.103",
     status: "expired",
     expiresAt: "2024-12-15T16:00:00Z",
+  },
+];
+
+export const customWaiverCategories: WaiverCategory[] = [
+  {
+    id: "cat-senior",
+    name: "Senior Pet Waivers",
+    kind: "custom",
+    createdAt: "2024-02-01T10:00:00Z",
+  },
+];
+
+export const waiverTemplates: WaiverTemplate[] = [
+  {
+    id: "tpl-boarding-starter",
+    name: "Boarding Liability Starter",
+    description:
+      "Standard liability waiver covering inherent risks, vaccinations, and emergency vet authorization.",
+    type: "boarding",
+    services: ["boarding"],
+    content: `**Boarding Liability Waiver**
+
+I, {{customerName}}, acknowledge that I am the owner of {{petName}} and authorize {{facilityName}} to provide boarding services on {{date}}.
+
+**Terms & Conditions**
+
+- I understand my pet will be housed with other animals.
+- I certify my pet is current on all required vaccinations.
+- I authorize emergency veterinary care at my expense.
+- I agree to pay any late pick-up fees as posted.
+
+**Acknowledgement**
+
+By signing below, I confirm I have read and agree to these terms.`,
+    requiresSignature: true,
+    requireDigitalSignature: true,
+    requiresWitness: false,
+    expiryDays: 365,
+    createdAt: "2024-01-15T10:00:00Z",
+    updatedAt: "2024-01-15T10:00:00Z",
+  },
+  {
+    id: "tpl-daycare-starter",
+    name: "Daycare General Starter",
+    description:
+      "Group play consent + behavior agreement + late pick-up policy.",
+    type: "daycare",
+    services: ["daycare"],
+    content: `**Daycare General Waiver**
+
+I, {{customerName}}, agree to the terms below for {{petName}} at {{facilityName}}.
+
+- My pet is in good health and current on Rabies, DHPP, and Bordetella.
+- I understand daycare involves group play and inherent risks.
+- I authorize staff to administer first aid if needed.
+- I will pick up my pet by the designated time or accept late fees.
+
+**Behavior Agreement**
+
+If my pet displays aggressive behavior, they may be removed from group play. Repeat incidents may result in suspension from daycare services.`,
+    requiresSignature: true,
+    requireDigitalSignature: true,
+    requiresWitness: false,
+    expiryDays: 180,
+    createdAt: "2024-01-10T09:00:00Z",
+    updatedAt: "2024-01-10T09:00:00Z",
+  },
+  {
+    id: "tpl-grooming-starter",
+    name: "Grooming Consent Starter",
+    description:
+      "Consent for grooming services including matted-coat policy and emergency authorization.",
+    type: "grooming",
+    services: ["grooming"],
+    content: `**Grooming Consent Form**
+
+I, {{customerName}}, give permission to {{facilityName}} to groom {{petName}} as discussed.
+
+**Acknowledgements**
+
+- I understand grooming may reveal pre-existing skin conditions.
+- I acknowledge that matted coats may require shaving and additional fees.
+- I will inform staff of any known behavioural issues or sensitivities.
+
+**Medical Authorization**
+
+If my pet experiences a medical emergency during grooming, I authorize immediate veterinary care at my expense.`,
+    requiresSignature: true,
+    requireDigitalSignature: true,
+    requiresWitness: false,
+    createdAt: "2024-02-01T10:00:00Z",
+    updatedAt: "2024-02-01T10:00:00Z",
+  },
+  {
+    id: "tpl-general-tos",
+    name: "General Terms of Service",
+    description: "Catch-all terms covering booking, payment, and liability.",
+    type: "general",
+    services: ["general"],
+    content: `**General Terms of Service**
+
+Welcome to {{facilityName}}. By using our services, you agree to these terms.
+
+**Account & Booking**
+
+- You must provide accurate contact and pet information.
+- Cancellations require 48 hours notice or incur a 50% fee.
+
+**Health & Vaccination**
+
+- All pets must be current on required vaccinations.
+- Pets showing signs of illness will not be accepted for service.
+
+**Liability**
+
+- {{facilityName}} is not liable for pre-existing conditions or escape due to pet behaviour.
+- Owners are liable for any damage or injury caused by their pet.`,
+    requiresSignature: true,
+    requireDigitalSignature: false,
+    requiresWitness: false,
+    expiryDays: 730,
+    createdAt: "2023-12-01T10:00:00Z",
+    updatedAt: "2023-12-01T10:00:00Z",
   },
 ];
 

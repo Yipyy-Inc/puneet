@@ -55,8 +55,10 @@ export function ComposeBar({
   petName,
   upcomingBookingSummary,
   bookingId,
+  recipientEmail,
+  senderName,
 }: {
-  onSend?: (message: string, channel: ActiveChannel) => void;
+  onSend?: (message: string, channel: ActiveChannel, meta?: { subject?: string }) => void;
   clientName?: string;
   lastMessage?: string;
   preferredLanguageLabel?: string;
@@ -67,9 +69,12 @@ export function ComposeBar({
   petName?: string;
   upcomingBookingSummary?: string | null;
   bookingId?: string | number | null;
+  recipientEmail?: string | null;
+  senderName?: string;
 }) {
   const isCustomerMode = mode === "customer";
   const [text, setText] = useState("");
+  const [subject, setSubject] = useState("");
   const [showExtras, setShowExtras] = useState(false);
   const [showQuickLinks, setShowQuickLinks] = useState(true);
   const [savedRepliesOpen, setSavedRepliesOpen] = useState(false);
@@ -102,8 +107,13 @@ export function ComposeBar({
 
   const handleSend = () => {
     if (!text.trim()) return;
-    onSend?.(text.trim(), activeChannel);
+    const meta =
+      activeChannel === "email" && subject.trim()
+        ? { subject: subject.trim() }
+        : undefined;
+    onSend?.(text.trim(), activeChannel, meta);
     setText("");
+    setSubject("");
   };
 
   const handleSchedule = (iso: string) => {
@@ -119,6 +129,7 @@ export function ComposeBar({
       createdBy: "You",
     });
     setText("");
+    setSubject("");
     toast.success(
       `Scheduled for ${new Date(iso).toLocaleString("en-US", {
         weekday: "short",
@@ -178,11 +189,14 @@ export function ComposeBar({
     sms: preferredLanguageLabel
       ? `Type an SMS in ${preferredLanguageLabel}…    Tip: type / for saved replies`
       : "Type an SMS…    Tip: type / for saved replies",
-    email: "Type your email…    Tip: type / for saved replies",
+    email: "Write your email…",
     "in-app": isCustomerMode
       ? "Type a message to your facility…"
       : "Type a chat message…    Tip: type / for saved replies",
   };
+
+  const isEmail = activeChannel === "email";
+  const sendDisabled = !text.trim() || (isEmail && !subject.trim());
 
   return (
     <div className="relative border-t bg-white">
@@ -292,7 +306,46 @@ export function ComposeBar({
           />
         </Button>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-0 rounded-3xl border border-slate-200 bg-slate-50/80">
+        <div
+          className={cn(
+            "flex min-w-0 flex-1 flex-col gap-0 border border-slate-200 bg-slate-50/80",
+            isEmail ? "rounded-2xl" : "rounded-3xl",
+          )}
+        >
+          {isEmail && (
+            <div className="flex flex-col border-b border-slate-200/80 bg-white/60 px-4 py-1.5 text-[12px]">
+              <div className="flex items-center gap-2 border-b border-slate-100 py-1">
+                <span className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  To
+                </span>
+                <span className="truncate text-slate-700">
+                  {clientName ? `${clientName} ` : ""}
+                  {recipientEmail ? (
+                    <span className="text-slate-400">{`<${recipientEmail}>`}</span>
+                  ) : (
+                    <span className="text-amber-500">No email on file</span>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 py-1">
+                <label
+                  htmlFor="email-subject"
+                  className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-slate-400"
+                >
+                  Subject
+                </label>
+                <input
+                  id="email-subject"
+                  type="text"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="Add a subject line"
+                  className="flex-1 bg-transparent text-[13px] font-medium text-slate-800 outline-none placeholder:font-normal placeholder:text-slate-400"
+                />
+              </div>
+            </div>
+          )}
+
           <textarea
             ref={textareaRef}
             value={text}
@@ -301,7 +354,7 @@ export function ComposeBar({
               if (savedRepliesOpen) return; // menu owns keys
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                handleSend();
+                if (!sendDisabled) handleSend();
               }
             }}
             placeholder={channelPlaceholder[activeChannel]}
@@ -315,6 +368,12 @@ export function ComposeBar({
               t.style.overflowY = t.scrollHeight > 128 ? "auto" : "hidden";
             }}
           />
+
+          {isEmail && senderName && (
+            <p className="px-4 pb-1 text-[10px] italic text-slate-400">
+              — {senderName} will appear as the sender
+            </p>
+          )}
 
           <div className="flex items-center justify-between px-3 pb-2">
             <div className="flex items-center gap-2">
@@ -374,9 +433,14 @@ export function ComposeBar({
           {text.trim() ? (
             <Button
               size="icon"
-              className="size-10 rounded-full bg-blue-500 shadow-md shadow-blue-200 hover:bg-blue-600"
+              className="size-10 rounded-full bg-blue-500 shadow-md shadow-blue-200 hover:bg-blue-600 disabled:bg-slate-300 disabled:shadow-none"
               onClick={handleSend}
-              title="Send"
+              disabled={sendDisabled}
+              title={
+                isEmail && !subject.trim()
+                  ? "Add a subject to send this email"
+                  : "Send"
+              }
             >
               <Send className="size-[18px] text-white" />
             </Button>

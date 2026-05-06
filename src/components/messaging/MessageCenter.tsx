@@ -8,6 +8,7 @@ import { messages as facilityMessages } from "@/data/communications-hub";
 import { clientCommunications } from "@/data/communications";
 import { facilities } from "@/data/facilities";
 import { clients } from "@/data/clients";
+import { isClientBlocked } from "@/lib/blocked-clients";
 import type { Message } from "@/types/communications";
 
 export type MessageCenterMode = "facility" | "customer";
@@ -113,6 +114,11 @@ export function MessageCenter({
     [mode, customerId],
   );
 
+  const senderBlocked = useMemo(
+    () => (mode === "customer" ? isClientBlocked(customerId) : false),
+    [mode, customerId],
+  );
+
   const threadIds = useMemo(
     () => [
       ...new Set(
@@ -190,6 +196,7 @@ export function MessageCenter({
           mode={mode}
           detailOpen={detailOpen}
           onToggleDetail={toggleDetail}
+          senderBlocked={senderBlocked}
         />
       </div>
 
