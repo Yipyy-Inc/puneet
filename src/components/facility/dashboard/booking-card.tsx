@@ -307,14 +307,8 @@ export function BookingCard({
           <>
             <Button
               size="sm"
-              variant="outline"
               onClick={handleCheckOutClick}
-              className={cn(
-                "gap-1 border-violet-300 bg-background text-violet-700",
-                "hover:border-violet-400 hover:bg-violet-100 hover:text-violet-800",
-                "dark:border-violet-800 dark:text-violet-300",
-                "dark:hover:border-violet-700 dark:hover:bg-violet-950/60 dark:hover:text-violet-200",
-              )}
+              className="gap-1 bg-red-600 text-white hover:bg-red-700"
             >
               <LogOut className="size-3.5" />
               Check Out

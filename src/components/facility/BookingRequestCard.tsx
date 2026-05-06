@@ -147,7 +147,7 @@ export function BookingRequestCard({
             stop(e);
             onSchedule(request);
           }}
-          className="bg-success text-success-foreground hover:bg-success/90 focus-visible:ring-success/30 h-8 shadow-none"
+          className="bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600/30 h-8 shadow-none"
         >
           <Check className="size-3.5" />
           Schedule
