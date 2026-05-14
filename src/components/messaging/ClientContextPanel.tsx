@@ -24,7 +24,23 @@ import {
   StickyNote,
   Save,
   User,
+  Clock3,
+  ArrowRight,
+  CalendarPlus,
+  FileSignature,
 } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  getReminderHistoryForCustomer,
+  ReminderHistoryPanel,
+} from "./ReminderHistoryPanel";
+import { InternalNotesTab } from "./InternalNotesTab";
+import { internalNotes as defaultInternalNotes } from "@/data/messaging";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { clients } from "@/data/clients";
@@ -271,6 +287,8 @@ export function ClientContextPanel({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [conversationNote, setConversationNote] = useState("");
   const [savedNote, setSavedNote] = useState("");
+  const [activeTab, setActiveTab] = useState<"client" | "notes">("client");
+  const [allRemindersOpen, setAllRemindersOpen] = useState(false);
   const conversationState = useConversationState();
   const assignee = threadId ? conversationState.getAssignee(threadId) : undefined;
 
@@ -377,6 +395,43 @@ export function ClientContextPanel({
       ];
   const quickLinks = isCustomerMode ? CUSTOMER_QUICK_LINKS : QUICK_LINKS;
 
+  const activeBooking = useMemo(() => {
+    if (isCustomerMode) return null;
+    const now = Date.now();
+    const inProgress = scopedBookings.find((b) => {
+      if (b.status === "cancelled" || b.status === "completed") return false;
+      const start = new Date(b.startDate).getTime();
+      const end = b.endDate ? new Date(b.endDate).getTime() : start;
+      return start <= now && now <= end + 24 * 60 * 60 * 1000;
+    });
+    return inProgress ?? null;
+  }, [isCustomerMode, scopedBookings]);
+
+  const flaggedPetIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const a of petCareAlerts) ids.add(a.petId);
+    return ids;
+  }, []);
+
+  const reminderHistory = useMemo(
+    () =>
+      getReminderHistoryForCustomer({
+        messages,
+        counterpartyId: threadEntityId ?? undefined,
+        isCustomerMode,
+      }),
+    [messages, threadEntityId, isCustomerMode],
+  );
+  const lastReminderAt = reminderHistory[0]?.timestamp ?? null;
+
+  const threadNotes = useMemo(
+    () =>
+      threadId
+        ? defaultInternalNotes.filter((n) => n.threadId === threadId)
+        : [],
+    [threadId],
+  );
+
   if (!profileName || (isCustomerMode ? !facility : !client)) {
     return (
       <div className="flex h-full w-80 shrink-0 flex-col items-center justify-center bg-white">
@@ -388,20 +443,80 @@ export function ClientContextPanel({
   return (
     <div className="flex h-full w-80 shrink-0 flex-col bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-5 py-3">
-        <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">
-          {infoTitle}
-        </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 rounded-full text-slate-400"
-          onClick={onClose}
-        >
-          <X className="size-4" />
-        </Button>
-      </div>
+      {isCustomerMode ? (
+        <div className="flex items-center justify-between border-b px-5 py-3">
+          <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">
+            {infoTitle}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 rounded-full text-slate-400"
+            onClick={onClose}
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between border-b pr-2">
+          <div className="flex flex-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab("client")}
+              className={cn(
+                "flex items-center gap-1.5 border-b-2 px-4 py-3 text-xs font-semibold tracking-wide uppercase transition-colors",
+                activeTab === "client"
+                  ? "border-blue-600 text-blue-700"
+                  : "border-transparent text-slate-400 hover:text-slate-600",
+              )}
+            >
+              <User className="size-3.5" />
+              Client
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("notes")}
+              className={cn(
+                "flex items-center gap-1.5 border-b-2 px-4 py-3 text-xs font-semibold tracking-wide uppercase transition-colors",
+                activeTab === "notes"
+                  ? "border-blue-600 text-blue-700"
+                  : "border-transparent text-slate-400 hover:text-slate-600",
+              )}
+            >
+              <StickyNote className="size-3.5" />
+              Notes
+              {threadNotes.length > 0 && (
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[9px] font-bold tabular-nums",
+                    activeTab === "notes"
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-200 text-slate-600",
+                  )}
+                >
+                  {threadNotes.length}
+                </span>
+              )}
+            </button>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 rounded-full text-slate-400"
+            onClick={onClose}
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
+      )}
 
+      {!isCustomerMode && activeTab === "notes" && threadId && (
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <InternalNotesTab threadId={threadId} initialNotes={threadNotes} />
+        </div>
+      )}
+
+      {(isCustomerMode || activeTab === "client") && (
       <div className="flex-1 overflow-y-auto">
         {/* ── Client profile ── */}
         <div className="flex flex-col items-center border-b px-5 pt-5 pb-4">
@@ -514,6 +629,81 @@ export function ClientContextPanel({
           ))}
         </div>
 
+        {/* ── Quick Actions ── */}
+        {!isCustomerMode && (
+          <div className="grid grid-cols-2 gap-2 border-b px-5 py-3">
+            <a
+              href={profilePhone ? `tel:${profilePhone}` : undefined}
+              aria-disabled={!profilePhone}
+              className={cn(
+                "flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50",
+                !profilePhone && "pointer-events-none opacity-50",
+              )}
+            >
+              <Phone className="size-3.5 text-emerald-600" />
+              Call
+            </a>
+            <Link
+              href={`/facility/dashboard/bookings/new${client?.id ? `?clientId=${client.id}` : ""}`}
+              className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              <CalendarPlus className="size-3.5 text-blue-600" />
+              New Booking
+            </Link>
+            <Link
+              href={`/facility/dashboard/estimates${client?.id ? `?clientId=${client.id}` : ""}`}
+              className="col-span-2 flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              <FileSignature className="size-3.5 text-violet-600" />
+              Send Estimate
+            </Link>
+          </div>
+        )}
+
+        {/* ── Active Booking ── */}
+        {!isCustomerMode && activeBooking && (() => {
+          const pet = pets.find((p) => p.id === activeBooking.petId);
+          const sameDay = activeBooking.endDate
+            ? activeBooking.startDate === activeBooking.endDate
+            : true;
+          return (
+            <div className="border-b px-5 py-3">
+              <Link
+                href={`/facility/dashboard/bookings/${activeBooking.id}`}
+                className="block rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 transition-colors hover:bg-emerald-50"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <Badge className="bg-emerald-100 text-[10px] capitalize text-emerald-800">
+                    {activeBooking.service}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className="border-emerald-300 bg-white text-[10px] capitalize text-emerald-700"
+                  >
+                    {activeBooking.status.replace(/_/g, " ")}
+                  </Badge>
+                </div>
+                <p className="mt-2 text-xs font-semibold text-slate-700">
+                  {pet?.name ?? "Pet"}
+                  {pet?.breed && (
+                    <span className="font-normal text-slate-400">
+                      {" "}· {pet.breed}
+                    </span>
+                  )}
+                </p>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  {formatDate(activeBooking.startDate)}
+                  {!sameDay &&
+                    activeBooking.endDate &&
+                    ` → ${formatDate(activeBooking.endDate)}`}
+                  {activeBooking.checkInTime &&
+                    ` · ${activeBooking.checkInTime}`}
+                </p>
+              </Link>
+            </div>
+          );
+        })()}
+
         {/* ── Assigned staff ── */}
         {!isCustomerMode && (
           <Section title="Assigned Staff" icon={User}>
@@ -567,8 +757,14 @@ export function ClientContextPanel({
                   </div>
                 )}
                 <div>
-                  <p className="text-xs font-semibold text-slate-700">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
                     {pet.name}
+                    {flaggedPetIds.has(pet.id) && (
+                      <span
+                        className="size-1.5 rounded-full bg-amber-500"
+                        title="Has medication, allergy, or behavior alert"
+                      />
+                    )}
                   </p>
                   <p className="text-[11px] text-slate-400">
                     {pet.breed} · {pet.type}
@@ -775,7 +971,54 @@ export function ClientContextPanel({
             ))}
           </div>
         </Section>
+
+        {/* ── Reminder History ── */}
+        <Section title="Reminder History" icon={Clock3} defaultOpen>
+          <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-3">
+            <div className="flex items-baseline justify-between">
+              <div>
+                <p className="text-base font-bold text-amber-900 tabular-nums">
+                  {reminderHistory.length}
+                </p>
+                <p className="text-[10px] font-semibold tracking-wider text-amber-700/80 uppercase">
+                  {isCustomerMode ? "Received" : "Sent"}
+                </p>
+              </div>
+              {lastReminderAt && (
+                <p className="text-[10px] text-amber-700/80">
+                  Last · {formatDate(lastReminderAt)}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              disabled={reminderHistory.length === 0}
+              onClick={() => setAllRemindersOpen(true)}
+              className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 hover:text-amber-900 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              View all reminders
+              <ArrowRight className="size-3" />
+            </button>
+          </div>
+        </Section>
       </div>
+      )}
+
+      <Sheet open={allRemindersOpen} onOpenChange={setAllRemindersOpen}>
+        <SheetContent
+          side="right"
+          className="w-full overflow-hidden p-0 sm:max-w-2xl"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>Reminder history for {profileName}</SheetTitle>
+          </SheetHeader>
+          <ReminderHistoryPanel
+            counterpartyName={profileName}
+            reminderHistory={reminderHistory}
+            mode={mode}
+          />
+        </SheetContent>
+      </Sheet>
 
       {/* Lightbox */}
       {selectedImage && (

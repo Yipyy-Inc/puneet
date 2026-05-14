@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   MessageSquare,
   Smartphone,
@@ -122,8 +121,19 @@ function KpiCard({
   );
 }
 
+type DateRange = "7d" | "30d" | "3m";
+
+const DATE_RANGES: { key: DateRange; label: string }[] = [
+  { key: "7d", label: "Last 7 days" },
+  { key: "30d", label: "Last 30 days" },
+  { key: "3m", label: "Last 3 months" },
+];
+
 export function MessagingAnalyticsView() {
   const data = messagingAnalytics;
+  const [range, setRange] = useState<DateRange>("30d");
+  const rangeLabel =
+    DATE_RANGES.find((r) => r.key === range)?.label ?? data.period;
 
   const hourlySeries = useMemo(
     () =>
@@ -171,16 +181,33 @@ export function MessagingAnalyticsView() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Messaging Analytics</h2>
           <p className="mt-1 text-sm text-slate-500">
-            {data.period} · all locations · all channels
+            {rangeLabel} · all locations · all channels
           </p>
         </div>
-        <Badge variant="outline" className="text-xs">
-          Live data refresh every 5 min
-        </Badge>
+        <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1">
+          {DATE_RANGES.map(({ key, label }) => {
+            const active = range === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setRange(key)}
+                className={cn(
+                  "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                  active
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-700",
+                )}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Headline KPIs */}

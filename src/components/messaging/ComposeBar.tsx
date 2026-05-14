@@ -11,8 +11,10 @@ import {
   Plus,
   Sparkles,
   Loader2,
-  Bookmark,
   Save,
+  Smartphone,
+  Mail,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -35,6 +37,16 @@ function countSegments(text: string): number {
 }
 
 type ActiveChannel = "sms" | "email" | "in-app";
+
+const CHANNEL_OPTIONS: {
+  key: ActiveChannel;
+  label: string;
+  icon: typeof Smartphone;
+}[] = [
+  { key: "sms", label: "SMS", icon: Smartphone },
+  { key: "email", label: "Email", icon: Mail },
+  { key: "in-app", label: "Chat", icon: MessageCircle },
+];
 
 function applyTokens(body: string, ctx: QuickLinkContext): string {
   return body
@@ -186,13 +198,17 @@ export function ComposeBar({
   };
 
   const channelPlaceholder: Record<ActiveChannel, string> = {
-    sms: preferredLanguageLabel
-      ? `Type an SMS in ${preferredLanguageLabel}…    Tip: type / for saved replies`
-      : "Type an SMS…    Tip: type / for saved replies",
-    email: "Write your email…",
+    sms: isCustomerMode
+      ? "Type an SMS…"
+      : preferredLanguageLabel
+        ? `Type an SMS in ${preferredLanguageLabel}… or type / for saved replies`
+        : "Type an SMS… or type / for saved replies",
+    email: isCustomerMode
+      ? "Write your email…"
+      : "Write your email… or type / for saved replies",
     "in-app": isCustomerMode
       ? "Type a message to your facility…"
-      : "Type a chat message…    Tip: type / for saved replies",
+      : "Type a chat message… or type / for saved replies",
   };
 
   const isEmail = activeChannel === "email";
@@ -257,19 +273,6 @@ export function ComposeBar({
                 AI Reply
               </Button>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1.5 rounded-full text-xs text-slate-500 hover:bg-emerald-50 hover:text-emerald-600"
-                onClick={() => {
-                  setSavedQuery("");
-                  setSavedRepliesOpen(true);
-                }}
-              >
-                <Bookmark className="size-4" />
-                Saved replies
-              </Button>
-
               {text.trim().length > 4 && (
                 <Button
                   variant="ghost"
@@ -282,6 +285,39 @@ export function ComposeBar({
                 </Button>
               )}
             </>
+          )}
+        </div>
+      )}
+
+      {/* Send Via selector */}
+      {!isCustomerMode && (
+        <div className="flex items-center gap-1 border-b border-slate-100 bg-slate-50/60 px-4 py-1.5">
+          <span className="mr-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
+            Send via
+          </span>
+          {CHANNEL_OPTIONS.map(({ key, label, icon: Icon }) => {
+            const active = activeChannel === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => onChannelChange?.(key)}
+                className={cn(
+                  "flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all",
+                  active
+                    ? "border border-slate-200 bg-white text-slate-800 shadow-sm"
+                    : "text-slate-400 hover:bg-white/70 hover:text-slate-600",
+                )}
+              >
+                <Icon className="size-3" />
+                {label}
+              </button>
+            );
+          })}
+          {isEmail && (
+            <span className="ml-auto text-[10px] text-amber-500">
+              Client may not respond instantly
+            </span>
           )}
         </div>
       )}

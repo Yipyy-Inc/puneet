@@ -122,14 +122,12 @@ export function ContactList({
   onSelectThread,
   mode = "facility",
   customerFacilityIds,
-  locationFilter,
 }: {
   messages: Message[];
   selectedThreadId: string | null;
   onSelectThread: (threadId: string) => void;
   mode?: "facility" | "customer";
   customerFacilityIds?: number[];
-  locationFilter?: string[];
 }) {
   const isCustomerMode = mode === "customer";
   const { role } = useFacilityRole();
@@ -262,19 +260,6 @@ export function ContactList({
   const filtered = useMemo(() => {
     let list = threads;
 
-    // Location filter (multi-location only)
-    if (
-      !isCustomerMode &&
-      locationFilter &&
-      locationFilter.length > 0
-    ) {
-      const locSet = new Set(locationFilter);
-      list = list.filter((t) => {
-        const loc = threadLocationMap[t.threadId];
-        return loc ? locSet.has(loc) : true;
-      });
-    }
-
     // Default: closed threads hidden unless explicitly viewing them
     if (!isCustomerMode && filter !== "closed") {
       list = list.filter((t) => !conversationState.closed.has(t.threadId));
@@ -312,7 +297,6 @@ export function ContactList({
     priorityIds,
     followUpIds,
     isCustomerMode,
-    locationFilter,
     conversationState.closed,
     conversationState.assignments,
   ]);

@@ -11,15 +11,11 @@ import {
   Info,
   Search,
   Star,
-  Smartphone,
-  Mail,
-  MessageCircle,
   ChevronDown,
   CheckCircle2,
   Clock,
   AlertCircle,
   Archive,
-  StickyNote,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -45,12 +41,11 @@ import {
   ReminderHistoryPanel,
   type ReminderTab,
 } from "./ReminderHistoryPanel";
-import { InternalNotesTab } from "./InternalNotesTab";
 import type { Message } from "@/types/communications";
 import type { ConversationStatus } from "@/types/messaging";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
-import { threadMeta as defaultThreadMeta, internalNotes as defaultInternalNotes } from "@/data/messaging";
+import { threadMeta as defaultThreadMeta } from "@/data/messaging";
 
 const COLORS = [
   "bg-rose-500",
@@ -84,12 +79,6 @@ const STATUS_CONFIG: Record<
   follow_up: { label: "Follow-up", color: "bg-violet-100 text-violet-700 border-violet-200", icon: AlertCircle },
   resolved: { label: "Resolved", color: "bg-slate-100 text-slate-600 border-slate-200", icon: CheckCircle2 },
   archived: { label: "Archived", color: "bg-slate-100 text-slate-500 border-slate-200", icon: Archive },
-};
-
-const CHANNEL_ICONS = {
-  sms: Smartphone,
-  email: Mail,
-  "in-app": MessageCircle,
 };
 
 const CHANNEL_LABELS = {
@@ -191,14 +180,6 @@ export function ConversationThread({
     [counterpartyId, isCustomerMode, messages],
   );
 
-  const threadNotes = useMemo(
-    () =>
-      threadId
-        ? defaultInternalNotes.filter((n) => n.threadId === threadId)
-        : [],
-    [threadId],
-  );
-
   const activeTab = threadId ? (tabsByThreadId[threadId] ?? "conversation") : "conversation";
   const currentStatus: ConversationStatus =
     (threadId ? statusByThreadId[threadId] : null) ?? "open";
@@ -256,40 +237,6 @@ export function ConversationThread({
 
   const conversationPanel = (
     <>
-      {/* Channel switcher */}
-      {!isCustomerMode && (
-        <div className="flex items-center gap-1 border-b border-slate-100 bg-slate-50/60 px-4 py-2">
-          <span className="mr-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-            Send via:
-          </span>
-          {(["sms", "email", "in-app"] as const).map((ch) => {
-            const Icon = CHANNEL_ICONS[ch];
-            const active = activeChannel === ch;
-            return (
-              <button
-                key={ch}
-                type="button"
-                onClick={() => setActiveChannel(ch)}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all",
-                  active
-                    ? "bg-white shadow-sm text-slate-800 border border-slate-200"
-                    : "text-slate-400 hover:bg-white/60 hover:text-slate-600",
-                )}
-              >
-                <Icon className="size-3.5" />
-                {CHANNEL_LABELS[ch]}
-              </button>
-            );
-          })}
-          {activeChannel === "email" && (
-            <span className="ml-auto text-[10px] text-amber-500">
-              Client may not respond instantly
-            </span>
-          )}
-        </div>
-      )}
-
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto"
@@ -690,58 +637,49 @@ export function ConversationThread({
         </div>
       </div>
 
-      <Tabs
-        value={activeTab}
-        onValueChange={(value) => {
-          if (!threadId) return;
-          setTabsByThreadId((current) => ({
-            ...current,
-            [threadId]: value as ReminderTab,
-          }));
-        }}
-        className="flex min-h-0 flex-1 flex-col gap-0"
-      >
-        <TabsList className="border-b border-slate-200 bg-white px-4">
-          <TabsTrigger value="conversation">
-            {isCustomerMode ? "Chat" : "Conversation"}
-          </TabsTrigger>
-          <TabsTrigger value="reminders" className="gap-2">
-            {isCustomerMode ? "Reminders" : "Reminder History"}
-            <Badge className="bg-amber-100 px-2 py-0 text-[10px] text-amber-800">
-              {reminderHistory.length}
-            </Badge>
-          </TabsTrigger>
-          {!isCustomerMode && (
-            <TabsTrigger value="notes" className="gap-2">
-              <StickyNote className="size-3.5" />
-              Internal Notes
-              {threadNotes.length > 0 && (
-                <Badge className="bg-slate-100 px-2 py-0 text-[10px] text-slate-600">
-                  {threadNotes.length}
-                </Badge>
-              )}
+      {isCustomerMode ? (
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => {
+            if (!threadId) return;
+            setTabsByThreadId((current) => ({
+              ...current,
+              [threadId]: value as ReminderTab,
+            }));
+          }}
+          className="flex min-h-0 flex-1 flex-col gap-0"
+        >
+          <TabsList className="border-b border-slate-200 bg-white px-4">
+            <TabsTrigger value="conversation">Chat</TabsTrigger>
+            <TabsTrigger value="reminders" className="gap-2">
+              Reminders
+              <Badge className="bg-amber-100 px-2 py-0 text-[10px] text-amber-800">
+                {reminderHistory.length}
+              </Badge>
             </TabsTrigger>
-          )}
-        </TabsList>
+          </TabsList>
 
-        <TabsContent value="conversation" className="flex min-h-0 flex-1 flex-col">
-          {conversationPanel}
-        </TabsContent>
-
-        <TabsContent value="reminders" className="min-h-0 flex-1 overflow-hidden">
-          <ReminderHistoryPanel
-            counterpartyName={counterpartyName}
-            reminderHistory={reminderHistory}
-            mode={mode}
-          />
-        </TabsContent>
-
-        {!isCustomerMode && (
-          <TabsContent value="notes" className="min-h-0 flex-1 overflow-hidden">
-            <InternalNotesTab threadId={threadId} initialNotes={threadNotes} />
+          <TabsContent
+            value="conversation"
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            {conversationPanel}
           </TabsContent>
-        )}
-      </Tabs>
+
+          <TabsContent
+            value="reminders"
+            className="min-h-0 flex-1 overflow-hidden"
+          >
+            <ReminderHistoryPanel
+              counterpartyName={counterpartyName}
+              reminderHistory={reminderHistory}
+              mode={mode}
+            />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col">{conversationPanel}</div>
+      )}
     </div>
   );
 }

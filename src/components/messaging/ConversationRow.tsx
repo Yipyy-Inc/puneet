@@ -12,6 +12,9 @@ import {
   Circle,
   MapPin,
   UserPlus,
+  Mail,
+  MessageSquare,
+  Smartphone,
 } from "lucide-react";
 import {
   ContextMenu,
@@ -35,6 +38,27 @@ const TAG_STYLES: Record<string, string> = {
   vaccine_expired: "bg-yellow-100 text-yellow-700 border-yellow-200",
   complaint: "bg-rose-100 text-rose-700 border-rose-200",
   upsell_opportunity: "bg-teal-100 text-teal-700 border-teal-200",
+};
+
+const CHANNEL_STYLES: Record<
+  string,
+  { label: string; icon: typeof Mail; class: string }
+> = {
+  sms: {
+    label: "SMS",
+    icon: Smartphone,
+    class: "border-blue-200 bg-blue-50 text-blue-700",
+  },
+  email: {
+    label: "Email",
+    icon: Mail,
+    class: "border-purple-200 bg-purple-50 text-purple-700",
+  },
+  "in-app": {
+    label: "Chat",
+    icon: MessageSquare,
+    class: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  },
 };
 
 const TAG_LABELS: Record<string, string> = {
@@ -239,6 +263,24 @@ export function ConversationRow({
                 >
                   {thread.clientName}
                 </span>
+                {(() => {
+                  const ch =
+                    CHANNEL_STYLES[thread.lastMessage.type] ??
+                    CHANNEL_STYLES["in-app"];
+                  const Icon = ch.icon;
+                  return (
+                    <span
+                      className={cn(
+                        "inline-flex shrink-0 items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[9px] leading-none font-semibold",
+                        ch.class,
+                      )}
+                      title={`Channel: ${ch.label}`}
+                    >
+                      <Icon className="size-2.5" />
+                      {ch.label}
+                    </span>
+                  );
+                })()}
                 {preferredLanguageLabel && (
                   <span className="rounded-full border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[9px] leading-none font-semibold text-indigo-700">
                     {preferredLanguageLabel}
