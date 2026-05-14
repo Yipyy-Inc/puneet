@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,9 @@ import { groomingQueries } from "@/lib/api/grooming";
 import { cn } from "@/lib/utils";
 import { DollarSign, Plus, Scissors, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useGroomingStations } from "@/hooks/use-grooming-stations";
+import { isStationEligibleForPetSize } from "@/components/rooms/GroomingStationsClient";
+import type { GroomingStationPetSize } from "@/types/rooms";
 
 // ─── Add-on catalogue ─────────────────────────────────────────────────────────
 
@@ -55,6 +58,7 @@ const DEFAULT_FORM = {
   coatType: "",
   packageId: "",
   stylistId: "",
+  stationId: "",
   date: "",
   startTime: "09:00",
   endTime: "10:00",
@@ -72,24 +76,52 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
+function addMinutesToTime(time: string, minutes: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const total = Math.min(h * 60 + m + minutes, 23 * 60 + 59);
+  const nh = Math.floor(total / 60);
+  const nm = total % 60;
+  return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface NewAppointmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultDate?: string;
+  defaultStartTime?: string;
+  defaultStylistId?: string;
 }
 
 export function NewAppointmentDialog({
   open,
   onOpenChange,
   defaultDate,
+  defaultStartTime,
+  defaultStylistId,
 }: NewAppointmentDialogProps) {
   const [form, setForm] = useState({ ...DEFAULT_FORM, date: defaultDate ?? "" });
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
 
+  // Re-seed the form each time the dialog opens so quick-book picks up the
+  // groomer column and time slot that was clicked.
+  useEffect(() => {
+    if (!open) return;
+    const startTime = defaultStartTime ?? DEFAULT_FORM.startTime;
+    setForm({
+      ...DEFAULT_FORM,
+      date: defaultDate ?? "",
+      startTime,
+      endTime: addMinutesToTime(startTime, 60),
+      stylistId: defaultStylistId ?? "",
+    });
+    setSelectedAddOns([]);
+  }, [open, defaultDate, defaultStartTime, defaultStylistId]);
+
   const { data: packages = [] } = useQuery(groomingQueries.packages());
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
+  const { stations } = useGroomingStations();
 
   const activeStylists = useMemo(
     () => stylistsData.filter((s) => s.status === "active"),
@@ -124,6 +156,29 @@ export function NewAppointmentDialog({
       return activeStylists;
     return activeStylists.filter((s) => assignedStylistIds.includes(s.id));
   }, [activeStylists, selectedPackage]);
+
+  // Stations eligible for the pet size — empty allowedPetSizes = multi-purpose,
+  // so it matches every size. Out-of-service or inactive stations are excluded.
+  const eligibleStations = useMemo(() => {
+    if (!form.petSize) return [];
+    const size = form.petSize as GroomingStationPetSize;
+    return stations.filter(
+      (s) =>
+        s.active &&
+        s.status !== "out-of-service" &&
+        isStationEligibleForPetSize(s, size),
+    );
+  }, [stations, form.petSize]);
+
+  // If the currently selected station no longer fits the pet size, clear it
+  // so we never submit a Great Dane to a small-dog table.
+  useEffect(() => {
+    if (!form.stationId) return;
+    const stillEligible = eligibleStations.some((s) => s.id === form.stationId);
+    if (!stillEligible) {
+      setForm((prev) => ({ ...prev, stationId: "" }));
+    }
+  }, [form.stationId, eligibleStations]);
 
   function update(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -289,8 +344,19 @@ export function NewAppointmentDialog({
                 value={form.packageId}
                 onValueChange={(v) => {
                   update("packageId", v);
-                  // Reset groomer + add-ons when service changes
-                  update("stylistId", "");
+                  // Only clear the groomer if they're not eligible for the new
+                  // package (preserves quick-book pre-fill when compatible).
+                  const next = packages.find((p) => p.id === v);
+                  const restricted =
+                    next?.assignedStylistIds &&
+                    next.assignedStylistIds.length > 0;
+                  if (
+                    restricted &&
+                    form.stylistId &&
+                    !next!.assignedStylistIds!.includes(form.stylistId)
+                  ) {
+                    update("stylistId", "");
+                  }
                   setSelectedAddOns([]);
                 }}
               >
@@ -426,6 +492,66 @@ export function NewAppointmentDialog({
                   placeholder="Select date"
                   className="mt-1"
                 />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-xs">
+                  Station{" "}
+                  <span className="text-muted-foreground font-normal">
+                    (optional)
+                  </span>
+                </Label>
+                <Select
+                  value={form.stationId || "__none__"}
+                  onValueChange={(v) =>
+                    update("stationId", v === "__none__" ? "" : v)
+                  }
+                  disabled={!form.petSize}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue
+                      placeholder={
+                        form.petSize
+                          ? "Assign at check-in or pick now"
+                          : "Pick a pet size first"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">
+                      Assign at check-in
+                    </SelectItem>
+                    {eligibleStations.length === 0 && form.petSize ? (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                        No stations fit a {form.petSize} pet.
+                      </div>
+                    ) : (
+                      eligibleStations.map((s) => {
+                        const sizes =
+                          !s.allowedPetSizes || s.allowedPetSizes.length === 0
+                            ? "any size"
+                            : s.allowedPetSizes.join(", ");
+                        return (
+                          <SelectItem key={s.id} value={s.id}>
+                            <div className="flex flex-col gap-0.5">
+                              <span>{s.name}</span>
+                              <span className="text-[10px] text-muted-foreground capitalize">
+                                {sizes}
+                                {s.maxWeightLbs
+                                  ? ` · max ${s.maxWeightLbs} lbs`
+                                  : ""}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })
+                    )}
+                  </SelectContent>
+                </Select>
+                {form.petSize && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Showing stations sized for {form.petSize} pets.
+                  </p>
+                )}
               </div>
               <div className="col-span-2">
                 <Label className="text-xs">Appointment Time</Label>

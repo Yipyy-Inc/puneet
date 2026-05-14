@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -14,16 +14,29 @@ import {
   CheckCircle2,
   Play,
   Phone,
+  AlertTriangle,
+  MapPin,
+  Bell,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { cn } from "@/lib/utils";
 import { groomingQueries } from "@/lib/api/grooming";
 import type { GroomingAppointment, GroomingStatus } from "@/types/grooming";
+import type { GroomingStationPetSize } from "@/types/rooms";
 import { deductProductsForAppointment } from "@/lib/grooming-inventory-deduction";
+import { useGroomingStations } from "@/hooks/use-grooming-stations";
+import { isStationEligibleForPetSize } from "@/components/rooms/GroomingStationsClient";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,11 +55,39 @@ function todayISO(): string {
   return new Date().toISOString().split("T")[0];
 }
 
+/**
+ * Surface anything a groomer needs to see *before* opening the booking:
+ * allergies, written-in care notes, behavior flags, or coat condition warnings.
+ * Returns a summary string for the tooltip when there's at least one item.
+ */
+function getAppointmentAlerts(apt: GroomingAppointment): string | null {
+  const items: string[] = [];
+  if (apt.allergies.length > 0) {
+    items.push(`Allergies: ${apt.allergies.join(", ")}`);
+  }
+  if (apt.specialInstructions?.trim()) {
+    items.push(apt.specialInstructions.trim());
+  }
+  if (apt.intake?.behaviorNotes?.trim()) {
+    items.push(`Behavior: ${apt.intake.behaviorNotes.trim()}`);
+  }
+  if (apt.intake?.coatCondition && apt.intake.coatCondition !== "normal") {
+    items.push(
+      `Coat: ${apt.intake.coatCondition.replace(/-/g, " ")}`,
+    );
+  }
+  return items.length > 0 ? items.join(" · ") : null;
+}
+
 // ─── Appointment card ────────────────────────────────────────────────────────
 
 interface AppointmentCardProps {
   apt: GroomingAppointment;
+  stationName?: string;
+  /** ISO timestamp captured when the pickup notification was sent. */
+  notifiedAt?: string;
   onAction: (apt: GroomingAppointment, next: GroomingStatus) => void;
+  onNotify: (apt: GroomingAppointment) => void;
 }
 
 const NEXT_STATUS: Partial<Record<GroomingStatus, { next: GroomingStatus; label: string; icon: React.ElementType; className: string }>> = {
@@ -76,8 +117,23 @@ const NEXT_STATUS: Partial<Record<GroomingStatus, { next: GroomingStatus; label:
   },
 };
 
-function AppointmentCard({ apt, onAction }: AppointmentCardProps) {
+function AppointmentCard({
+  apt,
+  stationName,
+  notifiedAt,
+  onAction,
+  onNotify,
+}: AppointmentCardProps) {
   const action = NEXT_STATUS[apt.status];
+  const alertSummary = getAppointmentAlerts(apt);
+  const showNotify = apt.status === "ready-for-pickup";
+  const notifiedTimeLabel = notifiedAt
+    ? new Date(notifiedAt).toLocaleTimeString("en-CA", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+    : null;
 
   return (
     <div
@@ -87,7 +143,7 @@ function AppointmentCard({ apt, onAction }: AppointmentCardProps) {
         apt.status === "completed" && "opacity-80",
       )}
     >
-      {/* Pet avatar */}
+      {/* Pet avatar + alert overlay */}
       <div className="relative shrink-0">
         {apt.petPhotoUrl ? (
           <div className="size-12 overflow-hidden rounded-2xl ring-2 ring-background">
@@ -103,6 +159,15 @@ function AppointmentCard({ apt, onAction }: AppointmentCardProps) {
           <div className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-2xl ring-2 ring-background">
             <PawPrint className="size-5" />
           </div>
+        )}
+        {alertSummary && (
+          <span
+            className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-amber-500 text-white shadow-sm ring-2 ring-background"
+            title={alertSummary}
+            aria-label={`Care alert: ${alertSummary}`}
+          >
+            <AlertTriangle className="size-3" />
+          </span>
         )}
       </div>
 
@@ -136,30 +201,181 @@ function AppointmentCard({ apt, onAction }: AppointmentCardProps) {
             {formatTime(apt.startTime)} – {formatTime(apt.endTime)}
           </span>
         </p>
-        <div className="pt-0.5">
+        <div className="flex flex-wrap items-center gap-1 pt-0.5">
           <Badge variant="outline" className="text-[10px] h-4 px-1.5">
             {apt.packageName}
           </Badge>
+          {stationName && (
+            <Badge
+              variant="outline"
+              className="h-4 gap-0.5 border-sky-300 bg-sky-50 px-1.5 text-[10px] text-sky-700 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300"
+              title={`Assigned to ${stationName}`}
+            >
+              <MapPin className="size-2.5" />
+              {stationName}
+            </Badge>
+          )}
         </div>
       </div>
 
-      {/* Action */}
-      {action && (
-        <div className="shrink-0">
-          <Button
-            size="sm"
-            className={cn("gap-1 text-xs", action.className)}
-            onClick={(e) => {
-              e.stopPropagation();
-              onAction(apt, action.next);
-            }}
-          >
-            <action.icon className="size-3.5" />
-            {action.label}
-          </Button>
+      {/* Action column */}
+      {(action || showNotify) && (
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          {showNotify &&
+            (notifiedTimeLabel ? (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                title="Pickup notification sent to owner"
+              >
+                <CheckCircle2 className="size-3" />
+                Notified — {notifiedTimeLabel}
+              </span>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1 px-2 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNotify(apt);
+                }}
+              >
+                <Bell className="size-3.5" />
+                Notify Owner
+              </Button>
+            ))}
+          {action && (
+            <Button
+              size="sm"
+              className={cn("gap-1 text-xs", action.className)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onAction(apt, action.next);
+              }}
+            >
+              <action.icon className="size-3.5" />
+              {action.label}
+            </Button>
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Station picker (fires from Check In) ────────────────────────────────────
+
+function StationPickerDialog({
+  open,
+  onOpenChange,
+  apt,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  apt: GroomingAppointment | null;
+  onConfirm: (stationId: string, stationName: string) => void;
+}) {
+  const { stations } = useGroomingStations();
+  const [selected, setSelected] = useState<string>("");
+
+  useEffect(() => {
+    if (open) setSelected("");
+  }, [open]);
+
+  const eligible = useMemo(() => {
+    if (!apt) return [];
+    return stations.filter(
+      (s) =>
+        s.active &&
+        (s.status ?? "available") !== "out-of-service" &&
+        isStationEligibleForPetSize(s, apt.petSize as GroomingStationPetSize),
+    );
+  }, [stations, apt]);
+
+  if (!apt) return null;
+
+  const STATION_STATUS_LABEL: Record<string, string> = {
+    available: "Available",
+    "in-use": "In use",
+    "needs-cleaning": "Needs cleaning",
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <MapPin className="size-4 text-sky-600" />
+            Assign Station
+          </DialogTitle>
+          <p className="text-muted-foreground text-xs">
+            Pick a station for{" "}
+            <span className="font-medium text-foreground">{apt.petName}</span>
+            <span className="text-muted-foreground/80">
+              {" "}
+              · {apt.petSize} · {apt.packageName}
+            </span>
+          </p>
+        </DialogHeader>
+        <div className="max-h-[50vh] space-y-1.5 overflow-y-auto py-2">
+          {eligible.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No stations are currently sized for a {apt.petSize} pet.
+            </p>
+          ) : (
+            eligible.map((s) => {
+              const status = s.status ?? "available";
+              const occupied =
+                status === "in-use" || status === "needs-cleaning";
+              const isSelected = selected === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  disabled={occupied}
+                  onClick={() => setSelected(s.id)}
+                  className={cn(
+                    "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition-colors",
+                    isSelected
+                      ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
+                      : "hover:bg-muted/40",
+                    occupied && "cursor-not-allowed opacity-50",
+                  )}
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{s.name}</p>
+                    <p className="text-[11px] text-muted-foreground capitalize">
+                      {STATION_STATUS_LABEL[status] ?? status}
+                      {s.maxWeightLbs ? ` · max ${s.maxWeightLbs} lbs` : ""}
+                    </p>
+                  </div>
+                  {isSelected && (
+                    <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!selected}
+            className="bg-emerald-600 text-white hover:bg-emerald-700"
+            onClick={() => {
+              const station = eligible.find((s) => s.id === selected);
+              if (station) onConfirm(station.id, station.name);
+            }}
+          >
+            <LogIn className="mr-1.5 size-4" />
+            Check In
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -170,8 +386,22 @@ export function GroomingCheckInOut() {
   const [query, setQuery] = useState("");
 
   const { data: allAppointments = [] } = useQuery(groomingQueries.appointments());
+  const { setStationStatus } = useGroomingStations();
 
   const [localStatuses, setLocalStatuses] = useState<Record<string, GroomingStatus>>({});
+  // Map of appointment id → { stationId, stationName } assigned at check-in.
+  // Kept local for now since the appointment record doesn't carry a station;
+  // when an appointment-side stationId field exists, this can move there.
+  const [localStations, setLocalStations] = useState<
+    Record<string, { id: string; name: string }>
+  >({});
+  const [pendingCheckIn, setPendingCheckIn] = useState<GroomingAppointment | null>(
+    null,
+  );
+  // appt id → ISO timestamp the pickup-ready SMS/push was sent.
+  const [localNotifications, setLocalNotifications] = useState<
+    Record<string, string>
+  >({});
 
   const today = todayISO();
 
@@ -211,8 +441,54 @@ export function GroomingCheckInOut() {
     );
   }, [todayApts, activeTab, query]);
 
+  function handleNotifyOwner(apt: GroomingAppointment) {
+    if (localNotifications[apt.id]) return;
+    const sentAt = new Date().toISOString();
+    setLocalNotifications((prev) => ({ ...prev, [apt.id]: sentAt }));
+    // Message body comes from the template configured in Settings; we just
+    // surface a confirmation toast here since the dispatch is server-side.
+    toast.success(`Pickup notification sent to ${apt.ownerName}`, {
+      description: `SMS · ${apt.ownerPhone}`,
+    });
+  }
+
+  function handleConfirmCheckIn(stationId: string, stationName: string) {
+    if (!pendingCheckIn) return;
+    const apt = pendingCheckIn;
+    setLocalStatuses((prev) => ({ ...prev, [apt.id]: "checked-in" }));
+    setLocalStations((prev) => ({
+      ...prev,
+      [apt.id]: { id: stationId, name: stationName },
+    }));
+    // Flip the station to In Use on the live board with the pet + groomer.
+    setStationStatus(stationId, "in-use", {
+      petName: apt.petName,
+      stylistName: apt.stylistName,
+    });
+    toast.success(`${apt.petName} — Checked In`, {
+      description: `Assigned to ${stationName}`,
+    });
+    setPendingCheckIn(null);
+  }
+
   function handleAction(apt: GroomingAppointment, next: GroomingStatus) {
+    // Intercept Check In so the groomer assigns a station before the
+    // appointment transitions. Status change happens after dialog confirm.
+    if (next === "checked-in") {
+      setPendingCheckIn(apt);
+      return;
+    }
+
     setLocalStatuses((prev) => ({ ...prev, [apt.id]: next }));
+
+    // Release the station back to the board when the pet leaves so the
+    // station board reflects the cleaning queue accurately.
+    if (next === "completed") {
+      const station = localStations[apt.id];
+      if (station) {
+        setStationStatus(station.id, "needs-cleaning");
+      }
+    }
 
     const labels: Record<GroomingStatus, string> = {
       "checked-in": "Checked In",
@@ -351,12 +627,28 @@ export function GroomingCheckInOut() {
           ) : (
             <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 xl:grid-cols-3">
               {filteredApts.map((apt) => (
-                <AppointmentCard key={apt.id} apt={apt} onAction={handleAction} />
+                <AppointmentCard
+                  key={apt.id}
+                  apt={apt}
+                  stationName={localStations[apt.id]?.name}
+                  notifiedAt={localNotifications[apt.id]}
+                  onAction={handleAction}
+                  onNotify={handleNotifyOwner}
+                />
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      <StationPickerDialog
+        open={!!pendingCheckIn}
+        onOpenChange={(o) => {
+          if (!o) setPendingCheckIn(null);
+        }}
+        apt={pendingCheckIn}
+        onConfirm={handleConfirmCheckIn}
+      />
     </div>
   );
 }

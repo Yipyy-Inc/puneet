@@ -221,6 +221,13 @@ export const groomingStations: GroomingStation[] = [
     type: "table",
     name: "Table 1",
     active: true,
+    status: "in-use",
+    currentPetName: "Buddy",
+    currentStylistName: "Sarah Chen",
+    statusChangedAt: new Date(Date.now() - 35 * 60_000).toISOString(),
+    estimatedCompletionAt: new Date(Date.now() + 25 * 60_000).toISOString(),
+    allowedPetSizes: ["small", "medium", "large"],
+    maxWeightLbs: 70,
   },
   {
     id: "gs-t-02",
@@ -228,6 +235,9 @@ export const groomingStations: GroomingStation[] = [
     type: "table",
     name: "Table 2",
     active: true,
+    status: "available",
+    allowedPetSizes: ["small", "medium"],
+    maxWeightLbs: 40,
   },
   {
     id: "gs-t-03",
@@ -235,6 +245,10 @@ export const groomingStations: GroomingStation[] = [
     type: "table",
     name: "Table 3",
     active: true,
+    status: "needs-cleaning",
+    statusChangedAt: new Date(Date.now() - 8 * 60_000).toISOString(),
+    allowedPetSizes: ["large", "giant"],
+    staffNotes: "Heavy-duty hydraulic lift for big dogs",
   },
   {
     id: "gs-t-04",
@@ -243,6 +257,7 @@ export const groomingStations: GroomingStation[] = [
     name: "Table 4",
     active: false,
     staffNotes: "Awaiting replacement hydraulic lift",
+    status: "out-of-service",
   },
   {
     id: "gs-tub-01",
@@ -250,6 +265,12 @@ export const groomingStations: GroomingStation[] = [
     type: "tub",
     name: "Tub 1",
     active: true,
+    status: "in-use",
+    currentPetName: "Cleo",
+    currentStylistName: "Marcus Reyes",
+    statusChangedAt: new Date(Date.now() - 12 * 60_000).toISOString(),
+    estimatedCompletionAt: new Date(Date.now() + 18 * 60_000).toISOString(),
+    // Empty = multi-purpose (any size)
   },
   {
     id: "gs-tub-02",
@@ -257,6 +278,9 @@ export const groomingStations: GroomingStation[] = [
     type: "tub",
     name: "Tub 2",
     active: true,
+    status: "available",
+    allowedPetSizes: ["small", "medium"],
+    maxWeightLbs: 35,
   },
   {
     id: "gs-dryer-01",
@@ -264,6 +288,7 @@ export const groomingStations: GroomingStation[] = [
     type: "cage_dryer",
     name: "Cage Dryer 1",
     active: true,
+    status: "available",
   },
   {
     id: "gs-dryer-02",
@@ -271,6 +296,7 @@ export const groomingStations: GroomingStation[] = [
     type: "stand_dryer",
     name: "Stand Dryer 1",
     active: true,
+    status: "available",
   },
 ];
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,6 @@ import {
   CalendarDays,
   Sparkles,
   Search,
-  Filter,
   CheckCircle2,
   Clock,
   TrendingUp,
@@ -24,6 +23,22 @@ import { groomingQueries } from "@/lib/api/grooming";
 import type { GroomingAppointment, GroomingStatus } from "@/types/grooming";
 import { AppointmentPanel } from "./appointment-panel";
 import { NewAppointmentDialog } from "./new-appointment-dialog";
+import {
+  CalendarFilters,
+  EMPTY_FILTERS,
+  applyCalendarFilters,
+  type CalendarFilterState,
+} from "./calendar-filters";
+import { TimeBlockDialog, type TimeBlock } from "./time-block-dialog";
+import { WaitlistPanel } from "./waitlist-panel";
+import { PrintableDaySheet } from "./printable-day-sheet";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { Ban, Hourglass, Printer } from "lucide-react";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -555,9 +570,15 @@ function GroomingSidebar({
 function AppointmentBlock({
   appointment,
   onClick,
+  isMatch,
+  isDimmed,
+  blockRef,
 }: {
   appointment: GroomingAppointment;
   onClick: (apt: GroomingAppointment) => void;
+  isMatch?: boolean;
+  isDimmed?: boolean;
+  blockRef?: React.Ref<HTMLButtonElement>;
 }) {
   const start = timeToMinutes(appointment.startTime);
   const end = timeToMinutes(appointment.endTime);
@@ -567,9 +588,13 @@ function AppointmentBlock({
 
   return (
     <button
-      onClick={() => onClick(appointment)}
+      ref={blockRef}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick(appointment);
+      }}
       className={cn(
-        "absolute left-1 right-1 z-10 rounded-lg",
+        "absolute left-1 right-1 rounded-lg",
         "px-2 py-1.5 text-left transition-all",
         "hover:shadow-md hover:scale-[1.01] active:scale-[0.99]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -578,6 +603,9 @@ function AppointmentBlock({
         s.text,
         appointment.status === "cancelled" && "opacity-40",
         appointment.status === "completed" && "opacity-55",
+        isMatch && "ring-2 ring-blue-500 ring-offset-1 shadow-lg z-20 scale-[1.02]",
+        isDimmed && "opacity-15 saturate-50",
+        !isMatch && !isDimmed && "z-10",
       )}
       style={{ top: `${top}px`, height: `${height}px` }}
     >
@@ -598,6 +626,43 @@ function AppointmentBlock({
         </p>
       )}
     </button>
+  );
+}
+
+// ─── Time block (striped gray block) ─────────────────────────────────────────
+
+const TIME_BLOCK_STRIPES =
+  "repeating-linear-gradient(45deg, rgba(148,163,184,0.35) 0, rgba(148,163,184,0.35) 6px, rgba(226,232,240,0.7) 6px, rgba(226,232,240,0.7) 12px)";
+
+function TimeBlockBlock({ block }: { block: TimeBlock }) {
+  const start = timeToMinutes(block.startTime);
+  const end = timeToMinutes(block.endTime);
+  const top = ((start - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+  const height = Math.max(((end - start) / 60) * HOUR_HEIGHT - 3, 24);
+  return (
+    <div
+      title={`${block.reason} · ${block.startTime}–${block.endTime}${
+        block.notes ? ` · ${block.notes}` : ""
+      }`}
+      className="absolute left-1 right-1 z-[5] overflow-hidden rounded-lg border border-slate-400/40 px-2 py-1 text-slate-700 dark:border-slate-500/40 dark:text-slate-200"
+      style={{
+        top: `${top}px`,
+        height: `${height}px`,
+        backgroundImage: TIME_BLOCK_STRIPES,
+      }}
+    >
+      <div className="flex items-center gap-1.5">
+        <Ban className="size-3 shrink-0 text-slate-500" />
+        <span className="truncate text-xs/tight font-semibold capitalize">
+          {block.reason}
+        </span>
+      </div>
+      {height > 40 && (
+        <p className="mt-0.5 pl-4 text-[10px] text-slate-500 dark:text-slate-400">
+          {block.startTime}–{block.endTime}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -625,21 +690,82 @@ function EmptyDay({ onNew }: { onNew: () => void }) {
 
 // ─── Day view ────────────────────────────────────────────────────────────────
 
+function WaitlistChip({
+  count,
+  onClick,
+  size = "sm",
+}: {
+  count: number;
+  onClick: () => void;
+  size?: "sm" | "xs";
+}) {
+  if (count <= 0) return null;
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      title={`${count} on the waitlist`}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 font-semibold text-amber-800 transition-colors hover:bg-amber-200 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900/60",
+        size === "sm" && "px-2 py-0.5 text-[11px]",
+        size === "xs" && "px-1.5 py-0.5 text-[10px]",
+      )}
+    >
+      <Hourglass className={cn(size === "xs" ? "size-2.5" : "size-3")} />
+      {count}
+    </button>
+  );
+}
+
 function DayView({
   selectedDate,
   appointments,
+  timeBlocks,
   stylists,
   onBlockClick,
   onNew,
+  onSlotClick,
+  onSlotContext,
+  onConfirmBlock,
+  matchedIds,
+  searchActive,
 }: {
   selectedDate: string;
   appointments: GroomingAppointment[];
+  timeBlocks: TimeBlock[];
   stylists: { id: string; name: string; status: string; capacity: { skillLevel: string } }[];
   onBlockClick: (apt: GroomingAppointment) => void;
   onNew: () => void;
+  onSlotClick: (stylistId: string, time: string) => void;
+  onSlotContext: (stylistId: string, time: string) => void;
+  onConfirmBlock: () => void;
+  matchedIds: Set<string>;
+  searchActive: boolean;
 }) {
   const dateAppointments = appointments.filter((a) => a.date === selectedDate);
   const activeStylists = stylists.filter((s) => s.status === "active");
+
+  const firstMatchId = useMemo(() => {
+    if (!searchActive || matchedIds.size === 0) return null;
+    const match = dateAppointments
+      .filter((a) => matchedIds.has(a.id))
+      .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))[0];
+    return match?.id ?? null;
+  }, [dateAppointments, matchedIds, searchActive]);
+
+  const firstMatchRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    if (firstMatchId && firstMatchRef.current) {
+      firstMatchRef.current.scrollIntoView({
+        block: "center",
+        inline: "center",
+        behavior: "smooth",
+      });
+    }
+  }, [firstMatchId]);
 
   if (activeStylists.length === 0) return <EmptyDay onNew={onNew} />;
 
@@ -680,17 +806,76 @@ function DayView({
           </div>
           {activeStylists.map((stylist) => {
             const stylistAppts = dateAppointments.filter((a) => a.stylistId === stylist.id);
+            const stylistBlocks = timeBlocks.filter(
+              (b) => b.date === selectedDate && b.stylistId === stylist.id,
+            );
+
+            const slotTimeFromEvent = (
+              e: React.MouseEvent<HTMLDivElement>,
+            ): string | null => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const y = e.clientY - rect.top;
+              const slotsFromStart = Math.max(
+                0,
+                Math.floor((y / HOUR_HEIGHT) * 2),
+              );
+              const totalMinutes = START_HOUR * 60 + slotsFromStart * 30;
+              if (totalMinutes >= END_HOUR * 60) return null;
+              const h = Math.floor(totalMinutes / 60);
+              const m = totalMinutes % 60;
+              return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+            };
+
+            const handleColumnClick = (e: React.MouseEvent<HTMLDivElement>) => {
+              const time = slotTimeFromEvent(e);
+              if (time) onSlotClick(stylist.id, time);
+            };
+
+            const handleColumnContextMenu = (
+              e: React.MouseEvent<HTMLDivElement>,
+            ) => {
+              const time = slotTimeFromEvent(e);
+              if (time) onSlotContext(stylist.id, time);
+            };
+
             return (
-              <div key={stylist.id} className="flex-1 min-w-[168px] relative border-l">
-                {HOURS.map((h) => (
-                  <div key={h} style={{ height: `${HOUR_HEIGHT}px` }} className="border-b border-border/30">
-                    <div className="h-1/2 border-b border-dashed border-border/20" />
+              <ContextMenu key={stylist.id}>
+                <ContextMenuTrigger asChild>
+                  <div
+                    className="flex-1 min-w-[168px] relative border-l cursor-pointer"
+                    onClick={handleColumnClick}
+                    onContextMenu={handleColumnContextMenu}
+                    role="button"
+                    tabIndex={-1}
+                    aria-label={`Schedule slot for ${stylist.name}`}
+                  >
+                    {HOURS.map((h) => (
+                      <div key={h} style={{ height: `${HOUR_HEIGHT}px` }} className="border-b border-border/30">
+                        <div className="h-1/2 border-b border-dashed border-border/20" />
+                      </div>
+                    ))}
+                    {stylistBlocks.map((b) => (
+                      <TimeBlockBlock key={b.id} block={b} />
+                    ))}
+                    {stylistAppts.map((apt) => (
+                      <AppointmentBlock
+                        key={apt.id}
+                        appointment={apt}
+                        onClick={onBlockClick}
+                        isMatch={searchActive && matchedIds.has(apt.id)}
+                        isDimmed={searchActive && !matchedIds.has(apt.id)}
+                        blockRef={apt.id === firstMatchId ? firstMatchRef : undefined}
+                      />
+                    ))}
                   </div>
-                ))}
-                {stylistAppts.map((apt) => (
-                  <AppointmentBlock key={apt.id} appointment={apt} onClick={onBlockClick} />
-                ))}
-              </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem onSelect={onConfirmBlock}>
+                    <Ban className="size-4" />
+                    Block this time
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             );
           })}
         </div>
@@ -708,11 +893,19 @@ function WeekView({
   today,
   appointments,
   onDayClick,
+  matchedIds,
+  searchActive,
+  waitlistByDate,
+  onWaitlistOpen,
 }: {
   selectedDate: string;
   today: string;
   appointments: GroomingAppointment[];
   onDayClick: (dateStr: string) => void;
+  matchedIds: Set<string>;
+  searchActive: boolean;
+  waitlistByDate: Record<string, number>;
+  onWaitlistOpen: (dateStr: string) => void;
 }) {
   const weekDays = getWeekDays(selectedDate);
 
@@ -727,6 +920,7 @@ function WeekView({
           const isToday = ds === today;
           const isSelected = ds === selectedDate;
 
+          const waitlistCount = waitlistByDate[ds] ?? 0;
           return (
             <button
               key={ds}
@@ -736,22 +930,29 @@ function WeekView({
                 isSelected && "bg-pink-50/60 dark:bg-pink-950/20",
               )}
             >
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-medium text-muted-foreground uppercase">
-                  {DAY_ABBR[idx]}
-                </span>
-                <span
-                  className={cn(
-                    "flex size-6 items-center justify-center rounded-full text-xs font-bold",
-                    isToday
-                      ? "bg-pink-500 text-white"
-                      : isSelected
-                        ? "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300"
-                        : "text-foreground",
-                  )}
-                >
-                  {day.getDate()}
-                </span>
+              <div className="flex items-center justify-between gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-medium text-muted-foreground uppercase">
+                    {DAY_ABBR[idx]}
+                  </span>
+                  <span
+                    className={cn(
+                      "flex size-6 items-center justify-center rounded-full text-xs font-bold",
+                      isToday
+                        ? "bg-pink-500 text-white"
+                        : isSelected
+                          ? "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300"
+                          : "text-foreground",
+                    )}
+                  >
+                    {day.getDate()}
+                  </span>
+                </div>
+                <WaitlistChip
+                  count={waitlistCount}
+                  onClick={() => onWaitlistOpen(ds)}
+                  size="xs"
+                />
               </div>
               {dayApts.length === 0 ? (
                 <span className="text-[10px] text-muted-foreground/50 mt-1">No appts</span>
@@ -759,6 +960,8 @@ function WeekView({
                 <div className="flex flex-col gap-1">
                   {dayApts.slice(0, 4).map((apt) => {
                     const s = STATUS_META[apt.status];
+                    const isMatch = searchActive && matchedIds.has(apt.id);
+                    const isDimmed = searchActive && !isMatch;
                     return (
                       <div
                         key={apt.id}
@@ -766,6 +969,8 @@ function WeekView({
                           "rounded px-1.5 py-0.5 text-[10px] font-medium truncate",
                           s.bg,
                           s.text,
+                          isMatch && "ring-2 ring-blue-500 ring-offset-1",
+                          isDimmed && "opacity-25 saturate-50",
                         )}
                       >
                         {apt.startTime} {apt.petName}
@@ -794,11 +999,19 @@ function MonthView({
   today,
   appointments,
   onDayClick,
+  matchedIds,
+  searchActive,
+  waitlistByDate,
+  onWaitlistOpen,
 }: {
   selectedDate: string;
   today: string;
   appointments: GroomingAppointment[];
   onDayClick: (dateStr: string) => void;
+  matchedIds: Set<string>;
+  searchActive: boolean;
+  waitlistByDate: Record<string, number>;
+  onWaitlistOpen: (dateStr: string) => void;
 }) {
   const cells = getMonthDays(selectedDate);
 
@@ -823,6 +1036,7 @@ function MonthView({
           const isToday = ds === today;
           const isSelected = ds === selectedDate;
 
+          const waitlistCount = waitlistByDate[ds] ?? 0;
           return (
             <button
               key={ds}
@@ -832,24 +1046,39 @@ function MonthView({
                 isSelected && "bg-pink-50/60 dark:bg-pink-950/20",
               )}
             >
-              <span
-                className={cn(
-                  "flex size-6 items-center justify-center rounded-full text-xs font-bold self-start",
-                  isToday
-                    ? "bg-pink-500 text-white"
-                    : isSelected
-                      ? "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300"
-                      : "text-foreground",
-                )}
-              >
-                {day.getDate()}
-              </span>
+              <div className="flex items-center justify-between gap-1">
+                <span
+                  className={cn(
+                    "flex size-6 items-center justify-center rounded-full text-xs font-bold",
+                    isToday
+                      ? "bg-pink-500 text-white"
+                      : isSelected
+                        ? "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300"
+                        : "text-foreground",
+                  )}
+                >
+                  {day.getDate()}
+                </span>
+                <WaitlistChip
+                  count={waitlistCount}
+                  onClick={() => onWaitlistOpen(ds)}
+                  size="xs"
+                />
+              </div>
               {dayApts.slice(0, 3).map((apt) => {
                 const s = STATUS_META[apt.status];
+                const isMatch = searchActive && matchedIds.has(apt.id);
+                const isDimmed = searchActive && !isMatch;
                 return (
                   <div
                     key={apt.id}
-                    className={cn("rounded px-1 py-0.5 text-[10px] font-medium truncate w-full", s.bg, s.text)}
+                    className={cn(
+                      "rounded px-1 py-0.5 text-[10px] font-medium truncate w-full",
+                      s.bg,
+                      s.text,
+                      isMatch && "ring-2 ring-blue-500 ring-offset-1",
+                      isDimmed && "opacity-25 saturate-50",
+                    )}
                   >
                     {apt.startTime} {apt.petName}
                   </div>
@@ -876,20 +1105,85 @@ export function GroomingCalendar() {
   const [selectedAppointment, setSelectedAppointment] =
     useState<GroomingAppointment | null>(null);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
+  const [quickBookSlot, setQuickBookSlot] = useState<
+    { stylistId: string; time: string } | null
+  >(null);
+  const [filters, setFilters] = useState<CalendarFilterState>(EMPTY_FILTERS);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
+  const [pendingBlockSlot, setPendingBlockSlot] = useState<
+    { stylistId: string; time: string } | null
+  >(null);
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
 
   const { data: appointments = [] } = useQuery(groomingQueries.appointments());
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
+  const { data: waitlist = [] } = useQuery(groomingQueries.waitlist());
 
-  const activeEventCount = useMemo(
-    () =>
-      appointments.filter(
-        (a) =>
-          a.date === selectedDate &&
-          a.status !== "cancelled" &&
-          a.status !== "no-show",
-      ).length,
-    [appointments, selectedDate],
+  const waitlistByDate = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const w of waitlist) map[w.date] = (map[w.date] ?? 0) + 1;
+    return map;
+  }, [waitlist]);
+
+  const [waitlistDate, setWaitlistDate] = useState<string | null>(null);
+
+  const filteredAppointments = useMemo(
+    () => applyCalendarFilters(appointments, filters),
+    [appointments, filters],
   );
+
+  const searchActive = searchQuery.trim().length > 0;
+
+  const searchMatchedIds = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return new Set<string>();
+    const qDigits = q.replace(/\D/g, "");
+    const ids = new Set<string>();
+    for (const a of filteredAppointments) {
+      if (
+        a.petName.toLowerCase().includes(q) ||
+        a.ownerName.toLowerCase().includes(q)
+      ) {
+        ids.add(a.id);
+        continue;
+      }
+      if (qDigits.length >= 3) {
+        const phoneDigits = a.ownerPhone.replace(/\D/g, "");
+        if (phoneDigits.includes(qDigits)) ids.add(a.id);
+      }
+    }
+    return ids;
+  }, [filteredAppointments, searchQuery]);
+
+  // Auto-navigate to the first match's date so the result is visible in any view.
+  useEffect(() => {
+    if (!searchActive || searchMatchedIds.size === 0) return;
+    const earliest = filteredAppointments
+      .filter((a) => searchMatchedIds.has(a.id))
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return a.startTime.localeCompare(b.startTime);
+      })[0];
+    if (earliest && earliest.date !== selectedDate) {
+      setSelectedDate(earliest.date);
+    }
+    // Intentionally fire only when the search query changes, not on every
+    // selectedDate change — otherwise we'd snap the user back if they navigate.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
+  const activeEventCount = useMemo(() => {
+    const apts = filteredAppointments.filter(
+      (a) =>
+        a.date === selectedDate &&
+        a.status !== "cancelled" &&
+        a.status !== "no-show",
+    ).length;
+    // Time blocks count against scheduling capacity, so include them.
+    const blocks = timeBlocks.filter((b) => b.date === selectedDate).length;
+    return apts + blocks;
+  }, [filteredAppointments, selectedDate, timeBlocks]);
 
   function handleBlockClick(apt: GroomingAppointment) {
     setSelectedAppointment(apt);
@@ -901,12 +1195,51 @@ export function GroomingCalendar() {
     setViewMode("day");
   }
 
+  function handleSlotClick(stylistId: string, time: string) {
+    setQuickBookSlot({ stylistId, time });
+    setNewDialogOpen(true);
+  }
+
+  function handleDialogOpenChange(open: boolean) {
+    setNewDialogOpen(open);
+    if (!open) setQuickBookSlot(null);
+  }
+
+  function handleNewEvent() {
+    setQuickBookSlot(null);
+    setNewDialogOpen(true);
+  }
+
+  function handleSlotContext(stylistId: string, time: string) {
+    // Stage the right-clicked slot so the menu item can commit it.
+    setPendingBlockSlot({ stylistId, time });
+  }
+
+  function handleConfirmBlock() {
+    if (pendingBlockSlot) setBlockDialogOpen(true);
+  }
+
+  function handleSaveBlock(block: TimeBlock) {
+    setTimeBlocks((prev) => [...prev, block]);
+  }
+
+  function handleBlockDialogOpenChange(next: boolean) {
+    setBlockDialogOpen(next);
+    if (!next) setPendingBlockSlot(null);
+  }
+
+  const pendingBlockStylistName = pendingBlockSlot
+    ? (stylistsData.find((s) => s.id === pendingBlockSlot.stylistId)?.name ??
+      "Groomer")
+    : "";
+
   return (
-    <div className="flex h-full gap-6">
+    <>
+    <div className="flex h-full gap-6 print:hidden">
       <GroomingSidebar
         selectedDate={selectedDate}
         todayStr={todayStr}
-        appointments={appointments}
+        appointments={filteredAppointments}
         viewMode={viewMode}
         onDateChange={setSelectedDate}
       />
@@ -940,12 +1273,28 @@ export function GroomingCalendar() {
           <div className="flex items-center gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search..." className="rounded-full w-56 pl-9 h-10 shadow-sm bg-white dark:bg-slate-950 border-slate-200" />
+              <Input
+                placeholder="Search pet, owner, phone..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="rounded-full w-56 pl-9 h-10 shadow-sm bg-white dark:bg-slate-950 border-slate-200"
+              />
             </div>
-            <Button variant="outline" className="rounded-full h-10 px-4 shadow-sm gap-2 border-slate-200 hover:bg-slate-100 bg-white">
-              <Filter className="h-4 w-4" /> Filters
+            <CalendarFilters
+              filters={filters}
+              onChange={setFilters}
+              stylists={stylistsData}
+              appointments={appointments}
+            />
+            <Button
+              variant="outline"
+              className="rounded-full h-10 px-4 shadow-sm gap-2 border-slate-200 hover:bg-slate-100 bg-white"
+              onClick={() => window.print()}
+              title="Print today's schedule"
+            >
+              <Printer className="h-4 w-4" /> Print
             </Button>
-            <Button className="rounded-full h-10 px-5 shadow-sm bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setNewDialogOpen(true)}>
+            <Button className="rounded-full h-10 px-5 shadow-sm bg-blue-600 hover:bg-blue-700 text-white" onClick={handleNewEvent}>
               <Plus className="h-4 w-4 mr-1.5" /> New Event
             </Button>
           </div>
@@ -959,11 +1308,21 @@ export function GroomingCalendar() {
             </div>
             <h2 className="text-xl font-bold">Client Schedule</h2>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
             <span className="flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-full px-3 py-1">
               <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
               {activeEventCount} active events
             </span>
+            {viewMode === "day" && (waitlistByDate[selectedDate] ?? 0) > 0 && (
+              <button
+                type="button"
+                onClick={() => setWaitlistDate(selectedDate)}
+                className="flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:bg-amber-950/50"
+              >
+                <Hourglass className="size-3.5" />
+                {waitlistByDate[selectedDate]} on waitlist
+              </button>
+            )}
             <span className="text-sm text-muted-foreground hidden lg:inline">
               Click any date & time to create a quick appointment.
             </span>
@@ -975,26 +1334,40 @@ export function GroomingCalendar() {
           {viewMode === "day" && (
             <DayView
               selectedDate={selectedDate}
-              appointments={appointments}
+              appointments={filteredAppointments}
+              timeBlocks={timeBlocks}
               stylists={stylistsData}
               onBlockClick={handleBlockClick}
-              onNew={() => setNewDialogOpen(true)}
+              onNew={handleNewEvent}
+              onSlotClick={handleSlotClick}
+              onSlotContext={handleSlotContext}
+              onConfirmBlock={handleConfirmBlock}
+              matchedIds={searchMatchedIds}
+              searchActive={searchActive}
             />
           )}
           {viewMode === "week" && (
             <WeekView
               selectedDate={selectedDate}
               today={todayStr}
-              appointments={appointments}
+              appointments={filteredAppointments}
               onDayClick={handleDayClick}
+              matchedIds={searchMatchedIds}
+              searchActive={searchActive}
+              waitlistByDate={waitlistByDate}
+              onWaitlistOpen={setWaitlistDate}
             />
           )}
           {viewMode === "month" && (
             <MonthView
               selectedDate={selectedDate}
               today={todayStr}
-              appointments={appointments}
+              appointments={filteredAppointments}
               onDayClick={handleDayClick}
+              matchedIds={searchMatchedIds}
+              searchActive={searchActive}
+              waitlistByDate={waitlistByDate}
+              onWaitlistOpen={setWaitlistDate}
             />
           )}
         </div>
@@ -1008,9 +1381,42 @@ export function GroomingCalendar() {
 
       <NewAppointmentDialog
         open={newDialogOpen}
-        onOpenChange={setNewDialogOpen}
+        onOpenChange={handleDialogOpenChange}
         defaultDate={selectedDate}
+        defaultStartTime={quickBookSlot?.time}
+        defaultStylistId={quickBookSlot?.stylistId}
+      />
+
+      <TimeBlockDialog
+        open={blockDialogOpen}
+        onOpenChange={handleBlockDialogOpenChange}
+        stylistId={pendingBlockSlot?.stylistId ?? ""}
+        stylistName={pendingBlockStylistName}
+        date={selectedDate}
+        startTime={pendingBlockSlot?.time ?? "09:00"}
+        onSave={handleSaveBlock}
+      />
+
+      <WaitlistPanel
+        open={waitlistDate !== null}
+        onOpenChange={(open) => {
+          if (!open) setWaitlistDate(null);
+        }}
+        date={waitlistDate ?? selectedDate}
+        entries={
+          waitlistDate
+            ? waitlist.filter((w) => w.date === waitlistDate)
+            : []
+        }
       />
     </div>
+
+    <PrintableDaySheet
+      date={selectedDate}
+      appointments={filteredAppointments}
+      timeBlocks={timeBlocks}
+      stylists={stylistsData}
+    />
+    </>
   );
 }
