@@ -1,16 +1,13 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -23,15 +20,19 @@ import {
   AlertTriangle,
   CalendarDays,
   PawPrint,
-  Check,
-  ChevronRight,
   MoreHorizontal,
+  X,
+  LogIn,
+  Sparkles,
+  LogOut,
+  MessageCircle,
+  Pencil,
 } from "lucide-react";
 import type { GroomingAppointment, GroomingStatus } from "@/types/grooming";
 import { toast } from "sonner";
 import { STATUS_META } from "./grooming-calendar";
 
-// ─── Status workflow ──────────────────────────────────────────────────────────
+// ─── Status meta ──────────────────────────────────────────────────────────────
 
 const STATUS_LABELS: Record<GroomingStatus, string> = {
   scheduled: "Scheduled",
@@ -43,15 +44,9 @@ const STATUS_LABELS: Record<GroomingStatus, string> = {
   "no-show": "No Show",
 };
 
-const STATUS_FLOW: GroomingStatus[] = [
-  "scheduled",
-  "checked-in",
-  "in-progress",
-  "ready-for-pickup",
-  "completed",
-];
-
-const DESTRUCTIVE_ACTIONS: Partial<Record<GroomingStatus, { next: GroomingStatus; label: string }[]>> = {
+const DESTRUCTIVE_ACTIONS: Partial<
+  Record<GroomingStatus, { next: GroomingStatus; label: string }[]>
+> = {
   scheduled: [{ next: "cancelled", label: "Cancel Appointment" }],
   "checked-in": [{ next: "no-show", label: "Mark No Show" }],
 };
@@ -71,11 +66,11 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="flex size-7 items-center justify-center rounded-md bg-muted flex-shrink-0 mt-0.5">
+      <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-muted">
         <Icon className="size-3.5 text-muted-foreground" />
       </div>
       <div className="min-w-0">
-        <p className="text-[11px] text-muted-foreground leading-none mb-0.5">
+        <p className="mb-0.5 text-[11px] leading-none text-muted-foreground">
           {label}
         </p>
         {href ? (
@@ -95,7 +90,7 @@ function InfoRow({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+    <p className="mb-3 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
       {children}
     </p>
   );
@@ -118,8 +113,6 @@ export function AppointmentPanel({
 
   const s = STATUS_META[appointment.status];
   const destructiveActions = DESTRUCTIVE_ACTIONS[appointment.status] ?? [];
-  const currentStepIdx = STATUS_FLOW.indexOf(appointment.status);
-  const isTerminal = ["cancelled", "no-show"].includes(appointment.status);
   const hasAlert =
     appointment.allergies.length > 0 || !!appointment.specialInstructions;
   const priceAdjTotal = appointment.priceAdjustments.reduce(
@@ -127,9 +120,16 @@ export function AppointmentPanel({
     0,
   );
 
-  function handleAction(next: GroomingStatus) {
+  // Quick-action availability — each button is enabled only when its status
+  // transition is the logical next step in the workflow.
+  const canCheckIn = appointment.status === "scheduled";
+  const canMarkReady =
+    appointment.status === "checked-in" ||
+    appointment.status === "in-progress";
+  const canCheckOut = appointment.status === "ready-for-pickup";
+
+  function advance(next: GroomingStatus) {
     toast.success(`Status updated to "${STATUS_LABELS[next]}"`);
-    onOpenChange(false);
   }
 
   const displayDate = new Date(
@@ -141,232 +141,312 @@ export function AppointmentPanel({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-2xl p-0 gap-0 flex flex-col overflow-hidden max-h-[calc(100vh-4rem)]"
-        showCloseButton={true}
-      >
-        {/* ── Header ── */}
-        <div className="px-6 pt-6 pb-4 border-b bg-muted/20 flex-shrink-0">
-          <div className="flex items-start justify-between gap-3 mb-4 pr-8">
-            <div className="flex items-center gap-3">
-              <div className="flex size-12 items-center justify-center rounded-xl bg-pink-100 text-pink-700 text-xl font-bold dark:bg-pink-900/30 dark:text-pink-300 flex-shrink-0">
-                {appointment.petName.charAt(0)}
+    <DialogPrimitive.Root
+      open={open}
+      onOpenChange={onOpenChange}
+      modal={false}
+    >
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Content
+          // Keep the calendar fully interactive behind the panel: don't close
+          // on outside clicks, don't trap focus.
+          onInteractOutside={(e) => e.preventDefault()}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          aria-describedby={undefined}
+          className={cn(
+            "fixed top-4 bottom-4 right-4 z-50 flex w-[420px] max-w-[calc(100vw-2rem)] flex-col",
+            "rounded-2xl border bg-background shadow-2xl outline-none",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out",
+            "data-[state=open]:slide-in-from-right-4 data-[state=closed]:slide-out-to-right-4",
+            "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
+            "data-[state=open]:duration-200 data-[state=closed]:duration-150",
+          )}
+        >
+          {/* ── Header ── */}
+          <div className="shrink-0 border-b bg-muted/20 px-5 pt-5 pb-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-3">
+                {appointment.petPhotoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={appointment.petPhotoUrl}
+                    alt={appointment.petName}
+                    className="size-12 shrink-0 rounded-xl object-cover ring-2 ring-pink-200/60 dark:ring-pink-900/40"
+                  />
+                ) : (
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-pink-100 text-xl font-bold text-pink-700 dark:bg-pink-900/30 dark:text-pink-300">
+                    {appointment.petName.charAt(0)}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <DialogPrimitive.Title className="truncate text-base/tight font-semibold">
+                    {appointment.petName}
+                  </DialogPrimitive.Title>
+                  <p className="truncate text-sm text-muted-foreground">
+                    {appointment.petBreed}
+                  </p>
+                  <Badge
+                    className={cn(
+                      "mt-1.5 border-0 text-xs capitalize",
+                      s.bg,
+                      s.text,
+                    )}
+                  >
+                    {s.label}
+                  </Badge>
+                </div>
               </div>
-              <div>
-                <DialogTitle className="text-base leading-tight">
-                  {appointment.petName}
-                </DialogTitle>
-                <p className="text-sm text-muted-foreground">
-                  {appointment.petBreed}
-                </p>
+              <div className="flex items-center gap-1">
+                {destructiveActions.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted">
+                      <MoreHorizontal className="size-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {destructiveActions.map((a) => (
+                        <DropdownMenuItem
+                          key={a.next}
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => advance(a.next)}
+                        >
+                          {a.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                <DialogPrimitive.Close
+                  className="flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted"
+                  aria-label="Close panel"
+                >
+                  <X className="size-4" />
+                </DialogPrimitive.Close>
               </div>
-            </div>
-            <div className="flex items-center gap-2 mt-1 flex-shrink-0">
-              <Badge className={cn("capitalize text-xs border-0", s.bg, s.text)}>
-                {s.label}
-              </Badge>
-              {destructiveActions.length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="flex size-7 items-center justify-center rounded-md hover:bg-muted text-muted-foreground transition-colors outline-none">
-                    <MoreHorizontal className="size-4" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {destructiveActions.map((a) => (
-                      <DropdownMenuItem
-                        key={a.next}
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => handleAction(a.next)}
-                      >
-                        {a.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             </div>
           </div>
 
-          {/* Interactive status steps */}
-          {!isTerminal && (
-            <div className="flex items-center gap-0.5 flex-wrap">
-              {STATUS_FLOW.map((step, i) => {
-                const isDone = i < currentStepIdx;
-                const isCurrent = i === currentStepIdx;
-                const isNext = i === currentStepIdx + 1;
-                return (
-                  <div key={step} className="flex items-center gap-0.5">
-                    <button
-                      onClick={isNext ? () => handleAction(step) : undefined}
-                      disabled={!isNext}
-                      title={isNext ? `Click to mark as ${STATUS_LABELS[step]}` : undefined}
-                      className={cn(
-                        "flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all select-none",
-                        isDone && "text-pink-500",
-                        isCurrent && "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300",
-                        isNext && "cursor-pointer ring-1 ring-border text-muted-foreground hover:ring-pink-400 hover:bg-pink-50 hover:text-pink-600 dark:hover:bg-pink-950/30",
-                        !isDone && !isCurrent && !isNext && "text-muted-foreground/40 cursor-default",
-                      )}
-                    >
-                      {isDone && <Check className="size-3" />}
-                      {STATUS_LABELS[step]}
-                    </button>
-                    {i < STATUS_FLOW.length - 1 && (
-                      <ChevronRight className="size-3 text-muted-foreground/30 flex-shrink-0" />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* ── Body (scrollable) ── */}
-        <div className="flex flex-col gap-5 px-6 py-5 flex-1 overflow-y-auto">
-          {/* Alert banner */}
-          {hasAlert && (
-            <div className="flex items-start gap-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2.5">
-              <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-              <div className="text-xs text-amber-800 dark:text-amber-200 space-y-1">
-                {appointment.allergies.length > 0 && (
-                  <p>
-                    <strong>Allergies:</strong>{" "}
-                    {appointment.allergies.join(", ")}
-                  </p>
-                )}
-                {appointment.specialInstructions && (
-                  <p>
-                    <strong>Instructions:</strong>{" "}
-                    {appointment.specialInstructions}
-                  </p>
-                )}
+          {/* ── Body (scrollable) ── */}
+          <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
+            {hasAlert && (
+              <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-800 dark:bg-amber-950/30">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <div className="space-y-1 text-xs text-amber-800 dark:text-amber-200">
+                  {appointment.allergies.length > 0 && (
+                    <p>
+                      <strong>Allergies:</strong>{" "}
+                      {appointment.allergies.join(", ")}
+                    </p>
+                  )}
+                  {appointment.specialInstructions && (
+                    <p>
+                      <strong>Care notes:</strong>{" "}
+                      {appointment.specialInstructions}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Two-column layout for main info */}
-          <div className="grid grid-cols-2 gap-6">
-            {/* Left: Pet + Owner */}
-            <div className="flex flex-col gap-5">
-              <div>
-                <SectionLabel>Pet Details</SectionLabel>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: "Size", value: appointment.petSize },
-                    { label: "Weight", value: `${appointment.petWeight} lbs` },
-                    { label: "Coat", value: appointment.coatType },
-                  ].map(({ label, value }) => (
-                    <div
-                      key={label}
-                      className="rounded-lg bg-muted/50 px-3 py-2 text-center"
-                    >
-                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {label}
-                      </p>
-                      <p className="text-xs font-semibold capitalize mt-0.5">
-                        {value}
-                      </p>
-                    </div>
+            <div>
+              <SectionLabel>Appointment</SectionLabel>
+              <div className="flex flex-col gap-3">
+                <InfoRow
+                  icon={Scissors}
+                  label="Service"
+                  value={appointment.packageName}
+                />
+                <InfoRow
+                  icon={User}
+                  label="Groomer"
+                  value={appointment.stylistName}
+                />
+                <InfoRow
+                  icon={CalendarDays}
+                  label="Date"
+                  value={displayDate}
+                />
+                <InfoRow
+                  icon={Clock}
+                  label="Time"
+                  value={`${appointment.startTime} – ${appointment.endTime}`}
+                />
+              </div>
+              {appointment.addOns.length > 0 && (
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] text-muted-foreground">
+                    <PawPrint className="mr-1 inline size-3" />
+                    Add-ons:
+                  </span>
+                  {appointment.addOns.map((ao) => (
+                    <Badge key={ao} variant="secondary" className="text-xs">
+                      {ao}
+                    </Badge>
                   ))}
                 </div>
-              </div>
+              )}
+            </div>
 
-              <Separator />
+            <Separator />
 
-              <div>
-                <SectionLabel>Owner</SectionLabel>
-                <div className="flex flex-col gap-3">
-                  <InfoRow icon={User} label="Name" value={appointment.ownerName} />
-                  <InfoRow
-                    icon={Phone}
-                    label="Phone"
-                    value={appointment.ownerPhone}
-                    href={`tel:${appointment.ownerPhone}`}
-                  />
-                  <InfoRow
-                    icon={Mail}
-                    label="Email"
-                    value={appointment.ownerEmail}
-                    href={`mailto:${appointment.ownerEmail}`}
-                  />
-                </div>
+            <div>
+              <SectionLabel>Owner</SectionLabel>
+              <div className="flex flex-col gap-3">
+                <InfoRow
+                  icon={User}
+                  label="Name"
+                  value={appointment.ownerName}
+                />
+                <InfoRow
+                  icon={Phone}
+                  label="Phone"
+                  value={appointment.ownerPhone}
+                  href={`tel:${appointment.ownerPhone}`}
+                />
+                <InfoRow
+                  icon={Mail}
+                  label="Email"
+                  value={appointment.ownerEmail}
+                  href={`mailto:${appointment.ownerEmail}`}
+                />
               </div>
             </div>
 
-            {/* Right: Appointment + Price */}
-            <div className="flex flex-col gap-5">
-              <div>
-                <SectionLabel>Appointment</SectionLabel>
-                <div className="flex flex-col gap-3">
-                  <InfoRow icon={Scissors} label="Service" value={appointment.packageName} />
-                  <InfoRow icon={User} label="Groomer" value={appointment.stylistName} />
-                  <InfoRow icon={CalendarDays} label="Date" value={displayDate} />
-                  <InfoRow
-                    icon={Clock}
-                    label="Time"
-                    value={`${appointment.startTime} – ${appointment.endTime}`}
-                  />
-                </div>
-                {appointment.addOns.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    <span className="text-[11px] text-muted-foreground mr-1 self-center">
-                      <PawPrint className="size-3 inline mr-1" />
-                      Add-ons:
-                    </span>
-                    {appointment.addOns.map((ao) => (
-                      <Badge key={ao} variant="secondary" className="text-xs">
-                        {ao}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
+            <Separator />
 
-              <Separator />
-
-              <div>
-                <SectionLabel>Price</SectionLabel>
-                <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Base — {appointment.packageName}</span>
-                    <span>${appointment.basePrice}</span>
-                  </div>
-                  {appointment.priceAdjustments.map((adj) => (
-                    <div
-                      key={adj.id}
-                      className="flex justify-between text-amber-700 dark:text-amber-400"
-                    >
-                      <span className="capitalize">
-                        {adj.reason.replace(/-/g, " ")}
-                      </span>
-                      <span>+${adj.amount}</span>
-                    </div>
-                  ))}
-                  {priceAdjTotal > 0 && <Separator className="my-1" />}
-                  <div className="flex justify-between font-semibold text-base pt-0.5">
-                    <span>Total</span>
-                    <span>${appointment.totalPrice}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes */}
-              {appointment.notes && (
-                <>
-                  <Separator />
-                  <div>
-                    <SectionLabel>Notes</SectionLabel>
-                    <p className="text-sm text-muted-foreground bg-muted/40 rounded-lg px-3 py-2.5 leading-relaxed">
-                      {appointment.notes}
+            <div>
+              <SectionLabel>Pet Details</SectionLabel>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: "Size", value: appointment.petSize },
+                  { label: "Weight", value: `${appointment.petWeight} lbs` },
+                  { label: "Coat", value: appointment.coatType },
+                ].map(({ label, value }) => (
+                  <div
+                    key={label}
+                    className="rounded-lg bg-muted/50 px-3 py-2 text-center"
+                  >
+                    <p className="text-[10px] tracking-wide text-muted-foreground uppercase">
+                      {label}
+                    </p>
+                    <p className="mt-0.5 text-xs font-semibold capitalize">
+                      {value}
                     </p>
                   </div>
-                </>
-              )}
+                ))}
+              </div>
+            </div>
+
+            {appointment.notes && (
+              <>
+                <Separator />
+                <div>
+                  <SectionLabel>Internal Notes</SectionLabel>
+                  <p className="rounded-lg bg-muted/40 px-3 py-2.5 text-sm/relaxed text-muted-foreground">
+                    {appointment.notes}
+                  </p>
+                </div>
+              </>
+            )}
+
+            <Separator />
+
+            <div>
+              <SectionLabel>Price</SectionLabel>
+              <div className="space-y-1.5 text-sm">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Base — {appointment.packageName}</span>
+                  <span>${appointment.basePrice}</span>
+                </div>
+                {appointment.priceAdjustments.map((adj) => (
+                  <div
+                    key={adj.id}
+                    className="flex justify-between text-amber-700 dark:text-amber-400"
+                  >
+                    <span className="capitalize">
+                      {adj.reason.replace(/-/g, " ")}
+                    </span>
+                    <span>+${adj.amount}</span>
+                  </div>
+                ))}
+                {priceAdjTotal > 0 && <Separator className="my-1" />}
+                <div className="flex justify-between pt-0.5 text-base font-semibold">
+                  <span>Total</span>
+                  <span>${appointment.totalPrice}</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-      </DialogContent>
-    </Dialog>
+          {/* ── Quick actions footer ── */}
+          <div className="shrink-0 space-y-2 border-t bg-muted/10 px-5 py-3">
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                size="sm"
+                disabled={!canCheckIn}
+                onClick={() => advance("checked-in")}
+                className={cn(
+                  "h-9 gap-1.5",
+                  canCheckIn &&
+                    "bg-emerald-600 text-white hover:bg-emerald-700",
+                )}
+                variant={canCheckIn ? "default" : "outline"}
+              >
+                <LogIn className="size-3.5" />
+                Check In
+              </Button>
+              <Button
+                size="sm"
+                disabled={!canMarkReady}
+                onClick={() => advance("ready-for-pickup")}
+                className={cn(
+                  "h-9 gap-1.5",
+                  canMarkReady && "bg-sky-600 text-white hover:bg-sky-700",
+                )}
+                variant={canMarkReady ? "default" : "outline"}
+              >
+                <Sparkles className="size-3.5" />
+                Mark Ready
+              </Button>
+              <Button
+                size="sm"
+                disabled={!canCheckOut}
+                onClick={() => advance("completed")}
+                className={cn(
+                  "h-9 gap-1.5",
+                  canCheckOut &&
+                    "bg-emerald-600 text-white hover:bg-emerald-700",
+                )}
+                variant={canCheckOut ? "default" : "outline"}
+              >
+                <LogOut className="size-3.5" />
+                Check Out
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 gap-1.5"
+                onClick={() =>
+                  toast.success(`Messaging ${appointment.ownerName}`)
+                }
+              >
+                <MessageCircle className="size-3.5" />
+                Message Owner
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 gap-1.5"
+                onClick={() => toast.info("Edit appointment")}
+              >
+                <Pencil className="size-3.5" />
+                Edit
+              </Button>
+            </div>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }

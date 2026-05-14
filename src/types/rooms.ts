@@ -107,6 +107,15 @@ export type GroomingStationType =
   | "cage_dryer"
   | "stand_dryer";
 
+export type GroomingStationStatus =
+  | "available"
+  | "in-use"
+  | "needs-cleaning"
+  | "out-of-service";
+
+/** Canonical pet sizes used for station size eligibility. Mirrors petSizeEnum in @/types/base. */
+export type GroomingStationPetSize = "small" | "medium" | "large" | "giant";
+
 export interface GroomingStation {
   id: string;
   facilityId: number;
@@ -115,7 +124,22 @@ export interface GroomingStation {
   active: boolean;
   maxWeightLbs?: number;
   petTypes?: ("dog" | "cat")[];
+  /**
+   * Which pet sizes this station can accept. Empty / undefined means
+   * multi-purpose (accepts every size). Booking flow filters stations by
+   * this list so a Great Dane never lands on a small-dog table.
+   */
+  allowedPetSizes?: GroomingStationPetSize[];
   staffNotes?: string;
   /** Photo of this station */
   imageUrl?: string;
+  /** Real-time station status — defaults to "available" */
+  status?: GroomingStationStatus;
+  /** When in-use, the pet and groomer currently at this station */
+  currentPetName?: string;
+  currentStylistName?: string;
+  /** ISO timestamp of last status change (drives "X min ago" labels) */
+  statusChangedAt?: string;
+  /** ISO timestamp of the in-use appointment's expected end (drives "Done at HH:MM" on the board) */
+  estimatedCompletionAt?: string;
 }

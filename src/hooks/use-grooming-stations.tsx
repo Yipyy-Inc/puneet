@@ -5,10 +5,14 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
   useMemo,
   type ReactNode,
 } from "react";
-import type { GroomingStation } from "@/types/rooms";
+import type {
+  GroomingStation,
+  GroomingStationStatus,
+} from "@/types/rooms";
 import { groomingStations as defaultGroomingStations } from "@/data/rooms";
 
 interface GroomingStationsContextValue {
@@ -19,6 +23,13 @@ interface GroomingStationsContextValue {
   updateStation: (station: GroomingStation) => void;
   deleteStation: (id: string) => void;
   toggleStation: (id: string) => void;
+
+  // Real-time status
+  setStationStatus: (
+    id: string,
+    status: GroomingStationStatus,
+    occupancy?: { petName?: string; stylistName?: string },
+  ) => void;
 
   // Queries
   getStationsByType: (type: GroomingStation["type"]) => GroomingStation[];
@@ -48,21 +59,35 @@ export function GroomingStationsProvider({
 }: {
   children: ReactNode;
 }) {
-  const [stations, setStations] = useState<GroomingStation[]>(() =>
-    loadStored(STATIONS_KEY, defaultGroomingStations),
+  // Always start with defaults so the server-rendered tree matches the first
+  // client render. Hydrate from localStorage in an effect once the component
+  // has mounted on the client.
+  const [stations, setStations] = useState<GroomingStation[]>(
+    defaultGroomingStations,
   );
+  const [hasHydrated, setHasHydrated] = useState(false);
+
+  useEffect(() => {
+    const stored = loadStored<GroomingStation[] | null>(STATIONS_KEY, null);
+    if (stored) setStations(stored);
+    setHasHydrated(true);
+  }, []);
 
   const persistStations = useCallback(
     (updater: (prev: GroomingStation[]) => GroomingStation[]) => {
       setStations((prev) => {
         const updated = updater(prev);
-        queueMicrotask(() =>
-          localStorage.setItem(STATIONS_KEY, JSON.stringify(updated)),
-        );
+        // Don't write to localStorage before we've hydrated from it — otherwise
+        // the initial mount would clobber the stored value with defaults.
+        if (hasHydrated) {
+          queueMicrotask(() =>
+            localStorage.setItem(STATIONS_KEY, JSON.stringify(updated)),
+          );
+        }
         return updated;
       });
     },
-    [],
+    [hasHydrated],
   );
 
   const addStation = useCallback(
@@ -101,6 +126,36 @@ export function GroomingStationsProvider({
     [persistStations],
   );
 
+  const setStationStatus = useCallback(
+    (
+      id: string,
+      status: GroomingStationStatus,
+      occupancy?: { petName?: string; stylistName?: string },
+    ) => {
+      persistStations((prev) =>
+        prev.map((s) => {
+          if (s.id !== id) return s;
+          const next: GroomingStation = {
+            ...s,
+            status,
+            statusChangedAt: new Date().toISOString(),
+          };
+          if (status === "in-use") {
+            next.currentPetName = occupancy?.petName ?? s.currentPetName;
+            next.currentStylistName =
+              occupancy?.stylistName ?? s.currentStylistName;
+          } else {
+            // Clear occupancy when leaving the in-use state.
+            next.currentPetName = undefined;
+            next.currentStylistName = undefined;
+          }
+          return next;
+        }),
+      );
+    },
+    [persistStations],
+  );
+
   const getStationsByType = useCallback(
     (type: GroomingStation["type"]) => stations.filter((s) => s.type === type),
     [stations],
@@ -117,6 +172,7 @@ export function GroomingStationsProvider({
       updateStation,
       deleteStation,
       toggleStation,
+      setStationStatus,
       getStationsByType,
       resetGroomingStations,
     }),
@@ -126,6 +182,7 @@ export function GroomingStationsProvider({
       updateStation,
       deleteStation,
       toggleStation,
+      setStationStatus,
       getStationsByType,
       resetGroomingStations,
     ],
