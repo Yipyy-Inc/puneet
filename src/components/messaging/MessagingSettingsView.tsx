@@ -203,10 +203,25 @@ export function MessagingSettingsView() {
   const [stopConfirmation, setStopConfirmation] = useState(
     "You have been unsubscribed from Doggieville MTL messages. Reply START to re-subscribe.",
   );
-  const [optedOutNumbers] = useState<string[]>([
-    "(514) 555-0182",
-    "(450) 555-0917",
+  const [optedOutNumbers, setOptedOutNumbers] = useState<
+    Array<{ name: string; phone: string; optedOutAt: string }>
+  >([
+    {
+      name: "Marie Tremblay",
+      phone: "(514) 555-0182",
+      optedOutAt: "2026-04-12T14:22:00Z",
+    },
+    {
+      name: "Daniel Roy",
+      phone: "(450) 555-0917",
+      optedOutAt: "2026-03-28T09:05:00Z",
+    },
   ]);
+
+  const removeOptOut = (phone: string) => {
+    setOptedOutNumbers((prev) => prev.filter((o) => o.phone !== phone));
+    toast.success("Re-enabled SMS for this client");
+  };
 
   // Saved replies UI state
   const [editingReply, setEditingReply] = useState<SavedReply | null>(null);
@@ -391,85 +406,6 @@ export function MessagingSettingsView() {
         </CardContent>
       </Card>
 
-      {/* Opt-out */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Ban className="size-4 text-red-500" />
-              SMS opt-out (STOP) handling
-            </CardTitle>
-            <Switch
-              checked={stopHandlingEnabled}
-              onCheckedChange={setStopHandlingEnabled}
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-            <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
-              <ShieldCheck className="size-4" />
-              Compliant with TCPA / CASL
-            </p>
-            <p className="mt-1 text-[11px] text-emerald-700/80">
-              Replying with any of these keywords automatically stops messaging
-              this client. We log the timestamp and surface it on their profile.
-            </p>
-          </div>
-
-          <div>
-            <Label className="text-xs">Trigger keywords</Label>
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {STOP_KEYWORDS.map((kw) => (
-                <span
-                  key={kw}
-                  className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-mono font-semibold text-slate-600"
-                >
-                  {kw}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">Confirmation reply</Label>
-            <Textarea
-              value={stopConfirmation}
-              onChange={(e) => setStopConfirmation(e.target.value)}
-              rows={2}
-              disabled={!stopHandlingEnabled}
-              className="resize-none text-sm"
-            />
-          </div>
-
-          <div>
-            <Label className="text-xs">Currently opted out</Label>
-            <div className="mt-1.5 space-y-1">
-              {optedOutNumbers.length === 0 ? (
-                <p className="text-[11px] text-slate-400 italic">
-                  No clients have opted out.
-                </p>
-              ) : (
-                optedOutNumbers.map((n) => (
-                  <div
-                    key={n}
-                    className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2"
-                  >
-                    <span className="font-mono text-sm text-slate-700">{n}</span>
-                    <Badge
-                      variant="outline"
-                      className="border-red-200 bg-red-50 text-[10px] text-red-700"
-                    >
-                      Unsubscribed
-                    </Badge>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Saved replies */}
       <Card>
         <CardHeader>
@@ -629,6 +565,118 @@ export function MessagingSettingsView() {
                 </Button>
               </div>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Opt-out */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Ban className="size-4 text-red-500" />
+              SMS opt-out (STOP) handling
+            </CardTitle>
+            <Switch
+              checked={stopHandlingEnabled}
+              onCheckedChange={setStopHandlingEnabled}
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+              <ShieldCheck className="size-4" />
+              Compliant with TCPA / CASL
+            </p>
+            <p className="mt-1 text-[11px] text-emerald-700/80">
+              Replying with any of these keywords automatically stops messaging
+              this client. We log the timestamp and surface it on their profile.
+            </p>
+          </div>
+
+          <div>
+            <Label className="text-xs">Trigger keywords</Label>
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {STOP_KEYWORDS.map((kw) => (
+                <span
+                  key={kw}
+                  className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-mono font-semibold text-slate-600"
+                >
+                  {kw}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Confirmation reply</Label>
+            <Textarea
+              value={stopConfirmation}
+              onChange={(e) => setStopConfirmation(e.target.value)}
+              rows={2}
+              disabled={!stopHandlingEnabled}
+              className="resize-none text-sm"
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Currently opted out</Label>
+              <span className="text-[10px] text-slate-400 tabular-nums">
+                {optedOutNumbers.length} client
+                {optedOutNumbers.length === 1 ? "" : "s"}
+              </span>
+            </div>
+            <div className="mt-1.5 space-y-1">
+              {optedOutNumbers.length === 0 ? (
+                <p className="text-[11px] text-slate-400 italic">
+                  No clients have opted out.
+                </p>
+              ) : (
+                optedOutNumbers.map((o) => (
+                  <div
+                    key={o.phone}
+                    className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-700">
+                        {o.name}
+                      </p>
+                      <p className="font-mono text-[11px] text-slate-500">
+                        {o.phone} · opted out{" "}
+                        {new Date(o.optedOutAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className="border-red-200 bg-red-50 text-[10px] text-red-700"
+                      >
+                        Unsubscribed
+                      </Badge>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 gap-1 text-[11px]"
+                        onClick={() => removeOptOut(o.phone)}
+                      >
+                        <RefreshCw className="size-3" />
+                        Re-enable
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <p className="mt-2 text-[10px] text-slate-400">
+              Only re-enable if the client has explicitly asked to receive SMS
+              again — keep written confirmation for compliance.
+            </p>
           </div>
         </CardContent>
       </Card>

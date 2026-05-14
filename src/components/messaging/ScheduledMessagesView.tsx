@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Clock,
   Calendar,
@@ -64,18 +64,44 @@ function timeUntil(iso: string): string {
   return `in ${d}d`;
 }
 
+type ChannelFilter = "all" | "sms" | "email";
+
+const FILTERS: { key: ChannelFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "sms", label: "SMS" },
+  { key: "email", label: "Email" },
+];
+
 export function ScheduledMessagesView() {
   const { scheduled, cancel } = useScheduledMessages();
+  const [channelFilter, setChannelFilter] = useState<ChannelFilter>("all");
+
+  const counts = useMemo(
+    () => ({
+      all: scheduled.length,
+      sms: scheduled.filter((m) => m.channel === "sms").length,
+      email: scheduled.filter((m) => m.channel === "email").length,
+    }),
+    [scheduled],
+  );
+
+  const filtered = useMemo(
+    () =>
+      channelFilter === "all"
+        ? scheduled
+        : scheduled.filter((m) => m.channel === channelFilter),
+    [scheduled, channelFilter],
+  );
 
   const grouped = useMemo(() => {
     const map = new Map<string, typeof scheduled>();
-    for (const msg of scheduled) {
+    for (const msg of filtered) {
       const key = formatDate(msg.scheduledFor);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(msg);
     }
     return [...map.entries()];
-  }, [scheduled]);
+  }, [filtered]);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -85,6 +111,37 @@ export function ScheduledMessagesView() {
           Messages waiting to send. Edit or cancel any time before they go out.
         </p>
       </div>
+
+      {scheduled.length > 0 && (
+        <div className="mb-4 flex items-center gap-2">
+          {FILTERS.map(({ key, label }) => {
+            const active = channelFilter === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setChannelFilter(key)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
+                  active
+                    ? "border-blue-600 bg-blue-600 text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                )}
+              >
+                {label}
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                    active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500",
+                  )}
+                >
+                  {counts[key]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {scheduled.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
@@ -97,6 +154,15 @@ export function ScheduledMessagesView() {
           <p className="mt-1 text-sm text-slate-400">
             Use the clock icon next to Send in any conversation to schedule a
             message for later.
+          </p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
+          <p className="text-sm font-semibold text-slate-700">
+            No {channelFilter.toUpperCase()} messages scheduled
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            Switch the filter above to see other channels.
           </p>
         </div>
       ) : (

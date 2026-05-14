@@ -40,9 +40,9 @@ export default async function FacilityLayout({
     <LocationContextProviderWrapper>
     <SettingsProviderWrapper>
       <BookingModalProviderWrapper>
-        <SidebarProvider>
+        <SidebarProvider className="min-h-[calc(100vh-64px)]">
           <FacilitySidebar />
-          <SidebarInset className="flex min-h-screen min-w-0 flex-col overflow-x-clip">
+          <SidebarInset className="flex min-h-[calc(100vh-64px)] min-w-0 flex-col overflow-x-clip">
             <header className="from-background to-muted/20 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-linear-to-r px-4 backdrop-blur-sm sm:px-6">
               <div className="flex items-center gap-3">
                 <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors md:hidden" />
@@ -68,9 +68,6 @@ export default async function FacilityLayout({
             </header>
             <main className="min-w-0 flex-1 overflow-x-clip">{children}</main>
             <FacilityMobileBottomNav />
-            <footer className="text-muted-foreground flex items-center justify-center border-t px-4 py-3 text-xs">
-              © 2026 Yipyy. All rights reserved.
-            </footer>
           </SidebarInset>
         </SidebarProvider>
       </BookingModalProviderWrapper>
