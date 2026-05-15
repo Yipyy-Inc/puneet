@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,9 @@ import {
   Wrench,
   CheckCircle2,
   AlertCircle,
+  ExternalLink,
+  Mail,
+  TrendingUp,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -49,6 +52,7 @@ import {
 import {
   groomingProducts,
   groomingPackages,
+  groomingAppointments,
   inventoryOrders,
   getInventoryStats,
   getLowStockProducts,
@@ -148,6 +152,76 @@ function getStockLevel(product: GroomingProduct): "critical" | "low" | "medium" 
   return "good";
 }
 
+// ── Usage tracking ────────────────────────────────────────────────────────────
+//
+// Aggregates units of `productId` deducted by completed appointments whose
+// package lists this product in `productUsage`. Required-only deductions are
+// included (optional add-on usage is treated as "may have been used" and also
+// counted so the manager sees the upper-bound consumption rate).
+function getUsageInRange(productId: string, sinceDate: string): number {
+  let total = 0;
+  for (const apt of groomingAppointments) {
+    if (apt.status !== "completed") continue;
+    if (apt.date < sinceDate) continue;
+    const pkg = groomingPackages.find((p) => p.id === apt.packageId);
+    if (!pkg?.productUsage) continue;
+    for (const usage of pkg.productUsage) {
+      if (usage.productId === productId) total += usage.quantity;
+    }
+  }
+  return total;
+}
+
+function startOfWeekIso(now: Date): string {
+  const d = new Date(now);
+  const day = d.getDay();
+  // Monday-first week (matches the rest of the grooming calendar).
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().split("T")[0];
+}
+
+function startOfMonthIso(now: Date): string {
+  const d = new Date(now.getFullYear(), now.getMonth(), 1);
+  return d.toISOString().split("T")[0];
+}
+
+// ── Supplier reorder helpers ──────────────────────────────────────────────────
+//
+// Builds the pre-filled mailto body so the manager can fire off an order to a
+// supplier without leaving the inventory tab. Subject + body include the
+// product, sku, supplier, and the suggested reorder quantity (max − current).
+function buildSupplierMailto(p: GroomingProduct): string {
+  const suggested = Math.max(0, p.maxStock - p.currentStock);
+  const subject = `Reorder request: ${p.name}${p.sku ? ` (SKU ${p.sku})` : ""}`;
+  const lines = [
+    `Hi ${p.supplier || "team"},`,
+    "",
+    `Please process a reorder for the following:`,
+    "",
+    `- Product: ${p.name}${p.brand ? ` (${p.brand})` : ""}`,
+    p.sku ? `- SKU: ${p.sku}` : null,
+    `- Suggested quantity: ${suggested} ${measurementUnitLabels[p.measurementUnit]}`,
+    `- Current stock: ${p.currentStock} ${measurementUnitLabels[p.measurementUnit]}`,
+    "",
+    "Thanks,",
+    "Doggieville MTL",
+  ].filter(Boolean) as string[];
+  const body = lines.join("\n");
+  return `mailto:${p.supplierEmail ?? ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function reorderFromSupplier(p: GroomingProduct): void {
+  if (p.supplierUrl) {
+    window.open(p.supplierUrl, "_blank", "noopener,noreferrer");
+    return;
+  }
+  if (p.supplierEmail) {
+    window.location.href = buildSupplierMailto(p);
+    return;
+  }
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StockCell({ product }: { product: GroomingProduct }) {
@@ -165,6 +239,38 @@ function StockCell({ product }: { product: GroomingProduct }) {
           Below min ({product.minStock.toLocaleString()} {measurementUnitLabels[product.measurementUnit]})
         </p>
       )}
+    </div>
+  );
+}
+
+function UsageCell({ productId }: { productId: string }) {
+  // Gate behind mount so SSR and first client render match (Date.now() drifts).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) {
+    return (
+      <span className="text-muted-foreground text-xs">—</span>
+    );
+  }
+
+  const now = new Date();
+  const week = getUsageInRange(productId, startOfWeekIso(now));
+  const month = getUsageInRange(productId, startOfMonthIso(now));
+
+  if (week === 0 && month === 0) {
+    return <span className="text-muted-foreground text-xs">No usage yet</span>;
+  }
+
+  return (
+    <div className="text-xs leading-tight">
+      <div>
+        <span className="font-semibold tabular-nums">{week}</span>
+        <span className="text-muted-foreground"> this week</span>
+      </div>
+      <div className="text-muted-foreground">
+        <span className="tabular-nums">{month}</span> this month
+      </div>
     </div>
   );
 }
@@ -200,6 +306,8 @@ const emptyForm = {
   unitPrice: 0,
   costPrice: 0,
   supplier: "",
+  supplierUrl: "",
+  supplierEmail: "",
   notes: "",
   condition: "good" as ToolCondition,
   lastServiced: "",
@@ -257,6 +365,8 @@ export default function InventoryPage() {
       unitPrice: product.unitPrice,
       costPrice: product.costPrice,
       supplier: product.supplier,
+      supplierUrl: product.supplierUrl ?? "",
+      supplierEmail: product.supplierEmail ?? "",
       notes: product.notes ?? "",
       condition: product.condition ?? "good",
       lastServiced: product.lastServiced ?? "",
@@ -355,9 +465,34 @@ export default function InventoryPage() {
       render: (p) => <UsedInCell productId={p.id} />,
     },
     {
+      key: "usageThisPeriod",
+      label: "Usage",
+      icon: TrendingUp,
+      defaultVisible: true,
+      render: (p) => <UsageCell productId={p.id} />,
+    },
+    {
       key: "supplier",
       label: "Supplier",
       defaultVisible: true,
+      render: (p) => (
+        <div className="flex flex-col text-xs leading-tight">
+          <span>{p.supplier}</span>
+          {(p.supplierUrl || p.supplierEmail) && (
+            <span className="text-muted-foreground inline-flex items-center gap-1">
+              {p.supplierUrl && <ExternalLink className="size-3" />}
+              {!p.supplierUrl && p.supplierEmail && <Mail className="size-3" />}
+              <span className="truncate">
+                {p.supplierUrl
+                  ? "Direct reorder"
+                  : p.supplierEmail
+                    ? "Email reorder"
+                    : ""}
+              </span>
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       key: "costPrice",
@@ -981,6 +1116,45 @@ export default function InventoryPage() {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="supplierUrl">
+                  Supplier Reorder URL{" "}
+                  <span className="text-muted-foreground text-[10px] font-normal">
+                    (optional)
+                  </span>
+                </Label>
+                <Input
+                  id="supplierUrl"
+                  type="url"
+                  placeholder="https://supplier.com/account/reorder"
+                  value={formData.supplierUrl}
+                  onChange={(e) => updateForm("supplierUrl", e.target.value)}
+                />
+                <p className="text-muted-foreground text-[11px]">
+                  Reorder action opens this page in a new tab.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="supplierEmail">
+                  Supplier Email{" "}
+                  <span className="text-muted-foreground text-[10px] font-normal">
+                    (optional)
+                  </span>
+                </Label>
+                <Input
+                  id="supplierEmail"
+                  type="email"
+                  placeholder="orders@supplier.com"
+                  value={formData.supplierEmail}
+                  onChange={(e) => updateForm("supplierEmail", e.target.value)}
+                />
+                <p className="text-muted-foreground text-[11px]">
+                  Used as fallback when no URL is set — opens pre-filled email.
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="notes">Notes</Label>
               <Textarea
@@ -1271,6 +1445,7 @@ function ActionsMenu({
   onOrder: (p: GroomingProduct) => void;
   onDelete: (p: GroomingProduct) => void;
 }) {
+  const hasSupplierLink = !!product.supplierUrl || !!product.supplierEmail;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -1283,9 +1458,23 @@ function ActionsMenu({
           <Edit className="mr-2 size-4" />
           Edit
         </DropdownMenuItem>
+        {hasSupplierLink && (
+          <DropdownMenuItem onClick={() => reorderFromSupplier(product)}>
+            {product.supplierUrl ? (
+              <ExternalLink className="mr-2 size-4" />
+            ) : (
+              <Mail className="mr-2 size-4" />
+            )}
+            {product.supplierUrl
+              ? "Reorder from supplier"
+              : "Email supplier to reorder"}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={() => onOrder(product)}>
           <ShoppingCart className="mr-2 size-4" />
-          {product.itemType === "tool" ? "Order Replacement" : "Reorder"}
+          {product.itemType === "tool"
+            ? "Order Replacement"
+            : "Create internal order"}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onDelete(product)} className="text-red-600">
           <Trash2 className="mr-2 size-4" />

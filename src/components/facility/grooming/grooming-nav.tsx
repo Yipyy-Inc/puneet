@@ -14,14 +14,41 @@ import {
   DollarSign,
   Building2,
   ClipboardList,
+  Route,
+  Hourglass,
+  Activity,
 } from "lucide-react";
+import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 
-const tabs = [
+type Tab = {
+  name: string;
+  href: string;
+  icon: typeof Calendar;
+  exact?: boolean;
+  matchPaths?: string[];
+};
+
+const tabs: Tab[] = [
   {
     name: "Calendar",
     href: "/facility/dashboard/services/grooming",
     icon: Calendar,
     exact: true,
+  },
+  {
+    name: "Route Planner",
+    href: "/facility/dashboard/services/grooming/route-planner",
+    icon: Route,
+  },
+  {
+    name: "Live Tracking",
+    href: "/facility/dashboard/services/grooming/live-tracking",
+    icon: Activity,
+  },
+  {
+    name: "Waitlist",
+    href: "/facility/dashboard/services/grooming/waitlist",
+    icon: Hourglass,
   },
   {
     name: "Stations",
@@ -76,10 +103,17 @@ const tabs = [
 
 export function GroomingNav() {
   const pathname = usePathname();
+  const { enabled: mobileEnabled } = useMobileGrooming();
+
+  const visibleTabs = tabs.filter((tab) => {
+    if (tab.name === "Route Planner") return mobileEnabled;
+    if (tab.name === "Live Tracking") return mobileEnabled;
+    return true;
+  });
 
   return (
     <nav className="flex gap-1 overflow-x-auto px-6">
-      {tabs.map((tab) => {
+      {visibleTabs.map((tab) => {
         const isActive = tab.matchPaths
           ? tab.matchPaths.some((p) => pathname.startsWith(p))
           : tab.exact

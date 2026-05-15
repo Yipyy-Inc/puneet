@@ -125,6 +125,54 @@ export function calculateAllStylistsPerformance(
   return metricsMap;
 }
 
+export type StylistThirtyDayStats = {
+  completedCount: number;
+  totalRevenue: number;
+  averageRating: number;
+  ratedCount: number;
+};
+
+/**
+ * Last 30-day performance summary used on the groomer profile card. Rating
+ * is sourced from the appointment rating field (stand-in for report cards
+ * until that pipeline lands).
+ */
+export function calculateStylistThirtyDayStats(
+  stylistId: string,
+  appointments: GroomingAppointment[] = groomingAppointments,
+  now: Date = new Date(),
+): StylistThirtyDayStats {
+  const cutoff = new Date(now);
+  cutoff.setDate(cutoff.getDate() - 30);
+  const cutoffStr = cutoff.toISOString().split("T")[0];
+
+  const recent = appointments.filter(
+    (apt) =>
+      apt.stylistId === stylistId &&
+      apt.status === "completed" &&
+      apt.date >= cutoffStr,
+  );
+
+  const totalRevenue = recent.reduce((sum, a) => sum + a.totalPrice, 0);
+
+  // Per-appointment ratings aren't in the mock data yet; aggregate from any
+  // numeric `rating` we can find on the appointment shape.
+  const ratings = recent
+    .map((a) => (a as unknown as { rating?: number }).rating)
+    .filter((r): r is number => typeof r === "number" && r > 0);
+  const averageRating =
+    ratings.length > 0
+      ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+      : 0;
+
+  return {
+    completedCount: recent.length,
+    totalRevenue,
+    averageRating,
+    ratedCount: ratings.length,
+  };
+}
+
 /**
  * Get revenue for a specific date range
  */

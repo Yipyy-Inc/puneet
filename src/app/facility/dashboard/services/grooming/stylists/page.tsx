@@ -52,12 +52,17 @@ import {
   stylists,
   stylistAvailability,
   groomingAppointments,
+  groomingPackages,
 } from "@/data/grooming";
 import type { StylistCapacity, StylistSkillLevel } from "@/types/grooming";
 import { facilityStaff } from "@/data/facility-staff";
 import type { StaffProfile } from "@/types/facility-staff";
 import { toast } from "sonner";
-import { calculateStylistPerformance } from "@/lib/stylist-performance";
+import {
+  calculateStylistPerformance,
+  calculateStylistThirtyDayStats,
+} from "@/lib/stylist-performance";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type MergedStylist = {
   staffId: string;
@@ -77,10 +82,13 @@ type MergedStylist = {
   capacity: StylistCapacity;
   visibleOnline: boolean;
   hasGroomingProfile: boolean;
+  calendarColor?: string;
+  qualifiedPackageIds: string[];
 };
 
 const defaultCapacity: StylistCapacity = {
   maxDailyAppointments: 6,
+  maxWeeklyAppointments: 30,
   maxConcurrentAppointments: 1,
   preferredPetSizes: ["small", "medium"],
   skillLevel: "junior",
@@ -88,6 +96,29 @@ const defaultCapacity: StylistCapacity = {
   canHandleAnxious: false,
   canHandleAggressive: false,
 };
+
+// Stable palette used when a stylist has no `calendarColor` set yet — same
+// hue family as the existing day-view service palette.
+const GROOMER_FALLBACK_PALETTE = [
+  "#ec4899", // pink
+  "#0ea5e9", // sky
+  "#10b981", // emerald
+  "#a855f7", // purple
+  "#f97316", // orange
+  "#6366f1", // indigo
+  "#14b8a6", // teal
+  "#eab308", // yellow
+];
+
+function fallbackColorFor(staffId: string): string {
+  let hash = 0;
+  for (let i = 0; i < staffId.length; i++) {
+    hash = (hash * 31 + staffId.charCodeAt(i)) | 0;
+  }
+  return GROOMER_FALLBACK_PALETTE[
+    Math.abs(hash) % GROOMER_FALLBACK_PALETTE.length
+  ];
+}
 
 function buildMergedStylists(
   staffList: StaffProfile[],
@@ -113,6 +144,8 @@ function buildMergedStylists(
       capacity: profile?.capacity ?? defaultCapacity,
       visibleOnline: profile?.visibleOnline ?? false,
       hasGroomingProfile: !!profile,
+      calendarColor: profile?.calendarColor,
+      qualifiedPackageIds: profile?.qualifiedPackageIds ?? [],
     };
   });
 }
@@ -140,11 +173,14 @@ export default function StylistsPage() {
     bio: "",
     visibleOnline: true,
     maxDailyAppointments: 6,
+    maxWeeklyAppointments: 30,
     maxConcurrentAppointments: 1,
     skillLevel: "junior" as StylistSkillLevel,
     canHandleMatted: false,
     canHandleAnxious: false,
     canHandleAggressive: false,
+    calendarColor: "#ec4899",
+    qualifiedPackageIds: [] as string[],
   });
 
   const [groomerVisibility, setGroomerVisibility] = useState<
@@ -193,6 +229,76 @@ export default function StylistsPage() {
     return metricsMap;
   }, [mergedStylists]);
 
+  const thirtyDayStats = useMemo(() => {
+    const m = new Map<string, ReturnType<typeof calculateStylistThirtyDayStats>>();
+    mergedStylists.forEach((g) => {
+      if (g.stylistId) {
+        m.set(
+          g.staffId,
+          calculateStylistThirtyDayStats(g.stylistId, groomingAppointments),
+        );
+      }
+    });
+    return m;
+  }, [mergedStylists]);
+
+  // Quick read of this stylist's weekly availability for the inline schedule
+  // summary. Mirrors the data shape used by the Manage Availability modal.
+  const scheduleSummaries = useMemo(() => {
+    const map = new Map<string, string>();
+    const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    mergedStylists.forEach((g) => {
+      if (!g.stylistId) return;
+      const slots = stylistAvailability.filter(
+        (a) => a.stylistId === g.stylistId && a.isAvailable,
+      );
+      if (slots.length === 0) {
+        map.set(g.staffId, "No schedule set");
+        return;
+      }
+      // Group contiguous days that share the same hours into ranges.
+      const byDay = slots
+        .map((s) => ({
+          day: s.dayOfWeek,
+          start: s.startTime,
+          end: s.endTime,
+        }))
+        .sort((a, b) => a.day - b.day);
+      const groups: { days: number[]; start: string; end: string }[] = [];
+      byDay.forEach((d) => {
+        const last = groups[groups.length - 1];
+        if (
+          last &&
+          last.start === d.start &&
+          last.end === d.end &&
+          last.days[last.days.length - 1] === d.day - 1
+        ) {
+          last.days.push(d.day);
+        } else {
+          groups.push({ days: [d.day], start: d.start, end: d.end });
+        }
+      });
+      map.set(
+        g.staffId,
+        groups
+          .map((g) => {
+            const range =
+              g.days.length === 1
+                ? DAY_SHORT[g.days[0]]
+                : `${DAY_SHORT[g.days[0]]}–${DAY_SHORT[g.days[g.days.length - 1]]}`;
+            return `${range} ${g.start}–${g.end}`;
+          })
+          .join(" · "),
+      );
+    });
+    return map;
+  }, [mergedStylists]);
+
+  const activePackages = useMemo(
+    () => groomingPackages.filter((p) => p.isActive),
+    [],
+  );
+
   const activeStylists = mergedStylists.filter((s) => s.status === "active").length;
   const totalAppointments = mergedStylists.reduce(
     (sum, s) => sum + s.totalAppointments,
@@ -231,11 +337,14 @@ export default function StylistsPage() {
       bio: groomer.bio,
       visibleOnline: groomerVisibility[groomer.staffId] ?? groomer.visibleOnline,
       maxDailyAppointments: groomer.capacity.maxDailyAppointments,
+      maxWeeklyAppointments: groomer.capacity.maxWeeklyAppointments ?? 30,
       maxConcurrentAppointments: groomer.capacity.maxConcurrentAppointments,
       skillLevel: groomer.capacity.skillLevel,
       canHandleMatted: groomer.capacity.canHandleMatted,
       canHandleAnxious: groomer.capacity.canHandleAnxious,
       canHandleAggressive: groomer.capacity.canHandleAggressive,
+      calendarColor: groomer.calendarColor ?? fallbackColorFor(groomer.staffId),
+      qualifiedPackageIds: groomer.qualifiedPackageIds,
     });
     setIsEditModalOpen(true);
   };
@@ -350,6 +459,151 @@ export default function StylistsPage() {
         groomer.yearsExperience > 0
           ? `${groomer.yearsExperience} years`
           : "—",
+    },
+    {
+      key: "skillLevel",
+      label: "Skill Level",
+      icon: Award,
+      defaultVisible: true,
+      render: (groomer) => {
+        const level = groomer.capacity.skillLevel;
+        const cls: Record<typeof level, string> = {
+          junior: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+          intermediate:
+            "bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300",
+          senior:
+            "bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300",
+          master:
+            "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-300",
+        };
+        return (
+          <Badge className={`capitalize ${cls[level]} border-0`}>{level}</Badge>
+        );
+      },
+    },
+    {
+      key: "capacity",
+      label: "Booking Capacity",
+      icon: Calendar,
+      defaultVisible: true,
+      render: (groomer) => {
+        const weekly = groomer.capacity.maxWeeklyAppointments;
+        return (
+          <div className="text-sm leading-tight">
+            <div>
+              <span className="font-medium">
+                {groomer.capacity.maxDailyAppointments}
+              </span>
+              <span className="text-muted-foreground"> / day</span>
+            </div>
+            <div className="text-muted-foreground text-xs">
+              {weekly ? `${weekly} / week` : "no weekly cap"}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: "qualifiedServices",
+      label: "Qualified Services",
+      icon: Scissors,
+      defaultVisible: true,
+      render: (groomer) => {
+        const ids = groomer.qualifiedPackageIds;
+        if (ids.length === 0) {
+          return (
+            <span className="text-muted-foreground text-xs italic">
+              Not configured
+            </span>
+          );
+        }
+        const names = ids
+          .map((id) => activePackages.find((p) => p.id === id)?.name)
+          .filter(Boolean) as string[];
+        return (
+          <div
+            className="flex max-w-xs flex-wrap gap-1"
+            title={names.join(", ")}
+          >
+            {names.slice(0, 2).map((n) => (
+              <Badge key={n} variant="secondary" className="text-xs">
+                {n}
+              </Badge>
+            ))}
+            {names.length > 2 && (
+              <Badge variant="outline" className="text-xs">
+                +{names.length - 2}
+              </Badge>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: "workingHours",
+      label: "Working Hours",
+      icon: Clock,
+      defaultVisible: true,
+      render: (groomer) => (
+        <span className="text-muted-foreground text-xs">
+          {scheduleSummaries.get(groomer.staffId) ?? "No schedule set"}
+        </span>
+      ),
+    },
+    {
+      key: "calendarColor",
+      label: "Calendar Color",
+      defaultVisible: true,
+      render: (groomer) => {
+        const color = groomer.calendarColor ?? fallbackColorFor(groomer.staffId);
+        return (
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-block size-5 rounded-md ring-2 ring-background shadow-sm"
+              style={{ backgroundColor: color }}
+              aria-label={`Calendar color ${color}`}
+            />
+            <span className="text-muted-foreground text-[10px] font-mono uppercase">
+              {color}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      key: "perf30",
+      label: "Performance (30d)",
+      icon: TrendingDown,
+      defaultVisible: true,
+      render: (groomer) => {
+        const s = thirtyDayStats.get(groomer.staffId);
+        if (!s) {
+          return <span className="text-muted-foreground text-xs">—</span>;
+        }
+        const ratingDisplay =
+          s.ratedCount > 0 ? s.averageRating.toFixed(1) : groomer.rating > 0
+            ? groomer.rating.toFixed(1)
+            : "—";
+        return (
+          <div className="text-xs leading-tight">
+            <div>
+              <span className="font-semibold tabular-nums">
+                {s.completedCount}
+              </span>
+              <span className="text-muted-foreground"> done</span>
+              <span className="text-muted-foreground/60"> · </span>
+              <span className="inline-flex items-center gap-0.5">
+                <Star className="size-3 fill-yellow-400 text-yellow-400" />
+                <span className="font-medium">{ratingDisplay}</span>
+              </span>
+            </div>
+            <div className="text-muted-foreground">
+              ${s.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              <span className="text-muted-foreground/70"> revenue</span>
+            </div>
+          </div>
+        );
+      },
     },
     {
       key: "rating",
@@ -739,11 +993,9 @@ export default function StylistsPage() {
                 rows={3}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="maxDailyAppointments">
-                  Max Daily Appointments
-                </Label>
+                <Label htmlFor="maxDailyAppointments">Daily Cap</Label>
                 <Input
                   id="maxDailyAppointments"
                   type="number"
@@ -757,9 +1009,21 @@ export default function StylistsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="maxConcurrentAppointments">
-                  Max Concurrent
-                </Label>
+                <Label htmlFor="maxWeeklyAppointments">Weekly Cap</Label>
+                <Input
+                  id="maxWeeklyAppointments"
+                  type="number"
+                  value={formData.maxWeeklyAppointments}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      maxWeeklyAppointments: parseInt(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maxConcurrentAppointments">Concurrent</Label>
                 <Input
                   id="maxConcurrentAppointments"
                   type="number"
@@ -772,6 +1036,71 @@ export default function StylistsPage() {
                     })
                   }
                 />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="calendarColor">Calendar Color</Label>
+              <div className="flex items-center gap-3">
+                <input
+                  id="calendarColor"
+                  type="color"
+                  value={formData.calendarColor}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      calendarColor: e.target.value,
+                    })
+                  }
+                  className="h-9 w-14 cursor-pointer rounded-md border bg-transparent p-0.5"
+                />
+                <span className="text-muted-foreground text-xs font-mono uppercase">
+                  {formData.calendarColor}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  Used on the day-view calendar to identify this groomer's blocks.
+                </span>
+              </div>
+            </div>
+            <div className="space-y-2 rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                <Label>Qualified Services</Label>
+                <span className="text-muted-foreground text-xs">
+                  {formData.qualifiedPackageIds.length} of {activePackages.length}
+                </span>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Only the services checked below will offer this groomer as an
+                assignment option in booking.
+              </p>
+              <div className="grid max-h-48 grid-cols-1 gap-1.5 overflow-y-auto sm:grid-cols-2">
+                {activePackages.map((p) => {
+                  const checked = formData.qualifiedPackageIds.includes(p.id);
+                  return (
+                    <label
+                      key={p.id}
+                      htmlFor={`pkg-${p.id}`}
+                      className="hover:bg-muted/40 flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm"
+                    >
+                      <Checkbox
+                        id={`pkg-${p.id}`}
+                        checked={checked}
+                        onCheckedChange={(v) => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            qualifiedPackageIds: v
+                              ? Array.from(
+                                  new Set([...prev.qualifiedPackageIds, p.id]),
+                                )
+                              : prev.qualifiedPackageIds.filter(
+                                  (id) => id !== p.id,
+                                ),
+                          }));
+                        }}
+                      />
+                      <span className="truncate">{p.name}</span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
             <div className="space-y-3 rounded-lg border p-4">

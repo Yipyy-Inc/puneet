@@ -187,6 +187,7 @@ export function BookingModal({
   onOpenChange,
   clients,
   facilityId,
+  facilityName,
   onCreateBooking,
   preSelectedClientId,
   preSelectedPetId,
@@ -313,6 +314,14 @@ export function BookingModal({
       return updated;
     });
   }, []);
+
+  // Quick-create state (declared before prevOpen so the close-side reset
+  // below can clear it). The handler callbacks live further down with the
+  // other action handlers.
+  const [draftClients, setDraftClients] = useState<Client[]>([]);
+  const [addedPets, setAddedPets] = useState<Record<number, Pet[]>>({});
+  const nextDraftIdRef = useRef(-1);
+
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
@@ -327,6 +336,10 @@ export function BookingModal({
       setEstimateSent(false);
       setGeneratedEstimateId(null);
       setEstimatePricingSnapshot(null);
+      // Reset quick-create drafts so a re-opened wizard starts clean.
+      setDraftClients([]);
+      setAddedPets({});
+      nextDraftIdRef.current = -1;
     }
   }
 
@@ -399,6 +412,86 @@ export function BookingModal({
   );
   const [selectedPetIds, setSelectedPetIds] = useState<number[]>(
     preSelectedPetId ? [preSelectedPetId] : [],
+  );
+
+  // Quick-create callbacks — state is declared earlier (above prevOpen) so
+  // the close-side reset can clear it. Drafts use negative ids to avoid
+  // colliding with real records; the parent caller decides whether to
+  // persist them after submission.
+  const allocateDraftId = useCallback(() => {
+    const id = nextDraftIdRef.current;
+    nextDraftIdRef.current -= 1;
+    return id;
+  }, []);
+
+  const handleAddClient = useCallback(
+    (draft: { name: string; phone: string; email: string }): number => {
+      const id = allocateDraftId();
+      const trimmedPhone = draft.phone.trim();
+      const newClient: Client = {
+        id,
+        name: draft.name.trim(),
+        email: draft.email.trim(),
+        phone: trimmedPhone || undefined,
+        status: "Active",
+        facility: facilityName,
+        pets: [],
+        additionalContacts: [],
+      };
+      setDraftClients((prev) => [newClient, ...prev]);
+      return id;
+    },
+    [allocateDraftId, facilityName],
+  );
+
+  const handleAddPet = useCallback(
+    (
+      clientId: number,
+      draft: {
+        name: string;
+        breed: string;
+        size: string;
+        coatType?: string;
+        ageMonths?: number;
+        weight?: number;
+      },
+    ): number => {
+      const id = allocateDraftId();
+      const newPet: Pet = {
+        id,
+        name: draft.name.trim(),
+        type: "Dog",
+        breed: draft.breed.trim(),
+        // Age stored as years (Pet schema) — convert from months input.
+        age:
+          draft.ageMonths !== undefined && draft.ageMonths > 0
+            ? Math.round((draft.ageMonths / 12) * 10) / 10
+            : 0,
+        weight: draft.weight ?? 0,
+        color: "",
+        microchip: "",
+        allergies: "",
+        specialNeeds: "",
+        coatType: (draft.coatType as Pet["coatType"]) || undefined,
+      };
+      setDraftClients((prev) => {
+        const draft = prev.find((c) => c.id === clientId);
+        if (!draft) return prev;
+        return prev.map((c) =>
+          c.id === clientId ? { ...c, pets: [...c.pets, newPet] } : c,
+        );
+      });
+      // For existing (prop) clients, accumulate in addedPets keyed by id.
+      const isDraftClient = draftClients.some((c) => c.id === clientId);
+      if (!isDraftClient) {
+        setAddedPets((prev) => ({
+          ...prev,
+          [clientId]: [...(prev[clientId] ?? []), newPet],
+        }));
+      }
+      return id;
+    },
+    [allocateDraftId, draftClients],
   );
 
   // Service selection state
@@ -635,21 +728,33 @@ export function BookingModal({
     ],
   );
 
+  // Combined view that folds quick-created drafts into the prop list so the
+  // rest of the wizard (filtered list, selection lookup, room logic) treats
+  // them as first-class clients/pets.
+  const mergedClients = useMemo<Client[]>(() => {
+    const augmented = clients.map((c) => {
+      const extras = addedPets[c.id];
+      if (!extras || extras.length === 0) return c;
+      return { ...c, pets: [...c.pets, ...extras] };
+    });
+    return [...draftClients, ...augmented];
+  }, [clients, draftClients, addedPets]);
+
   // Filtered clients based on search
   const filteredClients = useMemo(() => {
-    if (!searchQuery.trim()) return clients;
+    if (!searchQuery.trim()) return mergedClients;
     const query = searchQuery.toLowerCase();
-    return clients.filter(
+    return mergedClients.filter(
       (client) =>
         client.name.toLowerCase().includes(query) ||
         client.email.toLowerCase().includes(query) ||
         client.phone?.includes(query),
     );
-  }, [clients, searchQuery]);
+  }, [mergedClients, searchQuery]);
 
   const selectedClient = useMemo(() => {
-    return clients.find((c) => c.id === selectedClientId);
-  }, [clients, selectedClientId]);
+    return mergedClients.find((c) => c.id === selectedClientId);
+  }, [mergedClients, selectedClientId]);
 
   const petHasValidEvaluation = useCallback((pet: Pet) => {
     const evals: Evaluation[] = pet.evaluations ?? [];
@@ -2637,6 +2742,8 @@ export function BookingModal({
                     setGuestPetNames={setGuestPetNamesSynced}
                     guestPetWeights={guestPetWeights}
                     setGuestPetWeights={setGuestPetWeights}
+                    onAddClient={handleAddClient}
+                    onAddPet={handleAddPet}
                   />
                 )}
                 {displayedSteps[currentStep]?.id === "details" && (
