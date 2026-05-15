@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useId } from "react";
+import { useState, useId, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,11 @@ import {
   Star,
   AlertCircle,
   RefreshCcw,
+  AlertTriangle,
+  Filter,
+  Camera,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   getTemplatesForModule,
   addTemplate,
@@ -52,6 +56,11 @@ import {
   removeTemplate,
 } from "@/data/task-templates";
 import type { TaskTemplate } from "@/types/task";
+import {
+  buildTodayTasks,
+  isTaskPastDue,
+  type TodayTask,
+} from "@/lib/today-tasks";
 
 // ─────────────────────────────────────────────
 // Types
@@ -89,32 +98,8 @@ const ASSIGN_LABELS: Record<AssignTo, string> = {
   specific_role: "Specific role",
 };
 
-// Mock "today's tasks" from templates — in production these come from generated-tasks.ts
-function buildTodayTasks(templates: TaskTemplate[]) {
-  return templates
-    .filter((t) => t.autoCreate)
-    .map((t, i) => ({
-      id: `today-${t.id}-${i}`,
-      templateId: t.id,
-      name: t.name,
-      category: t.category,
-      assignedTo: t.assignTo === "booking_staff" ? "Alex R." : "Any Staff",
-      scheduledAt:
-        t.timing.type === "custom_time" && t.timing.customTime
-          ? t.timing.customTime
-          : t.timing.type === "before_start"
-            ? "08:45 AM"
-            : t.timing.type === "at_start"
-              ? "09:00 AM"
-              : t.timing.type === "at_end"
-                ? "05:00 PM"
-                : t.timing.type === "after_end"
-                  ? "05:30 PM"
-                  : "All day",
-      status: (["pending", "in_progress", "completed"] as const)[i % 3],
-      isRequired: t.isRequired,
-    }));
-}
+// buildTodayTasks is now imported from @/lib/today-tasks so the Calendar
+// sidebar's "Missed" tile can derive its count from the same source.
 
 // ─────────────────────────────────────────────
 // Empty template for the form
@@ -566,7 +551,14 @@ function TemplateRow({ template, isDefault, onEdit, onDelete }: TemplateRowProps
 // Today's task row (operational view)
 // ─────────────────────────────────────────────
 
-type TodayTask = ReturnType<typeof buildTodayTasks>[number];
+/**
+ * Tasks tied to report-card photo capture get a dedicated camera flow instead
+ * of the generic Done button. Detected by name so any future "Photo for…"
+ * template is picked up automatically.
+ */
+function isPhotoTask(task: TodayTask): boolean {
+  return /photo/i.test(task.name);
+}
 
 const STATUS_CFG = {
   pending: {
@@ -587,19 +579,30 @@ const STATUS_CFG = {
     icon: CheckCircle2,
     color: "text-green-500",
   },
+  missed: {
+    label: "Missed",
+    variant: "destructive" as const,
+    icon: AlertTriangle,
+    color: "text-red-600",
+  },
 };
 
 function TodayTaskRow({
   task,
   onComplete,
+  photoDataUrl,
+  onRequestPhoto,
 }: {
   task: TodayTask;
   onComplete: () => void;
+  photoDataUrl?: string;
+  onRequestPhoto?: () => void;
 }) {
   const meta = CATEGORY_META[task.category as Category] ?? CATEGORY_META.custom;
   const Icon = meta.icon;
   const statusCfg = STATUS_CFG[task.status];
   const StatusIcon = statusCfg.icon;
+  const photoTask = isPhotoTask(task);
 
   return (
     <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
@@ -615,6 +618,15 @@ function TodayTaskRow({
             {task.isRequired && (
               <AlertCircle className="text-destructive size-3.5" />
             )}
+            {photoTask && photoDataUrl && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                title="Photo attached to report card"
+              >
+                <Camera className="size-3" />
+                Added to report card
+              </span>
+            )}
           </div>
           <div className="text-muted-foreground flex items-center gap-2 text-xs">
             <span className="capitalize">{meta.label}</span>
@@ -622,11 +634,25 @@ function TodayTaskRow({
             <span>{task.assignedTo}</span>
             <span>·</span>
             <span>{task.scheduledAt}</span>
+            {task.bookingLabel && (
+              <>
+                <span>·</span>
+                <span className="truncate">{task.bookingLabel}</span>
+              </>
+            )}
           </div>
         </div>
       </div>
 
       <div className="flex items-center gap-2">
+        {photoTask && photoDataUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={photoDataUrl}
+            alt="Report card photo"
+            className="size-9 shrink-0 rounded-md object-cover ring-1 ring-border"
+          />
+        )}
         <div className={`flex items-center gap-1 text-xs ${statusCfg.color}`}>
           <StatusIcon className="size-3.5" />
           <span className="hidden sm:inline">{statusCfg.label}</span>
@@ -634,14 +660,132 @@ function TodayTaskRow({
         <Badge variant={statusCfg.variant} className="hidden sm:flex">
           {statusCfg.label}
         </Badge>
-        {task.status !== "completed" && (
-          <Button size="sm" variant="outline" onClick={onComplete}>
-            <CheckCircle2 className="mr-1.5 size-3.5" />
-            Done
+        {task.status !== "completed" &&
+          (photoTask ? (
+            <Button
+              size="sm"
+              className="bg-pink-600 text-white hover:bg-pink-700"
+              onClick={onRequestPhoto}
+            >
+              <Camera className="mr-1.5 size-3.5" />
+              Upload Photo
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline" onClick={onComplete}>
+              <CheckCircle2 className="mr-1.5 size-3.5" />
+              Done
+            </Button>
+          ))}
+        {task.status === "completed" && photoTask && !photoDataUrl && (
+          <Button size="sm" variant="outline" onClick={onRequestPhoto}>
+            <Camera className="mr-1.5 size-3.5" />
+            Add Photo
           </Button>
         )}
       </div>
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Photo upload dialog — fires from photo tasks
+// ─────────────────────────────────────────────
+
+function PhotoUploadDialog({
+  open,
+  onOpenChange,
+  task,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  task: TodayTask | null;
+  onSave: (dataUrl: string, caption: string) => void;
+}) {
+  const [dataUrl, setDataUrl] = useState<string>("");
+  const [caption, setCaption] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      setDataUrl("");
+      setCaption("");
+    }
+  }, [open]);
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setDataUrl(String(reader.result ?? ""));
+    reader.readAsDataURL(file);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Camera className="size-4 text-pink-500" />
+            Add Photo to Report Card
+          </DialogTitle>
+        </DialogHeader>
+        {task && (
+          <div className="space-y-3 py-2">
+            <div className="rounded-lg border bg-muted/40 px-3 py-2 text-xs">
+              <p className="font-medium">{task.name}</p>
+              {task.bookingLabel && (
+                <p className="text-muted-foreground mt-0.5">
+                  {task.bookingLabel}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label className="text-xs">Photo</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFile}
+                className="mt-1 cursor-pointer text-sm"
+              />
+              <p className="text-muted-foreground mt-1 text-[11px]">
+                Photo will be attached to this booking&apos;s report card.
+              </p>
+            </div>
+            {dataUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={dataUrl}
+                alt="Preview"
+                className="max-h-48 w-full rounded-lg border object-cover"
+              />
+            )}
+            <div>
+              <Label className="text-xs">Caption (optional)</Label>
+              <Input
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="e.g. After the trim"
+                className="mt-1 text-sm"
+              />
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!dataUrl}
+            onClick={() => onSave(dataUrl, caption)}
+            className="bg-pink-600 text-white hover:bg-pink-700"
+          >
+            <Camera className="mr-1.5 size-4" />
+            Attach Photo
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -660,9 +804,34 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
   );
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<TaskTemplate | undefined>();
-  const [todayTasks, setTodayTasks] = useState(() =>
+  const [todayTasks, setTodayTasks] = useState<TodayTask[]>(() =>
     buildTodayTasks(getTemplatesForModule(moduleId)),
   );
+  const [groomerFilter, setGroomerFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [bookingFilter, setBookingFilter] = useState<string>("all");
+  // taskId → captured photo data URL (mock; in production this writes to the
+  // report card record for the booking and the data URL becomes an asset id).
+  const [taskPhotos, setTaskPhotos] = useState<Record<string, string>>({});
+  const [photoUploadFor, setPhotoUploadFor] = useState<TodayTask | null>(null);
+
+  // Auto-mark tasks as "missed" when their scheduled time passes without
+  // being started or completed. Re-checks every minute while the page is
+  // open so the board stays accurate without a manual refresh.
+  useEffect(() => {
+    function sweep() {
+      setTodayTasks((prev) =>
+        prev.map((t) =>
+          t.status === "pending" && isTaskPastDue(t.scheduledAt)
+            ? { ...t, status: "missed" }
+            : t,
+        ),
+      );
+    }
+    sweep();
+    const id = setInterval(sweep, 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Which templates are default (ship with the app)
   const defaultIds = new Set(
@@ -709,9 +878,57 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
     );
   }
 
+  function handlePhotoSave(dataUrl: string, caption: string) {
+    const task = photoUploadFor;
+    if (!task) return;
+    setTaskPhotos((prev) => ({ ...prev, [task.id]: dataUrl }));
+    setTodayTasks((prev) =>
+      prev.map((t) =>
+        t.id === task.id ? { ...t, status: "completed" as const } : t,
+      ),
+    );
+    toast.success(
+      `Photo added to ${task.bookingLabel ?? "the booking"}'s report card`,
+      caption ? { description: `“${caption}”` } : undefined,
+    );
+    setPhotoUploadFor(null);
+  }
+
   const completedCount = todayTasks.filter((t) => t.status === "completed").length;
   const pendingCount = todayTasks.filter((t) => t.status === "pending").length;
   const inProgressCount = todayTasks.filter((t) => t.status === "in_progress").length;
+  const missedCount = todayTasks.filter((t) => t.status === "missed").length;
+
+  // Build filter options from the loaded task set so we never show stale
+  // names that have been removed.
+  const groomerOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of todayTasks) set.add(t.assignedTo);
+    return Array.from(set).sort();
+  }, [todayTasks]);
+
+  const bookingOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of todayTasks) {
+      if (t.bookingLabel) set.add(t.bookingLabel);
+    }
+    return Array.from(set).sort();
+  }, [todayTasks]);
+
+  const filteredTasks = useMemo(() => {
+    return todayTasks.filter((t) => {
+      if (groomerFilter !== "all" && t.assignedTo !== groomerFilter) return false;
+      if (statusFilter !== "all" && t.status !== statusFilter) return false;
+      if (bookingFilter !== "all" && t.bookingLabel !== bookingFilter)
+        return false;
+      return true;
+    });
+  }, [todayTasks, groomerFilter, statusFilter, bookingFilter]);
+
+  const activeFilterCount =
+    (groomerFilter !== "all" ? 1 : 0) +
+    (statusFilter !== "all" ? 1 : 0) +
+    (bookingFilter !== "all" ? 1 : 0);
 
   const byCategory = templates.reduce<Record<string, TaskTemplate[]>>(
     (acc, t) => {
@@ -830,7 +1047,7 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
         {/* ── Today tab ── */}
         <TabsContent value="today" className="mt-4 space-y-4">
           {/* Stats */}
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardContent className="pt-5">
                 <div className="flex items-center justify-between">
@@ -870,10 +1087,35 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
                 </div>
               </CardContent>
             </Card>
+            <Card
+              className={
+                missedCount > 0
+                  ? "border-red-200 bg-red-50/40 dark:border-red-900 dark:bg-red-950/20"
+                  : ""
+              }
+            >
+              <CardContent className="pt-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-muted-foreground text-sm">Missed</p>
+                    <p
+                      className={`text-2xl font-bold ${
+                        missedCount > 0 ? "text-red-600 dark:text-red-400" : ""
+                      }`}
+                    >
+                      {missedCount}
+                    </p>
+                  </div>
+                  <div className="flex size-11 items-center justify-center rounded-full bg-red-500/10">
+                    <AlertTriangle className="size-5 text-red-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="space-y-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <ClipboardList className="size-5" />
@@ -888,6 +1130,75 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
                   Refresh
                 </Button>
               </div>
+
+              {/* Filter row */}
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Filter className="size-3.5" />
+                  Filter
+                </div>
+                <Select
+                  value={groomerFilter}
+                  onValueChange={setGroomerFilter}
+                >
+                  <SelectTrigger className="h-8 min-w-[140px] text-xs">
+                    <SelectValue placeholder="Groomer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All groomers</SelectItem>
+                    {groomerOptions.map((g) => (
+                      <SelectItem key={g} value={g}>
+                        {g}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-8 min-w-[140px] text-xs">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="missed">Missed</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={bookingFilter}
+                  onValueChange={setBookingFilter}
+                  disabled={bookingOptions.length === 0}
+                >
+                  <SelectTrigger className="h-8 min-w-[180px] text-xs">
+                    <SelectValue placeholder="Booking" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All bookings</SelectItem>
+                    {bookingOptions.map((b) => (
+                      <SelectItem key={b} value={b}>
+                        {b}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGroomerFilter("all");
+                      setStatusFilter("all");
+                      setBookingFilter("all");
+                    }}
+                    className="ml-auto text-xs font-medium text-muted-foreground hover:text-foreground"
+                  >
+                    Clear ({activeFilterCount})
+                  </button>
+                )}
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                  {filteredTasks.length} of {todayTasks.length}
+                </span>
+              </div>
             </CardHeader>
             <CardContent>
               {todayTasks.length === 0 ? (
@@ -898,13 +1209,22 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
                     auto-create enabled.
                   </p>
                 </div>
+              ) : filteredTasks.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-8 text-center">
+                  <Filter className="text-muted-foreground size-8" />
+                  <p className="text-muted-foreground text-sm">
+                    No tasks match the current filters.
+                  </p>
+                </div>
               ) : (
                 <div className="space-y-3">
-                  {todayTasks.map((task) => (
+                  {filteredTasks.map((task) => (
                     <TodayTaskRow
                       key={task.id}
                       task={task}
                       onComplete={() => handleComplete(task.id)}
+                      photoDataUrl={taskPhotos[task.id]}
+                      onRequestPhoto={() => setPhotoUploadFor(task)}
                     />
                   ))}
                 </div>
@@ -920,6 +1240,15 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
         moduleId={moduleId}
         initial={editing}
         onSave={handleSave}
+      />
+
+      <PhotoUploadDialog
+        open={!!photoUploadFor}
+        onOpenChange={(o) => {
+          if (!o) setPhotoUploadFor(null);
+        }}
+        task={photoUploadFor}
+        onSave={handlePhotoSave}
       />
     </div>
   );

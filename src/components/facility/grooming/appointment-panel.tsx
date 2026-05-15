@@ -1,6 +1,7 @@
 "use client";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,10 +28,13 @@ import {
   LogOut,
   MessageCircle,
   Pencil,
+  ExternalLink,
 } from "lucide-react";
 import type { GroomingAppointment, GroomingStatus } from "@/types/grooming";
 import { toast } from "sonner";
 import { STATUS_META } from "./grooming-calendar";
+import { useQuery } from "@tanstack/react-query";
+import { groomingQueries, getEffectiveAlertNotes } from "@/lib/api/grooming";
 
 // ─── Status meta ──────────────────────────────────────────────────────────────
 
@@ -109,10 +113,15 @@ export function AppointmentPanel({
   onOpenChange,
   appointment,
 }: AppointmentPanelProps) {
+  const { data: allAppointments = [] } = useQuery(
+    groomingQueries.appointments(),
+  );
+
   if (!appointment) return null;
 
   const s = STATUS_META[appointment.status];
   const destructiveActions = DESTRUCTIVE_ACTIONS[appointment.status] ?? [];
+  const effectiveAlerts = getEffectiveAlertNotes(appointment, allAppointments);
   const hasAlert =
     appointment.allergies.length > 0 || !!appointment.specialInstructions;
   const priceAdjTotal = appointment.priceAdjustments.reduce(
@@ -215,6 +224,13 @@ export function AppointmentPanel({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
+                <Link
+                  href={`/facility/dashboard/services/grooming/appointments/${appointment.id}`}
+                  className="flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted"
+                  title="Open full detail page"
+                >
+                  <ExternalLink className="size-4" />
+                </Link>
                 <DialogPrimitive.Close
                   className="flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted"
                   aria-label="Close panel"
@@ -227,6 +243,30 @@ export function AppointmentPanel({
 
           {/* ── Body (scrollable) ── */}
           <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
+            {effectiveAlerts.length > 0 && (
+              <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2.5 dark:border-red-900 dark:bg-red-950/30">
+                <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">
+                  <AlertTriangle className="size-3" />
+                  Alert · {effectiveAlerts.length} note
+                  {effectiveAlerts.length > 1 ? "s" : ""}
+                </p>
+                <ul className="space-y-1 text-xs text-red-900 dark:text-red-100">
+                  {effectiveAlerts.map((n) => (
+                    <li key={n.id} className="flex items-start gap-1.5">
+                      <span className="mt-1 size-1 shrink-0 rounded-full bg-red-600 dark:bg-red-400" />
+                      <span>
+                        {n.text}
+                        {n.carriedFromAppointmentId && (
+                          <span className="ml-1 text-[10px] uppercase tracking-wide text-red-700/70 dark:text-red-300/70">
+                            · carried
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {hasAlert && (
               <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-800 dark:bg-amber-950/30">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -257,9 +297,29 @@ export function AppointmentPanel({
                 />
                 <InfoRow
                   icon={User}
-                  label="Groomer"
+                  label={
+                    (appointment.additionalStylistIds?.length ?? 0) > 0
+                      ? "Lead Groomer"
+                      : "Groomer"
+                  }
                   value={appointment.stylistName}
                 />
+                {(appointment.additionalStylistIds?.length ?? 0) > 0 && (
+                  <div className="ml-10 flex flex-wrap items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                      Working alongside:
+                    </span>
+                    {appointment.additionalStylistIds!.map((id) => (
+                      <Badge
+                        key={id}
+                        variant="secondary"
+                        className="text-[10px]"
+                      >
+                        {id}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
                 <InfoRow
                   icon={CalendarDays}
                   label="Date"
@@ -282,6 +342,112 @@ export function AppointmentPanel({
                       {ao}
                     </Badge>
                   ))}
+                </div>
+              )}
+
+              {/* Stages — split-service handoff chain */}
+              {(appointment.stages?.length ?? 0) > 0 && (
+                <div className="mt-3 rounded-lg border border-violet-200/70 bg-violet-50/40 px-3 py-2.5 dark:border-violet-900/40 dark:bg-violet-950/20">
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+                    Split service · {appointment.stages?.length} stages
+                  </p>
+                  <ol className="space-y-1.5">
+                    {appointment.stages!.map((st, i) => {
+                      const isDone = !!st.completedAt;
+                      const isCurrent =
+                        !isDone &&
+                        appointment.stages!.slice(0, i).every(
+                          (prev) => prev.completedAt,
+                        );
+                      const next = appointment.stages![i + 1];
+                      return (
+                        <li
+                          key={st.id}
+                          className={cn(
+                            "flex items-center gap-2 rounded-md border bg-card px-2.5 py-1.5 text-xs",
+                            isDone && "opacity-70",
+                            isCurrent && "border-emerald-400",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                              isDone
+                                ? "bg-emerald-500 text-white"
+                                : isCurrent
+                                  ? "bg-amber-500 text-white"
+                                  : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {isDone ? "✓" : i + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium">
+                              {st.label}
+                              <span className="text-muted-foreground ml-1 font-normal">
+                                · {st.stylistName}
+                              </span>
+                            </p>
+                            <p className="text-muted-foreground text-[10px]">
+                              {st.startTime}–{st.endTime}
+                              {isDone && (
+                                <span className="text-emerald-700 dark:text-emerald-300">
+                                  {" · done"}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          {isCurrent && (
+                            <button
+                              type="button"
+                              className="rounded-md bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700"
+                              onClick={() => {
+                                toast.success(
+                                  `${st.label} complete${
+                                    next
+                                      ? ` — handoff sent to ${next.stylistName}`
+                                      : ""
+                                  }`,
+                                );
+                              }}
+                            >
+                              Mark Done
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+              )}
+
+              {/* Additional pets — multi-pet bookings */}
+              {(appointment.additionalPets?.length ?? 0) > 0 && (
+                <div className="mt-3 rounded-lg border border-pink-200/70 bg-pink-50/40 px-3 py-2.5 dark:border-pink-900/40 dark:bg-pink-950/20">
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-pink-700 dark:text-pink-300">
+                    Multi-pet booking ·{" "}
+                    {(appointment.additionalPets?.length ?? 0) + 1} pets
+                  </p>
+                  <ul className="space-y-1 text-xs">
+                    <li className="flex items-start gap-2">
+                      <PawPrint className="mt-0.5 size-3 text-pink-600 shrink-0" />
+                      <span className="font-medium">
+                        {appointment.petName}
+                      </span>
+                      <span className="text-muted-foreground">
+                        · {appointment.packageName} · {appointment.petSize}
+                      </span>
+                    </li>
+                    {appointment.additionalPets!.map((p, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <PawPrint className="mt-0.5 size-3 text-pink-600 shrink-0" />
+                        <span className="font-medium">{p.petName}</span>
+                        <span className="text-muted-foreground">
+                          · {p.packageName} · {p.petSize}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>

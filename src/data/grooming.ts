@@ -418,6 +418,25 @@ export const groomingPackages: GroomingPackage[] = [
       large: 85,
       giant: 105,
     },
+    // Breed-specific full-price overrides. Drives Step 2's "breed > coat >
+    // size" tier in {@link resolveEffectivePricing} — when a Poodle books a
+    // Full Groom we charge the breed price regardless of size bucket.
+    breedOverrides: {
+      "Golden Retriever": 95,
+      Poodle: 110,
+      "Bichon Frise": 100,
+    },
+    // Signed deltas added on top of the size price when the pet's coat type
+    // matches. Double-coats need an extra blow-out, long coats need extra
+    // brushing — so we surcharge slightly.
+    coatAdjustments: {
+      double: 10,
+      long: 5,
+    },
+    // Senior stylist commands a premium for the same service.
+    stylistPricing: {
+      "stylist-001": 95,
+    },
     includes: [
       "Bath with premium products",
       "Haircut and styling",
@@ -442,6 +461,38 @@ export const groomingPackages: GroomingPackage[] = [
       { productId: "prod-020", productName: "Q-Tips / Cotton Swabs", quantity: 10, unit: "count", isOptional: false },
       { productId: "prod-006", productName: "Finishing Spray Cologne - Fresh Cotton", quantity: 5, unit: "ml", isOptional: true },
       { productId: "prod-014", productName: "Bandanas - Assorted Colors", quantity: 1, unit: "count", isOptional: true },
+    ],
+    defaultAddOns: [
+      // Teeth Brushing — always upsell on a Full Groom.
+      { addOnId: "ao-01" },
+      // De-shedding Treatment — only worth attaching for double / long / wire / curly coats.
+      {
+        addOnId: "ao-04",
+        conditions: [
+          { kind: "coat-type-in", values: ["double", "long", "wire", "curly"] },
+        ],
+      },
+      // Nail Grinding — dogs 30 lbs and up benefit most.
+      {
+        addOnId: "ao-02",
+        conditions: [{ kind: "weight-gte", value: 30 }],
+      },
+    ],
+    ageGroupPricing: [
+      // Puppy first groom — shorter session, discounted to drive adoption.
+      {
+        id: "agp-puppy",
+        label: "Puppy",
+        maxMonths: 12,
+        adjustment: { mode: "flat-subtract", amount: 15 },
+      },
+      // Senior premium — extra time and careful handling.
+      {
+        id: "agp-senior",
+        label: "Senior",
+        minMonths: 96,
+        adjustment: { mode: "percent", amount: 20 },
+      },
     ],
   },
   {
@@ -483,6 +534,11 @@ export const groomingPackages: GroomingPackage[] = [
       { productId: "prod-020", productName: "Q-Tips / Cotton Swabs", quantity: 12, unit: "count", isOptional: false },
       { productId: "prod-006", productName: "Finishing Spray Cologne - Fresh Cotton", quantity: 8, unit: "ml", isOptional: true },
       { productId: "prod-015", productName: "Bows - Assorted Colors", quantity: 1, unit: "count", isOptional: true },
+    ],
+    defaultAddOns: [
+      // Spa Day is the premium tier — Teeth Brushing and Blueberry Facial come standard.
+      { addOnId: "ao-01" },
+      { addOnId: "ao-03" },
     ],
   },
   {
@@ -554,6 +610,12 @@ export const groomingPackages: GroomingPackage[] = [
       large: 70,
       giant: 85,
     },
+    // Step 2 eligibility — only offer this service for coats that actually
+    // need de-shedding. Short-coat / wire-coat dogs don't see it in the
+    // booking dropdown.
+    eligibleCoatTypes: ["double", "long", "curly"],
+    // De-shedding takes finesse — gate the groomer dropdown to senior+ only.
+    requiredSkillLevel: "senior",
     includes: [
       "De-shedding shampoo & conditioner",
       "Undercoat removal",
@@ -632,6 +694,83 @@ export const groomingAppointments: GroomingAppointment[] = [
     lastGroomDate: getDateString(-42),
     createdAt: getDateString(-7),
     onlineBooking: true,
+    alertNotes: [
+      {
+        id: "an-001",
+        text: "Bites when ears are touched — muzzle for ear cleaning, no exceptions.",
+        createdBy: "Jessica Martinez",
+        createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+        appliesToFuture: true,
+      },
+      {
+        id: "an-002",
+        text: "On Apoquel — owner administers before the appointment.",
+        createdBy: "Front Desk",
+        createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+        appliesToFuture: true,
+      },
+      {
+        id: "an-003",
+        text: "Coat much more matted than last visit — flagged for matting fee.",
+        createdBy: "Jessica Martinez",
+        createdAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
+        appliesToFuture: false,
+      },
+    ],
+    ticketComments: [
+      {
+        id: "tc-001",
+        staff: "Sarah Chen",
+        message:
+          "Started the bath — coat is much more matted than expected, will take ~30 extra minutes.",
+        at: new Date(Date.now() - 75 * 60 * 1000).toISOString(),
+      },
+      {
+        id: "tc-002",
+        staff: "Jessica Martinez",
+        message:
+          "Handoff received from Sarah. Working through the back legs now, owner notified about the matting fee.",
+        at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+      },
+    ],
+    history: [
+      {
+        id: "h-001-a",
+        at: getDateString(-7),
+        staff: "System",
+        description: "Appointment created",
+      },
+      {
+        id: "h-001-b",
+        at: new Date(Date.now() - 75 * 60 * 1000).toISOString(),
+        staff: "Jessica Martinez",
+        fieldChange: {
+          field: "Status",
+          before: "Scheduled",
+          after: "Checked In",
+        },
+      },
+      {
+        id: "h-001-c",
+        at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        staff: "Jessica Martinez",
+        fieldChange: {
+          field: "Price",
+          before: "$85",
+          after: "$110",
+        },
+      },
+      {
+        id: "h-001-d",
+        at: new Date(Date.now() - 55 * 60 * 1000).toISOString(),
+        staff: "Jessica Martinez",
+        fieldChange: {
+          field: "Status",
+          before: "Checked In",
+          after: "In Progress",
+        },
+      },
+    ],
   },
   {
     id: "appt-002",
@@ -666,6 +805,32 @@ export const groomingAppointments: GroomingAppointment[] = [
     lastGroomDate: getDateString(-28),
     createdAt: getDateString(-14),
     onlineBooking: true,
+    alertNotes: [
+      {
+        id: "an-010",
+        text: "Brachycephalic — keep dryer on low only, watch for overheating.",
+        createdBy: "Amy Chen",
+        createdAt: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString(),
+        appliesToFuture: true,
+      },
+    ],
+    ticketComments: [],
+    history: [
+      {
+        id: "h-002-a",
+        at: getDateString(-14),
+        staff: "System",
+        description: "Appointment created (online booking)",
+      },
+      {
+        id: "h-002-b",
+        at: new Date(
+          new Date(getDateString(-14)).getTime() + 5 * 60_000,
+        ).toISOString(),
+        staff: "Front Desk",
+        description: "Confirmation email sent to client",
+      },
+    ],
   },
   {
     id: "appt-003",
@@ -698,6 +863,24 @@ export const groomingAppointments: GroomingAppointment[] = [
     allergies: [],
     createdAt: getDateString(-3),
     onlineBooking: false,
+    alertNotes: [
+      {
+        id: "an-020",
+        text: "Reactive to other dogs in the lobby — keep separated from other clients during drop-off and pickup.",
+        createdBy: "Marcus Thompson",
+        createdAt: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(),
+        appliesToFuture: true,
+      },
+    ],
+    ticketComments: [],
+    history: [
+      {
+        id: "h-003-a",
+        at: getDateString(-3),
+        staff: "Front Desk",
+        description: "Appointment created (phone booking)",
+      },
+    ],
   },
   {
     id: "appt-004",

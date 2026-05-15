@@ -42,6 +42,10 @@ import {
 // Note: DatePickerWithRange component would need to be created or use a different date picker
 // For now, using Input type="date" for simplicity
 import { toast } from "sonner";
+import {
+  useGroomingScheduling,
+  type SlotGranularityMin,
+} from "@/hooks/use-grooming-scheduling";
 
 interface ServiceCatalogItem {
   id: string;
@@ -110,6 +114,13 @@ interface BlackoutDate {
 }
 
 export default function GroomingBookingRulesPage() {
+  const {
+    smartSchedulingEnabled,
+    slotGranularityMin,
+    defaultBufferMin,
+    update: updateScheduling,
+  } = useGroomingScheduling();
+
   const [serviceCatalog, setServiceCatalog] = useState<ServiceCatalogItem[]>([
     {
       id: "full-groom",
@@ -264,6 +275,90 @@ export default function GroomingBookingRulesPage() {
           {isSaving ? "Saving..." : "Save All Changes"}
         </Button>
       </div>
+
+      {/* Smart Scheduling — drives the booking dialog's slot grid. */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="size-5" />
+            Smart Scheduling
+          </CardTitle>
+          <CardDescription>
+            Controls how the booking dialog suggests time slots. When on, only
+            slots with the configured buffer of free space on both sides are
+            highlighted as recommended.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">
+                Enable Smart Scheduling
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Highlights buffer-clean slots and dims the rest. Off = every
+                non-conflicting slot is treated equally.
+              </p>
+            </div>
+            <Switch
+              checked={smartSchedulingEnabled}
+              onCheckedChange={(v) =>
+                updateScheduling({ smartSchedulingEnabled: v })
+              }
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-sm">Slot granularity</Label>
+              <Select
+                value={String(slotGranularityMin)}
+                onValueChange={(v) =>
+                  updateScheduling({
+                    slotGranularityMin: Number(v) as SlotGranularityMin,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="15">15 minutes</SelectItem>
+                  <SelectItem value="30">30 minutes</SelectItem>
+                  <SelectItem value="60">60 minutes</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground">
+                Drives how often a new start-time block appears on the slot
+                grid. 30 min is the industry default.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm">Default buffer (minutes)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={5}
+                value={defaultBufferMin}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  updateScheduling({
+                    defaultBufferMin: Number.isFinite(n)
+                      ? Math.max(0, n)
+                      : 0,
+                  });
+                }}
+                disabled={!smartSchedulingEnabled}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Used by Smart Scheduling when a groomer doesn&apos;t have a
+                per-groomer buffer configured below.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Service Catalog */}
       <Card>

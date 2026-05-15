@@ -31,6 +31,7 @@ import { BookingCard } from "@/components/clients/BookingCard";
 import { AdditionalContactsManager } from "@/components/clients/AdditionalContactsManager";
 import { ClientServicePreferences } from "@/components/clients/ClientServicePreferences";
 import { generateInvoiceForBooking } from "@/lib/invoice-generator";
+import { NewAppointmentDialog } from "@/components/facility/grooming/new-appointment-dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -105,6 +106,7 @@ import {
   ShoppingBag,
   Receipt,
   Bell,
+  Scissors,
   Settings as SettingsIcon,
 } from "lucide-react";
 
@@ -137,6 +139,13 @@ export default function ClientDetailPage({
   const [petActiveTab, setPetActiveTab] = useState("overview");
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  // Grooming-appointment dialog state. Opened from the "Book Grooming" entry
+  // point in the Bookings card with the client (and optionally a specific
+  // pet from their roster) pre-filled.
+  const [groomingDialogOpen, setGroomingDialogOpen] = useState(false);
+  const [groomingDialogPetId, setGroomingDialogPetId] = useState<number | null>(
+    null,
+  );
 
   const client = clients.find((c) => c.id === parseInt(id));
   const facility = client
@@ -993,32 +1002,48 @@ export default function ClientDetailPage({
                   </Badge>
                 )}
               </CardTitle>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 gap-1.5 text-xs"
-                onClick={() => {
-                  if (client && facility) {
-                    openBookingModal({
-                      clients: [client],
-                      facilityId: facility.id,
-                      facilityName: facility.name,
-                      preSelectedClientId: client.id,
-                      onCreateBooking: (booking) => {
-                        const invoice = generateInvoiceForBooking(
-                          booking as never,
-                        );
-                        toast.success(
-                          `Booking created — Invoice ${invoice.id}: $${invoice.total.toFixed(2)}`,
-                        );
-                      },
-                    });
-                  }
-                }}
-              >
-                <Plus className="size-3" />
-                New Booking
-              </Button>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1.5 text-xs"
+                  onClick={() => {
+                    const firstPet = client.pets[0];
+                    setGroomingDialogPetId(firstPet?.id ?? null);
+                    setGroomingDialogOpen(true);
+                  }}
+                  title="Book a grooming appointment for this client"
+                >
+                  <Scissors className="size-3" />
+                  Book Grooming
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1.5 text-xs"
+                  onClick={() => {
+                    if (client && facility) {
+                      openBookingModal({
+                        clients: [client],
+                        facilityId: facility.id,
+                        facilityName: facility.name,
+                        preSelectedClientId: client.id,
+                        onCreateBooking: (booking) => {
+                          const invoice = generateInvoiceForBooking(
+                            booking as never,
+                          );
+                          toast.success(
+                            `Booking created — Invoice ${invoice.id}: $${invoice.total.toFixed(2)}`,
+                          );
+                        },
+                      });
+                    }
+                  }}
+                >
+                  <Plus className="size-3" />
+                  New Booking
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {clientBookings.length > 0 ? (
@@ -2482,6 +2507,49 @@ export default function ClientDetailPage({
       </Tabs>
 
       <PageAuditTrail area="clients" entityId={String(id)} />
+
+      {/* Grooming appointment entry point — opens the same dialog used on the
+          calendar, pre-filled with this client and (optionally) the first pet. */}
+      {(() => {
+        const targetPet = client.pets.find(
+          (p) => p.id === groomingDialogPetId,
+        );
+        const targetPetExtras = targetPet as
+          | (Pet & { coatType?: string })
+          | undefined;
+        function inferSize(weightLb?: number): string {
+          if (weightLb === undefined) return "";
+          if (weightLb < 20) return "small";
+          if (weightLb < 50) return "medium";
+          if (weightLb < 80) return "large";
+          return "giant";
+        }
+        return (
+          <NewAppointmentDialog
+            open={groomingDialogOpen}
+            onOpenChange={setGroomingDialogOpen}
+            prefillClient={{
+              clientId: client.id,
+              ownerName: client.name ?? "",
+              ownerPhone: client.phone ?? "",
+              ownerEmail: client.email ?? "",
+              pet: targetPet
+                ? {
+                    id: targetPet.id,
+                    name: targetPet.name,
+                    breed: targetPet.breed,
+                    size: inferSize(targetPet.weight),
+                    coatType: targetPetExtras?.coatType ?? "",
+                    ageMonths:
+                      typeof targetPet.age === "number"
+                        ? Math.round(targetPet.age * 12)
+                        : undefined,
+                  }
+                : undefined,
+            }}
+          />
+        );
+      })()}
 
       {/* Pet Details Modal */}
       <Dialog open={!!selectedPet} onOpenChange={() => setSelectedPet(null)}>

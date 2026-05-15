@@ -19,8 +19,12 @@ import {
   TrendingUp,
   ActivitySquare,
 } from "lucide-react";
-import { groomingQueries } from "@/lib/api/grooming";
-import type { GroomingAppointment, GroomingStatus } from "@/types/grooming";
+import { groomingQueries, getEffectiveAlertNotes } from "@/lib/api/grooming";
+import type {
+  GroomingAppointment,
+  GroomingStatus,
+  Stylist,
+} from "@/types/grooming";
 import { AppointmentPanel } from "./appointment-panel";
 import { NewAppointmentDialog } from "./new-appointment-dialog";
 import {
@@ -32,13 +36,43 @@ import {
 import { TimeBlockDialog, type TimeBlock } from "./time-block-dialog";
 import { WaitlistPanel } from "./waitlist-panel";
 import { PrintableDaySheet } from "./printable-day-sheet";
+import { PrintableAppointmentCards } from "./printable-appointment-cards";
+import {
+  BulkActionsDialog,
+  type BulkActionMode,
+} from "./bulk-actions-dialog";
+import { getMissedTaskCountForModule } from "@/lib/today-tasks";
+import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
+import { useGroomingWaitlist } from "@/hooks/use-grooming-waitlist";
+import { facilityStaff } from "@/data/facility-staff";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Ban, Hourglass, Printer } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Ban,
+  Hourglass,
+  Printer,
+  AlertTriangle,
+  CalendarClock,
+  CalendarPlus,
+  XCircle,
+} from "lucide-react";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -177,6 +211,21 @@ function colorForService(name: string): string {
   return SERVICE_PALETTE[Math.abs(hash) % SERVICE_PALETTE.length];
 }
 
+// Stable per-stylist color used for the calendar accent. Honors the stylist's
+// configured calendarColor when present, otherwise hashes the id into the
+// same SERVICE_PALETTE so adjacent groomers stay visually distinct.
+function colorForStylist(
+  stylistId: string,
+  configured?: string,
+): string {
+  if (configured) return configured;
+  let hash = 0;
+  for (let i = 0; i < stylistId.length; i++) {
+    hash = (hash * 31 + stylistId.charCodeAt(i)) | 0;
+  }
+  return SERVICE_PALETTE[Math.abs(hash) % SERVICE_PALETTE.length];
+}
+
 // ─── Sidebar (mini calendar + stats + upcoming + service breakdown) ──────────
 
 const DAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -238,9 +287,20 @@ function GroomingSidebar({
       ).length,
       completed: todayAppointments.filter((a) => a.status === "completed")
         .length,
-      tasks: todayAppointments.filter((a) => a.status === "in-progress").length,
     };
   }, [todayAppointments]);
+
+  // Missed tasks count — derived from the same source the Tasks tab uses.
+  // Gated by mount so SSR/CSR match (calc depends on current time).
+  const [missedTaskCount, setMissedTaskCount] = useState(0);
+  useEffect(() => {
+    function refresh() {
+      setMissedTaskCount(getMissedTaskCountForModule("grooming"));
+    }
+    refresh();
+    const id = setInterval(refresh, 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const upcomingToday = useMemo(() => {
     const nowMin =
@@ -255,6 +315,43 @@ function GroomingSidebar({
       .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
       .slice(0, 4);
   }, [todayAppointments, selectedDate, todayStr]);
+
+  // Calendar Report — totals for the selected period. Filtered by the
+  // calendar's current view mode so a manager looking at the week sees the
+  // week's numbers, etc. Recomputes whenever appointments change (so it
+  // stays accurate as bookings are added, completed, or cancelled).
+  const calendarReport = useMemo(() => {
+    const inView = appointments.filter((a) => {
+      if (viewMode === "day") return a.date === selectedDate;
+      if (viewMode === "week") {
+        const days = getWeekDays(selectedDate).map(formatISODate);
+        return days.includes(a.date);
+      }
+      const ref = new Date(selectedDate + "T00:00:00");
+      const aDate = new Date(a.date + "T00:00:00");
+      return (
+        aDate.getFullYear() === ref.getFullYear() &&
+        aDate.getMonth() === ref.getMonth()
+      );
+    });
+    const counting = inView.filter(
+      (a) => a.status !== "cancelled" && a.status !== "no-show",
+    );
+    const finished = counting.filter((a) => a.status === "completed");
+    const earnedRevenue = finished.reduce((s, a) => s + a.totalPrice, 0);
+    const expectedRevenue = counting.reduce((s, a) => s + a.totalPrice, 0);
+    const distinctPets = new Set(counting.map((a) => a.petId));
+    return {
+      appointments: counting.length,
+      pets: distinctPets.size,
+      finished: finished.length,
+      earnedRevenue,
+      expectedRevenue,
+    };
+  }, [appointments, viewMode, selectedDate]);
+
+  const reportPeriodLabel =
+    viewMode === "day" ? "today" : viewMode === "week" ? "this week" : "this month";
 
   const serviceBreakdown = useMemo(() => {
     const inView = appointments.filter((a) => {
@@ -322,13 +419,13 @@ function GroomingSidebar({
       iconColor: "text-indigo-500",
     },
     {
-      label: "Tasks",
-      value: stats.tasks,
-      icon: Clock,
-      bg: "bg-amber-50",
-      ring: "ring-amber-100",
-      text: "text-amber-600",
-      iconColor: "text-amber-500",
+      label: "Missed Tasks",
+      value: missedTaskCount,
+      icon: AlertTriangle,
+      bg: missedTaskCount > 0 ? "bg-red-50" : "bg-amber-50",
+      ring: missedTaskCount > 0 ? "ring-red-100" : "ring-amber-100",
+      text: missedTaskCount > 0 ? "text-red-600" : "text-amber-600",
+      iconColor: missedTaskCount > 0 ? "text-red-500" : "text-amber-500",
     },
   ];
 
@@ -443,6 +540,36 @@ function GroomingSidebar({
 
       <div className="mx-4 h-px bg-slate-200/70" />
 
+      {/* Quick Jump — teleport N weeks ahead in one click */}
+      <div className="px-4 pt-3 pb-2">
+        <p className="mb-2 text-[9px] font-black tracking-widest text-slate-400 uppercase">
+          Quick Jump
+        </p>
+        <Select
+          value=""
+          onValueChange={(v) => {
+            const n = Number(v);
+            if (!Number.isFinite(n) || n <= 0) return;
+            const d = new Date(selectedDate + "T00:00:00");
+            d.setDate(d.getDate() + n * 7);
+            onDateChange(formatISODate(d));
+          }}
+        >
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue placeholder="Jump N weeks ahead…" />
+          </SelectTrigger>
+          <SelectContent>
+            {Array.from({ length: 14 }, (_, i) => i + 1).map((n) => (
+              <SelectItem key={n} value={String(n)} className="text-xs">
+                +{n} week{n === 1 ? "" : "s"}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="mx-4 mt-1 h-px bg-slate-200/70" />
+
       {/* Today's overview */}
       <div className="px-4 pt-3 pb-2">
         <p className="mb-2.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
@@ -476,6 +603,54 @@ function GroomingSidebar({
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="mx-4 mt-2 h-px bg-slate-200/70" />
+
+      {/* Calendar Report — totals for the selected day/week/month view.
+          Auto-updates as appointments are added or completed. */}
+      <div className="px-4 pt-3 pb-2">
+        <p className="mb-2.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
+          Calendar Report ·{" "}
+          <span className="text-slate-500">{reportPeriodLabel}</span>
+        </p>
+        <div className="space-y-1.5 rounded-xl border border-emerald-100 bg-emerald-50/40 px-3 py-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-slate-600">Appointments</span>
+            <span className="text-[12px] font-bold tabular-nums text-slate-800">
+              {calendarReport.appointments}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-slate-600">Pets</span>
+            <span className="text-[12px] font-bold tabular-nums text-slate-800">
+              {calendarReport.pets}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-slate-600">Finished</span>
+            <span className="text-[12px] font-bold tabular-nums text-slate-800">
+              {calendarReport.finished}
+            </span>
+          </div>
+          <div className="my-1 h-px bg-emerald-200/60" />
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-slate-700">
+              Earned
+            </span>
+            <span className="text-[12px] font-bold tabular-nums text-emerald-700">
+              ${calendarReport.earnedRevenue.toFixed(0)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-slate-700">
+              Expected
+            </span>
+            <span className="text-base font-black tabular-nums text-emerald-800">
+              ${calendarReport.expectedRevenue.toFixed(0)}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -569,22 +744,49 @@ function GroomingSidebar({
 
 function AppointmentBlock({
   appointment,
+  stylistColor,
+  staffLine,
+  isSecondary,
+  stageOverride,
   onClick,
   isMatch,
   isDimmed,
   blockRef,
+  alertCount,
 }: {
   appointment: GroomingAppointment;
+  stylistColor: string;
+  /** Secondary line shown when the column has more than one assigned person
+   *  (e.g., a van's primary driver + second groomer). */
+  staffLine?: string;
+  /** True when this block is rendered in a co-groomer's column rather than the
+   *  primary stylist's column — get a "Co-groom" indicator + muted styling. */
+  isSecondary?: boolean;
+  /** When the booking is split across sequential stages, the block is sized
+   *  by the stage rather than the whole appointment. */
+  stageOverride?: {
+    label: string;
+    startTime: string;
+    endTime: string;
+    completedAt?: string;
+  };
   onClick: (apt: GroomingAppointment) => void;
   isMatch?: boolean;
   isDimmed?: boolean;
   blockRef?: React.Ref<HTMLButtonElement>;
+  /** Number of effective alert notes (own + pet carry-forward). Renders the
+   *  red exclamation badge so groomers can see warnings without opening the
+   *  appointment. */
+  alertCount?: number;
 }) {
-  const start = timeToMinutes(appointment.startTime);
-  const end = timeToMinutes(appointment.endTime);
+  const startStr = stageOverride?.startTime ?? appointment.startTime;
+  const endStr = stageOverride?.endTime ?? appointment.endTime;
+  const start = timeToMinutes(startStr);
+  const end = timeToMinutes(endStr);
   const top = ((start - START_HOUR * 60) / 60) * HOUR_HEIGHT;
   const height = Math.max(((end - start) / 60) * HOUR_HEIGHT - 3, 28);
   const s = STATUS_META[appointment.status];
+  const stageDone = !!stageOverride?.completedAt;
 
   return (
     <button
@@ -603,18 +805,85 @@ function AppointmentBlock({
         s.text,
         appointment.status === "cancelled" && "opacity-40",
         appointment.status === "completed" && "opacity-55",
+        isSecondary && "opacity-75",
         isMatch && "ring-2 ring-blue-500 ring-offset-1 shadow-lg z-20 scale-[1.02]",
         isDimmed && "opacity-15 saturate-50",
         !isMatch && !isDimmed && "z-10",
       )}
-      style={{ top: `${top}px`, height: `${height}px` }}
+      style={{
+        top: `${top}px`,
+        height: `${height}px`,
+      }}
     >
-      <div className="flex items-center gap-1.5 min-w-0">
-        <span className={cn("size-2 rounded-full flex-shrink-0 shadow-sm", s.dot)} />
-        <span className="font-semibold text-xs truncate leading-tight">
-          {appointment.petName}
-        </span>
-      </div>
+      {(() => {
+        const hasExtraPets =
+          (appointment.additionalPets?.length ?? 0) > 0;
+        const allPetNames = hasExtraPets
+          ? [
+              appointment.petName,
+              ...(appointment.additionalPets?.map((p) => p.petName) ?? []),
+            ].join(", ")
+          : appointment.petName;
+        return (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span
+              className={cn(
+                "size-2 rounded-full flex-shrink-0 shadow-sm",
+                s.dot,
+              )}
+            />
+            <span
+              className="font-semibold text-xs truncate leading-tight"
+              title={hasExtraPets ? allPetNames : undefined}
+            >
+              {allPetNames}
+            </span>
+            {!!alertCount && alertCount > 0 && (
+              <span
+                title={`${alertCount} alert note${alertCount > 1 ? "s" : ""} — open the appointment for details`}
+                className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-red-600 px-1.5 text-[9px] font-bold text-white shadow-sm"
+              >
+                <AlertTriangle className="size-2.5" />
+                {alertCount}
+              </span>
+            )}
+            {stageOverride && (
+              <span
+                className={cn(
+                  "ml-auto inline-flex shrink-0 items-center gap-0.5 rounded-full px-1 text-[9px] font-semibold shadow-sm",
+                  stageDone
+                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                    : "bg-white/80 text-amber-700 dark:bg-slate-900/80 dark:text-amber-300",
+                )}
+                title={
+                  stageDone
+                    ? `Stage complete — ${stageOverride.label}`
+                    : `Split-service stage — ${stageOverride.label}`
+                }
+              >
+                {stageDone ? "✓ " : ""}
+                {stageOverride.label}
+              </span>
+            )}
+            {!stageOverride && isSecondary && (
+              <span
+                className="ml-auto inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/80 px-1 text-[9px] font-semibold text-violet-700 shadow-sm dark:bg-slate-900/80 dark:text-violet-300"
+                title={`Co-groom — primary stylist is ${appointment.stylistName}`}
+              >
+                Co-groom
+              </span>
+            )}
+            {!stageOverride && !isSecondary && hasExtraPets && (
+              <span
+                className="ml-auto inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/80 px-1 text-[9px] font-semibold text-slate-700 shadow-sm dark:bg-slate-900/80 dark:text-slate-200"
+                title={`Multi-pet booking — ${(appointment.additionalPets?.length ?? 0) + 1} pets`}
+              >
+                {(appointment.additionalPets?.length ?? 0) + 1}🐾
+              </span>
+            )}
+          </div>
+        );
+      })()}
       {height > 46 && (
         <p className="text-[11px] truncate opacity-70 mt-0.5 leading-tight pl-3.5">
           {appointment.packageName}
@@ -622,7 +891,15 @@ function AppointmentBlock({
       )}
       {height > 66 && (
         <p className="text-[10px] opacity-55 mt-0.5 pl-3.5">
-          {appointment.startTime}–{appointment.endTime}
+          {startStr}–{endStr}
+        </p>
+      )}
+      {staffLine && height > 80 && (
+        <p
+          className="text-[10px] opacity-70 mt-0.5 pl-3.5 truncate"
+          title={staffLine}
+        >
+          {staffLine}
         </p>
       )}
     </button>
@@ -725,6 +1002,7 @@ function DayView({
   appointments,
   timeBlocks,
   stylists,
+  fullStylists,
   onBlockClick,
   onNew,
   onSlotClick,
@@ -732,11 +1010,25 @@ function DayView({
   onConfirmBlock,
   matchedIds,
   searchActive,
+  stylistNameById,
+  alertCountById,
 }: {
   selectedDate: string;
   appointments: GroomingAppointment[];
   timeBlocks: TimeBlock[];
-  stylists: { id: string; name: string; status: string; capacity: { skillLevel: string } }[];
+  stylists: {
+    id: string;
+    name: string;
+    status: string;
+    capacity: { skillLevel: string };
+    calendarColor?: string;
+    /** Optional secondary line (e.g., "Driver: Sarah · 2nd: Marcus") for van columns. */
+    staffLine?: string;
+  }[];
+  /** Full Stylist records — needed for the bulk-actions reschedule target picker. */
+  fullStylists: Stylist[];
+  /** Lookup so AppointmentBlocks can resolve co-groomer ids to names. */
+  stylistNameById: Record<string, string>;
   onBlockClick: (apt: GroomingAppointment) => void;
   onNew: () => void;
   onSlotClick: (stylistId: string, time: string) => void;
@@ -744,8 +1036,32 @@ function DayView({
   onConfirmBlock: () => void;
   matchedIds: Set<string>;
   searchActive: boolean;
+  alertCountById: Record<string, number>;
 }) {
   const dateAppointments = appointments.filter((a) => a.date === selectedDate);
+
+  // Bulk-actions state — triggered from each stylist's column header.
+  const [bulkState, setBulkState] = useState<{
+    mode: BulkActionMode;
+    stylistId: string;
+    stylistName: string;
+  } | null>(null);
+
+  function openBulk(
+    mode: BulkActionMode,
+    stylistId: string,
+    stylistName: string,
+  ) {
+    setBulkState({ mode, stylistId, stylistName });
+  }
+
+  const bulkTargetAppointments = useMemo(
+    () =>
+      bulkState
+        ? dateAppointments.filter((a) => a.stylistId === bulkState.stylistId)
+        : [],
+    [bulkState, dateAppointments],
+  );
   const activeStylists = stylists.filter((s) => s.status === "active");
 
   const firstMatchId = useMemo(() => {
@@ -777,21 +1093,73 @@ function DayView({
           className="sticky top-0 z-20 flex border-b bg-card/95 backdrop-blur-sm"
           style={{ paddingLeft: "4rem" }}
         >
-          {activeStylists.map((stylist) => (
-            <div key={stylist.id} className="flex-1 min-w-[168px] border-l px-3 py-2.5">
-              <div className="flex items-center gap-2.5">
-                <div className="flex size-7 items-center justify-center rounded-full bg-pink-100 text-pink-700 text-xs font-bold dark:bg-pink-900/40 dark:text-pink-300 flex-shrink-0">
-                  {stylist.name.charAt(0)}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold truncate leading-tight">{stylist.name}</p>
-                  <p className="text-[10px] text-muted-foreground capitalize leading-tight">
-                    {stylist.capacity.skillLevel}
-                  </p>
-                </div>
+          {activeStylists.map((stylist) => {
+            const headerColor = colorForStylist(
+              stylist.id,
+              stylist.calendarColor,
+            );
+            return (
+              <div
+                key={stylist.id}
+                className="flex-1 min-w-[168px] border-l px-3 py-2.5"
+                style={{ borderTop: `2px solid ${headerColor}` }}
+              >
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2.5 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-muted/60"
+                      title="Bulk actions for this groomer's day"
+                    >
+                      <div
+                        className="flex size-7 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm flex-shrink-0"
+                        style={{ backgroundColor: headerColor }}
+                      >
+                        {stylist.name.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold truncate leading-tight">
+                          {stylist.name}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground capitalize leading-tight">
+                          {stylist.capacity.skillLevel}
+                        </p>
+                      </div>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuItem
+                      className="gap-2"
+                      onClick={() =>
+                        openBulk("reschedule", stylist.id, stylist.name)
+                      }
+                    >
+                      <CalendarClock className="size-4" />
+                      Bulk Reschedule
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="gap-2"
+                      onClick={() =>
+                        openBulk("book-again", stylist.id, stylist.name)
+                      }
+                    >
+                      <CalendarPlus className="size-4" />
+                      Bulk Book Again
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="gap-2 text-destructive focus:text-destructive"
+                      onClick={() =>
+                        openBulk("cancel", stylist.id, stylist.name)
+                      }
+                    >
+                      <XCircle className="size-4" />
+                      Bulk Cancel
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         {/* Grid */}
         <div className="flex">
@@ -805,9 +1173,26 @@ function DayView({
             ))}
           </div>
           {activeStylists.map((stylist) => {
-            const stylistAppts = dateAppointments.filter((a) => a.stylistId === stylist.id);
+            // Include co-groom appointments where this stylist is the
+            // secondary so multi-staff bookings render in every involved
+            // column simultaneously. For split-service appointments, only
+            // include them in a column if this stylist owns at least one
+            // stage there (the per-stage render handles the actual block).
+            const stylistAppts = dateAppointments.filter((a) => {
+              if (a.stages && a.stages.length > 0) {
+                return a.stages.some((st) => st.stylistId === stylist.id);
+              }
+              return (
+                a.stylistId === stylist.id ||
+                a.additionalStylistIds?.includes(stylist.id)
+              );
+            });
             const stylistBlocks = timeBlocks.filter(
               (b) => b.date === selectedDate && b.stylistId === stylist.id,
+            );
+            const stylistColor = colorForStylist(
+              stylist.id,
+              stylist.calendarColor,
             );
 
             const slotTimeFromEvent = (
@@ -857,16 +1242,72 @@ function DayView({
                     {stylistBlocks.map((b) => (
                       <TimeBlockBlock key={b.id} block={b} />
                     ))}
-                    {stylistAppts.map((apt) => (
-                      <AppointmentBlock
-                        key={apt.id}
-                        appointment={apt}
-                        onClick={onBlockClick}
-                        isMatch={searchActive && matchedIds.has(apt.id)}
-                        isDimmed={searchActive && !matchedIds.has(apt.id)}
-                        blockRef={apt.id === firstMatchId ? firstMatchRef : undefined}
-                      />
-                    ))}
+                    {stylistAppts.flatMap((apt) => {
+                      // Split-service path: render one block per stage owned
+                      // by this column's stylist, anchored at the stage's
+                      // start/end times rather than the full appointment.
+                      if (apt.stages && apt.stages.length > 0) {
+                        return apt.stages
+                          .filter((st) => st.stylistId === stylist.id)
+                          .map((st) => (
+                            <AppointmentBlock
+                              key={`${apt.id}-${st.id}`}
+                              appointment={apt}
+                              stylistColor={stylistColor}
+                              stageOverride={{
+                                label: st.label,
+                                startTime: st.startTime,
+                                endTime: st.endTime,
+                                completedAt: st.completedAt,
+                              }}
+                              onClick={onBlockClick}
+                              isMatch={
+                                searchActive && matchedIds.has(apt.id)
+                              }
+                              isDimmed={
+                                searchActive && !matchedIds.has(apt.id)
+                              }
+                              alertCount={alertCountById[apt.id]}
+                            />
+                          ));
+                      }
+
+                      // Standard / co-groom path
+                      const coGroomerNames =
+                        apt.additionalStylistIds
+                          ?.map((id) => stylistNameById[id])
+                          .filter(Boolean) ?? [];
+                      const isSecondary = apt.stylistId !== stylist.id;
+                      let staffLine: string | undefined;
+                      if (isSecondary) {
+                        staffLine = `with ${apt.stylistName}`;
+                      } else if (coGroomerNames.length > 0) {
+                        staffLine = [
+                          apt.stylistName,
+                          ...coGroomerNames,
+                        ].join(" + ");
+                      } else if (stylist.staffLine) {
+                        staffLine = stylist.staffLine;
+                      }
+                      return [
+                        <AppointmentBlock
+                          key={apt.id}
+                          appointment={apt}
+                          stylistColor={stylistColor}
+                          staffLine={staffLine}
+                          isSecondary={isSecondary}
+                          onClick={onBlockClick}
+                          isMatch={searchActive && matchedIds.has(apt.id)}
+                          isDimmed={searchActive && !matchedIds.has(apt.id)}
+                          blockRef={
+                            apt.id === firstMatchId
+                              ? firstMatchRef
+                              : undefined
+                          }
+                          alertCount={alertCountById[apt.id]}
+                        />,
+                      ];
+                    })}
                   </div>
                 </ContextMenuTrigger>
                 <ContextMenuContent>
@@ -880,6 +1321,22 @@ function DayView({
           })}
         </div>
       </div>
+      {bulkState && (
+        <BulkActionsDialog
+          open={!!bulkState}
+          onOpenChange={(o) => {
+            if (!o) setBulkState(null);
+          }}
+          mode={bulkState.mode}
+          sourceStylist={{
+            id: bulkState.stylistId,
+            name: bulkState.stylistName,
+          }}
+          date={selectedDate}
+          appointments={bulkTargetAppointments}
+          allStylists={fullStylists}
+        />
+      )}
     </div>
   );
 }
@@ -897,6 +1354,8 @@ function WeekView({
   searchActive,
   waitlistByDate,
   onWaitlistOpen,
+  stylistColorById,
+  alertCountById,
 }: {
   selectedDate: string;
   today: string;
@@ -906,6 +1365,8 @@ function WeekView({
   searchActive: boolean;
   waitlistByDate: Record<string, number>;
   onWaitlistOpen: (dateStr: string) => void;
+  stylistColorById: Record<string, string>;
+  alertCountById: Record<string, number>;
 }) {
   const weekDays = getWeekDays(selectedDate);
 
@@ -966,14 +1427,22 @@ function WeekView({
                       <div
                         key={apt.id}
                         className={cn(
-                          "rounded px-1.5 py-0.5 text-[10px] font-medium truncate",
+                          "flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium",
                           s.bg,
                           s.text,
                           isMatch && "ring-2 ring-blue-500 ring-offset-1",
                           isDimmed && "opacity-25 saturate-50",
                         )}
                       >
-                        {apt.startTime} {apt.petName}
+                        {!!alertCountById[apt.id] && (
+                          <AlertTriangle
+                            className="size-2.5 shrink-0 text-red-600"
+                            aria-label={`${alertCountById[apt.id]} alert note${alertCountById[apt.id] > 1 ? "s" : ""}`}
+                          />
+                        )}
+                        <span className="truncate">
+                          {apt.startTime} {apt.petName}
+                        </span>
                       </div>
                     );
                   })}
@@ -1003,6 +1472,8 @@ function MonthView({
   searchActive,
   waitlistByDate,
   onWaitlistOpen,
+  stylistColorById,
+  alertCountById,
 }: {
   selectedDate: string;
   today: string;
@@ -1012,6 +1483,8 @@ function MonthView({
   searchActive: boolean;
   waitlistByDate: Record<string, number>;
   onWaitlistOpen: (dateStr: string) => void;
+  stylistColorById: Record<string, string>;
+  alertCountById: Record<string, number>;
 }) {
   const cells = getMonthDays(selectedDate);
 
@@ -1073,14 +1546,22 @@ function MonthView({
                   <div
                     key={apt.id}
                     className={cn(
-                      "rounded px-1 py-0.5 text-[10px] font-medium truncate w-full",
+                      "flex items-center gap-1 rounded px-1 py-0.5 text-[10px] font-medium w-full",
                       s.bg,
                       s.text,
                       isMatch && "ring-2 ring-blue-500 ring-offset-1",
                       isDimmed && "opacity-25 saturate-50",
                     )}
                   >
-                    {apt.startTime} {apt.petName}
+                    {!!alertCountById[apt.id] && (
+                      <AlertTriangle
+                        className="size-2.5 shrink-0 text-red-600"
+                        aria-label={`${alertCountById[apt.id]} alert note${alertCountById[apt.id] > 1 ? "s" : ""}`}
+                      />
+                    )}
+                    <span className="truncate">
+                      {apt.startTime} {apt.petName}
+                    </span>
                   </div>
                 );
               })}
@@ -1100,6 +1581,18 @@ function MonthView({
 export function GroomingCalendar() {
   const todayStr = formatISODate(new Date());
   const [selectedDate, setSelectedDate] = useState(todayStr);
+  // Print picker — controls which printable layout is mounted into the
+  // hidden `print:block` surface when the browser print dialog opens.
+  const [printMode, setPrintMode] = useState<"day-summary" | "cards">(
+    "day-summary",
+  );
+
+  function handlePrint(mode: "day-summary" | "cards") {
+    setPrintMode(mode);
+    // Defer the actual print() until after the state flush so the requested
+    // layout has time to mount into the print surface.
+    queueMicrotask(() => window.print());
+  }
   const [viewMode, setViewMode] = useState<ViewMode>("day");
   const [panelOpen, setPanelOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] =
@@ -1118,13 +1611,70 @@ export function GroomingCalendar() {
 
   const { data: appointments = [] } = useQuery(groomingQueries.appointments());
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
-  const { data: waitlist = [] } = useQuery(groomingQueries.waitlist());
+  const { entries: waitlist } = useGroomingWaitlist();
+  const { enabled: mobileEnabled, vans } = useMobileGrooming();
+
+  // When mobile grooming is on, vans show up alongside groomers as calendar
+  // columns. They share the same shape so DayView can render them without
+  // knowing the difference.
+  const calendarColumns = useMemo(() => {
+    const cols = stylistsData.map((s) => ({
+      id: s.id,
+      name: s.name,
+      status: s.status,
+      capacity: { skillLevel: s.capacity.skillLevel },
+      calendarColor: s.calendarColor,
+    }));
+    if (!mobileEnabled) return cols;
+    const nameFor = (id: string | undefined) => {
+      if (!id) return null;
+      const s = facilityStaff.find((p) => p.id === id);
+      return s ? `${s.firstName} ${s.lastName}` : null;
+    };
+    const vanCols = vans
+      .filter((v) => v.active)
+      .map((v) => {
+        const primary = nameFor(v.primaryDriverId);
+        const second = nameFor(v.secondGroomerId);
+        const staffLine =
+          primary && second
+            ? `${primary} · ${second}`
+            : (primary ?? second ?? undefined);
+        return {
+          id: v.id,
+          name: v.name,
+          status: "active" as const,
+          capacity: { skillLevel: "van" },
+          calendarColor: v.calendarColor,
+          staffLine,
+        };
+      });
+    return [...cols, ...vanCols];
+  }, [stylistsData, vans, mobileEnabled]);
 
   const waitlistByDate = useMemo(() => {
     const map: Record<string, number> = {};
-    for (const w of waitlist) map[w.date] = (map[w.date] ?? 0) + 1;
+    for (const w of waitlist) {
+      // Only count entries that are still actionable on the calendar.
+      if (w.status === "confirmed" || w.status === "expired") continue;
+      map[w.date] = (map[w.date] ?? 0) + 1;
+    }
     return map;
   }, [waitlist]);
+
+  const stylistColorById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const s of stylistsData) {
+      map[s.id] = colorForStylist(s.id, s.calendarColor);
+    }
+    return map;
+  }, [stylistsData]);
+
+  const stylistNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const s of stylistsData) map[s.id] = s.name;
+    return map;
+  }, [stylistsData]);
 
   const [waitlistDate, setWaitlistDate] = useState<string | null>(null);
 
@@ -1132,6 +1682,18 @@ export function GroomingCalendar() {
     () => applyCalendarFilters(appointments, filters),
     [appointments, filters],
   );
+
+  // Effective alert-note count per appointment. Carry-forward alerts from past
+  // bookings for the same pet are included so the red badge appears even on
+  // future appointments that don't have their own alerts yet.
+  const alertCountById = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const a of appointments) {
+      const count = getEffectiveAlertNotes(a, appointments).length;
+      if (count > 0) map[a.id] = count;
+    }
+    return map;
+  }, [appointments]);
 
   const searchActive = searchQuery.trim().length > 0;
 
@@ -1286,14 +1848,33 @@ export function GroomingCalendar() {
               stylists={stylistsData}
               appointments={appointments}
             />
-            <Button
-              variant="outline"
-              className="rounded-full h-10 px-4 shadow-sm gap-2 border-slate-200 hover:bg-slate-100 bg-white"
-              onClick={() => window.print()}
-              title="Print today's schedule"
-            >
-              <Printer className="h-4 w-4" /> Print
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="rounded-full h-10 px-4 shadow-sm gap-2 border-slate-200 hover:bg-slate-100 bg-white"
+                  title="Print options"
+                >
+                  <Printer className="h-4 w-4" /> Print
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem
+                  onClick={() => handlePrint("day-summary")}
+                  className="gap-2"
+                >
+                  <CalendarDays className="size-4" />
+                  Daily Summary
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handlePrint("cards")}
+                  className="gap-2"
+                >
+                  <Scissors className="size-4" />
+                  Appointment Cards
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button className="rounded-full h-10 px-5 shadow-sm bg-blue-600 hover:bg-blue-700 text-white" onClick={handleNewEvent}>
               <Plus className="h-4 w-4 mr-1.5" /> New Event
             </Button>
@@ -1336,7 +1917,8 @@ export function GroomingCalendar() {
               selectedDate={selectedDate}
               appointments={filteredAppointments}
               timeBlocks={timeBlocks}
-              stylists={stylistsData}
+              stylists={calendarColumns}
+              fullStylists={stylistsData}
               onBlockClick={handleBlockClick}
               onNew={handleNewEvent}
               onSlotClick={handleSlotClick}
@@ -1344,6 +1926,8 @@ export function GroomingCalendar() {
               onConfirmBlock={handleConfirmBlock}
               matchedIds={searchMatchedIds}
               searchActive={searchActive}
+              stylistNameById={stylistNameById}
+              alertCountById={alertCountById}
             />
           )}
           {viewMode === "week" && (
@@ -1356,6 +1940,8 @@ export function GroomingCalendar() {
               searchActive={searchActive}
               waitlistByDate={waitlistByDate}
               onWaitlistOpen={setWaitlistDate}
+              stylistColorById={stylistColorById}
+              alertCountById={alertCountById}
             />
           )}
           {viewMode === "month" && (
@@ -1368,6 +1954,8 @@ export function GroomingCalendar() {
               searchActive={searchActive}
               waitlistByDate={waitlistByDate}
               onWaitlistOpen={setWaitlistDate}
+              stylistColorById={stylistColorById}
+              alertCountById={alertCountById}
             />
           )}
         </div>
@@ -1414,8 +2002,16 @@ export function GroomingCalendar() {
     <PrintableDaySheet
       date={selectedDate}
       appointments={filteredAppointments}
+      allAppointments={appointments}
       timeBlocks={timeBlocks}
-      stylists={stylistsData}
+      stylists={calendarColumns}
+      active={printMode === "day-summary"}
+    />
+    <PrintableAppointmentCards
+      date={selectedDate}
+      appointments={filteredAppointments}
+      allAppointments={appointments}
+      active={printMode === "cards"}
     />
     </>
   );

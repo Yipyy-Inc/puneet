@@ -284,6 +284,35 @@ export const petTagAssignmentSchema = z.object({
 export type PetTagAssignment = z.infer<typeof petTagAssignmentSchema>;
 
 // ============================================================================
+// Pet & Client Notes
+// ============================================================================
+
+/**
+ * General-purpose note attached to a pet or client profile. Pulls through to
+ * every appointment for that pet/client. Distinct from grooming alert notes:
+ * these are routine info ("prefers lavender shampoo"), not urgent warnings.
+ *
+ * The `pinned` flag pulls the most important note to the top of the list
+ * regardless of when it was written.
+ */
+export const petNoteScopeEnum = z.enum(["pet", "client"]);
+export type PetNoteScope = z.infer<typeof petNoteScopeEnum>;
+
+export const petNoteSchema = z.object({
+  id: z.string(),
+  scope: petNoteScopeEnum,
+  /** Pet id when scope = "pet". */
+  petId: z.number().optional(),
+  /** Client id when scope = "client". */
+  clientId: z.number().optional(),
+  text: z.string(),
+  pinned: z.boolean(),
+  createdBy: z.string(),
+  createdAt: z.string(),
+});
+export type PetNote = z.infer<typeof petNoteSchema>;
+
+// ============================================================================
 // Ban Records
 // ============================================================================
 
