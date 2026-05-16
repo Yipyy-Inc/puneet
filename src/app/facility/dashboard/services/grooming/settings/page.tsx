@@ -24,6 +24,7 @@ import { Save, RotateCcw, Bell, Mail, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MobileGroomingSettings } from "@/components/facility/grooming/mobile-grooming-settings";
+import { GroomingCheckinFormBuilder } from "@/components/facility/grooming/grooming-checkin-form-builder";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -412,6 +413,21 @@ export default function GroomingSettingsPage() {
               </Select>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* 4b · Express Check-In Form (grooming pre-visit) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Express Check-In Form</CardTitle>
+          <CardDescription>
+            The pre-visit form sent to clients before their grooming
+            appointment. Build your own questions — answers show up in the
+            groomer&apos;s pre-visit briefing.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <GroomingCheckinFormBuilder isEditing={isEditing} />
         </CardContent>
       </Card>
 

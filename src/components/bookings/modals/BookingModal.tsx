@@ -43,6 +43,7 @@ import {
   DAYCARE_SUB_STEPS,
   BOARDING_SUB_STEPS,
   EVALUATION_SUB_STEPS,
+  GROOMING_SUB_STEPS,
   CUSTOM_SERVICE_SUB_STEPS,
   getServiceAccent,
 } from "./constants";
@@ -64,9 +65,18 @@ import {
 } from "@/lib/capacity-engine";
 import { evaluationConfig } from "@/data/settings";
 import { bookings as historicalBookings } from "@/data/bookings";
+import { toast } from "sonner";
 import { getNextEstimateId } from "@/data/estimates";
 import { facilities } from "@/data/facilities";
 import { facilityConfig, isApprovalRequired } from "@/data/facility-config";
+import { facilityStaff } from "@/data/facility-staff";
+import { groomingPackages } from "@/data/grooming";
+import { saveCustomPetPricingOverride } from "@/lib/grooming-pet-pricing-store";
+import { notificationToggles } from "@/data/settings";
+import {
+  digitalWaivers,
+  waiverSignatures,
+} from "@/data/additional-features";
 import {
   loadDepositRules,
   findApplicableDepositRule,
@@ -76,8 +86,10 @@ import {
   BookingDepositPrompt,
   type DepositPromptValue,
 } from "./BookingDepositPrompt";
+import { CustomerDepositPanel } from "./CustomerDepositPanel";
 
 import type { Client } from "@/types/client";
+import type { AppointmentStage } from "@/types/grooming";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 import type {
   NewBooking,
@@ -617,6 +629,124 @@ export function BookingModal({
   const [notificationSMS, setNotificationSMS] = useState(
     preSelectedNotificationSMS ?? initDefaults.sms,
   );
+  // Confirm-screen additions:
+  //   1) Express Check-In auto-send — sent after the booking is created. The
+  //      default flips per selected client (ON for new / draft clients, OFF
+  //      for returning clients who already have info on file). The effect
+  //      below re-evaluates whenever the selected client changes; staff can
+  //      override either way per booking.
+  //   2) Package redemption — when set, a session is debited from this
+  //      client package as part of the booking submission.
+  const [expressCheckInEnabled, setExpressCheckInEnabled] = useState(true);
+  const [redeemedPackageId, setRedeemedPackageId] = useState<string | null>(
+    null,
+  );
+  // Primary staff member assigned to this booking — drives which calendar
+  // column the appointment lands in (e.g. the groomer's column for grooming).
+  // Optional: an unassigned booking is still valid and falls into the
+  // "Unassigned" column on the calendar.
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  // Grooming-only: whether the customer chose mobile (van) service vs salon.
+  // Drives arrival-window display, service-area filtering, and the booking's
+  // `isMobile` flag on submit.
+  const [groomingIsMobile, setGroomingIsMobile] = useState(false);
+  // Grooming-only: primary stylist (groomer). Empty until staff assigns one.
+  const [groomingStylistId, setGroomingStylistId] = useState<string>("");
+  // Grooming-only: secondary co-groomers working alongside the primary stylist.
+  const [groomingAdditionalStylistIds, setGroomingAdditionalStylistIds] =
+    useState<string[]>([]);
+  // Grooming-only: assigned station (table/tub) — filtered by pet size.
+  const [groomingStationId, setGroomingStationId] = useState<string>("");
+  // Grooming-only: split-service stages — when set, the booking renders as
+  // sequential blocks on the calendar instead of one continuous block.
+  const [groomingStages, setGroomingStages] = useState<AppointmentStage[]>([]);
+  // Grooming-only: manual price/duration override. Wins over the resolver-
+  // computed value. Cleared whenever the pet or package changes.
+  const [groomingManualPrice, setGroomingManualPrice] = useState<
+    number | undefined
+  >(undefined);
+  const [groomingManualDuration, setGroomingManualDuration] = useState<
+    number | undefined
+  >(undefined);
+  // Grooming-only: when true, the manual price/duration is persisted as the
+  // pet's per-service rate on submit so the next booking pre-fills with it.
+  const [groomingSavePriceToPet, setGroomingSavePriceToPet] = useState(false);
+  // Grooming-only: ids of grooming-specific add-ons (GROOMING_ADD_ONS catalog)
+  // selected for this booking. Separate from `extraServices` which holds
+  // facility-wide service add-ons (different catalog, per-pet quantities).
+  const [groomingSelectedAddOnIds, setGroomingSelectedAddOnIds] = useState<
+    string[]
+  >([]);
+  // Grooming-only: subset of `groomingSelectedAddOnIds` that came from the
+  // package's default-rules (vs explicitly chosen by staff). Tracked so the
+  // rule engine can swap out only the auto picks when the package or pet changes.
+  const [groomingAutoAttachedAddOnIds, setGroomingAutoAttachedAddOnIds] =
+    useState<string[]>([]);
+  // Track waiver ids signed during this wizard session — combined with the
+  // already-stored signatures in waiverSignatures (read on the Confirm step)
+  // to decide whether the customer can submit. Reset on form reset.
+  const [sessionSignedWaiverIds, setSessionSignedWaiverIds] = useState<
+    Set<string>
+  >(new Set());
+  // Customer-mode card selection. When a deposit rule applies, the customer
+  // must pick a card before they can submit; staff mode uses the existing
+  // BookingDepositPrompt flow instead.
+  const [
+    customerPaymentMethodId,
+    setCustomerPaymentMethodId,
+  ] = useState<string | null>(null);
+
+  useEffect(() => {
+    // "Returning" = the client has at least one historical booking.
+    // Draft clients (negative ids from the quick-create flow) always count
+    // as new — they were just created in this session.
+    const hasHistory =
+      selectedClientId !== null &&
+      selectedClientId > 0 &&
+      historicalBookings.some((b) => b.clientId === selectedClientId);
+    setExpressCheckInEnabled(!hasHistory);
+  }, [selectedClientId]);
+
+  // Clear redemption whenever the client or service changes — otherwise a
+  // stale "$0 - covered by package" carries over to a service the package
+  // doesn't apply to.
+  useEffect(() => {
+    setRedeemedPackageId(null);
+  }, [selectedClientId, selectedService]);
+
+  // Clear grooming manual price/duration whenever the chosen package or pets
+  // change — a price tied to "Full Groom on Buddy" shouldn't carry to
+  // "Bath Only on Bella".
+  useEffect(() => {
+    if (selectedService !== "grooming") return;
+    setGroomingManualPrice(undefined);
+    setGroomingManualDuration(undefined);
+    setGroomingSavePriceToPet(false);
+  }, [selectedService, serviceType, selectedPetIds]);
+
+  // Clear staff selection when the service changes — the previously chosen
+  // staff member may not be assigned to the new service module.
+  useEffect(() => {
+    setSelectedStaffId(null);
+  }, [selectedService]);
+
+  // Reset grooming-only fields whenever the service changes — they only
+  // apply when grooming is selected, and stale values would otherwise leak
+  // into the next service's booking.
+  useEffect(() => {
+    if (selectedService !== "grooming") {
+      setGroomingIsMobile(false);
+      setGroomingStylistId("");
+      setGroomingAdditionalStylistIds([]);
+      setGroomingStationId("");
+      setGroomingStages([]);
+      setGroomingManualPrice(undefined);
+      setGroomingManualDuration(undefined);
+      setGroomingSavePriceToPet(false);
+      setGroomingSelectedAddOnIds([]);
+      setGroomingAutoAttachedAddOnIds([]);
+    }
+  }, [selectedService]);
   const [tipAmount, setTipAmount] = useState(0);
   const [showingTipStep, setShowingTipStep] = useState(false);
   const [includesEvaluation, setIncludesEvaluation] = useState(false);
@@ -641,6 +771,7 @@ export function BookingModal({
       return hideRoomAssignment(BOARDING_SUB_STEPS);
     }
     if (selectedService === "evaluation") return EVALUATION_SUB_STEPS;
+    if (selectedService === "grooming") return GROOMING_SUB_STEPS;
     if (selectedService) {
       return CUSTOM_SERVICE_SUB_STEPS;
     }
@@ -706,7 +837,19 @@ export function BookingModal({
             return false;
         }
       }
-      // Grooming, training, custom services — schedule sub-step
+      if (selectedService === "grooming") {
+        switch (stepId) {
+          case 0: // Package picked
+            return !!serviceType;
+          case 1: // Add-ons — always optional
+            return true;
+          case 2: // Schedule
+            return !!startDate && !!checkInTime && !!checkOutTime;
+          default:
+            return false;
+        }
+      }
+      // Training, custom services — schedule sub-step only
       if (stepId === 0) {
         return !!startDate && !!checkInTime && !!checkOutTime;
       }
@@ -725,6 +868,7 @@ export function BookingModal({
       startDate,
       checkInTime,
       checkOutTime,
+      serviceType,
     ],
   );
 
@@ -1033,6 +1177,39 @@ export function BookingModal({
     [open, facilityId, pricingStorageVersion],
   );
 
+  // Auto-seed extraServices with the facility's default + required add-ons
+  // for the picked service, applied per selected pet. Defaults are
+  // pre-selected (and removable); required are auto-included and cannot be
+  // removed (lock enforced in the UI). We only ADD missing rows — never
+  // remove rows the user has toggled on — so navigating back and forth in
+  // the wizard doesn't wipe customer choices.
+  useEffect(() => {
+    if (!selectedService) return;
+    if (selectedPetIds.length === 0) return;
+    const applicable = storedAddOns.filter(
+      (a) =>
+        a.isActive &&
+        (a.isDefault || a.isRequired) &&
+        (a.applicableServices?.includes(selectedService) ?? false),
+    );
+    if (applicable.length === 0) return;
+    setExtraServices((prev) => {
+      const next = [...prev];
+      for (const pid of selectedPetIds) {
+        for (const a of applicable) {
+          const already = next.some(
+            (es) => es.serviceId === a.id && es.petId === pid,
+          );
+          if (!already) {
+            next.push({ serviceId: a.id, quantity: 1, petId: pid });
+          }
+        }
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedService, selectedPetIds.join(","), storedAddOns]);
+
   const boardingNights = useMemo(() => {
     if (!boardingRangeStart || !boardingRangeEnd) return 0;
     return Math.max(
@@ -1055,8 +1232,15 @@ export function BookingModal({
     } else if (selectedService === "boarding") {
       basePrice = boarding.basePrice * Math.max(boardingNights, 1);
     } else if (selectedService === "grooming") {
-      basePrice =
-        grooming.basePrice * Math.max(pricingSelectedPetIds.length, 1);
+      // When a package is picked, use its starting price (smallest size).
+      // Final price resolves on the facility side once pet size/breed/coat
+      // are taken into account. Falls back to the category base price until
+      // staff/customer pick a package.
+      const pkg = serviceType
+        ? groomingPackages.find((p) => p.id === serviceType)
+        : undefined;
+      const perPet = pkg ? pkg.sizePricing.small : grooming.basePrice;
+      basePrice = perPet * Math.max(pricingSelectedPetIds.length, 1);
     } else if (selectedService === "training") {
       basePrice =
         training.basePrice * Math.max(pricingSelectedPetIds.length, 1);
@@ -1309,16 +1493,17 @@ export function BookingModal({
     return isEvaluationOptionalForService(selectedService);
   }, [isEvaluationOptionalForService, selectedService]);
 
-  // Resolve any deposit rule that applies to this booking
+  // Resolve any deposit rule that applies to this booking. Customer-mode
+  // now participates so the deposit + card picker can render on Confirm.
   const applicableDepositRule = useMemo(() => {
-    if (isEstimateMode || isCustomerMode || !selectedService) return null;
+    if (isEstimateMode || !selectedService) return null;
     const rules = loadDepositRules();
     return findApplicableDepositRule(
       selectedService,
       calculatePrice.total,
       rules,
     );
-  }, [isEstimateMode, isCustomerMode, selectedService, calculatePrice.total]);
+  }, [isEstimateMode, selectedService, calculatePrice.total]);
 
   // Sync prompt defaults when the rule or total changes
   useEffect(() => {
@@ -1387,7 +1572,7 @@ export function BookingModal({
           currentSubSteps[currentSubStep]?.id ?? currentSubStep,
         );
       }
-      case "confirm":
+      case "confirm": {
         if (selectedService !== "evaluation") {
           const hasExpired = selectedPets.some((pet) =>
             petHasExpiredEvaluation(pet),
@@ -1397,7 +1582,32 @@ export function BookingModal({
           );
           if (hasExpired || hasFailed) return false;
         }
+        // Waivers: every active, signature-required waiver matching this
+        // service (or "general") must be signed before submit. Signatures
+        // can be either previously-stored or freshly captured this session.
+        const previouslySigned = new Set(
+          waiverSignatures.map((s) => s.waiverId),
+        );
+        const pending = digitalWaivers.filter(
+          (w) =>
+            w.isActive &&
+            w.requiresSignature &&
+            !previouslySigned.has(w.id) &&
+            !sessionSignedWaiverIds.has(w.id) &&
+            (w.type === selectedService || w.type === "general"),
+        );
+        if (pending.length > 0) return false;
+        // Customer-mode deposit: when a rule applies and a deposit > 0 is
+        // required, the customer must pick a card before they can submit.
+        if (isCustomerMode && applicableDepositRule) {
+          const required = computeDepositAmount(
+            applicableDepositRule,
+            calculatePrice.total,
+          );
+          if (required > 0 && !customerPaymentMethodId) return false;
+        }
         return true;
+      }
       default:
         return false;
     }
@@ -1419,6 +1629,11 @@ export function BookingModal({
     petHasExpiredEvaluation,
     petHasFailedEvaluation,
     petHasValidEvaluation,
+    sessionSignedWaiverIds,
+    applicableDepositRule,
+    customerPaymentMethodId,
+    calculatePrice.total,
+    isCustomerMode,
   ]);
 
   const handleNext = () => {
@@ -1429,12 +1644,13 @@ export function BookingModal({
     }
 
     const currentStepId = displayedSteps[currentStep]?.id;
-    // Handle sub-steps for daycare/boarding on details step
+    // Handle sub-steps for services that split details into multiple panes
     if (
       currentStepId === "details" &&
       (selectedService === "daycare" ||
         selectedService === "boarding" ||
-        selectedService === "evaluation")
+        selectedService === "evaluation" ||
+        selectedService === "grooming")
     ) {
       if (currentSubStep < currentSubSteps.length - 1) {
         setCurrentSubStep(currentSubStep + 1);
@@ -1465,7 +1681,8 @@ export function BookingModal({
         prevStepId === "details" &&
         (selectedService === "daycare" ||
           selectedService === "boarding" ||
-          selectedService === "evaluation")
+          selectedService === "evaluation" ||
+          selectedService === "grooming")
       ) {
         setCurrentSubStep(currentSubSteps.length - 1);
       } else {
@@ -1483,12 +1700,13 @@ export function BookingModal({
       return;
     }
 
-    // Handle sub-steps for daycare/boarding on details step
+    // Handle sub-steps for services that split details into multiple panes
     if (
       currentStepId === "details" &&
       (selectedService === "daycare" ||
         selectedService === "boarding" ||
-        selectedService === "evaluation")
+        selectedService === "evaluation" ||
+        selectedService === "grooming")
     ) {
       if (currentSubStep > 0) {
         setCurrentSubStep(currentSubStep - 1);
@@ -1497,12 +1715,13 @@ export function BookingModal({
     }
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
-      // Reset to last sub-step if going back to details with daycare/boarding
+      // Reset to last sub-step if going back to a multi-pane details step
       if (
         prevStepId === "details" &&
         (selectedService === "daycare" ||
           selectedService === "boarding" ||
-          selectedService === "evaluation")
+          selectedService === "evaluation" ||
+          selectedService === "grooming")
       ) {
         setCurrentSubStep(currentSubSteps.length - 1);
       } else {
@@ -1596,7 +1815,7 @@ export function BookingModal({
         selectedService === "boarding" && boardingDateTimes.length > 0
           ? boardingDateTimes[boardingDateTimes.length - 1].checkOutTime
           : checkOutTime,
-      status: approvalRequired ? "request_submitted" : "pending",
+      status: approvalRequired ? "request_submitted" : "confirmed",
       basePrice: calculatePrice.basePrice,
       discount: calculatePrice.discount,
       totalCost: calculatePrice.total,
@@ -1629,18 +1848,84 @@ export function BookingModal({
           : undefined,
       notificationEmail: notificationEmail,
       notificationSMS: notificationSMS,
+      assignedStaff: (() => {
+        if (!selectedStaffId) return undefined;
+        const s = facilityStaff.find((m) => m.id === selectedStaffId);
+        return s ? `${s.firstName} ${s.lastName}` : undefined;
+      })(),
+      // For grooming, serviceType holds the picked GroomingPackage.id —
+      // mirror it onto the schema's dedicated field so downstream consumers
+      // (calendar bridge, invoice line item, etc.) can read it semantically.
+      groomingStyle:
+        selectedService === "grooming" && serviceType ? serviceType : undefined,
+      isMobile:
+        selectedService === "grooming" && groomingIsMobile ? true : undefined,
+      // Primary groomer assignment — mirror it onto both `stylistPreference`
+      // (the dedicated field) and `assignedStaff` (the calendar column key)
+      // so the grooming calendar bridge can route the booking correctly.
+      stylistPreference:
+        selectedService === "grooming" && groomingStylistId
+          ? groomingStylistId
+          : undefined,
+      // Secondary co-groomers + split-service stages.
+      additionalStylistIds:
+        selectedService === "grooming" &&
+        groomingAdditionalStylistIds.length > 0
+          ? groomingAdditionalStylistIds
+          : undefined,
+      groomingStages:
+        selectedService === "grooming" && groomingStages.length > 0
+          ? groomingStages.map(({ completedAt: _completedAt, ...keep }) => keep)
+          : undefined,
+      // Manual duration override — already reflected in checkInTime / checkOutTime,
+      // but surfaced as a dedicated field so the calendar bridge can pin the
+      // block height to staff's choice.
+      groomingDurationOverrideMin:
+        selectedService === "grooming" && groomingManualDuration !== undefined
+          ? groomingManualDuration
+          : undefined,
+      // Grooming station assignment (filtered by pet size on the wizard side).
+      stationAssignment:
+        selectedService === "grooming" && groomingStationId
+          ? groomingStationId
+          : undefined,
+      // Grooming-specific add-ons (separate catalog from facility-wide
+      // ServiceAddOns which still live on `extraServices`).
+      groomingAddOns:
+        selectedService === "grooming" && groomingSelectedAddOnIds.length > 0
+          ? groomingSelectedAddOnIds
+          : undefined,
       tipAmount: tipAmount > 0 ? tipAmount : undefined,
       includesEvaluation: includesEvaluation || undefined,
       evaluationStatus: includesEvaluation ? "pending" : undefined,
-      initialDeposit:
-        applicableDepositRule && depositPrompt.collectNow && depositPrompt.amount > 0
-          ? {
-              amount: depositPrompt.amount,
-              method: depositPrompt.method,
-              ruleLabel: applicableDepositRule.label,
-              collectedAt: new Date().toISOString(),
-            }
-          : undefined,
+      initialDeposit: (() => {
+        if (!applicableDepositRule) return undefined;
+        // Customer flow: payment method picked on the Confirm panel.
+        if (isCustomerMode) {
+          const required = computeDepositAmount(
+            applicableDepositRule,
+            calculatePrice.total,
+          );
+          if (required <= 0 || !customerPaymentMethodId) return undefined;
+          return {
+            amount: required,
+            method: "card",
+            ruleLabel: applicableDepositRule.label,
+            collectedAt: new Date().toISOString(),
+            paymentMethodId: customerPaymentMethodId,
+          };
+        }
+        // Staff flow: BookingDepositPrompt's collectNow / method / amount.
+        if (depositPrompt.collectNow && depositPrompt.amount > 0) {
+          return {
+            amount: depositPrompt.amount,
+            method: depositPrompt.method,
+            ruleLabel: applicableDepositRule.label,
+            collectedAt: new Date().toISOString(),
+          };
+        }
+        return undefined;
+      })(),
     };
 
     if (isEstimateMode) {
@@ -1651,6 +1936,29 @@ export function BookingModal({
       return;
     }
 
+    // Persist the grooming manual price/duration to this pet so the next
+    // booking for the same pet+package starts from this number. Only fires
+    // when staff explicitly opted in and the pet has a real id (drafted-
+    // only pets get a negative id from the quick-create flow — skip those).
+    if (
+      selectedService === "grooming" &&
+      groomingSavePriceToPet &&
+      effectiveSelectedPets.length > 0 &&
+      effectiveSelectedPets[0].id > 0 &&
+      serviceType &&
+      (groomingManualPrice !== undefined ||
+        groomingManualDuration !== undefined)
+    ) {
+      saveCustomPetPricingOverride({
+        petId: effectiveSelectedPets[0].id,
+        packageId: serviceType,
+        customPrice: groomingManualPrice,
+        customDurationMin: groomingManualDuration,
+        note: `Saved from booking on ${startDate || "today"}.`,
+        createdBy: "facility-staff",
+      });
+    }
+
     if (isCustomerMode) {
       onCreateBooking(booking);
       setBookingRequested(true);
@@ -1658,6 +1966,99 @@ export function BookingModal({
     }
 
     onCreateBooking(booking);
+
+    // Post-submit side effects driven by Confirm-screen toggles.
+    // 1) Booking confirmation (email / SMS) — driven by the per-booking
+    //    notification toggles. The actual content (groomer name, address,
+    //    care instructions) is composed by the backend from the booking
+    //    record; here we just acknowledge dispatch.
+    if (notificationEmail || notificationSMS) {
+      const channel =
+        notificationEmail && notificationSMS
+          ? "email + SMS"
+          : notificationEmail
+            ? "email"
+            : "SMS";
+      toast.success("Booking confirmation sent", {
+        description: `${channel} with date, time, address, and care instructions.`,
+      });
+    }
+
+    // 2) SMS / email reminder schedule — driven by the facility-wide
+    //    "Booking Reminder" toggle in Settings → Notifications.
+    const reminderToggle = notificationToggles.find(
+      (t) => t.name === "Booking Reminder",
+    );
+    if (reminderToggle) {
+      const channels = [
+        reminderToggle.email && "email",
+        reminderToggle.sms && "SMS",
+        reminderToggle.push && "push",
+      ].filter(Boolean);
+      if (channels.length > 0) {
+        toast.success("Reminder scheduled", {
+          description: `24h before the appointment via ${channels.join(" + ")}.`,
+        });
+      }
+    }
+
+    // 3) Deposit collected → invoice updated with paid amount + remaining
+    //    balance. Surfaces the same data the invoice surface will show.
+    if (
+      applicableDepositRule &&
+      depositPrompt.collectNow &&
+      depositPrompt.amount > 0
+    ) {
+      const remaining = Math.max(
+        0,
+        calculatePrice.total - depositPrompt.amount,
+      );
+      toast.success(`Deposit of $${depositPrompt.amount.toFixed(2)} applied`, {
+        description: `Invoice updated · $${remaining.toFixed(2)} remaining.`,
+      });
+    }
+
+    if (expressCheckInEnabled) {
+      const channel =
+        selectedClient?.email && selectedClient.phone
+          ? "email + SMS"
+          : selectedClient?.email
+            ? "email"
+            : selectedClient?.phone
+              ? "SMS"
+              : "the client's contact on file";
+      const isGrooming = selectedService === "grooming";
+      // Grooming uses its own pre-visit form (configured in Grooming
+      // Settings → Express Check-In Form). Surface that distinction in the
+      // toast so staff know which form was sent.
+      const groomingLead =
+        (facilities.find((f) => f.id === facilityId) as {
+          groomingCheckinConfig?: { sendBefore?: number };
+        } | undefined)?.groomingCheckinConfig?.sendBefore;
+      toast.success(
+        isGrooming
+          ? "Grooming Pre-Visit Form sent"
+          : "Express Check-In form sent",
+        {
+          description: isGrooming
+            ? `Heading to ${channel}${groomingLead ? ` · ${groomingLead}h before the appointment` : ""}.`
+            : `Heading to ${channel}.`,
+        },
+      );
+    }
+    if (redeemedPackageId) {
+      const pkg = selectedClient?.packages?.find(
+        (p) => p.id === redeemedPackageId,
+      );
+      if (pkg) {
+        toast.success(`Redeemed 1 session from ${pkg.name}`, {
+          description: `${Math.max(0, pkg.remainingCredits - 1)} session${
+            Math.max(0, pkg.remainingCredits - 1) === 1 ? "" : "s"
+          } remaining.`,
+        });
+      }
+    }
+
     resetForm();
     onOpenChange(false);
   };
@@ -1701,6 +2102,21 @@ export function BookingModal({
     setTipAmount(0);
     setIncludesEvaluation(false);
     setBookingRequested(false);
+    setSelectedStaffId(null);
+    setRedeemedPackageId(null);
+    setExpressCheckInEnabled(true);
+    setGroomingIsMobile(false);
+    setGroomingStylistId("");
+    setGroomingAdditionalStylistIds([]);
+    setGroomingStationId("");
+    setGroomingStages([]);
+    setGroomingManualPrice(undefined);
+    setGroomingManualDuration(undefined);
+    setGroomingSavePriceToPet(false);
+    setGroomingSelectedAddOnIds([]);
+    setGroomingAutoAttachedAddOnIds([]);
+    setSessionSignedWaiverIds(new Set());
+    setCustomerPaymentMethodId(null);
   };
 
   const handleSendEstimate = () => {
@@ -2714,6 +3130,7 @@ export function BookingModal({
                     configs={configs}
                     bookingFlow={bookingFlow}
                     selectedPets={selectedPets}
+                    onBookService={canProceed ? handleNext : undefined}
                   />
                 )}
                 {displayedSteps[currentStep]?.id === "client-pet" && (
@@ -2784,6 +3201,34 @@ export function BookingModal({
                     extraServices={extraServices}
                     setExtraServices={setExtraServices}
                     selectedPets={effectiveSelectedPets}
+                    applyEligibilityFilter={
+                      bookingFlow.onlyShowApplicableServices === true
+                    }
+                    groomingIsMobile={groomingIsMobile}
+                    setGroomingIsMobile={setGroomingIsMobile}
+                    selectedClient={selectedClient}
+                    groomingStylistId={groomingStylistId}
+                    setGroomingStylistId={setGroomingStylistId}
+                    groomingAdditionalStylistIds={groomingAdditionalStylistIds}
+                    setGroomingAdditionalStylistIds={
+                      setGroomingAdditionalStylistIds
+                    }
+                    groomingStationId={groomingStationId}
+                    setGroomingStationId={setGroomingStationId}
+                    groomingStages={groomingStages}
+                    setGroomingStages={setGroomingStages}
+                    groomingManualPrice={groomingManualPrice}
+                    setGroomingManualPrice={setGroomingManualPrice}
+                    groomingManualDuration={groomingManualDuration}
+                    setGroomingManualDuration={setGroomingManualDuration}
+                    groomingSavePriceToPet={groomingSavePriceToPet}
+                    setGroomingSavePriceToPet={setGroomingSavePriceToPet}
+                    groomingSelectedAddOnIds={groomingSelectedAddOnIds}
+                    setGroomingSelectedAddOnIds={setGroomingSelectedAddOnIds}
+                    groomingAutoAttachedAddOnIds={groomingAutoAttachedAddOnIds}
+                    setGroomingAutoAttachedAddOnIds={
+                      setGroomingAutoAttachedAddOnIds
+                    }
                   />
                 )}
 
@@ -2813,7 +3258,7 @@ export function BookingModal({
                     </div>
                   )}
 
-                {/* Deposit prompt — applies when a deposit rule matches this booking */}
+                {/* Staff-facing deposit prompt */}
                 {!isCustomerMode &&
                   !showingTipStep &&
                   displayedSteps[currentStep]?.id === "confirm" &&
@@ -2826,6 +3271,34 @@ export function BookingModal({
                       onChange={setDepositPrompt}
                     />
                   )}
+
+                {/* Customer-facing deposit panel: pay-now + card picker */}
+                {isCustomerMode &&
+                  !showingTipStep &&
+                  displayedSteps[currentStep]?.id === "confirm" &&
+                  !bookingRequested &&
+                  applicableDepositRule &&
+                  selectedClientId !== null &&
+                  selectedClientId > 0 &&
+                  (() => {
+                    const required = computeDepositAmount(
+                      applicableDepositRule,
+                      calculatePrice.total,
+                    );
+                    if (required <= 0) return null;
+                    return (
+                      <div className="mx-1 mb-4">
+                        <CustomerDepositPanel
+                          rule={applicableDepositRule}
+                          depositAmount={required}
+                          bookingTotal={calculatePrice.total}
+                          clientId={selectedClientId}
+                          selectedPaymentMethodId={customerPaymentMethodId}
+                          onSelectPaymentMethod={setCustomerPaymentMethodId}
+                        />
+                      </div>
+                    );
+                  })()}
 
                 {/* Customer booking request confirmation state */}
                 {isCustomerMode && bookingRequested && (
@@ -3012,6 +3485,20 @@ export function BookingModal({
                       setNotificationEmail={setNotificationEmail}
                       notificationSMS={notificationSMS}
                       setNotificationSMS={setNotificationSMS}
+                      expressCheckInEnabled={expressCheckInEnabled}
+                      setExpressCheckInEnabled={setExpressCheckInEnabled}
+                      redeemedPackageId={redeemedPackageId}
+                      setRedeemedPackageId={setRedeemedPackageId}
+                      selectedStaffId={selectedStaffId}
+                      setSelectedStaffId={setSelectedStaffId}
+                      isMobileGrooming={groomingIsMobile}
+                      onWaiverSigned={(waiverId) =>
+                        setSessionSignedWaiverIds((prev) => {
+                          const next = new Set(prev);
+                          next.add(waiverId);
+                          return next;
+                        })
+                      }
                       tipConfig={tipConfig}
                       tipAmount={tipAmount}
                       onTipChange={setTipAmount}

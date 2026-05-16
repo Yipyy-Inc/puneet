@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -22,21 +22,16 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { cn } from "@/lib/utils";
-import { groomingQueries } from "@/lib/api/grooming";
+import { canMarkReadyForPickup, groomingQueries } from "@/lib/api/grooming";
 import type { GroomingAppointment, GroomingStatus } from "@/types/grooming";
-import type { GroomingStationPetSize } from "@/types/rooms";
 import { deductProductsForAppointment } from "@/lib/grooming-inventory-deduction";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
-import { isStationEligibleForPetSize } from "@/components/rooms/GroomingStationsClient";
+import {
+  CheckInConfirmationDialog,
+  type CheckInConfirmation,
+} from "./check-in-confirmation-dialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -263,122 +258,6 @@ function AppointmentCard({
   );
 }
 
-// ─── Station picker (fires from Check In) ────────────────────────────────────
-
-function StationPickerDialog({
-  open,
-  onOpenChange,
-  apt,
-  onConfirm,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  apt: GroomingAppointment | null;
-  onConfirm: (stationId: string, stationName: string) => void;
-}) {
-  const { stations } = useGroomingStations();
-  const [selected, setSelected] = useState<string>("");
-
-  useEffect(() => {
-    if (open) setSelected("");
-  }, [open]);
-
-  const eligible = useMemo(() => {
-    if (!apt) return [];
-    return stations.filter(
-      (s) =>
-        s.active &&
-        (s.status ?? "available") !== "out-of-service" &&
-        isStationEligibleForPetSize(s, apt.petSize as GroomingStationPetSize),
-    );
-  }, [stations, apt]);
-
-  if (!apt) return null;
-
-  const STATION_STATUS_LABEL: Record<string, string> = {
-    available: "Available",
-    "in-use": "In use",
-    "needs-cleaning": "Needs cleaning",
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <MapPin className="size-4 text-sky-600" />
-            Assign Station
-          </DialogTitle>
-          <p className="text-muted-foreground text-xs">
-            Pick a station for{" "}
-            <span className="font-medium text-foreground">{apt.petName}</span>
-            <span className="text-muted-foreground/80">
-              {" "}
-              · {apt.petSize} · {apt.packageName}
-            </span>
-          </p>
-        </DialogHeader>
-        <div className="max-h-[50vh] space-y-1.5 overflow-y-auto py-2">
-          {eligible.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              No stations are currently sized for a {apt.petSize} pet.
-            </p>
-          ) : (
-            eligible.map((s) => {
-              const status = s.status ?? "available";
-              const occupied =
-                status === "in-use" || status === "needs-cleaning";
-              const isSelected = selected === s.id;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  disabled={occupied}
-                  onClick={() => setSelected(s.id)}
-                  className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition-colors",
-                    isSelected
-                      ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
-                      : "hover:bg-muted/40",
-                    occupied && "cursor-not-allowed opacity-50",
-                  )}
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{s.name}</p>
-                    <p className="text-[11px] text-muted-foreground capitalize">
-                      {STATION_STATUS_LABEL[status] ?? status}
-                      {s.maxWeightLbs ? ` · max ${s.maxWeightLbs} lbs` : ""}
-                    </p>
-                  </div>
-                  {isSelected && (
-                    <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
-                  )}
-                </button>
-              );
-            })
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            disabled={!selected}
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
-            onClick={() => {
-              const station = eligible.find((s) => s.id === selected);
-              if (station) onConfirm(station.id, station.name);
-            }}
-          >
-            <LogIn className="mr-1.5 size-4" />
-            Check In
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function GroomingCheckInOut() {
@@ -452,21 +331,57 @@ export function GroomingCheckInOut() {
     });
   }
 
-  function handleConfirmCheckIn(stationId: string, stationName: string) {
+  function handleConfirmCheckIn(result: CheckInConfirmation) {
     if (!pendingCheckIn) return;
     const apt = pendingCheckIn;
-    setLocalStatuses((prev) => ({ ...prev, [apt.id]: "checked-in" }));
+    // Spec: confirmation transitions directly to In Progress and timestamps
+    // the start. The intermediate "checked-in" status stays in the enum for
+    // legacy data but isn't used by this flow anymore.
+    setLocalStatuses((prev) => ({ ...prev, [apt.id]: "in-progress" }));
     setLocalStations((prev) => ({
       ...prev,
-      [apt.id]: { id: stationId, name: stationName },
+      [apt.id]: { id: result.stationId, name: result.stationName },
     }));
-    // Flip the station to In Use on the live board with the pet + groomer.
-    setStationStatus(stationId, "in-use", {
+    setStationStatus(result.stationId, "in-use", {
       petName: apt.petName,
       stylistName: apt.stylistName,
     });
-    toast.success(`${apt.petName} — Checked In`, {
-      description: `Assigned to ${stationName}`,
+    // Persist drop-off observations + add-on edits onto the mock appointment
+    // so the session panel + ticket comments reflect the confirmation.
+    const target = allAppointments.find((a) => a.id === apt.id) as
+      | (GroomingAppointment & { intake?: GroomingAppointment["intake"] })
+      | undefined;
+    if (target) {
+      const prevIntake = target.intake ?? {
+        coatCondition: "normal",
+        behaviorNotes: "",
+        allergies: target.allergies ?? [],
+        specialInstructions: target.specialInstructions ?? "",
+        beforePhotos: [],
+        mattingFeeWarning: false,
+      };
+      target.intake = {
+        ...prevIntake,
+        dropOffObservations:
+          result.dropOffObservations || prevIntake.dropOffObservations,
+        sessionStartedAt: new Date().toISOString(),
+      };
+      target.addOns = result.addOns;
+      target.checkInTime = new Date().toISOString();
+      if (result.dropOffObservations) {
+        target.ticketComments = [
+          ...(target.ticketComments ?? []),
+          {
+            id: `tc-${Date.now()}`,
+            staff: "You",
+            message: `Drop-off: ${result.dropOffObservations}`,
+            at: new Date().toISOString(),
+          },
+        ];
+      }
+    }
+    toast.success(`${apt.petName} — In Progress`, {
+      description: `Station ${result.stationName} · session started`,
     });
     setPendingCheckIn(null);
   }
@@ -477,6 +392,20 @@ export function GroomingCheckInOut() {
     if (next === "checked-in") {
       setPendingCheckIn(apt);
       return;
+    }
+
+    // Hard gate: at least one after photo (and one before photo, when the
+    // facility requires it) must exist before the appointment can move to
+    // Ready for Pickup. Both requirements relax to optional in Grooming
+    // Settings → Express Check-In Form.
+    if (next === "ready-for-pickup") {
+      const check = canMarkReadyForPickup(apt);
+      if (!check.allowed) {
+        toast.error("Can't mark ready yet", {
+          description: check.reason,
+        });
+        return;
+      }
     }
 
     setLocalStatuses((prev) => ({ ...prev, [apt.id]: next }));
@@ -641,7 +570,7 @@ export function GroomingCheckInOut() {
         </CardContent>
       </Card>
 
-      <StationPickerDialog
+      <CheckInConfirmationDialog
         open={!!pendingCheckIn}
         onOpenChange={(o) => {
           if (!o) setPendingCheckIn(null);

@@ -30,8 +30,141 @@ import type {
   AgeGroupPricingRule,
   AgeGroupAdjustment,
   StylistSkillLevel,
+  BehaviorTag,
 } from "@/types/grooming";
 import type { PetSize } from "@/types/base";
+
+// ============================================================================
+// Session → Report Card mapping
+// ============================================================================
+
+/**
+ * Maps the behavior tags captured during the grooming session to the
+ * coarser mood values the Report Card uses. The session can hold multiple
+ * tags ("calm + reactive"); the Report Card picks the dominant one the
+ * owner will see in their card. Priority order is hand-tuned so the most
+ * salient signal wins (a reactive/anxious session shouldn't show "happy").
+ */
+const BEHAVIOR_TO_MOOD_PRIORITY: BehaviorTag[] = [
+  "reactive",
+  "needed-muzzle",
+  "anxious",
+  "energetic",
+  "happy",
+  "calm",
+];
+
+const BEHAVIOR_TO_MOOD: Record<BehaviorTag, "happy" | "content" | "shy" | "tired"> = {
+  calm: "content",
+  happy: "happy",
+  anxious: "shy",
+  energetic: "happy",
+  reactive: "shy",
+  "needed-muzzle": "shy",
+};
+
+// ============================================================================
+// Mark-Ready gate (photo requirements)
+// ============================================================================
+
+interface GroomingCheckinFacilityConfig {
+  requireBeforePhotos?: boolean;
+  requireAfterPhotos?: boolean;
+}
+
+/**
+ * Read photo requirements from the facility's grooming config. Both default
+ * to true — facilities can relax either to "optional" in Grooming Settings.
+ * Keeping this lookup in one place so calendar / panel / detail page / board
+ * never disagree about whether the gate is on.
+ *
+ * The facility id is hard-coded to 11 to match the rest of the prototype.
+ * When real multi-facility wiring lands this becomes a param.
+ */
+export function getGroomingPhotoRequirements(): {
+  requireBeforePhotos: boolean;
+  requireAfterPhotos: boolean;
+} {
+  // Lazy require to avoid a hard cycle through the data layer at module init.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { facilities } = require("@/data/facilities") as typeof import("@/data/facilities");
+  const f = facilities.find((x) => x.id === 11) as
+    | { groomingCheckinConfig?: GroomingCheckinFacilityConfig }
+    | undefined;
+  return {
+    requireBeforePhotos: f?.groomingCheckinConfig?.requireBeforePhotos ?? true,
+    requireAfterPhotos: f?.groomingCheckinConfig?.requireAfterPhotos ?? true,
+  };
+}
+
+/**
+ * Whether the groomer is allowed to move this appointment to Ready for
+ * Pickup. Photos that count: `intake.beforePhotos[]` (which the session
+ * panel writes to) and `afterPhotos[]` on the appointment itself.
+ *
+ * Returns `{ allowed: true }` when the gate is satisfied or the facility
+ * has relaxed both requirements. When blocked, `reason` is a short
+ * user-facing message suitable for a toast — both UI surfaces show the
+ * same wording.
+ */
+export function canMarkReadyForPickup(apt: GroomingAppointment): {
+  allowed: boolean;
+  reason?: string;
+} {
+  const reqs = getGroomingPhotoRequirements();
+  const hasBefore = (apt.intake?.beforePhotos?.length ?? 0) > 0;
+  const hasAfter = (apt.afterPhotos?.length ?? 0) > 0;
+  if (reqs.requireAfterPhotos && !hasAfter) {
+    return {
+      allowed: false,
+      reason: "Take at least one after photo before marking ready for pickup.",
+    };
+  }
+  if (reqs.requireBeforePhotos && !hasBefore) {
+    return {
+      allowed: false,
+      reason: "Take at least one before photo before marking ready for pickup.",
+    };
+  }
+  return { allowed: true };
+}
+
+export interface ReportCardSessionPrefill {
+  mood: "happy" | "content" | "shy" | "tired";
+  playNotes: string;
+  closingComment: string;
+  photos: string[];
+}
+
+/**
+ * Derive Report Card form prefill data from a grooming appointment's
+ * session state. Returns `null` when there's nothing to prefill (no intake
+ * data yet, e.g. for a fresh appointment). The caller (ReportCardsModule)
+ * spreads this onto the form's initial input so staff can review and edit
+ * before sending.
+ */
+export function getReportCardPrefillFromAppointment(
+  apt: GroomingAppointment,
+): ReportCardSessionPrefill | null {
+  const intake = apt.intake;
+  if (!intake) return null;
+  const moods = intake.moodTags ?? [];
+  const dominant =
+    BEHAVIOR_TO_MOOD_PRIORITY.find((t) => moods.includes(t)) ?? null;
+
+  const photoSet = new Set<string>();
+  for (const url of intake.beforePhotos ?? []) photoSet.add(url);
+  for (const p of apt.afterPhotos ?? []) photoSet.add(p.url);
+
+  return {
+    mood: dominant ? BEHAVIOR_TO_MOOD[dominant] : "happy",
+    playNotes: intake.sessionNotes ?? "",
+    closingComment: intake.sessionNotes
+      ? `${apt.petName} had a great grooming session — see notes above.`
+      : "",
+    photos: [...photoSet],
+  };
+}
 
 export const groomingQueries = {
   appointments: () => ({
@@ -535,14 +668,18 @@ export function isPackageEligibleForPet(
  * appointments that actually happened (completed) or are otherwise treated
  * as historical. Sorted descending by date+time so the freshest wins.
  */
-function getMostRecentCompletedAppointment(
+export function getMostRecentCompletedAppointment(
   petId: number,
   appointments: GroomingAppointment[],
+  excludeAppointmentId?: string,
 ): GroomingAppointment | undefined {
   const finishedStatuses = new Set(["completed", "checked-out"]);
   return appointments
     .filter(
-      (a) => a.petId === petId && finishedStatuses.has(a.status as string),
+      (a) =>
+        a.petId === petId &&
+        finishedStatuses.has(a.status as string) &&
+        a.id !== excludeAppointmentId,
     )
     .sort((a, b) => {
       const aKey = `${a.date} ${a.startTime}`;

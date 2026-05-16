@@ -369,6 +369,12 @@ export const facilityBookingFlowConfigSchema = z.object({
   hiddenServices: z.array(z.string()),
   evaluationLockedMessage: z.string().optional(),
   bookingRequestConfirmationMessage: z.string().optional(),
+  /**
+   * When true, the booking catalog pre-filters services/packages by the
+   * client's pets on file. Services without `eligibleSizes` are always
+   * shown (default).
+   */
+  onlyShowApplicableServices: z.boolean().optional(),
 });
 export type FacilityBookingFlowConfig = z.infer<
   typeof facilityBookingFlowConfigSchema
@@ -746,6 +752,13 @@ export const serviceAddOnSchema = z.object({
   generatesTask: z.boolean(),
   taskCategory: z.string().optional(),
   isDefault: z.boolean().optional(),
+  /**
+   * When true, the add-on is auto-included with every booking of an
+   * applicable service and cannot be removed by the customer. Renders with
+   * a "Required" badge and a locked control. Mutually meaningful with
+   * `isDefault` (which is auto-selected but removable).
+   */
+  isRequired: z.boolean().optional(),
   petTypeFilter: petTypeFilterSchema.optional(),
   sizePricing: z
     .array(

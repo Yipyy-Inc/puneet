@@ -70,6 +70,10 @@ import {
 import { SendEstimateModal } from "@/components/bookings/SendEstimateModal";
 import { RefundModal } from "@/components/bookings/RefundModal";
 import { AddRetailItemModal } from "@/components/bookings/AddRetailItemModal";
+import {
+  computeLatePickupFee,
+  type LateFeeResult,
+} from "@/lib/late-pickup-fee";
 import { BookingTransferModal } from "@/components/bookings/modals/BookingTransferModal";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { cn } from "@/lib/utils";
@@ -93,6 +97,7 @@ import {
   boardingConfig,
   groomingConfig,
   trainingConfig,
+  reportCardConfig,
 } from "@/data/settings";
 import type { GeneratedTask } from "@/types/task";
 import {
@@ -173,9 +178,17 @@ export default function ClientBookingDetailPage({
   const clientId = parseInt(id, 10);
   const bookingId = parseInt(bookingIdStr, 10);
 
-  const booking = useMemo(
+  const initialBooking = useMemo(
     () => initialBookings.find((b) => b.id === bookingId),
     [bookingId],
+  );
+  const [booking, setBooking] = useState(() => initialBooking);
+  useEffect(() => {
+    setBooking(initialBooking);
+  }, [initialBooking]);
+  const [reportCardSent, setReportCardSent] = useState(false);
+  const [pendingLateFee, setPendingLateFee] = useState<LateFeeResult | null>(
+    null,
   );
   const client = useMemo(
     () => clients.find((c) => c.id === clientId),
@@ -411,6 +424,25 @@ export default function ClientBookingDetailPage({
   const invoice = booking.invoice;
   const addedSubtotal = addedItems.reduce((s, i) => s + i.price, 0);
   const completedTasks = tasks.filter((t) => t.status === "completed").length;
+
+  const openCheckout = () => {
+    const scheduledEndIso = `${booking.endDate}T${booking.checkOutTime ?? "12:00"}:00`;
+    const petCount = Array.isArray(booking.petId) ? booking.petId.length : 1;
+    const fee = computeLatePickupFee({
+      serviceId: booking.service.toLowerCase(),
+      scheduledEndIso,
+      actualEndIso: new Date().toISOString(),
+      petCount,
+      basePrice: booking.basePrice,
+    });
+    if (fee) {
+      toast.warning(
+        `Late pickup: ${fee.minutesLate} min over — $${fee.amount.toFixed(2)} fee added`,
+      );
+    }
+    setPendingLateFee(fee);
+    setCheckoutOpen(true);
+  };
 
   const bookingTotalForDeposit = invoice?.total ?? booking.totalCost;
   const depositRule = findApplicableDepositRule(
@@ -726,14 +758,14 @@ export default function ClientBookingDetailPage({
                 setCareGateOpen(true);
                 return;
               }
-              setCheckoutOpen(true);
+              openCheckout();
             }}
             onTakePayment={() => {
               if (careStatus.pending.length > 0) {
                 setCareGateOpen(true);
                 return;
               }
-              setCheckoutOpen(true);
+              openCheckout();
             }}
             onConfirmBooking={() => {
               toast.success("Booking confirmed");
@@ -1427,9 +1459,17 @@ export default function ClientBookingDetailPage({
         <PaymentCheckoutFlow
           open={checkoutOpen}
           onOpenChange={setCheckoutOpen}
-          amountDue={invoice?.remainingDue ?? booking.totalCost}
+          amountDue={
+            (invoice?.remainingDue ?? booking.totalCost) +
+            addedSubtotal +
+            (pendingLateFee?.amount ?? 0)
+          }
           depositPaid={invoice?.depositCollected ?? 0}
-          invoiceTotal={invoice?.total ?? booking.totalCost}
+          invoiceTotal={
+            (invoice?.total ?? booking.totalCost) +
+            addedSubtotal +
+            (pendingLateFee?.amount ?? 0)
+          }
           otherUnpaidInvoices={initialBookings
             .filter(
               (b) =>
@@ -1444,12 +1484,68 @@ export default function ClientBookingDetailPage({
               amount: b.invoice?.remainingDue ?? b.totalCost,
             }))}
           onConfirm={(payment) => {
+            const lateFee = pendingLateFee;
+            setBooking((prev) => {
+              if (!prev) return prev;
+              const existing = prev.invoice;
+              const newPayment = {
+                date: new Date().toISOString(),
+                method: payment.method,
+                amount: payment.amount,
+                kind: "final" as const,
+              };
+              const lateFeeAmount = lateFee?.amount ?? 0;
+              const lateFeeLineItem: InvoiceLineItem | null = lateFee
+                ? {
+                    name: lateFee.label,
+                    unitPrice: lateFee.amount,
+                    quantity: 1,
+                    price: lateFee.amount,
+                  }
+                : null;
+              return {
+                ...prev,
+                status: "completed",
+                paymentStatus: "paid",
+                invoice: existing
+                  ? {
+                      ...existing,
+                      status: "closed",
+                      remainingDue: 0,
+                      items: [...existing.items, ...addedItems],
+                      fees: lateFeeLineItem
+                        ? [...existing.fees, lateFeeLineItem]
+                        : existing.fees,
+                      subtotal: existing.subtotal + addedSubtotal,
+                      total: existing.total + addedSubtotal + lateFeeAmount,
+                      tipTotal: (existing.tipTotal ?? 0) + payment.tip,
+                      payments: [...existing.payments, newPayment],
+                    }
+                  : existing,
+              };
+            });
+            setAddedItems([]);
+            setPendingLateFee(null);
+
             const extra = payment.includedInvoices?.length
               ? ` + ${payment.includedInvoices.length} other invoices`
               : "";
             toast.success(
               `Charged $${payment.amount.toFixed(2)} via ${payment.method}${payment.tip > 0 ? ` + $${payment.tip.toFixed(2)} tip` : ""}${extra}`,
             );
+
+            if (!reportCardSent) {
+              const mode = reportCardConfig.autoSend.mode;
+              if (mode === "immediate" || mode === "checkout") {
+                toast.success(`Report card sent to ${client.name}`);
+                setReportCardSent(true);
+              } else if (mode === "scheduled") {
+                toast.success(
+                  `Report card scheduled for ${reportCardConfig.autoSend.sendTime ?? "18:00"}`,
+                );
+                setReportCardSent(true);
+              }
+            }
           }}
         />
         <TipSplitModal
@@ -1570,7 +1666,7 @@ export default function ClientBookingDetailPage({
                   "Recorded on the booking audit trail for manager review",
               },
             );
-            setCheckoutOpen(true);
+            openCheckout();
           }}
         />
         <AlertDialog

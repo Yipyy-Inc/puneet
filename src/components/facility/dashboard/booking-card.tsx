@@ -32,6 +32,12 @@ import {
   CheckOutDialog,
   type EarlyCheckoutAdjustment,
 } from "@/components/facility/dashboard/check-out-dialog";
+import { PaymentCheckoutFlow } from "@/components/bookings/PaymentCheckoutFlow";
+import { reportCardConfig } from "@/data/settings";
+import {
+  computeLatePickupFee,
+  type LateFeeResult,
+} from "@/lib/late-pickup-fee";
 
 const findClient = (petId: number) =>
   clients.find((c) => c.pets.some((p) => p.id === petId));
@@ -99,6 +105,15 @@ export function BookingCard({
   const { updateStatus } = useUnifiedBookings();
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [pendingCheckout, setPendingCheckout] = useState<{
+    timestamp: string;
+    earlyCheckout?: EarlyCheckoutAdjustment;
+  } | null>(null);
+  const [pendingLateFee, setPendingLateFee] = useState<LateFeeResult | null>(
+    null,
+  );
+  const [reportCardSent, setReportCardSent] = useState(false);
   const client = findClient(booking.petId);
   const petImage = getPetImage(booking.petId);
   const petHref = client
@@ -155,10 +170,56 @@ export function BookingCard({
     timestamp: string;
     earlyCheckout?: EarlyCheckoutAdjustment;
   }) => {
-    updateStatus(booking.id, "checked-out", {
-      timestamp,
-      earlyCheckout,
+    const lateFee = computeLatePickupFee({
+      serviceId: booking.serviceKey,
+      scheduledEndIso: booking.scheduledEnd,
+      actualEndIso: timestamp,
+      basePrice: booking.price ?? 0,
     });
+    if (lateFee) {
+      toast.warning(
+        `Late pickup: ${lateFee.minutesLate} min over — $${lateFee.amount.toFixed(2)} fee added`,
+      );
+    }
+    setPendingCheckout({ timestamp, earlyCheckout });
+    setPendingLateFee(lateFee);
+    setCheckOutOpen(false);
+    setPaymentOpen(true);
+  };
+
+  const handlePaymentConfirm = (payment: {
+    method: string;
+    amount: number;
+    tip: number;
+    includedInvoices?: string[];
+  }) => {
+    if (!pendingCheckout) return;
+    updateStatus(booking.id, "checked-out", {
+      timestamp: pendingCheckout.timestamp,
+      earlyCheckout: pendingCheckout.earlyCheckout,
+    });
+    setPendingCheckout(null);
+    setPendingLateFee(null);
+
+    const extra = payment.includedInvoices?.length
+      ? ` + ${payment.includedInvoices.length} other invoices`
+      : "";
+    toast.success(
+      `Charged $${payment.amount.toFixed(2)} via ${payment.method}${payment.tip > 0 ? ` + $${payment.tip.toFixed(2)} tip` : ""}${extra}`,
+    );
+
+    if (!reportCardSent) {
+      const mode = reportCardConfig.autoSend.mode;
+      if (mode === "immediate" || mode === "checkout") {
+        toast.success(`Report card sent to ${booking.ownerName}`);
+        setReportCardSent(true);
+      } else if (mode === "scheduled") {
+        toast.success(
+          `Report card scheduled for ${reportCardConfig.autoSend.sendTime ?? "18:00"}`,
+        );
+        setReportCardSent(true);
+      }
+    }
   };
 
   return (
@@ -320,6 +381,18 @@ export function BookingCard({
                 onOpenChange={setCheckOutOpen}
                 onConfirm={handleCheckOutConfirm}
               />
+            )}
+            {paymentOpen && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <PaymentCheckoutFlow
+                  open={paymentOpen}
+                  onOpenChange={setPaymentOpen}
+                  amountDue={(booking.price ?? 0) + (pendingLateFee?.amount ?? 0)}
+                  depositPaid={0}
+                  invoiceTotal={(booking.price ?? 0) + (pendingLateFee?.amount ?? 0)}
+                  onConfirm={handlePaymentConfirm}
+                />
+              </div>
             )}
           </>
         )}

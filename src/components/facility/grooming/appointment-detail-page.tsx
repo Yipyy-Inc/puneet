@@ -52,7 +52,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { groomingQueries, getEffectiveAlertNotes } from "@/lib/api/grooming";
+import {
+  groomingQueries,
+  getEffectiveAlertNotes,
+  canMarkReadyForPickup,
+} from "@/lib/api/grooming";
 import type {
   GroomingAppointment,
   GroomingStatus,
@@ -83,6 +87,12 @@ import {
   useGroomingWaitlist,
   DEFAULT_OFFER_WINDOW_MINUTES,
 } from "@/hooks/use-grooming-waitlist";
+import { PreVisitBriefing } from "./pre-visit-briefing";
+import { GroomingSessionPanel } from "./grooming-session-panel";
+import {
+  CheckInConfirmationDialog,
+  type CheckInConfirmation,
+} from "./check-in-confirmation-dialog";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -335,6 +345,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   const [noShowOpen, setNoShowOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [bookAgainOpen, setBookAgainOpen] = useState(false);
+  const [checkInOpen, setCheckInOpen] = useState(false);
   const [feeOverride, setFeeOverride] = useState<number | null>(null);
   const [scheduleOverride, setScheduleOverride] = useState<{
     date: string;
@@ -471,6 +482,38 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     setStatus(next);
     recordFieldChange("Status", before, STATUS_META[next].label);
     toast.success(`${apt.petName} — ${verb}`);
+  }
+
+  function handleCheckInConfirm(result: CheckInConfirmation) {
+    if (!apt) return;
+    const before = STATUS_META[status ?? apt.status].label;
+    setStatus("in-progress");
+    recordFieldChange("Status", before, STATUS_META["in-progress"].label);
+    recordHistory(`Station assigned · ${result.stationName}`);
+    if (result.dropOffObservations) {
+      recordHistory(`Drop-off: ${result.dropOffObservations}`);
+    }
+    // Mutate the mock appointment so the session panel + briefing reflect
+    // what was just confirmed.
+    (apt as typeof apt & { intake?: typeof apt.intake }).intake = {
+      ...(apt.intake ?? {
+        coatCondition: "normal",
+        behaviorNotes: "",
+        allergies: apt.allergies,
+        specialInstructions: apt.specialInstructions,
+        beforePhotos: [],
+        mattingFeeWarning: false,
+      }),
+      dropOffObservations:
+        result.dropOffObservations || apt.intake?.dropOffObservations,
+      sessionStartedAt: new Date().toISOString(),
+    };
+    apt.addOns = result.addOns;
+    apt.checkInTime = new Date().toISOString();
+    toast.success(`${apt.petName} — In Progress`, {
+      description: `Station ${result.stationName} · session started`,
+    });
+    setCheckInOpen(false);
   }
 
   function handleCancelConfirm(r: CancelResult) {
@@ -714,7 +757,25 @@ export function AppointmentDetailPage({ id }: { id: string }) {
             {primary && (
               <Button
                 className={primary.className}
-                onClick={() => advanceStatus(primary.next, primary.label)}
+                onClick={() => {
+                  if (
+                    currentStatus === "scheduled" &&
+                    primary.next === "checked-in"
+                  ) {
+                    setCheckInOpen(true);
+                    return;
+                  }
+                  if (primary.next === "ready-for-pickup") {
+                    const check = canMarkReadyForPickup(apt);
+                    if (!check.allowed) {
+                      toast.error("Can't mark ready yet", {
+                        description: check.reason,
+                      });
+                      return;
+                    }
+                  }
+                  advanceStatus(primary.next, primary.label);
+                }}
               >
                 <primary.icon className="mr-1.5 size-4" />
                 {primary.label}
@@ -837,6 +898,14 @@ export function AppointmentDetailPage({ id }: { id: string }) {
           </div>
         )}
       </SectionCard>
+
+      {/* Pre-visit briefing — what the groomer reads before the pet arrives */}
+      <PreVisitBriefing appointment={apt} layout="wide" />
+
+      {/* Session panel — visible while the appointment is In Progress */}
+      {currentStatus === "in-progress" && (
+        <GroomingSessionPanel appointment={apt} />
+      )}
 
       {/* Service Details */}
       <SectionCard icon={Scissors} title="Service Details">
@@ -1286,6 +1355,12 @@ export function AppointmentDetailPage({ id }: { id: string }) {
         open={bookAgainOpen}
         onOpenChange={setBookAgainOpen}
         prefillFrom={apt}
+      />
+      <CheckInConfirmationDialog
+        open={checkInOpen}
+        onOpenChange={setCheckInOpen}
+        apt={apt}
+        onConfirm={handleCheckInConfirm}
       />
     </div>
   );

@@ -869,6 +869,73 @@ export const facilities = [
       sendBefore: 48,
       reminderHours: 24,
     },
+    // Grooming-specific pre-visit form. Independent from the boarding/daycare
+    // expressCheckinConfig above so each service can ask its own questions.
+    // `requireBeforePhotos` is read by the session panel when the appointment
+    // is In Progress to gate the "Mark Ready" action when staff haven't yet
+    // taken a before photo.
+    groomingCheckinConfig: {
+      enabled: true,
+      sendBefore: 24,
+      reminderHours: 6,
+      requireBeforePhotos: true,
+      requireAfterPhotos: true,
+      questions: [
+        {
+          id: "q-coat",
+          label: "How has your dog's coat been since the last visit?",
+          helperText:
+            "Tell us if there's matting or tangles we should plan for.",
+          type: "long-text" as const,
+          required: true,
+        },
+        {
+          id: "q-mood",
+          label: "Any new behavior changes we should know about?",
+          type: "long-text" as const,
+          required: false,
+        },
+        {
+          id: "q-meds",
+          label: "Is your pet on any new medication?",
+          type: "yes-no" as const,
+          required: true,
+        },
+        {
+          id: "q-style",
+          label: "Preferred finish",
+          type: "single-select" as const,
+          options: ["Same as last time", "Slightly shorter", "Summer cut", "Other (note in next question)"],
+          required: true,
+        },
+        {
+          id: "q-style-notes",
+          label: "Any specific styling notes for the groomer?",
+          type: "text" as const,
+          required: false,
+        },
+        {
+          id: "q-coat-photo",
+          label: "Upload a current photo of the coat",
+          helperText: "Helps the groomer plan before you arrive.",
+          type: "photo" as const,
+          required: false,
+        },
+      ] as Array<{
+        id: string;
+        label: string;
+        helperText?: string;
+        type:
+          | "text"
+          | "long-text"
+          | "yes-no"
+          | "single-select"
+          | "multi-select"
+          | "photo";
+        options?: string[];
+        required: boolean;
+      }>,
+    },
     bookingStatusConfig: {
       customStatuses: [
         { id: "on_hold", name: "On Hold", color: "amber", position: 4 },

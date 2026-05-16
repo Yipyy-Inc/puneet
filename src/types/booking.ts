@@ -183,6 +183,10 @@ export const newBookingSchema = z.object({
   specialRequests: z.string().optional(),
   notificationEmail: z.boolean().optional(),
   notificationSMS: z.boolean().optional(),
+  /** Display name of the primary staff member assigned to this booking
+   * (e.g. the groomer for a grooming appointment). Drives which calendar
+   * column the appointment renders in. */
+  assignedStaff: z.string().optional(),
   tipAmount: z.number().optional(),
   // Service-specific fields
   daycareSelectedDates: z.array(z.string()).optional(),
@@ -190,6 +194,26 @@ export const newBookingSchema = z.object({
   groomingStyle: z.string().optional(),
   groomingAddOns: z.array(z.string()).optional(),
   stylistPreference: z.string().optional(),
+  /** Grooming: ids of secondary co-groomers working alongside the primary
+   * stylist on this booking (payroll-credited as a shared appointment). */
+  additionalStylistIds: z.array(z.string()).optional(),
+  /** Grooming: sequential stages when the appointment is split across multiple
+   * groomers (e.g., bath then cut). Empty/undefined = single-stage booking. */
+  groomingStages: z
+    .array(
+      z.object({
+        id: z.string(),
+        label: z.string(),
+        stylistId: z.string(),
+        stylistName: z.string(),
+        startTime: z.string(),
+        endTime: z.string(),
+      }),
+    )
+    .optional(),
+  /** Grooming: manual duration override (minutes). Wins over the package's
+   * resolved duration so staff can shorten / extend the slot block. */
+  groomingDurationOverrideMin: z.number().optional(),
   trainingType: z.string().optional(),
   trainerId: z.string().optional(),
   trainingGoals: z.string().optional(),
@@ -209,6 +233,10 @@ export const newBookingSchema = z.object({
   sectionId: z.string().optional(),
   /** Grooming: the GroomingStation.id assigned to this booking */
   stationAssignment: z.string().optional(),
+  /** Grooming: true when this booking is for mobile (van) service. Salon
+   * bookings leave this undefined / false. Drives arrival-window display
+   * and service-area routing on the calendar. */
+  isMobile: z.boolean().optional(),
   feedingSchedule: z.array(feedingScheduleItemSchema).optional(),
   walkSchedule: z.string().optional(),
   medications: z.array(medicationItemSchema).optional(),
@@ -220,6 +248,8 @@ export const newBookingSchema = z.object({
       ruleLabel: z.string().optional(),
       collectedBy: z.string().optional(),
       collectedAt: z.string().optional(),
+      /** Customer-mode: id of the saved card used for this deposit. */
+      paymentMethodId: z.string().optional(),
     })
     .optional(),
 });
@@ -589,6 +619,13 @@ export const facilityBookingFlowConfigSchema = z.object({
   hideServicesUntilEvaluationCompleted: z.boolean(),
   servicesRequiringEvaluation: z.array(z.string()),
   hiddenServices: z.array(z.string()),
+  /**
+   * When true, the booking catalog pre-filters services/packages by the
+   * client's pets on file. A service is hidden if its `eligibleSizes` field
+   * is set and none of the client's pet sizes overlap with it. Services
+   * without `eligibleSizes` are always shown (default).
+   */
+  onlyShowApplicableServices: z.boolean().optional(),
 });
 
 export type FacilityBookingFlowConfig = z.infer<

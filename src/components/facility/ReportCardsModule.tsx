@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { useAiSummary } from "@/hooks/use-ai-summary";
 import { businessProfile } from "@/data/settings";
@@ -50,6 +50,7 @@ import {
 import { daycareCheckIns } from "@/data/daycare";
 import { boardingGuests } from "@/data/boarding";
 import { groomingAppointments } from "@/data/grooming";
+import { getReportCardPrefillFromAppointment } from "@/lib/api/grooming";
 import { enrollments as trainingEnrollments } from "@/data/training";
 import { useSettings } from "@/hooks/use-settings";
 import type { ReportCardTheme, ReportCardSectionId } from "@/types/facility";
@@ -422,6 +423,26 @@ export function ReportCardsModule({
   const selectedVisit = visitOptions.find(
     (visit) => visit.id === selectedVisitId,
   );
+
+  // Prefill the form from a grooming appointment's session data so staff can
+  // review the groomer's notes / mood tags / before photos and just edit
+  // before sending the card.
+  useEffect(() => {
+    if (serviceType !== "grooming" || !selectedVisitId) return;
+    const apt = groomingAppointments.find((a) => a.id === selectedVisitId);
+    if (!apt) return;
+    const prefill = getReportCardPrefillFromAppointment(apt);
+    if (!prefill) return;
+    setInput((prev) => ({
+      ...prev,
+      mood: prefill.mood,
+      playNotes: prefill.playNotes || prev.playNotes,
+      closingComment: prefill.closingComment || prev.closingComment,
+    }));
+    if (prefill.photos.length > 0) {
+      setPhotoPreviews(prefill.photos);
+    }
+  }, [serviceType, selectedVisitId]);
 
   const themeOptions = useMemo(
     () =>
