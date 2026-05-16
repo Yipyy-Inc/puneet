@@ -34,7 +34,17 @@ import type { GroomingAppointment, GroomingStatus } from "@/types/grooming";
 import { toast } from "sonner";
 import { STATUS_META } from "./grooming-calendar";
 import { useQuery } from "@tanstack/react-query";
-import { groomingQueries, getEffectiveAlertNotes } from "@/lib/api/grooming";
+import {
+  groomingQueries,
+  getEffectiveAlertNotes,
+  canMarkReadyForPickup,
+} from "@/lib/api/grooming";
+import { PreVisitBriefing } from "./pre-visit-briefing";
+import {
+  CheckInConfirmationDialog,
+  type CheckInConfirmation,
+} from "./check-in-confirmation-dialog";
+import { useState } from "react";
 
 // ─── Status meta ──────────────────────────────────────────────────────────────
 
@@ -116,6 +126,7 @@ export function AppointmentPanel({
   const { data: allAppointments = [] } = useQuery(
     groomingQueries.appointments(),
   );
+  const [checkInOpen, setCheckInOpen] = useState(false);
 
   if (!appointment) return null;
 
@@ -138,6 +149,13 @@ export function AppointmentPanel({
   const canCheckOut = appointment.status === "ready-for-pickup";
 
   function advance(next: GroomingStatus) {
+    if (next === "ready-for-pickup") {
+      const check = canMarkReadyForPickup(appointment!);
+      if (!check.allowed) {
+        toast.error("Can't mark ready yet", { description: check.reason });
+        return;
+      }
+    }
     toast.success(`Status updated to "${STATUS_LABELS[next]}"`);
   }
 
@@ -286,6 +304,8 @@ export function AppointmentPanel({
                 </div>
               </div>
             )}
+
+            <PreVisitBriefing appointment={appointment} layout="narrow" />
 
             <div>
               <SectionLabel>Appointment</SectionLabel>
@@ -549,7 +569,7 @@ export function AppointmentPanel({
               <Button
                 size="sm"
                 disabled={!canCheckIn}
-                onClick={() => advance("checked-in")}
+                onClick={() => setCheckInOpen(true)}
                 className={cn(
                   "h-9 gap-1.5",
                   canCheckIn &&
@@ -613,6 +633,35 @@ export function AppointmentPanel({
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
+      <CheckInConfirmationDialog
+        open={checkInOpen}
+        onOpenChange={setCheckInOpen}
+        apt={appointment}
+        onConfirm={(result: CheckInConfirmation) => {
+          (appointment as typeof appointment & {
+            intake?: typeof appointment.intake;
+          }).intake = {
+            ...(appointment.intake ?? {
+              coatCondition: "normal",
+              behaviorNotes: "",
+              allergies: appointment.allergies,
+              specialInstructions: appointment.specialInstructions,
+              beforePhotos: [],
+              mattingFeeWarning: false,
+            }),
+            dropOffObservations:
+              result.dropOffObservations ||
+              appointment.intake?.dropOffObservations,
+            sessionStartedAt: new Date().toISOString(),
+          };
+          appointment.addOns = result.addOns;
+          appointment.checkInTime = new Date().toISOString();
+          toast.success(`${appointment.petName} — In Progress`, {
+            description: `Station ${result.stationName} · session started`,
+          });
+          setCheckInOpen(false);
+        }}
+      />
     </DialogPrimitive.Root>
   );
 }

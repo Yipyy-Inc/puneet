@@ -72,6 +72,7 @@ import {
   CalendarClock,
   CalendarPlus,
   XCircle,
+  PawPrint,
 } from "lucide-react";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -784,9 +785,72 @@ function AppointmentBlock({
   const start = timeToMinutes(startStr);
   const end = timeToMinutes(endStr);
   const top = ((start - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-  const height = Math.max(((end - start) / 60) * HOUR_HEIGHT - 3, 28);
+  // Fixed compact height — cards always render as the thin single-row layout
+  // regardless of appointment duration, so the calendar stays scannable.
+  const height = 44;
   const s = STATUS_META[appointment.status];
   const stageDone = !!stageOverride?.completedAt;
+
+  const hasExtraPets = (appointment.additionalPets?.length ?? 0) > 0;
+  const allPetNames = hasExtraPets
+    ? [
+        appointment.petName,
+        ...(appointment.additionalPets?.map((p) => p.petName) ?? []),
+      ].join(", ")
+    : appointment.petName;
+  const hasCheckedInBadge = !!appointment.expressCheckinSubmission;
+
+  const alertBadge = !!alertCount && alertCount > 0 && (
+    <span
+      title={`${alertCount} alert note${alertCount > 1 ? "s" : ""} — open the appointment for details`}
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-red-600 px-1.5 text-[9px] font-bold text-white shadow-sm"
+    >
+      <AlertTriangle className="size-2.5" />
+      {alertCount}
+    </span>
+  );
+  const checkedInBadge = hasCheckedInBadge && (
+    <span
+      title="Client submitted the Express Check-In form"
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-semibold text-white shadow-sm"
+    >
+      <CheckCircle2 className="size-2.5" />
+      Checked in
+    </span>
+  );
+
+  const cornerBadge = stageOverride ? (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-0.5 rounded-full px-1 text-[9px] font-semibold shadow-sm",
+        stageDone
+          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+          : "bg-white/80 text-amber-700 dark:bg-slate-900/80 dark:text-amber-300",
+      )}
+      title={
+        stageDone
+          ? `Stage complete — ${stageOverride.label}`
+          : `Split-service stage — ${stageOverride.label}`
+      }
+    >
+      {stageDone ? "✓ " : ""}
+      {stageOverride.label}
+    </span>
+  ) : isSecondary ? (
+    <span
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/80 px-1 text-[9px] font-semibold text-violet-700 shadow-sm dark:bg-slate-900/80 dark:text-violet-300"
+      title={`Co-groom — primary stylist is ${appointment.stylistName}`}
+    >
+      Co-groom
+    </span>
+  ) : hasExtraPets ? (
+    <span
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/80 px-1 text-[9px] font-semibold text-slate-700 shadow-sm dark:bg-slate-900/80 dark:text-slate-200"
+      title={`Multi-pet booking — ${(appointment.additionalPets?.length ?? 0) + 1} pets`}
+    >
+      {(appointment.additionalPets?.length ?? 0) + 1}🐾
+    </span>
+  ) : null;
 
   return (
     <button
@@ -796,11 +860,11 @@ function AppointmentBlock({
         onClick(appointment);
       }}
       className={cn(
-        "absolute left-1 right-1 rounded-lg",
-        "px-2 py-1.5 text-left transition-all",
+        "group absolute left-1 right-1 rounded-lg border border-black/5 backdrop-blur-sm",
+        "text-left transition-all overflow-hidden cursor-pointer shadow-sm",
         "hover:shadow-md hover:scale-[1.01] active:scale-[0.99]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        "overflow-hidden cursor-pointer shadow-xs",
+        "px-2 py-1",
         s.bg,
         s.text,
         appointment.status === "cancelled" && "opacity-40",
@@ -815,93 +879,33 @@ function AppointmentBlock({
         height: `${height}px`,
       }}
     >
-      {(() => {
-        const hasExtraPets =
-          (appointment.additionalPets?.length ?? 0) > 0;
-        const allPetNames = hasExtraPets
-          ? [
-              appointment.petName,
-              ...(appointment.additionalPets?.map((p) => p.petName) ?? []),
-            ].join(", ")
-          : appointment.petName;
-        return (
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span
-              className={cn(
-                "size-2 rounded-full flex-shrink-0 shadow-sm",
-                s.dot,
-              )}
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="ring-background size-7 shrink-0 overflow-hidden rounded-full ring-2">
+          {appointment.petPhotoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={appointment.petPhotoUrl}
+              alt={appointment.petName}
+              width={28}
+              height={28}
+              className="size-full object-cover"
             />
-            <span
-              className="font-semibold text-xs truncate leading-tight"
-              title={hasExtraPets ? allPetNames : undefined}
-            >
-              {allPetNames}
-            </span>
-            {!!alertCount && alertCount > 0 && (
-              <span
-                title={`${alertCount} alert note${alertCount > 1 ? "s" : ""} — open the appointment for details`}
-                className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-red-600 px-1.5 text-[9px] font-bold text-white shadow-sm"
-              >
-                <AlertTriangle className="size-2.5" />
-                {alertCount}
-              </span>
-            )}
-            {stageOverride && (
-              <span
-                className={cn(
-                  "ml-auto inline-flex shrink-0 items-center gap-0.5 rounded-full px-1 text-[9px] font-semibold shadow-sm",
-                  stageDone
-                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
-                    : "bg-white/80 text-amber-700 dark:bg-slate-900/80 dark:text-amber-300",
-                )}
-                title={
-                  stageDone
-                    ? `Stage complete — ${stageOverride.label}`
-                    : `Split-service stage — ${stageOverride.label}`
-                }
-              >
-                {stageDone ? "✓ " : ""}
-                {stageOverride.label}
-              </span>
-            )}
-            {!stageOverride && isSecondary && (
-              <span
-                className="ml-auto inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/80 px-1 text-[9px] font-semibold text-violet-700 shadow-sm dark:bg-slate-900/80 dark:text-violet-300"
-                title={`Co-groom — primary stylist is ${appointment.stylistName}`}
-              >
-                Co-groom
-              </span>
-            )}
-            {!stageOverride && !isSecondary && hasExtraPets && (
-              <span
-                className="ml-auto inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/80 px-1 text-[9px] font-semibold text-slate-700 shadow-sm dark:bg-slate-900/80 dark:text-slate-200"
-                title={`Multi-pet booking — ${(appointment.additionalPets?.length ?? 0) + 1} pets`}
-              >
-                {(appointment.additionalPets?.length ?? 0) + 1}🐾
-              </span>
-            )}
-          </div>
-        );
-      })()}
-      {height > 46 && (
-        <p className="text-[11px] truncate opacity-70 mt-0.5 leading-tight pl-3.5">
-          {appointment.packageName}
-        </p>
-      )}
-      {height > 66 && (
-        <p className="text-[10px] opacity-55 mt-0.5 pl-3.5">
-          {startStr}–{endStr}
-        </p>
-      )}
-      {staffLine && height > 80 && (
-        <p
-          className="text-[10px] opacity-70 mt-0.5 pl-3.5 truncate"
-          title={staffLine}
+          ) : (
+            <div className="bg-white/60 dark:bg-slate-900/60 flex size-full items-center justify-center">
+              <PawPrint className="size-3.5 opacity-70" />
+            </div>
+          )}
+        </div>
+        <span
+          className="font-semibold text-xs truncate leading-tight"
+          title={hasExtraPets ? allPetNames : undefined}
         >
-          {staffLine}
-        </p>
-      )}
+          {allPetNames}
+        </span>
+        {checkedInBadge}
+        {alertBadge}
+        {cornerBadge && <span className="ml-auto">{cornerBadge}</span>}
+      </div>
     </button>
   );
 }

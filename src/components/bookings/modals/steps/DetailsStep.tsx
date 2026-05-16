@@ -2,10 +2,13 @@ import {
   DaycareDetails,
   BoardingDetails,
   EvaluationDetails,
+  GroomingDetails,
   CustomServiceDetails,
 } from "../service-details";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 import type { Pet } from "@/types/pet";
+import type { Client } from "@/types/client";
+import type { AppointmentStage } from "@/types/grooming";
 
 interface DetailsStepProps {
   selectedService: string;
@@ -62,6 +65,41 @@ interface DetailsStepProps {
   /** When true, room/section eligibility rules are bypassed (used for guest estimates
    *  where pet weight/type are unknown). */
   skipEligibility?: boolean;
+  /** When true, packages/services are pre-filtered by pet-size eligibility
+   *  (driven by the facility's `onlyShowApplicableServices` toggle). */
+  applyEligibilityFilter?: boolean;
+  /** Grooming-only: mobile/salon mode state. Drives the schedule sub-step's
+   *  segmented control, coverage filter, and arrival-window picker. */
+  groomingIsMobile?: boolean;
+  setGroomingIsMobile?: (next: boolean) => void;
+  /** Selected client — used for postal-code-based coverage lookup. */
+  selectedClient?: Client;
+  /** Grooming-only: primary stylist (groomer) id. */
+  groomingStylistId?: string;
+  setGroomingStylistId?: (id: string) => void;
+  /** Grooming-only: secondary co-groomers. */
+  groomingAdditionalStylistIds?: string[];
+  setGroomingAdditionalStylistIds?: (ids: string[]) => void;
+  /** Grooming-only: assigned station id (filtered by pet size). */
+  groomingStationId?: string;
+  setGroomingStationId?: (id: string) => void;
+  /** Grooming-only: split-service stages. */
+  groomingStages?: AppointmentStage[];
+  setGroomingStages?: (stages: AppointmentStage[]) => void;
+  /** Grooming-only: manual price/duration override. */
+  groomingManualPrice?: number;
+  setGroomingManualPrice?: (price: number | undefined) => void;
+  groomingManualDuration?: number;
+  setGroomingManualDuration?: (mins: number | undefined) => void;
+  /** Grooming-only: when true, persist the manual price as a per-pet override. */
+  groomingSavePriceToPet?: boolean;
+  setGroomingSavePriceToPet?: (next: boolean) => void;
+  /** Grooming-only: full list of selected grooming-specific add-on ids. */
+  groomingSelectedAddOnIds?: string[];
+  setGroomingSelectedAddOnIds?: (ids: string[]) => void;
+  /** Grooming-only: which add-on ids were auto-attached by the package rules. */
+  groomingAutoAttachedAddOnIds?: string[];
+  setGroomingAutoAttachedAddOnIds?: (ids: string[]) => void;
 }
 
 export function DetailsStep({
@@ -98,6 +136,28 @@ export function DetailsStep({
   setExtraServices,
   selectedPets,
   skipEligibility,
+  applyEligibilityFilter,
+  groomingIsMobile,
+  setGroomingIsMobile,
+  selectedClient,
+  groomingStylistId,
+  setGroomingStylistId,
+  groomingAdditionalStylistIds,
+  setGroomingAdditionalStylistIds,
+  groomingStationId,
+  setGroomingStationId,
+  groomingStages,
+  setGroomingStages,
+  groomingManualPrice,
+  setGroomingManualPrice,
+  groomingManualDuration,
+  setGroomingManualDuration,
+  groomingSavePriceToPet,
+  setGroomingSavePriceToPet,
+  groomingSelectedAddOnIds,
+  setGroomingSelectedAddOnIds,
+  groomingAutoAttachedAddOnIds,
+  setGroomingAutoAttachedAddOnIds,
 }: DetailsStepProps) {
   return (
     <div className="space-y-4">
@@ -169,7 +229,54 @@ export function DetailsStep({
         />
       )}
 
-      {!["daycare", "boarding", "evaluation"].includes(selectedService) && (
+      {selectedService === "grooming" && (
+        <GroomingDetails
+          currentSubStep={currentSubStep}
+          serviceType={serviceType}
+          setServiceType={setServiceType}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          checkInTime={checkInTime}
+          setCheckInTime={setCheckInTime}
+          checkOutTime={checkOutTime}
+          setCheckOutTime={setCheckOutTime}
+          selectedPets={selectedPets}
+          applyEligibilityFilter={applyEligibilityFilter}
+          extraServices={extraServices}
+          setExtraServices={setExtraServices}
+          isMobile={groomingIsMobile ?? false}
+          setIsMobile={setGroomingIsMobile ?? (() => {})}
+          selectedClient={selectedClient}
+          stylistId={groomingStylistId ?? ""}
+          setStylistId={setGroomingStylistId ?? (() => {})}
+          additionalStylistIds={groomingAdditionalStylistIds ?? []}
+          setAdditionalStylistIds={
+            setGroomingAdditionalStylistIds ?? (() => {})
+          }
+          stationId={groomingStationId ?? ""}
+          setStationId={setGroomingStationId ?? (() => {})}
+          stages={groomingStages ?? []}
+          setStages={setGroomingStages ?? (() => {})}
+          manualPrice={groomingManualPrice}
+          setManualPrice={setGroomingManualPrice ?? (() => {})}
+          manualDuration={groomingManualDuration}
+          setManualDuration={setGroomingManualDuration ?? (() => {})}
+          savePriceToPet={groomingSavePriceToPet ?? false}
+          setSavePriceToPet={setGroomingSavePriceToPet ?? (() => {})}
+          selectedGroomingAddOnIds={groomingSelectedAddOnIds ?? []}
+          setSelectedGroomingAddOnIds={
+            setGroomingSelectedAddOnIds ?? (() => {})
+          }
+          autoAttachedAddOnIds={groomingAutoAttachedAddOnIds ?? []}
+          setAutoAttachedAddOnIds={
+            setGroomingAutoAttachedAddOnIds ?? (() => {})
+          }
+        />
+      )}
+
+      {!["daycare", "boarding", "evaluation", "grooming"].includes(
+        selectedService,
+      ) && (
         <CustomServiceDetails
           serviceId={selectedService}
           currentSubStep={currentSubStep}

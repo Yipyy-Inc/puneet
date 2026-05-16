@@ -307,6 +307,94 @@ export type StylistTimeOff = z.infer<typeof stylistTimeOffSchema>;
 // Appointments & Intake
 // ============================================================================
 
+/**
+ * Behavior tags the groomer can apply during a session. Multiple may apply
+ * at once — "Calm but needed muzzle for nails" is a real combo. These flow
+ * into the Report Card as the mood tag the owner sees.
+ */
+export const behaviorTagEnum = z.enum([
+  "calm",
+  "happy",
+  "anxious",
+  "energetic",
+  "reactive",
+  "needed-muzzle",
+]);
+export type BehaviorTag = z.infer<typeof behaviorTagEnum>;
+
+/**
+ * Unexpected findings the groomer can flag during a session. Each flag
+ * auto-creates an incident record (see {@link sessionIssueSchema}) and
+ * notifies a manager. The manager decides whether to notify the owner.
+ *
+ * Severity is implicit in the kind — injuries and behavioral concerns are
+ * routed to the manager urgently; matting / ear / nail findings become
+ * follow-ups but still surface immediately on the booking.
+ */
+export const sessionIssueKindEnum = z.enum([
+  "matting-found",
+  "skin-condition",
+  "ear-issue",
+  "nail-issue",
+  "behavioral-concern",
+  "injury-during-groom",
+]);
+export type SessionIssueKind = z.infer<typeof sessionIssueKindEnum>;
+
+/**
+ * Manager review state for a flagged issue. "pending" right after the
+ * groomer flags; "acknowledged" once a manager has seen it; "owner-notified"
+ * once the manager has decided to loop the owner in (with a templated or
+ * custom message). "dismissed" for false positives.
+ */
+export const sessionIssueStatusEnum = z.enum([
+  "pending",
+  "acknowledged",
+  "owner-notified",
+  "dismissed",
+]);
+export type SessionIssueStatus = z.infer<typeof sessionIssueStatusEnum>;
+
+export const sessionIssueSchema = z.object({
+  id: z.string(),
+  kind: sessionIssueKindEnum,
+  note: z.string().optional(),
+  reportedBy: z.string(),
+  reportedAt: z.string(),
+  status: sessionIssueStatusEnum,
+  /** ISO timestamp of the manager's review action, when one happened. */
+  reviewedAt: z.string().optional(),
+  reviewedBy: z.string().optional(),
+  /** Whatever the manager actually sent to the owner, if any. */
+  ownerMessage: z.string().optional(),
+});
+export type SessionIssue = z.infer<typeof sessionIssueSchema>;
+
+/**
+ * One logged scheduled-care event during the session — usually feeding or
+ * medication that was meant to happen on the pet's profile schedule. The
+ * task descriptor (`label` + `kind`) is pulled from the pet's care
+ * instructions when the appointment is long enough to span the schedule;
+ * the groomer ticks it off here to record administration.
+ */
+export const careLogEntryKindEnum = z.enum(["feeding", "medication"]);
+export type CareLogEntryKind = z.infer<typeof careLogEntryKindEnum>;
+
+export const careLogEntrySchema = z.object({
+  id: z.string(),
+  kind: careLogEntryKindEnum,
+  /** Display label — e.g. "Lunch (1.5 cups)" or "Rimadyl 75mg". */
+  label: z.string(),
+  /** When the care instruction said it should happen. */
+  scheduledFor: z.string().optional(),
+  /** Mark when the staffer actually performed it. */
+  administered: z.boolean(),
+  administeredAt: z.string().optional(),
+  administeredBy: z.string().optional(),
+  notes: z.string().optional(),
+});
+export type CareLogEntry = z.infer<typeof careLogEntrySchema>;
+
 export const groomingIntakeSchema = z.object({
   coatCondition: z.enum(["normal", "matted", "severely-matted"]),
   behaviorNotes: z.string(),
@@ -317,8 +405,99 @@ export const groomingIntakeSchema = z.object({
   mattingFeeAmount: z.number().optional(),
   completedBy: z.string().optional(),
   completedAt: z.string().optional(),
+  /**
+   * Anything the owner mentioned at drop-off, or the groomer noticed on
+   * arrival. Captured in the 3-section Check-In confirmation; appended to
+   * ticket comments so the timeline shows it too.
+   */
+  dropOffObservations: z.string().optional(),
+  /**
+   * Free-text record of what the groomer did during the session — distinct
+   * from alert notes (carry-forward warnings) and ticket comments (chat).
+   * Auto-attached to the Report Card the owner sees.
+   */
+  sessionNotes: z.string().optional(),
+  /**
+   * Multi-select behavior observations from the session. Drives the mood
+   * tag on the Report Card.
+   */
+  moodTags: z.array(behaviorTagEnum).optional(),
+  /** ISO timestamp captured when the appointment moved into In Progress. */
+  sessionStartedAt: z.string().optional(),
+  /**
+   * Issues the groomer flagged during the session. Each entry auto-creates
+   * an incident record + notifies a manager. The next visit's pre-visit
+   * briefing surfaces these so the new groomer isn't surprised.
+   */
+  issues: z.array(sessionIssueSchema).optional(),
+  /**
+   * Care events that happened during the appointment (feedings, meds
+   * administered). For long appointments where the schedule overlaps the
+   * pet's profile feeding / medication times. Seeded from the pet's care
+   * instructions when the session panel mounts.
+   */
+  careLog: z.array(careLogEntrySchema).optional(),
 });
 export type GroomingIntake = z.infer<typeof groomingIntakeSchema>;
+
+// ============================================================================
+// Express Check-In Form (grooming pre-visit)
+// ============================================================================
+
+/**
+ * One question on the facility's pre-visit form. The facility builds the
+ * full questionnaire in Grooming Settings → "Express Check-In Form"; the
+ * client sees it before their appointment via the link sent N hours ahead.
+ *
+ * `type` decides the input control:
+ *   - text         → single-line freeform
+ *   - long-text    → textarea
+ *   - yes-no       → boolean switch
+ *   - single-select / multi-select → dropdown / chips (uses `options`)
+ *   - photo        → image upload (returns URL strings)
+ */
+export const expressCheckinQuestionTypeEnum = z.enum([
+  "text",
+  "long-text",
+  "yes-no",
+  "single-select",
+  "multi-select",
+  "photo",
+]);
+export type ExpressCheckinQuestionType = z.infer<
+  typeof expressCheckinQuestionTypeEnum
+>;
+
+export const expressCheckinQuestionSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  helperText: z.string().optional(),
+  type: expressCheckinQuestionTypeEnum,
+  options: z.array(z.string()).optional(),
+  required: z.boolean(),
+});
+export type ExpressCheckinQuestion = z.infer<
+  typeof expressCheckinQuestionSchema
+>;
+
+/**
+ * Client's submitted answers to the pre-visit form. Stored on the
+ * appointment so the groomer sees responses in the briefing without
+ * leaving the booking. Answers are keyed by question id; the value
+ * shape mirrors the question type (string | boolean | string[]).
+ */
+export const expressCheckinSubmissionSchema = z.object({
+  submittedAt: z.string(),
+  answers: z.record(
+    z.string(),
+    z.union([z.string(), z.boolean(), z.array(z.string())]),
+  ),
+  /** Photos the client uploaded with the form (e.g., current coat condition). */
+  photosFromClient: z.array(z.string()).optional(),
+});
+export type ExpressCheckinSubmission = z.infer<
+  typeof expressCheckinSubmissionSchema
+>;
 
 // A single sequential stage in a split-service appointment. The same booking
 // may chain stages — e.g., bath by Sarah, then cut by Marcus — each owned by
@@ -498,6 +677,13 @@ export const groomingAppointmentSchema = z.object({
    * (before / after). See {@link appointmentHistoryEntrySchema}.
    */
   history: z.array(appointmentHistoryEntrySchema).optional(),
+  /**
+   * Client's response to the facility's Express Check-In form. Present
+   * once the client has filled it in; absent when they haven't (yet)
+   * submitted. Surfaces a green "Checked in" badge on the calendar card
+   * and renders the per-question answers in the pre-visit briefing.
+   */
+  expressCheckinSubmission: expressCheckinSubmissionSchema.optional(),
 });
 export type GroomingAppointment = z.infer<typeof groomingAppointmentSchema>;
 

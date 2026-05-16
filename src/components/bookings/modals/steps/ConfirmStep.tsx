@@ -11,6 +11,7 @@ import {
   Mail,
   Smartphone,
   User,
+  Users,
   CheckCircle2,
   Pencil,
   AlertTriangle,
@@ -22,7 +23,12 @@ import {
   FileSignature,
   Pen,
   CheckCircle,
+  Gift,
+  Send,
 } from "lucide-react";
+import { facilityStaff } from "@/data/facility-staff";
+import type { ServiceModule } from "@/types/facility-staff";
+import { groomingPackages } from "@/data/grooming";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -108,6 +114,34 @@ interface ConfirmStepProps {
   setNotificationEmail: (value: boolean) => void;
   notificationSMS: boolean;
   setNotificationSMS: (value: boolean) => void;
+  /**
+   * When true, an Express Check-In form is auto-sent to the client after the
+   * booking is created. Defaults ON for new clients and OFF for returning
+   * clients with bookings on file — staff can flip either way.
+   */
+  expressCheckInEnabled: boolean;
+  setExpressCheckInEnabled: (value: boolean) => void;
+  /**
+   * Set to the id of a client package when staff opts to redeem a session
+   * at confirmation. Otherwise null. Honored on submit (the booking gets
+   * marked as covered by the package).
+   */
+  redeemedPackageId: string | null;
+  setRedeemedPackageId: (id: string | null) => void;
+  /**
+   * Id of the primary staff member assigned to this booking. Drives which
+   * calendar column the appointment appears in (groomer column for grooming,
+   * trainer column for training, etc.). Optional — unassigned bookings land
+   * in the "Unassigned" column.
+   */
+  selectedStaffId: string | null;
+  setSelectedStaffId: (id: string | null) => void;
+  /** Grooming-only: true when the customer chose mobile (van) service. Drives
+   *  the "Mobile" badge + the "Arrival window" time label. */
+  isMobileGrooming?: boolean;
+  /** Lifts signed-waiver ids up to the parent so the wizard's Submit button
+   *  can stay disabled until all pending waivers are signed. */
+  onWaiverSigned?: (waiverId: string) => void;
   tipConfig: TipConfig;
   tipAmount: number;
   onTipChange: (amount: number) => void;
@@ -223,6 +257,14 @@ export function ConfirmStep({
   notificationEmail,
   setNotificationEmail,
   notificationSMS,
+  expressCheckInEnabled,
+  setExpressCheckInEnabled,
+  redeemedPackageId,
+  setRedeemedPackageId,
+  selectedStaffId,
+  setSelectedStaffId,
+  isMobileGrooming,
+  onWaiverSigned,
   setNotificationSMS,
   facilityTaxes,
   tipConfig,
@@ -256,6 +298,7 @@ export function ConfirmStep({
   const handleWaiverSigned = (_result: SignatureResult) => {
     if (!signingWaiver) return;
     setSignedIds((prev) => new Set([...prev, signingWaiver.id]));
+    onWaiverSigned?.(signingWaiver.id);
     setSigningWaiver(null);
   };
 
@@ -294,9 +337,15 @@ export function ConfirmStep({
           <h2 className="text-lg font-bold">Review Your Booking</h2>
           <p className="text-muted-foreground text-sm">
             {serviceInfo?.name}
-            {serviceType
-              ? ` · ${serviceType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}`
-              : ""}
+            {(() => {
+              if (!serviceType) return "";
+              // For grooming, serviceType is the package id — resolve to name.
+              if (selectedService === "grooming") {
+                const pkg = groomingPackages.find((p) => p.id === serviceType);
+                return pkg ? ` · ${pkg.name}` : "";
+              }
+              return ` · ${serviceType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}`;
+            })()}
           </p>
         </div>
       </div>
@@ -458,6 +507,186 @@ export function ConfirmStep({
         </div>
       )}
 
+      {/* ── Package Redemption ──────────────────────────────────── */}
+      {(() => {
+        const matchingPackages = (selectedClient?.packages ?? []).filter(
+          (p) =>
+            p.remainingCredits > 0 && p.moduleId === selectedService,
+        );
+        if (matchingPackages.length === 0) return null;
+        return (
+          <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4 dark:border-emerald-900 dark:bg-emerald-950/20">
+            <div className="flex items-center gap-2">
+              <div className="bg-emerald-500 text-white flex size-7 shrink-0 items-center justify-center rounded-lg">
+                <Gift className="size-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">
+                  Package with remaining sessions
+                </p>
+                <p className="text-muted-foreground text-[11px]">
+                  Apply a session now to skip the separate redemption step.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {matchingPackages.map((pkg) => {
+                const applied = redeemedPackageId === pkg.id;
+                return (
+                  <div
+                    key={pkg.id}
+                    className={cn(
+                      "flex items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2",
+                      applied &&
+                        "border-emerald-300 ring-1 ring-emerald-300 dark:border-emerald-700 dark:ring-emerald-700",
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {pkg.name}
+                      </p>
+                      <p className="text-muted-foreground text-[11px]">
+                        {pkg.remainingCredits} session
+                        {pkg.remainingCredits === 1 ? "" : "s"} remaining
+                        {pkg.expiryDate
+                          ? ` · expires ${new Date(
+                              pkg.expiryDate,
+                            ).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}`
+                          : ""}
+                      </p>
+                    </div>
+                    {applied ? (
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+                          <CheckCircle2 className="size-3" />
+                          Applied
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={() => setRedeemedPackageId(null)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-7 gap-1 bg-emerald-600 px-2.5 text-[11px] hover:bg-emerald-700"
+                        onClick={() => setRedeemedPackageId(pkg.id)}
+                      >
+                        <Gift className="size-3" />
+                        Redeem 1 session
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Staff Assignment ────────────────────────────────────── */}
+      {(() => {
+        // Map the wizard's service id to the ServiceModule values used in
+        // staff.serviceAssignments. "evaluation"/"custom" don't have a
+        // dedicated module, so we don't show the selector for them.
+        const moduleMap: Record<string, ServiceModule> = {
+          grooming: "grooming",
+          training: "training",
+          daycare: "daycare",
+          boarding: "boarding",
+        };
+        const serviceModule = moduleMap[selectedService];
+        if (!serviceModule) return null;
+        const eligible = facilityStaff.filter(
+          (s) =>
+            s.status === "active" &&
+            s.serviceAssignments.includes(serviceModule),
+        );
+        if (eligible.length === 0) return null;
+
+        const roleLabel =
+          serviceModule === "grooming"
+            ? "Groomer"
+            : serviceModule === "training"
+              ? "Trainer"
+              : "Attendant";
+        const selected = eligible.find((s) => s.id === selectedStaffId);
+
+        return (
+          <div className="rounded-2xl border p-4">
+            <SectionHeader icon={Users} label={`${roleLabel} Assignment`} />
+            <p className="text-muted-foreground mb-3 text-[11px]">
+              Choose who&rsquo;s responsible — the appointment will land in
+              their calendar column. Leave unassigned to drop into the
+              shared queue.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setSelectedStaffId(null)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                  selectedStaffId === null
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "hover:bg-muted",
+                )}
+              >
+                <User className="size-3" />
+                Unassigned
+              </button>
+              {eligible.map((s) => {
+                const active = selectedStaffId === s.id;
+                const initials = `${s.firstName[0] ?? ""}${
+                  s.lastName[0] ?? ""
+                }`.toUpperCase();
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setSelectedStaffId(s.id)}
+                    className={cn(
+                      "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                      active
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "hover:bg-muted",
+                    )}
+                  >
+                    <span
+                      className="flex size-5 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                      style={{ backgroundColor: s.colorHex }}
+                    >
+                      {initials}
+                    </span>
+                    {s.firstName} {s.lastName}
+                    {s.jobTitle && (
+                      <span className="text-muted-foreground text-[10px] font-normal">
+                        · {s.jobTitle}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {selected && (
+              <p className="text-muted-foreground mt-2 text-[11px]">
+                Booking will appear on {selected.firstName}&rsquo;s calendar
+                column.
+              </p>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── Schedule ────────────────────────────────────────────── */}
       <div className="rounded-2xl border p-4">
         <SectionHeader
@@ -521,11 +750,29 @@ export function ConfirmStep({
           {timeDisplay && (
             <div>
               <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                Time
+                {selectedService === "grooming" && isMobileGrooming
+                  ? "Arrival window"
+                  : "Time"}
               </p>
               <p className="flex items-center gap-1 text-sm font-semibold">
                 <Clock className="text-muted-foreground size-3" />
                 {timeDisplay}
+              </p>
+              {selectedService === "grooming" && isMobileGrooming && (
+                <p className="text-muted-foreground mt-0.5 text-[10px]">
+                  We&rsquo;ll text you when we&rsquo;re ~15 min away.
+                </p>
+              )}
+            </div>
+          )}
+
+          {selectedService === "grooming" && (
+            <div>
+              <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                Service mode
+              </p>
+              <p className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-pink-100 px-2 py-0.5 text-xs font-semibold text-pink-800">
+                {isMobileGrooming ? "Mobile (van)" : "Salon"}
               </p>
             </div>
           )}
@@ -843,6 +1090,29 @@ export function ConfirmStep({
               onCheckedChange={setNotificationSMS}
             />
           </div>
+          <div className="flex items-start justify-between gap-4 rounded-lg border border-dashed bg-muted/30 px-3 py-2">
+            <Label
+              htmlFor="confirm-express-checkin"
+              className="flex cursor-pointer items-start gap-2"
+            >
+              <Send className="text-sky-600 mt-0.5 size-3.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium">
+                  Send Express Check-In form
+                </p>
+                <p className="text-muted-foreground text-[11px]">
+                  {expressCheckInEnabled
+                    ? "Form will be auto-sent right after the booking is created."
+                    : "Skipped for this booking — staff will collect details on arrival."}
+                </p>
+              </div>
+            </Label>
+            <Switch
+              id="confirm-express-checkin"
+              checked={expressCheckInEnabled}
+              onCheckedChange={setExpressCheckInEnabled}
+            />
+          </div>
         </div>
       </div>
 
@@ -940,7 +1210,16 @@ export function ConfirmStep({
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">
               {serviceInfo?.name}
-              {serviceType ? ` (${serviceType.replace(/_/g, " ")})` : ""}
+              {(() => {
+                if (!serviceType) return "";
+                if (selectedService === "grooming") {
+                  const pkg = groomingPackages.find(
+                    (p) => p.id === serviceType,
+                  );
+                  return pkg ? ` (${pkg.name})` : "";
+                }
+                return ` (${serviceType.replace(/_/g, " ")})`;
+              })()}
               {selectedService === "daycare" && daycareSelectedDates.length > 1
                 ? ` × ${daycareSelectedDates.length} days`
                 : ""}

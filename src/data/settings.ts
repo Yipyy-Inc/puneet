@@ -295,6 +295,7 @@ export const facilityBookingFlowConfig: FacilityBookingFlowConfig = {
   hideServicesUntilEvaluationCompleted: false,
   servicesRequiringEvaluation: ["daycare"],
   hiddenServices: [],
+  onlyShowApplicableServices: false,
   evaluationLockedMessage:
     "This service requires a pet evaluation first. Please book an evaluation so we can get to know your pet before their first visit.",
   bookingRequestConfirmationMessage:
@@ -1258,7 +1259,7 @@ export const boardingConfig: ModuleConfig = {
 // Grooming Module Configuration
 
 export const groomingConfig: ModuleConfig = {
-  clientFacingName: "Pawfect Grooming",
+  clientFacingName: "Grooming",
   staffFacingName: "Grooming Services",
   slogan: "Pamper Your Pet to Perfection",
   description:

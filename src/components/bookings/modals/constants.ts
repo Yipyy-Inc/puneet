@@ -441,6 +441,12 @@ export const EVALUATION_SUB_STEPS = [
   { id: 1, title: "Add-ons", description: "Optional extras" },
 ];
 
+export const GROOMING_SUB_STEPS = [
+  { id: 0, title: "Service", description: "Choose your grooming" },
+  { id: 1, title: "Add-ons", description: "Optional extras" },
+  { id: 2, title: "Schedule", description: "Select date and time" },
+];
+
 export const CUSTOM_SERVICE_SUB_STEPS = [
   { id: 0, title: "Schedule", description: "Select date and time" },
 ];

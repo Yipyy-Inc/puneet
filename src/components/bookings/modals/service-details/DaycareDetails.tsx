@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { PawPrint, Check, Sun, Gift } from "lucide-react";
+import { PawPrint, Check, Sun, Gift, Lock } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 import type { Pet } from "@/types/pet";
@@ -953,6 +953,26 @@ function DaycareAddOnsSubStep({
         </div>
       )}
 
+      {isStepAccessible(2) &&
+        (() => {
+          const subtotal = extraServices.reduce((sum, es) => {
+            if (es.quantity <= 0) return sum;
+            const addon = daycareAddOns.find((a) => a.id === es.serviceId);
+            if (!addon) return sum;
+            return sum + addon.price * es.quantity;
+          }, 0);
+          return (
+            subtotal > 0 && (
+              <div className="flex items-center justify-between rounded-xl border bg-muted/40 px-4 py-2.5">
+                <span className="text-sm font-medium">Add-ons subtotal</span>
+                <span className="text-base font-bold tabular-nums">
+                  ${subtotal.toFixed(2)}
+                </span>
+              </div>
+            )
+          );
+        })()}
+
       {isStepAccessible(2) && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {daycareAddOns.map((service) => {
@@ -1006,7 +1026,13 @@ function DaycareAddOnsSubStep({
                         {priceLabel}
                       </div>
                     )}
-                    {service.isDefault && !isIncludedFree && (
+                    {service.isRequired && !isIncludedFree && (
+                      <div className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-bold text-white">
+                        <Lock className="size-3" />
+                        Required
+                      </div>
+                    )}
+                    {service.isDefault && !service.isRequired && !isIncludedFree && (
                       <div className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-bold text-white">
                         Default
                       </div>
@@ -1079,6 +1105,7 @@ function DaycareAddOnsSubStep({
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
+                                  if (service.isRequired && quantity <= 1) return;
                                   if (quantity > 0) {
                                     const updated = extraServices
                                       .map((es) =>
@@ -1094,7 +1121,10 @@ function DaycareAddOnsSubStep({
                                     setExtraServices(updated);
                                   }
                                 }}
-                                disabled={quantity === 0}
+                                disabled={
+                                  quantity === 0 ||
+                                  (service.isRequired === true && quantity <= 1)
+                                }
                                 className="size-6 p-0 text-xs"
                               >
                                 -
@@ -1138,6 +1168,11 @@ function DaycareAddOnsSubStep({
                                 +
                               </Button>
                             </div>
+                          ) : service.isRequired ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-800">
+                              <Lock className="size-3" />
+                              Included
+                            </span>
                           ) : (
                             <Button
                               type="button"

@@ -1,10 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
-import { Lock, Ban, Check, Sparkles } from "lucide-react";
+import { Lock, Ban, Check, Sparkles, ChevronRight, Info } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SERVICE_CATEGORIES, SERVICE_ACCENTS } from "../constants";
 import { evaluationConfig } from "@/data/settings";
+import { defaultServiceAddOns } from "@/data/service-addons";
+import { getPetSize } from "@/lib/pet-size";
 import type { FacilityBookingFlowConfig } from "@/types/booking";
 import type { ModuleConfig } from "@/types/facility";
 import type { Pet } from "@/types/pet";
@@ -19,6 +22,9 @@ interface ServiceStepProps {
   configs: Record<string, ModuleConfig>;
   bookingFlow: FacilityBookingFlowConfig;
   selectedPets?: Pet[];
+  /** Called when the customer hits "Book this service" on the inline detail
+   *  pane. Advances the wizard to the Details step. */
+  onBookService?: () => void;
 }
 
 const DEFAULT_ACCENT = {
@@ -37,7 +43,26 @@ export function ServiceStep({
   configs,
   bookingFlow,
   selectedPets = [],
+  onBookService,
 }: ServiceStepProps) {
+  // Which card is currently expanded into its inline detail pane. Defaults to
+  // whatever `selectedService` is so an already-picked service stays open.
+  // Independent from `selectedService` to allow "preview without selecting"
+  // patterns later — clicking a card sets both.
+  const [expandedServiceId, setExpandedServiceId] = useState<string | null>(
+    selectedService || null,
+  );
+
+  // Pet-size set across all selected pets — used to filter packages on
+  // services that declare eligibility, and for showing the "applicable
+  // services" banner when the facility toggle is on.
+  const clientPetSizes = useMemo(
+    () => Array.from(new Set(selectedPets.map(getPetSize))),
+    [selectedPets],
+  );
+
+  const eligibilityFilterActive =
+    bookingFlow.onlyShowApplicableServices === true && selectedPets.length > 0;
   const { activeModules } = useCustomServices();
   const allCategories = useMemo(
     () => getAllServiceCategories(SERVICE_CATEGORIES, activeModules),
@@ -134,12 +159,30 @@ export function ServiceStep({
           bookingFlow.hideServicesUntilEvaluationCompleted
         ) {
           if (selectedPets.length === 0) return false;
-          return selectedPets.every((pet) => hasValidEvaluation(pet));
+          if (!selectedPets.every((pet) => hasValidEvaluation(pet))) {
+            return false;
+          }
+        }
+        // Pet-size eligibility filter — only applied when the facility has
+        // opted in and the wizard has pet context. Service categories don't
+        // carry an `eligibleSizes` field today (every built-in service
+        // accepts every size); this hook is kept here so custom modules
+        // adding the field later automatically participate.
+        if (eligibilityFilterActive) {
+          const eligibleSizes = (
+            service as { eligibleSizes?: string[] }
+          ).eligibleSizes;
+          if (eligibleSizes && eligibleSizes.length > 0) {
+            const overlap = clientPetSizes.some((s) =>
+              eligibleSizes.includes(s),
+            );
+            if (!overlap) return false;
+          }
         }
         return true;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [allCategories, bookingFlow, selectedPets],
+    [allCategories, bookingFlow, selectedPets, eligibilityFilterActive, clientPetSizes],
   );
 
   // Show "Required first" nudge on evaluation card when facility requires it
@@ -153,6 +196,10 @@ export function ServiceStep({
     setSelectedService(serviceId);
     setServiceType("");
     setCurrentSubStep(0);
+    // Open this card's inline detail pane. Clicking the same card again
+    // keeps the pane open (no toggle-to-collapse) — the user is selecting,
+    // not browsing.
+    setExpandedServiceId(serviceId);
   };
 
   const isOddCount = visibleServices.length % 2 !== 0;
@@ -160,6 +207,15 @@ export function ServiceStep({
   return (
     // #4 — scroll protection so many custom modules don't overflow the modal
     <ScrollArea className="max-h-[440px]">
+      {eligibilityFilterActive && (
+        <div className="mb-3 flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-blue-900">
+          <Info className="mt-0.5 size-3.5 shrink-0 text-blue-600" />
+          <p className="text-xs">
+            Showing services applicable to your{" "}
+            {selectedPets.length === 1 ? "pet" : "pets"}.
+          </p>
+        </div>
+      )}
       {/* #8 — radiogroup role for screen readers */}
       <div
         role="radiogroup"
@@ -214,7 +270,18 @@ export function ServiceStep({
           // #3 — included bullets: up to 3 items
           const includedItems = service.included.slice(0, 3);
 
-          // #1 — last card spans full row when total count is odd
+          // Inline detail pane data (rendered only for the expanded card).
+          const isExpanded =
+            expandedServiceId === service.id && !isDisabled;
+          const allIncludedItems = service.included;
+          const applicableAddOns = defaultServiceAddOns.filter(
+            (a) =>
+              a.isActive &&
+              a.applicableServices?.includes(service.id),
+          );
+
+          // #1 — when a card is expanded inline, take the full row.
+          //      Otherwise keep the odd-row full-span rule.
           const isLastOdd = isOddCount && idx === visibleServices.length - 1;
 
           return (
@@ -235,8 +302,8 @@ export function ServiceStep({
                 }
               }}
               className={cn(
-                // #1 — span full row when last in odd-count grid
-                isLastOdd && "col-span-2",
+                // Expanded card and odd-count last card both take the full row.
+                (isExpanded || isLastOdd) && "col-span-2",
                 "group relative overflow-hidden rounded-2xl border transition-all duration-200 outline-none select-none",
                 isDisabled
                   ? "cursor-not-allowed opacity-60"
@@ -368,6 +435,95 @@ export function ServiceStep({
                   )}
                 </div>
               </div>
+
+              {/* ── Inline detail pane ─────────────────────────── */}
+              {isExpanded && (
+                <div
+                  className={cn(
+                    "border-t bg-muted/30 p-4",
+                    accent.subStepBorder,
+                  )}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {displaySlogan && (
+                    <p className="mb-3 text-sm/snug">{displaySlogan}</p>
+                  )}
+
+                  {allIncludedItems.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wide uppercase">
+                        What&rsquo;s included
+                      </p>
+                      <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                        {allIncludedItems.map((item) => (
+                          <li
+                            key={item}
+                            className="flex items-start gap-1.5 text-xs"
+                          >
+                            <Check
+                              className={cn(
+                                "mt-0.5 size-3 shrink-0",
+                                accent.icon,
+                              )}
+                            />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {applicableAddOns.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wide uppercase">
+                        Optional add-ons
+                      </p>
+                      <ul className="space-y-1">
+                        {applicableAddOns.slice(0, 6).map((addon) => (
+                          <li
+                            key={addon.id}
+                            className="flex items-center justify-between gap-2 rounded-md bg-card px-2 py-1.5 text-xs"
+                          >
+                            <span className="truncate">{addon.name}</span>
+                            <span
+                              className={cn(
+                                "shrink-0 font-semibold",
+                                accent.price,
+                              )}
+                            >
+                              ${addon.price}
+                              <span className="text-muted-foreground ml-0.5 text-[10px] font-normal">
+                                /{addon.unitLabel || "ea"}
+                              </span>
+                            </span>
+                          </li>
+                        ))}
+                        {applicableAddOns.length > 6 && (
+                          <li className="text-muted-foreground/80 text-[10px]">
+                            +{applicableAddOns.length - 6} more available at
+                            booking
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+
+                  {onBookService && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className={cn("w-full gap-1.5", accent.btnBg)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onBookService();
+                      }}
+                    >
+                      Book this service
+                      <ChevronRight className="size-4" />
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
