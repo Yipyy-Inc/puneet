@@ -20,11 +20,18 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import type {
+  CustomServiceCheckIn,
   CustomServiceVariant,
   ServiceAddOn,
 } from "@/types/facility";
 import { defaultServiceAddOns } from "@/data/service-addons";
+import { customServiceCheckIns as initialCustomServiceCheckIns } from "@/data/custom-service-checkins";
 import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
+import {
+  ApplyToUpcomingPrompt,
+  type ApplyToUpcomingAffected,
+  type ApplyToUpcomingChange,
+} from "@/components/facility/services/apply-to-upcoming-prompt";
 import {
   DollarSign,
   Clock,
@@ -210,6 +217,16 @@ export default function CustomServiceRatesPage() {
 
   const [customAddOns, setCustomAddOns] = useState<ServiceAddOn[]>([]);
 
+  const [checkIns, setCheckIns] = useState<CustomServiceCheckIn[]>(
+    initialCustomServiceCheckIns,
+  );
+  const [propagationPrompt, setPropagationPrompt] = useState<{
+    previous: CustomServiceVariant;
+    next: CustomServiceVariant;
+    affected: CustomServiceCheckIn[];
+    changes: ApplyToUpcomingChange[];
+  } | null>(null);
+
   useEffect(() => {
     if (!slug) return;
     const sync = () => setCustomAddOns(loadCustomAddOns(slug));
@@ -256,6 +273,64 @@ export default function CustomServiceRatesPage() {
     toast.success(editing ? `"${next.name}" updated` : `"${next.name}" created`);
     setVariantDialogOpen(false);
     setEditingVariant(null);
+
+    if (editing && serviceModule) {
+      const priceChanged = editing.price !== next.price;
+      const durationChanged = editing.durationMinutes !== next.durationMinutes;
+      if (!priceChanged && !durationChanged) return;
+      const today = new Date().toISOString().split("T")[0];
+      const affected = checkIns.filter(
+        (c) =>
+          c.moduleId === serviceModule.id &&
+          c.status === "scheduled" &&
+          c.price === editing.price &&
+          c.durationMinutes === editing.durationMinutes &&
+          c.checkInTime.slice(0, 10) >= today,
+      );
+      if (affected.length === 0) return;
+      const changes: ApplyToUpcomingChange[] = [];
+      if (priceChanged) {
+        changes.push({
+          label: "Price",
+          from: `$${editing.price}`,
+          to: `$${next.price}`,
+        });
+      }
+      if (durationChanged) {
+        changes.push({
+          label: "Duration",
+          from: `${editing.durationMinutes} min`,
+          to: `${next.durationMinutes} min`,
+        });
+      }
+      setPropagationPrompt({ previous: editing, next, affected, changes });
+    }
+  }
+
+  function applyPropagation() {
+    if (!propagationPrompt) return;
+    const { next, affected } = propagationPrompt;
+    const affectedIds = new Set(affected.map((a) => a.id));
+    setCheckIns((prev) =>
+      prev.map((c) =>
+        affectedIds.has(c.id)
+          ? { ...c, price: next.price, durationMinutes: next.durationMinutes }
+          : c,
+      ),
+    );
+    toast.success(
+      `Updated ${affected.length} upcoming appointment${
+        affected.length === 1 ? "" : "s"
+      } with the new price and duration.`,
+    );
+    setPropagationPrompt(null);
+  }
+
+  function skipPropagation() {
+    toast.info(
+      "Change applies to new bookings only — existing appointments untouched.",
+    );
+    setPropagationPrompt(null);
   }
   function handleVariantDelete() {
     if (!deletingVariant) return;
@@ -482,6 +557,28 @@ export default function CustomServiceRatesPage() {
         editing={editingVariant}
         onSave={handleVariantSave}
       />
+
+      {propagationPrompt && (
+        <ApplyToUpcomingPrompt
+          open={!!propagationPrompt}
+          onOpenChange={(o) => {
+            if (!o) setPropagationPrompt(null);
+          }}
+          serviceName={propagationPrompt.next.name}
+          serviceKind="service variant"
+          changes={propagationPrompt.changes}
+          affected={propagationPrompt.affected.map<ApplyToUpcomingAffected>(
+            (c) => ({
+              id: c.id,
+              primary: c.petName,
+              secondary: c.ownerName,
+              date: c.checkInTime.slice(0, 10),
+            }),
+          )}
+          onApply={applyPropagation}
+          onSkip={skipPropagation}
+        />
+      )}
 
       {/* Variant delete confirmation */}
       <Dialog

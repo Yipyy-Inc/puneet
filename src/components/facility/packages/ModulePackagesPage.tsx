@@ -51,6 +51,14 @@ import {
   type ServiceCategory,
   type ServiceStatus,
 } from "@/data/services-pricing";
+import { boardingGuests as initialBoardingGuests } from "@/data/boarding";
+import type { BoardingGuest } from "@/types/boarding";
+import {
+  ApplyToUpcomingPrompt,
+  type ApplyToUpcomingAffected,
+  type ApplyToUpcomingChange,
+} from "@/components/facility/services/apply-to-upcoming-prompt";
+import { toast } from "sonner";
 
 type PackageWithRecord = ServicePackage & Record<string, unknown>;
 
@@ -81,6 +89,12 @@ export function ModulePackagesPage({ category, label }: Props) {
   const [editingPackage, setEditingPackage] = useState<ServicePackage | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingPackage, setDeletingPackage] = useState<ServicePackage | null>(null);
+
+  const [propagationPrompt, setPropagationPrompt] = useState<{
+    next: ServicePackage;
+    affected: BoardingGuest[];
+    changes: ApplyToUpcomingChange[];
+  } | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -140,7 +154,67 @@ export function ModulePackagesPage({ category, label }: Props) {
     setIsAddEditModalOpen(true);
   };
 
-  const handleSave = () => setIsAddEditModalOpen(false);
+  const handleSave = () => {
+    setIsAddEditModalOpen(false);
+    if (!editingPackage) return;
+
+    const next: ServicePackage = {
+      ...editingPackage,
+      name: formData.name,
+      description: formData.description,
+      services: formData.services,
+      packagePrice: formData.packagePrice,
+      validDays: formData.validDays,
+      status: formData.status,
+      policy: formData.policy,
+    };
+
+    const priceChanged = editingPackage.packagePrice !== next.packagePrice;
+    const validityChanged = editingPackage.validDays !== next.validDays;
+    if (!priceChanged && !validityChanged) return;
+
+    if (category !== "boarding") return;
+
+    const today = new Date().toISOString().split("T")[0];
+    const affected = initialBoardingGuests.filter(
+      (g) => g.status === "scheduled" && g.checkInDate >= today,
+    );
+    if (affected.length === 0) return;
+
+    const changes: ApplyToUpcomingChange[] = [];
+    if (priceChanged) {
+      changes.push({
+        label: "Package price",
+        from: `$${editingPackage.packagePrice.toFixed(2)}`,
+        to: `$${next.packagePrice.toFixed(2)}`,
+      });
+    }
+    if (validityChanged) {
+      changes.push({
+        label: "Validity",
+        from: `${editingPackage.validDays} days`,
+        to: `${next.validDays} days`,
+      });
+    }
+    setPropagationPrompt({ next, affected, changes });
+  };
+
+  const applyPropagation = () => {
+    if (!propagationPrompt) return;
+    toast.success(
+      `Applied the new package pricing to ${propagationPrompt.affected.length} upcoming boarding booking${
+        propagationPrompt.affected.length === 1 ? "" : "s"
+      }.`,
+    );
+    setPropagationPrompt(null);
+  };
+
+  const skipPropagation = () => {
+    toast.info(
+      "Change applies to new package purchases only — existing bookings untouched.",
+    );
+    setPropagationPrompt(null);
+  };
 
   const handleDeleteClick = (pkg: ServicePackage) => {
     setDeletingPackage(pkg);
@@ -650,6 +724,29 @@ export function ModulePackagesPage({ category, label }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {propagationPrompt && (
+        <ApplyToUpcomingPrompt
+          open={!!propagationPrompt}
+          onOpenChange={(o) => {
+            if (!o) setPropagationPrompt(null);
+          }}
+          serviceName={propagationPrompt.next.name}
+          serviceKind={`${label.toLowerCase()} package`}
+          changes={propagationPrompt.changes}
+          affected={propagationPrompt.affected.map<ApplyToUpcomingAffected>(
+            (g) => ({
+              id: g.id,
+              primary: g.petName,
+              secondary: g.ownerName,
+              date: g.checkInDate,
+            }),
+          )}
+          onApply={applyPropagation}
+          onSkip={skipPropagation}
+          footerNote="Only scheduled boarding bookings dated today or later are matched. Checked-in, completed, and cancelled bookings are left untouched."
+        />
+      )}
     </div>
   );
 }

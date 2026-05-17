@@ -112,7 +112,7 @@ export function GroomingNav() {
   });
 
   return (
-    <nav className="flex gap-1 overflow-x-auto px-6">
+    <nav className="flex gap-0.5 overflow-x-auto px-4">
       {visibleTabs.map((tab) => {
         const isActive = tab.matchPaths
           ? tab.matchPaths.some((p) => pathname.startsWith(p))
@@ -126,7 +126,7 @@ export function GroomingNav() {
             key={tab.href}
             href={tab.href}
             className={cn(
-              "flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors",
+              "flex items-center gap-1.5 rounded-t-lg px-2.5 py-2.5 text-sm font-medium whitespace-nowrap transition-colors",
               "hover:bg-muted/50",
               isActive
                 ? "border-primary bg-background text-primary border-b-2"
