@@ -35,7 +35,18 @@ import {
   Star,
   TrendingUp,
 } from "lucide-react";
-import { daycarePackages, DaycarePackage } from "@/data/daycare";
+import {
+  daycarePackages,
+  DaycarePackage,
+  daycareCheckIns as initialDaycareCheckIns,
+  type DaycareCheckIn,
+} from "@/data/daycare";
+import {
+  ApplyToUpcomingPrompt,
+  type ApplyToUpcomingAffected,
+  type ApplyToUpcomingChange,
+} from "@/components/facility/services/apply-to-upcoming-prompt";
+import { toast } from "sonner";
 
 export default function DaycarePackagesPage() {
   const [packages, setPackages] = useState<DaycarePackage[]>(daycarePackages);
@@ -47,6 +58,14 @@ export default function DaycarePackagesPage() {
   const [deletingPackage, setDeletingPackage] = useState<DaycarePackage | null>(
     null,
   );
+
+  const [checkIns] = useState<DaycareCheckIn[]>(initialDaycareCheckIns);
+  const [propagationPrompt, setPropagationPrompt] = useState<{
+    previous: DaycarePackage;
+    next: DaycarePackage;
+    affected: DaycareCheckIn[];
+    changes: ApplyToUpcomingChange[];
+  } | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -94,25 +113,79 @@ export default function DaycarePackagesPage() {
 
   const handleSave = () => {
     if (editingPackage) {
-      setPackages(
-        packages.map((p) =>
-          p.id === editingPackage.id
-            ? {
-                ...p,
-                ...formData,
-              }
-            : p,
-        ),
-      );
-    } else {
-      const newPackage: DaycarePackage = {
-        id: `pkg-${Date.now()}`,
-        ...formData,
-      };
-      setPackages([...packages, newPackage]);
+      const next: DaycarePackage = { ...editingPackage, ...formData };
+      setPackages(packages.map((p) => (p.id === editingPackage.id ? next : p)));
+      setIsModalOpen(false);
+      detectAndPromptPropagation(editingPackage, next);
+      return;
     }
+    const newPackage: DaycarePackage = {
+      id: `pkg-${Date.now()}`,
+      ...formData,
+    };
+    setPackages([...packages, newPackage]);
     setIsModalOpen(false);
   };
+
+  function detectAndPromptPropagation(
+    previous: DaycarePackage,
+    next: DaycarePackage,
+  ) {
+    const priceChanged = previous.price !== next.price;
+    const rateTypeChanged = previous.rateType !== next.rateType;
+    const validityChanged = previous.validityDays !== next.validityDays;
+    if (!priceChanged && !rateTypeChanged && !validityChanged) return;
+
+    const today = new Date().toISOString().split("T")[0];
+    const affected = checkIns.filter(
+      (c) =>
+        c.status === "scheduled" &&
+        c.rateType === previous.rateType &&
+        c.checkInTime.slice(0, 10) >= today,
+    );
+    if (affected.length === 0) return;
+
+    const changes: ApplyToUpcomingChange[] = [];
+    if (priceChanged) {
+      changes.push({
+        label: "Price",
+        from: `$${previous.price}`,
+        to: `$${next.price}`,
+      });
+    }
+    if (rateTypeChanged) {
+      changes.push({
+        label: "Rate type",
+        from: previous.rateType,
+        to: next.rateType,
+      });
+    }
+    if (validityChanged) {
+      changes.push({
+        label: "Validity",
+        from: `${previous.validityDays} days`,
+        to: `${next.validityDays} days`,
+      });
+    }
+    setPropagationPrompt({ previous, next, affected, changes });
+  }
+
+  function applyPropagation() {
+    if (!propagationPrompt) return;
+    toast.success(
+      `Applied the new pricing to ${propagationPrompt.affected.length} upcoming daycare booking${
+        propagationPrompt.affected.length === 1 ? "" : "s"
+      }.`,
+    );
+    setPropagationPrompt(null);
+  }
+
+  function skipPropagation() {
+    toast.info(
+      "Change applies to new bookings only — existing daycare check-ins untouched.",
+    );
+    setPropagationPrompt(null);
+  }
 
   const handleDeleteClick = (pkg: DaycarePackage) => {
     setDeletingPackage(pkg);
@@ -602,6 +675,29 @@ export default function DaycarePackagesPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {propagationPrompt && (
+            <ApplyToUpcomingPrompt
+              open={!!propagationPrompt}
+              onOpenChange={(o) => {
+                if (!o) setPropagationPrompt(null);
+              }}
+              serviceName={propagationPrompt.next.name}
+              serviceKind="daycare package"
+              changes={propagationPrompt.changes}
+              affected={propagationPrompt.affected.map<ApplyToUpcomingAffected>(
+                (c) => ({
+                  id: c.id,
+                  primary: c.petName,
+                  secondary: c.ownerName,
+                  date: c.checkInTime.slice(0, 10),
+                }),
+              )}
+              onApply={applyPropagation}
+              onSkip={skipPropagation}
+              footerNote="Matched by rate type. Only scheduled daycare check-ins dated today or later are affected."
+            />
+          )}
     </div>
   );
 }

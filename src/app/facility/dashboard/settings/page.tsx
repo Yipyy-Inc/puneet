@@ -5198,10 +5198,10 @@ export default function SettingsPage() {
                     and basic info.
                   </p>
                   <Link
-                    href="/facility/dashboard/services/boarding"
+                    href="/facility/dashboard/services/boarding/settings"
                     className="text-primary mt-2 inline-block text-sm hover:underline"
                   >
-                    Go to Boarding Module →
+                    Go to Boarding Settings →
                   </Link>
                 </CardContent>
               </Card>
@@ -5221,10 +5221,10 @@ export default function SettingsPage() {
                     and basic info.
                   </p>
                   <Link
-                    href="/facility/dashboard/services/daycare"
+                    href="/facility/dashboard/services/daycare/settings"
                     className="text-primary mt-2 inline-block text-sm hover:underline"
                   >
-                    Go to Daycare Module →
+                    Go to Daycare Settings →
                   </Link>
                 </CardContent>
               </Card>
@@ -5244,10 +5244,10 @@ export default function SettingsPage() {
                     add-ons, stylists, and policies.
                   </p>
                   <Link
-                    href="/facility/dashboard/services/grooming"
+                    href="/facility/dashboard/services/grooming/settings"
                     className="text-primary mt-2 inline-block text-sm hover:underline"
                   >
-                    Go to Grooming Module →
+                    Go to Grooming Settings →
                   </Link>
                 </CardContent>
               </Card>
@@ -5267,10 +5267,10 @@ export default function SettingsPage() {
                     trainer management.
                   </p>
                   <Link
-                    href="/facility/dashboard/services/training"
+                    href="/facility/dashboard/services/training/settings"
                     className="text-primary mt-2 inline-block text-sm hover:underline"
                   >
-                    Go to Training Module →
+                    Go to Training Settings →
                   </Link>
                 </CardContent>
               </Card>
