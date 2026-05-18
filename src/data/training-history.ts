@@ -15,7 +15,12 @@ import type {
   SessionConditions,
   SessionExerciseRating,
   TrainingHomework,
+  TrainingReportCard,
 } from "@/lib/training-enrollment";
+import { seriesEnrollments } from "@/data/training-series";
+import { trainers } from "@/data/training";
+import { clients } from "@/data/clients";
+import { buildTrainingReportCard } from "@/lib/training-report-cards";
 
 const NOW_ISO = "2026-05-17T12:00:00Z";
 
@@ -416,6 +421,53 @@ const NEXT_DUE_OVERRIDES: Record<string, string> = {
   "homework-series-enroll-series-005-2-4": "2026-05-22", // due Friday
 };
 
+/** Owner practice check-ins seeded for the demo. Keys are homework ids; the
+ *  values are the consecutive run of days the owner marked the homework done.
+ *  We seed three different compliance patterns so the trainer's Practice
+ *  column reads cleanly:
+ *   - Hot streak (5 days back-to-back ending yesterday)
+ *   - Sporadic (a few scattered days)
+ *   - Nothing logged (omitted from this map — Buddy's other homework) */
+const PRACTICE_OVERRIDES: Record<string, string[]> = {
+  // Buddy practiced "U-turns on a loose leash" 5 days in a row → 3-day-back
+  // streak that turned into "overdue" after a 3-day gap (nextDue = 2026-05-14).
+  "homework-series-enroll-series-001-4-4": [
+    "2026-05-08",
+    "2026-05-09",
+    "2026-05-10",
+    "2026-05-11",
+    "2026-05-12",
+  ],
+  // Buddy's most recent advanced-series homework — practiced yesterday and
+  // the day before to demonstrate an active streak.
+  "homework-series-enroll-series-005-2-4": ["2026-05-15", "2026-05-16"],
+  // "Drop-on-recall foundations" — sporadic, with the most recent practice
+  // five days ago so the trainer sees a "needs a nudge" signal.
+  "homework-series-enroll-series-005-2-2": ["2026-05-09", "2026-05-12"],
+};
+
+/** Sample media keyed by homework id. Picked to demo both modes — the owner
+ *  sees a YouTube embed for one and a reference photo for another. */
+const MEDIA_OVERRIDES: Record<
+  string,
+  { url: string; type: "video" | "image"; caption?: string }[]
+> = {
+  "homework-series-enroll-series-001-4-4": [
+    {
+      url: "https://www.youtube.com/embed/Z5oQT1HOPME",
+      type: "video",
+      caption: "Loose-leash U-turn demo — watch the timing of the pivot.",
+    },
+  ],
+  "homework-series-enroll-series-005-2-4": [
+    {
+      url: "https://images.unsplash.com/photo-1450778869180-41d0601e046e?auto=format&fit=crop&w=900&q=70",
+      type: "image",
+      caption: "Set up the long-line backup line about 5 feet behind you.",
+    },
+  ],
+};
+
 function buildHomework(
   bundle: AttendanceBundle,
   seed: SessionSeed,
@@ -424,6 +476,11 @@ function buildHomework(
   if (seed.status === "absent") return null;
   const sessionNumber = seed.index + 1;
   const id = `homework-${bundle.enrollmentId}-${sessionNumber}`;
+  const practiceDates = PRACTICE_OVERRIDES[id];
+  const practiceLog = practiceDates?.map((date) => ({
+    date,
+    markedAt: `${date}T19:00:00Z`,
+  }));
   return {
     id,
     enrollmentId: bundle.enrollmentId,
@@ -433,7 +490,9 @@ function buildHomework(
     description: seed.homework.description,
     instructions: seed.homework.instructions,
     frequency: seed.homework.frequency,
+    media: MEDIA_OVERRIDES[id],
     nextDueDate: NEXT_DUE_OVERRIDES[id] ?? addDays(seed.date, 1),
+    practiceLog,
     unlocked: true,
     unlockedDate: seed.date,
     completed: false,
@@ -477,4 +536,128 @@ export function getHomeworkForEnrollments(
   if (enrollmentIds.length === 0) return [];
   const set = new Set(enrollmentIds);
   return trainingHomeworkRecords.filter((h) => set.has(h.enrollmentId));
+}
+
+// ── Training Report Cards (cumulative progress reports) ─────────────────────
+// Seed a few cards so the per-pet tab + customer view demo well end-to-end:
+//   - Buddy's series-001 graduation card (kind: series-completion, sent +
+//     viewed → trainer sees engagement signal).
+//   - Buddy's series-005 latest session card (through session 4, sent + not
+//     yet viewed so the customer side shows the "New" badge).
+//   - Buddy's series-005 earlier session card (through session 2, still a
+//     draft so trainers see the in-progress lifecycle).
+const REPORT_CARD_SEEDS: Array<{
+  enrollmentId: string;
+  kind: TrainingReportCard["kind"];
+  throughSessionNumber: number;
+  date: string;
+  createdAt: string;
+  trainerId: string;
+  overallAssessment?: string;
+  trainingLevel?: TrainingReportCard["trainingLevel"];
+  theme?: TrainingReportCard["theme"];
+  assignedHomeworkIds?: string[];
+  sentToOwner: boolean;
+  sentAt: string | null;
+  viewedByOwner: string | null;
+}> = [
+  {
+    enrollmentId: "series-enroll-series-001-4",
+    kind: "series-completion",
+    throughSessionNumber: 6,
+    date: "2026-04-11",
+    createdAt: "2026-04-11T17:30:00Z",
+    trainerId: "trainer-001",
+    overallAssessment:
+      "Buddy graduated with strong fundamentals — recall is reliable on flat ground with distractions, and his stays are holding 30 seconds. Ready for Advanced Obedience next.",
+    trainingLevel: "proficient",
+    theme: "everyday",
+    assignedHomeworkIds: ["homework-series-enroll-series-001-4-6"],
+    sentToOwner: true,
+    sentAt: "2026-04-11T18:00:00Z",
+    viewedByOwner: "2026-04-12T08:14:00Z",
+  },
+  {
+    enrollmentId: "series-enroll-series-005-2",
+    kind: "session",
+    throughSessionNumber: 2,
+    date: "2026-04-28",
+    createdAt: "2026-04-28T20:10:00Z",
+    trainerId: "trainer-001",
+    trainingLevel: "progressing",
+    theme: "everyday",
+    assignedHomeworkIds: ["homework-series-enroll-series-005-2-2"],
+    sentToOwner: false,
+    sentAt: null,
+    viewedByOwner: null,
+  },
+  {
+    enrollmentId: "series-enroll-series-005-2",
+    kind: "session",
+    throughSessionNumber: 4,
+    date: "2026-05-12",
+    createdAt: "2026-05-12T20:10:00Z",
+    trainerId: "trainer-001",
+    overallAssessment:
+      "Great session — Buddy nailed an out-of-sight down-stay. Push toward emergency stop next.",
+    trainingLevel: "developing",
+    theme: "everyday",
+    assignedHomeworkIds: ["homework-series-enroll-series-005-2-4"],
+    sentToOwner: true,
+    sentAt: "2026-05-13T07:55:00Z",
+    viewedByOwner: null,
+  },
+];
+
+const enrollmentById = new Map(seriesEnrollments.map((e) => [e.id, e]));
+const trainerById = new Map(trainers.map((t) => [t.id, t]));
+// Built once after homework records exist so report cards can reference real
+// homework by id without re-deriving from scratch.
+const homeworkById = new Map(
+  trainingHomeworkRecords.map((h) => [h.id, h]),
+);
+const petsById = new Map(clients.flatMap((c) => c.pets).map((p) => [p.id, p]));
+
+export const trainingReportCardRecords: TrainingReportCard[] = REPORT_CARD_SEEDS
+  .map((seed) => {
+    const enrollment = enrollmentById.get(seed.enrollmentId);
+    if (!enrollment) return null;
+    const trainer = trainerById.get(seed.trainerId);
+    const assignedHomework = (seed.assignedHomeworkIds ?? [])
+      .map((id) => homeworkById.get(id))
+      .filter((h): h is NonNullable<typeof h> => !!h)
+      .map((h) => ({
+        id: h.id,
+        title: h.title,
+        frequency: h.frequency,
+      }));
+    const card = buildTrainingReportCard({
+      kind: seed.kind,
+      enrollment,
+      attendances: sessionAttendances,
+      throughSessionNumber: seed.throughSessionNumber,
+      date: seed.date,
+      createdAt: seed.createdAt,
+      createdBy: trainer?.name ?? "Instructor",
+      createdById: 0,
+      petImageUrl: petsById.get(enrollment.petId)?.imageUrl,
+      assignedHomework,
+      overallAssessment: seed.overallAssessment,
+      trainingLevel: seed.trainingLevel,
+      theme: seed.theme,
+    });
+    return {
+      ...card,
+      sentToOwner: seed.sentToOwner,
+      sentAt: seed.sentAt,
+      viewedByOwner: seed.viewedByOwner,
+    };
+  })
+  .filter((c): c is TrainingReportCard => c !== null);
+
+/** Per-pet helper — used by the Report Cards tab on a pet's profile. */
+export function getReportCardsForPet(petId: number): TrainingReportCard[] {
+  return trainingReportCardRecords
+    .filter((r) => r.petId === petId)
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }

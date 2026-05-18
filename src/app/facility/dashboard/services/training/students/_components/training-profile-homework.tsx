@@ -27,12 +27,14 @@ import {
   ChevronRight,
   Clock,
   Edit,
+  Flame,
   Inbox,
   Plus,
   RotateCcw,
   Sparkles,
   Target,
   Trash2,
+  TrendingDown,
 } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
 import type {
@@ -44,6 +46,9 @@ import {
   fanOutHomeworkDelete,
   fanOutHomeworkUpsert,
   getHomeworkBoardStatus,
+  getLastPracticedDate,
+  getPracticeStreakDays,
+  hasPracticedToday,
 } from "@/lib/training-homework";
 import { HomeworkEditDialog } from "@/components/facility/training/homework-edit-dialog";
 
@@ -120,6 +125,19 @@ function HomeworkCard({
   const dueMeta =
     dueStatus && dueStatus !== "completed" ? NEXT_DUE_META[dueStatus] : null;
   const DueIcon = dueMeta?.icon ?? CalendarClock;
+  const practicedToday = !isCompleted && hasPracticedToday(homework, todayISO);
+  const streak = isCompleted ? 0 : getPracticeStreakDays(homework, todayISO);
+  const lastPracticed = isCompleted ? null : getLastPracticedDate(homework);
+  const daysSinceLast = lastPracticed
+    ? Math.max(
+        0,
+        Math.round(
+          (new Date(`${todayISO}T00:00:00Z`).getTime() -
+            new Date(`${lastPracticed}T00:00:00Z`).getTime()) /
+            86_400_000,
+        ),
+      )
+    : null;
 
   return (
     <li
@@ -181,6 +199,51 @@ function HomeworkCard({
                 >
                   <DueIcon className="size-3" />
                   Due {relativeDays(homework.nextDueDate, todayISO)}
+                </Badge>
+              )}
+              {!isCompleted && practicedToday && (
+                <Badge
+                  variant="outline"
+                  className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700"
+                  title="Owner marked practice for today"
+                >
+                  <CheckCircle2 className="size-3" />
+                  Practiced today
+                </Badge>
+              )}
+              {!isCompleted && streak >= 2 && (
+                <Badge
+                  variant="outline"
+                  className="gap-1 border-orange-200 bg-orange-50 text-orange-700"
+                  title="Consecutive days the owner has practiced"
+                >
+                  <Flame className="size-3" />
+                  {streak}-day streak
+                </Badge>
+              )}
+              {!isCompleted &&
+                !practicedToday &&
+                streak < 2 &&
+                lastPracticed &&
+                daysSinceLast !== null &&
+                daysSinceLast >= 7 && (
+                  <Badge
+                    variant="outline"
+                    className="gap-1 border-rose-200 bg-rose-50 text-rose-700"
+                    title={`Last practiced ${formatDate(lastPracticed)}`}
+                  >
+                    <TrendingDown className="size-3" />
+                    Not practicing
+                  </Badge>
+                )}
+              {!isCompleted && !lastPracticed && (
+                <Badge
+                  variant="outline"
+                  className="gap-1 border-slate-200 bg-slate-50 italic text-slate-500"
+                  title="Owner hasn't logged any practice yet"
+                >
+                  <TrendingDown className="size-3" />
+                  Not started
                 </Badge>
               )}
               <Badge

@@ -2,12 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -52,12 +52,12 @@ export function TrainingSessionPanel({ session, onClose }: Props) {
   const trainerColor = session ? colorForTrainer(session.trainerId) : "#6366f1";
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="flex max-h-[calc(100vh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         {session && (
           <>
-            <SheetHeader className="border-b">
-              <div className="flex items-start gap-3">
+            <DialogHeader className="border-b p-4">
+              <div className="flex items-start gap-3 pr-8 text-left">
                 <div
                   className="flex size-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm"
                   style={{ backgroundColor: trainerColor }}
@@ -69,10 +69,10 @@ export function TrainingSessionPanel({ session, onClose }: Props) {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <SheetTitle className="truncate text-base/tight">
+                  <DialogTitle className="truncate text-base/tight">
                     {session.className}
-                  </SheetTitle>
-                  <SheetDescription className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                  </DialogTitle>
+                  <DialogDescription className="mt-1 flex flex-wrap items-center gap-2 text-xs">
                     <Badge
                       variant="outline"
                       className={cn(
@@ -105,10 +105,10 @@ export function TrainingSessionPanel({ session, onClose }: Props) {
                         {classRecord.skillLevel}
                       </span>
                     )}
-                  </SheetDescription>
+                  </DialogDescription>
                 </div>
               </div>
-            </SheetHeader>
+            </DialogHeader>
 
             <div className="flex flex-col gap-4 overflow-y-auto p-4">
               {/* When + where */}
@@ -237,7 +237,7 @@ export function TrainingSessionPanel({ session, onClose }: Props) {
             </div>
           </>
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -191,6 +191,7 @@ export const reportCardThemeEnum = z.enum([
   "summer",
   "winter",
 ]);
+export type ReportCardTheme = z.infer<typeof reportCardThemeEnum>;
 
 export const reportCardSchema = z.object({
   id: z.string(),

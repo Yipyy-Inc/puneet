@@ -1446,6 +1446,9 @@ export const trainingPackages: TrainingPackage[] = [
     maxGroupSize: 8,
     imageUrl: "/training/advanced-obedience.jpg",
     sortOrder: 3,
+    // Restricted to the flagship — only Plateau runs the off-leash
+    // distraction-proofing curriculum (outdoor training area required).
+    locationIds: ["loc-dv-main"],
   },
   {
     id: "pkg-004",

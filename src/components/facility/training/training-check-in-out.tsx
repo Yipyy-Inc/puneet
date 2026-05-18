@@ -64,10 +64,13 @@ import type {
   SessionExerciseRating,
   TrainingEnrollment,
   TrainingHomework,
+  TrainingReportCard,
 } from "@/lib/training-enrollment";
 import { seriesEnrollments } from "@/data/training-series";
-import { petQueries } from "@/lib/api/pet";
-import type { ReportCard } from "@/types/pet";
+import {
+  buildTrainingReportCard,
+  fanOutReportCardUpsert,
+} from "@/lib/training-report-cards";
 
 /** Facility setting — eventually owned by Settings → Training. When true,
  *  completing a session auto-creates draft report cards for every present /
@@ -1098,43 +1101,99 @@ export function TrainingCheckInOut({ defaultTab = "today" }: Props) {
       }
     }
 
-    // ── Report card drafts — one per present/late student, only when the
-    // facility has auto-report-card enabled. Written to each pet's
-    // `petQueries.reportCards(petId)` cache so the existing Report Cards
-    // tab picks them up immediately. `sentToOwner: false` keeps them as
-    // drafts pending review.
-    const reportCardDrafts: ReportCard[] = [];
+    // ── Training report card drafts — cumulative progress reports, one per
+    // present/late student. Unlike grooming's single-session recap, each card
+    // rolls up every session the pet has attended so far in the series. When
+    // the just-completed session is the final one for an enrollment, we also
+    // drop a "series-completion" graduation card. Cards land in `draft` state
+    // (`sentToOwner: false`); staff reviews and sends from the Report Cards
+    // tab on the pet's Training Profile.
+    const reportCardDrafts: TrainingReportCard[] = [];
     if (AUTO_REPORT_CARD_ENABLED) {
+      const cachedAttendances =
+        queryClient.getQueryData<SessionAttendance[]>(
+          trainingQueries.allAttendances().queryKey,
+        ) ?? [];
       for (const [enrollmentId, choice] of Object.entries(result.attendance)) {
         if (choice === "absent") continue;
         const classEnrollment = enrollmentsById.get(enrollmentId);
         const petId = classEnrollment?.petId;
         if (!petId) continue;
-        reportCardDrafts.push({
-          id: `report-${session.id}-${enrollmentId}`,
-          petId,
-          bookingId: 0,
-          date: session.date,
-          serviceType: "training",
-          activities: result.exercisesByEnrollment[enrollmentId]?.map(
-            (l) => `${l.exerciseName} — ${l.rating}/5`,
-          ) ?? [],
-          meals: [],
-          pottyBreaks: [],
-          mood: "happy",
-          photos: [],
-          staffNotes: result.sessionSummary,
-          createdBy: session.trainerName,
-          createdById: 0,
-          sentToOwner: false,
-        });
-      }
-      for (const draft of reportCardDrafts) {
-        queryClient.setQueryData<ReportCard[]>(
-          petQueries.reportCards(draft.petId).queryKey,
-          (prev = []) =>
-            prev.some((r) => r.id === draft.id) ? prev : [draft, ...prev],
+        // Bridge: the report card lives on the *series* enrollment, not the
+        // class enrollment. Match the pet's most recent active series, same
+        // logic as the homework fan-out above.
+        const petSeriesEnrollments = seriesEnrollments
+          .filter((e) => e.petId === petId)
+          .sort((a, b) => (a.enrollmentDate < b.enrollmentDate ? 1 : -1));
+        const seriesEnrollment =
+          petSeriesEnrollments.find((e) => e.status === "enrolled") ??
+          petSeriesEnrollments[0];
+        if (!seriesEnrollment) continue;
+        const newClassAttendance = newAttendances.find(
+          (a) => a.enrollmentId === enrollmentId,
         );
+        if (!newClassAttendance) continue;
+        const throughSessionNumber = Math.min(
+          seriesEnrollment.sessionsAttended + 1,
+          seriesEnrollment.totalSessions,
+        );
+        // Re-tag the new class-attendance with the series-enrollment id so
+        // the builder rolls today's exercises into the cumulative tally.
+        const syntheticAttendance: SessionAttendance = {
+          ...newClassAttendance,
+          enrollmentId: seriesEnrollment.id,
+          sessionNumber: throughSessionNumber,
+        };
+        const attendancesForBuilder = [
+          ...cachedAttendances.filter(
+            (a) =>
+              a.enrollmentId === seriesEnrollment.id &&
+              a.sessionNumber !== throughSessionNumber,
+          ),
+          syntheticAttendance,
+        ];
+        // Pull this enrollment's freshly-assigned homework into the card's
+        // assignedHomework block so the owner sees the work they should
+        // tackle before the next session.
+        const cardHomework = newHomework
+          .filter((h) => h.enrollmentId === seriesEnrollment.id)
+          .map((h) => ({
+            id: h.id,
+            title: h.title,
+            frequency: h.frequency,
+          }));
+        const petImageUrl = petIndex.get(petId)?.imageUrl;
+        reportCardDrafts.push(
+          buildTrainingReportCard({
+            kind: "session",
+            enrollment: seriesEnrollment,
+            attendances: attendancesForBuilder,
+            throughSessionNumber,
+            date: session.date,
+            createdBy: session.trainerName,
+            createdById: 0,
+            petImageUrl,
+            assignedHomework: cardHomework,
+          }),
+        );
+        if (throughSessionNumber >= seriesEnrollment.totalSessions) {
+          reportCardDrafts.push(
+            buildTrainingReportCard({
+              kind: "series-completion",
+              enrollment: seriesEnrollment,
+              attendances: attendancesForBuilder,
+              throughSessionNumber: seriesEnrollment.totalSessions,
+              date: session.date,
+              createdBy: session.trainerName,
+              createdById: 0,
+              petImageUrl,
+              assignedHomework: cardHomework,
+            }),
+          );
+        }
+      }
+      for (const card of reportCardDrafts) {
+        fanOutReportCardUpsert(queryClient, card);
       }
     }
 

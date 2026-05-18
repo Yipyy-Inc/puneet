@@ -32,6 +32,7 @@ import type {
   TrainingSeries,
   TrainingSeriesSession,
 } from "@/lib/training-series";
+import { TrainingProfilePackagesPanel } from "./training-profile-packages-panel";
 
 const PAYMENT_META: Record<
   SeriesPaymentStatus,
@@ -166,6 +167,7 @@ function Panel({
 
 interface Props {
   petId: number;
+  petName: string;
   enrollments: TrainingEnrollment[];
   seriesById: Map<string, TrainingSeries>;
   primaryEnrollment: TrainingEnrollment | null;
@@ -174,6 +176,8 @@ interface Props {
 }
 
 export function TrainingProfileOverview({
+  petId,
+  petName,
   enrollments,
   seriesById,
   primaryEnrollment,
@@ -235,7 +239,13 @@ export function TrainingProfileOverview({
   const nextSessionDate = upcomingSessions[0]?.session.date ?? null;
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <div className="space-y-4">
+      <TrainingProfilePackagesPanel
+        petId={petId}
+        petName={petName}
+        todayISO={todayISO}
+      />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {/* Active enrollment ────────────────────────────────────────────── */}
       <Panel title="Active enrollment" icon={GraduationCap}>
         {!primaryEnrollment || !activeSeries ? (
@@ -568,6 +578,7 @@ export function TrainingProfileOverview({
           </ul>
         )}
       </Panel>
+      </div>
     </div>
   );
 }

@@ -48,8 +48,8 @@ import { EvaluationFormBuilder } from "@/components/evaluations/EvaluationFormBu
 import { EstimateFollowUpSettings } from "@/components/estimates/EstimateFollowUpSettings";
 import { StatusColorSettings } from "@/components/facility/StatusColorSettings";
 import { ServiceColorCard } from "@/components/facility/ServiceColorCard";
-import { TrainingDisciplinesManager } from "@/components/facility/training/training-disciplines-manager";
-import { TrainingExercisesManager } from "@/components/facility/training/training-exercises-manager";
+import { ExerciseLibrarySection } from "@/components/facility/training/exercise-library-section";
+import { TrainingModuleSettings } from "@/components/facility/training/training-module-settings";
 import { CustomEmailDomainSettings } from "@/components/facility/CustomEmailDomainSettings";
 import { staffMembers } from "@/data/staff";
 
@@ -5259,26 +5259,42 @@ export default function SettingsPage() {
 
           {activeSection === "training" && (
             <div className="space-y-6">
-              <TrainingDisciplinesManager />
-              <TrainingExercisesManager />
-              <Card>
-                <CardHeader>
-                  <CardTitle>Training Settings</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm">
-                    More training configuration — courses, session types, and
-                    trainer management.
-                  </p>
-                  <Link
-                    href="/facility/dashboard/services/training/settings"
-                    className="text-primary mt-2 inline-block text-sm hover:underline"
-                  >
-                    Go to Training Settings →
-                  </Link>
-                </CardContent>
-              </Card>
-              <ServiceColorCard service="Training" />
+              {/* In-page jump nav — keeps the foundational Exercise Library
+                  visible at a glance even when staff are deep into the
+                  Module Settings form below. */}
+              <nav
+                aria-label="Training settings sections"
+                className="bg-card flex flex-wrap items-center gap-1.5 rounded-xl border px-3 py-2 shadow-sm"
+              >
+                <span className="text-muted-foreground mr-1 text-[10px] font-bold uppercase tracking-wider">
+                  Jump to
+                </span>
+                <a
+                  href="#exercise-library"
+                  className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11.5px] font-medium text-indigo-700 hover:bg-indigo-100"
+                >
+                  Exercise Library
+                </a>
+                <a
+                  href="#module-settings"
+                  className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11.5px] font-medium text-slate-700 hover:bg-slate-100"
+                >
+                  Module Settings
+                </a>
+                <a
+                  href="#service-color"
+                  className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11.5px] font-medium text-slate-700 hover:bg-slate-100"
+                >
+                  Service Color
+                </a>
+              </nav>
+              <ExerciseLibrarySection />
+              <section id="module-settings" className="scroll-mt-24">
+                <TrainingModuleSettings />
+              </section>
+              <section id="service-color" className="scroll-mt-24">
+                <ServiceColorCard service="Training" />
+              </section>
             </div>
           )}
 

@@ -259,6 +259,10 @@ export const trainingPackageSchema = z
      *  also the order programs appear on the online booking page. Lower
      *  numbers render first. Programs without a sortOrder fall to the end. */
     sortOrder: z.number().optional(),
+    /** Multi-location override — when omitted (the default), the program is
+     *  available at every location in the facility. When set, it is
+     *  restricted to the listed location IDs only. */
+    locationIds: z.array(z.string()).optional(),
   })
   .catchall(z.unknown());
 

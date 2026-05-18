@@ -53,6 +53,7 @@ import {
   getUnfinishedBookingsForCustomer,
   ABANDONMENT_STEP_LABELS,
 } from "@/data/unfinished-bookings";
+import { CustomerTrainingCreditsBanner } from "@/components/customer/training/customer-training-credits-banner";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -651,6 +652,8 @@ export default function CustomerDashboardPage() {
             </Card>
           </Link>
         </div>
+
+        <CustomerTrainingCreditsBanner customerId={MOCK_CUSTOMER_ID} />
 
         {/* Loyalty Rewards Section */}
         {loyaltyData && (

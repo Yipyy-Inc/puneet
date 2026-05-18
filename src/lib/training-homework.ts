@@ -158,6 +158,83 @@ export function bumpNextDueDate(
   return d.toISOString().slice(0, 10);
 }
 
+/** True when the owner has already logged practice for the given day — used
+ *  to short-circuit the "Mark as Done" button so we don't write duplicates. */
+export function hasPracticedToday(
+  homework: TrainingHomework,
+  todayISO: string,
+): boolean {
+  const target = todayISO.slice(0, 10);
+  return (homework.practiceLog ?? []).some((entry) => entry.date === target);
+}
+
+/** Append a practice entry for `todayISO`. Idempotent — if the owner already
+ *  logged the same day, returns the unchanged record. Also bumps `nextDueDate`
+ *  forward via `bumpNextDueDate()` so the trainer's board reflects the next
+ *  practice target. */
+export function markPracticedToday(
+  homework: TrainingHomework,
+  todayISO: string,
+): TrainingHomework {
+  if (hasPracticedToday(homework, todayISO)) return homework;
+  const date = todayISO.slice(0, 10);
+  const next: TrainingHomework = {
+    ...homework,
+    practiceLog: [
+      ...(homework.practiceLog ?? []),
+      { date, markedAt: new Date().toISOString() },
+    ],
+    // Re-aim the next practice target so the board's overdue badge clears
+    // immediately when the owner logs today.
+    nextDueDate: bumpNextDueDate(homework, todayISO),
+  };
+  return next;
+}
+
+/** ISO date of the most recent practice entry, or `null` when the owner has
+ *  never logged practice on this homework. */
+export function getLastPracticedDate(
+  homework: TrainingHomework,
+): string | null {
+  const log = homework.practiceLog;
+  if (!log || log.length === 0) return null;
+  let latest = log[0]!.date;
+  for (const entry of log) {
+    if (entry.date > latest) latest = entry.date;
+  }
+  return latest;
+}
+
+/** Count consecutive practice days ending at `todayISO` or `todayISO - 1`. A
+ *  run that ends earlier than yesterday counts as 0 — the streak is broken.
+ *  Useful for the trainer's compliance signal: "5-day streak" reads very
+ *  differently from "last practiced 10 days ago". */
+export function getPracticeStreakDays(
+  homework: TrainingHomework,
+  todayISO: string,
+): number {
+  const log = homework.practiceLog;
+  if (!log || log.length === 0) return 0;
+  const dates = new Set(log.map((e) => e.date));
+  const cursor = new Date(`${todayISO.slice(0, 10)}T00:00:00Z`);
+  // Allow the streak to terminate at yesterday — owners who haven't opened
+  // the portal yet today shouldn't drop their streak.
+  if (!dates.has(toIsoDate(cursor))) {
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+    if (!dates.has(toIsoDate(cursor))) return 0;
+  }
+  let count = 0;
+  while (dates.has(toIsoDate(cursor))) {
+    count++;
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+  return count;
+}
+
+function toIsoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
 /** True when the given homework cache scope (the third query-key segment)
  *  should receive the given record. The `allHomework` cache is unscoped;
  *  per-enrollment caches only accept records whose enrollmentId is in their

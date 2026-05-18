@@ -31,12 +31,14 @@ import {
   ChevronRight,
   Clock,
   Edit,
+  Flame,
   Inbox,
   PawPrint,
   Plus,
   RotateCcw,
   Sparkles,
   Trash2,
+  TrendingDown,
   UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -48,6 +50,9 @@ import {
   bumpNextDueDate,
   fanOutHomeworkDelete,
   fanOutHomeworkUpsert,
+  getLastPracticedDate,
+  getPracticeStreakDays,
+  hasPracticedToday,
   type HomeworkBoardRow,
   type HomeworkBoardStatus,
 } from "@/lib/training-homework";
@@ -167,6 +172,7 @@ export function HomeworkBoard() {
     let dueThisWeek = 0;
     let overdue = 0;
     let completedThisWeek = 0;
+    let practicingToday = 0;
     const oneWeekAgo = new Date(`${todayISO}T00:00:00Z`);
     oneWeekAgo.setUTCDate(oneWeekAgo.getUTCDate() - 7);
     const weekCutoff = oneWeekAgo.toISOString().slice(0, 10);
@@ -176,11 +182,18 @@ export function HomeworkBoard() {
         if (cd && cd >= weekCutoff) completedThisWeek++;
       } else {
         active++;
+        if (hasPracticedToday(r.homework, todayISO)) practicingToday++;
         if (r.isDueThisWeek) dueThisWeek++;
         if (r.isOverdue) overdue++;
       }
     }
-    return { active, dueThisWeek, overdue, completedThisWeek };
+    return {
+      active,
+      dueThisWeek,
+      overdue,
+      completedThisWeek,
+      practicingToday,
+    };
   }, [rows, todayISO]);
 
   const instructorFilterOptions = useMemo(() => {
@@ -371,6 +384,101 @@ export function HomeworkBoard() {
       },
     },
     {
+      key: "practice",
+      label: "Practice",
+      icon: Flame,
+      sortable: true,
+      sortValue: (row) => {
+        // Owners practicing today rank highest; then by streak length; then by
+        // most-recent practice date; never-practiced ranks last.
+        if (hasPracticedToday(row.homework, todayISO)) return -10000;
+        const streak = getPracticeStreakDays(row.homework, todayISO);
+        if (streak > 0) return -1000 - streak;
+        const last = getLastPracticedDate(row.homework);
+        if (!last) return 9999;
+        return -new Date(`${last}T00:00:00Z`).getTime();
+      },
+      render: (row) => {
+        if (row.homework.completed) {
+          return <span className="text-muted-foreground text-xs">—</span>;
+        }
+        const practicedToday = hasPracticedToday(row.homework, todayISO);
+        const streak = getPracticeStreakDays(row.homework, todayISO);
+        const last = getLastPracticedDate(row.homework);
+        if (practicedToday) {
+          return (
+            <div className="flex flex-col items-start gap-0.5">
+              <Badge
+                variant="outline"
+                className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700"
+              >
+                <CheckCircle2 className="size-3" />
+                Practiced today
+              </Badge>
+              {streak >= 2 && (
+                <span className="text-orange-600 inline-flex items-center gap-1 text-[10px] font-medium">
+                  <Flame className="size-3" />
+                  {streak}-day streak
+                </span>
+              )}
+            </div>
+          );
+        }
+        if (streak >= 2) {
+          return (
+            <Badge
+              variant="outline"
+              className="gap-1 border-orange-200 bg-orange-50 text-orange-700"
+              title={`Last practiced ${last ? formatDate(last) : "—"}`}
+            >
+              <Flame className="size-3" />
+              {streak}-day streak
+            </Badge>
+          );
+        }
+        if (!last) {
+          return (
+            <Badge
+              variant="outline"
+              className="gap-1 border-slate-200 bg-slate-50 text-slate-500 italic"
+              title="Owner hasn't logged any practice yet"
+            >
+              <TrendingDown className="size-3" />
+              Not started
+            </Badge>
+          );
+        }
+        const daysAgo = Math.max(
+          0,
+          Math.round(
+            (new Date(`${todayISO}T00:00:00Z`).getTime() -
+              new Date(`${last}T00:00:00Z`).getTime()) /
+              86_400_000,
+          ),
+        );
+        const stale = daysAgo >= 7;
+        return (
+          <Badge
+            variant="outline"
+            className={cn(
+              "gap-1",
+              stale
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : "border-slate-200 bg-slate-50 text-slate-600",
+            )}
+            title={`Last practiced ${formatDate(last)}`}
+          >
+            {stale ? (
+              <TrendingDown className="size-3" />
+            ) : (
+              <Clock className="size-3" />
+            )}
+            {daysAgo === 1 ? "Yesterday" : `${daysAgo}d ago`}
+          </Badge>
+        );
+      },
+    },
+    {
       key: "instructor",
       label: "Instructor",
       icon: UserRound,
@@ -416,6 +524,36 @@ export function HomeworkBoard() {
       ],
       filterFn: (row: HomeworkBoardRow, v: string) =>
         (row.homework.frequency ?? "") === v,
+    },
+    {
+      key: "practice",
+      label: "Practice",
+      options: [
+        { value: "all", label: "Any practice" },
+        { value: "today", label: "Practiced today" },
+        { value: "streak", label: "On streak (2d+)" },
+        { value: "stale", label: "Not practicing (7d+)" },
+        { value: "never", label: "Not started" },
+      ],
+      filterFn: (row: HomeworkBoardRow, v: string) => {
+        if (row.homework.completed) return false;
+        const practicedToday = hasPracticedToday(row.homework, todayISO);
+        const streak = getPracticeStreakDays(row.homework, todayISO);
+        const last = getLastPracticedDate(row.homework);
+        if (v === "today") return practicedToday;
+        if (v === "streak") return streak >= 2;
+        if (v === "never") return !last;
+        if (v === "stale") {
+          if (!last) return true;
+          const daysAgo = Math.round(
+            (new Date(`${todayISO}T00:00:00Z`).getTime() -
+              new Date(`${last}T00:00:00Z`).getTime()) /
+              86_400_000,
+          );
+          return daysAgo >= 7;
+        }
+        return true;
+      },
     },
   ];
 
@@ -497,6 +635,11 @@ export function HomeworkBoard() {
           value={summary.active}
           icon={BookOpen}
           tone="indigo"
+          hint={
+            summary.active > 0
+              ? `${summary.practicingToday} practiced today`
+              : undefined
+          }
         />
         <KpiTile
           label="Due this week"
