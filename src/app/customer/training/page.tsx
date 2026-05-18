@@ -83,7 +83,7 @@ const mockSeries: TrainingSeries[] = [
       waitlistEnabled: true,
       allowDropIns: false,
     },
-    status: "open",
+    status: "upcoming",
     sessions: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -152,7 +152,7 @@ export default function CustomerTrainingPage() {
   // Filter series based on search, status, and progression (only show unlocked courses)
   const availableSeries = useMemo(() => {
     return series.filter((s) => {
-      if (s.status !== "open") return false;
+      if (s.status !== "upcoming") return false;
 
       // Check if course is unlocked for at least one pet
       const courseType = defaultTrainingCourseTypes.find(

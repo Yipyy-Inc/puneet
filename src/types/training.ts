@@ -21,8 +21,22 @@ export const enrollmentStatusEnum = z.enum([
 ]);
 export type EnrollmentStatus = z.infer<typeof enrollmentStatusEnum>;
 
-export const skillLevelEnum = z.enum(["beginner", "intermediate", "advanced"]);
+export const skillLevelEnum = z.enum([
+  "beginner",
+  "intermediate",
+  "advanced",
+  "all-levels",
+]);
 export type SkillLevel = z.infer<typeof skillLevelEnum>;
+
+/** Human-readable label for a skill level — keeps display strings consistent
+ *  wherever a SkillLevel surfaces (badges, dropdowns, table cells). */
+export const SKILL_LEVEL_LABELS: Record<SkillLevel, string> = {
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  advanced: "Advanced",
+  "all-levels": "All Levels",
+};
 
 export const trainerStatusEnum = z.enum(["active", "inactive", "on-leave"]);
 export type TrainerStatus = z.infer<typeof trainerStatusEnum>;
@@ -227,10 +241,42 @@ export const trainingPackageSchema = z
     color: z.string().optional(),
     /** IDs of ServiceAddOns included free of charge with this package */
     includedAddOnIds: z.array(z.string()).optional(),
+    /** Other programs that must be completed before a dog can enrol in this
+     *  one. Enforced at enrollment time — staff get a warning when booking
+     *  manually and the online flow blocks the purchase outright. */
+    prerequisitePackageIds: z.array(z.string()).optional(),
+    /** Discipline this program falls under (Obedience, Agility, etc.). The
+     *  list of disciplines is configured per facility in Settings — this
+     *  references one of those. */
+    disciplineId: z.string().optional(),
+    /** Optional per-program override on group size. The series capacity can
+     *  still differ per series — this is the suggested default the package
+     *  carries. Ignored for private programs. */
+    maxGroupSize: z.number().optional(),
+    /** Cover image URL surfaced on the online booking page. */
+    imageUrl: z.string().optional(),
+    /** Manual sort order — drives the Course Catalog grid order, which is
+     *  also the order programs appear on the online booking page. Lower
+     *  numbers render first. Programs without a sortOrder fall to the end. */
+    sortOrder: z.number().optional(),
   })
   .catchall(z.unknown());
 
 export type TrainingPackage = z.infer<typeof trainingPackageSchema>;
+
+// ============================================================================
+// Training Discipline
+// ============================================================================
+
+export const trainingDisciplineSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  /** UI accent color for badges/pills. */
+  color: z.string().optional(),
+  isActive: z.boolean(),
+});
+export type TrainingDiscipline = z.infer<typeof trainingDisciplineSchema>;
 
 // ============================================================================
 // Training Add-On

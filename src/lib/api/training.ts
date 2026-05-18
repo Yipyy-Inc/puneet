@@ -7,6 +7,19 @@ import {
   progressRecords,
   trainingPackages,
 } from "@/data/training";
+import {
+  seriesEnrollments,
+  trainingSeriesList,
+} from "@/data/training-series";
+import { defaultTrainingDisciplines } from "@/data/training-disciplines";
+import { trainingExercises } from "@/data/training-exercises";
+import { vaccinationRecords } from "@/data/pet-data";
+import {
+  getAttendanceForPet,
+  getHomeworkForEnrollments,
+  sessionAttendances,
+  trainingHomeworkRecords,
+} from "@/data/training-history";
 
 export const trainingQueries = {
   trainers: () => ({
@@ -62,5 +75,80 @@ export const trainingQueries = {
   packages: () => ({
     queryKey: ["training", "packages"] as const,
     queryFn: async () => trainingPackages,
+  }),
+  series: () => ({
+    queryKey: ["training", "series"] as const,
+    queryFn: async () => trainingSeriesList,
+  }),
+  seriesDetail: (id: string) => ({
+    queryKey: ["training", "series", id] as const,
+    queryFn: async () => trainingSeriesList.find((s) => s.id === id),
+  }),
+  seriesEnrollments: (seriesId: string) => ({
+    queryKey: ["training", "series", seriesId, "enrollments"] as const,
+    queryFn: async () =>
+      seriesEnrollments.filter((e) => e.seriesId === seriesId),
+  }),
+  /** All series enrollments across every series — used by the Students tab
+   *  to roll up per-pet activity. */
+  allSeriesEnrollments: () => ({
+    queryKey: ["training", "series-enrollments", "all"] as const,
+    queryFn: async () => seriesEnrollments,
+  }),
+  disciplines: () => ({
+    queryKey: ["training", "disciplines"] as const,
+    queryFn: async () =>
+      defaultTrainingDisciplines.filter((d) => d.isActive),
+  }),
+  /** Unfiltered discipline list — used by Settings → Training so staff can
+   *  toggle inactive disciplines back on. */
+  allDisciplines: () => ({
+    queryKey: ["training", "disciplines", "all"] as const,
+    queryFn: async () => defaultTrainingDisciplines,
+  }),
+  /** Exercise library — feeds the Session Completion Step 2 picker. The list
+   *  is grouped per discipline in the data file; the consumer is responsible
+   *  for filtering down to whatever discipline the active session belongs
+   *  to. Hidden exercises are filtered out so they stop showing up in the
+   *  picker without losing their record in historical attendance logs. */
+  exercises: () => ({
+    queryKey: ["training", "exercises"] as const,
+    queryFn: async () => trainingExercises.filter((e) => !e.isHidden),
+  }),
+  /** Unfiltered exercise list — used by Settings → Training so staff can
+   *  toggle hidden exercises back on or edit them. */
+  allExercises: () => ({
+    queryKey: ["training", "exercises", "all"] as const,
+    queryFn: async () => trainingExercises,
+  }),
+  /** Vaccination records — the Students tab uses these to flag expiring
+   *  vaccines so staff can chase owners before a series cuts them out. */
+  vaccinations: () => ({
+    queryKey: ["training", "vaccinations"] as const,
+    queryFn: async () => vaccinationRecords,
+  }),
+  /** Every attendance record for a single pet — drives the Training
+   *  History tab. */
+  attendancesForPet: (petId: number) => ({
+    queryKey: ["training", "attendances", "pet", petId] as const,
+    queryFn: async () => getAttendanceForPet(petId),
+  }),
+  /** All attendance records — used when an admin needs facility-wide rollups. */
+  allAttendances: () => ({
+    queryKey: ["training", "attendances", "all"] as const,
+    queryFn: async () => sessionAttendances,
+  }),
+  /** Homework records for a pet's enrollments — driven from the enrollment
+   *  ids rather than petId because homework is per-enrollment in the data
+   *  model. */
+  homeworkForEnrollments: (enrollmentIds: string[]) => ({
+    queryKey: ["training", "homework", enrollmentIds] as const,
+    queryFn: async () => getHomeworkForEnrollments(enrollmentIds),
+    enabled: enrollmentIds.length > 0,
+  }),
+  /** Catalog of all homework records — for any view that needs them. */
+  allHomework: () => ({
+    queryKey: ["training", "homework", "all"] as const,
+    queryFn: async () => trainingHomeworkRecords,
   }),
 };

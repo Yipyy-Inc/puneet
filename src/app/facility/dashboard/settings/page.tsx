@@ -48,6 +48,8 @@ import { EvaluationFormBuilder } from "@/components/evaluations/EvaluationFormBu
 import { EstimateFollowUpSettings } from "@/components/estimates/EstimateFollowUpSettings";
 import { StatusColorSettings } from "@/components/facility/StatusColorSettings";
 import { ServiceColorCard } from "@/components/facility/ServiceColorCard";
+import { TrainingDisciplinesManager } from "@/components/facility/training/training-disciplines-manager";
+import { TrainingExercisesManager } from "@/components/facility/training/training-exercises-manager";
 import { CustomEmailDomainSettings } from "@/components/facility/CustomEmailDomainSettings";
 import { staffMembers } from "@/data/staff";
 
@@ -5257,13 +5259,15 @@ export default function SettingsPage() {
 
           {activeSection === "training" && (
             <div className="space-y-6">
+              <TrainingDisciplinesManager />
+              <TrainingExercisesManager />
               <Card>
                 <CardHeader>
                   <CardTitle>Training Settings</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground text-sm">
-                    Training module configuration — courses, session types, and
+                    More training configuration — courses, session types, and
                     trainer management.
                   </p>
                   <Link
