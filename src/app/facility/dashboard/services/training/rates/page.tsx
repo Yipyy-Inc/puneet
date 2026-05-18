@@ -2,13 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -17,35 +12,26 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DollarSign,
   GraduationCap,
   Plus,
-  Edit,
   Trash2,
-  Save,
-  X,
   Sparkles,
-  Star,
+  MoveVertical,
 } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
-import type {
-  TrainingPackage,
-  ClassType,
-  SkillLevel,
-} from "@/types/training";
+import type { TrainingPackage } from "@/types/training";
 import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
 import type { ServiceAddOn } from "@/types/facility";
 import { defaultServiceAddOns } from "@/data/service-addons";
 import { toast } from "sonner";
+import {
+  ProgramDialog,
+  type ProgramFormState,
+} from "./_components/program-dialog";
+import { ProgramCardGrid } from "./_components/program-card-grid";
 
 function loadTrainingAddOns(): ServiceAddOn[] {
   if (typeof window === "undefined") return defaultServiceAddOns;
@@ -56,220 +42,6 @@ function loadTrainingAddOns(): ServiceAddOn[] {
   } catch {
     return defaultServiceAddOns.filter((a) => a.applicableServices.includes("training"));
   }
-}
-
-interface ProgramFormState {
-  name: string;
-  description: string;
-  classType: ClassType;
-  skillLevel: SkillLevel;
-  sessions: number;
-  price: number;
-  validityDays: number;
-  isActive: boolean;
-  popular: boolean;
-  includes: string;
-}
-
-const EMPTY_PROGRAM: ProgramFormState = {
-  name: "",
-  description: "",
-  classType: "group",
-  skillLevel: "beginner",
-  sessions: 1,
-  price: 0,
-  validityDays: 90,
-  isActive: true,
-  popular: false,
-  includes: "",
-};
-
-function ProgramDialog({
-  open,
-  onOpenChange,
-  editing,
-  onSave,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  editing: TrainingPackage | null;
-  onSave: (form: ProgramFormState, editing: TrainingPackage | null) => void;
-}) {
-  const [form, setForm] = useState<ProgramFormState>(() =>
-    editing
-      ? {
-          name: editing.name,
-          description: editing.description,
-          classType: editing.classType,
-          skillLevel: editing.skillLevel,
-          sessions: editing.sessions,
-          price: editing.price,
-          validityDays: editing.validityDays,
-          isActive: editing.isActive,
-          popular: editing.popular ?? false,
-          includes: editing.includes.join("\n"),
-        }
-      : EMPTY_PROGRAM,
-  );
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {editing ? "Edit Program" : "New Training Program"}
-          </DialogTitle>
-          <DialogDescription>
-            Define a bookable training program (e.g. Puppy Starter, Basic
-            Obedience, Private 1-on-1).
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Program Name</Label>
-            <Input
-              placeholder="e.g. Puppy Starter Pack"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Description</Label>
-            <Textarea
-              rows={2}
-              placeholder="Shown to customers during booking."
-              value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Class Type</Label>
-              <Select
-                value={form.classType}
-                onValueChange={(v: ClassType) =>
-                  setForm({ ...form, classType: v })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="group">Group</SelectItem>
-                  <SelectItem value="private">Private</SelectItem>
-                  <SelectItem value="board-and-train">Board & Train</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Skill Level</Label>
-              <Select
-                value={form.skillLevel}
-                onValueChange={(v: SkillLevel) =>
-                  setForm({ ...form, skillLevel: v })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beginner">Beginner</SelectItem>
-                  <SelectItem value="intermediate">Intermediate</SelectItem>
-                  <SelectItem value="advanced">Advanced</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-2">
-              <Label>Sessions</Label>
-              <Input
-                type="number"
-                min={1}
-                value={form.sessions}
-                onChange={(e) =>
-                  setForm({ ...form, sessions: parseInt(e.target.value) || 1 })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Price ($)</Label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={form.price}
-                onChange={(e) =>
-                  setForm({ ...form, price: parseFloat(e.target.value) || 0 })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Valid Days</Label>
-              <Input
-                type="number"
-                min={1}
-                value={form.validityDays}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    validityDays: parseInt(e.target.value) || 0,
-                  })
-                }
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>What's included (one per line)</Label>
-            <Textarea
-              rows={4}
-              placeholder={"6 group sessions\nPuppy socialization\nTraining manual"}
-              value={form.includes}
-              onChange={(e) => setForm({ ...form, includes: e.target.value })}
-            />
-          </div>
-          <div className="flex items-center justify-between rounded-lg border px-3 py-2">
-            <div>
-              <p className="text-sm font-medium">Active</p>
-              <p className="text-muted-foreground text-xs">
-                Inactive programs are hidden from booking.
-              </p>
-            </div>
-            <Switch
-              checked={form.isActive}
-              onCheckedChange={(v) => setForm({ ...form, isActive: v })}
-            />
-          </div>
-          <div className="flex items-center justify-between rounded-lg border px-3 py-2">
-            <div>
-              <p className="text-sm font-medium">Mark as popular</p>
-              <p className="text-muted-foreground text-xs">
-                Highlights this program in booking flows.
-              </p>
-            </div>
-            <Switch
-              checked={form.popular}
-              onCheckedChange={(v) => setForm({ ...form, popular: v })}
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            <X className="mr-2 size-4" /> Cancel
-          </Button>
-          <Button
-            disabled={!form.name.trim()}
-            onClick={() => onSave(form, editing)}
-          >
-            <Save className="mr-2 size-4" />
-            {editing ? "Save Changes" : "Create Program"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
 }
 
 export default function TrainingRatesPage() {
@@ -321,6 +93,17 @@ export default function TrainingRatesPage() {
         .filter(Boolean),
       color: editing?.color,
       includedAddOnIds: editing?.includedAddOnIds,
+      prerequisitePackageIds:
+        form.prerequisitePackageIds.length > 0
+          ? form.prerequisitePackageIds
+          : undefined,
+      disciplineId: form.disciplineId || undefined,
+      // Max group size is a group-only override — drop it entirely on private.
+      maxGroupSize:
+        form.classType === "group" && form.maxGroupSize !== ""
+          ? Number(form.maxGroupSize)
+          : undefined,
+      imageUrl: form.imageUrl.trim() || undefined,
     };
 
     queryClient.setQueryData<TrainingPackage[]>(
@@ -478,80 +261,22 @@ export default function TrainingRatesPage() {
               </Button>
             </div>
           ) : (
-            <Card>
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {programs.map((pkg) => (
-                    <div
-                      key={pkg.id}
-                      className="hover:bg-muted/30 flex items-center justify-between gap-4 px-5 py-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold">{pkg.name}</p>
-                          {pkg.popular && (
-                            <Badge className="border-0 bg-amber-100 text-[10px] text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                              <Star className="mr-1 size-2.5" />
-                              Popular
-                            </Badge>
-                          )}
-                          {!pkg.isActive && (
-                            <Badge variant="secondary" className="text-[10px]">
-                              Inactive
-                            </Badge>
-                          )}
-                        </div>
-                        {pkg.description && (
-                          <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
-                            {pkg.description}
-                          </p>
-                        )}
-                        <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-3 text-xs">
-                          <span>
-                            {pkg.sessions}{" "}
-                            {pkg.sessions === 1 ? "session" : "sessions"}
-                          </span>
-                          <span className="capitalize">{pkg.classType}</span>
-                          <span className="capitalize">{pkg.skillLevel}</span>
-                          <span>Valid {pkg.validityDays}d</span>
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        <Badge
-                          variant="outline"
-                          className="text-xs tabular-nums"
-                        >
-                          ${pkg.price}
-                        </Badge>
-                        <Switch
-                          checked={pkg.isActive}
-                          onCheckedChange={() => toggleProgram(pkg.id)}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8"
-                          onClick={() => {
-                            setEditingProgram(pkg);
-                            setProgramDialogOpen(true);
-                          }}
-                        >
-                          <Edit className="size-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive size-8"
-                          onClick={() => setDeletingProgram(pkg)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <>
+              <p className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">
+                <MoveVertical className="size-3" />
+                Drag any card to reorder — this is the order programs appear
+                on the online booking page.
+              </p>
+              <ProgramCardGrid
+                programs={programs}
+                onToggleActive={toggleProgram}
+                onEdit={(program) => {
+                  setEditingProgram(program);
+                  setProgramDialogOpen(true);
+                }}
+                onDelete={setDeletingProgram}
+              />
+            </>
           )}
         </TabsContent>
 

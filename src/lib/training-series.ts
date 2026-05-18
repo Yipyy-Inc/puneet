@@ -4,11 +4,18 @@
  * Defines the structure for training series (scheduled occurrences of course types)
  */
 
+/**
+ * Lifecycle of a training series:
+ * - `draft`     — not yet published for enrollment, only visible to staff
+ * - `upcoming`  — enrollment is live, but no sessions have started
+ * - `active`    — currently running (at least one session has begun)
+ * - `completed` — all sessions are done
+ * - `cancelled` — series was cancelled before completion
+ */
 export type SeriesStatus =
   | "draft"
-  | "open"
-  | "closed"
-  | "in-progress"
+  | "upcoming"
+  | "active"
   | "completed"
   | "cancelled";
 
@@ -16,6 +23,9 @@ export interface TrainingSeries {
   id: string;
   courseTypeId: string; // Reference to TrainingCourseType
   courseTypeName: string; // Denormalized for quick access
+  /** Reference to the TrainingPackage (program) this series is an instance of.
+   *  Drives the "series run" count surfaced on each Course Catalog card. */
+  programId?: string;
   seriesName: string; // e.g., "Basic Obedience - Saturday Morning February"
   startDate: string; // ISO date string
   dayOfWeek: number; // 0 = Sunday, 1 = Monday, etc.

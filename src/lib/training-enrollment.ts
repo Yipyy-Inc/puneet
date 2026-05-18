@@ -4,6 +4,14 @@
  * Defines structures for training enrollments, session attendance, and progress tracking
  */
 
+/** Lifecycle of payment for a series enrollment. */
+export type SeriesPaymentStatus =
+  | "paid"
+  | "deposit"
+  | "unpaid"
+  | "refunded"
+  | "comped";
+
 export interface TrainingEnrollment {
   id: string;
   seriesId: string;
@@ -24,9 +32,40 @@ export interface TrainingEnrollment {
   totalSessions: number;
   currentSessionNumber: number; // Next session to attend
   progress: number; // 0-100 percentage
+  /** Payment lifecycle — drives the badge on the Students tab. */
+  paymentStatus: SeriesPaymentStatus;
   notes: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Per-exercise rating logged on an attendance record. 1 = needs work,
+ *  5 = mastered. Optional inline note for context. */
+export interface SessionExerciseRating {
+  exerciseName: string;
+  rating: 1 | 2 | 3 | 4 | 5;
+  notes?: string;
+}
+
+/** Outdoor / environment conditions captured at session-completion time.
+ *  Carries forward as context on every attendance record from that session
+ *  so a 3-star recall in pouring rain reads very differently from a 3-star
+ *  recall on a still day. */
+export type WeatherCondition =
+  | "sunny"
+  | "cloudy"
+  | "rain"
+  | "hot"
+  | "cold"
+  | "windy";
+
+export type DistractionLevel = "low" | "medium" | "high";
+
+export interface SessionConditions {
+  /** Multi-select — multiple weather flags can apply at once (Hot + Windy). */
+  weather: WeatherCondition[];
+  /** Single tier describing how much the dog had to work through. */
+  distractionLevel?: DistractionLevel;
 }
 
 export interface SessionAttendance {
@@ -41,6 +80,12 @@ export interface SessionAttendance {
   checkInTime: string | null;
   checkOutTime: string | null;
   trainerNotes: string;
+  /** Exercises covered in this session with their per-exercise rating —
+   *  feeds the "exercises covered" rows in the Training History tab. */
+  exercises?: SessionExerciseRating[];
+  /** Environment context for the session — surfaced on the History tab so
+   *  the rating record carries its conditions next to it. */
+  conditions?: SessionConditions;
   homeworkUnlocked: boolean;
   certificateGenerated: boolean;
   createdAt: string;
@@ -72,6 +117,14 @@ export interface TrainingHomework {
   description: string;
   instructions: string[];
   resources?: string[]; // URLs to videos, PDFs, etc.
+  /** Short, human-readable cadence — "Daily, 5 minutes" / "3x per day".
+   *  Surfaced as a chip on the Homework tab so owners know how often to
+   *  practice without parsing the instructions. */
+  frequency?: string;
+  /** ISO date (YYYY-MM-DD) for the next practice session. Drives the
+   *  Overdue / Due Soon / Active status on the standalone Homework board
+   *  and the "due next" column. Cleared when homework is completed. */
+  nextDueDate?: string | null;
   unlocked: boolean;
   unlockedDate: string | null;
   completed: boolean;
