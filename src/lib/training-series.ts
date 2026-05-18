@@ -33,7 +33,12 @@ export interface TrainingSeries {
   endTime: string; // HH:mm format (calculated from duration)
   duration: number; // Duration in minutes per session
   numberOfWeeks: number; // Auto-calculates session dates
-  location: string; // e.g., "Training Room A"
+  location: string; // Physical room label, e.g., "Training Room A"
+  /** Multi-location facility ID this series runs at — drives which
+   *  branch's training calendar it appears on. Optional so older mock
+   *  series + single-location facilities still type-check; HQ analytics
+   *  treats missing values as "Unassigned". */
+  locationId?: string;
   instructorId: string; // Reference to Trainer
   instructorName: string; // Denormalized for quick access
   maxCapacity: number; // Maximum number of dogs

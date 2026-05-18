@@ -17,9 +17,12 @@ import { vaccinationRecords } from "@/data/pet-data";
 import {
   getAttendanceForPet,
   getHomeworkForEnrollments,
+  getReportCardsForPet,
   sessionAttendances,
   trainingHomeworkRecords,
+  trainingReportCardRecords,
 } from "@/data/training-history";
+import { clientTrainingPackages } from "@/data/client-training-packages";
 
 export const trainingQueries = {
   trainers: () => ({
@@ -150,5 +153,41 @@ export const trainingQueries = {
   allHomework: () => ({
     queryKey: ["training", "homework", "all"] as const,
     queryFn: async () => trainingHomeworkRecords,
+  }),
+  /** Training report cards for a single pet — feeds the per-pet Report
+   *  Cards tab on the Training Profile and the customer-portal view. */
+  reportCardsForPet: (petId: number) => ({
+    queryKey: ["training", "report-cards", "pet", petId] as const,
+    queryFn: async () => getReportCardsForPet(petId),
+  }),
+  /** Unscoped catalog of every training report card — for any global view
+   *  (none today; reserved for a future facility-wide Report Cards board). */
+  allReportCards: () => ({
+    queryKey: ["training", "report-cards", "all"] as const,
+    queryFn: async () => trainingReportCardRecords,
+  }),
+  /** All client-owned training packages — drives the unscoped catalogs.
+   *  Per-pet and per-client variants below match the cache fan-out scopes
+   *  in `client-training-packages.ts`. */
+  clientTrainingPackages: () => ({
+    queryKey: ["training", "client-packages", "all"] as const,
+    queryFn: async () => clientTrainingPackages,
+  }),
+  clientTrainingPackagesForPet: (petId: number) => ({
+    queryKey: ["training", "client-packages", "pet", petId] as const,
+    queryFn: async () => clientTrainingPackages.filter((p) => p.petId === petId),
+  }),
+  clientTrainingPackagesForClient: (clientId: number) => ({
+    queryKey: ["training", "client-packages", "client", clientId] as const,
+    queryFn: async () =>
+      clientTrainingPackages.filter((p) => p.clientId === clientId),
+  }),
+  /** Local-only set of session IDs the trainer has marked "briefed". Pure
+   *  client-state — no backend; the query exists so the briefing tasks list
+   *  and the panel "Mark briefed" button share the same cache. */
+  preSessionBriefedSessionIds: () => ({
+    queryKey: ["training", "pre-session", "briefed"] as const,
+    queryFn: async (): Promise<string[]> => [],
+    staleTime: Infinity,
   }),
 };

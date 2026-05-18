@@ -394,6 +394,24 @@ const PROGRAM_BY_SERIES: Record<string, string> = {
   "series-011": "pkg-007", // CGC Prep — April → CGC Test Prep
 };
 
+/** Multi-location assignment for each mock series — distributes the demo
+ *  catalog across the 3 Doggieville locations so the HQ overview surfaces
+ *  meaningful per-branch numbers. Plateau (main) carries the most volume,
+ *  matching its flagship role; Laval as the newest gets the fewest series. */
+const LOCATION_BY_SERIES: Record<string, string> = {
+  "series-001": "loc-dv-main", // Basic Obedience — March
+  "series-002": "loc-dv-main", // Intermediate — April
+  "series-003": "loc-dv-ouest", // Puppy Preschool — May
+  "series-004": "loc-dv-main", // Reactive Rover — Sundays
+  "series-005": "loc-dv-main", // Advanced Obedience — Tuesdays
+  "series-006": "loc-dv-laval", // Basic Obedience — June
+  "series-007": "loc-dv-main", // CGC Prep — June
+  "series-008": "loc-dv-ouest", // Intermediate — July
+  "series-009": "loc-dv-ouest", // Agility Foundations — July
+  "series-010": "loc-dv-laval", // Reactive Rover — Late Summer
+  "series-011": "loc-dv-main", // CGC Prep — April
+};
+
 export const trainingSeriesList: TrainingSeries[] = seeds.map((seed) => ({
   id: seed.id,
   courseTypeId: seed.courseTypeId,
@@ -407,6 +425,7 @@ export const trainingSeriesList: TrainingSeries[] = seeds.map((seed) => ({
   duration: seed.duration,
   numberOfWeeks: seed.numberOfWeeks,
   location: seed.location,
+  locationId: LOCATION_BY_SERIES[seed.id],
   instructorId: seed.instructorId,
   instructorName: seed.instructorName,
   maxCapacity: seed.maxCapacity,

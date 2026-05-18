@@ -1,17 +1,11 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { clients } from "@/data/clients";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -29,24 +23,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  CalendarDays,
-  Clock,
-  MapPin,
-  User,
-  Users,
-  CheckCircle2,
-  XCircle,
-  Info,
-} from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MakeupSessionsTab } from "./_components/makeup-sessions-tab";
+import { CustomerHomeworkTab } from "./_components/customer-homework-tab";
+import { CustomerReportCardsTab } from "./_components/customer-report-cards-tab";
+import { CustomerTrainingPackagesTab } from "./_components/customer-training-packages-tab";
+import { CustomerMyPetsTab } from "./_components/customer-my-pets-tab";
+import {
+  CustomerTrainingCatalog,
+  matchSeriesForCourse,
+} from "./_components/customer-training-catalog";
+import { CustomerTrainingSeriesCard } from "./_components/customer-training-series-card";
+import { TrainingWaiversSection } from "./_components/training-waivers-section";
+import { EnrollmentConfirmationDialog } from "./_components/enrollment-confirmation-dialog";
+import { DropInDialog } from "./_components/drop-in-dialog";
+import { allRequiredWaiversSigned } from "@/data/training-waivers";
+import { trainingQueries } from "@/lib/api/training";
+import type {
+  SeriesPaymentStatus,
+  TrainingEnrollment,
+} from "@/lib/training-enrollment";
+import type { TrainingPackage } from "@/types/training";
 import {
   type TrainingSeries,
-  getDayName,
   calculateSessionDates,
 } from "@/lib/training-series";
-import { defaultTrainingCourseTypes } from "@/lib/training-config";
+import {
+  defaultTrainingCourseTypes,
+  type TrainingCourseType,
+} from "@/lib/training-config";
 import { validatePrerequisites } from "@/lib/training-prerequisites";
 import { checkCourseProgression } from "@/lib/training-progression";
 import { type TrainingCertificate } from "@/lib/training-enrollment";
@@ -57,6 +63,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
+/** Facility-wide drop-in toggle. Eventually owned by Settings → Training;
+ *  hardcoded for now so the demo can showcase the single-session flow. */
+const FACILITY_ALLOWS_DROPINS = true;
 
 // Mock series data - In production, this would come from API
 const mockSeries: TrainingSeries[] = [
@@ -81,7 +90,8 @@ const mockSeries: TrainingSeries[] = [
       depositRequired: 50,
       fullPaymentAmount: 300,
       waitlistEnabled: true,
-      allowDropIns: false,
+      // Drop-ins enabled so the demo can showcase the single-session flow.
+      allowDropIns: true,
     },
     status: "upcoming",
     sessions: [],
@@ -90,8 +100,23 @@ const mockSeries: TrainingSeries[] = [
   },
 ];
 
+const VALID_CUSTOMER_TRAINING_TABS = new Set([
+  "pets",
+  "classes",
+  "homework",
+  "report-cards",
+  "packages",
+  "makeup",
+]);
+
 export default function CustomerTrainingPage() {
   const { selectedFacility } = useCustomerFacility();
+  const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const defaultTab = (() => {
+    const raw = searchParams.get("tab");
+    return raw && VALID_CUSTOMER_TRAINING_TABS.has(raw) ? raw : "pets";
+  })();
   const [isMounted, setIsMounted] = useState(false);
   const [series] = useState<TrainingSeries[]>(mockSeries);
   const [searchQuery, setSearchQuery] = useState("");
@@ -112,6 +137,24 @@ export default function CustomerTrainingPage() {
     useState(false);
   const [selectedCourseDetails, setSelectedCourseDetails] =
     useState<TrainingSeries | null>(null);
+  // Two-step catalog → series flow. `null` shows the Course Catalog;
+  // setting a `TrainingPackage` switches to the filtered series view.
+  const [selectedCourse, setSelectedCourse] = useState<TrainingPackage | null>(
+    null,
+  );
+  // Required + optional waivers the owner has signed off on.
+  const [agreedWaivers, setAgreedWaivers] = useState<Set<string>>(new Set());
+  // Post-submit confirmation modal — opens after the enrollment dialog closes
+  // so the owner gets schedule + location + what-to-bring all in one view.
+  const [confirmation, setConfirmation] = useState<{
+    series: TrainingSeries;
+    petName: string;
+    courseType: TrainingCourseType | null;
+    paymentLabel: string;
+  } | null>(null);
+  // Drop-in dialog state — opened from the series card's "Book Drop-In
+  // Session" button when the series has `allowDropIns`.
+  const [dropInSeries, setDropInSeries] = useState<TrainingSeries | null>(null);
   // Mock enrollments - in production, this would come from API
   const [enrollments] = useState<
     Array<{ seriesId: string; petId: number; petName: string }>
@@ -151,8 +194,17 @@ export default function CustomerTrainingPage() {
 
   // Filter series based on search, status, and progression (only show unlocked courses)
   const availableSeries = useMemo(() => {
+    // When the user has drilled into a specific course from the catalog,
+    // narrow the visible series to the ones that match that course by name
+    // (the customer-side series don't carry a packageId yet).
+    const matchedForCourse = selectedCourse
+      ? matchSeriesForCourse(selectedCourse, series).map((s) => s.id)
+      : null;
+    const matchedSet = matchedForCourse ? new Set(matchedForCourse) : null;
+
     return series.filter((s) => {
       if (s.status !== "upcoming") return false;
+      if (matchedSet && !matchedSet.has(s.id)) return false;
 
       // Check if course is unlocked for at least one pet
       const courseType = defaultTrainingCourseTypes.find(
@@ -187,7 +239,7 @@ export default function CustomerTrainingPage() {
       }
       return true;
     });
-  }, [series, searchQuery, progressionByPet]);
+  }, [series, searchQuery, progressionByPet, selectedCourse]);
 
   // Calculate spots left for each series
   const getSpotsLeft = (seriesItem: TrainingSeries): number => {
@@ -196,25 +248,12 @@ export default function CustomerTrainingPage() {
     return Math.max(0, seriesItem.maxCapacity - enrolledCount);
   };
 
-  // Format date range
-  const formatDateRange = (seriesItem: TrainingSeries): string => {
-    if (!isMounted) return "";
-    const sessionDates = calculateSessionDates(
-      seriesItem.startDate,
-      seriesItem.dayOfWeek,
-      seriesItem.numberOfWeeks,
-    );
-    if (sessionDates.length === 0) return "";
-    const start = new Date(sessionDates[0]);
-    const end = new Date(sessionDates[sessionDates.length - 1]);
-    return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
-  };
-
   const handleEnrollClick = (seriesItem: TrainingSeries) => {
     setSelectedSeries(seriesItem);
     setSelectedPetId(null);
     setPaymentOption("deposit");
     setAgreedToCommitment(false);
+    setAgreedWaivers(new Set());
     setIsEnrollmentModalOpen(true);
   };
 
@@ -237,6 +276,11 @@ export default function CustomerTrainingPage() {
 
     if (!agreedToCommitment) {
       toast.error("You must agree to the series commitment");
+      return;
+    }
+
+    if (!allRequiredWaiversSigned(agreedWaivers)) {
+      toast.error("Please sign every required waiver to continue");
       return;
     }
 
@@ -270,40 +314,58 @@ export default function CustomerTrainingPage() {
       // TODO: API call to enroll
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Generate session dates for confirmation and calendar
-      const sessionDates = calculateSessionDates(
-        selectedSeries.startDate,
-        selectedSeries.dayOfWeek,
-        selectedSeries.numberOfWeeks,
+      // Fan a new TrainingEnrollment into the facility-side cache so the
+      // trainer's Series Students list sees the new student immediately.
+      const paymentStatus: SeriesPaymentStatus =
+        paymentOption === "full" ? "paid" : "deposit";
+      const nowISO = new Date().toISOString();
+      const newEnrollment: TrainingEnrollment = {
+        id: `series-enroll-${selectedSeries.id}-${pet.id}-${Date.now()}`,
+        seriesId: selectedSeries.id,
+        seriesName: selectedSeries.seriesName,
+        courseTypeId: selectedSeries.courseTypeId,
+        courseTypeName: selectedSeries.courseTypeName,
+        petId: pet.id,
+        petName: pet.name,
+        petBreed: pet.breed ?? "",
+        ownerId: customer.id,
+        ownerName: customer.name,
+        ownerPhone: customer.phone ?? "",
+        ownerEmail: customer.email ?? "",
+        enrollmentDate: nowISO,
+        status: "enrolled",
+        sessionsAttended: 0,
+        totalSessions: selectedSeries.numberOfWeeks,
+        currentSessionNumber: 1,
+        progress: 0,
+        paymentStatus,
+        notes: "",
+        createdAt: nowISO,
+        updatedAt: nowISO,
+      };
+      queryClient.setQueryData<TrainingEnrollment[]>(
+        trainingQueries.allSeriesEnrollments().queryKey,
+        (prev = []) => [...prev, newEnrollment],
       );
-
-      toast.success(
-        `Successfully enrolled ${pet.name} in ${selectedSeries.seriesName}! Confirmation email sent with all session dates.`,
-        {
-          duration: 5000,
-          action: {
-            label: "Add All Sessions to Calendar",
-            onClick: () => {
-              // Generate .ics file for all sessions
-              const icsContent = generateICSForSessions(
-                selectedSeries,
-                sessionDates,
-                pet.name,
-                selectedFacility?.name || "Facility",
-              );
-              downloadICSFile(
-                icsContent,
-                `${selectedSeries.seriesName.replace(/\s+/g, "-")}-sessions.ics`,
-              );
-              toast.success("Calendar file downloaded");
-            },
-          },
-        },
+      queryClient.setQueryData<TrainingEnrollment[]>(
+        trainingQueries.seriesEnrollments(selectedSeries.id).queryKey,
+        (prev = []) => [...prev, newEnrollment],
       );
 
       setIsEnrollmentModalOpen(false);
+      setConfirmation({
+        series: selectedSeries,
+        petName: pet.name,
+        courseType,
+        paymentLabel:
+          paymentOption === "full"
+            ? "Paid in full"
+            : `Deposit · $${selectedSeries.enrollmentRules.depositRequired} paid`,
+      });
       setSelectedSeries(null);
       setSelectedPetId(null);
+      setAgreedToCommitment(false);
+      setAgreedWaivers(new Set());
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Failed to enroll");
     } finally {
@@ -415,18 +477,66 @@ export default function CustomerTrainingPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="classes">
+      <Tabs defaultValue={defaultTab}>
         <TabsList>
+          <TabsTrigger value="pets">My Pets</TabsTrigger>
           <TabsTrigger value="classes">Training Classes</TabsTrigger>
+          <TabsTrigger value="homework">Homework</TabsTrigger>
+          <TabsTrigger value="report-cards">Report Cards</TabsTrigger>
+          <TabsTrigger value="packages">Packages</TabsTrigger>
           <TabsTrigger value="makeup">Makeup Sessions</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="pets" className="space-y-4 pt-2">
+          <CustomerMyPetsTab customerId={MOCK_CUSTOMER_ID} />
+        </TabsContent>
+
         <TabsContent value="classes" className="space-y-6 pt-2">
-      {/* Search */}
+      {selectedCourse === null ? (
+        /* Step 1 — Course Catalog */
+        <CustomerTrainingCatalog
+          series={series}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onSelectCourse={(course) => {
+            setSelectedCourse(course);
+            // Reset the search when drilling in so the second step starts
+            // fresh; the catalog query and the series query are different
+            // mental models.
+            setSearchQuery("");
+          }}
+        />
+      ) : (
+        <>
+        {/* Step 2 — Available Classes header */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="-ml-2 mb-1 h-7 gap-1 text-[12px]"
+              onClick={() => {
+                setSelectedCourse(null);
+                setSearchQuery("");
+              }}
+            >
+              ← Back to all courses
+            </Button>
+            <h3 className="text-xl font-semibold tracking-tight">
+              {selectedCourse.name}
+            </h3>
+            <p className="text-muted-foreground text-sm">
+              Available classes for this course
+            </p>
+          </div>
+        </div>
+
+      {/* Search (scoped to the selected course's series) */}
       <div className="flex gap-4">
         <div className="flex-1">
           <Input
-            placeholder="Search by course name, instructor, or series..."
+            placeholder="Search by instructor or series name…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -436,103 +546,38 @@ export default function CustomerTrainingPage() {
       {/* Series Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {availableSeries.length === 0 ? (
-          <div className="text-muted-foreground col-span-full py-12 text-center">
-            No training series available at this time.
+          <div className="text-muted-foreground col-span-full rounded-xl border border-dashed py-12 text-center text-sm">
+            No upcoming classes for {selectedCourse.name} right now — check
+            back soon or join the waitlist on a related course.
           </div>
         ) : (
           availableSeries.map((seriesItem) => {
             const spotsLeft = getSpotsLeft(seriesItem);
-            const isFull = spotsLeft === 0;
-            const dateRange = formatDateRange(seriesItem);
-
+            const enrolledPetNames = enrollments
+              .filter((e) => e.seriesId === seriesItem.id)
+              .map((e) => e.petName);
+            const dropInsEnabled =
+              FACILITY_ALLOWS_DROPINS &&
+              seriesItem.enrollmentRules.allowDropIns;
             return (
-              <Card key={seriesItem.id} className="flex flex-col">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="mb-2 text-xl">
-                        {seriesItem.courseTypeName}
-                      </CardTitle>
-                      <CardDescription className="space-y-1">
-                        <div className="flex items-center gap-2 text-sm">
-                          <CalendarDays className="size-4" />
-                          {getDayName(seriesItem.dayOfWeek)}{" "}
-                          {seriesItem.startTime}
-                        </div>
-                        {isMounted && dateRange && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Clock className="size-4" />
-                            {dateRange} | {seriesItem.numberOfWeeks} weeks
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 text-sm">
-                          <User className="size-4" />
-                          Instructor: {seriesItem.instructorName}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <MapPin className="size-4" />
-                          {seriesItem.location}
-                        </div>
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex flex-1 flex-col justify-end space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Badge
-                      variant={isFull ? "destructive" : "default"}
-                      className="flex items-center gap-1"
-                    >
-                      <Users className="size-3" />
-                      {spotsLeft} of {seriesItem.maxCapacity} spots left
-                    </Badge>
-                  </div>
-                  <Separator />
-                  {/* Show enrolled pet if any */}
-                  {enrollments.some((e) => e.seriesId === seriesItem.id) && (
-                    <div className="bg-primary/10 rounded-lg p-2 text-sm">
-                      <div className="text-primary flex items-center gap-2 font-medium">
-                        <CheckCircle2 className="size-4" />
-                        Enrolled:{" "}
-                        {enrollments
-                          .filter((e) => e.seriesId === seriesItem.id)
-                          .map((e) => e.petName)
-                          .join(", ")}
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => handleCourseDetailsClick(seriesItem)}
-                    >
-                      <Info className="mr-2 size-4" />
-                      Course Details
-                    </Button>
-                    {isFull ? (
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => handleWaitlistClick(seriesItem)}
-                      >
-                        Join Waitlist
-                      </Button>
-                    ) : (
-                      <Button
-                        className="flex-1"
-                        onClick={() => handleEnrollClick(seriesItem)}
-                      >
-                        Enroll
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              <CustomerTrainingSeriesCard
+                key={seriesItem.id}
+                series={seriesItem}
+                enrolledPetNames={enrolledPetNames}
+                spotsLeft={spotsLeft}
+                isMounted={isMounted}
+                dropInsEnabled={dropInsEnabled}
+                onEnroll={() => handleEnrollClick(seriesItem)}
+                onWaitlist={() => handleWaitlistClick(seriesItem)}
+                onDetails={() => handleCourseDetailsClick(seriesItem)}
+                onBookDropIn={() => setDropInSeries(seriesItem)}
+              />
             );
           })
         )}
       </div>
+        </>
+      )}
 
       {/* Enrollment Modal */}
       <Dialog
@@ -649,6 +694,14 @@ export default function CustomerTrainingPage() {
               </div>
             )}
 
+            {/* Waivers — required acknowledgements */}
+            {selectedSeries && (
+              <TrainingWaiversSection
+                agreed={agreedWaivers}
+                onChange={setAgreedWaivers}
+              />
+            )}
+
             {/* Payment Options */}
             {selectedSeries && (
               <div className="space-y-2">
@@ -711,6 +764,7 @@ export default function CustomerTrainingPage() {
               disabled={
                 !selectedPetId ||
                 !agreedToCommitment ||
+                !allRequiredWaiversSigned(agreedWaivers) ||
                 !prerequisiteValidation?.eligible ||
                 isEnrolling
               }
@@ -932,6 +986,59 @@ export default function CustomerTrainingPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Drop-In Dialog — single-session purchase */}
+      <DropInDialog
+        open={!!dropInSeries}
+        onOpenChange={(o) => {
+          if (!o) setDropInSeries(null);
+        }}
+        series={dropInSeries}
+        pets={customer?.pets ?? []}
+      />
+
+      {/* Enrollment Confirmation — full schedule + what to bring */}
+      <EnrollmentConfirmationDialog
+        open={!!confirmation}
+        onOpenChange={(o) => {
+          if (!o) setConfirmation(null);
+        }}
+        series={confirmation?.series ?? null}
+        petName={confirmation?.petName ?? null}
+        courseType={confirmation?.courseType ?? null}
+        paymentLabel={confirmation?.paymentLabel ?? ""}
+        onAddToCalendar={() => {
+          if (!confirmation) return;
+          const sessionDates = calculateSessionDates(
+            confirmation.series.startDate,
+            confirmation.series.dayOfWeek,
+            confirmation.series.numberOfWeeks,
+          );
+          const icsContent = generateICSForSessions(
+            confirmation.series,
+            sessionDates,
+            confirmation.petName,
+            selectedFacility?.name || "Facility",
+          );
+          downloadICSFile(
+            icsContent,
+            `${confirmation.series.seriesName.replace(/\s+/g, "-")}-sessions.ics`,
+          );
+          toast.success("Calendar file downloaded");
+        }}
+      />
+        </TabsContent>
+
+        <TabsContent value="homework" className="space-y-4 pt-2">
+          <CustomerHomeworkTab customerId={MOCK_CUSTOMER_ID} />
+        </TabsContent>
+
+        <TabsContent value="report-cards" className="space-y-4 pt-2">
+          <CustomerReportCardsTab customerId={MOCK_CUSTOMER_ID} />
+        </TabsContent>
+
+        <TabsContent value="packages" className="space-y-4 pt-2">
+          <CustomerTrainingPackagesTab customerId={MOCK_CUSTOMER_ID} />
         </TabsContent>
 
         <TabsContent value="makeup" className="pt-2">

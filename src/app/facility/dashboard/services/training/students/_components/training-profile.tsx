@@ -44,6 +44,8 @@ import { TrainingProfileProgress } from "./training-profile-progress";
 import { TrainingProfileHomework } from "./training-profile-homework";
 import { TrainingProfileNotes } from "./training-profile-notes";
 import { TrainingProfileVaccinations } from "./training-profile-vaccinations";
+import { TrainingProfileReportCards } from "./training-profile-report-cards";
+import { TrainingProfilePackageChips } from "./training-profile-package-chips";
 
 interface Props {
   petId: number;
@@ -82,9 +84,9 @@ const VALID_PROFILE_TABS = new Set([
   "progress",
   "history",
   "homework",
+  "report-cards",
   "notes",
   "vaccinations",
-  "certificates",
 ]);
 
 export function TrainingProfile({ petId }: Props) {
@@ -259,6 +261,10 @@ export function TrainingProfile({ petId }: Props) {
                   No-Show Risk
                 </Badge>
               )}
+              <TrainingProfilePackageChips
+                petId={petId}
+                todayISO={todayISO ?? ""}
+              />
             </div>
             <p className="text-muted-foreground mt-0.5 text-sm">
               {pet.breed} ·{" "}
@@ -339,27 +345,25 @@ export function TrainingProfile({ petId }: Props) {
             <StickyNote className="size-3.5" />
             Notes
           </TabsTrigger>
+          <TabsTrigger value="report-cards" className="gap-1.5">
+            <FileText className="size-3.5" />
+            Report Cards
+          </TabsTrigger>
           <TabsTrigger value="vaccinations" className="gap-1.5">
             <Syringe className="size-3.5" />
             Vaccinations
-          </TabsTrigger>
-          <TabsTrigger value="certificates" className="gap-1.5" disabled>
-            <FileText className="size-3.5" />
-            Certificates
-            <span className="text-muted-foreground ml-1 text-[10px]">
-              soon
-            </span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-3">
           <TrainingProfileOverview
             petId={petId}
+            petName={pet.name}
             enrollments={enrollments}
             seriesById={seriesById}
             primaryEnrollment={primaryEnrollment}
             trainerNotes={trainerNotesForPet}
-            todayISO={todayISO}
+            todayISO={todayISO ?? ""}
           />
         </TabsContent>
 
@@ -386,6 +390,10 @@ export function TrainingProfile({ petId }: Props) {
             petName={pet.name}
             enrollments={enrollments}
           />
+        </TabsContent>
+
+        <TabsContent value="report-cards" className="space-y-3">
+          <TrainingProfileReportCards petId={petId} petName={pet.name} />
         </TabsContent>
 
         <TabsContent value="notes" className="space-y-3">

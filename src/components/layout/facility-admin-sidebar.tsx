@@ -391,6 +391,12 @@ export function FacilitySidebar() {
                   disabled: false,
                 },
                 {
+                  title: "Training",
+                  url: "/facility/hq/training",
+                  icon: GraduationCap,
+                  disabled: false,
+                },
+                {
                   title: "Staff Pool",
                   url: "/facility/hq/staff",
                   icon: Users,
