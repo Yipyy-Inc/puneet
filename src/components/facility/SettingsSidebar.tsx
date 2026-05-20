@@ -24,6 +24,7 @@ import {
   ChevronDown,
   CloudSun,
   Receipt,
+  Sparkles,
 } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import {
@@ -50,6 +51,7 @@ const STATIC_GROUPS: SettingsGroup[] = [
     sections: [
       { id: "business", label: "Business", icon: Building2 },
       { id: "notifications", label: "Notifications", icon: Bell },
+      { id: "smart-insights", label: "Smart Insights", icon: Sparkles },
       { id: "custom-email-domain", label: "Custom Email Domain", icon: Bell },
       { id: "weather", label: "Yipyy Forecast", icon: CloudSun },
       { id: "integrations", label: "Integrations", icon: Plug },

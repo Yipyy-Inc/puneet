@@ -19,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { Save, Edit, X } from "lucide-react";
 import { toast } from "sonner";
 import { useSettings } from "@/hooks/use-settings";
+import { MaxPetsPerStaffCard } from "@/components/smart-insights/MaxPetsPerStaffCard";
 import type { ModuleConfig } from "@/types/facility";
 
 export default function DaycareSettingsPage() {
@@ -380,6 +381,8 @@ export default function DaycareSettingsPage() {
             )}
           </CardContent>
         </Card>
+
+        <MaxPetsPerStaffCard facilityId={11} service="daycare" />
       </div>
     </div>
   );

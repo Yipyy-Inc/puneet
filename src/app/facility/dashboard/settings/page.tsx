@@ -51,6 +51,7 @@ import { ServiceColorCard } from "@/components/facility/ServiceColorCard";
 import { ExerciseLibrarySection } from "@/components/facility/training/exercise-library-section";
 import { TrainingModuleSettings } from "@/components/facility/training/training-module-settings";
 import { CustomEmailDomainSettings } from "@/components/facility/CustomEmailDomainSettings";
+import { SmartInsightsSettings } from "@/components/smart-insights/SmartInsightsSettings";
 import { staffMembers } from "@/data/staff";
 
 const AddOnsSettings = dynamic(
@@ -4702,6 +4703,13 @@ export default function SettingsPage() {
                   </Link>
                 </CardContent>
               </Card>
+            </div>
+          )}
+
+          {/* Smart Insights */}
+          {activeSection === "smart-insights" && (
+            <div className="space-y-6">
+              <SmartInsightsSettings />
             </div>
           )}
 
