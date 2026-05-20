@@ -5,6 +5,7 @@ import { DashboardFiltersProvider } from "@/components/facility/dashboard/dashbo
 import { KpiRow } from "@/components/facility/dashboard/kpi-row";
 import { ServiceBreakdown } from "@/components/facility/dashboard/service-breakdown";
 import { BookingsBoard } from "@/components/facility/dashboard/bookings-board";
+import { SmartInsightsWidget } from "@/components/facility/dashboard/SmartInsightsWidget";
 import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
 
 export function DashboardShell() {
@@ -16,6 +17,7 @@ export function DashboardShell() {
           <ServiceBreakdown />
           <KpiRow />
           <BookingsBoard />
+          <SmartInsightsWidget />
         </div>
       </DashboardFiltersProvider>
     </UnifiedBookingsProvider>

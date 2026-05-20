@@ -2,7 +2,9 @@
 
 import { useMemo } from "react";
 import Image from "next/image";
+import { useQuery } from "@tanstack/react-query";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { insightQueries } from "@/lib/api/smart-insights";
 import {
   Home,
   Users,
@@ -54,6 +56,16 @@ export function FacilitySidebar() {
   const { activeModules } = useCustomServices();
   const sidebarModules = isMounted ? activeModules : [];
   const { isMultiLocation } = useLocationContext();
+
+  // Static facility ID for now (would come from user token in production).
+  const facilityId = 11;
+
+  // Spec § 10.7: nav badge updates every 5 minutes via lightweight polling.
+  const { data: highPriorityCount = 0 } = useQuery({
+    ...insightQueries.highPriorityCount(facilityId),
+    refetchInterval: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
 
   // Show all menu items since permission system is removed
   const filteredMenuSections = useMemo((): MenuSection[] => {
@@ -157,6 +169,17 @@ export function FacilitySidebar() {
             url: "/facility/dashboard/automations",
             icon: Zap,
             disabled: false,
+          },
+        ],
+      },
+      {
+        items: [
+          {
+            title: "Smart Insights",
+            url: "/facility/dashboard/insights",
+            icon: Lightbulb,
+            disabled: false,
+            count: highPriorityCount > 0 ? highPriorityCount : undefined,
           },
         ],
       },
@@ -295,12 +318,6 @@ export function FacilitySidebar() {
             icon: BarChart3,
             disabled: false,
           },
-          {
-            title: "Smart Insights",
-            url: "/facility/dashboard/insights",
-            icon: Lightbulb,
-            disabled: false,
-          },
         ],
       },
       {
@@ -422,14 +439,12 @@ export function FacilitySidebar() {
 
     // Since permission system is removed, always show all items
     return allMenuSections;
-  }, [sidebarModules, isMultiLocation]);
+  }, [sidebarModules, isMultiLocation, highPriorityCount]);
 
   const handleLogout = () => {
     // TODO: Implement logout logic
   };
 
-  // Static facility ID for now (would come from user token in production)
-  const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
   const dateLabel = isMounted
     ? new Date().toLocaleDateString("en-US", {

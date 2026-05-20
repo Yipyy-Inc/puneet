@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Save, Edit, X } from "lucide-react";
+import { MaxPetsPerStaffCard } from "@/components/smart-insights/MaxPetsPerStaffCard";
 import { toast } from "sonner";
 import { useSettings } from "@/hooks/use-settings";
 import { FeedingRoundSettings } from "@/components/facility/boarding/feeding-round-settings";
@@ -609,6 +610,8 @@ export default function BoardingSettingsPage() {
             )}
           </CardContent>
         </Card>
+
+        <MaxPetsPerStaffCard facilityId={11} service="boarding" />
       </div>
     </div>
   );

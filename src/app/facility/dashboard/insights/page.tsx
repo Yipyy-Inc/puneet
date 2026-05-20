@@ -1,11 +1,9 @@
-"use client";
-
-import { SmartInsightsDashboard } from "@/components/additional-features/SmartInsightsDashboard";
+import { SmartInsightsPage } from "@/components/smart-insights/SmartInsightsPage";
 
 export default function InsightsPage() {
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
-      <SmartInsightsDashboard />
+      <SmartInsightsPage />
     </div>
   );
 }
