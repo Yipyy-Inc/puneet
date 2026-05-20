@@ -495,7 +495,8 @@ function CustomQuestionForm({
       </div>
 
       {/* Type-specific options */}
-      {localQuestion.type === "dropdown" && (
+      {(localQuestion.type === "dropdown" ||
+        localQuestion.type === "multi_select") && (
         <div className="space-y-2">
           <Label>Options (one per line)</Label>
           <Textarea

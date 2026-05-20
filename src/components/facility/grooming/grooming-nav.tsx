@@ -9,13 +9,11 @@ import {
   Package,
   BoxesIcon,
   Settings,
-  ArrowLeftRight,
   FileText,
   DollarSign,
   Building2,
   ClipboardList,
   Route,
-  Hourglass,
   Activity,
 } from "lucide-react";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
@@ -46,23 +44,9 @@ const tabs: Tab[] = [
     icon: Activity,
   },
   {
-    name: "Waitlist",
-    href: "/facility/dashboard/services/grooming/waitlist",
-    icon: Hourglass,
-  },
-  {
     name: "Stations",
     href: "/facility/dashboard/services/grooming/stations",
     icon: Building2,
-  },
-  {
-    name: "Check-In / Out",
-    href: "/facility/dashboard/services/grooming/check-in",
-    icon: ArrowLeftRight,
-    matchPaths: [
-      "/facility/dashboard/services/grooming/check-in",
-      "/facility/dashboard/services/grooming/check-out",
-    ],
   },
   {
     name: "Groomers",

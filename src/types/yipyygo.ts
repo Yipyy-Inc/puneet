@@ -21,7 +21,10 @@ export type DeliveryChannel = z.infer<typeof deliveryChannelEnum>;
 
 export const customQuestionTypeEnum = z.enum([
   "short_text",
+  "long_text",
+  "yes_no",
   "dropdown",
+  "multi_select",
   "checkbox",
   "number",
   "date",
@@ -169,7 +172,17 @@ export const yipyyGoConfigSchema = z.object({
   enabled: z.boolean(),
   serviceConfigs: z.array(serviceYipyyGoConfigSchema),
   timing: timingConfigSchema,
+  /**
+   * Global default form template — used for any service that doesn't have a
+   * per-service override in `formTemplates`.
+   */
   formTemplate: formTemplateConfigSchema,
+  /**
+   * Per-service form template overrides. Keyed by service type
+   * ("daycare" / "boarding" / "grooming" / "training") or `custom:<name>` for
+   * custom services. Absent keys fall back to `formTemplate`.
+   */
+  formTemplates: z.record(z.string(), formTemplateConfigSchema).optional(),
   addOnsApproval: yipyyGoAddOnsApprovalEnum,
   notifyStaffEmailOnSubmit: z.boolean(),
   medicationFee: medicationFeeConfigSchema.optional(),

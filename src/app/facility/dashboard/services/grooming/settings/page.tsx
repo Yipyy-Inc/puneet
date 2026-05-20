@@ -20,11 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Save, RotateCcw, Bell, Mail, MessageSquare } from "lucide-react";
+import {
+  Save,
+  RotateCcw,
+  Bell,
+  Mail,
+  MessageSquare,
+  ExternalLink,
+} from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MobileGroomingSettings } from "@/components/facility/grooming/mobile-grooming-settings";
-import { GroomingCheckinFormBuilder } from "@/components/facility/grooming/grooming-checkin-form-builder";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -413,21 +420,20 @@ export default function GroomingSettingsPage() {
               </Select>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* 4b · Express Check-In Form (grooming pre-visit) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Express Check-In Form</CardTitle>
-          <CardDescription>
-            The pre-visit form sent to clients before their grooming
-            appointment. Build your own questions — answers show up in the
-            groomer&apos;s pre-visit briefing.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <GroomingCheckinFormBuilder isEditing={isEditing} />
+          <Separator />
+          <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+            <p className="font-medium">Express Check-in form</p>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              The pre-visit form for grooming is now managed alongside every
+              other service in the global Express Check-in settings.
+            </p>
+            <Button asChild variant="outline" size="sm" className="mt-2">
+              <Link href="/facility/dashboard/settings?section=yipyygo">
+                Open Express Check-in settings
+                <ExternalLink className="ml-1.5 size-3.5" />
+              </Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

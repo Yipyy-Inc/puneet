@@ -73,7 +73,9 @@ import {
   CalendarPlus,
   XCircle,
   PawPrint,
+  Eraser,
 } from "lucide-react";
+import { toast } from "sonner";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -1012,6 +1014,8 @@ function DayView({
   onSlotClick,
   onSlotContext,
   onConfirmBlock,
+  onConfirmUnblock,
+  pendingExistingBlockId,
   matchedIds,
   searchActive,
   stylistNameById,
@@ -1038,6 +1042,9 @@ function DayView({
   onSlotClick: (stylistId: string, time: string) => void;
   onSlotContext: (stylistId: string, time: string) => void;
   onConfirmBlock: () => void;
+  onConfirmUnblock: () => void;
+  /** Id of an existing time block at the right-clicked slot, if any. */
+  pendingExistingBlockId: string | null;
   matchedIds: Set<string>;
   searchActive: boolean;
   alertCountById: Record<string, number>;
@@ -1315,10 +1322,17 @@ function DayView({
                   </div>
                 </ContextMenuTrigger>
                 <ContextMenuContent>
-                  <ContextMenuItem onSelect={onConfirmBlock}>
-                    <Ban className="size-4" />
-                    Block this time
-                  </ContextMenuItem>
+                  {pendingExistingBlockId ? (
+                    <ContextMenuItem onSelect={onConfirmUnblock}>
+                      <Eraser className="size-4" />
+                      Unblock this time
+                    </ContextMenuItem>
+                  ) : (
+                    <ContextMenuItem onSelect={onConfirmBlock}>
+                      <Ban className="size-4" />
+                      Block this time
+                    </ContextMenuItem>
+                  )}
                 </ContextMenuContent>
               </ContextMenu>
             );
@@ -1609,7 +1623,7 @@ export function GroomingCalendar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [pendingBlockSlot, setPendingBlockSlot] = useState<
-    { stylistId: string; time: string } | null
+    { stylistId: string; time: string; existingBlockId: string | null } | null
   >(null);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
 
@@ -1777,12 +1791,36 @@ export function GroomingCalendar() {
   }
 
   function handleSlotContext(stylistId: string, time: string) {
-    // Stage the right-clicked slot so the menu item can commit it.
-    setPendingBlockSlot({ stylistId, time });
+    // Stage the right-clicked slot so the menu item can commit it. If the slot
+    // falls inside an existing block for this stylist, capture its id so the
+    // menu shows "Unblock" instead of "Block this time".
+    const tMin = timeToMinutes(time);
+    const existing = timeBlocks.find(
+      (b) =>
+        b.date === selectedDate &&
+        b.stylistId === stylistId &&
+        timeToMinutes(b.startTime) <= tMin &&
+        timeToMinutes(b.endTime) > tMin,
+    );
+    setPendingBlockSlot({
+      stylistId,
+      time,
+      existingBlockId: existing?.id ?? null,
+    });
   }
 
   function handleConfirmBlock() {
-    if (pendingBlockSlot) setBlockDialogOpen(true);
+    if (pendingBlockSlot && !pendingBlockSlot.existingBlockId) {
+      setBlockDialogOpen(true);
+    }
+  }
+
+  function handleConfirmUnblock() {
+    const id = pendingBlockSlot?.existingBlockId;
+    if (!id) return;
+    setTimeBlocks((prev) => prev.filter((b) => b.id !== id));
+    toast.success("Time block removed");
+    setPendingBlockSlot(null);
   }
 
   function handleSaveBlock(block: TimeBlock) {
@@ -1928,6 +1966,8 @@ export function GroomingCalendar() {
               onSlotClick={handleSlotClick}
               onSlotContext={handleSlotContext}
               onConfirmBlock={handleConfirmBlock}
+              onConfirmUnblock={handleConfirmUnblock}
+              pendingExistingBlockId={pendingBlockSlot?.existingBlockId ?? null}
               matchedIds={searchMatchedIds}
               searchActive={searchActive}
               stylistNameById={stylistNameById}

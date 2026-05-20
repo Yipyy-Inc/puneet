@@ -67,7 +67,7 @@ const BEHAVIOR_TO_MOOD: Record<BehaviorTag, "happy" | "content" | "shy" | "tired
 // Mark-Ready gate (photo requirements)
 // ============================================================================
 
-interface GroomingCheckinFacilityConfig {
+interface GroomingPhotoPolicyConfig {
   requireBeforePhotos?: boolean;
   requireAfterPhotos?: boolean;
 }
@@ -89,11 +89,11 @@ export function getGroomingPhotoRequirements(): {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { facilities } = require("@/data/facilities") as typeof import("@/data/facilities");
   const f = facilities.find((x) => x.id === 11) as
-    | { groomingCheckinConfig?: GroomingCheckinFacilityConfig }
+    | { groomingPhotoPolicy?: GroomingPhotoPolicyConfig }
     | undefined;
   return {
-    requireBeforePhotos: f?.groomingCheckinConfig?.requireBeforePhotos ?? true,
-    requireAfterPhotos: f?.groomingCheckinConfig?.requireAfterPhotos ?? true,
+    requireBeforePhotos: f?.groomingPhotoPolicy?.requireBeforePhotos ?? true,
+    requireAfterPhotos: f?.groomingPhotoPolicy?.requireAfterPhotos ?? true,
   };
 }
 

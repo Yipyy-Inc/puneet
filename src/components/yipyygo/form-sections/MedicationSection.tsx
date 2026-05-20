@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MedicationItem, YipyyGoFormSectionProps } from "@/types/yipyygo";
+import { getFormTemplateForService } from "@/data/yipyygo-config";
 import type {
   MedForm,
   MedFrequency,
@@ -120,6 +121,7 @@ export function MedicationSection({
   formData,
   updateFormData,
   config,
+  booking,
   onNext,
   onBack,
   isLastSection,
@@ -127,6 +129,9 @@ export function MedicationSection({
   const [expandedMed, setExpandedMed] = useState<string | null>(
     formData.medications.length > 0 ? formData.medications[0].id : null,
   );
+  const effectiveTemplate = config
+    ? getFormTemplateForService(config, booking.service ?? "")
+    : null;
 
   const handleNoMedicationsToggle = (checked: boolean) => {
     updateFormData({
@@ -642,7 +647,7 @@ export function MedicationSection({
                       </div>
 
                       {/* Photo upload */}
-                      {config?.formTemplate.features.photoUploads && (
+                      {effectiveTemplate?.features.photoUploads && (
                         <div className="space-y-1">
                           <Label className="text-xs">
                             Photo of Medication Label (optional)

@@ -4,7 +4,10 @@ import { use, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { bookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
-import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import {
+  getYipyyGoConfig,
+  getFormTemplateForService,
+} from "@/data/yipyygo-config";
 import {
   getYipyyGoForm,
   getLastStayFormForPet,
@@ -574,7 +577,12 @@ export default function YipyyGoFormPage({
     );
   }
 
-  const features = yipyyGoConfig?.formTemplate.features;
+  // Resolve the form template that applies to this booking's service so any
+  // per-service override configured in global Yipyy settings takes effect.
+  const effectiveFormTemplate = yipyyGoConfig
+    ? getFormTemplateForService(yipyyGoConfig, booking.service)
+    : null;
+  const features = effectiveFormTemplate?.features;
   const sections = [
     ...(features?.contactInfoSection !== false
       ? [

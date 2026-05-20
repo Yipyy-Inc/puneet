@@ -2027,24 +2027,19 @@ export function BookingModal({
             : selectedClient?.phone
               ? "SMS"
               : "the client's contact on file";
-      const isGrooming = selectedService === "grooming";
-      // Grooming uses its own pre-visit form (configured in Grooming
-      // Settings → Express Check-In Form). Surface that distinction in the
-      // toast so staff know which form was sent.
-      const groomingLead =
-        (facilities.find((f) => f.id === facilityId) as {
-          groomingCheckinConfig?: { sendBefore?: number };
-        } | undefined)?.groomingCheckinConfig?.sendBefore;
-      toast.success(
-        isGrooming
-          ? "Grooming Pre-Visit Form sent"
-          : "Express Check-In form sent",
-        {
-          description: isGrooming
-            ? `Heading to ${channel}${groomingLead ? ` · ${groomingLead}h before the appointment` : ""}.`
-            : `Heading to ${channel}.`,
-        },
-      );
+      // Lead time is now configured globally per facility (Yipyy → Timing &
+      // Reminders → "Initial send time"). Resolve it lazily to avoid pulling
+      // the yipyygo-config module into the BookingModal's module graph.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { getYipyyGoConfig } =
+        require("@/data/yipyygo-config") as typeof import("@/data/yipyygo-config");
+      const sendBefore =
+        getYipyyGoConfig(facilityId)?.timing.initialSendTime;
+      toast.success("Express Check-In form sent", {
+        description: `Heading to ${channel}${
+          sendBefore ? ` · ${sendBefore}h before the appointment` : ""
+        }.`,
+      });
     }
     if (redeemedPackageId) {
       const pkg = selectedClient?.packages?.find(
