@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Calendar,
   UserPlus,
   Send,
   MessageSquare,
   ArrowLeft,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -23,6 +25,7 @@ import { staffMembers } from "@/data/staff";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { ConfirmBeforeModify } from "../shared/ConfirmBeforeModify";
 import { PreviewBeforeSend } from "../shared/PreviewBeforeSend";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -145,10 +148,14 @@ function OptionButton({
 function ShiftCard() {
   return (
     <div className="rounded-lg border bg-slate-50 p-3">
-      <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+      <Link
+        href={insightLinks.schedule(SHIFT.dateIso)}
+        className="text-muted-foreground hover:text-primary mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide hover:underline"
+      >
         <Calendar className="size-3.5" />
         Unfilled shift
-      </div>
+        <ExternalLink className="size-3" />
+      </Link>
       <p className="font-semibold">{SHIFT.dateLabel}</p>
       <p className="text-sm">
         {SHIFT.role} · {SHIFT.start} – {SHIFT.end}

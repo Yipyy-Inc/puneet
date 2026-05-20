@@ -1,8 +1,10 @@
 "use client";
 
-import { Sparkles, UserPlus } from "lucide-react";
+import Link from "next/link";
+import { Sparkles, UserPlus, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DrawerFooter } from "../shared/DrawerFooter";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -108,6 +110,14 @@ export function StationsBoardPanel({ onComplete, onCancel }: InsightPanelProps) 
           throughput from idle stations.
         </p>
       </div>
+
+      <Link
+        href={insightLinks.grooming("stations")}
+        className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 self-start text-xs hover:underline"
+      >
+        <ExternalLink className="size-3" />
+        Open Stations board in Grooming module
+      </Link>
 
       <div className="mt-auto">
         <DrawerFooter

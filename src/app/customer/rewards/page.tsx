@@ -28,7 +28,9 @@ import {
   ExternalLink,
   Info,
   Loader2,
+  DollarSign,
 } from "lucide-react";
+import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -507,36 +509,24 @@ export default function CustomerRewardsPage() {
 
             {/* Stats Summary */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-2xl font-bold">
-                    {loyaltyData?.points || 0}
-                  </div>
-                  <div className="text-muted-foreground text-sm">
-                    Current Points
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-2xl font-bold">
-                    {loyaltyData?.lifetimePoints || 0}
-                  </div>
-                  <div className="text-muted-foreground text-sm">
-                    Lifetime Points
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-2xl font-bold">
-                    ${totalSpent.toFixed(2)}
-                  </div>
-                  <div className="text-muted-foreground text-sm">
-                    Total Spent
-                  </div>
-                </CardContent>
-              </Card>
+              <KpiTile
+                label="Current Points"
+                value={loyaltyData?.points || 0}
+                icon={Star}
+                tone="amber"
+              />
+              <KpiTile
+                label="Lifetime Points"
+                value={loyaltyData?.lifetimePoints || 0}
+                icon={TrendingUp}
+                tone="violet"
+              />
+              <KpiTile
+                label="Total Spent"
+                value={`$${totalSpent.toFixed(2)}`}
+                icon={DollarSign}
+                tone="emerald"
+              />
             </div>
           </TabsContent>
 

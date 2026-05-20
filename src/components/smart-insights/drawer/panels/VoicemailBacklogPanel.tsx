@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Voicemail, Play } from "lucide-react";
+import Link from "next/link";
+import { Check, Voicemail, Play, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DrawerFooter } from "../shared/DrawerFooter";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -16,6 +18,7 @@ interface VoicemailRow {
   id: string;
   caller: string;
   matchedClient?: string;
+  matchedClientId?: string;
   receivedAt: string;
   ageHours: number;
   durationSec: number;
@@ -23,14 +26,14 @@ interface VoicemailRow {
 }
 
 const VOICEMAILS: VoicemailRow[] = [
-  { id: "VM-1", caller: "+1 514-555-0211", matchedClient: "Hannah Patel", receivedAt: "2 days ago", ageHours: 61, durationSec: 42, transcriptPreview: "Hi, wanted to reschedule Layla's grooming…" },
+  { id: "VM-1", caller: "+1 514-555-0211", matchedClient: "Hannah Patel", matchedClientId: "c-1202", receivedAt: "2 days ago", ageHours: 61, durationSec: 42, transcriptPreview: "Hi, wanted to reschedule Layla's grooming…" },
   { id: "VM-2", caller: "+1 438-555-0344", receivedAt: "2 days ago", ageHours: 53, durationSec: 28, transcriptPreview: "Looking for boarding rates for July long weekend…" },
-  { id: "VM-3", caller: "+1 514-555-0703", matchedClient: "Owen Park", receivedAt: "Yesterday", ageHours: 33, durationSec: 51, transcriptPreview: "My number is on file, just need to confirm Luna's…" },
-  { id: "VM-4", caller: "+1 514-555-0824", matchedClient: "Sara Khan", receivedAt: "Yesterday", ageHours: 24, durationSec: 19, transcriptPreview: "Can you call me back when you have a moment…" },
+  { id: "VM-3", caller: "+1 514-555-0703", matchedClient: "Owen Park", matchedClientId: "c-811", receivedAt: "Yesterday", ageHours: 33, durationSec: 51, transcriptPreview: "My number is on file, just need to confirm Luna's…" },
+  { id: "VM-4", caller: "+1 514-555-0824", matchedClient: "Sara Khan", matchedClientId: "c-1104", receivedAt: "Yesterday", ageHours: 24, durationSec: 19, transcriptPreview: "Can you call me back when you have a moment…" },
   { id: "VM-5", caller: "+1 514-555-0911", receivedAt: "12h ago", ageHours: 12, durationSec: 34, transcriptPreview: "First-time caller, looking to start daycare for my…" },
-  { id: "VM-6", caller: "+1 514-555-1042", matchedClient: "Mike Cho", receivedAt: "8h ago", ageHours: 8, durationSec: 22, transcriptPreview: "Hey, quick question about the training package…" },
+  { id: "VM-6", caller: "+1 514-555-1042", matchedClient: "Mike Cho", matchedClientId: "c-1109", receivedAt: "8h ago", ageHours: 8, durationSec: 22, transcriptPreview: "Hey, quick question about the training package…" },
   { id: "VM-7", caller: "+1 438-555-1158", receivedAt: "4h ago", ageHours: 4, durationSec: 47, transcriptPreview: "Calling about your boarding waiver requirements…" },
-  { id: "VM-8", caller: "+1 514-555-1231", matchedClient: "Iris Khoury", receivedAt: "2h ago", ageHours: 2, durationSec: 31, transcriptPreview: "Hi, I think I left my keys at pickup yesterday…" },
+  { id: "VM-8", caller: "+1 514-555-1231", matchedClient: "Iris Khoury", matchedClientId: "c-1013", receivedAt: "2h ago", ageHours: 2, durationSec: 31, transcriptPreview: "Hi, I think I left my keys at pickup yesterday…" },
 ];
 
 export function VoicemailBacklogPanel({
@@ -75,7 +78,16 @@ export function VoicemailBacklogPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-semibold">
-                      {v.matchedClient ?? <span className="italic">{v.caller}</span>}
+                      {v.matchedClient && v.matchedClientId ? (
+                        <Link
+                          href={insightLinks.client(v.matchedClientId)}
+                          className="hover:text-primary hover:underline"
+                        >
+                          {v.matchedClient}
+                        </Link>
+                      ) : (
+                        <span className="italic">{v.caller}</span>
+                      )}
                     </p>
                     {isHandled ? (
                       <Badge
@@ -127,6 +139,14 @@ export function VoicemailBacklogPanel({
           );
         })}
       </ul>
+
+      <Link
+        href={insightLinks.calling("voicemail")}
+        className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 self-start text-xs hover:underline"
+      >
+        <ExternalLink className="size-3" />
+        Open full Voicemail tab in Calling module
+      </Link>
 
       <div className="mt-auto">
         <DrawerFooter

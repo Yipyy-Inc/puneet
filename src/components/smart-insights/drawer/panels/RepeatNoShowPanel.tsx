@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   AlertOctagon,
   ArrowLeft,
@@ -15,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { ConfirmBeforeModify } from "../shared/ConfirmBeforeModify";
 import { PreviewBeforeSend } from "../shared/PreviewBeforeSend";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -27,6 +29,7 @@ import type { InsightPanelProps } from "../panel-types";
 
 interface FlaggedBooking {
   bookingId: string;
+  clientId: string;
   clientName: string;
   petName: string;
   phone: string;
@@ -37,11 +40,11 @@ interface FlaggedBooking {
 }
 
 const FLAGGED: FlaggedBooking[] = [
-  { bookingId: "BK-22481", clientName: "Pierre Lavoie", petName: "Otis", phone: "+1 514-555-0144", date: "May 22, 9:30 AM", service: "Grooming – Full", noShowCount: 3, value: 135 },
-  { bookingId: "BK-22517", clientName: "Hannah Patel", petName: "Layla", phone: "+1 514-555-0211", date: "May 23, 11:00 AM", service: "Daycare", noShowCount: 2, value: 45 },
-  { bookingId: "BK-22634", clientName: "Etienne Roy", petName: "Biscuit", phone: "+1 514-555-0319", date: "May 28, 2:00 PM", service: "Boarding (2 nights)", noShowCount: 2, value: 220 },
-  { bookingId: "BK-22708", clientName: "Yuki Tanaka", petName: "Kuma", phone: "+1 514-555-0426", date: "May 30, 10:00 AM", service: "Grooming – Bath & Brush", noShowCount: 2, value: 80 },
-  { bookingId: "BK-22791", clientName: "Marcus Wright", petName: "Diesel", phone: "+1 514-555-0532", date: "Jun 02, 3:30 PM", service: "Training (1 session)", noShowCount: 4, value: 160 },
+  { bookingId: "BK-22481", clientId: "c-901", clientName: "Pierre Lavoie", petName: "Otis", phone: "+1 514-555-0144", date: "May 22, 9:30 AM", service: "Grooming – Full", noShowCount: 3, value: 135 },
+  { bookingId: "BK-22517", clientId: "c-902", clientName: "Hannah Patel", petName: "Layla", phone: "+1 514-555-0211", date: "May 23, 11:00 AM", service: "Daycare", noShowCount: 2, value: 45 },
+  { bookingId: "BK-22634", clientId: "c-903", clientName: "Etienne Roy", petName: "Biscuit", phone: "+1 514-555-0319", date: "May 28, 2:00 PM", service: "Boarding (2 nights)", noShowCount: 2, value: 220 },
+  { bookingId: "BK-22708", clientId: "c-904", clientName: "Yuki Tanaka", petName: "Kuma", phone: "+1 514-555-0426", date: "May 30, 10:00 AM", service: "Grooming – Bath & Brush", noShowCount: 2, value: 80 },
+  { bookingId: "BK-22791", clientId: "c-905", clientName: "Marcus Wright", petName: "Diesel", phone: "+1 514-555-0532", date: "Jun 02, 3:30 PM", service: "Training (1 session)", noShowCount: 4, value: 160 },
 ];
 
 const DEFAULT_SMS = `Hi {{firstName}}, this is Doggieville confirming {{petName}}'s appointment on {{date}}. Our cancellation policy: please give 24-hour notice or a no-show fee may apply. Reply YES to confirm, or call us at (514) 555-0100. Thanks!`;
@@ -122,11 +125,24 @@ function FlaggedList() {
           >
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">
-                {b.clientName} · {b.petName}
+                <Link
+                  href={insightLinks.client(b.clientId)}
+                  className="hover:text-primary hover:underline"
+                >
+                  {b.clientName}
+                </Link>{" "}
+                · {b.petName}
               </p>
               <p className="text-muted-foreground text-xs">
                 <CalendarClock className="mr-1 inline size-3" />
-                {b.date} · {b.service}
+                {b.date} ·{" "}
+                <Link
+                  href={insightLinks.booking(b.bookingId)}
+                  className="hover:text-primary hover:underline"
+                >
+                  {b.bookingId}
+                </Link>{" "}
+                · {b.service}
               </p>
             </div>
             <Badge variant="outline" className="border-red-200 bg-red-50 text-red-800">

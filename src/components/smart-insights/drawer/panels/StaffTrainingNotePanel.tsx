@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { GraduationCap, Users } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { PreviewBeforeSend } from "../shared/PreviewBeforeSend";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -17,10 +19,10 @@ import type { InsightPanelProps } from "../panel-types";
  */
 
 const STAFF_RECIPIENTS = [
-  { name: "Mike Chen", role: "Senior Evaluator" },
-  { name: "David Wilson", role: "Grooming Lead" },
-  { name: "Tom Anderson", role: "Daycare Supervisor" },
-  { name: "Manager One", role: "Facility Manager" },
+  { id: "staff-001", name: "Mike Chen", role: "Senior Evaluator" },
+  { id: "staff-003", name: "David Wilson", role: "Grooming Lead" },
+  { id: "staff-005", name: "Tom Anderson", role: "Daycare Supervisor" },
+  { id: "staff-006", name: "Manager One", role: "Facility Manager" },
 ];
 
 const DEFAULT_SUBJECT = "Reminder: Offer grooming at every boarding check-in";
@@ -60,10 +62,14 @@ export function StaffTrainingNotePanel({
           </div>
           <div className="flex flex-wrap gap-1.5">
             {STAFF_RECIPIENTS.map((s) => (
-              <Badge key={s.name} variant="outline" className="gap-1 bg-white">
+              <Link
+                key={s.id}
+                href={insightLinks.staff(s.id)}
+                className="inline-flex items-center gap-1 rounded-md border bg-white px-2 py-0.5 text-xs hover:border-primary/40 hover:bg-primary/5"
+              >
                 <GraduationCap className="size-3" />
                 {s.name}
-              </Badge>
+              </Link>
             ))}
           </div>
         </div>

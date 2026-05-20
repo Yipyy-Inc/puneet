@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, Receipt } from "lucide-react";
+import Link from "next/link";
+import { FileText, Receipt, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DrawerFooter } from "../shared/DrawerFooter";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -15,6 +17,7 @@ import type { InsightPanelProps } from "../panel-types";
 interface OpenInvoice {
   id: string;
   date: string;
+  clientId: string;
   client: string;
   petName: string;
   amount: number;
@@ -23,13 +26,13 @@ interface OpenInvoice {
 }
 
 const INVOICES: OpenInvoice[] = [
-  { id: "INV-9821", date: "May 14", client: "Sandra Beaulieu", petName: "Rocky", amount: 285, status: "open", reason: "Check-out not closed" },
-  { id: "INV-9824", date: "May 15", client: "Tomás García", petName: "Luna", amount: 165, status: "unpaid", reason: "Card declined" },
-  { id: "INV-9830", date: "May 16", client: "Ines Lemay", petName: "Charlie", amount: 420, status: "open", reason: "Late pickup, fee pending" },
-  { id: "INV-9835", date: "May 17", client: "Daniel Brodeur", petName: "Nala", amount: 95, status: "unpaid", reason: "Awaiting bank transfer" },
-  { id: "INV-9841", date: "May 18", client: "Olivia Frenette", petName: "Mochi", amount: 540, status: "open", reason: "Boarding extension not invoiced" },
-  { id: "INV-9847", date: "May 19", client: "Hugo St-Pierre", petName: "Zoey", amount: 215, status: "uncollected_deposit", reason: "Deposit not collected" },
-  { id: "INV-9853", date: "May 19", client: "Jordan Mills", petName: "Coco", amount: 180, status: "open", reason: "Add-on not billed" },
+  { id: "INV-9821", date: "May 14", clientId: "c-1501", client: "Sandra Beaulieu", petName: "Rocky", amount: 285, status: "open", reason: "Check-out not closed" },
+  { id: "INV-9824", date: "May 15", clientId: "c-1502", client: "Tomás García", petName: "Luna", amount: 165, status: "unpaid", reason: "Card declined" },
+  { id: "INV-9830", date: "May 16", clientId: "c-1503", client: "Ines Lemay", petName: "Charlie", amount: 420, status: "open", reason: "Late pickup, fee pending" },
+  { id: "INV-9835", date: "May 17", clientId: "c-1504", client: "Daniel Brodeur", petName: "Nala", amount: 95, status: "unpaid", reason: "Awaiting bank transfer" },
+  { id: "INV-9841", date: "May 18", clientId: "c-1505", client: "Olivia Frenette", petName: "Mochi", amount: 540, status: "open", reason: "Boarding extension not invoiced" },
+  { id: "INV-9847", date: "May 19", clientId: "c-1506", client: "Hugo St-Pierre", petName: "Zoey", amount: 215, status: "uncollected_deposit", reason: "Deposit not collected" },
+  { id: "INV-9853", date: "May 19", clientId: "c-1507", client: "Jordan Mills", petName: "Coco", amount: 180, status: "open", reason: "Add-on not billed" },
 ];
 
 const TOTAL = INVOICES.reduce((s, i) => s + i.amount, 0);
@@ -90,7 +93,12 @@ export function RevenueReportPanel({ onComplete, onCancel }: InsightPanelProps) 
               <div className="min-w-0 flex-1 space-y-0.5">
                 <div className="flex items-center gap-2">
                   <Receipt className="text-muted-foreground size-3.5" />
-                  <span className="text-sm font-semibold">{inv.id}</span>
+                  <Link
+                    href={insightLinks.billing(inv.id)}
+                    className="text-sm font-semibold hover:text-primary hover:underline"
+                  >
+                    {inv.id}
+                  </Link>
                   <Badge variant="outline" className={STATUS_STYLE[inv.status]}>
                     {STATUS_LABEL[inv.status]}
                   </Badge>
@@ -99,7 +107,13 @@ export function RevenueReportPanel({ onComplete, onCancel }: InsightPanelProps) 
                   </span>
                 </div>
                 <p className="text-sm">
-                  {inv.client} · {inv.petName} ·{" "}
+                  <Link
+                    href={insightLinks.client(inv.clientId)}
+                    className="hover:text-primary hover:underline"
+                  >
+                    {inv.client}
+                  </Link>{" "}
+                  · {inv.petName} ·{" "}
                   <span className="font-semibold">${inv.amount}</span>
                 </p>
                 <p className="text-muted-foreground text-xs">{inv.reason}</p>
@@ -108,6 +122,14 @@ export function RevenueReportPanel({ onComplete, onCancel }: InsightPanelProps) 
           );
         })}
       </ul>
+
+      <Link
+        href={insightLinks.billing()}
+        className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 self-start text-xs hover:underline"
+      >
+        <ExternalLink className="size-3" />
+        Open full revenue report in Billing
+      </Link>
 
       <div className="mt-auto">
         <DrawerFooter

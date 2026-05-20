@@ -1,8 +1,10 @@
 "use client";
 
-import { Star, TrendingDown, Info } from "lucide-react";
+import Link from "next/link";
+import { Star, TrendingDown, Info, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DrawerFooter } from "../shared/DrawerFooter";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -11,6 +13,7 @@ import type { InsightPanelProps } from "../panel-types";
  */
 
 const GROOMER = {
+  id: "staff-4",
   name: "Lucas Martin",
   role: "Groomer",
   joinedOn: "Mar 2024",
@@ -46,7 +49,13 @@ export function GroomerProfilePanel({ onComplete, onCancel }: InsightPanelProps)
   return (
     <div className="flex h-full flex-col gap-5 px-1">
       <div className="rounded-lg border bg-slate-50 p-3 text-sm">
-        <p className="font-semibold">{GROOMER.name}</p>
+        <Link
+          href={insightLinks.staff(GROOMER.id)}
+          className="inline-flex items-center gap-1 font-semibold hover:text-primary hover:underline"
+        >
+          {GROOMER.name}
+          <ExternalLink className="size-3" />
+        </Link>
         <p className="text-muted-foreground text-xs">
           {GROOMER.role} · Joined {GROOMER.joinedOn} ·{" "}
           {GROOMER.appointmentsThisMonth} appts this month

@@ -43,6 +43,7 @@ import {
 import { getClientRetailPurchases } from "@/data/retail";
 import type { Evaluation } from "@/types/pet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,6 +109,7 @@ import {
   Bell,
   Scissors,
   Settings as SettingsIcon,
+  CalendarDays,
 } from "lucide-react";
 
 interface Pet {
@@ -569,40 +571,37 @@ export default function ClientDetailPage({
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{totalBookings}</div>
-            <div className="text-muted-foreground text-xs">Total Bookings</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{client.pets.length}</div>
-            <div className="text-muted-foreground text-xs">Pets</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">${totalSpent}</div>
-            <div className="text-muted-foreground text-xs">Total Spent</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{clientDocs.length}</div>
-            <div className="text-muted-foreground text-xs">Documents</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">
-              ${totalRetailSpent.toFixed(2)}
-            </div>
-            <div className="text-muted-foreground text-xs">
-              Retail Purchases ({clientRetailPurchases.length})
-            </div>
-          </CardContent>
-        </Card>
+        <KpiTile
+          label="Total Bookings"
+          value={totalBookings}
+          icon={CalendarDays}
+          tone="indigo"
+        />
+        <KpiTile
+          label="Pets"
+          value={client.pets.length}
+          icon={Heart}
+          tone="rose"
+        />
+        <KpiTile
+          label="Total Spent"
+          value={`$${totalSpent}`}
+          icon={DollarSign}
+          tone="emerald"
+        />
+        <KpiTile
+          label="Documents"
+          value={clientDocs.length}
+          icon={FileText}
+          tone="slate"
+        />
+        <KpiTile
+          label="Retail Purchases"
+          value={`$${totalRetailSpent.toFixed(2)}`}
+          hint={`${clientRetailPurchases.length} purchases`}
+          icon={ShoppingBag}
+          tone="amber"
+        />
       </div>
 
       {/* Tabs */}
@@ -2653,30 +2652,30 @@ function PetDetailContent({
 
       {/* Quick Stats */}
       <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{totalStays}</div>
-            <div className="text-muted-foreground text-xs">Total Stays</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{photos.length}</div>
-            <div className="text-muted-foreground text-xs">Photos</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{vaccinations.length}</div>
-            <div className="text-muted-foreground text-xs">Vaccinations</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{reports.length}</div>
-            <div className="text-muted-foreground text-xs">Report Cards</div>
-          </CardContent>
-        </Card>
+        <KpiTile
+          label="Total Stays"
+          value={totalStays}
+          icon={CalendarDays}
+          tone="indigo"
+        />
+        <KpiTile
+          label="Photos"
+          value={photos.length}
+          icon={Camera}
+          tone="rose"
+        />
+        <KpiTile
+          label="Vaccinations"
+          value={vaccinations.length}
+          icon={Syringe}
+          tone="emerald"
+        />
+        <KpiTile
+          label="Report Cards"
+          value={reports.length}
+          icon={Award}
+          tone="amber"
+        />
       </div>
 
       {/* Alerts */}

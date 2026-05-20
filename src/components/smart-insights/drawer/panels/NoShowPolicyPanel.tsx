@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ArrowLeft, ShieldAlert, MessageSquare, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { PreviewBeforeSend } from "../shared/PreviewBeforeSend";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -19,12 +21,12 @@ import type { InsightPanelProps } from "../panel-types";
  */
 
 const NO_SHOW_CLIENTS = [
-  { name: "Pierre Lavoie", petName: "Otis", upcomingDate: "May 22", noShows: 3 },
-  { name: "Hannah Patel", petName: "Layla", upcomingDate: "May 23", noShows: 2 },
-  { name: "Marcus Wright", petName: "Diesel", upcomingDate: "Jun 02", noShows: 4 },
-  { name: "Étienne Roy", petName: "Biscuit", upcomingDate: "May 28", noShows: 2 },
-  { name: "Yuki Tanaka", petName: "Kuma", upcomingDate: "May 30", noShows: 2 },
-  { name: "Sara Mahmoud", petName: "Theo", upcomingDate: "Jun 04", noShows: 2 },
+  { id: "c-1201", name: "Pierre Lavoie", petName: "Otis", upcomingDate: "May 22", noShows: 3 },
+  { id: "c-1202", name: "Hannah Patel", petName: "Layla", upcomingDate: "May 23", noShows: 2 },
+  { id: "c-1203", name: "Marcus Wright", petName: "Diesel", upcomingDate: "Jun 02", noShows: 4 },
+  { id: "c-1204", name: "Étienne Roy", petName: "Biscuit", upcomingDate: "May 28", noShows: 2 },
+  { id: "c-1205", name: "Yuki Tanaka", petName: "Kuma", upcomingDate: "May 30", noShows: 2 },
+  { id: "c-1206", name: "Sara Mahmoud", petName: "Theo", upcomingDate: "Jun 04", noShows: 2 },
 ];
 
 type Mode = "menu" | "fee" | "reminder";
@@ -72,9 +74,15 @@ function ClientsList() {
       </div>
       <ul className="space-y-1.5 text-sm">
         {NO_SHOW_CLIENTS.map((c) => (
-          <li key={c.name} className="flex items-center justify-between gap-2">
+          <li key={c.id} className="flex items-center justify-between gap-2">
             <span className="truncate">
-              {c.name} · {c.petName}
+              <Link
+                href={insightLinks.client(c.id)}
+                className="hover:text-primary hover:underline"
+              >
+                {c.name}
+              </Link>{" "}
+              · {c.petName}
               <span className="text-muted-foreground ml-2 text-xs">
                 {c.upcomingDate}
               </span>

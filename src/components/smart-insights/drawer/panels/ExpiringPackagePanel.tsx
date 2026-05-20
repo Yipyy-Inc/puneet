@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { CalendarClock, Package } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { PreviewBeforeSend } from "../shared/PreviewBeforeSend";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -15,6 +17,7 @@ import type { InsightPanelProps } from "../panel-types";
  */
 
 interface ExpiringHolder {
+  id: string;
   firstName: string;
   lastName: string;
   petName: string;
@@ -25,14 +28,14 @@ interface ExpiringHolder {
 }
 
 const HOLDERS: ExpiringHolder[] = [
-  { firstName: "Catherine", lastName: "Léger", petName: "Joey", packageName: "Grooming 5-pack", expiryDate: "Jun 8", sessionsRemaining: 2, phone: "+1 514-555-0123" },
-  { firstName: "Alexandre", lastName: "Picard", petName: "Roxy", packageName: "Daycare 10-pack", expiryDate: "Jun 12", sessionsRemaining: 4, phone: "+1 514-555-0234" },
-  { firstName: "Isabelle", lastName: "Bouchard", petName: "Maple", packageName: "Grooming 5-pack", expiryDate: "Jun 15", sessionsRemaining: 1, phone: "+1 514-555-0345" },
-  { firstName: "Daniel", lastName: "Ouellet", petName: "Chase", packageName: "Training 6-pack", expiryDate: "Jun 17", sessionsRemaining: 3, phone: "+1 514-555-0456" },
-  { firstName: "Camille", lastName: "Fortin", petName: "Willow", packageName: "Daycare 10-pack", expiryDate: "Jun 18", sessionsRemaining: 5, phone: "+1 514-555-0567" },
-  { firstName: "Mathieu", lastName: "Roy", petName: "Zeus", packageName: "Boarding 3-pack", expiryDate: "Jun 19", sessionsRemaining: 2, phone: "+1 514-555-0678" },
-  { firstName: "Audrey", lastName: "Beaulieu", petName: "Mia", packageName: "Grooming 5-pack", expiryDate: "Jun 20", sessionsRemaining: 3, phone: "+1 514-555-0789" },
-  { firstName: "Vincent", lastName: "Dubois", petName: "Hank", packageName: "Daycare 10-pack", expiryDate: "Jun 19", sessionsRemaining: 3, phone: "+1 514-555-0890" },
+  { id: "c-701", firstName: "Catherine", lastName: "Léger", petName: "Joey", packageName: "Grooming 5-pack", expiryDate: "Jun 8", sessionsRemaining: 2, phone: "+1 514-555-0123" },
+  { id: "c-702", firstName: "Alexandre", lastName: "Picard", petName: "Roxy", packageName: "Daycare 10-pack", expiryDate: "Jun 12", sessionsRemaining: 4, phone: "+1 514-555-0234" },
+  { id: "c-703", firstName: "Isabelle", lastName: "Bouchard", petName: "Maple", packageName: "Grooming 5-pack", expiryDate: "Jun 15", sessionsRemaining: 1, phone: "+1 514-555-0345" },
+  { id: "c-704", firstName: "Daniel", lastName: "Ouellet", petName: "Chase", packageName: "Training 6-pack", expiryDate: "Jun 17", sessionsRemaining: 3, phone: "+1 514-555-0456" },
+  { id: "c-705", firstName: "Camille", lastName: "Fortin", petName: "Willow", packageName: "Daycare 10-pack", expiryDate: "Jun 18", sessionsRemaining: 5, phone: "+1 514-555-0567" },
+  { id: "c-706", firstName: "Mathieu", lastName: "Roy", petName: "Zeus", packageName: "Boarding 3-pack", expiryDate: "Jun 19", sessionsRemaining: 2, phone: "+1 514-555-0678" },
+  { id: "c-707", firstName: "Audrey", lastName: "Beaulieu", petName: "Mia", packageName: "Grooming 5-pack", expiryDate: "Jun 20", sessionsRemaining: 3, phone: "+1 514-555-0789" },
+  { id: "c-708", firstName: "Vincent", lastName: "Dubois", petName: "Hank", packageName: "Daycare 10-pack", expiryDate: "Jun 19", sessionsRemaining: 3, phone: "+1 514-555-0890" },
 ];
 
 const DEFAULT_TEMPLATE = `Hi {{firstName}}, your {{packageName}} for {{petName}} expires {{expiryDate}} and you still have {{sessionsRemaining}} session(s) remaining. Book now so you don't lose them: doggieville.ca/book. Reply STOP to opt out.`;
@@ -56,10 +59,13 @@ export function ExpiringPackagePanel({ onComplete, onCancel }: InsightPanelProps
           </div>
           <ul className="space-y-1.5 text-sm">
             {HOLDERS.slice(0, 4).map((h) => (
-              <li key={h.phone} className="flex justify-between gap-2">
-                <span className="truncate">
+              <li key={h.id} className="flex justify-between gap-2">
+                <Link
+                  href={insightLinks.client(h.id)}
+                  className="truncate hover:text-primary hover:underline"
+                >
                   {h.firstName} {h.lastName.charAt(0)}. · {h.petName}
-                </span>
+                </Link>
                 <span className="text-muted-foreground shrink-0 text-xs">
                   <CalendarClock className="mr-0.5 inline size-3" />
                   {h.expiryDate} · {h.sessionsRemaining} left
@@ -67,8 +73,13 @@ export function ExpiringPackagePanel({ onComplete, onCancel }: InsightPanelProps
               </li>
             ))}
             {HOLDERS.length > 4 && (
-              <li className="text-muted-foreground pl-2 text-xs">
-                +{HOLDERS.length - 4} more clients
+              <li className="pl-2 text-xs">
+                <Link
+                  href={insightLinks.client()}
+                  className="text-muted-foreground hover:text-primary hover:underline"
+                >
+                  +{HOLDERS.length - 4} more clients
+                </Link>
               </li>
             )}
           </ul>

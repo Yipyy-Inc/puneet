@@ -1,8 +1,10 @@
 "use client";
 
-import { ClipboardX } from "lucide-react";
+import Link from "next/link";
+import { ClipboardX, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DrawerFooter } from "../shared/DrawerFooter";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -15,20 +17,21 @@ interface MissedTaskRow {
   id: string;
   task: string;
   groomer: string;
+  groomerId: string;
   date: string;
   appointment: string;
   reason?: string;
 }
 
 const MISSED: MissedTaskRow[] = [
-  { id: "T-1", task: "Photo for report card", groomer: "Lucas Martin", date: "May 18", appointment: "Daisy · Spaniel cut" },
-  { id: "T-2", task: "Photo for report card", groomer: "Sophie Côté", date: "May 18", appointment: "Mango · Bath & brush" },
-  { id: "T-3", task: "Brush teeth", groomer: "Lucas Martin", date: "May 17", appointment: "Otis · Senior groom" },
-  { id: "T-4", task: "Photo for report card", groomer: "Lucas Martin", date: "May 17", appointment: "Pepper · Full" },
-  { id: "T-5", task: "Express anal glands", groomer: "Sophie Côté", date: "May 16", appointment: "Hazel · Spa" },
-  { id: "T-6", task: "Photo for report card", groomer: "Sophie Côté", date: "May 16", appointment: "Cooper · Full" },
-  { id: "T-7", task: "Photo for report card", groomer: "J-F Roy", date: "May 15", appointment: "Bella · Bath & brush" },
-  { id: "T-8", task: "Trim sanitary area", groomer: "Lucas Martin", date: "May 14", appointment: "Luna · Full" },
+  { id: "T-1", task: "Photo for report card", groomer: "Lucas Martin", groomerId: "staff-4", date: "May 18", appointment: "Daisy · Spaniel cut" },
+  { id: "T-2", task: "Photo for report card", groomer: "Sophie Côté", groomerId: "staff-3", date: "May 18", appointment: "Mango · Bath & brush" },
+  { id: "T-3", task: "Brush teeth", groomer: "Lucas Martin", groomerId: "staff-4", date: "May 17", appointment: "Otis · Senior groom" },
+  { id: "T-4", task: "Photo for report card", groomer: "Lucas Martin", groomerId: "staff-4", date: "May 17", appointment: "Pepper · Full" },
+  { id: "T-5", task: "Express anal glands", groomer: "Sophie Côté", groomerId: "staff-3", date: "May 16", appointment: "Hazel · Spa" },
+  { id: "T-6", task: "Photo for report card", groomer: "Sophie Côté", groomerId: "staff-3", date: "May 16", appointment: "Cooper · Full" },
+  { id: "T-7", task: "Photo for report card", groomer: "J-F Roy", groomerId: "staff-2", date: "May 15", appointment: "Bella · Bath & brush" },
+  { id: "T-8", task: "Trim sanitary area", groomer: "Lucas Martin", groomerId: "staff-4", date: "May 14", appointment: "Luna · Full" },
 ];
 
 const BY_TASK = MISSED.reduce<Record<string, number>>((acc, m) => {
@@ -91,7 +94,14 @@ export function MissedTasksReviewPanel({
             <div className="min-w-0 flex-1">
               <p className="font-medium">{t.task}</p>
               <p className="text-muted-foreground text-xs">
-                {t.appointment} · {t.groomer} · {t.date}
+                {t.appointment} ·{" "}
+                <Link
+                  href={insightLinks.staff(t.groomerId)}
+                  className="hover:text-primary hover:underline"
+                >
+                  {t.groomer}
+                </Link>{" "}
+                · {t.date}
               </p>
             </div>
             <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-900">
@@ -100,6 +110,14 @@ export function MissedTasksReviewPanel({
           </li>
         ))}
       </ul>
+
+      <Link
+        href={insightLinks.grooming("tasks")}
+        className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 self-start text-xs hover:underline"
+      >
+        <ExternalLink className="size-3" />
+        Open full Tasks tab in Grooming module
+      </Link>
 
       <p className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
         Smart Insights does <b>not</b> auto-fix this. Use the data above to

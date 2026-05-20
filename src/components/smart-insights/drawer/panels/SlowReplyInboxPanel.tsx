@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Check, MessageSquare, Reply } from "lucide-react";
+import Link from "next/link";
+import { Check, MessageSquare, Reply, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DrawerFooter } from "../shared/DrawerFooter";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -14,6 +16,7 @@ import type { InsightPanelProps } from "../panel-types";
 
 interface Conversation {
   id: string;
+  clientId: string;
   client: string;
   petName?: string;
   lastInboundAt: string;
@@ -24,7 +27,8 @@ interface Conversation {
 
 const CONVERSATIONS: Conversation[] = [
   {
-    id: "C-1",
+    id: "conv-1401",
+    clientId: "c-1201",
     client: "Pierre Lavoie",
     petName: "Otis",
     lastInboundAt: "2 days ago",
@@ -33,7 +37,8 @@ const CONVERSATIONS: Conversation[] = [
     channel: "sms",
   },
   {
-    id: "C-2",
+    id: "conv-1402",
+    clientId: "c-1102",
     client: "Maya Brown",
     petName: "Luna",
     lastInboundAt: "Yesterday",
@@ -42,7 +47,8 @@ const CONVERSATIONS: Conversation[] = [
     channel: "email",
   },
   {
-    id: "C-3",
+    id: "conv-1403",
+    clientId: "c-1113",
     client: "Henry Kim",
     lastInboundAt: "26h ago",
     hoursOpen: 26,
@@ -91,7 +97,12 @@ export function SlowReplyInboxPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-semibold">
-                      {c.client}
+                      <Link
+                        href={insightLinks.client(c.clientId)}
+                        className="hover:text-primary hover:underline"
+                      >
+                        {c.client}
+                      </Link>
                       {c.petName ? ` · ${c.petName}` : ""}
                     </p>
                     <Badge variant="outline" className="text-[10px]">
@@ -118,16 +129,24 @@ export function SlowReplyInboxPanel({
                   {c.hoursOpen}h
                 </Badge>
               </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={isHandled}
-                onClick={() => markHandled(c.id)}
-              >
-                <Reply className="mr-1.5 size-3.5" />
-                Mark replied
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isHandled}
+                  onClick={() => markHandled(c.id)}
+                >
+                  <Reply className="mr-1.5 size-3.5" />
+                  Mark replied
+                </Button>
+                <Button type="button" size="sm" variant="ghost" asChild>
+                  <Link href={insightLinks.messaging(c.id)}>
+                    <ExternalLink className="mr-1.5 size-3.5" />
+                    Open thread
+                  </Link>
+                </Button>
+              </div>
             </li>
           );
         })}

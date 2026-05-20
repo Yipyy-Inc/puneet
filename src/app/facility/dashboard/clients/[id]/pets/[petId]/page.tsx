@@ -15,6 +15,7 @@ import { getFormsByFacility } from "@/data/forms";
 import { getSubmissionsForPet } from "@/data/form-submissions";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -460,30 +461,30 @@ export default function PetDetailPage({
 
         {/* Quick Stats */}
         <div className="grid grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold">{totalStays}</div>
-              <div className="text-muted-foreground text-xs">Total Stays</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold">{photos.length}</div>
-              <div className="text-muted-foreground text-xs">Photos</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold">{vaccinations.length}</div>
-              <div className="text-muted-foreground text-xs">Vaccinations</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold">{reports.length}</div>
-              <div className="text-muted-foreground text-xs">Report Cards</div>
-            </CardContent>
-          </Card>
+          <KpiTile
+            label="Total Stays"
+            value={totalStays}
+            icon={Calendar}
+            tone="indigo"
+          />
+          <KpiTile
+            label="Photos"
+            value={photos.length}
+            icon={Camera}
+            tone="rose"
+          />
+          <KpiTile
+            label="Vaccinations"
+            value={vaccinations.length}
+            icon={Syringe}
+            tone="emerald"
+          />
+          <KpiTile
+            label="Report Cards"
+            value={reports.length}
+            icon={Award}
+            tone="amber"
+          />
         </div>
 
         {/* Alerts */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   INSIGHT_CATEGORY_LABELS,
@@ -23,7 +23,7 @@ const PRIORITY_CLASSES: Record<Insight["priority"], string> = {
 
 export function DrawerHeader({ insight }: { insight: Insight }) {
   return (
-    <SheetHeader className="space-y-2 border-b pb-4">
+    <DialogHeader className="space-y-2 border-b p-5 pr-12">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="outline" className={CATEGORY_CLASSES[insight.category]}>
           {INSIGHT_CATEGORY_LABELS[insight.category]}
@@ -34,12 +34,12 @@ export function DrawerHeader({ insight }: { insight: Insight }) {
           Priority
         </Badge>
       </div>
-      <SheetTitle className="text-left text-lg leading-tight">
+      <DialogTitle className="text-left text-lg leading-tight">
         {insight.title}
-      </SheetTitle>
-      <p className="text-muted-foreground text-left text-sm">
+      </DialogTitle>
+      <DialogDescription className="text-left text-sm">
         {insight.description}
-      </p>
-    </SheetHeader>
+      </DialogDescription>
+    </DialogHeader>
   );
 }

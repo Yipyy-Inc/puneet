@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Users, Mail } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { PreviewBeforeSend } from "../shared/PreviewBeforeSend";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -20,19 +22,19 @@ import type { InsightPanelProps } from "../panel-types";
  * (spec § 10.6).
  */
 
-const AT_RISK_CLIENTS: { firstName: string; lastName: string; petName: string; email: string }[] = [
-  { firstName: "Sarah", lastName: "Johnson", petName: "Max", email: "sarah.j@example.com" },
-  { firstName: "Michael", lastName: "Chen", petName: "Luna", email: "mchen@example.com" },
-  { firstName: "Emma", lastName: "Wilson", petName: "Bella", email: "emma.w@example.com" },
-  { firstName: "David", lastName: "Martinez", petName: "Charlie", email: "dmartinez@example.com" },
-  { firstName: "Lisa", lastName: "Anderson", petName: "Cooper", email: "lisa.a@example.com" },
-  { firstName: "Robert", lastName: "Kim", petName: "Daisy", email: "rkim@example.com" },
-  { firstName: "Jennifer", lastName: "Patel", petName: "Rocky", email: "jpatel@example.com" },
-  { firstName: "Mark", lastName: "Thompson", petName: "Bailey", email: "mthompson@example.com" },
-  { firstName: "Anna", lastName: "Schmidt", petName: "Buddy", email: "aschmidt@example.com" },
-  { firstName: "Carlos", lastName: "Reyes", petName: "Ginger", email: "creyes@example.com" },
-  { firstName: "Olivia", lastName: "Brown", petName: "Milo", email: "obrown@example.com" },
-  { firstName: "Henry", lastName: "Wright", petName: "Scout", email: "hwright@example.com" },
+const AT_RISK_CLIENTS: { id: string; firstName: string; lastName: string; petName: string; email: string }[] = [
+  { id: "c-501", firstName: "Sarah", lastName: "Johnson", petName: "Max", email: "sarah.j@example.com" },
+  { id: "c-502", firstName: "Michael", lastName: "Chen", petName: "Luna", email: "mchen@example.com" },
+  { id: "c-503", firstName: "Emma", lastName: "Wilson", petName: "Bella", email: "emma.w@example.com" },
+  { id: "c-504", firstName: "David", lastName: "Martinez", petName: "Charlie", email: "dmartinez@example.com" },
+  { id: "c-505", firstName: "Lisa", lastName: "Anderson", petName: "Cooper", email: "lisa.a@example.com" },
+  { id: "c-506", firstName: "Robert", lastName: "Kim", petName: "Daisy", email: "rkim@example.com" },
+  { id: "c-507", firstName: "Jennifer", lastName: "Patel", petName: "Rocky", email: "jpatel@example.com" },
+  { id: "c-508", firstName: "Mark", lastName: "Thompson", petName: "Bailey", email: "mthompson@example.com" },
+  { id: "c-509", firstName: "Anna", lastName: "Schmidt", petName: "Buddy", email: "aschmidt@example.com" },
+  { id: "c-510", firstName: "Carlos", lastName: "Reyes", petName: "Ginger", email: "creyes@example.com" },
+  { id: "c-511", firstName: "Olivia", lastName: "Brown", petName: "Milo", email: "obrown@example.com" },
+  { id: "c-512", firstName: "Henry", lastName: "Wright", petName: "Scout", email: "hwright@example.com" },
 ];
 
 const DEFAULT_SUBJECT = "We miss you and {{petName}}";
@@ -161,10 +163,14 @@ function RecipientsCard() {
       </div>
       <div className="flex flex-wrap gap-1.5">
         {AT_RISK_CLIENTS.map((c) => (
-          <Badge key={c.email} variant="outline" className="gap-1 bg-white">
+          <Link
+            key={c.id}
+            href={insightLinks.client(c.id)}
+            className="inline-flex items-center gap-1 rounded-md border bg-white px-2 py-0.5 text-xs hover:border-primary/40 hover:bg-primary/5"
+          >
             <Mail className="size-3" />
             {c.firstName} {c.lastName.charAt(0)}. · {c.petName}
-          </Badge>
+          </Link>
         ))}
       </div>
     </div>
