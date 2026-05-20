@@ -286,6 +286,70 @@ const mockYipyyGoConfigs: YipyyGoConfig[] = [
       { serviceType: "grooming", enabled: true, requirement: "optional" },
       { serviceType: "training", enabled: false, requirement: "optional" },
     ],
+    // Per-service form overrides. Grooming was historically built with its own
+    // form-builder that lived on facility.groomingCheckinConfig; that legacy
+    // surface was retired in favor of a unified per-service Express Check-in
+    // form. The questions below are the migrated grooming pre-visit questions
+    // and keep the same ids so existing appointment-level
+    // expressCheckinSubmission.answers continue to resolve to the right field.
+    formTemplates: {
+      grooming: {
+        ...defaultFormTemplate,
+        globalCustomQuestions: [
+          {
+            id: "q-coat",
+            type: "long_text",
+            label: "How has your dog's coat been since the last visit?",
+            required: true,
+            helpText:
+              "Tell us if there's matting or tangles we should plan for.",
+            order: 0,
+          },
+          {
+            id: "q-mood",
+            type: "long_text",
+            label: "Any new behavior changes we should know about?",
+            required: false,
+            order: 1,
+          },
+          {
+            id: "q-meds",
+            type: "yes_no",
+            label: "Is your pet on any new medication?",
+            required: true,
+            order: 2,
+          },
+          {
+            id: "q-style",
+            type: "dropdown",
+            label: "Preferred finish",
+            required: true,
+            options: [
+              { value: "option-0", label: "Same as last time" },
+              { value: "option-1", label: "Slightly shorter" },
+              { value: "option-2", label: "Summer cut" },
+              { value: "option-3", label: "Other (note in next question)" },
+            ],
+            order: 3,
+          },
+          {
+            id: "q-style-notes",
+            type: "short_text",
+            label: "Any specific styling notes for the groomer?",
+            required: false,
+            order: 4,
+          },
+          {
+            id: "q-coat-photo",
+            type: "file_upload",
+            label: "Upload a current photo of the coat",
+            required: false,
+            helpText: "Helps the groomer plan before you arrive.",
+            order: 5,
+          },
+        ],
+      },
+    },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     updatedBy: 0,
@@ -327,6 +391,37 @@ export function saveYipyyGoConfig(config: YipyyGoConfig): YipyyGoConfig {
   return updatedConfig;
 }
 
+/**
+ * Builds the per-service override key used in `YipyyGoConfig.formTemplates`.
+ * Standard service types are stored under their slug ("daycare"); custom
+ * services are keyed as `custom:<serviceName>` so two custom services don't
+ * collide on the bare "custom" key.
+ */
+export function getServiceTemplateKey(
+  serviceType: string,
+  customServiceName?: string,
+): string {
+  if (serviceType === "custom" && customServiceName) {
+    return `custom:${customServiceName}`;
+  }
+  return serviceType;
+}
+
+/**
+ * Resolves the form template to use for a given booking's service. Returns the
+ * per-service override if one exists, otherwise falls back to the global
+ * `formTemplate`. Use this in any consumer that renders/queries the customer
+ * Express Check-in form so it picks up per-service customization.
+ */
+export function getFormTemplateForService(
+  config: YipyyGoConfig,
+  serviceType: string,
+  customServiceName?: string,
+): FormTemplateConfig {
+  const key = getServiceTemplateKey(serviceType, customServiceName);
+  return config.formTemplates?.[key] ?? config.formTemplate;
+}
+
 // ============================================================================
 // Service Type Labels
 // ============================================================================
@@ -352,7 +447,10 @@ export const DELIVERY_CHANNEL_LABELS: Record<DeliveryChannel, string> = {
 
 export const QUESTION_TYPE_LABELS: Record<CustomQuestionType, string> = {
   short_text: "Short Text",
-  dropdown: "Dropdown",
+  long_text: "Long Text",
+  yes_no: "Yes / No",
+  dropdown: "Dropdown (single select)",
+  multi_select: "Multi-select",
   checkbox: "Checkbox",
   number: "Number",
   date: "Date",

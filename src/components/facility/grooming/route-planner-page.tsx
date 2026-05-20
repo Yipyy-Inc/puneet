@@ -53,6 +53,7 @@ import {
 } from "@/lib/route-planning";
 import { clients } from "@/data/clients";
 import { Switch } from "@/components/ui/switch";
+import { ServiceAreasMapDialog } from "./service-areas-map-dialog";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -297,6 +298,7 @@ export function RoutePlannerPage() {
 
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [showNearbyClients, setShowNearbyClients] = useState(false);
+  const [mapDialogOpen, setMapDialogOpen] = useState(false);
   useEffect(() => {
     setSelectedDate(todayIso());
   }, []);
@@ -442,12 +444,24 @@ export function RoutePlannerPage() {
             Optimise to reorder stops and minimise drive time.
           </p>
         </div>
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="h-9 rounded-md border bg-card px-3 text-sm"
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setMapDialogOpen(true)}
+            disabled={serviceAreas.length === 0}
+          >
+            <MapIcon className="mr-1.5 size-4" />
+            Service Areas Map
+          </Button>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="h-9 rounded-md border bg-card px-3 text-sm"
+          />
+        </div>
       </div>
 
       {/* Service areas for this date */}
@@ -483,8 +497,10 @@ export function RoutePlannerPage() {
                     <span className="text-muted-foreground">
                       ·{" "}
                       {a.type === "postal"
-                        ? `${(a.postalCodes ?? []).length} codes`
-                        : `${a.radiusKm} km radius`}
+                        ? `${(a.postalCodes ?? []).length} ZIPs`
+                        : a.type === "draw"
+                          ? `${(a.polygon ?? []).length} points`
+                          : `${a.radiusKm} km radius`}
                     </span>
                     <span className="text-muted-foreground/70">
                       · {formatDaysOfWeek(a.daysOfWeek)}
@@ -831,6 +847,12 @@ export function RoutePlannerPage() {
           onConfirm={applyOptimisation}
         />
       )}
+
+      <ServiceAreasMapDialog
+        open={mapDialogOpen}
+        onOpenChange={setMapDialogOpen}
+        areas={serviceAreas}
+      />
     </div>
   );
 }

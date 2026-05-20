@@ -16,7 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnablementScopeSection } from "./EnablementScopeSection";
 import { TimingRemindersSection } from "./TimingRemindersSection";
-import { FormTemplateSection } from "./FormTemplateSection";
+import { PerServiceFormTemplateSection } from "./PerServiceFormTemplateSection";
 import { FeesAndMessagingSection } from "./FeesAndMessagingSection";
 import type {
   YipyyGoConfig,
@@ -220,7 +220,7 @@ export function YipyyGoSettings({
             </TabsContent>
 
             <TabsContent value="template" className="space-y-4">
-              <FormTemplateSection
+              <PerServiceFormTemplateSection
                 config={localConfig}
                 onConfigChange={handleConfigUpdate}
               />

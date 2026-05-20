@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +19,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Plus,
   Truck,
@@ -30,17 +33,92 @@ import {
   Users,
   Map as MapIcon,
   CalendarDays,
+  Hash,
+  Circle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { facilityStaff } from "@/data/facility-staff";
 import type { MobileGroomingVan, ServiceArea } from "@/types/grooming";
-import { DAY_SHORT, formatDaysOfWeek } from "@/lib/service-areas";
+import { formatDaysOfWeek } from "@/lib/service-areas";
 import { CertainAreaForCertainDaysPanel } from "./certain-area-for-certain-days-panel";
 import { ZoneAndTaxSettingsPanel } from "./zone-and-tax-settings-panel";
+import { ServiceAreaDialog } from "./service-area-dialog";
 
 const FACILITY_ID = 11;
+
+// Same palette the service-area dialog uses — keeps the swatch set consistent
+// across the create flow and the inline recolor on each list row.
+const AREA_COLORS = [
+  "#10b981",
+  "#0ea5e9",
+  "#6366f1",
+  "#a855f7",
+  "#ec4899",
+  "#f43f5e",
+  "#f97316",
+  "#eab308",
+  "#84cc16",
+  "#06b6d4",
+  "#475569",
+  "#0f172a",
+];
+
+function ColorSwatchPopover({
+  value,
+  onChange,
+  size = 12,
+}: {
+  value: string;
+  onChange: (color: string) => void;
+  size?: number;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="Change area color"
+          className="shrink-0 rounded-full ring-2 ring-offset-1 ring-offset-background transition-transform hover:scale-110 focus:outline-none focus-visible:ring-foreground"
+          style={{
+            backgroundColor: value,
+            boxShadow: `0 0 0 1px ${value}`,
+            width: size,
+            height: size,
+          }}
+        />
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        side="bottom"
+        className="w-auto p-2"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="px-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Area color
+        </p>
+        <div className="grid grid-cols-6 gap-1.5">
+          {AREA_COLORS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              aria-label={`Color ${c}`}
+              onClick={() => onChange(c)}
+              style={{ backgroundColor: c }}
+              className={cn(
+                "size-6 rounded-full ring-2 ring-offset-2 ring-offset-background transition-transform",
+                value === c
+                  ? "scale-110 ring-foreground"
+                  : "ring-transparent hover:scale-105",
+              )}
+            />
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 function blankVan(): MobileGroomingVan {
   return {
@@ -66,19 +144,6 @@ function syncAssignedIds(v: MobileGroomingVan): MobileGroomingVan {
   return { ...v, assignedStaffIds: ids };
 }
 
-function blankArea(): ServiceArea {
-  return {
-    id: `area-${Date.now()}`,
-    facilityId: FACILITY_ID,
-    name: "",
-    type: "postal",
-    postalCodes: [],
-    daysOfWeek: [1, 2, 3, 4, 5],
-    active: true,
-    color: "#10b981",
-  };
-}
-
 export function MobileGroomingSettings() {
   const {
     enabled,
@@ -102,8 +167,6 @@ export function MobileGroomingSettings() {
 
   const [areaDialogOpen, setAreaDialogOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<ServiceArea | null>(null);
-  const [areaForm, setAreaForm] = useState<ServiceArea>(blankArea());
-  const [postalInput, setPostalInput] = useState("");
 
   const groomers = facilityStaff.filter((s) => s.primaryRole === "groomer");
 
@@ -137,42 +200,13 @@ export function MobileGroomingSettings() {
 
   function openAddArea() {
     setEditingArea(null);
-    setAreaForm(blankArea());
-    setPostalInput("");
     setAreaDialogOpen(true);
   }
   function openEditArea(a: ServiceArea) {
     setEditingArea(a);
-    setAreaForm({ ...a });
-    setPostalInput((a.postalCodes ?? []).join(", "));
     setAreaDialogOpen(true);
   }
-  function saveArea() {
-    if (!areaForm.name.trim()) {
-      toast.error("Area name is required");
-      return;
-    }
-    let next = areaForm;
-    if (next.type === "postal") {
-      const codes = postalInput
-        .split(/[,\n]/)
-        .map((s) => s.trim().toUpperCase())
-        .filter(Boolean);
-      next = { ...next, postalCodes: codes };
-      if (codes.length === 0) {
-        toast.error("Add at least one postal/zip code");
-        return;
-      }
-    } else {
-      if (!next.centerAddress?.trim()) {
-        toast.error("Center address is required for a radius area");
-        return;
-      }
-      if (!next.radiusKm || next.radiusKm <= 0) {
-        toast.error("Radius must be greater than 0");
-        return;
-      }
-    }
+  function handleAreaSave(next: ServiceArea) {
     if (editingArea) {
       updateServiceArea(next);
       toast.success("Service area updated");
@@ -180,16 +214,6 @@ export function MobileGroomingSettings() {
       addServiceArea(next);
       toast.success("Service area added");
     }
-    setAreaDialogOpen(false);
-  }
-
-  function toggleAreaDay(d: number) {
-    setAreaForm((prev) => ({
-      ...prev,
-      daysOfWeek: prev.daysOfWeek.includes(d)
-        ? prev.daysOfWeek.filter((x) => x !== d)
-        : [...prev.daysOfWeek, d].sort((a, b) => a - b),
-    }));
   }
 
   return (
@@ -427,87 +451,127 @@ export function MobileGroomingSettings() {
             </Card>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              {serviceAreas.map((a) => (
-                <Card
-                  key={a.id}
-                  className={cn(
-                    "overflow-hidden",
-                    !a.active && "opacity-60",
-                  )}
-                >
-                  <div
-                    className="h-1 w-full"
-                    style={{ backgroundColor: a.color ?? "#10b981" }}
-                    aria-hidden
-                  />
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center justify-between text-base">
-                      <span className="flex items-center gap-2">
-                        <MapIcon className="size-4 text-muted-foreground" />
-                        {a.name || "(unnamed area)"}
-                      </span>
-                      <Badge variant={a.active ? "default" : "outline"}>
-                        {a.active ? "Active" : "Inactive"}
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                      <CalendarDays className="size-3" />
-                      {formatDaysOfWeek(a.daysOfWeek)}
-                    </p>
-                    {a.type === "postal" ? (
-                      <p className="text-muted-foreground text-xs">
-                        <span className="font-medium text-foreground">
-                          {(a.postalCodes ?? []).length}
-                        </span>{" "}
-                        postal/zip codes
-                        {a.postalCodes && a.postalCodes.length > 0 && (
-                          <span className="text-muted-foreground/80">
-                            {" · "}
-                            {a.postalCodes.slice(0, 4).join(", ")}
-                            {a.postalCodes.length > 4 ? "…" : ""}
-                          </span>
-                        )}
-                      </p>
-                    ) : (
-                      <p className="text-muted-foreground text-xs">
-                        <span className="font-medium text-foreground">
-                          {a.radiusKm} km
-                        </span>{" "}
-                        radius from {a.centerAddress || "(unset)"}
-                      </p>
+              {serviceAreas.map((a) => {
+                const TypeIcon =
+                  a.type === "draw"
+                    ? Pencil
+                    : a.type === "postal"
+                      ? Hash
+                      : Circle;
+                const typeLabel =
+                  a.type === "draw"
+                    ? "Drawn"
+                    : a.type === "postal"
+                      ? "ZIP codes"
+                      : "Radius";
+                const color = a.color ?? "#10b981";
+                return (
+                  <Card
+                    key={a.id}
+                    className={cn(
+                      "relative overflow-hidden border-l-[6px] transition-colors",
+                      !a.active && "opacity-60",
                     )}
-                    <div className="flex items-center gap-2 pt-1">
-                      <Switch
-                        checked={a.active}
-                        onCheckedChange={() => toggleServiceAreaActive(a.id)}
-                        className="scale-75"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="ml-auto"
-                        onClick={() => openEditArea(a)}
-                      >
-                        <Pencil className="mr-1.5 size-3" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive/70 hover:text-destructive"
-                        onClick={() => {
-                          deleteServiceArea(a.id);
-                          toast.success("Service area removed");
-                        }}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    style={{
+                      // Subtle tint of the area's color across the whole card,
+                      // with the left edge accent bar in the full color so the
+                      // card itself is visually identifiable at a glance.
+                      borderLeftColor: color,
+                      backgroundColor: `${color}10`,
+                    }}
+                  >
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center justify-between gap-2 text-base">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <ColorSwatchPopover
+                            value={color}
+                            onChange={(nextColor) => {
+                              updateServiceArea({ ...a, color: nextColor });
+                              toast.success(`${a.name || "Area"} recolored`);
+                            }}
+                          />
+                          <span className="truncate">
+                            {a.name || "(unnamed area)"}
+                          </span>
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="gap-1 bg-card text-[10px] font-medium"
+                        >
+                          <TypeIcon className="size-3" />
+                          {typeLabel}
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                      <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                        <CalendarDays className="size-3" />
+                        {formatDaysOfWeek(a.daysOfWeek)}
+                      </p>
+                      {a.type === "postal" ? (
+                        <p className="text-muted-foreground text-xs">
+                          <span className="font-medium text-foreground">
+                            {(a.postalCodes ?? []).length}
+                          </span>{" "}
+                          ZIP code{(a.postalCodes ?? []).length === 1 ? "" : "s"}
+                          {a.postalCodes && a.postalCodes.length > 0 && (
+                            <span className="text-muted-foreground/80">
+                              {" · "}
+                              {a.postalCodes.slice(0, 4).join(", ")}
+                              {a.postalCodes.length > 4 ? "…" : ""}
+                            </span>
+                          )}
+                        </p>
+                      ) : a.type === "draw" ? (
+                        <p className="text-muted-foreground text-xs">
+                          <span className="font-medium text-foreground">
+                            {(a.polygon ?? []).length}
+                          </span>{" "}
+                          point{(a.polygon ?? []).length === 1 ? "" : "s"} traced
+                          on the map
+                        </p>
+                      ) : (
+                        <p className="text-muted-foreground text-xs">
+                          <span className="font-medium text-foreground">
+                            {a.radiusKm} km
+                          </span>{" "}
+                          radius from {a.centerAddress || "(unset)"}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 pt-1">
+                        <Switch
+                          checked={a.active}
+                          onCheckedChange={() => toggleServiceAreaActive(a.id)}
+                          className="scale-75"
+                        />
+                        <span className="text-[11px] text-muted-foreground">
+                          {a.active ? "Active" : "Inactive"}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="ml-auto"
+                          onClick={() => openEditArea(a)}
+                        >
+                          <Pencil className="mr-1.5 size-3" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive/70 hover:text-destructive"
+                          onClick={() => {
+                            deleteServiceArea(a.id);
+                            toast.success("Service area removed");
+                          }}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
 
@@ -516,175 +580,16 @@ export function MobileGroomingSettings() {
         </>
       )}
 
-      <Dialog open={areaDialogOpen} onOpenChange={setAreaDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editingArea ? "Edit Service Area" : "Add Service Area"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">
-                Area Name <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                value={areaForm.name}
-                onChange={(e) =>
-                  setAreaForm({ ...areaForm, name: e.target.value })
-                }
-                placeholder="North Montréal, South Shore…"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Area Type</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {(
-                  [
-                    {
-                      value: "postal",
-                      label: "Postal / Zip Codes",
-                      hint: "Type the codes you cover",
-                    },
-                    {
-                      value: "radius",
-                      label: "Radius",
-                      hint: "Distance around a center point",
-                    },
-                  ] as const
-                ).map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() =>
-                      setAreaForm({ ...areaForm, type: opt.value })
-                    }
-                    className={cn(
-                      "rounded-lg border p-2.5 text-left text-xs transition-colors",
-                      areaForm.type === opt.value
-                        ? "border-primary bg-primary/5"
-                        : "hover:bg-muted/40",
-                    )}
-                  >
-                    <p className="font-semibold">{opt.label}</p>
-                    <p className="text-muted-foreground mt-0.5 text-[10px]">
-                      {opt.hint}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {areaForm.type === "postal" ? (
-              <div className="space-y-1.5">
-                <Label className="text-xs">Postal / Zip Codes</Label>
-                <Textarea
-                  value={postalInput}
-                  onChange={(e) => setPostalInput(e.target.value)}
-                  placeholder="H2P, H2N, H2M, 90210…"
-                  rows={3}
-                  className="text-sm"
-                />
-                <p className="text-muted-foreground text-[10px]">
-                  Separate by comma or new line. Canadian FSAs (first 3 chars)
-                  match any postal code starting with them.
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">
-                    Center Address <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    value={areaForm.centerAddress ?? ""}
-                    onChange={(e) =>
-                      setAreaForm({
-                        ...areaForm,
-                        centerAddress: e.target.value,
-                      })
-                    }
-                    placeholder="123 Main St, Montréal QC"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Radius (km)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={areaForm.radiusKm ?? ""}
-                      onChange={(e) =>
-                        setAreaForm({
-                          ...areaForm,
-                          radiusKm: Number(e.target.value) || undefined,
-                        })
-                      }
-                      placeholder="10"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Color</Label>
-                    <input
-                      type="color"
-                      value={areaForm.color ?? "#10b981"}
-                      onChange={(e) =>
-                        setAreaForm({ ...areaForm, color: e.target.value })
-                      }
-                      className="h-9 w-full cursor-pointer rounded-md border bg-transparent p-0.5"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Active Days</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {DAY_SHORT.map((label, i) => {
-                  const checked = areaForm.daysOfWeek.includes(i);
-                  return (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => toggleAreaDay(i)}
-                      className={cn(
-                        "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
-                        checked
-                          ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
-                          : "hover:bg-muted/40",
-                      )}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="text-muted-foreground text-[10px]">
-                {formatDaysOfWeek(areaForm.daysOfWeek)}
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border px-3 py-2">
-              <Label className="text-sm">Active</Label>
-              <Switch
-                checked={areaForm.active}
-                onCheckedChange={(v) =>
-                  setAreaForm({ ...areaForm, active: v })
-                }
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAreaDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={saveArea}>
-              {editingArea ? "Save Changes" : "Add Area"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ServiceAreaDialog
+        open={areaDialogOpen}
+        onOpenChange={(o) => {
+          setAreaDialogOpen(o);
+          if (!o) setEditingArea(null);
+        }}
+        initial={editingArea ?? undefined}
+        otherAreas={serviceAreas}
+        onSave={handleAreaSave}
+      />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">

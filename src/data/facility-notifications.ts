@@ -137,7 +137,7 @@ const notifications: FacilityNotification[] = [
     timestamp: ago(90),
     facilityId: 11,
     category: "grooming",
-    link: "/facility/dashboard/services/grooming/check-out",
+    link: "/facility/dashboard",
     meta: { petName: "Buddy" },
   },
   // --- Training ---

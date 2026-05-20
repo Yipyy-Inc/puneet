@@ -141,18 +141,22 @@ export type StylistAvailability = z.infer<typeof stylistAvailabilitySchema>;
 // ============================================================================
 
 /**
- * Service area drawn on a map. Two modes:
+ * Service area drawn on a map. Three modes:
+ *   - "draw"   — custom polygon traced on the map; `polygon` is an array of
+ *                [lat, lng] vertices in order, the last vertex connecting
+ *                back to the first to close the shape.
  *   - "postal" — explicit list of postal/zip codes the van covers.
- *   - "radius" — center address with a radius in kilometres. Real address
- *     matching needs geocoding; we store the raw values and offer an explicit
- *     `centerLat`/`centerLng` for future use.
+ *   - "radius" — center address with a radius in kilometres (legacy mode kept
+ *                for backwards compatibility with existing saved data).
  * `dayOfWeek` is 0=Sunday … 6=Saturday so an area can be active on specific days.
  */
 export const serviceAreaSchema = z.object({
   id: z.string(),
   facilityId: z.number(),
   name: z.string(),
-  type: z.enum(["postal", "radius"]),
+  type: z.enum(["draw", "postal", "radius"]),
+  /** Ordered [lat, lng] vertices that form the polygon (for type "draw"). */
+  polygon: z.array(z.tuple([z.number(), z.number()])).optional(),
   postalCodes: z.array(z.string()).optional(),
   centerAddress: z.string().optional(),
   centerLat: z.number().optional(),
@@ -443,42 +447,10 @@ export type GroomingIntake = z.infer<typeof groomingIntakeSchema>;
 // ============================================================================
 // Express Check-In Form (grooming pre-visit)
 // ============================================================================
-
-/**
- * One question on the facility's pre-visit form. The facility builds the
- * full questionnaire in Grooming Settings → "Express Check-In Form"; the
- * client sees it before their appointment via the link sent N hours ahead.
- *
- * `type` decides the input control:
- *   - text         → single-line freeform
- *   - long-text    → textarea
- *   - yes-no       → boolean switch
- *   - single-select / multi-select → dropdown / chips (uses `options`)
- *   - photo        → image upload (returns URL strings)
- */
-export const expressCheckinQuestionTypeEnum = z.enum([
-  "text",
-  "long-text",
-  "yes-no",
-  "single-select",
-  "multi-select",
-  "photo",
-]);
-export type ExpressCheckinQuestionType = z.infer<
-  typeof expressCheckinQuestionTypeEnum
->;
-
-export const expressCheckinQuestionSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  helperText: z.string().optional(),
-  type: expressCheckinQuestionTypeEnum,
-  options: z.array(z.string()).optional(),
-  required: z.boolean(),
-});
-export type ExpressCheckinQuestion = z.infer<
-  typeof expressCheckinQuestionSchema
->;
+//
+// Question definitions live in the unified Yipyy per-service form
+// (see yipyygo-config → formTemplates.grooming). Only the client-submitted
+// answer payload is stored here on the appointment.
 
 /**
  * Client's submitted answers to the pre-visit form. Stored on the

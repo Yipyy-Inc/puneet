@@ -10,8 +10,6 @@ import {
   Users,
   Settings,
   CalendarDays,
-  LogIn,
-  LogOut,
   FileText,
   DollarSign,
   Package,
@@ -28,16 +26,6 @@ const tabs = [
     name: "Series",
     href: "/facility/dashboard/services/training/series",
     icon: CalendarDays,
-  },
-  {
-    name: "Check-In",
-    href: "/facility/dashboard/services/training/check-in",
-    icon: LogIn,
-  },
-  {
-    name: "Check-Out",
-    href: "/facility/dashboard/services/training/check-out",
-    icon: LogOut,
   },
   {
     name: "Course Catalog",

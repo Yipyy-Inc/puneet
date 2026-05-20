@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BelongingItem, YipyyGoFormSectionProps } from "@/types/yipyygo";
+import { getFormTemplateForService } from "@/data/yipyygo-config";
 
 type BelongingsSectionProps = YipyyGoFormSectionProps;
 
@@ -33,12 +34,16 @@ export function BelongingsSection({
   formData,
   updateFormData,
   config,
+  booking,
   onNext,
   onBack,
   isLastSection,
 }: BelongingsSectionProps) {
   const [otherNote, setOtherNote] = useState("");
   const [showOtherInput, setShowOtherInput] = useState(false);
+  const effectiveTemplate = config
+    ? getFormTemplateForService(config, booking.service ?? "")
+    : null;
 
   const _selectedTypes = new Set(formData.belongings.map((b) => b.type));
 
@@ -222,7 +227,7 @@ export function BelongingsSection({
           </div>
         )}
 
-        {config?.formTemplate.features.photoUploads && (
+        {effectiveTemplate?.features.photoUploads && (
           <div className="space-y-2">
             <Label className="text-muted-foreground">
               Photo of labeled bags (optional)

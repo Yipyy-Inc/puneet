@@ -61,6 +61,7 @@ import {
   isTaskPastDue,
   type TodayTask,
 } from "@/lib/today-tasks";
+import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 
 // ─────────────────────────────────────────────
 // Types
@@ -590,11 +591,15 @@ const STATUS_CFG = {
 function TodayTaskRow({
   task,
   onComplete,
+  onEdit,
+  onDelete,
   photoDataUrl,
   onRequestPhoto,
 }: {
   task: TodayTask;
   onComplete: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
   photoDataUrl?: string;
   onRequestPhoto?: () => void;
 }) {
@@ -682,6 +687,24 @@ function TodayTaskRow({
             Add Photo
           </Button>
         )}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="size-8"
+          onClick={onEdit}
+          aria-label="Edit task"
+        >
+          <Pencil className="size-3.5" />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="text-destructive hover:text-destructive size-8"
+          onClick={onDelete}
+          aria-label="Delete task"
+        >
+          <Trash2 className="size-3.5" />
+        </Button>
       </div>
     </div>
   );
@@ -790,6 +813,191 @@ function PhotoUploadDialog({
 }
 
 // ─────────────────────────────────────────────
+// Today task form modal — ad-hoc tasks managers add from the Today's Tasks tab
+// ─────────────────────────────────────────────
+
+function emptyTodayTask(): TodayTask {
+  return {
+    id: "",
+    templateId: "",
+    name: "",
+    category: "custom",
+    assignedTo: "Any Staff",
+    scheduledAt: "09:00 AM",
+    status: "pending",
+    isRequired: false,
+  };
+}
+
+function TodayTaskFormModal({
+  open,
+  onOpenChange,
+  initial,
+  bookingOptions,
+  groomerOptions,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  initial?: TodayTask;
+  bookingOptions: string[];
+  groomerOptions: string[];
+  onSave: (t: TodayTask) => void;
+}) {
+  const uid = useId();
+  const isNew = !initial;
+  const [form, setForm] = useState<TodayTask>(
+    () => initial ?? emptyTodayTask(),
+  );
+
+  useEffect(() => {
+    if (open) setForm(initial ?? emptyTodayTask());
+  }, [open, initial]);
+
+  function patch<K extends keyof TodayTask>(key: K, value: TodayTask[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleSave() {
+    if (!form.name.trim()) return;
+    const id = isNew ? `today-adhoc-${Date.now()}` : form.id;
+    onSave({ ...form, id });
+    onOpenChange(false);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isNew ? "Add Task" : "Edit Task"}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <Label htmlFor={`${uid}-name`}>Task name *</Label>
+            <Input
+              id={`${uid}-name`}
+              value={form.name}
+              onChange={(e) => patch("name", e.target.value)}
+              placeholder="e.g. Sanitize grooming station"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor={`${uid}-cat`}>Category</Label>
+            <Select
+              value={form.category}
+              onValueChange={(v) => patch("category", v as Category)}
+            >
+              <SelectTrigger id={`${uid}-cat`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(CATEGORY_META) as Category[]).map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {CATEGORY_META[c].label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor={`${uid}-assigned`}>Assigned to</Label>
+            <Input
+              id={`${uid}-assigned`}
+              value={form.assignedTo}
+              onChange={(e) => patch("assignedTo", e.target.value)}
+              list={`${uid}-assigned-list`}
+              placeholder="Staff name"
+            />
+            {groomerOptions.length > 0 && (
+              <datalist id={`${uid}-assigned-list`}>
+                {groomerOptions.map((g) => (
+                  <option key={g} value={g} />
+                ))}
+              </datalist>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor={`${uid}-time`}>Scheduled time</Label>
+            <Input
+              id={`${uid}-time`}
+              value={form.scheduledAt}
+              onChange={(e) => patch("scheduledAt", e.target.value)}
+              placeholder="e.g. 09:30 AM or All day"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor={`${uid}-status`}>Status</Label>
+            <Select
+              value={form.status}
+              onValueChange={(v) =>
+                patch("status", v as TodayTask["status"])
+              }
+            >
+              <SelectTrigger id={`${uid}-status`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="missed">Missed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor={`${uid}-booking`}>Booking (optional)</Label>
+            <Input
+              id={`${uid}-booking`}
+              value={form.bookingLabel ?? ""}
+              onChange={(e) =>
+                patch("bookingLabel", e.target.value || undefined)
+              }
+              list={`${uid}-booking-list`}
+              placeholder="e.g. Booking #1042 — Luna"
+            />
+            {bookingOptions.length > 0 && (
+              <datalist id={`${uid}-booking-list`}>
+                {bookingOptions.map((b) => (
+                  <option key={b} value={b} />
+                ))}
+              </datalist>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Required</p>
+              <p className="text-muted-foreground text-xs">
+                Must be completed before checkout
+              </p>
+            </div>
+            <Switch
+              checked={form.isRequired}
+              onCheckedChange={(v) => patch("isRequired", v)}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={!form.name.trim()}>
+            {isNew ? "Add Task" : "Save Changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Main exported component
 // ─────────────────────────────────────────────
 
@@ -814,6 +1022,8 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
   // report card record for the booking and the data URL becomes an asset id).
   const [taskPhotos, setTaskPhotos] = useState<Record<string, string>>({});
   const [photoUploadFor, setPhotoUploadFor] = useState<TodayTask | null>(null);
+  const [todayFormOpen, setTodayFormOpen] = useState(false);
+  const [editingToday, setEditingToday] = useState<TodayTask | undefined>();
 
   // Auto-mark tasks as "missed" when their scheduled time passes without
   // being started or completed. Re-checks every minute while the page is
@@ -876,6 +1086,35 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
         t.id === taskId ? { ...t, status: "completed" as const } : t,
       ),
     );
+  }
+
+  function handleAddTodayTask() {
+    setEditingToday(undefined);
+    setTodayFormOpen(true);
+  }
+
+  function handleEditTodayTask(task: TodayTask) {
+    setEditingToday(task);
+    setTodayFormOpen(true);
+  }
+
+  function handleSaveTodayTask(task: TodayTask) {
+    setTodayTasks((prev) => {
+      const exists = prev.some((t) => t.id === task.id);
+      if (exists) return prev.map((t) => (t.id === task.id ? task : t));
+      return [task, ...prev];
+    });
+    toast.success(editingToday ? "Task updated" : `Added "${task.name}"`);
+  }
+
+  function handleDeleteTodayTask(taskId: string) {
+    setTodayTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setTaskPhotos((prev) => {
+      const next = { ...prev };
+      delete next[taskId];
+      return next;
+    });
+    toast.success("Task removed");
   }
 
   function handlePhotoSave(dataUrl: string, caption: string) {
@@ -1047,71 +1286,35 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
         {/* ── Today tab ── */}
         <TabsContent value="today" className="mt-4 space-y-4">
           {/* Stats */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardContent className="pt-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm">Completed</p>
-                    <p className="text-2xl font-bold">{completedCount}</p>
-                  </div>
-                  <div className="bg-success/10 flex size-11 items-center justify-center rounded-full">
-                    <CheckCircle2 className="text-success size-5" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm">In Progress</p>
-                    <p className="text-2xl font-bold">{inProgressCount}</p>
-                  </div>
-                  <div className="bg-primary/10 flex size-11 items-center justify-center rounded-full">
-                    <Play className="text-primary size-5" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm">Pending</p>
-                    <p className="text-2xl font-bold">{pendingCount}</p>
-                  </div>
-                  <div className="bg-muted flex size-11 items-center justify-center rounded-full">
-                    <Clock className="text-muted-foreground size-5" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card
-              className={
-                missedCount > 0
-                  ? "border-red-200 bg-red-50/40 dark:border-red-900 dark:bg-red-950/20"
-                  : ""
-              }
-            >
-              <CardContent className="pt-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm">Missed</p>
-                    <p
-                      className={`text-2xl font-bold ${
-                        missedCount > 0 ? "text-red-600 dark:text-red-400" : ""
-                      }`}
-                    >
-                      {missedCount}
-                    </p>
-                  </div>
-                  <div className="flex size-11 items-center justify-center rounded-full bg-red-500/10">
-                    <AlertTriangle className="size-5 text-red-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <KpiTile
+              label="Completed"
+              value={completedCount}
+              hint="Done today"
+              icon={CheckCircle2}
+              tone="emerald"
+            />
+            <KpiTile
+              label="In Progress"
+              value={inProgressCount}
+              hint="Currently active"
+              icon={Play}
+              tone="indigo"
+            />
+            <KpiTile
+              label="Pending"
+              value={pendingCount}
+              hint="Not yet started"
+              icon={Clock}
+              tone="amber"
+            />
+            <KpiTile
+              label="Missed"
+              value={missedCount}
+              hint={missedCount > 0 ? "Needs attention" : "All on track"}
+              icon={AlertTriangle}
+              tone="rose"
+            />
           </div>
 
           <Card>
@@ -1121,14 +1324,20 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
                   <ClipboardList className="size-5" />
                   Today&apos;s Tasks
                 </CardTitle>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setTodayTasks(buildTodayTasks(templates))}
-                >
-                  <RotateCcw className="mr-1.5 size-3.5" />
-                  Refresh
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" onClick={handleAddTodayTask}>
+                    <Plus className="mr-1.5 size-3.5" />
+                    Add Task
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setTodayTasks(buildTodayTasks(templates))}
+                  >
+                    <RotateCcw className="mr-1.5 size-3.5" />
+                    Refresh
+                  </Button>
+                </div>
               </div>
 
               {/* Filter row */}
@@ -1206,8 +1415,12 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
                   <ClipboardList className="text-muted-foreground size-8" />
                   <p className="text-muted-foreground text-sm">
                     No tasks scheduled for today. Add task templates with
-                    auto-create enabled.
+                    auto-create enabled, or add a one-off task below.
                   </p>
+                  <Button size="sm" className="mt-2" onClick={handleAddTodayTask}>
+                    <Plus className="mr-1.5 size-3.5" />
+                    Add Task
+                  </Button>
                 </div>
               ) : filteredTasks.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-8 text-center">
@@ -1223,6 +1436,8 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
                       key={task.id}
                       task={task}
                       onComplete={() => handleComplete(task.id)}
+                      onEdit={() => handleEditTodayTask(task)}
+                      onDelete={() => handleDeleteTodayTask(task.id)}
                       photoDataUrl={taskPhotos[task.id]}
                       onRequestPhoto={() => setPhotoUploadFor(task)}
                     />
@@ -1249,6 +1464,15 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
         }}
         task={photoUploadFor}
         onSave={handlePhotoSave}
+      />
+
+      <TodayTaskFormModal
+        open={todayFormOpen}
+        onOpenChange={setTodayFormOpen}
+        initial={editingToday}
+        bookingOptions={bookingOptions}
+        groomerOptions={groomerOptions}
+        onSave={handleSaveTodayTask}
       />
     </div>
   );

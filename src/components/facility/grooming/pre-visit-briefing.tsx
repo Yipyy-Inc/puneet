@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { facilities } from "@/data/facilities";
 import {
   groomingQueries,
   getMostRecentCompletedAppointment,
@@ -21,9 +20,15 @@ import {
 import type {
   GroomingAppointment,
   BehaviorTag,
-  ExpressCheckinQuestion,
   SessionIssueKind,
 } from "@/types/grooming";
+import {
+  getYipyyGoConfig,
+  getFormTemplateForService,
+} from "@/data/yipyygo-config";
+import type { CustomQuestion } from "@/types/yipyygo";
+
+const FACILITY_ID = 11;
 
 const ISSUE_LABELS: Record<SessionIssueKind, string> = {
   "matting-found": "Matting found",
@@ -53,7 +58,7 @@ function formatDateLong(iso?: string): string {
 }
 
 function formatAnswer(
-  q: ExpressCheckinQuestion | undefined,
+  _q: CustomQuestion | undefined,
   value: unknown,
 ): string {
   if (value === undefined || value === null) return "—";
@@ -62,11 +67,16 @@ function formatAnswer(
   return String(value);
 }
 
-function readQuestions(): ExpressCheckinQuestion[] {
-  const f = facilities.find((x) => x.id === 11) as
-    | { groomingCheckinConfig?: { questions?: ExpressCheckinQuestion[] } }
-    | undefined;
-  return f?.groomingCheckinConfig?.questions ?? [];
+/**
+ * Grooming pre-visit questions live in the unified Yipyy per-service form
+ * (formTemplates.grooming.globalCustomQuestions) so they can be edited in one
+ * place alongside daycare/boarding/training. Falls back to the global default
+ * template if no grooming override is configured yet.
+ */
+function readQuestions(): CustomQuestion[] {
+  const config = getYipyyGoConfig(FACILITY_ID);
+  if (!config) return [];
+  return getFormTemplateForService(config, "grooming").globalCustomQuestions;
 }
 
 export function PreVisitBriefing({
@@ -128,7 +138,7 @@ export function PreVisitBriefing({
             >
               {questions.map((q) => {
                 const value = submission.answers[q.id];
-                if (q.type === "photo") return null;
+                if (q.type === "file_upload") return null;
                 return (
                   <div key={q.id} className="min-w-0">
                     <dt className="text-muted-foreground text-[10px] uppercase tracking-wide">
