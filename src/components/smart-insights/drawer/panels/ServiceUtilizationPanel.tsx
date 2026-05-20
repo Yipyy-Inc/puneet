@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Archive, DollarSign, Megaphone } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Archive, DollarSign, Megaphone, ExternalLink } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { ConfirmBeforeModify } from "../shared/ConfirmBeforeModify";
 import { PreviewBeforeSend } from "../shared/PreviewBeforeSend";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -38,9 +40,13 @@ export function ServiceUtilizationPanel({
     return (
       <div className="flex h-full flex-col gap-5 px-1">
         <div className="rounded-lg border bg-slate-50 p-3 text-sm">
-          <div className="text-muted-foreground mb-1 text-xs uppercase tracking-wide">
+          <Link
+            href={insightLinks.rates("grooming")}
+            className="text-muted-foreground hover:text-primary mb-1 inline-flex items-center gap-1 text-xs uppercase tracking-wide hover:underline"
+          >
             {SERVICE.module}
-          </div>
+            <ExternalLink className="size-3" />
+          </Link>
           <p className="font-semibold">{SERVICE.name}</p>
           <ul className="text-muted-foreground mt-1 grid grid-cols-2 text-xs">
             <li>Bookings: {SERVICE.bookings}</li>

@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ExternalLink, Mail, Check, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DrawerFooter } from "../shared/DrawerFooter";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -130,7 +132,12 @@ export function ReorderPanel({ onComplete, onCancel }: InsightPanelProps) {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold">{item.name}</p>
+                    <Link
+                      href={insightLinks.inventory(item.id)}
+                      className="text-sm font-semibold hover:text-primary hover:underline"
+                    >
+                      {item.name}
+                    </Link>
                     {isActioned && (
                       <Badge
                         variant="outline"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Users } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { PreviewBeforeSend } from "../shared/PreviewBeforeSend";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -16,25 +18,25 @@ import type { InsightPanelProps } from "../panel-types";
  * visit, recipients pre-populated.
  */
 
-const FIRST_TIMERS: { firstName: string; lastName: string; petName: string; email: string }[] = [
-  { firstName: "Aiden", lastName: "Murray", petName: "Pepper", email: "amurray@example.com" },
-  { firstName: "Sophie", lastName: "Bélanger", petName: "Mochi", email: "sbelanger@example.com" },
-  { firstName: "Liam", lastName: "Ferrari", petName: "Tucker", email: "lferrari@example.com" },
-  { firstName: "Chloé", lastName: "Tremblay", petName: "Nova", email: "ctremblay@example.com" },
-  { firstName: "Noah", lastName: "Singh", petName: "Bandit", email: "nsingh@example.com" },
-  { firstName: "Mia", lastName: "Levesque", petName: "Roxie", email: "mlevesque@example.com" },
-  { firstName: "Ethan", lastName: "Park", petName: "Toby", email: "epark@example.com" },
-  { firstName: "Zoe", lastName: "Bouchard", petName: "Hazel", email: "zbouchard@example.com" },
-  { firstName: "Lucas", lastName: "Côté", petName: "Finn", email: "lcote@example.com" },
-  { firstName: "Lily", lastName: "Kaur", petName: "Coco", email: "lkaur@example.com" },
-  { firstName: "Oliver", lastName: "Lemire", petName: "Penny", email: "olemire@example.com" },
-  { firstName: "Ava", lastName: "Roy", petName: "Oscar", email: "aroy@example.com" },
-  { firstName: "Jackson", lastName: "Gauthier", petName: "Stella", email: "jgauthier@example.com" },
-  { firstName: "Maya", lastName: "Choi", petName: "Bruno", email: "mchoi@example.com" },
-  { firstName: "Henry", lastName: "Beaulieu", petName: "Riley", email: "hbeaulieu@example.com" },
-  { firstName: "Eva", lastName: "Nguyen", petName: "Sasha", email: "enguyen@example.com" },
-  { firstName: "Leo", lastName: "Smith", petName: "Olive", email: "lsmith@example.com" },
-  { firstName: "Hannah", lastName: "Garcia", petName: "Murphy", email: "hgarcia@example.com" },
+const FIRST_TIMERS: { id: string; firstName: string; lastName: string; petName: string; email: string }[] = [
+  { id: "c-601", firstName: "Aiden", lastName: "Murray", petName: "Pepper", email: "amurray@example.com" },
+  { id: "c-602", firstName: "Sophie", lastName: "Bélanger", petName: "Mochi", email: "sbelanger@example.com" },
+  { id: "c-603", firstName: "Liam", lastName: "Ferrari", petName: "Tucker", email: "lferrari@example.com" },
+  { id: "c-604", firstName: "Chloé", lastName: "Tremblay", petName: "Nova", email: "ctremblay@example.com" },
+  { id: "c-605", firstName: "Noah", lastName: "Singh", petName: "Bandit", email: "nsingh@example.com" },
+  { id: "c-606", firstName: "Mia", lastName: "Levesque", petName: "Roxie", email: "mlevesque@example.com" },
+  { id: "c-607", firstName: "Ethan", lastName: "Park", petName: "Toby", email: "epark@example.com" },
+  { id: "c-608", firstName: "Zoe", lastName: "Bouchard", petName: "Hazel", email: "zbouchard@example.com" },
+  { id: "c-609", firstName: "Lucas", lastName: "Côté", petName: "Finn", email: "lcote@example.com" },
+  { id: "c-610", firstName: "Lily", lastName: "Kaur", petName: "Coco", email: "lkaur@example.com" },
+  { id: "c-611", firstName: "Oliver", lastName: "Lemire", petName: "Penny", email: "olemire@example.com" },
+  { id: "c-612", firstName: "Ava", lastName: "Roy", petName: "Oscar", email: "aroy@example.com" },
+  { id: "c-613", firstName: "Jackson", lastName: "Gauthier", petName: "Stella", email: "jgauthier@example.com" },
+  { id: "c-614", firstName: "Maya", lastName: "Choi", petName: "Bruno", email: "mchoi@example.com" },
+  { id: "c-615", firstName: "Henry", lastName: "Beaulieu", petName: "Riley", email: "hbeaulieu@example.com" },
+  { id: "c-616", firstName: "Eva", lastName: "Nguyen", petName: "Sasha", email: "enguyen@example.com" },
+  { id: "c-617", firstName: "Leo", lastName: "Smith", petName: "Olive", email: "lsmith@example.com" },
+  { id: "c-618", firstName: "Hannah", lastName: "Garcia", petName: "Murphy", email: "hgarcia@example.com" },
 ];
 
 const DEFAULT_SUBJECT = "We loved meeting {{petName}} — come back and save";
@@ -76,12 +78,21 @@ export function WelcomeBackCampaignPanel({
           </div>
           <div className="flex flex-wrap gap-1.5">
             {FIRST_TIMERS.slice(0, 10).map((c) => (
-              <Badge key={c.email} variant="outline" className="bg-white">
+              <Link
+                key={c.id}
+                href={insightLinks.client(c.id)}
+                className="inline-flex items-center rounded-md border bg-white px-2 py-0.5 text-xs hover:border-primary/40 hover:bg-primary/5"
+              >
                 {c.firstName} · {c.petName}
-              </Badge>
+              </Link>
             ))}
             {FIRST_TIMERS.length > 10 && (
-              <Badge variant="outline">+{FIRST_TIMERS.length - 10} more</Badge>
+              <Link
+                href={insightLinks.client()}
+                className="inline-flex items-center rounded-md border bg-white px-2 py-0.5 text-xs text-muted-foreground hover:border-primary/40"
+              >
+                +{FIRST_TIMERS.length - 10} more
+              </Link>
             )}
           </div>
         </div>

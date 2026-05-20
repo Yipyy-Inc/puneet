@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Package, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import { Package, TrendingUp, ExternalLink } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { ConfirmBeforeModify } from "../shared/ConfirmBeforeModify";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -15,6 +17,7 @@ import type { InsightPanelProps } from "../panel-types";
  */
 
 const ITEM = {
+  id: "inv-ear",
   name: "Ear Cleaning Solution",
   unit: "bottles",
   currentStock: 11,
@@ -47,10 +50,14 @@ export function InventoryItemEditPanel({
     return (
       <div className="flex h-full flex-col gap-5 px-1">
         <div className="rounded-lg border bg-slate-50 p-3 text-sm">
-          <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+          <Link
+            href={insightLinks.inventory(ITEM.id)}
+            className="text-muted-foreground hover:text-primary mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide hover:underline"
+          >
             <Package className="size-3.5" />
             Inventory · Grooming
-          </div>
+            <ExternalLink className="size-3" />
+          </Link>
           <p className="font-semibold">{ITEM.name}</p>
           <p className="text-muted-foreground text-xs">
             In stock: {ITEM.currentStock} {ITEM.unit}

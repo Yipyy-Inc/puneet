@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ArrowLeft, XCircle, MailX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -8,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { PreviewBeforeSend } from "../shared/PreviewBeforeSend";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -17,6 +19,7 @@ import type { InsightPanelProps } from "../panel-types";
 
 interface CancellationRow {
   id: string;
+  clientId: string;
   clientName: string;
   petName: string;
   date: string;
@@ -27,24 +30,24 @@ interface CancellationRow {
 }
 
 const CANCELLATIONS: CancellationRow[] = [
-  { id: "C-1", clientName: "Aiden Mac", petName: "Bo", date: "May 14", service: "Grooming", reason: "Client cancelled — no reason", value: 85, email: "amac@example.com" },
-  { id: "C-2", clientName: "Léa Marchand", petName: "Mango", date: "May 14", service: "Daycare", reason: "Sick pet", value: 45, email: "lmarchand@example.com" },
-  { id: "C-3", clientName: "Thomas Ko", petName: "Pepper", date: "May 15", service: "Grooming", reason: "Client cancelled — no reason", value: 95, email: "tko@example.com" },
-  { id: "C-4", clientName: "Maya Singh", petName: "Charlie", date: "May 15", service: "Boarding", reason: "Travel change", value: 220, email: "msingh@example.com" },
-  { id: "C-5", clientName: "Hugo Brisson", petName: "Otis", date: "May 16", service: "Daycare", reason: "Client cancelled — no reason", value: 45, email: "hbrisson@example.com" },
-  { id: "C-6", clientName: "Sara Khan", petName: "Layla", date: "May 16", service: "Grooming", reason: "Client cancelled — no reason", value: 85, email: "skhan@example.com" },
-  { id: "C-7", clientName: "Eli Ross", petName: "Cooper", date: "May 17", service: "Training", reason: "Client cancelled — no reason", value: 60, email: "eross@example.com" },
-  { id: "C-8", clientName: "Nora Diaz", petName: "Daisy", date: "May 17", service: "Daycare", reason: "Sick pet", value: 45, email: "ndiaz@example.com" },
-  { id: "C-9", clientName: "Owen Park", petName: "Luna", date: "May 18", service: "Grooming", reason: "Client cancelled — no reason", value: 95, email: "opark@example.com" },
-  { id: "C-10", clientName: "Bea Klein", petName: "Olive", date: "May 18", service: "Boarding", reason: "Travel change", value: 175, email: "bklein@example.com" },
-  { id: "C-11", clientName: "Felix Owen", petName: "Theo", date: "May 19", service: "Grooming", reason: "Client cancelled — no reason", value: 95, email: "fowen@example.com" },
-  { id: "C-12", clientName: "Lucas Roy", petName: "Hazel", date: "May 19", service: "Daycare", reason: "Client cancelled — no reason", value: 45, email: "lroy@example.com" },
-  { id: "C-13", clientName: "Iris Khoury", petName: "Sage", date: "May 20", service: "Grooming", reason: "Client cancelled — no reason", value: 95, email: "ikhoury@example.com" },
-  { id: "C-14", clientName: "Daniel Wu", petName: "Rumi", date: "May 20", service: "Daycare", reason: "Client cancelled — no reason", value: 45, email: "dwu@example.com" },
-  { id: "C-15", clientName: "Mia Pierre", petName: "Atlas", date: "May 20", service: "Boarding", reason: "Client cancelled — no reason", value: 175, email: "mpierre@example.com" },
-  { id: "C-16", clientName: "Noah Lee", petName: "Tucker", date: "May 20", service: "Grooming", reason: "Client cancelled — no reason", value: 85, email: "nlee@example.com" },
-  { id: "C-17", clientName: "Zoe Bauer", petName: "Echo", date: "May 20", service: "Training", reason: "Schedule conflict", value: 60, email: "zbauer@example.com" },
-  { id: "C-18", clientName: "Adam Cohen", petName: "Joey", date: "May 20", service: "Daycare", reason: "Client cancelled — no reason", value: 45, email: "acohen@example.com" },
+  { id: "C-1", clientId: "c-1001", clientName: "Aiden Mac", petName: "Bo", date: "May 14", service: "Grooming", reason: "Client cancelled — no reason", value: 85, email: "amac@example.com" },
+  { id: "C-2", clientId: "c-1002", clientName: "Léa Marchand", petName: "Mango", date: "May 14", service: "Daycare", reason: "Sick pet", value: 45, email: "lmarchand@example.com" },
+  { id: "C-3", clientId: "c-1003", clientName: "Thomas Ko", petName: "Pepper", date: "May 15", service: "Grooming", reason: "Client cancelled — no reason", value: 95, email: "tko@example.com" },
+  { id: "C-4", clientId: "c-1004", clientName: "Maya Singh", petName: "Charlie", date: "May 15", service: "Boarding", reason: "Travel change", value: 220, email: "msingh@example.com" },
+  { id: "C-5", clientId: "c-1005", clientName: "Hugo Brisson", petName: "Otis", date: "May 16", service: "Daycare", reason: "Client cancelled — no reason", value: 45, email: "hbrisson@example.com" },
+  { id: "C-6", clientId: "c-1006", clientName: "Sara Khan", petName: "Layla", date: "May 16", service: "Grooming", reason: "Client cancelled — no reason", value: 85, email: "skhan@example.com" },
+  { id: "C-7", clientId: "c-1007", clientName: "Eli Ross", petName: "Cooper", date: "May 17", service: "Training", reason: "Client cancelled — no reason", value: 60, email: "eross@example.com" },
+  { id: "C-8", clientId: "c-1008", clientName: "Nora Diaz", petName: "Daisy", date: "May 17", service: "Daycare", reason: "Sick pet", value: 45, email: "ndiaz@example.com" },
+  { id: "C-9", clientId: "c-1009", clientName: "Owen Park", petName: "Luna", date: "May 18", service: "Grooming", reason: "Client cancelled — no reason", value: 95, email: "opark@example.com" },
+  { id: "C-10", clientId: "c-1010", clientName: "Bea Klein", petName: "Olive", date: "May 18", service: "Boarding", reason: "Travel change", value: 175, email: "bklein@example.com" },
+  { id: "C-11", clientId: "c-1011", clientName: "Felix Owen", petName: "Theo", date: "May 19", service: "Grooming", reason: "Client cancelled — no reason", value: 95, email: "fowen@example.com" },
+  { id: "C-12", clientId: "c-1012", clientName: "Lucas Roy", petName: "Hazel", date: "May 19", service: "Daycare", reason: "Client cancelled — no reason", value: 45, email: "lroy@example.com" },
+  { id: "C-13", clientId: "c-1013", clientName: "Iris Khoury", petName: "Sage", date: "May 20", service: "Grooming", reason: "Client cancelled — no reason", value: 95, email: "ikhoury@example.com" },
+  { id: "C-14", clientId: "c-1014", clientName: "Daniel Wu", petName: "Rumi", date: "May 20", service: "Daycare", reason: "Client cancelled — no reason", value: 45, email: "dwu@example.com" },
+  { id: "C-15", clientId: "c-1015", clientName: "Mia Pierre", petName: "Atlas", date: "May 20", service: "Boarding", reason: "Client cancelled — no reason", value: 175, email: "mpierre@example.com" },
+  { id: "C-16", clientId: "c-1016", clientName: "Noah Lee", petName: "Tucker", date: "May 20", service: "Grooming", reason: "Client cancelled — no reason", value: 85, email: "nlee@example.com" },
+  { id: "C-17", clientId: "c-1017", clientName: "Zoe Bauer", petName: "Echo", date: "May 20", service: "Training", reason: "Schedule conflict", value: 60, email: "zbauer@example.com" },
+  { id: "C-18", clientId: "c-1018", clientName: "Adam Cohen", petName: "Joey", date: "May 20", service: "Daycare", reason: "Client cancelled — no reason", value: 45, email: "acohen@example.com" },
 ];
 
 const REVENUE_LOST = CANCELLATIONS.reduce((s, c) => s + c.value, 0);
@@ -82,7 +85,13 @@ export function CancellationsReviewPanel({
             >
               <div className="min-w-0 flex-1">
                 <p className="font-medium">
-                  {c.clientName} · {c.petName}
+                  <Link
+                    href={insightLinks.client(c.clientId)}
+                    className="hover:text-primary hover:underline"
+                  >
+                    {c.clientName}
+                  </Link>{" "}
+                  · {c.petName}
                 </p>
                 <p className="text-muted-foreground text-xs">
                   {c.date} · {c.service} · {c.reason}

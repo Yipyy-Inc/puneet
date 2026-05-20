@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Package, Users } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { PreviewBeforeSend } from "../shared/PreviewBeforeSend";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -17,6 +19,7 @@ import type { InsightPanelProps } from "../panel-types";
  */
 
 const FREQUENT_BUYERS: {
+  id: string;
   firstName: string;
   lastName: string;
   petName: string;
@@ -25,20 +28,20 @@ const FREQUENT_BUYERS: {
   bestPackage: string;
   savings: number;
 }[] = [
-  { firstName: "Brooke", lastName: "Mason", petName: "Atlas", email: "bmason@example.com", visitsPast90: 6, bestPackage: "Grooming 5-pack", savings: 65 },
-  { firstName: "Tyler", lastName: "Yates", petName: "Cleo", email: "tyates@example.com", visitsPast90: 5, bestPackage: "Daycare 10-pack", savings: 120 },
-  { firstName: "Naomi", lastName: "Reyes", petName: "Pepper", email: "nreyes@example.com", visitsPast90: 4, bestPackage: "Grooming 5-pack", savings: 65 },
-  { firstName: "Felix", lastName: "Owen", petName: "Theo", email: "fowen@example.com", visitsPast90: 5, bestPackage: "Grooming 5-pack", savings: 65 },
-  { firstName: "Iris", lastName: "Hwang", petName: "Mango", email: "ihwang@example.com", visitsPast90: 6, bestPackage: "Daycare 10-pack", savings: 120 },
-  { firstName: "Quinn", lastName: "Adler", petName: "Bo", email: "qadler@example.com", visitsPast90: 4, bestPackage: "Grooming 5-pack", savings: 65 },
-  { firstName: "Roman", lastName: "Doyle", petName: "Echo", email: "rdoyle@example.com", visitsPast90: 4, bestPackage: "Grooming 5-pack", savings: 65 },
-  { firstName: "Beatrice", lastName: "Klein", petName: "Olive", email: "bklein@example.com", visitsPast90: 5, bestPackage: "Daycare 10-pack", savings: 120 },
-  { firstName: "Daniel", lastName: "Cho", petName: "Juno", email: "dcho@example.com", visitsPast90: 6, bestPackage: "Grooming 5-pack", savings: 65 },
-  { firstName: "Sarah", lastName: "Whitman", petName: "Ziggy", email: "swhitman@example.com", visitsPast90: 4, bestPackage: "Daycare 10-pack", savings: 120 },
-  { firstName: "Owen", lastName: "Park", petName: "Rumi", email: "opark@example.com", visitsPast90: 4, bestPackage: "Grooming 5-pack", savings: 65 },
-  { firstName: "Yara", lastName: "Boudreau", petName: "Hazel", email: "yboudreau@example.com", visitsPast90: 5, bestPackage: "Grooming 5-pack", savings: 65 },
-  { firstName: "Linus", lastName: "Brodeur", petName: "Sage", email: "lbrodeur@example.com", visitsPast90: 4, bestPackage: "Daycare 10-pack", savings: 120 },
-  { firstName: "Greta", lastName: "Vance", petName: "Otis", email: "gvance@example.com", visitsPast90: 4, bestPackage: "Grooming 5-pack", savings: 65 },
+  { id: "c-801", firstName: "Brooke", lastName: "Mason", petName: "Atlas", email: "bmason@example.com", visitsPast90: 6, bestPackage: "Grooming 5-pack", savings: 65 },
+  { id: "c-802", firstName: "Tyler", lastName: "Yates", petName: "Cleo", email: "tyates@example.com", visitsPast90: 5, bestPackage: "Daycare 10-pack", savings: 120 },
+  { id: "c-803", firstName: "Naomi", lastName: "Reyes", petName: "Pepper", email: "nreyes@example.com", visitsPast90: 4, bestPackage: "Grooming 5-pack", savings: 65 },
+  { id: "c-804", firstName: "Felix", lastName: "Owen", petName: "Theo", email: "fowen@example.com", visitsPast90: 5, bestPackage: "Grooming 5-pack", savings: 65 },
+  { id: "c-805", firstName: "Iris", lastName: "Hwang", petName: "Mango", email: "ihwang@example.com", visitsPast90: 6, bestPackage: "Daycare 10-pack", savings: 120 },
+  { id: "c-806", firstName: "Quinn", lastName: "Adler", petName: "Bo", email: "qadler@example.com", visitsPast90: 4, bestPackage: "Grooming 5-pack", savings: 65 },
+  { id: "c-807", firstName: "Roman", lastName: "Doyle", petName: "Echo", email: "rdoyle@example.com", visitsPast90: 4, bestPackage: "Grooming 5-pack", savings: 65 },
+  { id: "c-808", firstName: "Beatrice", lastName: "Klein", petName: "Olive", email: "bklein@example.com", visitsPast90: 5, bestPackage: "Daycare 10-pack", savings: 120 },
+  { id: "c-809", firstName: "Daniel", lastName: "Cho", petName: "Juno", email: "dcho@example.com", visitsPast90: 6, bestPackage: "Grooming 5-pack", savings: 65 },
+  { id: "c-810", firstName: "Sarah", lastName: "Whitman", petName: "Ziggy", email: "swhitman@example.com", visitsPast90: 4, bestPackage: "Daycare 10-pack", savings: 120 },
+  { id: "c-811", firstName: "Owen", lastName: "Park", petName: "Rumi", email: "opark@example.com", visitsPast90: 4, bestPackage: "Grooming 5-pack", savings: 65 },
+  { id: "c-812", firstName: "Yara", lastName: "Boudreau", petName: "Hazel", email: "yboudreau@example.com", visitsPast90: 5, bestPackage: "Grooming 5-pack", savings: 65 },
+  { id: "c-813", firstName: "Linus", lastName: "Brodeur", petName: "Sage", email: "lbrodeur@example.com", visitsPast90: 4, bestPackage: "Daycare 10-pack", savings: 120 },
+  { id: "c-814", firstName: "Greta", lastName: "Vance", petName: "Otis", email: "gvance@example.com", visitsPast90: 4, bestPackage: "Grooming 5-pack", savings: 65 },
 ];
 
 const TOTAL_SAVINGS = FREQUENT_BUYERS.reduce((s, c) => s + c.savings, 0);
@@ -78,12 +81,21 @@ export function PackageCampaignPanel({ onComplete, onCancel }: InsightPanelProps
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {FREQUENT_BUYERS.slice(0, 6).map((c) => (
-              <Badge key={c.email} variant="outline" className="bg-white">
+              <Link
+                key={c.id}
+                href={insightLinks.client(c.id)}
+                className="inline-flex items-center rounded-md border bg-white px-2 py-0.5 text-xs hover:border-primary/40 hover:bg-primary/5"
+              >
                 <Package className="mr-1 size-3" />
                 {c.firstName} · {c.visitsPast90}× visits
-              </Badge>
+              </Link>
             ))}
-            <Badge variant="outline">+{FREQUENT_BUYERS.length - 6} more</Badge>
+            <Link
+              href={insightLinks.client()}
+              className="inline-flex items-center rounded-md border bg-white px-2 py-0.5 text-xs text-muted-foreground hover:border-primary/40"
+            >
+              +{FREQUENT_BUYERS.length - 6} more
+            </Link>
           </div>
         </div>
 

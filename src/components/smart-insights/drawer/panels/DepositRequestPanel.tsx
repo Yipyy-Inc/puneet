@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Check, DollarSign, Mail, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DrawerFooter } from "../shared/DrawerFooter";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -14,6 +16,7 @@ import type { InsightPanelProps } from "../panel-types";
 
 interface BookingRow {
   id: string;
+  clientId: string;
   clientName: string;
   petName: string;
   date: string;
@@ -25,20 +28,20 @@ interface BookingRow {
 }
 
 const BOOKINGS: BookingRow[] = [
-  { id: "BK-30021", clientName: "Aaron Smith", petName: "Bo", date: "May 24", service: "Boarding · 3 nights", bookingValue: 360, depositRequired: 100, email: "asmith@example.com", phone: "+1 514-555-0021" },
-  { id: "BK-30024", clientName: "Maya Brown", petName: "Luna", date: "May 25", service: "Grooming · Full", bookingValue: 135, depositRequired: 40, email: "mbrown@example.com", phone: "+1 514-555-0024" },
-  { id: "BK-30029", clientName: "Felix Lin", petName: "Cooper", date: "May 26", service: "Boarding · 2 nights", bookingValue: 240, depositRequired: 80, email: "flin@example.com", phone: "+1 514-555-0029" },
-  { id: "BK-30033", clientName: "Sara Khan", petName: "Daisy", date: "May 27", service: "Boarding · 5 nights", bookingValue: 600, depositRequired: 150, email: "skhan@example.com", phone: "+1 514-555-0033" },
-  { id: "BK-30041", clientName: "Tom Hwang", petName: "Pepper", date: "May 28", service: "Grooming · Full", bookingValue: 135, depositRequired: 40, email: "thwang@example.com", phone: "+1 514-555-0041" },
-  { id: "BK-30046", clientName: "Léa Drouin", petName: "Otis", date: "Jun 01", service: "Boarding · 2 nights", bookingValue: 240, depositRequired: 80, email: "ldrouin@example.com", phone: "+1 514-555-0046" },
-  { id: "BK-30052", clientName: "Pierre Roy", petName: "Mango", date: "Jun 02", service: "Boarding · 7 nights", bookingValue: 840, depositRequired: 200, email: "proy@example.com", phone: "+1 514-555-0052" },
-  { id: "BK-30058", clientName: "Anna Beaulieu", petName: "Charlie", date: "Jun 03", service: "Boarding · 3 nights", bookingValue: 360, depositRequired: 100, email: "abeaulieu@example.com", phone: "+1 514-555-0058" },
-  { id: "BK-30063", clientName: "Mike Cho", petName: "Joey", date: "Jun 05", service: "Grooming · Spa", bookingValue: 160, depositRequired: 50, email: "mcho@example.com", phone: "+1 514-555-0063" },
-  { id: "BK-30068", clientName: "Sophie Wu", petName: "Sage", date: "Jun 06", service: "Boarding · 4 nights", bookingValue: 480, depositRequired: 120, email: "swu@example.com", phone: "+1 514-555-0068" },
-  { id: "BK-30072", clientName: "Ethan Mac", petName: "Atlas", date: "Jun 07", service: "Boarding · 2 nights", bookingValue: 240, depositRequired: 80, email: "emac@example.com", phone: "+1 514-555-0072" },
-  { id: "BK-30077", clientName: "Iris Park", petName: "Hazel", date: "Jun 09", service: "Boarding · 5 nights", bookingValue: 600, depositRequired: 150, email: "ipark@example.com", phone: "+1 514-555-0077" },
-  { id: "BK-30084", clientName: "Henry Kim", petName: "Rocky", date: "Jun 10", service: "Boarding · 3 nights", bookingValue: 360, depositRequired: 100, email: "hkim@example.com", phone: "+1 514-555-0084" },
-  { id: "BK-30089", clientName: "Quinn Diaz", petName: "Theo", date: "Jun 12", service: "Grooming · Spa", bookingValue: 160, depositRequired: 50, email: "qdiaz@example.com", phone: "+1 514-555-0089" },
+  { id: "BK-30021", clientId: "c-1101", clientName: "Aaron Smith", petName: "Bo", date: "May 24", service: "Boarding · 3 nights", bookingValue: 360, depositRequired: 100, email: "asmith@example.com", phone: "+1 514-555-0021" },
+  { id: "BK-30024", clientId: "c-1102", clientName: "Maya Brown", petName: "Luna", date: "May 25", service: "Grooming · Full", bookingValue: 135, depositRequired: 40, email: "mbrown@example.com", phone: "+1 514-555-0024" },
+  { id: "BK-30029", clientId: "c-1103", clientName: "Felix Lin", petName: "Cooper", date: "May 26", service: "Boarding · 2 nights", bookingValue: 240, depositRequired: 80, email: "flin@example.com", phone: "+1 514-555-0029" },
+  { id: "BK-30033", clientId: "c-1104", clientName: "Sara Khan", petName: "Daisy", date: "May 27", service: "Boarding · 5 nights", bookingValue: 600, depositRequired: 150, email: "skhan@example.com", phone: "+1 514-555-0033" },
+  { id: "BK-30041", clientId: "c-1105", clientName: "Tom Hwang", petName: "Pepper", date: "May 28", service: "Grooming · Full", bookingValue: 135, depositRequired: 40, email: "thwang@example.com", phone: "+1 514-555-0041" },
+  { id: "BK-30046", clientId: "c-1106", clientName: "Léa Drouin", petName: "Otis", date: "Jun 01", service: "Boarding · 2 nights", bookingValue: 240, depositRequired: 80, email: "ldrouin@example.com", phone: "+1 514-555-0046" },
+  { id: "BK-30052", clientId: "c-1107", clientName: "Pierre Roy", petName: "Mango", date: "Jun 02", service: "Boarding · 7 nights", bookingValue: 840, depositRequired: 200, email: "proy@example.com", phone: "+1 514-555-0052" },
+  { id: "BK-30058", clientId: "c-1108", clientName: "Anna Beaulieu", petName: "Charlie", date: "Jun 03", service: "Boarding · 3 nights", bookingValue: 360, depositRequired: 100, email: "abeaulieu@example.com", phone: "+1 514-555-0058" },
+  { id: "BK-30063", clientId: "c-1109", clientName: "Mike Cho", petName: "Joey", date: "Jun 05", service: "Grooming · Spa", bookingValue: 160, depositRequired: 50, email: "mcho@example.com", phone: "+1 514-555-0063" },
+  { id: "BK-30068", clientId: "c-1110", clientName: "Sophie Wu", petName: "Sage", date: "Jun 06", service: "Boarding · 4 nights", bookingValue: 480, depositRequired: 120, email: "swu@example.com", phone: "+1 514-555-0068" },
+  { id: "BK-30072", clientId: "c-1111", clientName: "Ethan Mac", petName: "Atlas", date: "Jun 07", service: "Boarding · 2 nights", bookingValue: 240, depositRequired: 80, email: "emac@example.com", phone: "+1 514-555-0072" },
+  { id: "BK-30077", clientId: "c-1112", clientName: "Iris Park", petName: "Hazel", date: "Jun 09", service: "Boarding · 5 nights", bookingValue: 600, depositRequired: 150, email: "ipark@example.com", phone: "+1 514-555-0077" },
+  { id: "BK-30084", clientId: "c-1113", clientName: "Henry Kim", petName: "Rocky", date: "Jun 10", service: "Boarding · 3 nights", bookingValue: 360, depositRequired: 100, email: "hkim@example.com", phone: "+1 514-555-0084" },
+  { id: "BK-30089", clientId: "c-1114", clientName: "Quinn Diaz", petName: "Theo", date: "Jun 12", service: "Grooming · Spa", bookingValue: 160, depositRequired: 50, email: "qdiaz@example.com", phone: "+1 514-555-0089" },
 ];
 
 const TOTAL_OUTSTANDING = BOOKINGS.reduce((s, b) => s + b.depositRequired, 0);
@@ -79,7 +82,13 @@ export function DepositRequestPanel({ onComplete, onCancel }: InsightPanelProps)
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-semibold">
-                      {b.clientName} · {b.petName}
+                      <Link
+                        href={insightLinks.client(b.clientId)}
+                        className="hover:text-primary hover:underline"
+                      >
+                        {b.clientName}
+                      </Link>{" "}
+                      · {b.petName}
                     </p>
                     {isSent && (
                       <Badge
@@ -92,7 +101,13 @@ export function DepositRequestPanel({ onComplete, onCancel }: InsightPanelProps)
                     )}
                   </div>
                   <p className="text-muted-foreground text-xs">
-                    {b.date} · {b.service} · ${b.bookingValue} total
+                    <Link
+                      href={insightLinks.booking(b.id)}
+                      className="hover:text-primary hover:underline"
+                    >
+                      {b.id}
+                    </Link>{" "}
+                    · {b.date} · {b.service} · ${b.bookingValue} total
                   </p>
                 </div>
                 <span className="shrink-0 text-sm font-semibold">

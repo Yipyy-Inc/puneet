@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, PhoneMissed, MessageSquare } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, PhoneMissed, MessageSquare, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { PreviewBeforeSend } from "../shared/PreviewBeforeSend";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -19,22 +21,23 @@ interface MissedCall {
   id: string;
   phone: string;
   matchedClient?: string;
+  matchedClientId?: string;
   time: string;
   voicemail: boolean;
 }
 
 const MISSED_CALLS: MissedCall[] = [
-  { id: "MC-1", phone: "+1 514-555-0144", matchedClient: "Pierre Lavoie", time: "8:42 AM", voicemail: false },
+  { id: "MC-1", phone: "+1 514-555-0144", matchedClient: "Pierre Lavoie", matchedClientId: "c-1201", time: "8:42 AM", voicemail: false },
   { id: "MC-2", phone: "+1 514-555-0289", time: "9:11 AM", voicemail: false },
-  { id: "MC-3", phone: "+1 514-555-0211", matchedClient: "Hannah Patel", time: "11:03 AM", voicemail: true },
-  { id: "MC-4", phone: "+1 514-555-0426", matchedClient: "Yuki Tanaka", time: "11:18 AM", voicemail: false },
-  { id: "MC-5", phone: "+1 514-555-0512", matchedClient: "Marie Tremblay", time: "11:32 AM", voicemail: false },
+  { id: "MC-3", phone: "+1 514-555-0211", matchedClient: "Hannah Patel", matchedClientId: "c-1202", time: "11:03 AM", voicemail: true },
+  { id: "MC-4", phone: "+1 514-555-0426", matchedClient: "Yuki Tanaka", matchedClientId: "c-1205", time: "11:18 AM", voicemail: false },
+  { id: "MC-5", phone: "+1 514-555-0512", matchedClient: "Marie Tremblay", matchedClientId: "c-1301", time: "11:32 AM", voicemail: false },
   { id: "MC-6", phone: "+1 438-555-0199", time: "11:47 AM", voicemail: false },
-  { id: "MC-7", phone: "+1 514-555-0703", matchedClient: "Owen Park", time: "12:08 PM", voicemail: true },
-  { id: "MC-8", phone: "+1 514-555-0844", matchedClient: "Sofia Diaz", time: "12:22 PM", voicemail: false },
+  { id: "MC-7", phone: "+1 514-555-0703", matchedClient: "Owen Park", matchedClientId: "c-811", time: "12:08 PM", voicemail: true },
+  { id: "MC-8", phone: "+1 514-555-0844", matchedClient: "Sofia Diaz", matchedClientId: "c-1302", time: "12:22 PM", voicemail: false },
   { id: "MC-9", phone: "+1 438-555-0317", time: "12:36 PM", voicemail: false },
-  { id: "MC-10", phone: "+1 514-555-0976", matchedClient: "Iris Khoury", time: "12:51 PM", voicemail: false },
-  { id: "MC-11", phone: "+1 514-555-1023", matchedClient: "Henry Kim", time: "1:09 PM", voicemail: false },
+  { id: "MC-10", phone: "+1 514-555-0976", matchedClient: "Iris Khoury", matchedClientId: "c-1013", time: "12:51 PM", voicemail: false },
+  { id: "MC-11", phone: "+1 514-555-1023", matchedClient: "Henry Kim", matchedClientId: "c-1113", time: "1:09 PM", voicemail: false },
 ];
 
 const NO_VOICEMAIL = MISSED_CALLS.filter((c) => !c.voicemail);
@@ -68,7 +71,16 @@ export function MissedCallsPanel({ onComplete, onCancel }: InsightPanelProps) {
             >
               <div className="min-w-0 flex-1">
                 <p className="font-medium">
-                  {c.matchedClient ?? <span className="italic">Unknown caller</span>}
+                  {c.matchedClient && c.matchedClientId ? (
+                    <Link
+                      href={insightLinks.client(c.matchedClientId)}
+                      className="hover:text-primary hover:underline"
+                    >
+                      {c.matchedClient}
+                    </Link>
+                  ) : (
+                    <span className="italic">Unknown caller</span>
+                  )}
                 </p>
                 <p className="text-muted-foreground text-xs">
                   {c.phone} · {c.time}
@@ -86,6 +98,14 @@ export function MissedCallsPanel({ onComplete, onCancel }: InsightPanelProps) {
             </li>
           ))}
         </ul>
+
+        <Link
+          href={insightLinks.calling("missed")}
+          className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 self-start text-xs hover:underline"
+        >
+          <ExternalLink className="size-3" />
+          Open full Call Log in Calling module
+        </Link>
 
         <button
           type="button"

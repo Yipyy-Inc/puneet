@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Award, Copy } from "lucide-react";
+import Link from "next/link";
+import { Award, Copy, ExternalLink } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { PreviewBeforeSend } from "../shared/PreviewBeforeSend";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -23,6 +25,7 @@ import type { InsightPanelProps } from "../panel-types";
  */
 
 const SOURCE = {
+  id: "campaign-mothers-day-2026",
   name: "Mother's Day Promo",
   sentOn: "May 8",
   openRate: "48%",
@@ -56,10 +59,14 @@ export function DuplicateCampaignPanel({
     return (
       <div className="flex h-full flex-col gap-5 px-1">
         <div className="rounded-lg border bg-amber-50/60 p-3 text-sm">
-          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-900">
+          <Link
+            href={insightLinks.marketing(SOURCE.id)}
+            className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-900 hover:underline"
+          >
             <Award className="size-3.5" />
             Source campaign: {SOURCE.name}
-          </div>
+            <ExternalLink className="size-3" />
+          </Link>
           <ul className="grid grid-cols-2 gap-y-1 text-xs text-amber-900">
             <li>Sent: {SOURCE.sentOn}</li>
             <li>Open rate: {SOURCE.openRate}</li>

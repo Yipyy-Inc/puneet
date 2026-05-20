@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarRange, Plus } from "lucide-react";
+import Link from "next/link";
+import { CalendarRange, Plus, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,7 @@ import {
 import { staffMembers } from "@/data/staff";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { ConfirmBeforeModify } from "../shared/ConfirmBeforeModify";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -76,7 +78,12 @@ export function WeekScheduleGapPanel({
               className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm data-[needs=true]:border-red-200 data-[needs=true]:bg-red-50/30"
             >
               <div>
-                <p className="font-semibold">{d.label}</p>
+                <Link
+                  href={insightLinks.schedule(d.date)}
+                  className="font-semibold hover:text-primary hover:underline"
+                >
+                  {d.label}
+                </Link>
                 <p className="text-muted-foreground text-xs">
                   Peak {d.peakWindow} · {d.bookings} bookings · {d.staff} staff
                 </p>
@@ -102,6 +109,14 @@ export function WeekScheduleGapPanel({
             </li>
           ))}
         </ul>
+
+        <Link
+          href={insightLinks.schedule()}
+          className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 self-start text-xs hover:underline"
+        >
+          <ExternalLink className="size-3" />
+          Open full week in Staff Scheduling
+        </Link>
 
         <div className="mt-auto">
           <DrawerFooter primaryLabel="Close" onPrimary={onCancel} />

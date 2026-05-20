@@ -1,8 +1,10 @@
 "use client";
 
-import { Clock, AlertCircle } from "lucide-react";
+import Link from "next/link";
+import { Clock, AlertCircle, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DrawerFooter } from "../shared/DrawerFooter";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -12,6 +14,7 @@ import type { InsightPanelProps } from "../panel-types";
  */
 
 const STAFF = {
+  id: "staff-2",
   name: "J-F Roy",
   role: "Groomer",
   hiredOn: "Aug 2023",
@@ -51,7 +54,13 @@ export function StaffAttendanceRecordPanel({
   return (
     <div className="flex h-full flex-col gap-5 px-1">
       <div className="rounded-lg border bg-slate-50 p-3 text-sm">
-        <p className="font-semibold">{STAFF.name}</p>
+        <Link
+          href={insightLinks.staff(STAFF.id)}
+          className="inline-flex items-center gap-1 font-semibold hover:text-primary hover:underline"
+        >
+          {STAFF.name}
+          <ExternalLink className="size-3" />
+        </Link>
         <p className="text-muted-foreground text-xs">
           {STAFF.role} · Hired {STAFF.hiredOn}
         </p>

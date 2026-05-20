@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { DollarSign, Info } from "lucide-react";
+import Link from "next/link";
+import { DollarSign, Info, ExternalLink } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { ConfirmBeforeModify } from "../shared/ConfirmBeforeModify";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -41,10 +43,14 @@ export function ServiceRateEditPanel({
     return (
       <div className="flex h-full flex-col gap-5 px-1">
         <div className="rounded-lg border bg-slate-50 p-3">
-          <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+          <Link
+            href={insightLinks.rates("daycare")}
+            className="text-muted-foreground hover:text-primary mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide hover:underline"
+          >
             <DollarSign className="size-3.5" />
             {SERVICE.module} · Rates
-          </div>
+            <ExternalLink className="size-3" />
+          </Link>
           <p className="font-semibold">{SERVICE.name}</p>
           <p className="text-muted-foreground text-xs">{SERVICE.unit}</p>
         </div>

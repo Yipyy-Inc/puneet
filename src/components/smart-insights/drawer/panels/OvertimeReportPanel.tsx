@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ArrowLeft, ClockAlert, Users, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { ConfirmBeforeModify } from "../shared/ConfirmBeforeModify";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -15,6 +17,7 @@ import type { InsightPanelProps } from "../panel-types";
  */
 
 interface OvertimeRow {
+  staffId: string;
   staffName: string;
   role: string;
   otHours: number;
@@ -23,11 +26,11 @@ interface OvertimeRow {
 }
 
 const OT_ROWS: OvertimeRow[] = [
-  { staffName: "Marie Tremblay", role: "Manager", otHours: 12, otCost: 540, weeklyHours: 52 },
-  { staffName: "J-F Roy", role: "Groomer", otHours: 9, otCost: 360, weeklyHours: 49 },
-  { staffName: "Sophie Côté", role: "Kennel Tech", otHours: 7, otCost: 245, weeklyHours: 47 },
-  { staffName: "Lucas Martin", role: "Groomer", otHours: 5, otCost: 200, weeklyHours: 45 },
-  { staffName: "Amélie Dubois", role: "Front Desk", otHours: 3, otCost: 105, weeklyHours: 43 },
+  { staffId: "staff-1", staffName: "Marie Tremblay", role: "Manager", otHours: 12, otCost: 540, weeklyHours: 52 },
+  { staffId: "staff-2", staffName: "J-F Roy", role: "Groomer", otHours: 9, otCost: 360, weeklyHours: 49 },
+  { staffId: "staff-3", staffName: "Sophie Côté", role: "Kennel Tech", otHours: 7, otCost: 245, weeklyHours: 47 },
+  { staffId: "staff-4", staffName: "Lucas Martin", role: "Groomer", otHours: 5, otCost: 200, weeklyHours: 45 },
+  { staffId: "staff-5", staffName: "Amélie Dubois", role: "Front Desk", otHours: 3, otCost: 105, weeklyHours: 43 },
 ];
 
 const TOTAL_OT_COST = OT_ROWS.reduce((s, r) => s + r.otCost, 0);
@@ -53,11 +56,16 @@ export function OvertimeReportPanel({ onComplete, onCancel }: InsightPanelProps)
         <ul className="space-y-2">
           {OT_ROWS.map((r) => (
             <li
-              key={r.staffName}
+              key={r.staffId}
               className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm"
             >
               <div className="min-w-0 flex-1">
-                <p className="font-semibold">{r.staffName}</p>
+                <Link
+                  href={insightLinks.staff(r.staffId)}
+                  className="font-semibold hover:text-primary hover:underline"
+                >
+                  {r.staffName}
+                </Link>
                 <p className="text-muted-foreground text-xs">
                   {r.role} · {r.weeklyHours}h this week
                 </p>

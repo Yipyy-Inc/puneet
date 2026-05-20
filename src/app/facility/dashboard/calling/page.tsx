@@ -96,7 +96,18 @@ function LiveTab({
           <CardContent>
             <div className="flex items-center gap-4">
               <div className="text-sm">
-                <p className="font-bold">{activeCall.clientName ?? "Unknown Caller"}</p>
+                <p className="font-bold">
+                  {activeCall.clientId && activeCall.clientName ? (
+                    <Link
+                      href={`/facility/dashboard/clients/${activeCall.clientId}`}
+                      className="hover:text-primary hover:underline"
+                    >
+                      {activeCall.clientName}
+                    </Link>
+                  ) : (
+                    activeCall.clientName ?? "Unknown Caller"
+                  )}
+                </p>
                 <p className="text-muted-foreground">{activeCall.from}</p>
               </div>
               <Badge className="bg-green-600 hover:bg-green-700">Live</Badge>
@@ -142,7 +153,18 @@ function LiveTab({
                   {entry.position}
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-sm">{entry.clientName ?? "Unknown Caller"}</p>
+                  <p className="font-semibold text-sm">
+                    {entry.clientId && entry.clientName ? (
+                      <Link
+                        href={`/facility/dashboard/clients/${entry.clientId}`}
+                        className="hover:text-primary hover:underline"
+                      >
+                        {entry.clientName}
+                      </Link>
+                    ) : (
+                      entry.clientName ?? "Unknown Caller"
+                    )}
+                  </p>
                   <p className="font-mono text-xs text-muted-foreground">{entry.from}</p>
                   {entry.reason && <p className="text-xs text-muted-foreground">{entry.reason}</p>}
                 </div>
@@ -176,7 +198,18 @@ function LiveTab({
             <div key={task.id} className="flex items-start gap-3 rounded-xl border bg-card p-3">
               <div className={`mt-0.5 size-2.5 shrink-0 rounded-full ${task.status === "unresolved" ? "bg-red-500" : task.status === "called_back" ? "bg-amber-500" : "bg-green-500"}`} />
               <div className="flex-1">
-                <p className="text-sm font-semibold">{task.clientName ?? "Unknown"}</p>
+                <p className="text-sm font-semibold">
+                  {task.clientId && task.clientName ? (
+                    <Link
+                      href={`/facility/dashboard/clients/${task.clientId}`}
+                      className="hover:text-primary hover:underline"
+                    >
+                      {task.clientName}
+                    </Link>
+                  ) : (
+                    task.clientName ?? "Unknown"
+                  )}
+                </p>
                 <p className="font-mono text-xs text-muted-foreground">{task.from}</p>
                 <p className="text-xs text-muted-foreground">
                   {new Date(task.callTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -278,7 +311,18 @@ function CallLogDetail({
             {call.type === "inbound" ? <PhoneIncoming className="size-5" /> : <PhoneOutgoing className="size-5" />}
           </div>
           <div className="min-w-0">
-            <p className="font-semibold text-sm truncate">{call.clientName ?? "Unknown Caller"}</p>
+            <p className="font-semibold text-sm truncate">
+              {call.clientId && call.clientName ? (
+                <Link
+                  href={`/facility/dashboard/clients/${call.clientId}`}
+                  className="hover:text-primary hover:underline"
+                >
+                  {call.clientName}
+                </Link>
+              ) : (
+                call.clientName ?? "Unknown Caller"
+              )}
+            </p>
             <p className="font-mono text-[11px] text-muted-foreground">{call.from}</p>
           </div>
         </div>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, Users } from "lucide-react";
+import Link from "next/link";
+import { Calendar, Users, ExternalLink } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,6 +15,7 @@ import {
 import { staffMembers } from "@/data/staff";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { ConfirmBeforeModify } from "../shared/ConfirmBeforeModify";
+import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
 
 /**
@@ -48,10 +50,14 @@ export function AddShiftPanel({ insight, onComplete, onCancel }: InsightPanelPro
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Date</Label>
-            <div className="bg-muted/40 flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+            <Link
+              href={insightLinks.schedule(TARGET_DATE_ISO)}
+              className="bg-muted/40 hover:border-primary/40 hover:bg-primary/5 flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors"
+            >
               <Calendar className="text-muted-foreground size-4" />
               <span className="font-medium">{TARGET_DATE_LABEL}</span>
-            </div>
+              <ExternalLink className="text-muted-foreground ml-auto size-3.5" />
+            </Link>
           </div>
 
           <div className="space-y-2">

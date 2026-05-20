@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Construction } from "lucide-react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { insightMutations } from "@/lib/api/smart-insights";
 import type { Insight, InsightOutcome } from "@/types/smart-insights";
@@ -50,16 +50,12 @@ export function InsightActionDrawer({ facilityId, insight, onClose }: Props) {
   const Panel = insight ? getPanelForActionType(insight.actionType) : null;
 
   return (
-    <Sheet open={insight !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col overflow-hidden sm:max-w-xl"
-      >
+    <Dialog open={insight !== null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:w-full">
         {insight && (
           <>
             <DrawerHeader insight={insight} />
-
-            <div className="flex-1 overflow-y-auto py-4">
+            <div className="flex-1 overflow-y-auto px-5 py-4">
               {Panel ? (
                 <Panel
                   insight={insight}
@@ -72,14 +68,14 @@ export function InsightActionDrawer({ facilityId, insight, onClose }: Props) {
             </div>
           </>
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 function ComingSoonPanel({ actionType }: { actionType: string }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+    <div className="flex h-full flex-col items-center justify-center gap-3 py-12 text-center">
       <Construction className="text-muted-foreground size-12" />
       <div>
         <p className="font-semibold">Action panel coming soon</p>
