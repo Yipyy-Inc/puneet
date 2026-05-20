@@ -35,6 +35,7 @@ import {
   CalendarDays,
   Hash,
   Circle,
+  Palette,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -65,58 +66,36 @@ const AREA_COLORS = [
   "#0f172a",
 ];
 
-function ColorSwatchPopover({
+function ColorPalette({
   value,
   onChange,
-  size = 12,
 }: {
   value: string;
   onChange: (color: string) => void;
-  size?: number;
 }) {
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label="Change area color"
-          className="shrink-0 rounded-full ring-2 ring-offset-1 ring-offset-background transition-transform hover:scale-110 focus:outline-none focus-visible:ring-foreground"
-          style={{
-            backgroundColor: value,
-            boxShadow: `0 0 0 1px ${value}`,
-            width: size,
-            height: size,
-          }}
-        />
-      </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        side="bottom"
-        className="w-auto p-2"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <p className="px-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Area color
-        </p>
-        <div className="grid grid-cols-6 gap-1.5">
-          {AREA_COLORS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              aria-label={`Color ${c}`}
-              onClick={() => onChange(c)}
-              style={{ backgroundColor: c }}
-              className={cn(
-                "size-6 rounded-full ring-2 ring-offset-2 ring-offset-background transition-transform",
-                value === c
-                  ? "scale-110 ring-foreground"
-                  : "ring-transparent hover:scale-105",
-              )}
-            />
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
+    <div onClick={(e) => e.stopPropagation()}>
+      <p className="px-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        Area color
+      </p>
+      <div className="grid grid-cols-6 gap-1.5">
+        {AREA_COLORS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            aria-label={`Color ${c}`}
+            onClick={() => onChange(c)}
+            style={{ backgroundColor: c }}
+            className={cn(
+              "size-6 rounded-full ring-2 ring-offset-2 ring-offset-background transition-transform",
+              value === c
+                ? "scale-110 ring-foreground"
+                : "ring-transparent hover:scale-105",
+            )}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -460,115 +439,181 @@ export function MobileGroomingSettings() {
                       : Circle;
                 const typeLabel =
                   a.type === "draw"
-                    ? "Drawn"
+                    ? "Drawn polygon"
                     : a.type === "postal"
-                      ? "ZIP codes"
-                      : "Radius";
+                      ? "ZIP-based"
+                      : "Radius-based";
                 const color = a.color ?? "#10b981";
+                const count =
+                  a.type === "postal"
+                    ? (a.postalCodes ?? []).length
+                    : a.type === "draw"
+                      ? (a.polygon ?? []).length
+                      : (a.radiusKm ?? 0);
+                const countLabel =
+                  a.type === "postal"
+                    ? `ZIP${count === 1 ? "" : "s"}`
+                    : a.type === "draw"
+                      ? `pt${count === 1 ? "" : "s"}`
+                      : "km";
                 return (
                   <Card
                     key={a.id}
                     className={cn(
-                      "relative overflow-hidden border-l-[6px] transition-colors",
+                      "group relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
                       !a.active && "opacity-60",
                     )}
-                    style={{
-                      // Subtle tint of the area's color across the whole card,
-                      // with the left edge accent bar in the full color so the
-                      // card itself is visually identifiable at a glance.
-                      borderLeftColor: color,
-                      backgroundColor: `${color}10`,
-                    }}
                   >
-                    <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center justify-between gap-2 text-base">
-                        <span className="flex min-w-0 items-center gap-2">
-                          <ColorSwatchPopover
-                            value={color}
-                            onChange={(nextColor) => {
-                              updateServiceArea({ ...a, color: nextColor });
-                              toast.success(`${a.name || "Area"} recolored`);
-                            }}
-                          />
-                          <span className="truncate">
+                    {/* Soft colored glow in the top-right corner */}
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute -right-16 -top-16 size-44 rounded-full opacity-30 blur-3xl transition-opacity duration-300 group-hover:opacity-50"
+                      style={{ backgroundColor: color }}
+                    />
+                    {/* Subtle dotted texture on the bottom-left */}
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute -bottom-8 -left-8 size-32 rounded-full opacity-10 blur-2xl"
+                      style={{ backgroundColor: color }}
+                    />
+
+                    <div className="relative space-y-3 p-4">
+                      {/* Header row */}
+                      <div className="flex items-start gap-3">
+                        {/* Color avatar — clickable to recolor */}
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label="Change area color"
+                              className="relative flex size-11 shrink-0 items-center justify-center rounded-xl shadow-md ring-2 ring-white/40 transition-transform hover:scale-105 focus:outline-none focus-visible:ring-foreground"
+                              style={{ backgroundColor: color }}
+                            >
+                              <TypeIcon className="size-5 text-white drop-shadow-sm" />
+                              <span className="absolute -bottom-1 -right-1 flex size-4 items-center justify-center rounded-full bg-card opacity-0 shadow ring-1 ring-border transition-opacity group-hover:opacity-100">
+                                <Palette className="size-2.5 text-muted-foreground" />
+                              </span>
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            align="start"
+                            side="bottom"
+                            className="w-auto p-2"
+                          >
+                            <ColorPalette
+                              value={color}
+                              onChange={(nextColor) => {
+                                updateServiceArea({ ...a, color: nextColor });
+                                toast.success(
+                                  `${a.name || "Area"} recolored`,
+                                );
+                              }}
+                            />
+                          </PopoverContent>
+                        </Popover>
+
+                        {/* Name + type */}
+                        <div className="min-w-0 flex-1 pt-0.5">
+                          <h4 className="truncate font-semibold leading-tight">
                             {a.name || "(unnamed area)"}
+                          </h4>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {typeLabel}
+                          </p>
+                        </div>
+
+                        {/* Status pill */}
+                        <span
+                          className={cn(
+                            "inline-flex shrink-0 items-center gap-1 rounded-full border bg-card/70 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider backdrop-blur",
+                            a.active
+                              ? "border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300"
+                              : "border-border text-muted-foreground",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "size-1.5 rounded-full",
+                              a.active
+                                ? "bg-emerald-500"
+                                : "bg-muted-foreground/40",
+                            )}
+                          />
+                          {a.active ? "Live" : "Off"}
+                        </span>
+                      </div>
+
+                      {/* Stat chips */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span
+                          className="inline-flex items-center gap-1.5 rounded-lg border bg-card/70 px-2 py-1 text-xs backdrop-blur"
+                          style={{ borderColor: `${color}55` }}
+                        >
+                          <span
+                            className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-md px-1 text-[10px] font-bold text-white"
+                            style={{ backgroundColor: color }}
+                          >
+                            {count}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {countLabel}
                           </span>
                         </span>
-                        <Badge
-                          variant="outline"
-                          className="gap-1 bg-card text-[10px] font-medium"
-                        >
-                          <TypeIcon className="size-3" />
-                          {typeLabel}
-                        </Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                      <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                        <CalendarDays className="size-3" />
-                        {formatDaysOfWeek(a.daysOfWeek)}
-                      </p>
-                      {a.type === "postal" ? (
-                        <p className="text-muted-foreground text-xs">
-                          <span className="font-medium text-foreground">
-                            {(a.postalCodes ?? []).length}
-                          </span>{" "}
-                          ZIP code{(a.postalCodes ?? []).length === 1 ? "" : "s"}
-                          {a.postalCodes && a.postalCodes.length > 0 && (
-                            <span className="text-muted-foreground/80">
-                              {" · "}
-                              {a.postalCodes.slice(0, 4).join(", ")}
-                              {a.postalCodes.length > 4 ? "…" : ""}
-                            </span>
-                          )}
-                        </p>
-                      ) : a.type === "draw" ? (
-                        <p className="text-muted-foreground text-xs">
-                          <span className="font-medium text-foreground">
-                            {(a.polygon ?? []).length}
-                          </span>{" "}
-                          point{(a.polygon ?? []).length === 1 ? "" : "s"} traced
-                          on the map
-                        </p>
-                      ) : (
-                        <p className="text-muted-foreground text-xs">
-                          <span className="font-medium text-foreground">
-                            {a.radiusKm} km
-                          </span>{" "}
-                          radius from {a.centerAddress || "(unset)"}
+                        <span className="inline-flex items-center gap-1 rounded-lg border bg-card/70 px-2 py-1 text-[11px] text-muted-foreground backdrop-blur">
+                          <CalendarDays className="size-3" />
+                          {formatDaysOfWeek(a.daysOfWeek)}
+                        </span>
+                      </div>
+
+                      {/* Detail line */}
+                      {a.type === "postal" &&
+                        a.postalCodes &&
+                        a.postalCodes.length > 0 && (
+                          <p className="truncate font-mono text-[11px] text-muted-foreground">
+                            {a.postalCodes.slice(0, 6).join(" · ")}
+                            {a.postalCodes.length > 6 &&
+                              ` · +${a.postalCodes.length - 6} more`}
+                          </p>
+                        )}
+                      {a.type === "radius" && (
+                        <p className="truncate text-[11px] text-muted-foreground">
+                          <MapPin className="mr-1 inline size-3" />
+                          {a.centerAddress || "(no center address)"}
                         </p>
                       )}
-                      <div className="flex items-center gap-2 pt-1">
+
+                      {/* Footer */}
+                      <div className="flex items-center gap-2 border-t border-dashed pt-3">
                         <Switch
                           checked={a.active}
-                          onCheckedChange={() => toggleServiceAreaActive(a.id)}
+                          onCheckedChange={() =>
+                            toggleServiceAreaActive(a.id)
+                          }
                           className="scale-75"
                         />
-                        <span className="text-[11px] text-muted-foreground">
-                          {a.active ? "Active" : "Inactive"}
-                        </span>
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
-                          className="ml-auto"
+                          className="ml-auto gap-1.5"
                           onClick={() => openEditArea(a)}
                         >
-                          <Pencil className="mr-1.5 size-3" />
+                          <Pencil className="size-3" />
                           Edit
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
-                          className="text-destructive/70 hover:text-destructive"
+                          size="icon"
+                          className="size-8 text-destructive/70 hover:text-destructive"
                           onClick={() => {
                             deleteServiceArea(a.id);
                             toast.success("Service area removed");
                           }}
+                          aria-label="Delete service area"
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
                       </div>
-                    </CardContent>
+                    </div>
                   </Card>
                 );
               })}
