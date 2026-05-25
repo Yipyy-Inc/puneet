@@ -35,6 +35,7 @@ import {
 import { distinctEnrolledForSeries } from "@/data/training-series";
 import { SeriesSessionsTab } from "./series-sessions-tab";
 import { SeriesStudentsTab } from "./series-students-tab";
+import { SeriesWaitlistTab } from "./series-waitlist-tab";
 
 const STATUS_META: Record<
   SeriesStatus,
@@ -111,6 +112,14 @@ function SeriesInfoTile({
 
 export function SeriesDetail({ seriesId }: { seriesId: string }) {
   const { data: series } = useQuery(trainingQueries.seriesDetail(seriesId));
+  const { data: seriesEnrollments = [] } = useQuery(
+    trainingQueries.seriesEnrollments(seriesId),
+  );
+
+  const waitlistCount = useMemo(
+    () => seriesEnrollments.filter((e) => e.status === "waitlisted").length,
+    [seriesEnrollments],
+  );
 
   const summary = useMemo(() => {
     if (!series) return null;
@@ -288,6 +297,20 @@ export function SeriesDetail({ seriesId }: { seriesId: string }) {
             <Users className="size-3.5" />
             Students
           </TabsTrigger>
+          <TabsTrigger value="waitlist" className="gap-1.5">
+            <Hourglass className="size-3.5" />
+            Waitlist
+            {waitlistCount > 0 && (
+              <span
+                className={cn(
+                  "ml-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums",
+                  "bg-amber-500 text-white",
+                )}
+              >
+                {waitlistCount}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="sessions" className="space-y-3">
@@ -296,6 +319,10 @@ export function SeriesDetail({ seriesId }: { seriesId: string }) {
 
         <TabsContent value="students" className="space-y-3">
           <SeriesStudentsTab series={series} />
+        </TabsContent>
+
+        <TabsContent value="waitlist" className="space-y-3">
+          <SeriesWaitlistTab series={series} />
         </TabsContent>
       </Tabs>
     </div>

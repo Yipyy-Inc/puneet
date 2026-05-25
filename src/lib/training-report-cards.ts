@@ -16,12 +16,16 @@ import type {
   TrainingEnrollment,
   TrainingLevel,
   TrainingReportCard,
+  TrainingReportCardBehaviorTag,
   TrainingReportCardExerciseSummary,
   TrainingReportCardHomework,
   TrainingReportCardKind,
+  TrainingReportCardMood,
   TrainingReportCardPhoto,
 } from "@/lib/training-enrollment";
 import type { ReportCardTheme } from "@/types/pet";
+import { trainingPackages } from "@/data/training";
+import type { TrainingReportCardProgression } from "@/lib/training-enrollment";
 
 /** Ordered Training Level progression — iterate this for segmented pickers
  *  so the visual order matches the journey arc (newcomer → mastery). */
@@ -52,6 +56,88 @@ export const TRAINING_LEVEL_HELP: Record<TrainingLevel, string> = {
 };
 
 /** Escalating palette: slate → sky → indigo → emerald → amber. */
+/** Owner-facing labels for the per-exercise rating scale. Mirrors the
+ *  in-session rating buttons so the card reads with the same vocabulary
+ *  the trainer used while teaching. */
+export const EXERCISE_RATING_LABELS: Record<1 | 2 | 3 | 4 | 5, string> = {
+  1: "Developing",
+  2: "Getting it",
+  3: "Good",
+  4: "Excellent",
+  5: "Mastered",
+};
+
+export const EXERCISE_RATING_BADGE_CLS: Record<1 | 2 | 3 | 4 | 5, string> = {
+  1: "border-rose-200 bg-rose-50 text-rose-700",
+  2: "border-orange-200 bg-orange-50 text-orange-700",
+  3: "border-sky-200 bg-sky-50 text-sky-700",
+  4: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  5: "border-violet-200 bg-violet-50 text-violet-700",
+};
+
+export const TRAINING_REPORT_CARD_MOODS: readonly TrainingReportCardMood[] = [
+  "playful",
+  "focused",
+  "calm",
+  "energetic",
+  "curious",
+  "tired",
+] as const;
+
+export const TRAINING_MOOD_LABELS: Record<TrainingReportCardMood, string> = {
+  playful: "Playful",
+  focused: "Focused",
+  calm: "Calm",
+  energetic: "Energetic",
+  curious: "Curious",
+  tired: "Tired",
+};
+
+export const TRAINING_MOOD_EMOJI: Record<TrainingReportCardMood, string> = {
+  playful: "🐶",
+  focused: "🎯",
+  calm: "🌿",
+  energetic: "⚡",
+  curious: "🔍",
+  tired: "💤",
+};
+
+/** Multi-select behavior-tag catalog — what the trainer picks in the
+ *  report-card editor and what the parent sees on the card. Order is the
+ *  natural pick order the user described. */
+export const TRAINING_REPORT_CARD_BEHAVIOR_TAGS: readonly TrainingReportCardBehaviorTag[] = [
+  "focused",
+  "energetic",
+  "distracted",
+  "anxious",
+  "had-a-breakthrough",
+  "needed-encouragement",
+  "great-progress",
+] as const;
+
+export const BEHAVIOR_TAG_LABELS: Record<TrainingReportCardBehaviorTag, string> = {
+  focused: "Focused",
+  energetic: "Energetic",
+  distracted: "Distracted",
+  anxious: "Anxious",
+  "had-a-breakthrough": "Had a breakthrough",
+  "needed-encouragement": "Needed encouragement",
+  "great-progress": "Great progress",
+};
+
+export const BEHAVIOR_TAG_BADGE_CLS: Record<
+  TrainingReportCardBehaviorTag,
+  string
+> = {
+  focused: "border-indigo-200 bg-indigo-50 text-indigo-700",
+  energetic: "border-orange-200 bg-orange-50 text-orange-700",
+  distracted: "border-slate-200 bg-slate-50 text-slate-700",
+  anxious: "border-rose-200 bg-rose-50 text-rose-700",
+  "had-a-breakthrough": "border-violet-200 bg-violet-50 text-violet-700",
+  "needed-encouragement": "border-amber-200 bg-amber-50 text-amber-700",
+  "great-progress": "border-emerald-200 bg-emerald-50 text-emerald-700",
+};
+
 export const TRAINING_LEVEL_BADGE_CLS: Record<TrainingLevel, string> = {
   foundation: "border-slate-200 bg-slate-50 text-slate-700",
   progressing: "border-sky-200 bg-sky-50 text-sky-700",
@@ -293,6 +379,59 @@ function autoDraftSeriesSummary(
   return `${petName} completed ${present} of ${total} sessions in ${seriesName}.${topPhrase}`;
 }
 
+/** Compute first-rating + final-rating per exercise across the scope of
+ *  attendances. Used to populate the graduation card's side-by-side
+ *  progression list. Sorted by largest delta first so the biggest wins
+ *  bubble up. */
+function buildExerciseProgression(
+  scope: SessionAttendance[],
+): TrainingReportCardProgression[] {
+  // Chronological order — earliest attendance first — so the first rating
+  // we encounter for an exercise is its true starting point.
+  const sorted = [...scope].sort((a, b) => {
+    if (a.sessionDate !== b.sessionDate)
+      return a.sessionDate < b.sessionDate ? -1 : 1;
+    return a.sessionNumber - b.sessionNumber;
+  });
+  const byExercise = new Map<
+    string,
+    { start: 1 | 2 | 3 | 4 | 5; end: 1 | 2 | 3 | 4 | 5; count: number }
+  >();
+  for (const a of sorted) {
+    if (a.status === "absent" || a.status === "excused") continue;
+    for (const ex of a.exercises ?? []) {
+      const prev = byExercise.get(ex.exerciseName);
+      if (!prev) {
+        byExercise.set(ex.exerciseName, {
+          start: ex.rating,
+          end: ex.rating,
+          count: 1,
+        });
+      } else {
+        prev.end = ex.rating;
+        prev.count += 1;
+      }
+    }
+  }
+  const rows: TrainingReportCardProgression[] = [];
+  for (const [name, data] of byExercise) {
+    rows.push({
+      name,
+      startRating: data.start,
+      endRating: data.end,
+      ratingsCount: data.count,
+    });
+  }
+  // Biggest gain first, then alphabetical for stability.
+  rows.sort((a, b) => {
+    const da = a.endRating - a.startRating;
+    const db = b.endRating - b.startRating;
+    if (da !== db) return db - da;
+    return a.name.localeCompare(b.name);
+  });
+  return rows;
+}
+
 export function buildTrainingReportCard(input: BuildInput): TrainingReportCard {
   const { kind, enrollment, throughSessionNumber, createdBy, createdById, date } =
     input;
@@ -350,6 +489,37 @@ export function buildTrainingReportCard(input: BuildInput): TrainingReportCard {
 
   const createdAt = input.createdAt ?? new Date().toISOString();
   const idSuffix = kind === "series-completion" ? "graduation" : `s${throughSessionNumber}`;
+
+  // Graduation-only enrichments — per-exercise start/end progression list
+  // + a suggested next program snapshotted from the course type catalog.
+  let exerciseProgression: TrainingReportCardProgression[] | undefined;
+  let recommendedNextProgram:
+    | { packageId: string; packageName: string; description?: string }
+    | undefined;
+  if (kind === "series-completion") {
+    exerciseProgression = buildExerciseProgression(scope);
+    // Resolve "graduate into" — match the course type name to a package,
+    // then follow that package's `graduateIntoPackageId`. We match by name
+    // because the series enrollment carries the course-type name, not id.
+    const normalize = (s: string) =>
+      s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const target = normalize(enrollment.courseTypeName);
+    const sourcePkg = trainingPackages.find(
+      (p) => normalize(p.name) === target,
+    );
+    const nextId = sourcePkg?.graduateIntoPackageId;
+    if (nextId) {
+      const nextPkg = trainingPackages.find((p) => p.id === nextId);
+      if (nextPkg) {
+        recommendedNextProgram = {
+          packageId: nextPkg.id,
+          packageName: nextPkg.name,
+          description: nextPkg.description,
+        };
+      }
+    }
+  }
+
   return {
     id: `training-report-${enrollment.id}-${idSuffix}`,
     petId: enrollment.petId,
@@ -380,6 +550,8 @@ export function buildTrainingReportCard(input: BuildInput): TrainingReportCard {
       (kind === "series-completion" ? "proficient" : "progressing"),
     theme: input.theme ?? "everyday",
     scheduledSendAt: null,
+    ...(exerciseProgression ? { exerciseProgression } : {}),
+    ...(recommendedNextProgram ? { recommendedNextProgram } : {}),
     createdBy,
     createdById,
     createdAt,

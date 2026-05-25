@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { GraduationCap, User2 } from "lucide-react";
+import { AlertOctagon, CalendarRange, GraduationCap, User2 } from "lucide-react";
 import type { TrainingClass, TrainingSession } from "@/types/training";
 import {
   HOUR_HEIGHT,
@@ -21,6 +21,13 @@ interface Props {
   waitlistCount: number;
   /** For private sessions: the single dog + owner being coached. */
   privateAttendee?: { petName: string; ownerName: string };
+  /** True when at least one enrolled pet has an active trainer alert.
+   *  Renders the red exclamation badge on the card. */
+  hasActiveAlert?: boolean;
+  /** Number of guest make-up dogs joining this session. When > 0 a blue
+   *  "Make-up" badge renders on the card so the trainer knows a dog from
+   *  a different cohort is coming in. */
+  makeupCount?: number;
   trainerColor: string;
   onClick: (session: TrainingSession) => void;
 }
@@ -49,6 +56,8 @@ export function TrainingSessionBlock({
   enrolledCount,
   waitlistCount,
   privateAttendee,
+  hasActiveAlert,
+  makeupCount = 0,
   trainerColor,
   onClick,
 }: Props) {
@@ -128,6 +137,25 @@ export function TrainingSessionBlock({
           <User2 className="size-3 shrink-0 opacity-70" aria-hidden />
         ) : (
           <GraduationCap className="size-3 shrink-0 opacity-70" aria-hidden />
+        )}
+        {hasActiveAlert && (
+          <span
+            className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-rose-600 text-white shadow-sm ring-2 ring-white"
+            title="One or more enrolled dogs has an active alert — open the session to review."
+            aria-label="Active alert on roster"
+          >
+            <AlertOctagon className="size-2.5" />
+          </span>
+        )}
+        {makeupCount > 0 && (
+          <span
+            className="inline-flex items-center gap-0.5 rounded-full bg-sky-600 px-1.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm ring-2 ring-white"
+            title={`${makeupCount} guest dog${makeupCount === 1 ? "" : "s"} joining as make-up from a different cohort.`}
+            aria-label={`${makeupCount} make-up dog${makeupCount === 1 ? "" : "s"} joining`}
+          >
+            <CalendarRange className="size-2.5" />
+            Make-up{makeupCount > 1 ? ` ${makeupCount}` : ""}
+          </span>
         )}
         <span className="text-[11px] font-semibold truncate leading-tight">
           {title}

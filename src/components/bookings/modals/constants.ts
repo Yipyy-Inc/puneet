@@ -451,6 +451,13 @@ export const CUSTOM_SERVICE_SUB_STEPS = [
   { id: 0, title: "Schedule", description: "Select date and time" },
 ];
 
+// Training sessions run at a fixed scheduled time on a fixed day — the
+// owner is enrolling in a series, not picking arrival/departure windows.
+// Keep the sub-step label specific so the sidebar makes the purpose clear.
+export const TRAINING_SUB_STEPS = [
+  { id: 0, title: "Select Series", description: "Pick a class to enroll in" },
+];
+
 // ── Per-service accent colors ────────────────────────────────────────────────
 // Used throughout the booking flow for consistent service-branded styling.
 export const SERVICE_ACCENTS: Record<

@@ -12,6 +12,9 @@ import type { AppointmentStage } from "@/types/grooming";
 
 interface DetailsStepProps {
   selectedService: string;
+  /** Deep-link the training Step 3 to a specific Program — flows into
+   *  TrainingScheduleStep so the series list filters to that program only. */
+  preSelectedProgramId?: string;
   currentSubStep: number;
   isSubStepComplete?: (stepIndex: number) => boolean;
   // Daycare
@@ -104,6 +107,7 @@ interface DetailsStepProps {
 
 export function DetailsStep({
   selectedService,
+  preSelectedProgramId,
   currentSubStep,
   isSubStepComplete,
   daycareSelectedDates,
@@ -289,6 +293,7 @@ export function DetailsStep({
           checkOutTime={checkOutTime}
           setCheckOutTime={setCheckOutTime}
           selectedPets={selectedPets}
+          preSelectedProgramId={preSelectedProgramId}
         />
       )}
     </div>

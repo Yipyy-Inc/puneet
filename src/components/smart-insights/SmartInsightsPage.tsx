@@ -144,16 +144,17 @@ export function SmartInsightsPage() {
     <div className="space-y-5">
       <InsightsHeader highPriorityCount={highPriorityCount} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <CategoryFilterBar value={filter} onChange={setFilter} counts={counts} />
-        {isHQView && isMultiLocation && (
+      {isHQView && isMultiLocation && (
+        <div className="flex justify-end">
           <LocationFilter
             value={locationFilter}
             onChange={setLocationFilter}
             locations={locations.map((l) => ({ id: l.id, name: l.name }))}
           />
-        )}
-      </div>
+        </div>
+      )}
+
+      <CategoryFilterBar value={filter} onChange={setFilter} counts={counts} />
 
       {allQuery.isLoading ? (
         <p className="text-muted-foreground py-12 text-center text-sm">

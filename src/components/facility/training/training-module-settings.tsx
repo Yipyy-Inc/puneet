@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { trainingQueries } from "@/lib/api/training";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,21 +37,27 @@ import {
   Building,
   CalendarClock,
   Check,
+  ChevronDown,
+  ChevronUp,
   ClipboardCheck,
   Edit,
   FileSignature,
   GraduationCap,
   Home,
+  Hourglass,
   Mail,
   MapPin,
   MessageSquare,
   Plus,
+  Route,
   Save,
   Settings as SettingsIcon,
   Sun,
   Ticket,
   Trash2,
+  Trophy,
   Users,
+  X,
 } from "lucide-react";
 import {
   DURATION_OPTIONS,
@@ -61,6 +69,24 @@ import {
   type TrainingModuleSettings,
 } from "@/lib/training-module-settings";
 import { defaultTrainingWaivers } from "@/data/training-waivers";
+import type {
+  TrainingPathway,
+  TrainingPathwayStep,
+} from "@/data/training-pathways";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { TrainingPackage } from "@/types/training";
+import {
+  MILESTONE_LABELS,
+  MILESTONE_ORDER,
+  type MilestoneKind,
+} from "@/lib/pet-milestones";
+import { MILESTONE_VISUAL } from "@/components/training/milestone-visuals";
 
 // Module-level seed for newly-created location ids — keeps writes pure for
 // the React Compiler (no Date.now() inside render).
@@ -70,23 +96,51 @@ function nextLocationId(): string {
   return `loc-custom-${newLocationSeed}`;
 }
 
+// Module-level seed for newly-created pathway ids — same rationale as the
+// location seed above; keeps the create handler pure.
+let newPathwaySeed = 0;
+function nextPathwayId(): string {
+  newPathwaySeed += 1;
+  return `pathway-custom-${newPathwaySeed}`;
+}
+
 export function TrainingModuleSettings() {
-  const [draft, setDraft] = useState<TrainingModuleSettings>(
-    defaultTrainingModuleSettings,
+  const queryClient = useQueryClient();
+  // Hydrate from the shared cache so the toggle persists across navigations
+  // within the session — consumers (customer Homework tab) read from the
+  // same key.
+  const { data: persisted = defaultTrainingModuleSettings } = useQuery(
+    trainingQueries.moduleSettings(),
   );
-  const [saved, setSaved] = useState<TrainingModuleSettings>(
-    defaultTrainingModuleSettings,
+  // Pathways live in their own cache key; the page-local draft mirrors them
+  // so save/revert stays atomic with the rest of the module settings.
+  const { data: persistedPathways = [] } = useQuery(
+    trainingQueries.allTrainingPathways(),
   );
+  const { data: programs = [] } = useQuery(trainingQueries.packages());
+  const [draft, setDraft] = useState<TrainingModuleSettings>(persisted);
+  const [saved, setSaved] = useState<TrainingModuleSettings>(persisted);
+  const [pathwaysDraft, setPathwaysDraft] =
+    useState<TrainingPathway[]>(persistedPathways);
+  const [pathwaysSaved, setPathwaysSaved] =
+    useState<TrainingPathway[]>(persistedPathways);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<TrainingLocation | null>(
     null,
   );
   const [deletingLocation, setDeletingLocation] =
     useState<TrainingLocation | null>(null);
+  const [pathwayDialogOpen, setPathwayDialogOpen] = useState(false);
+  const [editingPathway, setEditingPathway] =
+    useState<TrainingPathway | null>(null);
+  const [deletingPathway, setDeletingPathway] =
+    useState<TrainingPathway | null>(null);
 
   const dirty = useMemo(
-    () => JSON.stringify(draft) !== JSON.stringify(saved),
-    [draft, saved],
+    () =>
+      JSON.stringify(draft) !== JSON.stringify(saved) ||
+      JSON.stringify(pathwaysDraft) !== JSON.stringify(pathwaysSaved),
+    [draft, saved, pathwaysDraft, pathwaysSaved],
   );
 
   function update<K extends keyof TrainingModuleSettings>(
@@ -107,12 +161,57 @@ export function TrainingModuleSettings() {
 
   function handleSave() {
     setSaved(draft);
+    setPathwaysSaved(pathwaysDraft);
+    // Write through to the shared cache so consumers (e.g. customer Homework
+    // tab) react immediately. Persistence to a real backend lands later.
+    queryClient.setQueryData(
+      trainingQueries.moduleSettings().queryKey,
+      draft,
+    );
+    queryClient.setQueryData(
+      trainingQueries.allTrainingPathways().queryKey,
+      pathwaysDraft,
+    );
+    queryClient.setQueryData(
+      trainingQueries.trainingPathways().queryKey,
+      pathwaysDraft.filter((p) => p.isActive),
+    );
     toast.success("Training module settings saved.");
   }
 
   function handleRevert() {
     setDraft(saved);
+    setPathwaysDraft(pathwaysSaved);
     toast.success("Reverted unsaved changes.");
+  }
+
+  function openAddPathway() {
+    setEditingPathway(null);
+    setPathwayDialogOpen(true);
+  }
+
+  function openEditPathway(pathway: TrainingPathway) {
+    setEditingPathway(pathway);
+    setPathwayDialogOpen(true);
+  }
+
+  function persistPathway(record: TrainingPathway) {
+    setPathwaysDraft((prev) => {
+      const exists = prev.some((p) => p.id === record.id);
+      return exists
+        ? prev.map((p) => (p.id === record.id ? record : p))
+        : [...prev, record];
+    });
+    setPathwayDialogOpen(false);
+    setEditingPathway(null);
+  }
+
+  function confirmDeletePathway() {
+    if (!deletingPathway) return;
+    const removed = deletingPathway;
+    setPathwaysDraft((prev) => prev.filter((p) => p.id !== removed.id));
+    toast.success(`"${removed.name}" removed`);
+    setDeletingPathway(null);
   }
 
   function openAddLocation() {
@@ -280,6 +379,46 @@ export function TrainingModuleSettings() {
                       </Button>
                     </div>
                   </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Training pathways ─────────────────────────────────────── */}
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Route className="text-muted-foreground size-4" />
+                Training pathways
+              </CardTitle>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Multi-program journeys you can show clients on the customer
+                portal so they see what comes next after each class.
+              </p>
+            </div>
+            <Button onClick={openAddPathway} size="sm">
+              <Plus className="mr-1.5 size-4" />
+              Add pathway
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {pathwaysDraft.length === 0 ? (
+              <div className="text-muted-foreground rounded-xl border border-dashed py-8 text-center text-sm">
+                No pathways yet — create one to give clients a visual map of
+                the training journey.
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {pathwaysDraft.map((pathway) => (
+                  <PathwayRow
+                    key={pathway.id}
+                    pathway={pathway}
+                    programs={programs}
+                    onEdit={() => openEditPathway(pathway)}
+                    onDelete={() => setDeletingPathway(pathway)}
+                  />
                 ))}
               </ul>
             )}
@@ -556,6 +695,223 @@ export function TrainingModuleSettings() {
           </CardContent>
         </Card>
 
+        {/* ── Homework ──────────────────────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="text-muted-foreground size-4" />
+              Homework
+            </CardTitle>
+            <p className="text-muted-foreground text-sm">
+              Controls how owners submit homework practice from their portal.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <ToggleRow
+              label="Require video for homework submission"
+              description="When on, owners must attach a short video clip before the 'Mark as Done' button activates. Use this when you want proof of practice, not just a self-reported tap."
+              icon={GraduationCap}
+              checked={draft.requireVideoForHomeworkSubmission}
+              onCheckedChange={(v) =>
+                update("requireVideoForHomeworkSubmission", v)
+              }
+            />
+          </CardContent>
+        </Card>
+
+        {/* ── Graduation follow-up ──────────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <GraduationCap className="text-muted-foreground size-4" />
+              Graduation follow-up
+            </CardTitle>
+            <p className="text-muted-foreground text-sm">
+              If a graduating client hasn&apos;t enrolled in the recommended
+              next program after the configured delay, the system sends them
+              an automated nudge with the enrollment link.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <ToggleRow
+              label="Send automated follow-up"
+              description="When off, no follow-up fires regardless of timing."
+              icon={Bell}
+              checked={draft.graduationFollowUpEnabled}
+              onCheckedChange={(v) =>
+                update("graduationFollowUpEnabled", v)
+              }
+            />
+            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+              <Label
+                htmlFor="grad-followup-days"
+                className="text-sm font-medium"
+              >
+                Delay
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="grad-followup-days"
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={draft.graduationFollowUpDays}
+                  onChange={(e) => {
+                    const next = Number(e.target.value);
+                    if (Number.isFinite(next) && next >= 1) {
+                      update(
+                        "graduationFollowUpDays",
+                        Math.min(30, Math.round(next)),
+                      );
+                    }
+                  }}
+                  disabled={!draft.graduationFollowUpEnabled}
+                  className="h-9 w-24"
+                />
+                <span className="text-muted-foreground text-sm">
+                  days after the graduation card sends
+                </span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label
+                htmlFor="grad-followup-template"
+                className="text-sm font-medium"
+              >
+                Message template
+              </Label>
+              <Textarea
+                id="grad-followup-template"
+                value={draft.graduationFollowUpTemplate}
+                onChange={(e) =>
+                  update("graduationFollowUpTemplate", e.target.value)
+                }
+                disabled={!draft.graduationFollowUpEnabled}
+                className="min-h-[60px] text-sm leading-relaxed"
+              />
+              <p className="text-muted-foreground text-[11px]">
+                Use <code className="rounded bg-slate-100 px-1">{`{petName}`}</code>{" "}
+                and <code className="rounded bg-slate-100 px-1">{`{programName}`}</code>{" "}
+                — substituted at send time.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── Milestone notifications ───────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="text-muted-foreground size-4" />
+              Milestone notifications
+            </CardTitle>
+            <p className="text-muted-foreground text-sm">
+              Milestones auto-fire as the system detects achievements. By
+              default every milestone notifies the pet parent — turn off any
+              individual one you&apos;d rather keep internal.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {MILESTONE_ORDER.map((kind) => {
+                const visual = MILESTONE_VISUAL[kind];
+                const Icon = visual.icon;
+                // Unset values default to true (per the spec) — only an
+                // explicit `false` opts the milestone out.
+                const explicit = draft.milestoneNotifications[kind];
+                const enabled = explicit === undefined ? true : explicit;
+                return (
+                  <li
+                    key={kind}
+                    className="flex items-start justify-between gap-3 rounded-lg border bg-card px-3 py-2"
+                  >
+                    <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                      <div
+                        className={cn(
+                          "flex size-8 shrink-0 items-center justify-center rounded-lg text-white shadow-sm",
+                          visual.chip,
+                        )}
+                      >
+                        <Icon className="size-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-800">
+                          {MILESTONE_LABELS[kind]}
+                        </p>
+                        <p className="text-muted-foreground text-[11px]">
+                          {enabled
+                            ? "Pet parents are notified when this milestone unlocks."
+                            : "Notification suppressed — milestone still appears on profiles."}
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={enabled}
+                      onCheckedChange={(next) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          milestoneNotifications: {
+                            ...prev.milestoneNotifications,
+                            [kind]: next,
+                          },
+                        }))
+                      }
+                      aria-label={`Toggle ${MILESTONE_LABELS[kind]} notification`}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+
+        {/* ── Waitlist ──────────────────────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Hourglass className="text-muted-foreground size-4" />
+              Waitlist
+            </CardTitle>
+            <p className="text-muted-foreground text-sm">
+              How long an Offer Spot invitation holds before auto-moving the
+              spot to the next person on the list. A reminder fires at the
+              half-window mark.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+              <Label
+                htmlFor="waitlist-hold-hours"
+                className="text-sm font-medium"
+              >
+                Hold window
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="waitlist-hold-hours"
+                  type="number"
+                  min={1}
+                  max={168}
+                  value={draft.waitlistHoldHours}
+                  onChange={(e) => {
+                    const next = Number(e.target.value);
+                    if (Number.isFinite(next) && next >= 1) {
+                      update("waitlistHoldHours", Math.min(168, Math.round(next)));
+                    }
+                  }}
+                  className="h-9 w-24"
+                />
+                <span className="text-muted-foreground text-sm">
+                  hours · reminder fires at{" "}
+                  <span className="font-semibold tabular-nums text-slate-700">
+                    {Math.max(1, Math.round(draft.waitlistHoldHours / 2))}h
+                  </span>
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* ── Notifications ─────────────────────────────────────────── */}
         <Card>
           <CardHeader>
@@ -674,6 +1030,44 @@ export function TrainingModuleSettings() {
         editing={editingLocation}
         onSave={persistLocation}
       />
+
+      <PathwayDialog
+        open={pathwayDialogOpen}
+        onOpenChange={(o) => {
+          setPathwayDialogOpen(o);
+          if (!o) setEditingPathway(null);
+        }}
+        editing={editingPathway}
+        programs={programs}
+        onSave={persistPathway}
+      />
+
+      <AlertDialog
+        open={!!deletingPathway}
+        onOpenChange={(o) => !o && setDeletingPathway(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete &quot;{deletingPathway?.name}&quot;?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Clients currently in a program on this pathway will lose the
+              journey map on their portal. Active enrollments aren&apos;t
+              affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeletePathway}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={!!deletingLocation}
@@ -871,6 +1265,399 @@ function TypePill({
       {label}
       {active && <Check className="size-3.5" />}
     </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Training Pathways
+// ─────────────────────────────────────────────────────────────────────────
+
+interface PathwayRowProps {
+  pathway: TrainingPathway;
+  programs: TrainingPackage[];
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+function PathwayRow({ pathway, programs, onEdit, onDelete }: PathwayRowProps) {
+  const programNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of programs) map.set(p.id, p.name);
+    return map;
+  }, [programs]);
+
+  return (
+    <li
+      className={cn(
+        "rounded-xl border bg-card p-3 shadow-sm",
+        !pathway.isActive && "opacity-70",
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+          <Route className="size-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="text-sm font-semibold text-slate-800">
+              {pathway.name}
+            </p>
+            <Badge
+              variant="outline"
+              className="border-slate-200 bg-slate-50 text-[10px] text-slate-600"
+            >
+              {pathway.steps.length} step
+              {pathway.steps.length === 1 ? "" : "s"}
+            </Badge>
+            {!pathway.isActive && (
+              <Badge
+                variant="outline"
+                className="border-slate-200 bg-slate-50 text-[10px] text-slate-600"
+              >
+                Hidden
+              </Badge>
+            )}
+          </div>
+          {pathway.description && (
+            <p className="text-muted-foreground mt-0.5 text-[11.5px]/relaxed">
+              {pathway.description}
+            </p>
+          )}
+          {pathway.steps.length > 0 && (
+            <ol className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+              {pathway.steps.map((step, idx) => {
+                const programName =
+                  programNameById.get(step.programId) ?? "Unknown program";
+                const unknown = !programNameById.has(step.programId);
+                return (
+                  <li
+                    key={`${pathway.id}-${idx}`}
+                    className="inline-flex items-center gap-1"
+                  >
+                    {idx > 0 && (
+                      <span className="text-muted-foreground/60">→</span>
+                    )}
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5",
+                        unknown
+                          ? "border-amber-200 bg-amber-50 text-amber-700"
+                          : step.required
+                            ? "border-indigo-200 bg-indigo-50 text-indigo-700"
+                            : "border-slate-200 bg-slate-50 text-slate-600",
+                      )}
+                    >
+                      <span className="font-medium">{programName}</span>
+                      {!step.required && (
+                        <span className="text-muted-foreground/80 text-[10px]">
+                          optional
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            onClick={onEdit}
+            title="Edit pathway"
+          >
+            <Edit className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-destructive size-8"
+            onClick={onDelete}
+            title="Delete pathway"
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+interface PathwayDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  editing: TrainingPathway | null;
+  programs: TrainingPackage[];
+  onSave: (pathway: TrainingPathway) => void;
+}
+
+function PathwayDialog({
+  open,
+  onOpenChange,
+  editing,
+  programs,
+  onSave,
+}: PathwayDialogProps) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [steps, setSteps] = useState<TrainingPathwayStep[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (editing) {
+      setName(editing.name);
+      setDescription(editing.description ?? "");
+      setIsActive(editing.isActive);
+      setSteps(editing.steps.map((s) => ({ ...s })));
+    } else {
+      setName("");
+      setDescription("");
+      setIsActive(true);
+      setSteps([]);
+    }
+  }, [open, editing]);
+
+  // Programs already used in this pathway are filtered out of the picker so
+  // staff can't accidentally add the same course twice.
+  const usedProgramIds = new Set(steps.map((s) => s.programId));
+  const availablePrograms = programs.filter(
+    (p) => !usedProgramIds.has(p.id) && p.isActive,
+  );
+
+  function addStep(programId: string) {
+    if (!programId) return;
+    setSteps((prev) => [
+      ...prev,
+      { programId, required: true, description: "" },
+    ]);
+  }
+
+  function updateStep(idx: number, patch: Partial<TrainingPathwayStep>) {
+    setSteps((prev) =>
+      prev.map((s, i) => (i === idx ? { ...s, ...patch } : s)),
+    );
+  }
+
+  function removeStep(idx: number) {
+    setSteps((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function moveStep(idx: number, delta: -1 | 1) {
+    setSteps((prev) => {
+      const target = idx + delta;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
+  }
+
+  function handleSave() {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      toast.error("Pathway name is required.");
+      return;
+    }
+    if (steps.length === 0) {
+      toast.error("Add at least one program to the pathway.");
+      return;
+    }
+    onSave({
+      id: editing?.id ?? nextPathwayId(),
+      name: trimmed,
+      description: description.trim() || undefined,
+      steps: steps.map((s) => ({
+        programId: s.programId,
+        required: s.required,
+        description: s.description?.trim() || undefined,
+      })),
+      isActive,
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Route className="text-muted-foreground size-4" />
+            {editing ? "Edit pathway" : "Create pathway"}
+          </DialogTitle>
+          <DialogDescription>
+            Arrange courses in the order a dog typically progresses. Clients
+            see this on their portal as the journey map.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-semibold">Pathway name</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Obedience Track, Agility Journey"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-semibold">
+              Description (optional)
+            </Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="One-line summary shown on the customer portal."
+              rows={2}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-semibold">Steps</Label>
+              <span className="text-muted-foreground text-[11px]">
+                {steps.length === 0
+                  ? "Add the first course below"
+                  : `${steps.length} program${steps.length === 1 ? "" : "s"} in sequence`}
+              </span>
+            </div>
+
+            {steps.length === 0 ? (
+              <div className="text-muted-foreground rounded-lg border border-dashed py-6 text-center text-[12px]">
+                No courses added yet.
+              </div>
+            ) : (
+              <ol className="space-y-2">
+                {steps.map((step, idx) => {
+                  const program = programs.find((p) => p.id === step.programId);
+                  return (
+                    <li
+                      key={`step-${idx}`}
+                      className="rounded-lg border bg-slate-50/40 p-2.5"
+                    >
+                      <div className="flex items-start gap-2">
+                        <div className="flex flex-col items-center gap-0.5 pt-0.5">
+                          <span className="inline-flex size-6 items-center justify-center rounded-full bg-indigo-600 text-[11px] font-bold text-white">
+                            {idx + 1}
+                          </span>
+                          <div className="flex flex-col gap-0.5">
+                            <button
+                              type="button"
+                              onClick={() => moveStep(idx, -1)}
+                              disabled={idx === 0}
+                              className={cn(
+                                "rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700",
+                                idx === 0 && "cursor-not-allowed opacity-30",
+                              )}
+                              title="Move up"
+                            >
+                              <ChevronUp className="size-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveStep(idx, 1)}
+                              disabled={idx === steps.length - 1}
+                              className={cn(
+                                "rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700",
+                                idx === steps.length - 1 &&
+                                  "cursor-not-allowed opacity-30",
+                              )}
+                              title="Move down"
+                            >
+                              <ChevronDown className="size-3" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <div className="flex flex-wrap items-center justify-between gap-1.5">
+                            <p className="text-sm font-semibold text-slate-800">
+                              {program?.name ?? "Unknown program"}
+                            </p>
+                            <div className="flex items-center gap-1.5">
+                              <label className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
+                                <Switch
+                                  checked={step.required}
+                                  onCheckedChange={(v) =>
+                                    updateStep(idx, { required: v })
+                                  }
+                                />
+                                <span>
+                                  {step.required ? "Required" : "Optional"}
+                                </span>
+                              </label>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 text-rose-600"
+                                onClick={() => removeStep(idx)}
+                                title="Remove step"
+                              >
+                                <X className="size-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          <Input
+                            value={step.description ?? ""}
+                            onChange={(e) =>
+                              updateStep(idx, { description: e.target.value })
+                            }
+                            placeholder="What dogs are ready for after this step (optional)"
+                            className="h-8 text-[12px]"
+                          />
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+
+            {availablePrograms.length > 0 && (
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-[11px] font-medium uppercase tracking-wider">
+                  Add a program
+                </Label>
+                <Select onValueChange={addStep} value="">
+                  <SelectTrigger className="h-9 text-[12px]">
+                    <SelectValue placeholder="Pick a program to append…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availablePrograms.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border px-3 py-2">
+            <div>
+              <p className="text-sm font-medium">Visible to customers</p>
+              <p className="text-muted-foreground text-xs">
+                Hidden pathways stay in this list but don&apos;t render on the
+                customer portal.
+              </p>
+            </div>
+            <Switch checked={isActive} onCheckedChange={setIsActive} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={!name.trim() || steps.length === 0}
+          >
+            {editing ? "Save changes" : "Create pathway"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

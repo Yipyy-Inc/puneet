@@ -1,7 +1,5 @@
-"use client";
-
-import { ReportCardsModule } from "@/components/facility/ReportCardsModule";
+import { FacilityTrainingReportCards } from "./_components/facility-training-report-cards";
 
 export default function TrainingReportCardsPage() {
-  return <ReportCardsModule defaultServiceType="training" />;
+  return <FacilityTrainingReportCards />;
 }

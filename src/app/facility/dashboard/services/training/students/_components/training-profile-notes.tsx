@@ -35,13 +35,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AlertOctagon,
   Award,
+  BellOff,
   Edit,
   Eye,
   Filter,
   Heart,
   Lightbulb,
   Lock,
+  Pin,
+  PinOff,
   PlayCircle,
   Plus,
   Search,
@@ -54,6 +58,7 @@ import {
 import { cn } from "@/lib/utils";
 import { trainingQueries } from "@/lib/api/training";
 import type { TrainerNote, TrainerNoteCategory } from "@/types/training";
+import { isAlertActive } from "@/lib/training-active-alerts";
 
 const NOTE_META: Record<
   TrainerNoteCategory,
@@ -135,12 +140,16 @@ interface FormState {
   note: string;
   category: TrainerNoteCategory;
   isPrivate: boolean;
+  /** When true, this note becomes a banner-eligible alert across the profile,
+   *  calendar appointment cards, and pre-session briefing. */
+  isActiveAlert: boolean;
 }
 
 const EMPTY_FORM: FormState = {
   note: "",
   category: "general",
   isPrivate: true,
+  isActiveAlert: false,
 };
 
 interface Props {
@@ -213,6 +222,12 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
   const [composerOpen, setComposerOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [deletingNote, setDeletingNote] = useState<TrainerNote | null>(null);
+  // The deactivation dialog requires the trainer to type a reason — the spec
+  // calls this out explicitly so the audit trail explains the lift.
+  const [deactivatingNote, setDeactivatingNote] = useState<TrainerNote | null>(
+    null,
+  );
+  const [deactivationReason, setDeactivationReason] = useState("");
 
   function openComposer(target: TrainerNote | null) {
     setEditingNote(target);
@@ -222,6 +237,7 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
             note: target.note,
             category: target.category,
             isPrivate: target.isPrivate,
+            isActiveAlert: !!target.isActiveAlert && !target.deactivatedAt,
           }
         : EMPTY_FORM,
     );
@@ -235,6 +251,34 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
     });
   }
 
+  function togglePin(target: TrainerNote) {
+    const now = new Date().toISOString();
+    const willPin = !target.isPinnedToProfile;
+    queryClient.setQueryData<TrainerNote[]>(notesQuery.queryKey, (prev = []) =>
+      prev.map((n) => {
+        // Only one pin per pet — unpin every other note for this pet, then
+        // flip the target's pin state.
+        if (n.petId !== target.petId) return n;
+        if (n.id === target.id) {
+          return {
+            ...n,
+            isPinnedToProfile: willPin,
+            pinnedAtISO: willPin ? now : undefined,
+          };
+        }
+        if (willPin && n.isPinnedToProfile) {
+          return { ...n, isPinnedToProfile: false, pinnedAtISO: undefined };
+        }
+        return n;
+      }),
+    );
+    toast.success(
+      willPin
+        ? "Pinned to profile — visible at the top of the Overview tab."
+        : "Unpinned from profile.",
+    );
+  }
+
   function handleSubmit() {
     const trimmed = form.note.trim();
     if (!trimmed) {
@@ -242,14 +286,42 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
       return;
     }
     if (editingNote) {
+      // If the trainer toggled the alert flag off via the composer, clear
+      // any stale deactivation metadata so the lifecycle is unambiguous.
+      const droppingAlert =
+        editingNote.isActiveAlert &&
+        !editingNote.deactivatedAt &&
+        !form.isActiveAlert;
       const next: TrainerNote = {
         ...editingNote,
         note: trimmed,
         category: form.category,
         isPrivate: form.isPrivate,
+        isActiveAlert: form.isActiveAlert,
+        ...(droppingAlert
+          ? {
+              deactivatedAt: new Date().toISOString(),
+              deactivationReason:
+                editingNote.deactivationReason ??
+                "Alert removed from composer.",
+              deactivatedByName: editingNote.deactivatedByName ?? "Staff",
+            }
+          : !form.isActiveAlert
+            ? {}
+            : {
+                // Re-activated through the composer — clear deactivation
+                // metadata so the banner picks it up again.
+                deactivatedAt: undefined,
+                deactivationReason: undefined,
+                deactivatedByName: undefined,
+              }),
       };
       persistNote(next, true);
-      toast.success("Note updated.");
+      toast.success(
+        form.isActiveAlert
+          ? "Note updated — alert is active."
+          : "Note updated.",
+      );
     } else {
       const next: TrainerNote = {
         id: `note-${Date.now()}`,
@@ -264,10 +336,15 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
         note: trimmed,
         category: form.category,
         isPrivate: form.isPrivate,
+        isActiveAlert: form.isActiveAlert,
       };
       persistNote(next, false);
       toast.success(
-        form.isPrivate ? "Private note added." : "Note added and shared.",
+        form.isActiveAlert
+          ? "Alert added — visible at the top of this profile."
+          : form.isPrivate
+            ? "Private note added."
+            : "Note added and shared.",
       );
     }
     setComposerOpen(false);
@@ -281,6 +358,52 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
     );
     toast.success("Note deleted.");
     setDeletingNote(null);
+  }
+
+  function openDeactivate(note: TrainerNote) {
+    setDeactivatingNote(note);
+    setDeactivationReason("");
+  }
+
+  function confirmDeactivate() {
+    if (!deactivatingNote) return;
+    const reason = deactivationReason.trim();
+    if (!reason) {
+      toast.error("Add a reason so the audit trail explains the lift.");
+      return;
+    }
+    const now = new Date().toISOString();
+    const target = deactivatingNote;
+    // Flip the original alert closed.
+    const updated: TrainerNote = {
+      ...target,
+      deactivatedAt: now,
+      deactivationReason: reason,
+      deactivatedByName: "Staff",
+    };
+    // Drop a follow-up note explaining the deactivation. This gives the
+    // history view a permanent record of *why* the alert was lifted.
+    const followUp: TrainerNote = {
+      id: `note-${Date.now()}`,
+      enrollmentId: target.enrollmentId,
+      petId: target.petId,
+      petName: target.petName,
+      classId: target.classId,
+      className: target.className,
+      trainerId: target.trainerId,
+      trainerName: "Staff",
+      date: todayISO,
+      note: `Alert deactivated: ${reason} (was: "${target.note}")`,
+      category: "general",
+      isPrivate: true,
+    };
+    queryClient.setQueryData<TrainerNote[]>(notesQuery.queryKey, (prev = []) => [
+      followUp,
+      ...prev.map((n) => (n.id === updated.id ? updated : n)),
+    ]);
+    toast.success("Alert deactivated.");
+    setDeactivatingNote(null);
+    setDeactivationReason("");
   }
 
   return (
@@ -442,6 +565,36 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5">
+                      {n.isPinnedToProfile && (
+                        <Badge
+                          variant="outline"
+                          className="gap-1 border-amber-300 bg-amber-50 text-[10px] font-bold text-amber-800"
+                          title="Pinned to the top of this pet's Overview tab."
+                        >
+                          <Pin className="size-2.5" />
+                          Pinned
+                        </Badge>
+                      )}
+                      {isAlertActive(n) && (
+                        <Badge
+                          variant="outline"
+                          className="gap-1 border-rose-300 bg-rose-100 text-[10px] font-bold text-rose-800"
+                          title="Visible at the top of this profile, on calendar cards, and in the pre-session briefing."
+                        >
+                          <AlertOctagon className="size-2.5" />
+                          Active Alert
+                        </Badge>
+                      )}
+                      {n.deactivatedAt && n.isActiveAlert && (
+                        <Badge
+                          variant="outline"
+                          className="gap-1 border-slate-200 bg-slate-50 text-[10px] text-slate-500 line-through decoration-slate-400"
+                          title={`Alert deactivated${n.deactivationReason ? `: ${n.deactivationReason}` : ""}`}
+                        >
+                          <BellOff className="size-2.5" />
+                          Alert lifted
+                        </Badge>
+                      )}
                       <Badge
                         variant="outline"
                         className={cn("gap-1 border text-[10px]", meta.cls)}
@@ -473,7 +626,47 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
                   <p className="mt-2 text-[13px]/relaxed text-slate-700">
                     {n.note}
                   </p>
+                  {n.deactivatedAt && n.deactivationReason && (
+                    <p className="text-muted-foreground mt-1 inline-flex items-center gap-1 text-[11px] italic">
+                      <BellOff className="size-3" />
+                      Deactivated: {n.deactivationReason}
+                    </p>
+                  )}
                   <div className="mt-2 flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => togglePin(n)}
+                      className={cn(
+                        "h-7 px-2 text-[11px]",
+                        n.isPinnedToProfile
+                          ? "text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+                          : "text-slate-600 hover:bg-slate-50",
+                      )}
+                    >
+                      {n.isPinnedToProfile ? (
+                        <>
+                          <PinOff className="mr-1 size-3" />
+                          Unpin
+                        </>
+                      ) : (
+                        <>
+                          <Pin className="mr-1 size-3" />
+                          Pin to profile
+                        </>
+                      )}
+                    </Button>
+                    {isAlertActive(n) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openDeactivate(n)}
+                        className="h-7 px-2 text-[11px] text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                      >
+                        <BellOff className="mr-1 size-3" />
+                        Deactivate alert
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -570,6 +763,39 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
                 aria-label="Toggle client visibility"
               />
             </div>
+
+            <div
+              className={cn(
+                "flex items-center justify-between rounded-lg border px-3 py-2.5",
+                form.isActiveAlert && "border-rose-300 bg-rose-50/50",
+              )}
+            >
+              <div className="min-w-0">
+                <p className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800">
+                  <AlertOctagon
+                    className={cn(
+                      "size-3.5",
+                      form.isActiveAlert
+                        ? "text-rose-600"
+                        : "text-muted-foreground",
+                    )}
+                  />
+                  Mark as Active Alert
+                </p>
+                <p className="text-muted-foreground text-[11px]">
+                  Surfaces this note at the top of the profile, on the
+                  calendar appointment card, and in the pre-session briefing.
+                  Stays active until a trainer or manager deactivates it.
+                </p>
+              </div>
+              <Switch
+                checked={form.isActiveAlert}
+                onCheckedChange={(checked) =>
+                  setForm({ ...form, isActiveAlert: checked })
+                }
+                aria-label="Toggle active alert"
+              />
+            </div>
           </div>
 
           <DialogFooter>
@@ -588,6 +814,73 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
               className="bg-emerald-600 text-white hover:bg-emerald-700"
             >
               {editingNote ? "Save changes" : "Add note"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deactivate-alert dialog ────────────────────────────────── */}
+      <Dialog
+        open={!!deactivatingNote}
+        onOpenChange={(o) => {
+          if (!o) {
+            setDeactivatingNote(null);
+            setDeactivationReason("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BellOff className="text-rose-600 size-4" />
+              Deactivate alert?
+            </DialogTitle>
+            <DialogDescription>
+              The alert stops showing on the profile banner, calendar cards,
+              and briefing. Add a short reason so the audit trail explains
+              the lift.
+            </DialogDescription>
+          </DialogHeader>
+          {deactivatingNote && (
+            <div className="space-y-3 py-1">
+              <div className="rounded-lg border border-rose-200 bg-rose-50/60 px-3 py-2">
+                <p className="text-rose-900 text-[11px] font-bold uppercase tracking-wider">
+                  Current alert
+                </p>
+                <p className="text-rose-900 mt-0.5 text-[13px]/relaxed">
+                  {deactivatingNote.note}
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-semibold">
+                  Reason for deactivation
+                </Label>
+                <Textarea
+                  rows={3}
+                  value={deactivationReason}
+                  onChange={(e) => setDeactivationReason(e.target.value)}
+                  placeholder="e.g. Behavior has improved, handler training completed."
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeactivatingNote(null);
+                setDeactivationReason("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmDeactivate}
+              disabled={!deactivationReason.trim()}
+              className="bg-rose-600 text-white hover:bg-rose-700"
+            >
+              <BellOff className="mr-1.5 size-4" />
+              Deactivate alert
             </Button>
           </DialogFooter>
         </DialogContent>

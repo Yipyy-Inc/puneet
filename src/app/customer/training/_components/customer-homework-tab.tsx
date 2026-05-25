@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -25,9 +25,12 @@ import {
   PawPrint,
   PlayCircle,
   Sparkles,
+  Trash2,
+  Video,
 } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
 import {
+  detachTodaysVideo,
   fanOutHomeworkUpsert,
   getLastPracticedDate,
   getPracticeStreakDays,
@@ -83,6 +86,8 @@ export function CustomerHomeworkTab({ customerId }: Props) {
     trainingQueries.allSeriesEnrollments(),
   );
   const { data: homework = [] } = useQuery(trainingQueries.allHomework());
+  const { data: moduleSettings } = useQuery(trainingQueries.moduleSettings());
+  const requireVideo = moduleSettings?.requireVideoForHomeworkSubmission ?? false;
 
   const [showCompleted, setShowCompleted] = useState(false);
 
@@ -164,6 +169,25 @@ export function CustomerHomeworkTab({ customerId }: Props) {
     toast.success(`Nice work — "${hw.title}" marked done for today.`);
   }
 
+  function handleAttachVideo(hw: TrainingHomework, videoUrl: string) {
+    const updated = markPracticedToday(hw, todayISO, videoUrl);
+    fanOutHomeworkUpsert(queryClient, updated);
+    toast.success(`Video attached for "${hw.title}".`);
+  }
+
+  function handleRemoveVideo(hw: TrainingHomework) {
+    // Free the blob URL we created when the file was picked.
+    const todayEntry = hw.practiceLog?.find(
+      (e) => e.date === todayISO && !!e.videoUrl,
+    );
+    if (todayEntry?.videoUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(todayEntry.videoUrl);
+    }
+    const updated = detachTodaysVideo(hw, todayISO);
+    fanOutHomeworkUpsert(queryClient, updated);
+    toast(`Video removed from "${hw.title}".`);
+  }
+
   if (totalActive === 0 && totalCompleted === 0) {
     return (
       <div className="text-muted-foreground rounded-xl border border-dashed py-16 text-center text-sm">
@@ -229,7 +253,10 @@ export function CustomerHomeworkTab({ customerId }: Props) {
                     key={hw.id}
                     homework={hw}
                     todayISO={todayISO}
+                    requireVideo={requireVideo}
                     onMarkDone={() => handleMarkDone(hw)}
+                    onAttachVideo={(url) => handleAttachVideo(hw, url)}
+                    onRemoveVideo={() => handleRemoveVideo(hw)}
                   />
                 ))}
               </ul>
@@ -307,15 +334,87 @@ export function CustomerHomeworkTab({ customerId }: Props) {
 function HomeworkCard({
   homework,
   todayISO,
+  requireVideo,
   onMarkDone,
+  onAttachVideo,
+  onRemoveVideo,
 }: {
   homework: TrainingHomework;
   todayISO: string;
+  requireVideo: boolean;
   onMarkDone: () => void;
+  onAttachVideo: (videoUrl: string) => void;
+  onRemoveVideo: () => void;
 }) {
   const practiced = hasPracticedToday(homework, todayISO);
   const streak = getPracticeStreakDays(homework, todayISO);
   const lastPracticed = getLastPracticedDate(homework);
+  const todayEntry = homework.practiceLog?.find(
+    (entry) => entry.date === todayISO,
+  );
+  const submittedVideoUrl = todayEntry?.videoUrl;
+
+  // Most-recent submission that has a trainer response — so the owner sees
+  // the trainer's reply next time they open the homework, even if they
+  // haven't practiced again yet today.
+  const latestReviewedSubmission = useMemo(() => {
+    const log = homework.practiceLog ?? [];
+    return [...log]
+      .filter((entry) => !!entry.videoUrl && !!entry.trainerResponse)
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+  }, [homework.practiceLog]);
+
+  // Today's response (if the trainer reviewed today's submission already).
+  const todaysResponse = todayEntry?.trainerResponse;
+
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const [validating, setValidating] = useState(false);
+
+  function pickVideo() {
+    videoInputRef.current?.click();
+  }
+
+  function onVideoFile(files: FileList | null) {
+    const file = files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("video/")) {
+      toast.error("Please pick a video file.");
+      return;
+    }
+    setValidating(true);
+    const probeUrl = URL.createObjectURL(file);
+    const probe = document.createElement("video");
+    probe.preload = "metadata";
+    probe.muted = true;
+    probe.src = probeUrl;
+    const cleanup = () => {
+      setValidating(false);
+      if (videoInputRef.current) videoInputRef.current.value = "";
+    };
+    probe.onloadedmetadata = () => {
+      // Allow a small buffer beyond 20 s so 20.x clips don't get rejected on
+      // a metadata rounding edge.
+      if (probe.duration > 21) {
+        URL.revokeObjectURL(probeUrl);
+        toast.error(
+          `That clip is ${Math.round(probe.duration)} s long. Please pick a video 20 s or shorter.`,
+        );
+        cleanup();
+        return;
+      }
+      // Hand the blob URL up — the parent persists it on today's practice
+      // entry. In production this is where the real upload-and-compress
+      // pipeline runs and we'd swap the blob URL for the returned server URL.
+      onAttachVideo(probeUrl);
+      cleanup();
+    };
+    probe.onerror = () => {
+      URL.revokeObjectURL(probeUrl);
+      toast.error("Couldn't read that video file. Try another clip.");
+      cleanup();
+    };
+  }
+
 
   return (
     <li className="bg-card rounded-xl border shadow-sm">
@@ -382,37 +481,198 @@ function HomeworkCard({
           </ul>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2.5">
-          <div className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
-            {lastPracticed ? (
-              <>
-                <Clock className="size-3" />
-                Last practiced {relativeDays(lastPracticed, todayISO)}
-              </>
-            ) : (
-              <>
-                <Sparkles className="size-3" />
-                Mark today&apos;s practice to start a streak!
-              </>
-            )}
+        <div className="space-y-2.5 border-t pt-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
+              {lastPracticed ? (
+                <>
+                  <Clock className="size-3" />
+                  Last practiced {relativeDays(lastPracticed, todayISO)}
+                </>
+              ) : (
+                <>
+                  <Sparkles className="size-3" />
+                  Mark today&apos;s practice to start a streak!
+                </>
+              )}
+            </div>
+            <Button
+              size="sm"
+              onClick={onMarkDone}
+              disabled={practiced || (requireVideo && !submittedVideoUrl)}
+              title={
+                requireVideo && !submittedVideoUrl && !practiced
+                  ? "Upload a video first — this facility requires proof of practice."
+                  : undefined
+              }
+              className={cn(
+                "h-9 gap-1.5 px-4",
+                practiced
+                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
+                  : "bg-emerald-600 text-white hover:bg-emerald-700",
+              )}
+            >
+              <CheckCircle2 className="size-4" />
+              {practiced ? "Done for today" : "Mark as Done for today"}
+            </Button>
           </div>
-          <Button
-            size="sm"
-            onClick={onMarkDone}
-            disabled={practiced}
-            className={cn(
-              "h-9 gap-1.5 px-4",
-              practiced
-                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
-                : "bg-emerald-600 text-white hover:bg-emerald-700",
-            )}
-          >
-            <CheckCircle2 className="size-4" />
-            {practiced ? "Done for today" : "Mark as Done for today"}
-          </Button>
+
+          {requireVideo && !submittedVideoUrl && !practiced && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/40 dark:bg-amber-950/30">
+              <p className="text-amber-800 dark:text-amber-200 inline-flex items-center gap-1.5 text-[12px] font-medium">
+                <Video className="size-3.5" />
+                Your trainer requires a short video for this submission.
+              </p>
+              <p className="text-muted-foreground mt-0.5 text-[11px]">
+                Upload a clip below — &quot;Mark as Done&quot; activates once
+                the video is attached.
+              </p>
+            </div>
+          )}
+
+          {/* Video submission — owner records / uploads a short clip of the
+              dog performing the exercise. Attaches to today's practice entry
+              so the trainer sees the actual practice, not just the tap. */}
+          {submittedVideoUrl ? (
+            <div className="space-y-1.5">
+              <div className="bg-card relative overflow-hidden rounded-lg border">
+                <video
+                  src={submittedVideoUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="aspect-video w-full bg-slate-900 object-contain"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
+                  <PlayCircle className="size-3" />
+                  Video submitted{" "}
+                  {todayEntry?.videoAttachedAt
+                    ? "today"
+                    : ""}
+                  {todaysResponse
+                    ? " — trainer responded below"
+                    : " — your trainer can review it next session"}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={pickVideo}
+                    className="text-muted-foreground h-8 gap-1.5 px-2 text-[11px]"
+                    disabled={validating}
+                  >
+                    <Video className="size-3.5" />
+                    Replace
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={onRemoveVideo}
+                    className="h-8 gap-1.5 px-2 text-[11px] text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                  >
+                    <Trash2 className="size-3.5" />
+                    Remove
+                  </Button>
+                </div>
+              </div>
+              {todaysResponse && (
+                <TrainerResponseBlock
+                  message={todaysResponse}
+                  trainerName={todayEntry?.trainerRespondedBy}
+                  respondedAtISO={todayEntry?.trainerRespondedAt}
+                />
+              )}
+            </div>
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={pickVideo}
+              disabled={validating}
+              className="h-9 w-full gap-1.5 border-dashed text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-indigo-950/30"
+            >
+              <Video className="size-4" />
+              {validating
+                ? "Reading clip…"
+                : requireVideo
+                  ? "Upload a video (required)"
+                  : "Upload a video (optional)"}
+              <span className="text-muted-foreground ml-1 text-[10px] font-normal">
+                · max 20 s
+              </span>
+            </Button>
+          )}
+          <input
+            ref={videoInputRef}
+            type="file"
+            accept="video/*"
+            capture="environment"
+            onChange={(e) => onVideoFile(e.target.files)}
+            className="hidden"
+          />
+
+          {/* If today's submission has no trainer response yet, but an older
+              submission has one on file, surface it so the owner sees the
+              trainer's feedback the next time they open the homework. */}
+          {!todaysResponse && latestReviewedSubmission && (
+            <TrainerResponseBlock
+              message={latestReviewedSubmission.trainerResponse!}
+              trainerName={latestReviewedSubmission.trainerRespondedBy}
+              respondedAtISO={latestReviewedSubmission.trainerRespondedAt}
+              practiceDate={latestReviewedSubmission.date}
+            />
+          )}
         </div>
       </div>
     </li>
+  );
+}
+
+function TrainerResponseBlock({
+  message,
+  trainerName,
+  respondedAtISO,
+  practiceDate,
+}: {
+  message: string;
+  trainerName?: string;
+  respondedAtISO?: string;
+  /** When set, surfaces "for {date}'s submission" — used by the fallback
+   *  block so it's clear the response is about an older video, not today's. */
+  practiceDate?: string;
+}) {
+  const when = respondedAtISO
+    ? new Date(respondedAtISO).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })
+    : null;
+  return (
+    <div className="space-y-1 rounded-lg border border-indigo-200 bg-indigo-50/70 px-3 py-2 dark:border-indigo-900/40 dark:bg-indigo-950/30">
+      <p className="text-indigo-700 dark:text-indigo-200 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+        <Sparkles className="size-3" />
+        Trainer says
+        {practiceDate && (
+          <span className="text-muted-foreground ml-1 normal-case font-normal tracking-normal">
+            · about your {formatDate(practiceDate)} clip
+          </span>
+        )}
+      </p>
+      <p className="text-[13px]/relaxed text-slate-700 dark:text-slate-200">
+        {message}
+      </p>
+      {(trainerName || when) && (
+        <p className="text-muted-foreground text-[10px]">
+          {trainerName ?? "Your trainer"}
+          {when ? ` · ${when}` : ""}
+        </p>
+      )}
+    </div>
   );
 }
 

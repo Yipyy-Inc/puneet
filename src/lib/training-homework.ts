@@ -169,26 +169,101 @@ export function hasPracticedToday(
 }
 
 /** Append a practice entry for `todayISO`. Idempotent — if the owner already
- *  logged the same day, returns the unchanged record. Also bumps `nextDueDate`
- *  forward via `bumpNextDueDate()` so the trainer's board reflects the next
- *  practice target. */
+ *  logged the same day, returns the unchanged record (or with the video
+ *  attached to today's existing entry when `videoUrl` is provided). Also
+ *  bumps `nextDueDate` forward via `bumpNextDueDate()` so the trainer's
+ *  board reflects the next practice target. */
 export function markPracticedToday(
   homework: TrainingHomework,
   todayISO: string,
+  videoUrl?: string,
 ): TrainingHomework {
-  if (hasPracticedToday(homework, todayISO)) return homework;
   const date = todayISO.slice(0, 10);
-  const next: TrainingHomework = {
+  const nowISO = new Date().toISOString();
+  const log = homework.practiceLog ?? [];
+  const existingIdx = log.findIndex((entry) => entry.date === date);
+
+  if (existingIdx >= 0) {
+    // Already practiced today. If a video came in, stamp it onto the
+    // existing entry; otherwise nothing to do.
+    if (!videoUrl) return homework;
+    const updated = log.slice();
+    updated[existingIdx] = {
+      ...updated[existingIdx]!,
+      videoUrl,
+      videoAttachedAt: nowISO,
+    };
+    return { ...homework, practiceLog: updated };
+  }
+
+  // Fresh entry — append plus optional video.
+  return {
     ...homework,
     practiceLog: [
-      ...(homework.practiceLog ?? []),
-      { date, markedAt: new Date().toISOString() },
+      ...log,
+      {
+        date,
+        markedAt: nowISO,
+        ...(videoUrl ? { videoUrl, videoAttachedAt: nowISO } : {}),
+      },
     ],
     // Re-aim the next practice target so the board's overdue badge clears
     // immediately when the owner logs today.
     nextDueDate: bumpNextDueDate(homework, todayISO),
   };
-  return next;
+}
+
+/** Write a trainer response onto the practice entry matching `practiceDate`.
+ *  No-ops if there's no entry on that day. Trimming an empty response clears
+ *  the response cleanly so the customer-portal view goes back to "awaiting
+ *  trainer review". */
+export function setTrainerResponseForDate(
+  homework: TrainingHomework,
+  practiceDate: string,
+  response: string,
+  trainerName: string,
+): TrainingHomework {
+  const log = homework.practiceLog ?? [];
+  const idx = log.findIndex((entry) => entry.date === practiceDate);
+  if (idx === -1) return homework;
+  const target = log[idx]!;
+  const trimmed = response.trim();
+  const nowISO = new Date().toISOString();
+  const updated = log.slice();
+  if (trimmed.length === 0) {
+    updated[idx] = {
+      date: target.date,
+      markedAt: target.markedAt,
+      ...(target.videoUrl
+        ? { videoUrl: target.videoUrl, videoAttachedAt: target.videoAttachedAt }
+        : {}),
+    };
+  } else {
+    updated[idx] = {
+      ...target,
+      trainerResponse: trimmed,
+      trainerRespondedAt: nowISO,
+      trainerRespondedBy: trainerName,
+    };
+  }
+  return { ...homework, practiceLog: updated };
+}
+
+/** Remove the owner-attached video from today's practice entry. Leaves the
+ *  practice entry itself intact (the owner already reported practice). */
+export function detachTodaysVideo(
+  homework: TrainingHomework,
+  todayISO: string,
+): TrainingHomework {
+  const date = todayISO.slice(0, 10);
+  const log = homework.practiceLog ?? [];
+  const idx = log.findIndex((entry) => entry.date === date);
+  if (idx === -1) return homework;
+  const target = log[idx]!;
+  if (!target.videoUrl) return homework;
+  const updated = log.slice();
+  updated[idx] = { date: target.date, markedAt: target.markedAt };
+  return { ...homework, practiceLog: updated };
 }
 
 /** ISO date of the most recent practice entry, or `null` when the owner has

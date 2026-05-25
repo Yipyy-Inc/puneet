@@ -10,6 +10,7 @@ import {
   Users,
   Settings,
   CalendarDays,
+  CalendarRange,
   FileText,
   DollarSign,
   Package,
@@ -51,6 +52,11 @@ const tabs = [
     name: "Tasks",
     href: "/facility/dashboard/services/training/tasks",
     icon: ClipboardList,
+  },
+  {
+    name: "Make-up Sessions",
+    href: "/facility/dashboard/services/training/makeup",
+    icon: CalendarRange,
   },
   {
     name: "Report Cards",

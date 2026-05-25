@@ -9,6 +9,7 @@ import type { CustomServiceModule } from "@/types/facility";
 import type { Pet } from "@/types/pet";
 import { resolveIcon, isBuiltinService } from "@/lib/service-registry";
 import { SERVICE_CATEGORIES } from "../constants";
+import { TrainingScheduleStep } from "./TrainingScheduleStep";
 
 // Module-level constants
 const TIME_SLOTS: string[] = [];
@@ -46,6 +47,8 @@ interface CustomServiceDetailsProps {
   selectedPets: Pet[];
   specialRequests?: string;
   setSpecialRequests?: (value: string) => void;
+  /** Training-only: filter the series list to this Program. */
+  preSelectedProgramId?: string;
 }
 
 export function CustomServiceDetails({
@@ -58,6 +61,7 @@ export function CustomServiceDetails({
   checkOutTime,
   setCheckOutTime,
   selectedPets,
+  preSelectedProgramId,
 }: CustomServiceDetailsProps) {
   const { getModuleBySlug } = useCustomServices();
   const serviceModule = getModuleBySlug(serviceId);
@@ -66,6 +70,22 @@ export function CustomServiceDetails({
   // custom module, show a basic scheduling form instead of "not found."
   if (!serviceModule) {
     if (isBuiltinService(serviceId) && currentSubStep === 0) {
+      // Training has a bespoke "Select Series" step — sessions run at a
+      // fixed scheduled time, so a check-in/check-out picker doesn't apply.
+      if (serviceId === "training") {
+        return (
+          <TrainingScheduleStep
+            startDate={startDate}
+            setStartDate={setStartDate}
+            checkInTime={checkInTime}
+            setCheckInTime={setCheckInTime}
+            checkOutTime={checkOutTime}
+            setCheckOutTime={setCheckOutTime}
+            preSelectedProgramId={preSelectedProgramId}
+            selectedPets={selectedPets}
+          />
+        );
+      }
       return (
         <BuiltinServiceSchedule
           serviceId={serviceId}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { clients } from "@/data/clients";
@@ -35,6 +35,7 @@ import {
   matchSeriesForCourse,
 } from "./_components/customer-training-catalog";
 import { CustomerTrainingSeriesCard } from "./_components/customer-training-series-card";
+import { ProgramWaitlistDialog } from "./_components/program-waitlist-dialog";
 import { TrainingWaiversSection } from "./_components/training-waivers-section";
 import { EnrollmentConfirmationDialog } from "./_components/enrollment-confirmation-dialog";
 import { DropInDialog } from "./_components/drop-in-dialog";
@@ -112,6 +113,7 @@ const VALID_CUSTOMER_TRAINING_TABS = new Set([
 export default function CustomerTrainingPage() {
   const { selectedFacility } = useCustomerFacility();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const defaultTab = (() => {
     const raw = searchParams.get("tab");
@@ -137,6 +139,12 @@ export default function CustomerTrainingPage() {
     useState(false);
   const [selectedCourseDetails, setSelectedCourseDetails] =
     useState<TrainingSeries | null>(null);
+  // Program-level waitlist dialog — opens from a catalog card when every
+  // matching upcoming series is at capacity.
+  const [isProgramWaitlistOpen, setIsProgramWaitlistOpen] = useState(false);
+  const [waitlistProgram, setWaitlistProgram] = useState<TrainingPackage | null>(
+    null,
+  );
   // Two-step catalog → series flow. `null` shows the Course Catalog;
   // setting a `TrainingPackage` switches to the filtered series view.
   const [selectedCourse, setSelectedCourse] = useState<TrainingPackage | null>(
@@ -498,12 +506,26 @@ export default function CustomerTrainingPage() {
           series={series}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          pets={customer?.pets ?? []}
           onSelectCourse={(course) => {
             setSelectedCourse(course);
             // Reset the search when drilling in so the second step starts
             // fresh; the catalog query and the series query are different
             // mental models.
             setSearchQuery("");
+          }}
+          onEnrollInCourse={(course) => {
+            // Deep-link straight to the booking flow with this program
+            // pre-selected. The /customer/bookings/new page reads `service`
+            // + `program` from the query string and forwards them into the
+            // BookingModal so the customer lands at Step 3 (Select Series).
+            router.push(
+              `/customer/bookings/new?service=training&program=${encodeURIComponent(course.id)}`,
+            );
+          }}
+          onJoinProgramWaitlist={(course) => {
+            setWaitlistProgram(course);
+            setIsProgramWaitlistOpen(true);
           }}
         />
       ) : (
@@ -921,6 +943,25 @@ export default function CustomerTrainingPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Program-level waitlist signup — fired from the catalog card when
+          every matching upcoming series is at capacity. */}
+      {customer && (
+        <ProgramWaitlistDialog
+          open={isProgramWaitlistOpen}
+          onOpenChange={(o) => {
+            setIsProgramWaitlistOpen(o);
+            if (!o) setWaitlistProgram(null);
+          }}
+          program={waitlistProgram}
+          customer={customer}
+          matchingSeries={
+            waitlistProgram
+              ? matchSeriesForCourse(waitlistProgram, series)
+              : []
+          }
+        />
+      )}
 
       {/* Waitlist Modal */}
       <Dialog open={isWaitlistModalOpen} onOpenChange={setIsWaitlistModalOpen}>

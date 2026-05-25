@@ -1,13 +1,16 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import {
+  ArrowRight,
   Award,
   BookOpen,
   CalendarDays,
@@ -16,6 +19,7 @@ import {
   ChevronRight,
   Clock,
   FileText,
+  GraduationCap,
   Inbox,
   PawPrint,
   Quote,
@@ -28,6 +32,7 @@ import {
 } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
 import {
+  EXERCISE_RATING_LABELS,
   REPORT_CARD_THEME_ACCENT,
   TRAINING_LEVEL_BADGE_CLS,
   TRAINING_LEVEL_LABELS,
@@ -41,6 +46,14 @@ import type {
 
 interface Props {
   customerId: number;
+}
+
+/** Map an averaged rating (float, 1-5) onto the canonical owner-facing
+ *  label. Rounds to the nearest integer so the report card reads with the
+ *  same vocabulary the trainer used in-session. */
+function ratingLabelForAvg(avg: number): string {
+  const rounded = Math.max(1, Math.min(5, Math.round(avg))) as 1 | 2 | 3 | 4 | 5;
+  return EXERCISE_RATING_LABELS[rounded];
 }
 
 function formatDate(iso: string): string {
@@ -137,6 +150,44 @@ export function CustomerReportCardsTab({ customerId }: Props) {
     () => cards.filter((c) => !c.viewedByOwner).length,
     [cards],
   );
+
+  // Graduation follow-up tick — once per mount, scan sent graduation cards
+  // with a recommended next program. Fire a toast (the demo's "system
+  // message") for any whose follow-up window has elapsed without an
+  // enrollment, then stamp `graduationFollowUpSentAt` so it only fires
+  // once. Real-world this would be a server cron.
+  const { data: moduleSettings } = useQuery(trainingQueries.moduleSettings());
+  useEffect(() => {
+    if (!moduleSettings?.graduationFollowUpEnabled) return;
+    const delayMs = Math.max(1, moduleSettings.graduationFollowUpDays) *
+      24 * 60 * 60 * 1000;
+    const template =
+      moduleSettings.graduationFollowUpTemplate ??
+      "{petName} has graduated — have you seen the upcoming {programName} classes?";
+    for (const card of cards) {
+      if (card.kind !== "series-completion") continue;
+      if (!card.sentToOwner || !card.sentAt) continue;
+      if (!card.recommendedNextProgram) continue;
+      if (card.graduationFollowUpSentAt) continue;
+      const elapsed = nowMs - new Date(card.sentAt).getTime();
+      if (elapsed < delayMs) continue;
+      const message = template
+        .replace("{petName}", card.petName)
+        .replace("{programName}", card.recommendedNextProgram.packageName);
+      toast(message, {
+        description: "Tap your Report Cards tab to enroll.",
+        duration: 8_000,
+      });
+      fanOutReportCardUpsert(queryClient, {
+        ...card,
+        graduationFollowUpSentAt: new Date().toISOString(),
+      });
+    }
+    // We intentionally don't depend on `cards` here — the snapshot at mount
+    // time is good enough for the demo, and re-running on each card change
+    // would re-fire toasts during rapid edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moduleSettings?.graduationFollowUpEnabled]);
 
   if (cards.length === 0) {
     return (
@@ -442,7 +493,13 @@ function CustomerCard({
                     key={ex.name}
                     className="flex items-center justify-between gap-2 text-[12.5px]"
                   >
-                    <span className="truncate text-slate-700">{ex.name}</span>
+                    <span className="truncate text-slate-700">
+                      {ex.name}
+                      <span className="text-muted-foreground"> — </span>
+                      <span className="font-medium text-slate-800">
+                        {ratingLabelForAvg(ex.avgRating)}
+                      </span>
+                    </span>
                     <StarRow value={ex.avgRating} count={ex.ratingsCount} />
                   </div>
                 ))}
@@ -547,14 +604,55 @@ function CustomerCard({
 
 
           {isGraduation && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-3 text-center">
-              <Award className="text-amber-500 mx-auto mb-1 size-6" />
-              <p className="text-sm font-semibold text-amber-800">
-                Congratulations, {card.petName}!
-              </p>
-              <p className="text-amber-700 mt-0.5 text-[12px]">
-                Series complete. Ask your instructor about the next program.
-              </p>
+            <div className="space-y-2">
+              <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-3 text-center">
+                <Award className="text-amber-500 mx-auto mb-1 size-6" />
+                <p className="text-sm font-semibold text-amber-800">
+                  Congratulations, {card.petName}!
+                </p>
+                <p className="text-amber-700 mt-0.5 text-[12px]">
+                  Series complete. We&apos;re so proud of how far you&apos;ve
+                  both come.
+                </p>
+              </div>
+
+              {card.recommendedNextProgram ? (
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 px-3 py-3 dark:border-indigo-900/40 dark:bg-indigo-950/30">
+                  <div className="flex items-start gap-2.5">
+                    <div className="bg-indigo-500 text-white flex size-9 shrink-0 items-center justify-center rounded-xl shadow-sm">
+                      <GraduationCap className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-indigo-700 dark:text-indigo-200 text-[10px] font-bold uppercase tracking-wider">
+                        Next step
+                      </p>
+                      <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        {card.petName} is ready for{" "}
+                        {card.recommendedNextProgram.packageName}
+                      </p>
+                      {card.recommendedNextProgram.description && (
+                        <p className="text-muted-foreground mt-0.5 text-[12px]/relaxed">
+                          {card.recommendedNextProgram.description}
+                        </p>
+                      )}
+                      <Button
+                        asChild
+                        size="sm"
+                        className="mt-2 gap-1.5 bg-indigo-600 text-white hover:bg-indigo-700"
+                      >
+                        <Link
+                          href={`/customer/bookings/new?service=training&program=${encodeURIComponent(
+                            card.recommendedNextProgram.packageId,
+                          )}&pet=${card.petId}`}
+                        >
+                          See upcoming classes
+                          <ArrowRight className="size-3.5" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -653,7 +751,13 @@ function ExercisePanel({
               key={ex.name}
               className="flex items-center justify-between gap-2 text-[12px] text-slate-700"
             >
-              <span className="truncate">{ex.name}</span>
+              <span className="truncate">
+                {ex.name}
+                <span className="text-muted-foreground"> — </span>
+                <span className="font-medium">
+                  {ratingLabelForAvg(ex.avgRating)}
+                </span>
+              </span>
               <span className="text-muted-foreground inline-flex shrink-0 items-center gap-1 tabular-nums">
                 <Star className="size-3 fill-amber-400 text-amber-400" />
                 {ex.avgRating.toFixed(1)}

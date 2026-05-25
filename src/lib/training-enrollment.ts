@@ -27,7 +27,29 @@ export interface TrainingEnrollment {
   ownerEmail: string;
   handlerName?: string; // Person dropping off the pet
   enrollmentDate: string;
-  status: "enrolled" | "completed" | "dropped" | "waitlisted";
+  status: "enrolled" | "completed" | "dropped" | "waitlisted" | "paused";
+  /** Reason captured when the trainer pauses the enrollment (vacation,
+   *  illness, etc.). Cleared when the student resumes. */
+  pauseReason?: string;
+  /** ISO date the trainer expects the student to return — informational
+   *  only, not enforced. Cleared on resume. */
+  pauseExpectedReturnDate?: string;
+  /** ISO timestamp the pause was applied. Cleared on resume. */
+  pausedAt?: string;
+  /** Free-text detail captured when the trainer withdraws the enrollment. */
+  dropReason?: string;
+  /** Structured reason category for the withdrawal — drives the picker
+   *  shown in the Remove-from-series dialog. */
+  dropReasonCategory?: "client-requested" | "no-show-policy" | "other";
+  /** ISO timestamp the withdrawal was applied. */
+  droppedAt?: string;
+  /** How the withdrawal was handled financially — informational; the
+   *  actual refund/credit payout lives in the billing module. */
+  dropRefundDecision?:
+    | "full-refund"
+    | "partial-refund"
+    | "account-credit"
+    | "no-refund";
   sessionsAttended: number;
   totalSessions: number;
   currentSessionNumber: number; // Next session to attend
@@ -35,8 +57,41 @@ export interface TrainingEnrollment {
   /** Payment lifecycle — drives the badge on the Students tab. */
   paymentStatus: SeriesPaymentStatus;
   notes: string;
+  /** Optional time-of-day preference captured when an owner joins the
+   *  waitlist for a series. The trainer uses this on the Waitlist tab to
+   *  decide whether the next available spot matches what this client is
+   *  hoping for. Defaults `undefined` for non-waitlist enrollments. */
+  preferredTimeOfDay?: "morning" | "afternoon" | "no-preference";
+  /** Manager-curated position in the waitlist. Set whenever the staff
+   *  reorder the list — entries without a position fall to the end and tie-
+   *  break on `enrollmentDate` (first-come-first-served). */
+  waitlistPosition?: number;
+  /** Outstanding (or recently-resolved) Offer Spot invitation. Set when the
+   *  facility taps Offer Spot on a waitlist entry — the system mocks an
+   *  SMS + email send and holds the spot until `expiresAtISO`. */
+  offer?: WaitlistOffer;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Outcome lifecycle for an Offer Spot invitation. Drives the badges on the
+ *  Waitlist tab and the customer-facing accept screen. */
+export type WaitlistOfferOutcome = "active" | "accepted" | "expired" | "cancelled";
+
+export interface WaitlistOffer {
+  /** When the invitation was sent — wall-clock ISO. */
+  sentAtISO: string;
+  /** Computed at send time = sentAtISO + `waitlistHoldHours`. */
+  expiresAtISO: string;
+  /** Filled when the half-window reminder fires; `null` until then. */
+  reminderSentAtISO: string | null;
+  /** Set when the customer taps the accept link. */
+  acceptedAtISO?: string;
+  /** Wall-clock ISO when the hold lapsed and the spot moved on. */
+  expiredAtISO?: string;
+  /** Set when the facility cancels the offer before it expires. */
+  cancelledAtISO?: string;
+  outcome: WaitlistOfferOutcome;
 }
 
 /** Per-exercise rating logged on an attendance record. 1 = needs work,
@@ -112,6 +167,39 @@ export type TrainingLevel =
   | "developing"
   | "proficient"
   | "excellent";
+
+/** Deprecated single-mood enum — superseded by the multi-select
+ *  `behaviorTags` field below. Kept around for backward-compat with any
+ *  draft data that's been written before the refactor. */
+export type TrainingReportCardMood =
+  | "playful"
+  | "focused"
+  | "calm"
+  | "energetic"
+  | "curious"
+  | "tired";
+
+/** Multi-select session vibe + behavior tags the trainer picks during the
+ *  report-card edit. Surfaces as chips on both the editor and the parent's
+ *  card so the report opens with a feeling, not just stats. */
+export type TrainingReportCardBehaviorTag =
+  | "focused"
+  | "energetic"
+  | "distracted"
+  | "anxious"
+  | "had-a-breakthrough"
+  | "needed-encouragement"
+  | "great-progress";
+
+/** Per-exercise progression entry surfaced on graduation cards — the
+ *  start vs final rating shown side by side so the owner sees the journey
+ *  from first session to last. */
+export interface TrainingReportCardProgression {
+  name: string;
+  startRating: 1 | 2 | 3 | 4 | 5;
+  endRating: 1 | 2 | 3 | 4 | 5;
+  ratingsCount: number;
+}
 
 export interface TrainingReportCardExerciseSummary {
   /** Display name of the exercise (matches what was logged in the session). */
@@ -201,6 +289,39 @@ export interface TrainingReportCard {
    *  prominently on both the trainer and customer views — the level badge
    *  is what gives owners a clear "where is my dog at" snapshot. */
   overallAssessment: string;
+  /** Warmer parent-facing note that lives below the assessment — the
+   *  trainer's chance to add a personalized touch ("Buddy was the goofball
+   *  of the class today — he made everyone smile"). Optional. */
+  personalizedMessage?: string;
+  /** Deprecated single mood — replaced by `behaviorTags`. Kept for the
+   *  one or two records that may have been drafted before the refactor. */
+  mood?: TrainingReportCardMood;
+  /** Multi-select session vibe / behavior tags. Shown as chips on the
+   *  parent's view ("Focused · Had a breakthrough"). */
+  behaviorTags?: TrainingReportCardBehaviorTag[];
+  /** Per-exercise rating overrides the trainer can apply at send time
+   *  without mutating the underlying attendance records (which still feed
+   *  the progress chart). Key = exercise name. */
+  exerciseRatingOverrides?: Record<string, 1 | 2 | 3 | 4 | 5>;
+  /** URL of the photo selected as the hero (large banner on the card).
+   *  Must reference one of the entries in `photos` — when omitted, the
+   *  card auto-uses the first photo. */
+  heroPhotoUrl?: string;
+  /** Optional before/after layout — when both URLs are set the card
+   *  renders them side-by-side as the primary photo block. */
+  beforeAfterPhotoUrls?: { before: string; after: string };
+  /** Per-exercise progression (start → final rating) for graduation
+   *  cards. Empty/undefined for session cards. */
+  exerciseProgression?: TrainingReportCardProgression[];
+  /** Suggested next program for graduation cards — pulled from the
+   *  course type's `graduateIntoPackageId`. Stored as a snapshot at
+   *  card-creation time so historic cards stay accurate when programs
+   *  change. */
+  recommendedNextProgram?: {
+    packageId: string;
+    packageName: string;
+    description?: string;
+  };
   /** Current spot on the training journey. Defaults to `progressing` for
    *  auto-drafted cards; the trainer adjusts before sending. */
   trainingLevel: TrainingLevel;
@@ -222,6 +343,10 @@ export interface TrainingReportCard {
   /** ISO timestamp the owner opened the card on the customer portal —
    *  drives the engagement signal trainers see ("Owner viewed Mar 14"). */
   viewedByOwner: string | null;
+  /** ISO timestamp the graduation follow-up message fired (graduation
+   *  cards only). Used to dedupe so a customer never gets the nudge
+   *  twice. */
+  graduationFollowUpSentAt?: string;
 }
 
 /** A purchased training-package balance — distinct from `TrainingEnrollment`
@@ -291,6 +416,23 @@ export interface HomeworkPracticeEntry {
   date: string;
   /** ISO timestamp of the click — useful for "marked just now". */
   markedAt: string;
+  /** Optional owner-uploaded video of the practice — short clip (≤ 20 s)
+   *  showing the dog performing the exercise. Stored as a `blob:` object URL
+   *  in the mock today; the production upload pipeline will replace this
+   *  with a server-hosted URL after compression. */
+  videoUrl?: string;
+  /** Wall-clock timestamp the video landed — distinct from `markedAt` so the
+   *  trainer can see whether the owner uploaded right when they marked done
+   *  or attached the clip later. */
+  videoAttachedAt?: string;
+  /** Trainer's free-text response after reviewing the owner's video. Shown
+   *  back to the owner in the customer portal next time they open the
+   *  homework item. */
+  trainerResponse?: string;
+  /** ISO timestamp the response was written. */
+  trainerRespondedAt?: string;
+  /** Display name of the trainer who responded. */
+  trainerRespondedBy?: string;
 }
 
 export interface TrainingHomework {

@@ -18,10 +18,12 @@ import {
   Lightbulb,
   Lock,
   MapPin,
+  Pin,
   PlayCircle,
   ShieldAlert,
   StickyNote,
   TriangleAlert,
+  Trophy,
 } from "lucide-react";
 import type { TrainerNote, TrainerNoteCategory } from "@/types/training";
 import type {
@@ -33,6 +35,11 @@ import type {
   TrainingSeriesSession,
 } from "@/lib/training-series";
 import { TrainingProfilePackagesPanel } from "./training-profile-packages-panel";
+import { useQuery } from "@tanstack/react-query";
+import { trainingQueries } from "@/lib/api/training";
+import { computePetMilestones } from "@/lib/pet-milestones";
+import { MilestoneCard } from "@/components/training/milestone-visuals";
+import { getPinnedNoteForPet } from "@/lib/training-active-alerts";
 
 const PAYMENT_META: Record<
   SeriesPaymentStatus,
@@ -238,8 +245,68 @@ export function TrainingProfileOverview({
   // Next session date — used inside the package progress panel.
   const nextSessionDate = upcomingSessions[0]?.session.date ?? null;
 
+  // The trainer who last worked with this dog can pin a single note from
+  // the Notes tab. When present, it surfaces at the very top of the
+  // Overview tab so any staff sees the heads-up without tab navigation.
+  const pinnedNote = useMemo(
+    () => getPinnedNoteForPet(petId, trainerNotes),
+    [petId, trainerNotes],
+  );
+
+  // Milestone derivation — feeds the "Milestones" section below the active
+  // enrollment panels. Pulls attendance + homework fresh from the cache so
+  // newly-recorded sessions and practice taps unlock cards immediately.
+  const { data: attendances = [] } = useQuery(
+    trainingQueries.attendancesForPet(petId),
+  );
+  const enrollmentIdsForHomework = useMemo(
+    () => enrollments.map((e) => e.id),
+    [enrollments],
+  );
+  const { data: homework = [] } = useQuery(
+    trainingQueries.homeworkForEnrollments(enrollmentIdsForHomework),
+  );
+  const milestones = useMemo(
+    () =>
+      computePetMilestones({
+        attendances,
+        enrollments,
+        seriesById,
+        homework,
+      }),
+    [attendances, enrollments, seriesById, homework],
+  );
+
   return (
     <div className="space-y-4">
+      {pinnedNote && (
+        <section
+          className="rounded-xl border-l-4 border-amber-400 bg-amber-50/60 px-4 py-3 shadow-sm"
+          aria-label="Pinned trainer note"
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white">
+              <Pin className="size-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-amber-900 text-[10px] font-bold uppercase tracking-wider">
+                Pinned trainer note
+              </p>
+              <p className="mt-1 text-[13px]/relaxed text-slate-800">
+                {pinnedNote.note}
+              </p>
+              <p className="text-muted-foreground mt-1 text-[11px]">
+                {pinnedNote.trainerName} ·{" "}
+                {new Date(`${pinnedNote.date}T00:00:00`).toLocaleDateString(
+                  "en-US",
+                  { month: "short", day: "numeric", year: "numeric" },
+                )}
+                {pinnedNote.className && ` · ${pinnedNote.className}`}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
       <TrainingProfilePackagesPanel
         petId={petId}
         petName={petName}
@@ -330,6 +397,14 @@ export function TrainingProfileOverview({
             )}
           </div>
         )}
+      </Panel>
+
+      {/* Payment status ───────────────────────────────────────────────── */}
+      <Panel title="Payment status" icon={CircleDollarSign}>
+        <PaymentStatusBody
+          enrollment={primaryEnrollment}
+          activeSeries={activeSeries}
+        />
       </Panel>
 
       {/* Package progress ────────────────────────────────────────────── */}
@@ -579,6 +654,142 @@ export function TrainingProfileOverview({
         )}
       </Panel>
       </div>
+
+      {/* Milestones ────────────────────────────────────────────────────── */}
+      <Panel title="Milestones" icon={Trophy}>
+        {milestones.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            No milestones unlocked yet — they auto-generate as {petName} hits
+            achievements like first session, first exercise mastered, or a
+            7-day homework streak.
+          </p>
+        ) : (
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {milestones.map((m) => (
+              <li key={`${m.kind}-${m.achievedISO}`}>
+                <MilestoneCard milestone={m} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+    </div>
+  );
+}
+
+function PaymentStatusBody({
+  enrollment,
+  activeSeries,
+}: {
+  enrollment: TrainingEnrollment | null;
+  activeSeries: TrainingSeries | null;
+}) {
+  if (!enrollment) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        No payment recorded — this pet has no active enrollment to charge
+        against.
+      </p>
+    );
+  }
+  const rules = activeSeries?.enrollmentRules;
+  const fullAmount = rules?.fullPaymentAmount ?? 0;
+  const depositAmount = rules?.depositRequired ?? 0;
+  const balanceDue = Math.max(0, fullAmount - depositAmount);
+  // No dedicated "balance due date" on the schema yet — use the first
+  // session date as a reasonable proxy. Customers typically settle the
+  // balance by their first class.
+  const firstSessionISO =
+    activeSeries?.sessions?.[0]?.date ?? activeSeries?.startDate ?? null;
+
+  if (enrollment.paymentStatus === "paid") {
+    return (
+      <div className="space-y-1.5">
+        <p className="text-sm font-semibold text-emerald-700">Paid in full</p>
+        {fullAmount > 0 && (
+          <p className="text-muted-foreground text-[12px]">
+            ${fullAmount.toLocaleString()} settled.
+          </p>
+        )}
+      </div>
+    );
+  }
+  if (enrollment.paymentStatus === "comped") {
+    return (
+      <div className="space-y-1.5">
+        <p className="text-sm font-semibold text-violet-700">Comped</p>
+        <p className="text-muted-foreground text-[12px]">
+          Series provided at no charge — no balance to collect.
+        </p>
+      </div>
+    );
+  }
+  if (enrollment.paymentStatus === "refunded") {
+    return (
+      <div className="space-y-1.5">
+        <p className="text-sm font-semibold text-slate-700">Refunded</p>
+        <p className="text-muted-foreground text-[12px]">
+          {fullAmount > 0
+            ? `Original $${fullAmount.toLocaleString()} returned.`
+            : "Payment returned."}
+        </p>
+      </div>
+    );
+  }
+  if (enrollment.paymentStatus === "deposit") {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm font-semibold text-amber-700">
+          Deposit collected
+        </p>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border bg-amber-50/40 px-3 py-2 text-[12.5px]">
+          <span className="text-muted-foreground">Deposit paid</span>
+          <span className="text-right font-semibold tabular-nums">
+            ${depositAmount.toLocaleString()}
+          </span>
+          <span className="text-muted-foreground">Balance due</span>
+          <span className="text-right font-semibold tabular-nums text-amber-900">
+            ${balanceDue.toLocaleString()}
+          </span>
+          {firstSessionISO && (
+            <>
+              <span className="text-muted-foreground">Due by</span>
+              <span className="text-right font-semibold tabular-nums">
+                {new Date(`${firstSessionISO}T00:00:00`).toLocaleDateString(
+                  "en-US",
+                  { month: "short", day: "numeric", year: "numeric" },
+                )}
+              </span>
+            </>
+          )}
+        </div>
+        <p className="text-muted-foreground text-[11px] italic">
+          Balance is typically collected at the first session.
+        </p>
+      </div>
+    );
+  }
+  // unpaid
+  return (
+    <div className="space-y-1.5">
+      <p className="text-sm font-semibold text-rose-700">No payment recorded</p>
+      {fullAmount > 0 && (
+        <p className="text-muted-foreground text-[12px]">
+          Full ${fullAmount.toLocaleString()} outstanding
+          {firstSessionISO && (
+            <>
+              {" — due by "}
+              <span className="font-semibold tabular-nums">
+                {new Date(`${firstSessionISO}T00:00:00`).toLocaleDateString(
+                  "en-US",
+                  { month: "short", day: "numeric", year: "numeric" },
+                )}
+              </span>
+            </>
+          )}
+          .
+        </p>
+      )}
     </div>
   );
 }

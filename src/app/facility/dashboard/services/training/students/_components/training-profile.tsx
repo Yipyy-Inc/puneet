@@ -46,6 +46,8 @@ import { TrainingProfileNotes } from "./training-profile-notes";
 import { TrainingProfileVaccinations } from "./training-profile-vaccinations";
 import { TrainingProfileReportCards } from "./training-profile-report-cards";
 import { TrainingProfilePackageChips } from "./training-profile-package-chips";
+import { TrainingProfileAlertBanner } from "./training-profile-alert-banner";
+import { TrainingProfileQuickActions } from "./training-profile-quick-actions";
 
 interface Props {
   petId: number;
@@ -194,6 +196,14 @@ export function TrainingProfile({ petId }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Alert banner — sits above everything else, including the back link,
+          so trainers can't miss critical info on a pet with active alerts. */}
+      <TrainingProfileAlertBanner
+        petId={petId}
+        petName={pet.name}
+        notes={trainerNotesForPet}
+      />
+
       <Button
         asChild
         variant="ghost"
@@ -321,6 +331,16 @@ export function TrainingProfile({ petId }: Props) {
           </Button>
         </div>
       </div>
+
+      {/* Quick actions — covers the 5 workflows staff hit most often without
+          tab navigation. */}
+      <TrainingProfileQuickActions
+        petId={petId}
+        petName={pet.name}
+        ownerName={ownerName}
+        ownerEmail={owningClient?.email}
+        ownerPhone={ownerPhone || undefined}
+      />
 
       {/* Tabs ─────────────────────────────────────────────────────────── */}
       <Tabs defaultValue={defaultTab} className="space-y-4">

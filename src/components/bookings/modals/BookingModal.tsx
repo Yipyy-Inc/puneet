@@ -45,6 +45,7 @@ import {
   EVALUATION_SUB_STEPS,
   GROOMING_SUB_STEPS,
   CUSTOM_SERVICE_SUB_STEPS,
+  TRAINING_SUB_STEPS,
   getServiceAccent,
 } from "./constants";
 import { useCustomServices } from "@/hooks/use-custom-services";
@@ -112,6 +113,16 @@ export interface NewBookingModalProps {
   preSelectedClientId?: number;
   preSelectedPetId?: number;
   preSelectedService?: string;
+  /** Deep-link the training booking flow to a specific Program. The
+   *  TrainingScheduleStep filters its series list to those matching this
+   *  program id so customers who tapped Enroll on a catalog card never see
+   *  series from other programs. */
+  preSelectedProgramId?: string;
+  /** When true, the Service step is hidden + skipped. Used for deep links
+   *  from a service-specific catalog (e.g. the customer tapped Enroll on a
+   *  training program card) so the customer doesn't have to confirm their
+   *  service choice again. */
+  lockService?: boolean;
   /** Pre-fill the wizard with details the customer submitted in their online booking request. */
   preSelectedStartDate?: string; // "YYYY-MM-DD"
   preSelectedEndDate?: string; // "YYYY-MM-DD"
@@ -204,6 +215,8 @@ export function BookingModal({
   preSelectedClientId,
   preSelectedPetId,
   preSelectedService,
+  preSelectedProgramId,
+  lockService = false,
   preSelectedStartDate,
   preSelectedEndDate,
   preSelectedCheckInTime,
@@ -377,7 +390,10 @@ export function BookingModal({
   const displayedSteps = STEPS.filter(
     (step) =>
       !(step.id === "client-pet" && (editMode || (preSelectedClientId && preSelectedPetId))) &&
-      !(step.id === "service" && editMode),
+      !(step.id === "service" && editMode) &&
+      // Hide the Service step entirely when the caller deep-linked into a
+      // specific service (e.g. customer tapped Enroll on a training program).
+      !(step.id === "service" && lockService && !!preSelectedService),
   );
   // Wizard now runs client-pet → service → details → confirm. When both client
   // and pet are preselected, client-pet is filtered out and we start at service
@@ -772,6 +788,7 @@ export function BookingModal({
     }
     if (selectedService === "evaluation") return EVALUATION_SUB_STEPS;
     if (selectedService === "grooming") return GROOMING_SUB_STEPS;
+    if (selectedService === "training") return TRAINING_SUB_STEPS;
     if (selectedService) {
       return CUSTOM_SERVICE_SUB_STEPS;
     }
@@ -3139,6 +3156,7 @@ export function BookingModal({
                     setSelectedPetIds={setSelectedPetIds}
                     selectedClient={selectedClient}
                     preSelectedClientId={preSelectedClientId}
+                    preSelectedProgramId={preSelectedProgramId}
                     selectedService={selectedService}
                     configs={configs}
                     isEstimateMode={isEstimateMode}
@@ -3161,6 +3179,7 @@ export function BookingModal({
                 {displayedSteps[currentStep]?.id === "details" && (
                   <DetailsStep
                     selectedService={selectedService}
+                    preSelectedProgramId={preSelectedProgramId}
                     currentSubStep={
                       currentSubSteps[currentSubStep]?.id ?? currentSubStep
                     }

@@ -37,7 +37,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, CheckCircle2, XCircle } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, CheckCircle2, XCircle } from "lucide-react";
+import { HomeworkTemplatesSheet } from "./_components/homework-templates-sheet";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
 import {
   type TrainingCourseType,
@@ -66,6 +67,8 @@ export default function TrainingCourseCatalogPage() {
   );
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
+  const [templatesForCourse, setTemplatesForCourse] =
+    useState<TrainingCourseType | null>(null);
 
   const [classes, setClasses] = useState<TrainingClass[]>(initialTrainingClasses);
   const [propagationPrompt, setPropagationPrompt] = useState<{
@@ -387,6 +390,14 @@ export default function TrainingCourseCatalogPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => setTemplatesForCourse(course)}
+                          title="Manage homework templates"
+                        >
+                          <BookOpen className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleEdit(course)}
                         >
                           <Edit className="size-4" />
@@ -699,6 +710,14 @@ export default function TrainingCourseCatalogPage() {
           footerNote="Only classes that haven't started yet are affected. In-progress and completed classes are left untouched."
         />
       )}
+
+      <HomeworkTemplatesSheet
+        open={!!templatesForCourse}
+        onOpenChange={(o) => {
+          if (!o) setTemplatesForCourse(null);
+        }}
+        courseTypeName={templatesForCourse?.name ?? ""}
+      />
     </div>
   );
 }

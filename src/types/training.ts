@@ -183,6 +183,28 @@ export const trainerNoteSchema = z
     note: z.string(),
     category: trainerNoteCategoryEnum,
     isPrivate: z.boolean(),
+    /** When true, this note is surfaced at the top of the student profile,
+     *  the calendar appointment card, and the pre-session briefing as an
+     *  active alert. Set via the "Mark as Active Alert" toggle in the Notes
+     *  composer. */
+    isActiveAlert: z.boolean().optional(),
+    /** ISO timestamp when the alert was deactivated. Once set, the note is
+     *  no longer treated as active even though the `isActiveAlert` flag may
+     *  still be true — the deactivation timestamp is the source of truth. */
+    deactivatedAt: z.string().optional(),
+    /** Free-text reason captured at deactivation time — required by the
+     *  product spec so the audit trail explains *why* the alert was lifted. */
+    deactivationReason: z.string().optional(),
+    /** Display name of the staff member who deactivated the alert. */
+    deactivatedByName: z.string().optional(),
+    /** When true, this note is surfaced at the top of the student profile's
+     *  Overview tab so any staff member sees the trainer's last heads-up
+     *  immediately on open. Only one note can be pinned per pet — pinning
+     *  a new note auto-unpins the previous one. */
+    isPinnedToProfile: z.boolean().optional(),
+    /** ISO timestamp the note was pinned — drives the "Pinned · {time}"
+     *  caption on the Overview card. */
+    pinnedAtISO: z.string().optional(),
   })
   .catchall(z.unknown());
 
@@ -245,6 +267,9 @@ export const trainingPackageSchema = z
      *  one. Enforced at enrollment time — staff get a warning when booking
      *  manually and the online flow blocks the purchase outright. */
     prerequisitePackageIds: z.array(z.string()).optional(),
+    /** The natural "next step" program for graduates of this one — surfaces
+     *  as a recommendation on the parent's graduation report card. */
+    graduateIntoPackageId: z.string().optional(),
     /** Discipline this program falls under (Obedience, Agility, etc.). The
      *  list of disciplines is configured per facility in Settings — this
      *  references one of those. */
