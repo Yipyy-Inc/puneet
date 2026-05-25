@@ -32,6 +32,12 @@ import {
   getDayName,
   type TrainingSeries,
 } from "@/lib/training-series";
+import { useQuery } from "@tanstack/react-query";
+import { trainingQueries } from "@/lib/api/training";
+import {
+  DEFAULT_DROP_IN_MAX_PER_SESSION,
+  DEFAULT_DROP_IN_PRICE,
+} from "@/lib/training-drop-ins";
 
 const TRAINING_LOCATIONS = [
   "Training Room A",
@@ -58,9 +64,14 @@ interface FormState {
   fullPaymentAmount: number;
   waitlistEnabled: boolean;
   allowDropIns: boolean;
+  dropInMaxPerSession: number;
+  dropInPrice: number;
 }
 
-function emptyForm(): FormState {
+function emptyForm(
+  defaultDropInMax: number = DEFAULT_DROP_IN_MAX_PER_SESSION,
+  defaultDropInPrice: number = DEFAULT_DROP_IN_PRICE,
+): FormState {
   const today = new Date().toISOString().split("T")[0];
   return {
     courseTypeId: "",
@@ -79,10 +90,16 @@ function emptyForm(): FormState {
     fullPaymentAmount: 300,
     waitlistEnabled: true,
     allowDropIns: false,
+    dropInMaxPerSession: defaultDropInMax,
+    dropInPrice: defaultDropInPrice,
   };
 }
 
-function seedFromSeries(series: TrainingSeries): FormState {
+function seedFromSeries(
+  series: TrainingSeries,
+  defaultDropInMax: number = DEFAULT_DROP_IN_MAX_PER_SESSION,
+  defaultDropInPrice: number = DEFAULT_DROP_IN_PRICE,
+): FormState {
   return {
     courseTypeId: series.courseTypeId,
     seriesName: series.seriesName,
@@ -100,6 +117,9 @@ function seedFromSeries(series: TrainingSeries): FormState {
     fullPaymentAmount: series.enrollmentRules.fullPaymentAmount,
     waitlistEnabled: series.enrollmentRules.waitlistEnabled,
     allowDropIns: series.enrollmentRules.allowDropIns,
+    dropInMaxPerSession:
+      series.enrollmentRules.dropInMaxPerSession ?? defaultDropInMax,
+    dropInPrice: series.enrollmentRules.dropInPrice ?? defaultDropInPrice,
   };
 }
 
@@ -117,13 +137,25 @@ export function SeriesEditDialog({
   editing,
   onSave,
 }: Props) {
-  const [form, setForm] = useState<FormState>(() => emptyForm());
+  const { data: moduleSettings } = useQuery(trainingQueries.moduleSettings());
+  const defaultDropInMax =
+    moduleSettings?.defaultDropInMaxPerSession ??
+    DEFAULT_DROP_IN_MAX_PER_SESSION;
+  const defaultDropInPrice =
+    moduleSettings?.defaultDropInPrice ?? DEFAULT_DROP_IN_PRICE;
+  const [form, setForm] = useState<FormState>(() =>
+    emptyForm(defaultDropInMax, defaultDropInPrice),
+  );
 
   // Re-sync the form whenever the dialog opens with a new "editing" target.
   useEffect(() => {
     if (!open) return;
-    setForm(editing ? seedFromSeries(editing) : emptyForm());
-  }, [open, editing]);
+    setForm(
+      editing
+        ? seedFromSeries(editing, defaultDropInMax, defaultDropInPrice)
+        : emptyForm(defaultDropInMax, defaultDropInPrice),
+    );
+  }, [open, editing, defaultDropInMax, defaultDropInPrice]);
 
   const selectedCourseType = useMemo(
     () =>
@@ -210,6 +242,17 @@ export function SeriesEditDialog({
         fullPaymentAmount: form.fullPaymentAmount,
         waitlistEnabled: form.waitlistEnabled,
         allowDropIns: form.allowDropIns,
+        // Only persist overrides when the trainer's value differs from
+        // the module default — keeps the data minimal and lets future
+        // default changes propagate to series that didn't customize.
+        dropInMaxPerSession:
+          form.allowDropIns && form.dropInMaxPerSession !== defaultDropInMax
+            ? form.dropInMaxPerSession
+            : undefined,
+        dropInPrice:
+          form.allowDropIns && form.dropInPrice !== defaultDropInPrice
+            ? form.dropInPrice
+            : undefined,
       },
       status: editing?.status ?? "draft",
     };
@@ -562,19 +605,74 @@ export function SeriesEditDialog({
                 />
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div>
-                  <Label>Allow Drop-Ins</Label>
-                  <p className="text-muted-foreground text-sm">
-                    Allow single-session enrollments (not full series).
-                  </p>
+              <div className="space-y-3 rounded-lg border p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Allow Drop-Ins</Label>
+                    <p className="text-muted-foreground text-sm">
+                      Allow single-session enrollments (not full series).
+                    </p>
+                  </div>
+                  <Switch
+                    checked={form.allowDropIns}
+                    onCheckedChange={(v) =>
+                      setForm({ ...form, allowDropIns: v })
+                    }
+                  />
                 </div>
-                <Switch
-                  checked={form.allowDropIns}
-                  onCheckedChange={(v) =>
-                    setForm({ ...form, allowDropIns: v })
-                  }
-                />
+                {form.allowDropIns && (
+                  <div className="grid grid-cols-2 gap-3 border-t pt-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Drop-in max per session
+                      </Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={form.maxCapacity}
+                        value={form.dropInMaxPerSession}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            dropInMaxPerSession: Math.max(
+                              1,
+                              Math.min(
+                                form.maxCapacity,
+                                Number(e.target.value) || 1,
+                              ),
+                            ),
+                          })
+                        }
+                      />
+                      <p className="text-muted-foreground text-[11px]">
+                        Default from Settings: {defaultDropInMax}. Capped at
+                        the series max capacity ({form.maxCapacity}).
+                      </p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Per-session price ($)
+                      </Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={form.dropInPrice}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            dropInPrice: Math.max(0, Number(e.target.value) || 0),
+                          })
+                        }
+                      />
+                      <p className="text-muted-foreground text-[11px]">
+                        Default from Settings: ${defaultDropInPrice}.
+                        Tracked separately on the invoice from the series
+                        package.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

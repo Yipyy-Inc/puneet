@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -38,6 +39,18 @@ import {
 import type { Pet } from "@/types/pet";
 import { TrainingWaiversSection } from "./training-waivers-section";
 import { allRequiredWaiversSigned } from "@/data/training-waivers";
+import { trainingQueries } from "@/lib/api/training";
+import {
+  buildDropInCountsBySessionId,
+  fanOutDropInUpsert,
+  nextDropInId,
+  nextDropInInvoiceLineId,
+  resolveDropInMax,
+  resolveDropInPrice,
+  type TrainingDropInBooking,
+} from "@/lib/training-drop-ins";
+import { clients } from "@/data/clients";
+import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -71,27 +84,62 @@ function nowMs() {
  *  `allowDropIns: true`. Drop-ins don't propagate to the trainer's Series
  *  Students list (they're per-session, not enrollments). */
 export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
+  const queryClient = useQueryClient();
   const [petId, setPetId] = useState<number | null>(null);
   const [sessionDate, setSessionDate] = useState<string>("");
   const [agreedWaivers, setAgreedWaivers] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [openedAtMs] = useState<number>(nowMs);
 
+  const { data: moduleSettings } = useQuery(trainingQueries.moduleSettings());
+  const { data: dropInBookings = [] } = useQuery(
+    trainingQueries.dropInBookings(),
+  );
+
   // Restrict to dogs — the broader pet schema includes cats etc.
   const dogs = useMemo(() => pets.filter((p) => p.type === "Dog"), [pets]);
 
-  // Upcoming sessions for this series (drop-in must pick a specific date).
+  // Upcoming sessions for this series. The picker now keeps each session's
+  // id alongside its date so a booking can pin to the right
+  // TrainingSeriesSession record (the same id the trainer sees on their
+  // calendar).
   const upcomingSessions = useMemo(() => {
-    if (!series) return [];
-    const all = calculateSessionDates(
+    if (!series)
+      return [] as {
+        id: string;
+        date: string;
+        sessionNumber: number;
+        startTime: string;
+      }[];
+    const list = series.sessions
+      .filter((s) => {
+        const ms = new Date(`${s.date}T${s.startTime}`).getTime();
+        return ms >= openedAtMs && s.status !== "cancelled";
+      })
+      .map((s) => ({
+        id: s.id,
+        date: s.date,
+        sessionNumber: s.sessionNumber,
+        startTime: s.startTime,
+      }));
+    if (list.length > 0) return list;
+    // Fallback for series whose sessions[] hasn't been generated yet — keep
+    // the legacy date-only flow so the dialog never goes empty.
+    return calculateSessionDates(
       series.startDate,
       series.dayOfWeek,
       series.numberOfWeeks,
-    );
-    return all.filter((d) => {
-      const ms = new Date(`${d}T${series.startTime}`).getTime();
-      return ms >= openedAtMs;
-    });
+    )
+      .filter((d) => {
+        const ms = new Date(`${d}T${series.startTime}`).getTime();
+        return ms >= openedAtMs;
+      })
+      .map((d, idx) => ({
+        id: `${series.id}-fallback-${idx}`,
+        date: d,
+        sessionNumber: idx + 1,
+        startTime: series.startTime,
+      }));
   }, [series, openedAtMs]);
 
   // Reset state every time the dialog opens against a new series.
@@ -100,23 +148,38 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
     setPetId(null);
     setAgreedWaivers(new Set());
     setBusy(false);
-    setSessionDate(upcomingSessions[0] ?? "");
+    setSessionDate(upcomingSessions[0]?.id ?? "");
   }, [open, series?.id, upcomingSessions]);
 
   if (!series) return null;
 
-  // Single-session price — derived from full payment / numberOfWeeks since
-  // `EnrollmentRules` doesn't carry a dedicated dropInPrice field yet.
-  const pricePerSession = series.numberOfWeeks
-    ? Math.round(series.enrollmentRules.fullPaymentAmount / series.numberOfWeeks)
-    : series.enrollmentRules.fullPaymentAmount;
+  const dropInMax = resolveDropInMax(
+    series,
+    moduleSettings?.defaultDropInMaxPerSession,
+  );
+  const pricePerSession = resolveDropInPrice(
+    series,
+    moduleSettings?.defaultDropInPrice,
+  );
+  const countsBySession = buildDropInCountsBySessionId(dropInBookings);
+  const selectedSession = upcomingSessions.find((s) => s.id === sessionDate);
+  const selectedSeatsTaken = selectedSession
+    ? countsBySession.get(selectedSession.id) ?? 0
+    : 0;
+  const selectedSeatsLeft = Math.max(0, dropInMax - selectedSeatsTaken);
+  const selectedFull = !!selectedSession && selectedSeatsLeft === 0;
 
   const waiversOk = allRequiredWaiversSigned(agreedWaivers);
   const canSubmit =
-    petId !== null && !!sessionDate && waiversOk && !busy;
+    petId !== null &&
+    !!sessionDate &&
+    !!selectedSession &&
+    !selectedFull &&
+    waiversOk &&
+    !busy;
 
   async function handleSubmit() {
-    if (!canSubmit || !series) return;
+    if (!canSubmit || !series || !selectedSession) return;
     const pet = dogs.find((p) => p.id === petId);
     if (!pet) {
       toast.error("Pet not found");
@@ -126,8 +189,38 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
     try {
       // Mock: simulate an async charge + write
       await new Promise((resolve) => setTimeout(resolve, 800));
+      const owner = clients.find((c) => c.pets.some((p) => p.id === pet.id));
+      const nowISO = new Date().toISOString();
+      const invoiceLineId = nextDropInInvoiceLineId();
+      const booking: TrainingDropInBooking = {
+        id: nextDropInId(),
+        seriesId: series.id,
+        sessionId: selectedSession.id,
+        sessionDate: selectedSession.date,
+        sessionNumber: selectedSession.sessionNumber,
+        sessionStartTime: selectedSession.startTime,
+        petId: pet.id,
+        petName: pet.name,
+        petBreed: pet.breed,
+        ownerId: owner?.id ?? 0,
+        ownerName: owner?.name ?? "Owner",
+        ownerPhone: owner?.phone,
+        ownerEmail: owner?.email,
+        price: pricePerSession,
+        invoiceLine: {
+          id: invoiceLineId,
+          description: `Drop-in fee — ${series.seriesName} · Session ${selectedSession.sessionNumber}`,
+          category: "training-drop-in",
+          amount: pricePerSession,
+          dateISO: nowISO.slice(0, 10),
+        },
+        status: "booked",
+        createdAt: nowISO,
+        updatedAt: nowISO,
+      };
+      fanOutDropInUpsert(queryClient, booking);
       toast.success(
-        `${pet.name} is booked into ${series.seriesName} on ${formatLongDate(sessionDate)}. Confirmation email on the way.`,
+        `${pet.name} is booked into ${series.seriesName} on ${formatLongDate(selectedSession.date)}. Confirmation email on the way.`,
         { duration: 5000 },
       );
       onOpenChange(false);
@@ -202,18 +295,53 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
                   <SelectValue placeholder="Pick a session…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {upcomingSessions.map((d, idx) => (
-                    <SelectItem key={d} value={d}>
-                      <span className="flex items-center gap-2">
-                        <span className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
-                          S{idx + 1}
+                  {upcomingSessions.map((s) => {
+                    const taken = countsBySession.get(s.id) ?? 0;
+                    const left = Math.max(0, dropInMax - taken);
+                    const full = left === 0;
+                    return (
+                      <SelectItem key={s.id} value={s.id} disabled={full}>
+                        <span className="flex items-center gap-2">
+                          <span className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+                            S{s.sessionNumber}
+                          </span>
+                          {formatLongDate(s.date)} · {formatTime(series.startTime)}
+                          <span
+                            className={cn(
+                              "ml-auto text-[10px]",
+                              full
+                                ? "text-rose-600"
+                                : left === 1
+                                  ? "text-amber-700"
+                                  : "text-muted-foreground",
+                            )}
+                          >
+                            {full
+                              ? "Drop-in full"
+                              : `${left} drop-in${left === 1 ? "" : "s"} left`}
+                          </span>
                         </span>
-                        {formatLongDate(d)} · {formatTime(series.startTime)}
-                      </span>
-                    </SelectItem>
-                  ))}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+            )}
+            {selectedSession && (
+              <p
+                className={cn(
+                  "text-[11px]",
+                  selectedFull
+                    ? "text-rose-700"
+                    : selectedSeatsLeft <= 1
+                      ? "text-amber-700"
+                      : "text-muted-foreground",
+                )}
+              >
+                {selectedFull
+                  ? "This session is already at its drop-in cap. Pick another."
+                  : `${selectedSeatsLeft} of ${dropInMax} drop-in seat${dropInMax === 1 ? "" : "s"} still open.`}
+              </p>
             )}
             <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
               <Clock className="size-3" />

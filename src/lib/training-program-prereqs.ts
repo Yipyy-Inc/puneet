@@ -12,6 +12,7 @@
  * become real API queries.
  */
 import type { TrainingPackage } from "@/types/training";
+import type { TrainingEnrollment } from "@/lib/training-enrollment";
 import { trainingPackages } from "@/data/training";
 import { seriesEnrollments } from "@/data/training-series";
 
@@ -20,6 +21,22 @@ export interface PrereqResult {
   programId: string;
   programName: string;
   satisfied: boolean;
+}
+
+/** Richer prerequisite info that includes "currently in" progress. Lets
+ *  tooltips read "Buddy is currently in Basic Obedience — 4 of 6 sessions
+ *  completed" instead of a vague "Prereqs apply" hint. */
+export interface PrereqDetail extends PrereqResult {
+  /** Set when the pet is mid-way through a series matching this prereq
+   *  program. Carries enough to render the progress line. */
+  inProgress?: {
+    seriesName: string;
+    sessionsAttended: number;
+    totalSessions: number;
+    /** Pause / active / etc. — exposed so the tooltip can distinguish a
+     *  paused enrollment from an in-progress one. */
+    status: TrainingEnrollment["status"];
+  };
 }
 
 /** Programs a pet has finished — completion is currently inferred from
@@ -78,6 +95,46 @@ export function hasCompletedPrerequisites(
 ): boolean {
   const results = checkPrerequisitesForPet(petId, program);
   return results.every((r) => r.satisfied);
+}
+
+/** Detail-rich prerequisite check — augments each unsatisfied result with
+ *  in-progress info from the pet's series enrollments. The `enrollments`
+ *  argument defaults to the mock catalog; callers can pass a query-cache
+ *  snapshot for fresher data. */
+export function checkPrerequisitesWithProgress(
+  petId: number,
+  program: TrainingPackage,
+  enrollments: TrainingEnrollment[] = seriesEnrollments,
+): PrereqDetail[] {
+  const base = checkPrerequisitesForPet(petId, program);
+  return base.map((row) => {
+    if (row.satisfied) return row;
+    // Find an active (or paused) enrollment for this pet whose
+    // course-type name matches the prereq program by normalized name.
+    const targetName = normalize(row.programName);
+    const candidate = enrollments
+      .filter(
+        (e) =>
+          e.petId === petId &&
+          (e.status === "enrolled" || e.status === "paused") &&
+          (normalize(e.courseTypeName) === targetName ||
+            normalize(e.seriesName) === targetName),
+      )
+      .sort((a, b) =>
+        // Most-progressed enrollment wins — `sessionsAttended` descending.
+        b.sessionsAttended - a.sessionsAttended,
+      )[0];
+    if (!candidate) return row;
+    return {
+      ...row,
+      inProgress: {
+        seriesName: candidate.seriesName,
+        sessionsAttended: candidate.sessionsAttended,
+        totalSessions: candidate.totalSessions,
+        status: candidate.status,
+      },
+    };
+  });
 }
 
 /** Detect circular dependency before saving a program — returns the chain of

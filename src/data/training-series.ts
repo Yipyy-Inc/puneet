@@ -581,6 +581,7 @@ type EnrollmentSeed = {
   paymentStatus: SeriesPaymentStatus;
   notes?: string;
   handlerName?: string;
+  preferredTimeOfDay?: TrainingEnrollment["preferredTimeOfDay"];
 };
 
 const enrollmentSeedsBySeries: Record<string, EnrollmentSeed[]> = {
@@ -814,7 +815,23 @@ const enrollmentSeedsBySeries: Record<string, EnrollmentSeed[]> = {
       status: "waitlisted",
       sessionsAttended: 0,
       paymentStatus: "unpaid",
-      notes: "Waitlisted in case a spot opens.",
+      notes: "Looking for a Saturday class — flexible on time.",
+      preferredTimeOfDay: "morning",
+    },
+    {
+      studentIndex: 3,
+      status: "waitlisted",
+      sessionsAttended: 0,
+      paymentStatus: "unpaid",
+      preferredTimeOfDay: "afternoon",
+    },
+    {
+      studentIndex: 5,
+      status: "waitlisted",
+      sessionsAttended: 0,
+      paymentStatus: "unpaid",
+      notes: "Owner can take any session that opens.",
+      preferredTimeOfDay: "no-preference",
     },
   ],
   "series-008": [
@@ -882,6 +899,9 @@ function buildSeriesEnrollment(
         : 0,
     paymentStatus: seed.paymentStatus,
     notes: seed.notes ?? "",
+    ...(seed.preferredTimeOfDay
+      ? { preferredTimeOfDay: seed.preferredTimeOfDay }
+      : {}),
     createdAt: NOW_ISO,
     updatedAt: NOW_ISO,
   };

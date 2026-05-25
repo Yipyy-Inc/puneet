@@ -56,6 +56,13 @@ export interface EnrollmentRules {
   fullPaymentAmount: number; // Full payment amount in dollars
   waitlistEnabled: boolean; // Whether waitlist is enabled
   allowDropIns: boolean; // Whether single-session drop-ins are allowed
+  /** Per-session cap on drop-in bookings. Separate from `maxCapacity` — a
+   *  series might cap regular enrollment at 8 but only allow 3 drop-ins
+   *  per session. Falls back to the global default when undefined. */
+  dropInMaxPerSession?: number;
+  /** Per-session price charged for drop-in attendees. When undefined, the
+   *  legacy fallback (`fullPaymentAmount / numberOfWeeks`) applies. */
+  dropInPrice?: number;
 }
 
 export interface TrainingSeriesSession {

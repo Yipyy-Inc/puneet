@@ -36,6 +36,11 @@ import {
   Trash2,
   TrendingDown,
 } from "lucide-react";
+import { HomeworkSubmissionsSection } from "./homework-submissions-section";
+
+// Mock current trainer — matches the convention used elsewhere in the app
+// (Smart Insights, etc.). A real auth context will own this later.
+const TRAINER_USER_NAME = "Marie Tremblay";
 import { trainingQueries } from "@/lib/api/training";
 import type {
   TrainingEnrollment,
@@ -49,6 +54,7 @@ import {
   getLastPracticedDate,
   getPracticeStreakDays,
   hasPracticedToday,
+  setTrainerResponseForDate,
 } from "@/lib/training-homework";
 import { HomeworkEditDialog } from "@/components/facility/training/homework-edit-dialog";
 
@@ -108,6 +114,7 @@ function HomeworkCard({
   onEdit,
   onMarkPracticed,
   onDelete,
+  onSaveTrainerResponse,
 }: {
   row: HomeworkRow;
   todayISO: string;
@@ -115,6 +122,7 @@ function HomeworkCard({
   onEdit: () => void;
   onMarkPracticed: () => void;
   onDelete: () => void;
+  onSaveTrainerResponse: (practiceDate: string, response: string) => void;
 }) {
   const { homework, enrollment } = row;
   const assignedLabel = homework.unlockedDate ?? homework.sessionDate;
@@ -364,6 +372,12 @@ function HomeworkCard({
               )}
             </div>
           </div>
+
+          <HomeworkSubmissionsSection
+            homework={homework}
+            todayISO={todayISO}
+            onSaveResponse={onSaveTrainerResponse}
+          />
         </div>
       </div>
     </li>
@@ -449,6 +463,25 @@ export function TrainingProfileHomework({
     const next = bumpNextDueDate(homework, todayISO);
     fanOutHomeworkUpsert(queryClient, { ...homework, nextDueDate: next });
     toast.success(`Next practice ${next}.`);
+  }
+
+  function saveTrainerResponse(
+    homework: TrainingHomework,
+    practiceDate: string,
+    response: string,
+  ) {
+    const updated = setTrainerResponseForDate(
+      homework,
+      practiceDate,
+      response,
+      TRAINER_USER_NAME,
+    );
+    fanOutHomeworkUpsert(queryClient, updated);
+    if (response.trim().length === 0) {
+      toast(`Response cleared for "${homework.title}".`);
+    } else {
+      toast.success(`Response sent to owner for "${homework.title}".`);
+    }
   }
 
   function confirmDelete() {
@@ -572,6 +605,9 @@ export function TrainingProfileHomework({
                 onEdit={() => openEdit(row.homework)}
                 onMarkPracticed={() => markPracticed(row.homework)}
                 onDelete={() => setDeleting(row.homework)}
+                onSaveTrainerResponse={(date, response) =>
+                  saveTrainerResponse(row.homework, date, response)
+                }
               />
             ))}
           </ul>
@@ -616,6 +652,9 @@ export function TrainingProfileHomework({
                   onEdit={() => openEdit(row.homework)}
                   onMarkPracticed={() => markPracticed(row.homework)}
                   onDelete={() => setDeleting(row.homework)}
+                  onSaveTrainerResponse={(date, response) =>
+                    saveTrainerResponse(row.homework, date, response)
+                  }
                 />
               ))}
             </ul>

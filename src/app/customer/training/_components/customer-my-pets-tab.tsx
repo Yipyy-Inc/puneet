@@ -48,6 +48,17 @@ export function CustomerMyPetsTab({ customerId }: Props) {
     return pickEligiblePets(customer.pets, enrollments, customerId);
   }, [customer, enrollments, customerId]);
 
+  // Scope enrollments to this owner so the per-pet Progress sub-tab doesn't
+  // pull other owners' records through the chain.
+  const ownerEnrollments = useMemo(
+    () => enrollments.filter((e) => e.ownerId === customerId),
+    [enrollments, customerId],
+  );
+  const seriesById = useMemo(
+    () => new Map(seriesList.map((s) => [s.id, s])),
+    [seriesList],
+  );
+
   const dashboards = useMemo(() => {
     if (!customer) return [];
     return eligiblePets.map((pet) =>
@@ -106,6 +117,9 @@ export function CustomerMyPetsTab({ customerId }: Props) {
           dashboard={d}
           todayISO={todayISO}
           nowMs={nowMs}
+          enrollments={ownerEnrollments}
+          seriesById={seriesById}
+          attendances={attendances}
         />
       ))}
     </div>

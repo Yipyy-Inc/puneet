@@ -19,6 +19,7 @@ import {
   Check,
   Cat,
   FileWarning,
+  Lock,
   Info,
   CheckCheck,
   XCircle,
@@ -42,6 +43,11 @@ import { cn } from "@/lib/utils";
 import type { Client } from "@/types/client";
 import type { ModuleConfig } from "@/types/facility";
 import type { Pet } from "@/types/pet";
+import { trainingPackages } from "@/data/training";
+import {
+  checkPrerequisitesForPet,
+  hasCompletedPrerequisites,
+} from "@/lib/training-program-prereqs";
 
 interface ClientPetStepProps {
   searchQuery: string;
@@ -54,6 +60,10 @@ interface ClientPetStepProps {
   selectedClient: Client | undefined;
   preSelectedClientId?: number;
   selectedService: string;
+  /** Training-only: when a specific program is deep-linked, dogs that
+   *  haven't completed the prereq programs are grayed out + tagged with a
+   *  note about what's missing. */
+  preSelectedProgramId?: string;
   configs: { daycare: ModuleConfig; boarding: ModuleConfig };
   // Guest estimate props
   isEstimateMode?: boolean;
@@ -101,6 +111,7 @@ export function ClientPetStep({
   setSelectedPetIds,
   selectedClient,
   preSelectedClientId,
+  preSelectedProgramId,
   selectedService,
   configs,
   isEstimateMode,
@@ -256,6 +267,35 @@ export function ClientPetStep({
     }
     return true;
   };
+
+  // Resolve the locked-in training program (if any) once so prereq checks
+  // below are a constant-time lookup per pet.
+  const lockedProgram = React.useMemo(() => {
+    if (selectedService !== "training" || !preSelectedProgramId) return null;
+    return trainingPackages.find((p) => p.id === preSelectedProgramId) ?? null;
+  }, [selectedService, preSelectedProgramId]);
+
+  const canSelectForProgramPrereq = React.useCallback(
+    (pet: Pet) => {
+      if (!lockedProgram) return true;
+      if ((lockedProgram.prerequisitePackageIds?.length ?? 0) === 0) return true;
+      // The current prereq helper checks against dogs; cats can't enroll in
+      // a training program anyway, so we just gate on dogs here.
+      if (pet.type !== "Dog") return false;
+      return hasCompletedPrerequisites(pet.id, lockedProgram);
+    },
+    [lockedProgram],
+  );
+
+  const prereqResultsByPet = React.useMemo(() => {
+    if (!lockedProgram) return new Map<number, ReturnType<typeof checkPrerequisitesForPet>>();
+    const map = new Map<number, ReturnType<typeof checkPrerequisitesForPet>>();
+    if (!selectedClient) return map;
+    for (const pet of selectedClient.pets) {
+      map.set(pet.id, checkPrerequisitesForPet(pet.id, lockedProgram));
+    }
+    return map;
+  }, [lockedProgram, selectedClient]);
 
   // Get selected pets
   const selectedPets = React.useMemo(() => {
@@ -1117,9 +1157,16 @@ export function ClientPetStep({
                   <div className="grid grid-cols-2 gap-3 pr-2">
                     {selectedClient.pets.map((pet) => {
                       const isSelected = selectedPetIds.includes(pet.id);
-                      const canSelect = canSelectForEvaluation(pet);
+                      const canSelectEval = canSelectForEvaluation(pet);
+                      const canSelectPrereq = canSelectForProgramPrereq(pet);
+                      const canSelect = canSelectEval && canSelectPrereq;
                       const isDisabled = !canSelect;
                       const evalBadge = renderEvalBadge(pet);
+                      const missingPrereqs = canSelectEval && !canSelectPrereq
+                        ? (prereqResultsByPet.get(pet.id) ?? [])
+                            .filter((r) => !r.satisfied)
+                            .map((r) => r.programName)
+                        : [];
 
                       return (
                         <div
@@ -1189,6 +1236,18 @@ export function ClientPetStep({
                                   {evalBadge && (
                                     <div className="mt-1">{evalBadge}</div>
                                   )}
+                                  {missingPrereqs.length > 0 && (
+                                    <div className="mt-1 inline-flex items-start gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px]/snug text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                                      <FileWarning className="mt-0.5 size-3 shrink-0" />
+                                      <span>
+                                        Needs to complete{" "}
+                                        <span className="font-semibold">
+                                          {missingPrereqs.join(", ")}
+                                        </span>{" "}
+                                        first
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                                 {isSelected && !isDisabled && (
                                   <Check className="text-primary size-5 shrink-0" />
@@ -1202,6 +1261,15 @@ export function ClientPetStep({
                                       Already Evaluated
                                     </Badge>
                                   )}
+                                {isDisabled && missingPrereqs.length > 0 && (
+                                  <Badge
+                                    variant="outline"
+                                    className="shrink-0 gap-1 border-amber-200 bg-amber-50 text-[10px] text-amber-800"
+                                  >
+                                    <Lock className="size-3" />
+                                    Prereq
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>

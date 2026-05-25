@@ -1,6 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -12,12 +13,18 @@ import {
   Hourglass,
   MapPin,
   PlayCircle,
+  Ticket,
   Users,
 } from "lucide-react";
 import type {
   TrainingSeries,
   TrainingSeriesSession,
 } from "@/lib/training-series";
+import { trainingQueries } from "@/lib/api/training";
+import {
+  buildDropInCountsBySessionId,
+  resolveDropInMax,
+} from "@/lib/training-drop-ins";
 
 type SessionStatus = TrainingSeriesSession["status"];
 
@@ -75,7 +82,53 @@ function attendanceLabel(session: TrainingSeriesSession): string {
   return `${session.enrolledCount} expected`;
 }
 
+function DropInCounter({
+  count,
+  max,
+  completed,
+}: {
+  count: number;
+  max: number;
+  completed: boolean;
+}) {
+  const full = count >= max;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums",
+        completed
+          ? "bg-violet-100 text-violet-700"
+          : full
+            ? "bg-amber-100 text-amber-700"
+            : "bg-sky-100 text-sky-700",
+      )}
+      title={
+        full
+          ? "Drop-in capacity reached"
+          : `Drop-ins: ${count} of ${max} booked`
+      }
+    >
+      <Ticket className="size-3" />
+      {count} / {max}
+      <span className="ml-0.5 font-normal opacity-80">drop-ins</span>
+    </span>
+  );
+}
+
 export function SeriesSessionsTab({ series }: { series: TrainingSeries }) {
+  const { data: moduleSettings } = useQuery(trainingQueries.moduleSettings());
+  const { data: dropInBookings = [] } = useQuery(
+    trainingQueries.dropInBookings(),
+  );
+  const dropInCountsBySessionId = buildDropInCountsBySessionId(
+    dropInBookings.filter((b) => b.seriesId === series.id),
+  );
+  const dropInMax = resolveDropInMax(
+    series,
+    moduleSettings?.defaultDropInMaxPerSession,
+  );
+  const showDropIns = series.enrollmentRules.allowDropIns;
+
   function handleComplete(session: TrainingSeriesSession) {
     // The Session Completion flow is deferred — the caller asked for the
     // button to surface here while they finalize the spec for the flow.
@@ -141,7 +194,7 @@ export function SeriesSessionsTab({ series }: { series: TrainingSeries }) {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge
                 variant="outline"
                 className={cn("gap-1 border", meta.cls)}
@@ -155,10 +208,26 @@ export function SeriesSessionsTab({ series }: { series: TrainingSeries }) {
                   "inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 tabular-nums",
                   session.status === "completed" && "bg-emerald-100 text-emerald-700",
                 )}
-                title="Attendance count"
+                title={`Enrolled: ${session.enrolledCount} of ${series.maxCapacity} max`}
               >
                 <Users className="size-3" />
-                {attendanceLabel(session)}
+                {session.enrolledCount} / {series.maxCapacity}
+                <span className="text-muted-foreground ml-0.5 font-normal">
+                  enrolled
+                </span>
+              </span>
+              {showDropIns && (
+                <DropInCounter
+                  count={dropInCountsBySessionId.get(session.id) ?? 0}
+                  max={dropInMax}
+                  completed={session.status === "completed"}
+                />
+              )}
+              <span
+                className="text-muted-foreground inline-flex items-center text-[10px] italic"
+                title={attendanceLabel(session)}
+              >
+                · {attendanceLabel(session)}
               </span>
             </div>
 

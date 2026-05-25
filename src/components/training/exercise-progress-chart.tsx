@@ -19,6 +19,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { EXERCISE_RATING_LABELS } from "@/lib/training-report-cards";
 
 /** A single rating point — one session worth of data. */
 export interface ExerciseProgressPoint {
@@ -41,13 +42,10 @@ interface Props {
   height?: number;
 }
 
-const TIER_LABEL: Record<number, string> = {
-  1: "Needs work",
-  2: "Developing",
-  3: "Good",
-  4: "Great",
-  5: "Mastered",
-};
+// Single source of truth for the rating vocabulary lives in
+// `training-report-cards`. The chart re-exports the same labels so the
+// y-axis is self-explaining without needing a separate legend.
+const TIER_LABEL: Record<number, string> = EXERCISE_RATING_LABELS;
 
 function formatDate(iso: string): string {
   return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
@@ -117,7 +115,7 @@ export function ExerciseProgressChart({
     <ResponsiveContainer width="100%" height={height}>
       <ComposedChart
         data={padded}
-        margin={{ top: 8, right: 12, left: -8, bottom: 4 }}
+        margin={{ top: 8, right: 12, left: 6, bottom: 4 }}
       >
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -143,7 +141,12 @@ export function ExerciseProgressChart({
           tick={{ fontSize: 10, fill: "rgb(100 116 139)" }}
           tickLine={false}
           stroke="rgb(203 213 225)"
-          width={22}
+          // Wider axis so "5 Mastered" fits without truncating. Labels
+          // collapse to just the number on very narrow chart sizes via the
+          // `tickFormatter` width check at render time would be overkill
+          // here — every consumer renders at ≥ 200px wide.
+          width={70}
+          tickFormatter={(v) => `${v} ${TIER_LABEL[v] ?? ""}`}
         />
         {/* Faint guide at "Good" (3) — anchors the eye on the midpoint */}
         <ReferenceLine y={3} stroke="rgb(203 213 225)" strokeDasharray="2 4" />

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +35,20 @@ import {
   hasPracticedToday,
   markPracticedToday,
 } from "@/lib/training-homework";
-import type { TrainingHomework } from "@/lib/training-enrollment";
+import type {
+  SessionAttendance,
+  TrainingEnrollment,
+  TrainingHomework,
+} from "@/lib/training-enrollment";
+import type { TrainingSeries } from "@/lib/training-series";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PetProgressCharts } from "@/components/training/pet-progress-charts";
+import { PathwayJourney } from "@/components/training/pathway-journey";
+import { MilestoneTrophyShelf } from "@/components/training/milestone-visuals";
+import { EXERCISE_RATING_LABELS } from "@/lib/training-report-cards";
+import { computePetMilestones } from "@/lib/pet-milestones";
+import { useQuery } from "@tanstack/react-query";
+import { trainingQueries } from "@/lib/api/training";
 
 // Recharts pulls a heavy dependency tree — defer it to first paint so the
 // rest of the dashboard renders fast on the customer portal.
@@ -51,6 +64,16 @@ interface Props {
   dashboard: PetTrainingDashboard;
   todayISO: string;
   nowMs: number;
+  /** Series enrollments for this customer — passed through so the Progress
+   *  sub-tab can render the full per-exercise chart set scoped to this pet. */
+  enrollments: TrainingEnrollment[];
+  /** Series id → series record map (built once in the parent) — also feeds
+   *  the Progress sub-tab so chart tooltips show series names. */
+  seriesById: Map<string, TrainingSeries>;
+  /** Facility-wide attendance records (the parent already queries them).
+   *  Used by the Overview mini progress panel to compute start → current
+   *  per-exercise ratings scoped to the active enrollment. */
+  attendances: SessionAttendance[];
 }
 
 function formatDate(iso: string): string {
@@ -93,9 +116,30 @@ export function CustomerPetTrainingDashboard({
   dashboard,
   todayISO,
   nowMs,
+  enrollments,
+  seriesById,
+  attendances,
 }: Props) {
   const { pet, currentProgram } = dashboard;
   void nowMs;
+
+  // Scope to this pet only — the parent already passes the whole owner's
+  // enrollments, and the Progress component uses petId for the attendance
+  // query, so we just keep enrollments that belong to this pet.
+  const petEnrollments = enrollments.filter((e) => e.petId === pet.id);
+  const petAttendances = attendances.filter((a) =>
+    petEnrollments.some((e) => e.id === a.enrollmentId),
+  );
+  const petEnrollmentIds = petEnrollments.map((e) => e.id);
+  const { data: petHomework = [] } = useQuery(
+    trainingQueries.homeworkForEnrollments(petEnrollmentIds),
+  );
+  const milestones = computePetMilestones({
+    attendances: petAttendances,
+    enrollments: petEnrollments,
+    seriesById,
+    homework: petHomework,
+  });
 
   return (
     <article className="space-y-3">
@@ -145,13 +189,46 @@ export function CustomerPetTrainingDashboard({
         )}
       </header>
 
-      {/* Four sections stacked — each needs full width to read well. */}
-      <div className="space-y-3">
-        <CurrentProgramPanel dashboard={dashboard} todayISO={todayISO} />
-        <SessionHistoryPanel dashboard={dashboard} todayISO={todayISO} />
-        <ProgressChartsPanel dashboard={dashboard} />
-        <HomeworkPanel dashboard={dashboard} todayISO={todayISO} />
-      </div>
+      {/* Sub-tabs — Overview / Session History / Progress. Homework stays
+          inside Overview so the per-pet view still surfaces what to practice
+          today; the customer also has a top-level Homework tab for the full
+          board. */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="history">Session History</TabsTrigger>
+          <TabsTrigger value="progress">Progress</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-3 pt-3">
+          <CurrentProgramPanel dashboard={dashboard} todayISO={todayISO} />
+          <PathwayJourney
+            petId={pet.id}
+            petName={pet.name}
+            enrollments={petEnrollments}
+          />
+          <CurrentSeriesProgressPanel
+            enrollment={currentProgram.enrollment}
+            attendances={attendances}
+          />
+          <HomeworkPanel dashboard={dashboard} todayISO={todayISO} />
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-4 pt-3">
+          <SessionHistoryPanel dashboard={dashboard} todayISO={todayISO} />
+          <MilestoneTrophyShelf petName={pet.name} milestones={milestones} />
+        </TabsContent>
+
+        <TabsContent value="progress" className="pt-3">
+          <PetProgressCharts
+            petId={pet.id}
+            petName={pet.name}
+            enrollments={petEnrollments}
+            seriesById={seriesById}
+            audience="customer"
+          />
+        </TabsContent>
+      </Tabs>
     </article>
   );
 }
@@ -303,6 +380,13 @@ function SessionHistoryPanel({
                   {relativeDays(a.sessionDate, todayISO)}
                 </p>
               </div>
+              {a.exercises && a.exercises.length > 0 && (
+                <p className="text-muted-foreground mt-0.5 text-[11px]">
+                  Rating scale: 1 {EXERCISE_RATING_LABELS[1]} · 2{" "}
+                  {EXERCISE_RATING_LABELS[2]} · 3 {EXERCISE_RATING_LABELS[3]} · 4{" "}
+                  {EXERCISE_RATING_LABELS[4]} · 5 {EXERCISE_RATING_LABELS[5]}
+                </p>
+              )}
               {a.trainerNotes && a.trainerNotes.trim() && (
                 <p className="mt-1 text-[12.5px]/relaxed text-slate-700">
                   {a.trainerNotes}
@@ -415,6 +499,224 @@ function ProgressChartsPanel({
         ))}
       </ul>
     </Panel>
+  );
+}
+
+/** ──────────── Mini progress (Overview) ───────────────────────────── */
+const RATING_TIER_LABEL: Record<number, string> = {
+  1: "Developing",
+  2: "Getting it",
+  3: "Good",
+  4: "Excellent",
+  5: "Mastered",
+};
+const RATING_TIER_COLOR: Record<number, string> = {
+  1: "#f43f5e",
+  2: "#f59e0b",
+  3: "#0ea5e9",
+  4: "#10b981",
+  5: "#8b5cf6",
+};
+
+interface MiniExerciseRow {
+  name: string;
+  start: 1 | 2 | 3 | 4 | 5;
+  current: 1 | 2 | 3 | 4 | 5;
+  delta: number;
+  ratingsCount: number;
+}
+
+function CurrentSeriesProgressPanel({
+  enrollment,
+  attendances,
+}: {
+  enrollment: TrainingEnrollment | null | undefined;
+  attendances: SessionAttendance[];
+}) {
+  const rows = useMemo<MiniExerciseRow[]>(() => {
+    if (!enrollment) return [];
+    // Pull every attended session for this enrollment, ordered chronologically,
+    // then group by exercise name with first + last rating.
+    const scoped = attendances
+      .filter(
+        (a) =>
+          a.enrollmentId === enrollment.id &&
+          (a.status === "present" || a.status === "late") &&
+          a.exercises &&
+          a.exercises.length > 0,
+      )
+      .slice()
+      .sort((a, b) => {
+        if (a.sessionDate !== b.sessionDate)
+          return a.sessionDate < b.sessionDate ? -1 : 1;
+        return a.sessionNumber - b.sessionNumber;
+      });
+
+    const byExercise = new Map<
+      string,
+      { first: 1 | 2 | 3 | 4 | 5; last: 1 | 2 | 3 | 4 | 5; count: number }
+    >();
+    for (const att of scoped) {
+      for (const ex of att.exercises ?? []) {
+        const prev = byExercise.get(ex.exerciseName);
+        if (prev) {
+          prev.last = ex.rating;
+          prev.count += 1;
+        } else {
+          byExercise.set(ex.exerciseName, {
+            first: ex.rating,
+            last: ex.rating,
+            count: 1,
+          });
+        }
+      }
+    }
+
+    const out: MiniExerciseRow[] = [];
+    for (const [name, data] of byExercise) {
+      out.push({
+        name,
+        start: data.first,
+        current: data.last,
+        delta: data.last - data.first,
+        ratingsCount: data.count,
+      });
+    }
+    // Most movement first, then by current rating, then alphabetical.
+    out.sort((a, b) => {
+      if (b.delta !== a.delta) return b.delta - a.delta;
+      if (b.current !== a.current) return b.current - a.current;
+      return a.name.localeCompare(b.name);
+    });
+    return out;
+  }, [enrollment, attendances]);
+
+  if (!enrollment || rows.length === 0) return null;
+
+  return (
+    <Panel icon={LineChart} title="Progress so far" iconTone="emerald">
+      <p className="text-muted-foreground -mt-1 mb-2 text-[11.5px]">
+        Every exercise in{" "}
+        <span className="font-medium text-slate-700">
+          {enrollment.seriesName}
+        </span>
+        , from where you started to where you are now.
+      </p>
+      <ul className="space-y-2.5">
+        {rows.map((row) => (
+          <MiniProgressRow key={row.name} row={row} />
+        ))}
+      </ul>
+      <p className="text-muted-foreground mt-2 text-[11px]">
+        Open the <span className="font-medium text-slate-700">Progress</span>{" "}
+        tab for the full per-session chart.
+      </p>
+    </Panel>
+  );
+}
+
+function MiniProgressRow({ row }: { row: MiniExerciseRow }) {
+  const min = Math.min(row.start, row.current);
+  const max = Math.max(row.start, row.current);
+  const improved = row.delta > 0;
+  const regressed = row.delta < 0;
+  const trackTone = improved
+    ? "bg-emerald-400"
+    : regressed
+      ? "bg-rose-300"
+      : "bg-slate-300";
+
+  return (
+    <li className="space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[13px] font-medium text-slate-800 truncate">
+          {row.name}
+        </p>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="text-muted-foreground text-[10px]">
+            Start{" "}
+            <span className="font-semibold text-slate-700">{row.start}</span>{" "}
+            → Now{" "}
+            <span className="font-semibold text-slate-700">{row.current}</span>
+          </span>
+          {improved && (
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
+              <TrendingUp className="size-2.5" />+{row.delta}
+            </span>
+          )}
+          {regressed && (
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
+              <TrendingDown className="size-2.5" />
+              {row.delta}
+            </span>
+          )}
+          {!improved && !regressed && row.ratingsCount > 1 && (
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
+              Steady
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* 5-segment rail with start (gray) + current (color) markers and a
+          tinted connector between them. Single-rating rows show start only. */}
+      <div className="relative">
+        <div className="flex gap-1">
+          {[1, 2, 3, 4, 5].map((n) => {
+            const inRange = n >= min && n <= max;
+            return (
+              <div
+                key={n}
+                className={cn(
+                  "h-1.5 flex-1 rounded-full",
+                  inRange ? trackTone : "bg-slate-200/70",
+                )}
+              />
+            );
+          })}
+        </div>
+        <div className="pointer-events-none absolute inset-0">
+          <Marker
+            position={row.start}
+            kind="start"
+            color="#94a3b8"
+            label={`Start: ${row.start} · ${RATING_TIER_LABEL[row.start]}`}
+          />
+          <Marker
+            position={row.current}
+            kind="current"
+            color={RATING_TIER_COLOR[row.current]!}
+            label={`Now: ${row.current} · ${RATING_TIER_LABEL[row.current]}`}
+          />
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function Marker({
+  position,
+  kind,
+  color,
+  label,
+}: {
+  position: number;
+  kind: "start" | "current";
+  color: string;
+  label: string;
+}) {
+  // Center each segment at the midpoint of its 1/5 slice.
+  const leftPct = ((position - 0.5) / 5) * 100;
+  const size = kind === "current" ? "size-3.5" : "size-2.5";
+  return (
+    <span
+      className={cn(
+        "absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-white shadow-sm",
+        size,
+      )}
+      style={{ left: `${leftPct}%`, backgroundColor: color }}
+      title={label}
+    />
   );
 }
 

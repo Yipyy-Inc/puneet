@@ -16,13 +16,39 @@ export interface MakeupSession {
   missedSessionId: string; // The session that was missed
   missedSessionNumber: number;
   missedSessionDate: string;
-  status: "pending" | "scheduled" | "completed" | "cancelled";
+  /** Lifecycle:
+   *   - `pending`    — customer requested from their portal, awaiting staff.
+   *   - `offered`    — facility surfaced a host session as a booking offer;
+   *                    customer hasn't accepted yet.
+   *   - `scheduled`  — customer accepted (or staff directly scheduled).
+   *   - `completed`  — make-up happened.
+   *   - `cancelled`  — customer skipped/cancelled.
+   *   - `ineligible` — facility marked the absence as not getting a make-up
+   *                    (past window, no-call no-show, etc.).
+   */
+  status:
+    | "pending"
+    | "offered"
+    | "scheduled"
+    | "completed"
+    | "cancelled"
+    | "ineligible";
   scheduledDate: string | null;
   scheduledTime: string | null;
   price: number; // e.g., $40
   trainerId: string | null;
   trainerName: string | null;
   notes: string;
+  /** Host series this make-up is attached to (when offered/scheduled). The
+   *  trainer running that series sees a Make-up badge on the appointment
+   *  block on their calendar. */
+  targetSeriesId?: string;
+  targetSeriesName?: string;
+  targetSessionId?: string;
+  /** Reason the facility marked the absence ineligible. Required by the
+   *  workflow so the audit trail explains the call. */
+  ineligibleReason?: string;
+  ineligibleByName?: string;
   createdAt: string;
   updatedAt: string;
 }

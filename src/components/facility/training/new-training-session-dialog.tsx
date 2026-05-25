@@ -35,6 +35,9 @@ interface Props {
   defaultDate?: string;
   defaultTime?: string;
   defaultTrainerId?: string;
+  /** Group / private preset — drives the initial Mode toggle. The trainer
+   *  can still flip it inside the dialog. */
+  defaultMode?: ClassType;
 }
 
 export function NewTrainingSessionDialog({
@@ -43,8 +46,9 @@ export function NewTrainingSessionDialog({
   defaultDate,
   defaultTime,
   defaultTrainerId,
+  defaultMode,
 }: Props) {
-  const [mode, setMode] = useState<ClassType>("group");
+  const [mode, setMode] = useState<ClassType>(defaultMode ?? "group");
   const [classId, setClassId] = useState<string>("");
   const [date, setDate] = useState<string>(
     defaultDate ?? new Date().toISOString().split("T")[0],
@@ -53,13 +57,15 @@ export function NewTrainingSessionDialog({
   const [petKey, setPetKey] = useState<string>(""); // "<clientId>:<petId>"
   const [notes, setNotes] = useState<string>("");
 
-  // Re-sync date/time on each open so slot clicks always reflect the latest
-  // pre-filled values. We don't sync `mode` — that's a user choice once opened.
+  // Re-sync date/time/mode on each open so slot clicks always reflect the
+  // latest pre-filled values. The right-click "New private session" path
+  // depends on the mode preset landing alongside the date/time.
   useEffect(() => {
     if (!open) return;
     setDate(defaultDate ?? new Date().toISOString().split("T")[0]);
     setTime(defaultTime ?? "10:00");
-  }, [open, defaultDate, defaultTime]);
+    if (defaultMode) setMode(defaultMode);
+  }, [open, defaultDate, defaultTime, defaultMode]);
 
   const { data: trainingClasses } = useQuery(trainingQueries.classes());
 

@@ -40,6 +40,7 @@ export default function NewBookingPage() {
   );
 
   const preSelectedService = searchParams?.get("service") ?? undefined;
+  const preSelectedProgramId = searchParams?.get("program") ?? undefined;
   const resumeBookingId = searchParams?.get("resumeBooking") ?? null;
 
   // If the customer clicked a recovery link in an email we'll restore every
@@ -109,6 +110,13 @@ export default function NewBookingPage() {
           facilityName={selectedFacility.name}
           preSelectedClientId={customer.id}
           preSelectedService={resumePreselection?.preSelectedService ?? preSelectedService}
+          preSelectedProgramId={
+            resumePreselection ? undefined : preSelectedProgramId
+          }
+          // When a service-specific program is deep-linked (e.g. customer
+          // tapped Enroll on a training catalog card), lock the wizard to
+          // that service so Step 2 is hidden + skipped.
+          lockService={!resumePreselection && !!preSelectedService}
           preSelectedPetId={resumePreselection?.preSelectedPetId}
           preSelectedStartDate={resumePreselection?.preSelectedStartDate}
           preSelectedEndDate={resumePreselection?.preSelectedEndDate}

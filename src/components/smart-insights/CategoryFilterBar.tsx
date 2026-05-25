@@ -1,17 +1,32 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import {
+  Sparkles,
+  TrendingUp,
+  Settings2,
+  Users,
+  UserCog,
+  Megaphone,
+  type LucideIcon,
+} from "lucide-react";
+import { KpiTile, type KpiTone } from "@/components/facility/dashboard/kpi-tile";
 import type { InsightCategory } from "@/types/smart-insights";
 
 export type CategoryFilter = "all" | InsightCategory;
 
-const TABS: { value: CategoryFilter; label: string }[] = [
-  { value: "all", label: "All Insights" },
-  { value: "revenue", label: "Revenue" },
-  { value: "operations", label: "Operations" },
-  { value: "customers", label: "Customers" },
-  { value: "staff", label: "Staff" },
-  { value: "marketing", label: "Marketing" },
+const TABS: {
+  value: CategoryFilter;
+  label: string;
+  icon: LucideIcon;
+  tone: KpiTone;
+  hint: string;
+}[] = [
+  { value: "all", label: "All Insights", icon: Sparkles, tone: "slate", hint: "Across all categories" },
+  { value: "revenue", label: "Revenue", icon: TrendingUp, tone: "emerald", hint: "Pricing & growth" },
+  { value: "operations", label: "Operations", icon: Settings2, tone: "indigo", hint: "Schedule & capacity" },
+  { value: "customers", label: "Customers", icon: Users, tone: "violet", hint: "Retention & churn" },
+  { value: "staff", label: "Staff", icon: UserCog, tone: "amber", hint: "Team & scheduling" },
+  { value: "marketing", label: "Marketing", icon: Megaphone, tone: "rose", hint: "Campaigns & outreach" },
 ];
 
 interface Props {
@@ -22,29 +37,19 @@ interface Props {
 
 export function CategoryFilterBar({ value, onChange, counts }: Props) {
   return (
-    <div className="flex flex-wrap gap-2">
-      {TABS.map((tab) => {
-        const isActive = value === tab.value;
-        const count = counts[tab.value];
-        return (
-          <Button
-            key={tab.value}
-            type="button"
-            variant={isActive ? "default" : "outline"}
-            size="sm"
-            onClick={() => onChange(tab.value)}
-            className="gap-1.5"
-          >
-            {tab.label}
-            <span
-              data-active={isActive}
-              className="rounded-full bg-black/10 px-1.5 text-[11px] data-[active=false]:bg-muted data-[active=false]:text-muted-foreground"
-            >
-              {count}
-            </span>
-          </Button>
-        );
-      })}
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+      {TABS.map((tab) => (
+        <KpiTile
+          key={tab.value}
+          label={tab.label}
+          value={counts[tab.value]}
+          hint={tab.hint}
+          icon={tab.icon}
+          tone={tab.tone}
+          active={value === tab.value}
+          onClick={() => onChange(tab.value)}
+        />
+      ))}
     </div>
   );
 }

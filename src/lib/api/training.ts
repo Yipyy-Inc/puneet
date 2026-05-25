@@ -12,6 +12,8 @@ import {
   trainingSeriesList,
 } from "@/data/training-series";
 import { defaultTrainingDisciplines } from "@/data/training-disciplines";
+import { defaultTrainingPathways } from "@/data/training-pathways";
+import { defaultHomeworkTemplates } from "@/data/training-homework-templates";
 import { trainingExercises } from "@/data/training-exercises";
 import { vaccinationRecords } from "@/data/pet-data";
 import {
@@ -23,6 +25,13 @@ import {
   trainingReportCardRecords,
 } from "@/data/training-history";
 import { clientTrainingPackages } from "@/data/client-training-packages";
+import {
+  defaultTrainingModuleSettings,
+  type TrainingModuleSettings,
+} from "@/lib/training-module-settings";
+import type { MakeupSession } from "@/lib/training-makeup";
+import type { TrainingDropInBooking } from "@/lib/training-drop-ins";
+import type { TrainingTimeBlock } from "@/lib/training-time-blocks";
 
 export const trainingQueries = {
   trainers: () => ({
@@ -109,6 +118,32 @@ export const trainingQueries = {
     queryKey: ["training", "disciplines", "all"] as const,
     queryFn: async () => defaultTrainingDisciplines,
   }),
+  /** Homework templates — saved homework assignments a trainer can load
+   *  into the post-session prompt or curate per course in the Course
+   *  Catalog. Active templates only (Settings/Catalog UI uses `all` below
+   *  for editing hidden templates). */
+  homeworkTemplates: () => ({
+    queryKey: ["training", "homework-templates"] as const,
+    queryFn: async () => defaultHomeworkTemplates.filter((t) => t.isActive),
+  }),
+  /** Unfiltered template catalog — used by the Course Catalog manager and
+   *  the "Save as template" action to validate name uniqueness. */
+  allHomeworkTemplates: () => ({
+    queryKey: ["training", "homework-templates", "all"] as const,
+    queryFn: async () => defaultHomeworkTemplates,
+  }),
+  /** Active training pathways — feeds the customer "Pathway Journey" panel
+   *  and the "Part of {Pathway}" badge on the Training Classes catalog. */
+  trainingPathways: () => ({
+    queryKey: ["training", "pathways"] as const,
+    queryFn: async () => defaultTrainingPathways.filter((p) => p.isActive),
+  }),
+  /** Unfiltered pathway catalog — used by Settings → Training so staff can
+   *  edit/toggle hidden pathways. */
+  allTrainingPathways: () => ({
+    queryKey: ["training", "pathways", "all"] as const,
+    queryFn: async () => defaultTrainingPathways,
+  }),
   /** Exercise library — feeds the Session Completion Step 2 picker. The list
    *  is grouped per discipline in the data file; the consumer is responsible
    *  for filtering down to whatever discipline the active session belongs
@@ -188,6 +223,52 @@ export const trainingQueries = {
   preSessionBriefedSessionIds: () => ({
     queryKey: ["training", "pre-session", "briefed"] as const,
     queryFn: async (): Promise<string[]> => [],
+    staleTime: Infinity,
+  }),
+  /** Exercises the trainer planned during the pre-session briefing for a
+   *  given session. The Session View's Exercises section reads from this
+   *  on first mount so the trainer walks in with their plan pre-loaded.
+   *  Pure client-state — defaults to an empty list and is mutated via
+   *  setQueryData from the briefing panel. */
+  plannedExercisesForSession: (sessionId: string) => ({
+    queryKey: ["training", "planned-exercises", sessionId] as const,
+    queryFn: async (): Promise<string[]> => [],
+    staleTime: Infinity,
+  }),
+  /** Catalog of make-up session records — populated when staff issue a
+   *  make-up from the Students tab or offer a slot from the facility-side
+   *  Make-up Sessions view. The customer portal + the per-pet History view
+   *  both read from this so issuance surfaces everywhere. */
+  allMakeupSessions: () => ({
+    queryKey: ["training", "makeup-sessions", "all"] as const,
+    queryFn: async (): Promise<MakeupSession[]> => [],
+    staleTime: Infinity,
+  }),
+  /** Calendar time blocks — facility-curated unavailable slots that show as
+   *  striped gray overlays on the training calendar. Persisted via the
+   *  shared cache today; the dialog + day view read from the same key so
+   *  a freshly-created block lights up the column instantly. */
+  calendarTimeBlocks: () => ({
+    queryKey: ["training", "calendar-time-blocks"] as const,
+    queryFn: async (): Promise<TrainingTimeBlock[]> => [],
+    staleTime: Infinity,
+  }),
+  /** Drop-in bookings — single-session attendance for series with
+   *  `allowDropIns: true`. Pure client-state today; the customer drop-in
+   *  dialog writes through this so the facility-side counters and the
+   *  session view student list see the booking instantly. */
+  dropInBookings: () => ({
+    queryKey: ["training", "drop-in-bookings"] as const,
+    queryFn: async (): Promise<TrainingDropInBooking[]> => [],
+    staleTime: Infinity,
+  }),
+  /** Facility-wide Training module settings. Pure client-state today —
+   *  Settings → Training writes to this cache; consumers (customer Homework
+   *  tab, etc.) read from it so a flip propagates to every surface. */
+  moduleSettings: () => ({
+    queryKey: ["training", "module-settings"] as const,
+    queryFn: async (): Promise<TrainingModuleSettings> =>
+      defaultTrainingModuleSettings,
     staleTime: Infinity,
   }),
 };

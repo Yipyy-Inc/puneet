@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,8 +19,8 @@ import { TrainingCalendarSidebar } from "./training-calendar-sidebar";
 import { TrainingCalendarDayView } from "./training-calendar-day-view";
 import { TrainingCalendarWeekView } from "./training-calendar-week-view";
 import { TrainingCalendarMonthView } from "./training-calendar-month-view";
-import { TrainingSessionPanel } from "./training-session-panel";
 import { NewTrainingSessionDialog } from "./new-training-session-dialog";
+import { BlockTimeDialog } from "./block-time-dialog";
 import { SmartSchedulingDialog } from "./smart-scheduling-dialog";
 import {
   EMPTY_TRAINING_FILTERS,
@@ -27,6 +28,7 @@ import {
   applyTrainingCalendarFilters,
   type TrainingCalendarFilterState,
 } from "./training-calendar-filters";
+import { buildAlertedPetIdSet } from "@/lib/training-active-alerts";
 import {
   formatISODate,
   getWeekDays,
@@ -40,6 +42,7 @@ const VIEW_MODES: { id: TrainingViewMode; label: string }[] = [
 ];
 
 export function TrainingCalendar() {
+  const router = useRouter();
   const todayStr = useMemo(() => formatISODate(new Date()), []);
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [viewMode, setViewMode] = useState<TrainingViewMode>("day");
@@ -47,21 +50,39 @@ export function TrainingCalendar() {
     EMPTY_TRAINING_FILTERS,
   );
   const [search, setSearch] = useState("");
-  const [activeSession, setActiveSession] = useState<TrainingSession | null>(
-    null,
-  );
+  const openSessionView = (session: TrainingSession) => {
+    router.push(`/facility/dashboard/services/training/session/${session.id}`);
+  };
   const [newSessionOpen, setNewSessionOpen] = useState(false);
   const [newSessionDefaults, setNewSessionDefaults] = useState<{
     date?: string;
     time?: string;
     trainerId?: string;
+    mode?: "group" | "private";
   }>({});
   const [smartSchedulingOpen, setSmartSchedulingOpen] = useState(false);
+  // Time-block dialog state — opens from the right-click context menu.
+  const [blockTimeTarget, setBlockTimeTarget] = useState<{
+    date: string;
+    startTime: string;
+    trainerId?: string;
+    trainerName?: string;
+  } | null>(null);
 
   const { data: trainers = [] } = useQuery(trainingQueries.trainers());
   const { data: trainingClasses = [] } = useQuery(trainingQueries.classes());
   const { data: trainingSessions = [] } = useQuery(trainingQueries.sessions());
   const { data: enrollmentList = [] } = useQuery(trainingQueries.enrollments());
+  const { data: trainerNoteList = [] } = useQuery(
+    trainingQueries.trainerNotes(),
+  );
+  const { data: makeupSessions = [] } = useQuery(
+    trainingQueries.allMakeupSessions(),
+  );
+  const { data: dropInBookings = [] } = useQuery(
+    trainingQueries.dropInBookings(),
+  );
+  const { data: disciplines = [] } = useQuery(trainingQueries.disciplines());
 
   const classesById = useMemo(() => {
     const map: Record<string, (typeof trainingClasses)[number] | undefined> =
@@ -98,6 +119,47 @@ export function TrainingCalendar() {
     return map;
   }, [enrollmentList]);
 
+  // Make-up records key their host session by `targetSessionId`, which is a
+  // `TrainingSeriesSession.id` from the series system. The calendar runs on
+  // the older `TrainingSession` model, so bridge the two by matching on
+  // date + start time + trainer — enough to flag the host block correctly
+  // in the mock dataset without a hard schema link.
+  const makeupCountByCalendarSessionId = useMemo(() => {
+    const live = makeupSessions.filter(
+      (m) => m.status === "offered" || m.status === "scheduled",
+    );
+    if (live.length === 0) return new Map<string, number>();
+    const map = new Map<string, number>();
+    for (const tSess of trainingSessions) {
+      const count = live.filter(
+        (m) =>
+          m.scheduledDate === tSess.date &&
+          m.scheduledTime === tSess.startTime &&
+          (!m.trainerId || m.trainerId === tSess.trainerId),
+      ).length;
+      if (count > 0) map.set(tSess.id, count);
+    }
+    return map;
+  }, [makeupSessions, trainingSessions]);
+
+  // Sessions whose roster includes at least one pet with an active alert.
+  // Drives the red exclamation badge on the appointment block.
+  const alertedSessionIds = useMemo(() => {
+    const alertedPetIds = buildAlertedPetIdSet(trainerNoteList);
+    if (alertedPetIds.size === 0) return new Set<string>();
+    const set = new Set<string>();
+    for (const sess of trainingSessions) {
+      for (const enrollmentId of sess.attendees) {
+        const enroll = enrollmentList.find((e) => e.id === enrollmentId);
+        if (enroll && alertedPetIds.has(enroll.petId)) {
+          set.add(sess.id);
+          break;
+        }
+      }
+    }
+    return set;
+  }, [trainerNoteList, trainingSessions, enrollmentList]);
+
   const privateAttendeeBySessionId = useMemo(() => {
     const map: Record<
       string,
@@ -128,6 +190,7 @@ export function TrainingCalendar() {
       trainingSessions,
       classesById,
       filters,
+      { dropIns: dropInBookings, disciplines },
     );
     if (!search.trim()) return afterFilters;
     const q = search.trim().toLowerCase();
@@ -152,7 +215,15 @@ export function TrainingCalendar() {
       }
       return false;
     });
-  }, [trainingSessions, classesById, filters, search, enrollmentsById]);
+  }, [
+    trainingSessions,
+    classesById,
+    filters,
+    search,
+    enrollmentsById,
+    dropInBookings,
+    disciplines,
+  ]);
 
   const dateHeader = useMemo(() => {
     if (viewMode === "day") {
@@ -263,6 +334,7 @@ export function TrainingCalendar() {
               filters={filters}
               onChange={setFilters}
               trainers={trainers}
+              disciplines={disciplines}
             />
 
             <div className="flex items-center gap-1 rounded-full bg-slate-100 p-1">
@@ -304,10 +376,26 @@ export function TrainingCalendar() {
             enrolledCountByClassId={enrolledCountByClassId}
             waitlistCountByClassId={waitlistCountByClassId}
             privateAttendeeBySessionId={privateAttendeeBySessionId}
-            onBlockClick={setActiveSession}
+            alertedSessionIds={alertedSessionIds}
+            makeupCountBySessionId={makeupCountByCalendarSessionId}
+            onBlockClick={openSessionView}
             onNew={() => openNewSession()}
             onSlotClick={(trainerId, time) =>
               openNewSession({ trainerId, time })
+            }
+            onSlotNewGroup={(trainerId, time) =>
+              openNewSession({ trainerId, time, mode: "group" })
+            }
+            onSlotNewPrivate={(trainerId, time) =>
+              openNewSession({ trainerId, time, mode: "private" })
+            }
+            onSlotBlockTime={(trainerId, time, trainerName) =>
+              setBlockTimeTarget({
+                date: selectedDate,
+                startTime: time,
+                trainerId,
+                trainerName,
+              })
             }
           />
         )}
@@ -337,17 +425,22 @@ export function TrainingCalendar() {
         )}
       </div>
 
-      <TrainingSessionPanel
-        session={activeSession}
-        onClose={() => setActiveSession(null)}
-      />
-
       <NewTrainingSessionDialog
         open={newSessionOpen}
         onOpenChange={setNewSessionOpen}
         defaultDate={newSessionDefaults.date}
         defaultTime={newSessionDefaults.time}
         defaultTrainerId={newSessionDefaults.trainerId}
+        defaultMode={newSessionDefaults.mode}
+      />
+
+      <BlockTimeDialog
+        open={!!blockTimeTarget}
+        onOpenChange={(o) => !o && setBlockTimeTarget(null)}
+        date={blockTimeTarget?.date ?? selectedDate}
+        startTime={blockTimeTarget?.startTime ?? "09:00"}
+        trainerId={blockTimeTarget?.trainerId}
+        trainerName={blockTimeTarget?.trainerName}
       />
 
       <SmartSchedulingDialog

@@ -9,6 +9,7 @@
  * mock); a follow-up refactor will rewire the page-level constants to read
  * from this catalog so changes propagate end-to-end.
  */
+import type { MilestoneKind } from "@/lib/pet-milestones";
 
 /** Physical training room or outdoor area — distinct from a facility
  *  `Location` (which represents a whole branch). One facility can have many
@@ -63,6 +64,12 @@ export interface TrainingModuleSettings {
   /** Facility-wide drop-in toggle (each series can still opt out via
    *  `enrollmentRules.allowDropIns`; this gates the whole capability). */
   allowDropIns: boolean;
+  /** Default cap on drop-in bookings per session — used as the prefill on
+   *  the Create Series modal. Series can override per-instance. */
+  defaultDropInMaxPerSession: number;
+  /** Default per-session drop-in price — used as the prefill on the Create
+   *  Series modal. Series can override per-instance. */
+  defaultDropInPrice: number;
   /** When true, customers must complete an evaluation before they can
    *  enroll in advanced programs. */
   requireEvaluationBeforeEnrollment: boolean;
@@ -80,7 +87,34 @@ export interface TrainingModuleSettings {
   /** When to deliver fresh report cards to owners. */
   reportCardSendMode: ReportCardSendMode;
 
+  /** When true, owners must attach a video before the "Mark as Done" button
+   *  activates on their portal. Defaults off so existing facilities aren't
+   *  surprised by stricter behavior — each facility opts in. */
+  requireVideoForHomeworkSubmission: boolean;
+
+  /** How long a waitlist Offer Spot invitation holds before auto-moving the
+   *  spot to the next person on the list. The half-window mark fires a
+   *  reminder. Spec calls for a 24-hour default. */
+  waitlistHoldHours: number;
+
+  /** When on, the system auto-sends a follow-up message N days after the
+   *  graduation card lands if the owner hasn't enrolled in the
+   *  recommended next program. Off = no follow-up regardless of timing. */
+  graduationFollowUpEnabled: boolean;
+  /** How many days after the graduation card sends to fire the follow-up.
+   *  Default 3 per the spec; minimum 1, maximum 30. */
+  graduationFollowUpDays: number;
+  /** Template body used for the follow-up message. The runtime substitutes
+   *  `{petName}` and `{programName}` placeholders. */
+  graduationFollowUpTemplate: string;
+
   notifications: TrainingNotificationToggles;
+
+  /** Per-milestone notification opt-outs. Key = milestone kind; `true` means
+   *  the customer gets a portal notification (and optional email) when the
+   *  milestone unlocks. Unset keys fall back to "on" — the default is to
+   *  notify on every milestone unless staff explicitly turn one off. */
+  milestoneNotifications: Partial<Record<MilestoneKind, boolean>>;
 }
 
 export const defaultTrainingModuleSettings: TrainingModuleSettings = {
@@ -127,12 +161,20 @@ export const defaultTrainingModuleSettings: TrainingModuleSettings = {
   defaultClassSize: 8,
   allowOnlineEnrollment: true,
   allowDropIns: true,
+  defaultDropInMaxPerSession: 3,
+  defaultDropInPrice: 40,
   requireEvaluationBeforeEnrollment: false,
   defaultEnrollmentMessage:
     "Welcome! We can't wait to meet your dog. Please arrive 10 minutes early on the first day with your dog on a 6-foot leash, treats, and proof of vaccinations.",
   waiverRequiredOverrides: {},
   autoCreateReportCardOnSessionComplete: true,
   reportCardSendMode: "after_review",
+  requireVideoForHomeworkSubmission: false,
+  waitlistHoldHours: 24,
+  graduationFollowUpEnabled: true,
+  graduationFollowUpDays: 3,
+  graduationFollowUpTemplate:
+    "{petName} has graduated — have you seen the upcoming {programName} classes? Tap below to enroll.",
   notifications: {
     emailEnabled: true,
     smsEnabled: true,
@@ -141,7 +183,22 @@ export const defaultTrainingModuleSettings: TrainingModuleSettings = {
     reportCardSent: true,
     seriesCancelled: true,
   },
+  // Default to notifying on every milestone — staff opt out individually.
+  // Empty object means "all on" via the fallback rule in
+  // `isMilestoneNotificationEnabled`.
+  milestoneNotifications: {},
 };
+
+/** Resolve the notification policy for a single milestone kind. Returns true
+ *  when the customer should receive a notification — unset keys fall back to
+ *  the spec's default ("notify on every milestone"). */
+export function isMilestoneNotificationEnabled(
+  settings: TrainingModuleSettings,
+  kind: MilestoneKind,
+): boolean {
+  const explicit = settings.milestoneNotifications[kind];
+  return explicit === undefined ? true : explicit;
+}
 
 export const DURATION_OPTIONS: readonly number[] = [30, 45, 60, 90, 120] as const;
 
