@@ -24,6 +24,7 @@ export const coatTypeEnum = z.enum([
   "wire",
   "curly",
   "double",
+  "matted",
 ]);
 export type CoatType = z.infer<typeof coatTypeEnum>;
 
@@ -57,10 +58,9 @@ export const toolConditionEnum = z.enum(["good", "needs-service", "retired"]);
 export type ToolCondition = z.infer<typeof toolConditionEnum>;
 
 export const stylistSkillLevelEnum = z.enum([
-  "junior",
-  "intermediate",
-  "senior",
-  "master",
+  "standard",
+  "premium",
+  "platinum",
 ]);
 export type StylistSkillLevel = z.infer<typeof stylistSkillLevelEnum>;
 
@@ -399,9 +399,41 @@ export const careLogEntrySchema = z.object({
 });
 export type CareLogEntry = z.infer<typeof careLogEntrySchema>;
 
+export const arrivalCoatConditionEnum = z.enum([
+  "clean",
+  "slightly-matted",
+  "heavily-matted",
+  "flea-tick",
+]);
+export type ArrivalCoatCondition = z.infer<typeof arrivalCoatConditionEnum>;
+
+export const arrivalBehaviorEnum = z.enum([
+  "calm",
+  "anxious",
+  "aggressive",
+  "better-than-usual",
+]);
+export type ArrivalBehavior = z.infer<typeof arrivalBehaviorEnum>;
+
+export const arrivalHealthFlagEnum = z.enum([
+  "none",
+  "skin-irritation",
+  "injury",
+  "other",
+]);
+export type ArrivalHealthFlag = z.infer<typeof arrivalHealthFlagEnum>;
+
 export const groomingIntakeSchema = z.object({
   coatCondition: z.enum(["normal", "matted", "severely-matted"]),
   behaviorNotes: z.string(),
+  /** Quick-tap arrival flags captured at check-in. Separate from the
+   *  legacy `coatCondition` (3-value session enum) so check-in can record
+   *  finer-grained signals (flea/tick, etc.) without breaking the existing
+   *  session-flow consumer. All three are optional — older intake records
+   *  pre-date the arrival fields and remain valid. */
+  arrivalCoatCondition: arrivalCoatConditionEnum.optional(),
+  arrivalBehavior: arrivalBehaviorEnum.optional(),
+  arrivalHealthFlags: z.array(arrivalHealthFlagEnum).optional(),
   allergies: z.array(z.string()),
   specialInstructions: z.string(),
   beforePhotos: z.array(z.string()),
@@ -480,6 +512,10 @@ export const appointmentStageSchema = z.object({
   label: z.string(),
   stylistId: z.string(),
   stylistName: z.string(),
+  /** Optional per-stage station — when set it overrides the parent
+   *  appointment's `stationId` for that stage's portion of the timeline,
+   *  allowing a Bath → Cut handoff between Tub A and Table B. */
+  stationId: z.string().optional(),
   startTime: z.string(),
   endTime: z.string(),
   /** ISO timestamp captured when the stage's groomer marks their portion done. */
@@ -599,6 +635,10 @@ export const groomingAppointmentSchema = z.object({
   ownerEmail: z.string(),
   stylistId: z.string(),
   stylistName: z.string(),
+  /** Grooming station (table/tub) assigned at booking time. Optional — when
+   *  absent the appointment is "auto-assigned at check-in". Used by the
+   *  booking flow's station picker to filter out time-conflicting stations. */
+  stationId: z.string().optional(),
   packageId: z.string(),
   packageName: z.string(),
   addOns: z.array(z.string()),
@@ -608,6 +648,35 @@ export const groomingAppointmentSchema = z.object({
   status: groomingStatusEnum,
   checkInTime: z.string().nullable(),
   checkOutTime: z.string().nullable(),
+  /** Estimated ready-for-pickup time captured at check-in. Computed from
+   *  check-in time + service duration + add-on durations, with optional
+   *  staff adjustment. HH:MM (24h). Shown to the owner in their portal so
+   *  they know when to come back without calling. */
+  estimatedReadyTime: z.string().optional(),
+  /** ISO timestamp captured when the groomer fires the "running long" SMS
+   *  to the owner. Suppresses the alert so it doesn't fire repeatedly for
+   *  the same overdue appointment. */
+  ownerEtaNotifiedAt: z.string().optional(),
+  /** Payment lifecycle — `paid` after the at-pickup payment screen confirms,
+   *  `refunded` if the booking was reversed. Defaults to `pending` for new
+   *  appointments. */
+  paymentStatus: z.enum(["pending", "paid", "refunded"]).optional(),
+  /** ISO timestamp of payment confirmation. */
+  paidAt: z.string().optional(),
+  /** Method used at pickup. */
+  paymentMethod: z
+    .enum(["card-on-file", "new-card", "cash", "package-pass", "store-credit"])
+    .optional(),
+  /** Tip recorded against the booking — set at booking (online) or at the
+   *  counter (in-person). Stored separately from totalPrice so the payout
+   *  split (tip → groomer, base → facility) stays clean. */
+  tipAmount: z.number().optional(),
+  /** Store-credit dollars applied to this booking, decremented from the
+   *  client's `storeCredit.balance` at payment time. */
+  appliedStoreCredit: z.number().optional(),
+  /** `CustomerPackage` id whose pass was redeemed at payment (different from
+   *  the booking-time package pre-application — this is the at-pickup hit). */
+  appliedPackagePassId: z.string().optional(),
   notes: z.string(),
   specialInstructions: z.string(),
   allergies: z.array(z.string()),
@@ -760,12 +829,11 @@ export const groomingPackageSchema = z.object({
   description: z.string(),
   basePrice: z.number(),
   duration: z.number(),
-  sizePricing: z.object({
-    small: z.number(),
-    medium: z.number(),
-    large: z.number(),
-    giant: z.number(),
-  }),
+  /**
+   * Price variations mapped to configurable facility size tiers (e.g. XS, S, M, L).
+   * The keys correspond to the `id` of a `petSizeTier` defined in `GroomingFacilityConfig`.
+   */
+  sizePricing: z.record(z.string(), z.number()),
   coatAdjustments: z
     .object({
       short: z.number(),
@@ -774,9 +842,20 @@ export const groomingPackageSchema = z.object({
       wire: z.number(),
       curly: z.number(),
       double: z.number(),
+      matted: z.number(),
+      /** When true, amounts in coatAdjustments are percentages of the size
+       *  price rather than flat dollar deltas. */
+      mode: z.enum(["flat", "percent"]),
     })
     .partial()
     .optional(),
+  /**
+   * Default dollar amount pre-filled in the "Matted Surcharge" field when
+   * staff trigger it manually at check-in. The surcharge is always opt-in
+   * per appointment — this is just the suggested starting value. Set to 0
+   * to let staff enter the amount freely.
+   */
+  mattedSurchargeDefault: z.number().nonnegative().optional(),
   breedOverrides: z.record(z.string(), z.number()).optional(),
   includes: z.array(z.string()),
   isActive: z.boolean(),
@@ -800,6 +879,11 @@ export const groomingPackageSchema = z.object({
    * default in the resolution priority. See {@link resolveEffectivePricing}.
    */
   stylistPricing: z.record(z.string(), z.number()).optional(),
+  /**
+   * Groomer Tier adjustments (Layer 4). Maps a stylistSkillLevel (e.g.,
+   * "premium", "platinum") to a fixed dollar modifier added to the service price.
+   */
+  tierAdjustments: z.record(stylistSkillLevelEnum, z.number()).optional(),
   /**
    * Add-ons that auto-attach when this package is booked. Each rule can
    * optionally restrict the auto-attach to pets matching its conditions —
@@ -1024,6 +1108,20 @@ export const groomingFacilityConfigSchema = z.object({
     salon: z.boolean(),
     mobile: z.boolean(),
   }),
+  /**
+   * Configurable size tiers used to map pet weights/sizes to price layers.
+   * If empty, the system falls back to default small/medium/large/giant.
+   */
+  petSizeTiers: z
+    .array(
+      z.object({
+        id: z.string(),
+        label: z.string(),
+        /** Max weight in lbs (inclusive) for this tier. If undefined, it acts as the "X and up" tier. */
+        maxWeightLbs: z.number().optional(),
+      }),
+    )
+    .optional(),
 });
 export type GroomingFacilityConfig = z.infer<
   typeof groomingFacilityConfigSchema

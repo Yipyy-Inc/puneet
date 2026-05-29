@@ -29,8 +29,12 @@ import {
   AlertTriangle,
   Activity,
   ShieldCheck,
+  BellRing,
+  UserX,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 function formatRelativeFromNow(iso: string, nowIso: string): string {
   const mins = Math.max(
@@ -73,6 +77,17 @@ export function LiveTrackingPage() {
     );
     return () => clearInterval(id);
   }, []);
+
+  // Per-van sent-reminder bookkeeping so the button switches to "Reminder
+  // sent" after one tap (and won't fire repeatedly during the same session).
+  const [remindersSent, setRemindersSent] = useState<Record<string, string>>(
+    {},
+  );
+  // Per-van auto-alert state — set once the no-data window crosses 30 min so
+  // the "manager alert" banner pulses for visibility without re-firing.
+  const [autoAlertedVans, setAutoAlertedVans] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const today = nowIso.split("T")[0];
   const nowMinutes = useMemo(() => {
@@ -132,6 +147,85 @@ export function LiveTrackingPage() {
   );
 
   const activeDelayCount = summaries.filter((s) => s.summary.delay).length;
+  const NO_DATA_ALERT_GRACE_MIN = 30;
+
+  // Per-van computed flags driven by today's scheduled mobile bookings vs.
+  // current time vs. tracking status. The earliest stop sets the deadline
+  // beyond which the manager gets pinged automatically.
+  const vanFlags = useMemo(() => {
+    const map: Record<
+      string,
+      {
+        firstStopMin: number | null;
+        minutesPastFirstStop: number;
+        noDataAlert: boolean;
+        hasScheduledStops: boolean;
+      }
+    > = {};
+    for (const { van, summary } of summaries) {
+      const staffIds = van.assignedStaffIds ?? [];
+      const todayAppts = appointments.filter(
+        (a) =>
+          a.date === today &&
+          a.status !== "cancelled" &&
+          a.status !== "no-show" &&
+          (staffIds.length === 0 || staffIds.includes(a.stylistId)),
+      );
+      const startMinutes = todayAppts
+        .map((a) => {
+          const [h, m] = a.startTime.split(":").map(Number);
+          return h * 60 + m;
+        })
+        .sort((x, y) => x - y);
+      const firstStopMin = startMinutes[0] ?? null;
+      const minutesPastFirstStop =
+        firstStopMin !== null ? nowMinutes - firstStopMin : 0;
+      const noDataAlert =
+        summary.status === "no-data-all-day" &&
+        todayAppts.length > 0 &&
+        firstStopMin !== null &&
+        minutesPastFirstStop > NO_DATA_ALERT_GRACE_MIN;
+      map[van.id] = {
+        firstStopMin,
+        minutesPastFirstStop,
+        noDataAlert,
+        hasScheduledStops: todayAppts.length > 0,
+      };
+    }
+    return map;
+  }, [summaries, appointments, today, nowMinutes]);
+
+  // Fire the auto-alert toast once per van per session — re-firing every
+  // minute the manager kept the page open would be unbearable.
+  useEffect(() => {
+    for (const { van } of summaries) {
+      const flags = vanFlags[van.id];
+      if (!flags?.noDataAlert) continue;
+      if (autoAlertedVans.has(van.id)) continue;
+      setAutoAlertedVans((prev) => {
+        const next = new Set(prev);
+        next.add(van.id);
+        return next;
+      });
+      toast.warning(`${van.name} — no location data`, {
+        description: `${flags.minutesPastFirstStop} min past the first scheduled stop. Driver may not have tracking enabled.`,
+        duration: 10000,
+      });
+    }
+  }, [summaries, vanFlags, autoAlertedVans]);
+
+  function handleSendDriverReminder(vanId: string, driverName: string) {
+    setRemindersSent((prev) => ({
+      ...prev,
+      [vanId]: new Date().toISOString(),
+    }));
+    const target = driverName === "—" ? "the driver" : driverName.split(" ")[0];
+    toast.message(`Reminder sent to ${target}`, {
+      description:
+        "Please enable location tracking in the Yipyy mobile app to start your route.",
+      duration: 8000,
+    });
+  }
 
   if (!mobileEnabled) {
     return (
@@ -211,13 +305,22 @@ export function LiveTrackingPage() {
         )}
         {summaries.map(({ van, summary }) => {
           const meta = describeVanStatus(summary.status);
+          // Resolve today's driver — primaryDriverId is the day's assigned
+          // driver in the current mock; fall back to the secondGroomer if
+          // present so a co-driving-only crew still surfaces a name.
           const driverName = (() => {
-            if (!van.primaryDriverId) return "—";
-            const staff = facilityStaff.find(
-              (s) => s.id === van.primaryDriverId,
+            const lookup = (id: string | undefined) => {
+              if (!id) return null;
+              const staff = facilityStaff.find((s) => s.id === id);
+              return staff ? `${staff.firstName} ${staff.lastName}` : null;
+            };
+            return (
+              lookup(van.primaryDriverId) ?? lookup(van.secondGroomerId) ?? "—"
             );
-            return staff ? `${staff.firstName} ${staff.lastName}` : "—";
           })();
+          const noDriverAssigned = driverName === "—";
+          const flags = vanFlags[van.id];
+          const reminderSentAt = remindersSent[van.id];
           return (
             <Card
               key={van.id}
@@ -226,6 +329,8 @@ export function LiveTrackingPage() {
                 summary.delay
                   ? "border-amber-300 dark:border-amber-900"
                   : "",
+                flags?.noDataAlert &&
+                  "border-red-300 dark:border-red-900",
               )}
             >
               <CardHeader className="pb-3">
@@ -253,9 +358,20 @@ export function LiveTrackingPage() {
                     {meta.label}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Driver: <strong>{driverName}</strong>
-                </p>
+                <div className="mt-0.5 flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    Driver: <strong>{driverName}</strong>
+                  </p>
+                  {noDriverAssigned && (
+                    <span
+                      title="A van operating without a named driver is an operational problem — assign someone in Mobile Grooming Settings."
+                      className="inline-flex items-center gap-1 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-800 dark:bg-red-950/40 dark:text-red-200"
+                    >
+                      <UserX className="size-2.5" />
+                      No driver assigned
+                    </span>
+                  )}
+                </div>
               </CardHeader>
 
               <CardContent className="space-y-2.5 text-xs">
@@ -265,13 +381,18 @@ export function LiveTrackingPage() {
                     label="Moving"
                     value={
                       <>
-                        Last ping{" "}
+                        Last ping at{" "}
                         <strong>
+                          {formatTimeLocal(summary.latestPing.recordedAt)}
+                        </strong>{" "}
+                        <span className="text-muted-foreground">
+                          (
                           {formatRelativeFromNow(
                             summary.latestPing.recordedAt,
                             nowIso,
                           )}
-                        </strong>
+                          )
+                        </span>
                         {" · between stops"}
                       </>
                     }
@@ -300,31 +421,78 @@ export function LiveTrackingPage() {
                 )}
 
                 {summary.status === "no-location" && summary.latestPing && (
-                  <>
-                    <Row
-                      icon={MapPin}
-                      label="Last known"
-                      value={
-                        summary.latestPing.address ??
-                        "Coordinates only — no address resolved"
-                      }
-                    />
-                    <Row
-                      icon={Clock}
-                      label="Last ping"
-                      value={formatRelativeFromNow(
-                        summary.latestPing.recordedAt,
-                        nowIso,
-                      )}
-                    />
-                  </>
+                  <Row
+                    icon={MapPin}
+                    label="Last known"
+                    value={
+                      <>
+                        Last seen at{" "}
+                        <strong>
+                          {summary.latestPing.address ??
+                            "Coordinates only — no address resolved"}
+                        </strong>{" "}
+                        stop at{" "}
+                        <strong>
+                          {formatTimeLocal(summary.latestPing.recordedAt)}
+                        </strong>{" "}
+                        <span className="text-muted-foreground">
+                          (
+                          {formatRelativeFromNow(
+                            summary.latestPing.recordedAt,
+                            nowIso,
+                          )}
+                          )
+                        </span>
+                      </>
+                    }
+                  />
                 )}
 
                 {summary.status === "no-data-all-day" && (
-                  <p className="rounded-md border border-dashed bg-muted/20 px-3 py-2 text-center text-muted-foreground italic">
-                    No tracking data received today. Confirm the driver has
-                    tracking enabled in the mobile app.
-                  </p>
+                  <div className="space-y-2">
+                    <p className="rounded-md border border-dashed bg-muted/20 px-3 py-2 text-center text-muted-foreground italic">
+                      No tracking data received today. Confirm the driver has
+                      tracking enabled in the mobile app.
+                    </p>
+                    {flags?.noDataAlert && (
+                      <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 dark:border-red-900 dark:bg-red-950/30">
+                        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-red-800 dark:text-red-200">
+                          <AlertTriangle className="size-3 animate-pulse" />
+                          Manager alert · {flags.minutesPastFirstStop} min
+                          past first stop
+                        </p>
+                        <p className="mt-0.5 text-[12px] text-red-900 dark:text-red-100">
+                          {van.name} has scheduled mobile bookings today and
+                          still hasn&apos;t pinged. Driver may have tracking
+                          disabled or the device may be offline.
+                        </p>
+                      </div>
+                    )}
+                    {reminderSentAt ? (
+                      <div className="inline-flex items-center gap-1.5 rounded-md bg-emerald-100 px-2.5 py-1 text-[11px] font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+                        <CheckCircle2 className="size-3" />
+                        Reminder sent at {formatTimeLocal(reminderSentAt)}
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 w-full justify-center gap-1.5 border-sky-300 bg-sky-50 text-sky-800 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200"
+                        onClick={() =>
+                          handleSendDriverReminder(van.id, driverName)
+                        }
+                        disabled={noDriverAssigned}
+                        title={
+                          noDriverAssigned
+                            ? "Assign a driver before sending a reminder."
+                            : undefined
+                        }
+                      >
+                        <BellRing className="size-3.5" />
+                        Send reminder to driver
+                      </Button>
+                    )}
+                  </div>
                 )}
 
                 {/* Delay heads-up */}

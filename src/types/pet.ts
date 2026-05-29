@@ -77,6 +77,20 @@ export const petSchema = z.object({
     .optional(),
   energyLevel: z.enum(["low", "medium", "high"]).optional(),
   petStatus: z.enum(["active", "inactive", "deceased"]).optional(),
+  /** Per-visit photo gallery — populated by the check-in flow (pre-groom
+   *  photos) and by the session panel (after photos). Surfaced in the pet
+   *  profile's "Visit photos" section so owners and staff can scroll a
+   *  history of how this pet has looked at each appointment. */
+  visitPhotos: z
+    .array(
+      z.object({
+        url: z.string(),
+        capturedAt: z.string(),
+        appointmentId: z.string(),
+        kind: z.enum(["before", "after"]),
+      }),
+    )
+    .optional(),
 });
 
 export type Pet = z.infer<typeof petSchema>;

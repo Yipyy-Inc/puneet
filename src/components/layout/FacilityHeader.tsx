@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,9 +34,30 @@ interface FacilityHeaderProps {
   facilityId?: number;
 }
 
+// Maps a `/services/<slug>` path segment to the BookingModal service key.
+// Limited to modules the wizard knows how to render details for — others
+// fall through to the unfiltered Service step.
+const SERVICE_SECTION_SLUGS: Record<string, string> = {
+  grooming: "grooming",
+  daycare: "daycare",
+  boarding: "boarding",
+};
+
 export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
   const { openBookingModal } = useBookingModal();
   const { t } = useUiText();
+  const pathname = usePathname();
+
+  // When staff hit "+ New Booking" from inside a service section, pre-select
+  // that service and skip the Service step so they don't have to re-pick the
+  // module they're already working in.
+  const sectionService = useMemo(() => {
+    const match = pathname?.match(
+      /^\/facility\/dashboard\/services\/([^/]+)/,
+    );
+    const slug = match?.[1];
+    return slug ? SERVICE_SECTION_SLUGS[slug] : undefined;
+  }, [pathname]);
 
   // Modal states
   const [isCreateClientModalOpen, setIsCreateClientModalOpen] = useState(false);
@@ -165,6 +187,8 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
                   facilityId: facilityId,
                   facilityName: facility.name,
                   onCreateBooking: handleCreateBooking,
+                  preSelectedService: sectionService,
+                  lockService: !!sectionService,
                 })
               }
             >
@@ -188,6 +212,8 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
                   facilityName: facility.name,
                   onCreateBooking: handleCreateBooking,
                   isEstimateMode: true,
+                  preSelectedService: sectionService,
+                  lockService: !!sectionService,
                 });
               }}
             >

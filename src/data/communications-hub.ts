@@ -671,6 +671,35 @@ export const automationRules: AutomationRule[] = [
       lastTriggered: "2026-03-20T11:45:00Z",
     },
   },
+  // ---- Package Automations ----
+  {
+    id: "auto-pkg-001",
+    name: "Package Expiry Alert (14 days)",
+    trigger: "package_expiry" as const,
+    enabled: true,
+    messageType: "email" as const,
+    templateId: "tmpl-pkg-expiry-14",
+    schedule: {
+      daysBeforeExpiry: 14,
+    },
+    stats: {
+      totalSent: 0,
+    },
+  },
+  {
+    id: "auto-pkg-002",
+    name: "Package Expiry Alert (7 days)",
+    trigger: "package_expiry" as const,
+    enabled: true,
+    messageType: "sms" as const,
+    templateId: "tmpl-pkg-expiry-7",
+    schedule: {
+      daysBeforeExpiry: 7,
+    },
+    stats: {
+      totalSent: 0,
+    },
+  },
 ];
 
 // ========================================

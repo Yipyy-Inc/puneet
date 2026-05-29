@@ -23,6 +23,10 @@ interface BookingModalConfig {
   preSelectedClientId?: number;
   preSelectedPetId?: number;
   preSelectedService?: string;
+  /** Skip the Service step entirely when a service is preselected. Useful when
+   *  the caller already knows which module the booking belongs to (e.g. the
+   *  global "+ New Booking" button fired from inside a service section). */
+  lockService?: boolean;
   preSelectedStartDate?: string;
   preSelectedEndDate?: string;
   preSelectedCheckInTime?: string;
@@ -87,6 +91,7 @@ export function BookingModalProvider({ children }: { children: ReactNode }) {
           preSelectedClientId={config.preSelectedClientId}
           preSelectedPetId={config.preSelectedPetId}
           preSelectedService={config.preSelectedService}
+          lockService={config.lockService ?? false}
           preSelectedStartDate={config.preSelectedStartDate}
           preSelectedEndDate={config.preSelectedEndDate}
           preSelectedCheckInTime={config.preSelectedCheckInTime}

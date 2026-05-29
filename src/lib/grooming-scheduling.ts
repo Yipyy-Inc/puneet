@@ -92,6 +92,36 @@ export function getAppointmentsForStylistOnDate(
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
 }
 
+/**
+ * Set of station ids already booked during the requested window on the given
+ * date. The station picker subtracts these from the eligible-by-size list so
+ * staff can't double-book a tub/table.
+ *
+ * Cancelled and no-show appointments are ignored. An appointment without a
+ * `stationId` (still flagged as "auto-assign at check-in") contributes
+ * nothing — there's no committed station to conflict against yet.
+ */
+export function getBookedStationIdsInWindow(
+  dateStr: string,
+  startTime: string,
+  endTime: string,
+  appointments: GroomingAppointment[],
+): Set<string> {
+  const start = timeToMin(startTime);
+  const end = timeToMin(endTime);
+  const booked = new Set<string>();
+  if (end <= start) return booked;
+  for (const a of appointments) {
+    if (!a.stationId) continue;
+    if (a.date !== dateStr) continue;
+    if (a.status === "cancelled" || a.status === "no-show") continue;
+    const aStart = timeToMin(a.startTime);
+    const aEnd = timeToMin(a.endTime);
+    if (aStart < end && aEnd > start) booked.add(a.stationId);
+  }
+  return booked;
+}
+
 // ─── Slot grid ───────────────────────────────────────────────────────────────
 
 export interface ComputeSlotGridArgs {

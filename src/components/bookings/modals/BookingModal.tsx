@@ -38,6 +38,17 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ServiceStep, ClientPetStep, DetailsStep, ConfirmStep } from "./steps";
 import { TipWizardContent } from "./steps/TipWizardContent";
+import { PackagePromptWizardContent } from "./steps/PackagePromptWizardContent";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  groomingQueries,
+  resolveEffectivePricing,
+} from "@/lib/api/grooming";
+import { getPetSize } from "@/lib/pet-size";
+import { computeBookingTotals, findZipTaxRate } from "@/lib/service-areas";
+import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
+import { computePackagePassDiscount } from "@/lib/grooming/package-pass";
+import { redeemPackagePass } from "@/data/customer-packages";
 import {
   STEPS,
   DAYCARE_SUB_STEPS,
@@ -252,6 +263,27 @@ export function BookingModal({
   const { getModuleBySlug } = useCustomServices();
   const { sections: daycareSections } = useDaycareAreas();
   const { categories: roomCategories, rooms: facilityRooms } = useRooms();
+  const queryClient = useQueryClient();
+  const { data: customerPackagesData = [] } = useQuery(
+    groomingQueries.customerPackages(),
+  );
+  // Pet-pricing overrides feed Step 1 of the rate engine (pet-custom
+  // shortcut) so the Confirm-step subtotal matches what the resolver
+  // produces on the service card AND what's stored on apt.basePrice
+  // when the appointment finally hits PaymentDialog.
+  const { data: groomingPetPricingOverrides = [] } = useQuery(
+    groomingQueries.allPetServicePricing(),
+  );
+  // Travel-zone surcharge (Step 6) + ZIP-prefix tax (Step 7). Same lookups
+  // the facility dialog and PaymentDialog use — single source of truth so
+  // ConfirmStep and the at-pickup screen agree by construction.
+  const {
+    travelZones: groomingTravelZones,
+    zipTaxRates: groomingZipTaxRates,
+  } = useMobileGrooming();
+  // Real impl would read this from the facility config; the demo uses a
+  // downtown Montréal anchor consistent with the facility dialog.
+  const FACILITY_BASE_POSTAL = "H2X 1Z4";
 
   // Estimate mode — initialized from prop, key-remount resets it correctly
   const [isEstimateMode, setIsEstimateMode] = useState(estimateMode);
@@ -765,6 +797,7 @@ export function BookingModal({
   }, [selectedService]);
   const [tipAmount, setTipAmount] = useState(0);
   const [showingTipStep, setShowingTipStep] = useState(false);
+  const [showingPackagePromptStep, setShowingPackagePromptStep] = useState(false);
   const [includesEvaluation, setIncludesEvaluation] = useState(false);
   const [depositPrompt, setDepositPrompt] = useState<DepositPromptValue>({
     collectNow: true,
@@ -1241,6 +1274,11 @@ export function BookingModal({
   // Calculate total price with dynamic pricing rules
   const calculatePrice = useMemo(() => {
     let basePrice = 0;
+    // Per-pet pricing breakdown — only populated for grooming. Drives the
+    // small explainer subline under the service row in ConfirmStep so
+    // customers (and staff) understand where the number came from. Does
+    // NOT affect basePrice itself, which is already the fully-resolved sum.
+    const groomingPriceBreakdown: Array<{ petName: string; lines: string[] }> = [];
 
     if (selectedService === "daycare") {
       const pricePerDay =
@@ -1249,15 +1287,74 @@ export function BookingModal({
     } else if (selectedService === "boarding") {
       basePrice = boarding.basePrice * Math.max(boardingNights, 1);
     } else if (selectedService === "grooming") {
-      // When a package is picked, use its starting price (smallest size).
-      // Final price resolves on the facility side once pet size/breed/coat
-      // are taken into account. Falls back to the category base price until
-      // staff/customer pick a package.
+      // Run each selected pet through the shared rate engine so Confirm
+      // matches the service-card "Price $X" and the at-pickup PaymentDialog
+      // total. The resolver handles Steps 1-4 (size base / coat / breed
+      // override / groomer tier — tier only when stylistId is supplied,
+      // which it isn't at this wizard stage). Falls back to the category
+      // base when no package is picked yet.
       const pkg = serviceType
         ? groomingPackages.find((p) => p.id === serviceType)
         : undefined;
-      const perPet = pkg ? pkg.sizePricing.small : grooming.basePrice;
-      basePrice = perPet * Math.max(pricingSelectedPetIds.length, 1);
+      if (pkg && selectedPets.length > 0) {
+        basePrice = selectedPets.reduce((sum, pet) => {
+          const pricing = resolveEffectivePricing({
+            petId: pet.id,
+            petSize: getPetSize(pet),
+            petBreed: pet.breed,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            petCoatType: pet.coatType as any,
+            petAgeMonths:
+              typeof pet.age === "number"
+                ? Math.max(0, Math.round(pet.age * 12))
+                : undefined,
+            stylistId: undefined,
+            package: pkg,
+            petPricingOverrides: groomingPetPricingOverrides,
+          });
+          // Capture which steps fired for this pet so ConfirmStep can render
+          // a 1-line explainer ("Standard Poodle breed pricing", "Coat: long
+          // +$10", etc.) without recomputing.
+          const lines: string[] = [];
+          const fmtDelta = (d: number) =>
+            `${d > 0 ? "+" : "-"}$${Math.abs(d).toFixed(2)}`;
+          if (pricing.source === "pet-custom") {
+            lines.push(`Saved pricing for ${pet.name}`);
+          } else if (pricing.source === "breed-override") {
+            lines.push(`${pet.breed} breed pricing`);
+          } else if (pricing.source === "stylist-specific") {
+            lines.push(`Stylist-specific pricing`);
+          } else {
+            // service-default path: surface any deltas layered on top of size.
+            const size = getPetSize(pet);
+            if (size) lines.push(`${size} size`);
+            if (pricing.coatAdjustment?.delta) {
+              lines.push(
+                `Coat: ${pricing.coatAdjustment.coatType} ${fmtDelta(pricing.coatAdjustment.delta)}`,
+              );
+            }
+            if (pricing.ageAdjustment?.delta) {
+              lines.push(
+                `${pricing.ageAdjustment.label} ${fmtDelta(pricing.ageAdjustment.delta)}`,
+              );
+            }
+          }
+          // Tier delta runs regardless of source (it sits on top of the
+          // resolved service price) — surface it whenever it fired.
+          if (pricing.tierAdjustment?.delta) {
+            lines.push(
+              `${pricing.tierAdjustment.tier} groomer tier ${fmtDelta(pricing.tierAdjustment.delta)}`,
+            );
+          }
+          if (lines.length > 0) {
+            groomingPriceBreakdown.push({ petName: pet.name, lines });
+          }
+          return sum + pricing.price;
+        }, 0);
+      } else {
+        const perPet = pkg ? pkg.sizePricing.small : grooming.basePrice;
+        basePrice = perPet * Math.max(pricingSelectedPetIds.length, 1);
+      }
     } else if (selectedService === "training") {
       basePrice =
         training.basePrice * Math.max(pricingSelectedPetIds.length, 1);
@@ -1446,17 +1543,87 @@ export function BookingModal({
       });
     }
 
-    const subtotal =
+    let subtotal =
       pricingComputation.total + medicationFeeTotal + feedingFeeTotal + evaluationFeeTotal;
-    const taxRate = isEstimateMode ? estimateTaxRate : 0;
+
+    let totalDiscount = pricingComputation.discountTotal || 0;
+    const adjustments = [...(pricingComputation.adjustments || [])];
+
+    // Step 6 — Travel zone surcharge. Looks up the matching zone from the
+    // van's home base to the client's postal code and adds the surcharge as
+    // a priceAdjustment so it (a) renders on ConfirmStep through the
+    // existing adjustments.map and (b) survives onto the appointment
+    // record for PaymentDialog to read at pickup.
+    const clientZip = selectedClient?.address?.zip;
+    if (
+      selectedService === "grooming" &&
+      groomingIsMobile &&
+      clientZip &&
+      groomingTravelZones.length > 0
+    ) {
+      const zoneBreakdown = computeBookingTotals({
+        serviceSubtotal: basePrice,
+        addOnTotal: pricingComputation.addOnsTotal,
+        isMobile: true,
+        basePostalCode: FACILITY_BASE_POSTAL,
+        clientPostalCode: clientZip,
+        zones: groomingTravelZones,
+        // Tax stays out of this lookup — it's handled separately by the
+        // existing flat-rate path (Fix #4 will swap that for ZIP tax).
+        zipTaxRates: [],
+      });
+      if (zoneBreakdown.zoneSurcharge > 0 && zoneBreakdown.zone) {
+        subtotal += zoneBreakdown.zoneSurcharge;
+        adjustments.push({
+          id: "travel_zone",
+          label: `Travel surcharge · ${zoneBreakdown.zone.label}`,
+          amount: zoneBreakdown.zoneSurcharge,
+          source: "custom_fee",
+        });
+      }
+    }
+
+    if (redeemedPackageId) {
+      // Single helper shared with PaymentDialog so the discount math stays
+      // identical across the booking-time application and the at-pickup
+      // application. Helper currently returns the base-service dollar value
+      // — add-ons stay billable per the spec.
+      const passDiscount = computePackagePassDiscount({
+        baseService: basePrice,
+      });
+      subtotal -= passDiscount;
+      totalDiscount += passDiscount;
+      adjustments.push({
+        id: "package_redemption",
+        label: "Package pass applied",
+        amount: -passDiscount,
+        source: "custom_fee",
+      });
+      subtotal = Math.max(0, subtotal);
+    }
+
+    // Step 7 — Tax. ZIP/postal-prefix lookup is the source of truth across
+    // all three display points (ConfirmStep + PaymentDialog + facility
+    // dialog). Falls back to the legacy estimateTaxRate when no postal
+    // code is on file (guest estimate / no client picked yet) so estimates
+    // don't silently turn into $0 tax.
+    const matchedTax = findZipTaxRate(
+      groomingZipTaxRates,
+      selectedClient?.address?.zip ?? "",
+    );
+    const taxRate = matchedTax
+      ? matchedTax.ratePercent / 100
+      : isEstimateMode
+        ? estimateTaxRate
+        : 0;
     const taxAmount = subtotal * taxRate;
     const total = subtotal + taxAmount;
 
     return {
       basePrice,
       addOnsTotal: pricingComputation.addOnsTotal,
-      adjustments: pricingComputation.adjustments,
-      discount: pricingComputation.discountTotal,
+      adjustments,
+      discount: totalDiscount,
       subtotal,
       taxRate,
       taxAmount,
@@ -1466,6 +1633,7 @@ export function BookingModal({
       feedingFeeTotal,
       evaluationFeeTotal,
       serviceFeeItems,
+      groomingPriceBreakdown,
     };
   }, [
     selectedService,
@@ -1498,6 +1666,12 @@ export function BookingModal({
     medications,
     feedingSchedule,
     includesEvaluation,
+    redeemedPackageId,
+    selectedPets,
+    groomingPetPricingOverrides,
+    groomingIsMobile,
+    groomingTravelZones,
+    groomingZipTaxRates,
   ]);
 
   // Check if service requires evaluation
@@ -1653,7 +1827,69 @@ export function BookingModal({
     isCustomerMode,
   ]);
 
+  const applicablePackages = useMemo(() => {
+    if (!selectedClient || !selectedService) return [];
+    
+    // Using an explicit type to match UnifiedApplicablePackage from PackagePromptWizardContent
+    const packages: { id: string; name: string; passesLeft: number; totalPasses: number }[] = [];
+    
+    // 1. Legacy packages (from client.packages)
+    if (selectedClient.packages) {
+      for (const pkg of selectedClient.packages) {
+        if (pkg.remainingCredits > 0) {
+          // For legacy packages, we might need a rough heuristic if they don't have a serviceId mapping,
+          // but let's assume they map to the module/service if their name or moduleId matches.
+          // For now, if they are just active, we might include them, or strictly check moduleId.
+          if (pkg.moduleId === selectedService || pkg.name.toLowerCase().includes(selectedService)) {
+            packages.push({
+              id: pkg.id,
+              name: pkg.name,
+              passesLeft: pkg.remainingCredits,
+              totalPasses: pkg.totalCredits,
+            });
+          }
+        }
+      }
+    }
+
+    // 2. New Prepaid packages (from customerPackages query)
+    const prepaid = customerPackagesData.filter(
+      (p) => p.customerId === selectedClient.id && p.status === "active",
+    );
+    for (const pkg of prepaid) {
+      if (pkg.passesTotal - pkg.passesUsed > 0) {
+        // A pass covers the booking when its moduleId matches the picked
+        // service (e.g. "grooming"). passes[].packageId points at the specific
+        // catalog row and is checked separately when finer matching is needed
+        // (currently only the module check is required here).
+        const coversService = pkg.passes.some(
+          (pass) => pass.moduleId === selectedService,
+        );
+
+        if (coversService) {
+          packages.push({
+            id: pkg.id,
+            name: pkg.packageName,
+            passesLeft: pkg.passesTotal - pkg.passesUsed,
+            totalPasses: pkg.passesTotal,
+          });
+        }
+      }
+    }
+
+    return packages;
+  }, [selectedClient, selectedService, serviceType, customerPackagesData]);
+
   const handleNext = () => {
+    // If package prompt is showing, dismiss it and proceed to tip/confirm
+    if (showingPackagePromptStep) {
+      setShowingPackagePromptStep(false);
+      if (tipConfig?.enabled && !isEstimateMode) {
+        setShowingTipStep(true);
+      }
+      return;
+    }
+
     // Tip step is showing — dismiss it and proceed to confirm
     if (showingTipStep) {
       setShowingTipStep(false);
@@ -1680,17 +1916,47 @@ export function BookingModal({
       setCurrentStep(nextStep);
       setCurrentSubStep(0);
       setHighestStepReached((prev) => Math.max(prev, nextStep));
-      // Show tip step before confirm when tip is enabled
-      if (nextStepId === "confirm" && tipConfig?.enabled && !isEstimateMode) {
-        setShowingTipStep(true);
+      
+      // Intercept before confirm step to show package prompt or tip screen
+      if (nextStepId === "confirm" && !isEstimateMode) {
+        if (applicablePackages.length > 0 && !redeemedPackageId && !isCustomerMode) {
+          setShowingPackagePromptStep(true);
+        } else if (tipConfig?.enabled) {
+          setShowingTipStep(true);
+        }
       }
     }
   };
 
   const handlePrevious = () => {
-    // Tip step is showing — go back to the previous step (details)
+    // If package prompt is showing, go back to the previous step (details)
+    if (showingPackagePromptStep) {
+      setShowingPackagePromptStep(false);
+      const prevStep = currentStep - 1;
+      const prevStepId = displayedSteps[prevStep]?.id;
+      setCurrentStep(prevStep);
+      if (
+        prevStepId === "details" &&
+        (selectedService === "daycare" ||
+          selectedService === "boarding" ||
+          selectedService === "evaluation" ||
+          selectedService === "grooming")
+      ) {
+        setCurrentSubStep(currentSubSteps.length - 1);
+      } else {
+        setCurrentSubStep(0);
+      }
+      return;
+    }
+
+    // Tip step is showing — go back to package prompt (if applicable) or previous step
     if (showingTipStep) {
       setShowingTipStep(false);
+      if (applicablePackages.length > 0 && !redeemedPackageId && !isCustomerMode) {
+        setShowingPackagePromptStep(true);
+        return;
+      }
+      
       const prevStep = currentStep - 1;
       const prevStepId = displayedSteps[prevStep]?.id;
       setCurrentStep(prevStep);
@@ -1711,10 +1977,15 @@ export function BookingModal({
     const currentStepId = displayedSteps[currentStep]?.id;
     const prevStepId = displayedSteps[currentStep - 1]?.id;
 
-    // From confirm, go back to tip step instead of jumping straight to details
-    if (currentStepId === "confirm" && tipConfig?.enabled && !isEstimateMode) {
-      setShowingTipStep(true);
-      return;
+    // From confirm, go back to tip step or package prompt instead of jumping straight to details
+    if (currentStepId === "confirm" && !isEstimateMode) {
+      if (tipConfig?.enabled) {
+        setShowingTipStep(true);
+        return;
+      } else if (applicablePackages.length > 0 && !redeemedPackageId && !isCustomerMode) {
+        setShowingPackagePromptStep(true);
+        return;
+      }
     }
 
     // Handle sub-steps for services that split details into multiple panes
@@ -2059,15 +2330,38 @@ export function BookingModal({
       });
     }
     if (redeemedPackageId) {
-      const pkg = selectedClient?.packages?.find(
+      const legacyPkg = selectedClient?.packages?.find(
         (p) => p.id === redeemedPackageId,
       );
-      if (pkg) {
-        toast.success(`Redeemed 1 session from ${pkg.name}`, {
-          description: `${Math.max(0, pkg.remainingCredits - 1)} session${
-            Math.max(0, pkg.remainingCredits - 1) === 1 ? "" : "s"
+      if (legacyPkg) {
+        toast.success(`Redeemed 1 session from ${legacyPkg.name}`, {
+          description: `${Math.max(0, legacyPkg.remainingCredits - 1)} session${
+            Math.max(0, legacyPkg.remainingCredits - 1) === 1 ? "" : "s"
           } remaining.`,
         });
+      } else {
+        const prepaid = customerPackagesData.find(
+          (p) => p.id === redeemedPackageId,
+        );
+        if (prepaid) {
+          const primaryPetId = Array.isArray(petId) ? petId[0] : petId;
+          const primaryPet = selectedPets.find((p) => p.id === primaryPetId);
+          const result = redeemPackagePass(prepaid.id, {
+            petId: primaryPetId,
+            petName: primaryPet?.name,
+            serviceLabel: prepaid.passes[0]?.serviceName ?? prepaid.packageName,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: ["grooming", "customer-packages"],
+          });
+          if (result.ok) {
+            toast.success(`Redeemed 1 pass from ${prepaid.packageName}`, {
+              description: `${result.passesLeft} pass${
+                result.passesLeft === 1 ? "" : "es"
+              } remaining.`,
+            });
+          }
+        }
       }
     }
 
@@ -3098,11 +3392,13 @@ export function BookingModal({
                 </span>
               </div>
               <h2 className="text-lg font-semibold">
-                {showingTipStep
-                  ? "Show Your Appreciation"
-                  : displayedSteps[currentStep]?.title}
+                {showingPackagePromptStep
+                  ? "Apply Package Pass"
+                  : showingTipStep
+                    ? "Show Your Appreciation"
+                    : displayedSteps[currentStep]?.title}
               </h2>
-              {displayedSteps[currentStep]?.id === "details" &&
+              {!showingPackagePromptStep && !showingTipStep && displayedSteps[currentStep]?.id === "details" &&
                 (selectedService === "daycare" ||
                   selectedService === "boarding" ||
                   selectedService === "evaluation") && (
@@ -3111,7 +3407,26 @@ export function BookingModal({
                   </p>
                 )}
             </div>
-            {showingTipStep && tipConfig?.enabled ? (
+            {showingPackagePromptStep ? (
+              <div className="min-h-0 flex-1 overflow-y-auto p-6">
+                <PackagePromptWizardContent
+                  applicablePackages={applicablePackages}
+                  onApply={(packageId) => {
+                    setRedeemedPackageId(packageId);
+                    setShowingPackagePromptStep(false);
+                    if (tipConfig?.enabled && !isEstimateMode) {
+                      setShowingTipStep(true);
+                    }
+                  }}
+                  onSkip={() => {
+                    setShowingPackagePromptStep(false);
+                    if (tipConfig?.enabled && !isEstimateMode) {
+                      setShowingTipStep(true);
+                    }
+                  }}
+                />
+              </div>
+            ) : showingTipStep && tipConfig?.enabled ? (
               <div className="min-h-0 flex-1 overflow-hidden">
                 <TipWizardContent
                   tipConfig={tipConfig}
@@ -3552,7 +3867,7 @@ export function BookingModal({
                   >
                     Cancel
                   </Button>
-                  {currentStep < displayedSteps.length - 1 || showingTipStep ? (
+                  {currentStep < displayedSteps.length - 1 || showingTipStep || showingPackagePromptStep ? (
                     <Button
                       type="button"
                       onClick={handleNext}
@@ -3563,7 +3878,11 @@ export function BookingModal({
                           : ""
                       }
                     >
-                      {showingTipStep ? "Continue to Review" : "Next"}
+                      {showingPackagePromptStep
+                        ? "Skip"
+                        : showingTipStep
+                          ? "Continue to Review"
+                          : "Next"}
                     </Button>
                   ) : (
                     <Button

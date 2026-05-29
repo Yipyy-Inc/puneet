@@ -109,6 +109,10 @@ interface ConfirmStepProps {
     medicationFeeTotal?: number;
     feedingFeeTotal?: number;
     serviceFeeItems?: Array<{ label: string; amount: number }>;
+    /** Per-pet pricing-rule trace for grooming bookings — surfaced under the
+     *  service row so staff/customer can see why the number is what it is
+     *  (size bucket, coat modifier, breed override, tier delta). */
+    groomingPriceBreakdown?: Array<{ petName: string; lines: string[] }>;
   };
   notificationEmail: boolean;
   setNotificationEmail: (value: boolean) => void;
@@ -1231,6 +1235,22 @@ export function ConfirmStep({
               ${calculatePrice.basePrice.toFixed(2)}
             </span>
           </div>
+          {/* Grooming rate-engine trace — one indented line per pet showing
+              the modifiers that fired (size · coat · breed · tier). Purely
+              explanatory; the price above already includes them. */}
+          {(calculatePrice.groomingPriceBreakdown ?? []).length > 0 && (
+            <div className="space-y-0.5">
+              {calculatePrice.groomingPriceBreakdown!.map((b) => (
+                <p
+                  key={b.petName}
+                  className="text-muted-foreground ml-1 text-[11px] italic"
+                >
+                  <span className="font-medium not-italic">{b.petName}:</span>{" "}
+                  {b.lines.join(" · ")}
+                </p>
+              ))}
+            </div>
+          )}
           {hasAddons &&
             (() => {
               const addonsTotal =
@@ -1278,9 +1298,9 @@ export function ConfirmStep({
                 <span className="text-muted-foreground">
                   {adjustment.label}
                 </span>
-                <span className="font-[tabular-nums] font-medium">
-                  {adjustment.amount > 0 ? "+" : ""}$
-                  {adjustment.amount.toFixed(2)}
+                <span className={cn("font-[tabular-nums] font-medium", adjustment.amount < 0 && "text-emerald-600")}>
+                  {adjustment.amount < 0 ? "-" : "+"}$
+                  {Math.abs(adjustment.amount).toFixed(2)}
                 </span>
               </div>
             ))}
@@ -1351,7 +1371,11 @@ export function ConfirmStep({
             <span className="text-sm font-bold">Total</span>
           </div>
           <span className="text-primary font-[tabular-nums] text-xl font-bold">
-            ${(calculatePrice.total + tipAmount).toFixed(2)}
+            {redeemedPackageId && (calculatePrice.total + tipAmount) === 0 ? (
+              <span className="text-emerald-600 text-sm">Package pass applied</span>
+            ) : (
+              `$${(calculatePrice.total + tipAmount).toFixed(2)}`
+            )}
           </span>
         </div>
       </div>

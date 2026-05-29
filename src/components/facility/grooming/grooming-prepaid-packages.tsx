@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,6 +56,7 @@ import {
   type GroomingPrepaidPackageService,
   type GroomingPrepaidPackageStatus,
 } from "@/data/grooming-prepaid-packages";
+import { clients } from "@/data/clients";
 
 type PackageRecord = GroomingPrepaidPackage & Record<string, unknown>;
 
@@ -107,6 +109,9 @@ function PolicyToggle({
 
 export function GroomingPrepaidPackages() {
   const { data: services = [] } = useQuery(groomingQueries.packages());
+  const { data: customerPackages = [] } = useQuery(
+    groomingQueries.customerPackages(),
+  );
   const [packages, setPackages] = useState<GroomingPrepaidPackage[]>(
     groomingPrepaidPackages,
   );
@@ -487,7 +492,16 @@ export function GroomingPrepaidPackages() {
               prepay and redeem sessions over the validity window.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-2">
+
+          <Tabs defaultValue="details" className="w-full mt-2">
+            {editing && (
+              <TabsList className="w-full grid grid-cols-2 mb-4">
+                <TabsTrigger value="details">Package Details</TabsTrigger>
+                <TabsTrigger value="history">Redemption History</TabsTrigger>
+              </TabsList>
+            )}
+            <TabsContent value="details">
+              <div className="grid gap-4 py-2">
             {/* Basic info */}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -533,7 +547,12 @@ export function GroomingPrepaidPackages() {
 
             {/* Services */}
             <div className="space-y-3">
-              <Label>Included Services</Label>
+              <div>
+                <Label>Included Services</Label>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  Add one or more service types to create single-service or mixed bundles.
+                </p>
+              </div>
               <div className="flex flex-wrap gap-2">
                 <Select
                   value={pendingService.serviceId}
@@ -542,7 +561,9 @@ export function GroomingPrepaidPackages() {
                   }
                 >
                   <SelectTrigger className="min-w-[260px] flex-1">
-                    <SelectValue placeholder="Select a grooming service…" />
+                    <SelectValue 
+                      placeholder={form.services.length > 0 ? "Add another service to this bundle…" : "Select a grooming service…"} 
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {services
@@ -827,8 +848,60 @@ export function GroomingPrepaidPackages() {
                 />
               </div>
             </div>
-          </div>
-          <DialogFooter>
+              </div>
+            </TabsContent>
+            {editing && (
+              <TabsContent value="history">
+                <div className="space-y-4 py-2">
+                  {(() => {
+                    const packageRedemptions = customerPackages
+                      .filter(cp => cp.packageId === editing.id)
+                      .flatMap(cp => {
+                        const client = clients.find(c => c.id === cp.customerId);
+                        return cp.redemptions.map(r => ({ ...r, clientName: client?.name ?? "Unknown Client" }));
+                      })
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                    if (packageRedemptions.length === 0) {
+                      return (
+                        <div className="text-muted-foreground rounded-lg border border-dashed px-3 py-8 text-center text-sm">
+                          No passes have been redeemed for this package type yet.
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="rounded-md border">
+                        <div className="divide-y">
+                          {packageRedemptions.map((redemption) => (
+                            <div key={redemption.id} className="p-3 text-sm hover:bg-muted/50 transition-colors">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-semibold text-slate-800">
+                                  {redemption.clientName}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(redemption.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                                </span>
+                              </div>
+                              <div className="text-slate-600 flex items-center justify-between">
+                                <span>
+                                  Redeemed <span className="font-medium text-slate-800">{redemption.serviceLabel}</span> pass for <span className="font-medium text-slate-800">{redemption.petName}</span>
+                                </span>
+                                <Badge variant="outline" className="text-[10px]">
+                                  Pass #{redemption.passNumber}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </TabsContent>
+            )}
+          </Tabs>
+          <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setEditorOpen(false)}>
               Cancel
             </Button>

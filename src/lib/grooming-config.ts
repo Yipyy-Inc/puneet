@@ -87,6 +87,12 @@ export const defaultGroomingConfig: GroomingFacilityConfig = {
     salon: true,
     mobile: false,
   },
+  petSizeTiers: [
+    { id: "small", label: "Small", maxWeightLbs: 15 },
+    { id: "medium", label: "Medium", maxWeightLbs: 35 },
+    { id: "large", label: "Large", maxWeightLbs: 70 },
+    { id: "giant", label: "Giant" },
+  ],
 };
 
 /**

@@ -1,11 +1,11 @@
 "use client";
 
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -135,10 +135,13 @@ export function WaitlistPanel({
 }) {
   const { setStatus } = useGroomingWaitlist();
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col p-0 gap-0">
-        <DialogHeader className="border-b bg-amber-50/60 px-5 py-4 dark:bg-amber-950/20">
-          <DialogTitle className="flex items-center gap-2 text-base">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
+      >
+        <SheetHeader className="border-b bg-amber-50/60 px-5 py-4 dark:bg-amber-950/20">
+          <SheetTitle className="flex items-center gap-2 text-base">
             <Hourglass className="size-4 text-amber-600" />
             Waitlist
             <Badge
@@ -147,11 +150,11 @@ export function WaitlistPanel({
             >
               {entries.length}
             </Badge>
-          </DialogTitle>
+          </SheetTitle>
           <p className="text-xs text-muted-foreground">
             {formatDateLong(date)}
           </p>
-        </DialogHeader>
+        </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {entries.length === 0 ? (
@@ -337,7 +340,7 @@ export function WaitlistPanel({
             </ul>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

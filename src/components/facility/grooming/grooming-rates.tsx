@@ -168,9 +168,13 @@ function ServiceCard({
                   Popular
                 </Badge>
               )}
-              {!pkg.isActive && (
-                <Badge variant="secondary" className="text-[10px]">
-                  Inactive
+              {!pkg.isActive ? (
+                <Badge variant="secondary" className="text-[10px] bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-0">
+                  Draft
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0">
+                  Live
                 </Badge>
               )}
             </div>

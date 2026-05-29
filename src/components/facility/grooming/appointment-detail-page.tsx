@@ -57,6 +57,9 @@ import {
   getEffectiveAlertNotes,
   canMarkReadyForPickup,
 } from "@/lib/api/grooming";
+import { applyCheckInResult } from "@/lib/grooming/check-in-actions";
+import { useGroomingStations } from "@/hooks/use-grooming-stations";
+import { clients as initialClients } from "@/data/clients";
 import type {
   GroomingAppointment,
   GroomingStatus,
@@ -93,6 +96,20 @@ import {
   CheckInConfirmationDialog,
   type CheckInConfirmation,
 } from "./check-in-confirmation-dialog";
+import {
+  MarkReadyDialog,
+  type MarkReadyConfirmation,
+} from "./mark-ready-dialog";
+import {
+  PaymentDialog,
+  type PaymentResult,
+} from "./payment-dialog";
+import {
+  applyMarkReadyResult,
+  applyPaymentResult,
+} from "@/lib/grooming/check-in-actions";
+import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
+import { findZipTaxRate } from "@/lib/service-areas";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -346,6 +363,13 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [bookAgainOpen, setBookAgainOpen] = useState(false);
   const [checkInOpen, setCheckInOpen] = useState(false);
+  const [markReadyOpen, setMarkReadyOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const { setStationStatus } = useGroomingStations();
+  const { data: customerPackages = [] } = useQuery(
+    groomingQueries.customerPackages(),
+  );
+  const { zipTaxRates: paymentZipTaxRates } = useMobileGrooming();
   const [feeOverride, setFeeOverride] = useState<number | null>(null);
   const [scheduleOverride, setScheduleOverride] = useState<{
     date: string;
@@ -493,28 +517,146 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     if (result.dropOffObservations) {
       recordHistory(`Drop-off: ${result.dropOffObservations}`);
     }
-    // Mutate the mock appointment so the session panel + briefing reflect
-    // what was just confirmed.
-    (apt as typeof apt & { intake?: typeof apt.intake }).intake = {
-      ...(apt.intake ?? {
-        coatCondition: "normal",
-        behaviorNotes: "",
-        allergies: apt.allergies,
-        specialInstructions: apt.specialInstructions,
-        beforePhotos: [],
-        mattingFeeWarning: false,
-      }),
-      dropOffObservations:
-        result.dropOffObservations || apt.intake?.dropOffObservations,
-      sessionStartedAt: new Date().toISOString(),
-    };
-    apt.addOns = result.addOns;
-    apt.checkInTime = new Date().toISOString();
+    if (result.arrivalCoatCondition) {
+      recordHistory(
+        `Coat at arrival · ${result.arrivalCoatCondition.replace(/-/g, " ")}`,
+      );
+    }
+    if (result.arrivalBehavior) {
+      recordHistory(
+        `Behavior at arrival · ${result.arrivalBehavior.replace(/-/g, " ")}`,
+      );
+    }
+    if (result.arrivalHealthFlags && result.arrivalHealthFlags.length > 0) {
+      recordHistory(
+        `Health flags · ${result.arrivalHealthFlags
+          .map((f) => f.replace(/-/g, " "))
+          .join(", ")}`,
+      );
+    }
+    if (result.beforePhotos && result.beforePhotos.length > 0) {
+      recordHistory(
+        `Pre-groom photos · ${result.beforePhotos.length} captured`,
+      );
+    }
+    if (result.estimatedReadyTime) {
+      recordHistory(`Estimated ready · ${result.estimatedReadyTime}`);
+    }
+    if (result.mattedSurcharge > 0) {
+      recordFieldChange("Matting Fee", null, `+$${result.mattedSurcharge}`);
+    }
+
+    // All the side effects live in one place — apt mutations, station board
+    // update, pet visitPhoto write, alert-note promotion, add-on SMS.
+    const summary = applyCheckInResult(apt, result, {
+      clients: initialClients,
+      setStationStatus,
+      notify: (title, detail) => toast.message(title, detail),
+    });
+
+    if (summary.newlyAddedAddOns.length > 0) {
+      recordHistory(
+        `Add-ons added at check-in · ${summary.newlyAddedAddOns.join(", ")} (+$${summary.addedTotal})`,
+      );
+    }
+    for (const note of summary.promotedAlerts) {
+      recordHistory(`Pet profile alert · ${note.text}`);
+    }
+
+    const readyLine = result.estimatedReadyTime
+      ? ` · ready ~${result.estimatedReadyTime}`
+      : "";
     toast.success(`${apt.petName} — In Progress`, {
-      description: `Station ${result.stationName} · session started`,
+      description:
+        (result.mattedSurcharge > 0
+          ? `Station ${result.stationName} · matting fee +$${result.mattedSurcharge}`
+          : `Station ${result.stationName} · session started`) + readyLine,
     });
     setCheckInOpen(false);
   }
+
+  function handleMarkReadyConfirm(result: MarkReadyConfirmation) {
+    if (!apt) return;
+    const before = STATUS_META[status ?? apt.status].label;
+    setStatus("ready-for-pickup");
+    recordFieldChange(
+      "Status",
+      before,
+      STATUS_META["ready-for-pickup"].label,
+    );
+    const summary = applyMarkReadyResult(apt, result, {
+      clients: initialClients,
+      setStationStatus,
+      notify: (title, detail) => toast.message(title, detail),
+      facilityName: "Doggieville MTL",
+    });
+    if (result.afterPhotos.length > 0) {
+      recordHistory(`Post-groom photos · ${result.afterPhotos.length} captured`);
+    }
+    if (result.sessionNotes) {
+      recordHistory(`Session notes saved`);
+    }
+    if (summary.finalChargesTotal > 0) {
+      recordHistory(
+        `Final charges · +$${summary.finalChargesTotal.toFixed(2)} added at mark-ready`,
+      );
+      recordFieldChange(
+        "Total",
+        null,
+        `+$${summary.finalChargesTotal.toFixed(2)}`,
+      );
+    }
+    toast.success(`${apt.petName} — Ready for Pickup`, {
+      description: `Owner notified · total $${summary.updatedTotal.toFixed(2)}`,
+    });
+    setMarkReadyOpen(false);
+  }
+
+  function handlePaymentConfirm(result: PaymentResult) {
+    if (!apt) return;
+    const before = STATUS_META[status ?? apt.status].label;
+    setStatus("completed");
+    recordFieldChange("Status", before, STATUS_META.completed.label);
+    const summary = applyPaymentResult(apt, result, {
+      clients: initialClients,
+      setStationStatus,
+      notify: (title, detail) => toast.message(title, detail),
+      facilityName: "Doggieville MTL",
+    });
+    recordHistory(
+      `Payment · ${result.method.replace(/-/g, " ")} · $${result.amountCharged.toFixed(2)}`,
+    );
+    if (result.tipAmount > 0) {
+      recordHistory(`Tip · +$${result.tipAmount.toFixed(2)}`);
+    }
+    if (result.appliedPackagePassId && summary.packagePassesLeft !== undefined) {
+      recordHistory(
+        `Package pass redeemed · ${summary.packagePassesLeft} remaining`,
+      );
+    }
+    if (result.appliedStoreCredit > 0) {
+      recordHistory(
+        `Store credit applied · −$${result.appliedStoreCredit.toFixed(2)} (balance $${(summary.storeCreditAfter ?? 0).toFixed(2)})`,
+      );
+    }
+    toast.success(`${apt.petName} — Completed`, {
+      description: `Receipt sent · $${summary.amountCharged.toFixed(2)} charged`,
+    });
+    setPaymentOpen(false);
+  }
+
+  // The customer's package(s) applicable to this appointment — drives the
+  // auto-detected "Apply 1 pass" affordance in the payment dialog.
+  const applicableCustomerPackages = useMemo(() => {
+    if (!apt) return [];
+    return customerPackages.filter(
+      (p) =>
+        p.customerId === apt.ownerId &&
+        p.status === "active" &&
+        p.passesTotal - p.passesUsed > 0 &&
+        p.passes.some((pass) => pass.moduleId === "grooming"),
+    );
+  }, [customerPackages, apt]);
 
   function handleCancelConfirm(r: CancelResult) {
     if (!apt) return;
@@ -766,13 +908,18 @@ export function AppointmentDetailPage({ id }: { id: string }) {
                     return;
                   }
                   if (primary.next === "ready-for-pickup") {
-                    const check = canMarkReadyForPickup(apt);
-                    if (!check.allowed) {
-                      toast.error("Can't mark ready yet", {
-                        description: check.reason,
-                      });
-                      return;
-                    }
+                    // Open the Mark Ready dialog (captures after-photos,
+                    // session notes, late charges); the helper below handles
+                    // the side effects + status flip on confirm.
+                    setMarkReadyOpen(true);
+                    return;
+                  }
+                  if (primary.next === "completed") {
+                    // Check Out → opens the at-pickup payment screen instead
+                    // of flipping status directly. The dialog handles the
+                    // status flip + receipt SMS on confirm.
+                    setPaymentOpen(true);
+                    return;
                   }
                   advanceStatus(primary.next, primary.label);
                 }}
@@ -1362,6 +1509,34 @@ export function AppointmentDetailPage({ id }: { id: string }) {
         apt={apt}
         onConfirm={handleCheckInConfirm}
       />
+      <MarkReadyDialog
+        open={markReadyOpen}
+        onOpenChange={setMarkReadyOpen}
+        apt={apt}
+        facilityName="Doggieville MTL"
+        onConfirm={handleMarkReadyConfirm}
+      />
+      {(() => {
+        const paymentClient = initialClients.find((c) => c.id === apt.ownerId);
+        // Step 7 — ZIP-prefix tax lookup. Same helper BookingModal uses on
+        // ConfirmStep so the two displays agree to the cent.
+        const matchedTax = findZipTaxRate(
+          paymentZipTaxRates,
+          paymentClient?.address?.zip ?? "",
+        );
+        const resolvedTaxRate = matchedTax ? matchedTax.ratePercent / 100 : 0;
+        return (
+          <PaymentDialog
+            open={paymentOpen}
+            onOpenChange={setPaymentOpen}
+            apt={apt}
+            client={paymentClient}
+            applicableCustomerPackages={applicableCustomerPackages}
+            taxRate={resolvedTaxRate}
+            onConfirm={handlePaymentConfirm}
+          />
+        );
+      })()}
     </div>
   );
 }

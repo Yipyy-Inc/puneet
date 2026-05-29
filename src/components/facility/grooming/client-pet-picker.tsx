@@ -46,6 +46,9 @@ export interface ClientPetPickerValue {
   /** Set when the picker selected an existing pet for that client. */
   petId?: number;
   petName: string;
+  /** Species — "Dog", "Cat", "Other". Required at minimal-record stage; the
+   *  rest (breed, size, coat) can be filled later via the Step 1 warning. */
+  petType: string;
   petBreed: string;
   petSize: string;
   coatType: string;
@@ -57,6 +60,7 @@ const EMPTY_VALUE: ClientPetPickerValue = {
   ownerPhone: "",
   ownerEmail: "",
   petName: "",
+  petType: "",
   petBreed: "",
   petSize: "",
   coatType: "",
@@ -98,6 +102,9 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
   const [addingNewClient, setAddingNewClient] = useState(false);
   const [addingNewPet, setAddingNewPet] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  // Toggled by the incomplete-profile warning's "Update now" button so staff
+  // can fix size/breed/coat inline without leaving the dialog.
+  const [quickEditOpen, setQuickEditOpen] = useState(false);
 
   const clientMode: "search" | "new" | "selected" = selectedClient
     ? "selected"
@@ -154,6 +161,7 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
       ...value,
       petId: p.id,
       petName: p.name,
+      petType: p.type ?? "",
       petBreed: p.breed,
       petSize: inferSizeFromWeight(p.weight),
       coatType: p.coatType ?? "",
@@ -168,6 +176,7 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
       ...value,
       petId: undefined,
       petName: "",
+      petType: "",
       petBreed: "",
       petSize: "",
       coatType: "",
@@ -181,6 +190,7 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
       ...value,
       petId: undefined,
       petName: "",
+      petType: "",
       petBreed: "",
       petSize: "",
       coatType: "",
@@ -203,7 +213,8 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
         (c) =>
           c.name.toLowerCase().includes(q) ||
           c.email.toLowerCase().includes(q) ||
-          (c.phone ?? "").toLowerCase().includes(q),
+          (c.phone ?? "").toLowerCase().includes(q) ||
+          (c.pets ?? []).some((p) => p.name.toLowerCase().includes(q)),
       )
       .slice(0, 8);
   }, [clients, q]);
@@ -219,7 +230,7 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
               <CommandInput
                 value={searchQuery}
                 onValueChange={setSearchQuery}
-                placeholder="Search by name, phone, or email…"
+                placeholder="Search by client name, phone, email, or pet name…"
               />
               <CommandList className="max-h-64">
                 <CommandEmpty>
@@ -249,11 +260,32 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">
-                            {c.name}
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="truncate text-sm font-medium">
+                              {c.name}
+                            </p>
+                            {(c.outstandingBalance ?? 0) > 0 && (
+                              <Badge
+                                variant="outline"
+                                className="h-4 border-amber-300 bg-amber-50 px-1 text-[9px] font-semibold uppercase tracking-wide text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
+                              >
+                                Bal ${c.outstandingBalance}
+                              </Badge>
+                            )}
+                            {(c.noShowCount ?? 0) > 0 && (
+                              <Badge
+                                variant="outline"
+                                className="h-4 border-red-300 bg-red-50 px-1 text-[9px] font-semibold uppercase tracking-wide text-red-800 dark:border-red-700 dark:bg-red-950/40 dark:text-red-200"
+                              >
+                                No-show ×{c.noShowCount}
+                              </Badge>
+                            )}
+                          </div>
                           <p className="truncate text-[11px] text-muted-foreground">
-                            {c.phone ?? "no phone"} · {c.email}
+                            {c.phone ?? "no phone"}
+                            {c.lastVisitDate
+                              ? ` · Last visit ${new Date(c.lastVisitDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                              : " · No prior visits"}
                           </p>
                         </div>
                         <span className="shrink-0 text-[10px] text-muted-foreground">
@@ -397,6 +429,123 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
             />
           )}
 
+          {clientMode === "selected" &&
+            petMode === "pick" &&
+            value.petId !== undefined &&
+            (() => {
+              const missingFields: string[] = [];
+              if (!value.petSize) missingFields.push("size");
+              if (!value.petBreed) missingFields.push("breed");
+              if (!value.coatType) missingFields.push("coat type");
+              if (missingFields.length === 0) return null;
+              const fieldList =
+                missingFields.length === 1
+                  ? missingFields[0]
+                  : missingFields.length === 2
+                    ? `${missingFields[0]} and ${missingFields[1]}`
+                    : `${missingFields.slice(0, -1).join(", ")}, and ${missingFields[missingFields.length - 1]}`;
+              return (
+                <div className="mt-3 rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 dark:border-yellow-700 dark:bg-yellow-950/30">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-xs text-yellow-900 dark:text-yellow-100">
+                      Missing {fieldList} — price cannot be calculated
+                      accurately. Update now or continue.
+                    </p>
+                    {!quickEditOpen && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-6 shrink-0 border-yellow-400 bg-white px-2 text-[11px] text-yellow-900 hover:bg-yellow-100 dark:bg-yellow-950/40 dark:text-yellow-100"
+                        onClick={() => setQuickEditOpen(true)}
+                      >
+                        Update now
+                      </Button>
+                    )}
+                  </div>
+                  {quickEditOpen && (
+                    <div className="mt-2.5 grid grid-cols-2 gap-2.5 border-t border-yellow-200 pt-2.5 dark:border-yellow-800">
+                      {!value.petSize && (
+                        <div>
+                          <Label className="text-xs">Size</Label>
+                          <Select
+                            value={value.petSize}
+                            onValueChange={(v) => updatePetDraft({ petSize: v })}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="Select size" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="small">
+                                Small — under 15 lbs
+                              </SelectItem>
+                              <SelectItem value="medium">
+                                Medium — 15–40 lbs
+                              </SelectItem>
+                              <SelectItem value="large">
+                                Large — 40–70 lbs
+                              </SelectItem>
+                              <SelectItem value="giant">
+                                Giant — 70+ lbs
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      {!value.petBreed && (
+                        <div>
+                          <Label className="text-xs">Breed</Label>
+                          <Input
+                            placeholder="e.g. Golden Retriever"
+                            value={value.petBreed}
+                            onChange={(e) =>
+                              updatePetDraft({ petBreed: e.target.value })
+                            }
+                            className="mt-1"
+                          />
+                        </div>
+                      )}
+                      {!value.coatType && (
+                        <div>
+                          <Label className="text-xs">Coat type</Label>
+                          <Select
+                            value={value.coatType}
+                            onValueChange={(v) =>
+                              updatePetDraft({ coatType: v })
+                            }
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="Select coat" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(
+                                [
+                                  "short",
+                                  "medium",
+                                  "long",
+                                  "wire",
+                                  "curly",
+                                  "double",
+                                ] as const
+                              ).map((c) => (
+                                <SelectItem
+                                  key={c}
+                                  value={c}
+                                  className="capitalize"
+                                >
+                                  {c.charAt(0).toUpperCase() + c.slice(1)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
           {(petMode === "new" || clientMode === "new") && (
             <NewPetForm
               value={value}
@@ -528,7 +677,30 @@ function NewPetForm({
           />
         </div>
         <div>
-          <Label className="text-xs">Breed</Label>
+          <Label className="text-xs">
+            Pet Type <span className="text-destructive">*</span>
+          </Label>
+          <Select
+            value={value.petType}
+            onValueChange={(v) => onUpdate({ petType: v })}
+          >
+            <SelectTrigger className="mt-1">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Dog">Dog</SelectItem>
+              <SelectItem value="Cat">Cat</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs">
+            Breed
+            <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+              optional
+            </span>
+          </Label>
           <Input
             placeholder="e.g. Golden Retriever"
             value={value.petBreed}
@@ -538,7 +710,10 @@ function NewPetForm({
         </div>
         <div>
           <Label className="text-xs">
-            Size <span className="text-destructive">*</span>
+            Size
+            <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+              optional — needed for pricing
+            </span>
           </Label>
           <Select
             value={value.petSize}

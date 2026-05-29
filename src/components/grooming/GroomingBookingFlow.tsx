@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import { useState, useMemo, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { groomingQueries } from "@/lib/api/grooming";
 import { useGroomingValidation } from "@/hooks/use-grooming-validation";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
@@ -60,6 +62,10 @@ import {
   getStoredServiceAddOns,
 } from "@/lib/pricing-rules";
 import { toast } from "sonner";
+import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
+import { useGroomingStations } from "@/hooks/use-grooming-stations";
+import { checkPostalCodeOnDay, getActiveServiceAreasForDay } from "@/lib/service-areas";
+import type { ServiceArea } from "@/types/grooming";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -330,34 +336,7 @@ const SERVICE_VARIANTS: Record<string, ServiceVariant[]> = {
 // (see groomingAddOns memo inside the component). Add-ons created in the
 // grooming rates page Add-ons tab automatically appear here.
 
-// Mobile service zones (mock data - in production, this would come from facility config)
-interface ServiceZone {
-  id: string;
-  name: string;
-  daysOfWeek: number[]; // 0 = Sunday, 1 = Monday, etc.
-  neighborhoods: string[];
-}
 
-const MOBILE_SERVICE_ZONES: ServiceZone[] = [
-  {
-    id: "zone-a",
-    name: "Zone A - Downtown",
-    daysOfWeek: [1, 3], // Monday, Wednesday
-    neighborhoods: ["Downtown", "Financial District", "SOMA"],
-  },
-  {
-    id: "zone-b",
-    name: "Zone B - North",
-    daysOfWeek: [2, 4], // Tuesday, Thursday
-    neighborhoods: ["North Beach", "Russian Hill", "Nob Hill"],
-  },
-  {
-    id: "zone-c",
-    name: "Zone C - West",
-    daysOfWeek: [5, 6], // Friday, Saturday
-    neighborhoods: ["Sunset", "Richmond", "Presidio"],
-  },
-];
 
 export function GroomingBookingFlow({
   open,
@@ -370,6 +349,8 @@ export function GroomingBookingFlow({
     config,
   } = useGroomingValidation();
   const { selectedFacility } = useCustomerFacility();
+  const { vans, serviceAreas } = useMobileGrooming();
+  const { stations: groomingStations } = useGroomingStations();
   const [currentStep, setCurrentStep] = useState<
     1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
   >(1);
@@ -425,6 +406,10 @@ export function GroomingBookingFlow({
     message: string;
     nextAvailableDate: Date | null;
   } | null>(null);
+  
+  const activeStaffedVans = useMemo(() => {
+    return vans.filter((v) => v.active && v.assignedStaffIds.length > 0);
+  }, [vans]);
 
   // Step 8: Recurring & Packages
   const [recurringEnabled, setRecurringEnabled] = useState(false);
@@ -950,19 +935,30 @@ export function GroomingBookingFlow({
     selectedTimeSlot,
   ]);
 
-  // Mock data for packages and memberships (in production, fetch from API)
+  // Customer prepaid packages — shared query factory (same source as
+  // BookingModal + facility prepaid-packages admin), filtered to this
+  // customer + active grooming-module packs.
+  const { data: rawCustomerPackages = [] } = useQuery(
+    groomingQueries.customerPackages(),
+  );
   const customerPackages = useMemo(() => {
-    // Mock: Customer has a 4-pack grooming package with 3 remaining credits
-    return [
-      {
-        id: "pkg-001",
-        name: "4-Pack Grooming Package",
-        creditsRemaining: 3,
-        creditsTotal: 4,
-        validUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days from now
-      },
-    ];
-  }, []);
+    if (!customer) return [];
+    return rawCustomerPackages
+      .filter(
+        (p) =>
+          p.customerId === customer.id &&
+          p.status === "active" &&
+          p.passesTotal - p.passesUsed > 0 &&
+          p.passes.some((pass) => pass.moduleId === "grooming"),
+      )
+      .map((p) => ({
+        id: p.id,
+        name: p.packageName,
+        creditsRemaining: p.passesTotal - p.passesUsed,
+        creditsTotal: p.passesTotal,
+        validUntil: p.expiresAt ? new Date(p.expiresAt) : null,
+      }));
+  }, [rawCustomerPackages, customer]);
 
   const availablePackages = useMemo(() => {
     // Mock: Available packages for upsell
@@ -976,6 +972,7 @@ export function GroomingBookingFlow({
         savings: 40,
         savingsPercentage: 13,
         credits: 4,
+        isPopular: true,
       },
     ];
   }, []);
@@ -1207,9 +1204,17 @@ export function GroomingBookingFlow({
     setSelectedGroomerId(null); // Clear groomer selection if tier is selected
   };
 
-  // Check if both salon and mobile are available
-  const salonAvailable = config.serviceTypes.salon;
-  const mobileAvailable = config.serviceTypes.mobile;
+  // Check if both salon and mobile are available.
+  //   - "Mobile available" needs BOTH the config switch AND at least one
+  //     active staffed van (solo-salon facility otherwise sees the option
+  //     it can't fulfill).
+  //   - "Salon available" needs BOTH the config switch AND at least one
+  //     configured grooming station (mobile-only facility otherwise sees a
+  //     salon option that has no physical location).
+  const salonAvailable =
+    config.serviceTypes.salon && groomingStations.length > 0;
+  const mobileAvailable =
+    config.serviceTypes.mobile && activeStaffedVans.length > 0;
 
   // Determine default service location
   const defaultServiceLocation = useMemo(() => {
@@ -1225,41 +1230,49 @@ export function GroomingBookingFlow({
     }
   }, [defaultServiceLocation, serviceLocation]);
 
-  // Validate mobile address and find service zone
+  // Validate mobile address against real service areas
   const mobileAddressValidation = useMemo(() => {
     if (!mobileAddress || serviceLocation !== "mobile") return null;
 
-    // Simple validation - in production, use geocoding API
-    const addressLower = mobileAddress.toLowerCase();
-    let matchedZone: ServiceZone | null = null;
+    // Check today as a baseline or maybe we shouldn't validate the day until a date is picked?
+    // Wait, the original mock logic checked the neighborhood against zones.
+    // If we want to know if it's broadly valid for ANY day:
+    const activeAreas = serviceAreas.filter(a => a.active);
+    let matchedArea: ServiceArea | null = null;
+    let fallbackReview = false;
 
-    for (const zone of MOBILE_SERVICE_ZONES) {
-      if (
-        zone.neighborhoods.some((neighborhood) =>
-          addressLower.includes(neighborhood.toLowerCase()),
-        )
-      ) {
-        matchedZone = zone;
-        break;
+    for (const area of activeAreas) {
+      if (area.type === "postal" && area.postalCodes) {
+        if (area.postalCodes.some(pc => {
+          const clientCode = mobileAddress.toUpperCase().replace(/\s+/g, "");
+          const areaCode = pc.toUpperCase().replace(/\s+/g, "");
+          return clientCode === areaCode || (areaCode.length >= 3 && clientCode.startsWith(areaCode));
+        })) {
+          matchedArea = area;
+          break;
+        }
+      } else if (area.type === "radius" || area.type === "draw") {
+        // Radius/Draw requires human review or geocoding in a real system.
+        // We consider it conditionally valid so the booking flow isn't blocked.
+        fallbackReview = true;
+        matchedArea = area; 
       }
     }
 
-    if (!matchedZone) {
-      // Try to extract neighborhood from address
-      const possibleNeighborhood = addressLower.split(",")[0]?.trim();
+    if (!matchedArea) {
       return {
         isValid: false,
-        zone: null,
-        message: `We don't service this area yet. Join our waitlist for ${possibleNeighborhood || "this neighborhood"}`,
+        area: null,
+        message: `We don't service this postal code. Please check your address or choose Salon.`,
       };
     }
 
     return {
       isValid: true,
-      zone: matchedZone,
-      message: null,
+      area: matchedArea,
+      message: fallbackReview ? "This address requires manual review to confirm it is within our radius." : null,
     };
-  }, [mobileAddress, serviceLocation]);
+  }, [mobileAddress, serviceLocation, serviceAreas]);
 
   // Get available salon locations
   const availableSalonLocations = useMemo(() => {
@@ -1436,28 +1449,21 @@ export function GroomingBookingFlow({
     return slots;
   }, [selectedDate, serviceLocation, totalDurationWithAddOns]);
 
-  // Generate time slots for mobile (with routing algorithm)
+  // Generate time slots for mobile (with real vans)
   const generateMobileTimeSlots = useMemo(() => {
     if (
       !mobileDateRange ||
       !mobileAddressValidation?.isValid ||
-      serviceLocation !== "mobile"
+      serviceLocation !== "mobile" ||
+      activeStaffedVans.length === 0
     ) {
       return [];
     }
 
     const slots: TimeSlot[] = [];
-    const zone = mobileAddressValidation.zone;
-    if (!zone) return [];
+    const area = mobileAddressValidation.area;
+    if (!area) return [];
 
-    // Mock route data - in production, this would come from van scheduling
-    const mockRoute = [
-      { time: "08:00", address: "123 Main St, Downtown", driveTime: 0 },
-      { time: "10:15", address: "456 Oak Ave, Downtown", driveTime: 15 },
-      { time: "13:00", address: "789 Pine St, Downtown", driveTime: 20 },
-    ];
-
-    // Generate slots for each day in range that matches zone days
     const startDate = new Date(mobileDateRange.start);
     const endDate = new Date(mobileDateRange.end);
     const currentDate = new Date(startDate);
@@ -1467,80 +1473,20 @@ export function GroomingBookingFlow({
     while (currentDate <= endDate) {
       const dayOfWeek = currentDate.getDay();
 
-      // Check if this day is in the zone's service days
-      if (zone.daysOfWeek.includes(dayOfWeek)) {
-        // Generate time slots for this day
-        const daySlots: TimeSlot[] = [];
-        const slotDuration = totalDurationWithAddOns;
-
-        // Check each potential slot against route
-        for (let hour = 8; hour < 17; hour++) {
-          for (let minute = 0; minute < 60; minute += 30) {
+      // Check if this day is in the area's service days
+      if (area.daysOfWeek.includes(dayOfWeek)) {
+        // Generate mock slots for this day using actual staffed vans
+        for (let hour = 8; hour < 16; hour++) {
+          for (let minute = 0; minute < 60; minute += 60) {
             const timeString = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-
-            // Find previous appointment in route
-            const previousAppt = mockRoute.find((apt) => {
-              const [aptHour, aptMin] = apt.time.split(":").map(Number);
-              const aptTime = aptHour * 60 + aptMin;
-              const slotTime = hour * 60 + minute;
-              return aptTime < slotTime;
+            slots.push({
+              time: timeString,
+              status: "optimal",
+              available: true,
             });
-
-            if (previousAppt) {
-              const [prevHour, prevMin] = previousAppt.time
-                .split(":")
-                .map(Number);
-              const prevTime = prevHour * 60 + prevMin;
-              const slotTime = hour * 60 + minute;
-              const driveTime = previousAppt.driveTime || 15;
-              const bufferTime = 15; // Cleanup time
-              const prevEndTime = prevTime + 90 + bufferTime; // Assume 90 min appointment + buffer
-
-              // Check if slot fits with drive time
-              if (slotTime >= prevEndTime + driveTime) {
-                const slotEndTime = slotTime + slotDuration;
-                // Check if slot doesn't exceed end of day
-                if (slotEndTime <= 17 * 60) {
-                  const routePosition = mockRoute.indexOf(previousAppt) + 2; // +1 for index, +1 for this being next
-                  const weekday = currentDate.toLocaleDateString("en-US", {
-                    weekday: "long",
-                  });
-                  daySlots.push({
-                    time: timeString,
-                    status: driveTime < 15 ? "optimal" : "tight",
-                    available: true,
-                    driveTimeFromPrevious: driveTime,
-                    routePosition: `You'll be our ${routePosition}${routePosition === 2 ? "nd" : routePosition === 3 ? "rd" : "th"} stop in ${zone.name} that ${weekday}`,
-                  });
-                }
-              }
-            } else {
-              // First appointment of the day - check if slot fits
-              const slotEndTime = hour * 60 + minute + slotDuration;
-              if (slotEndTime <= 17 * 60) {
-                const weekday = currentDate.toLocaleDateString("en-US", {
-                  weekday: "long",
-                });
-                daySlots.push({
-                  time: timeString,
-                  status: hour < 10 ? "off-peak" : "optimal",
-                  available: true,
-                  routePosition: `You'll be our first stop in ${zone.name} that ${weekday}`,
-                });
-              }
-            }
           }
         }
-
-        // Add date info to slots
-        daySlots.forEach((slot) => {
-          slots.push({
-            ...slot,
-            time: `${currentDate.toISOString().split("T")[0]} ${slot.time}`, // Include date
-          });
-        });
       }
-
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
@@ -1549,6 +1495,7 @@ export function GroomingBookingFlow({
     mobileDateRange,
     mobileAddressValidation,
     serviceLocation,
+    activeStaffedVans,
     totalDurationWithAddOns,
   ]);
 
@@ -1597,10 +1544,10 @@ export function GroomingBookingFlow({
         disabled.push(date);
       }
 
-      // For mobile: disable days not in zone's service days
-      if (serviceLocation === "mobile" && mobileAddressValidation?.zone) {
+      // For mobile: disable days not in area's service days
+      if (serviceLocation === "mobile" && mobileAddressValidation?.area) {
         const dayOfWeek = date.getDay();
-        if (!mobileAddressValidation.zone.daysOfWeek.includes(dayOfWeek)) {
+        if (!mobileAddressValidation.area.daysOfWeek.includes(dayOfWeek)) {
           disabled.push(date);
         }
       }
@@ -1799,45 +1746,47 @@ export function GroomingBookingFlow({
     return removable;
   };
 
-  // Check if mobile zone is available on selected date
+  // Check if mobile area is available on selected date
   const checkMobileZoneConflict = (date: Date) => {
-    if (!mobileAddressValidation?.zone) {
-      return { hasConflict: false, message: "", nextAvailableDate: null };
-    }
-
-    const dayOfWeek = date.getDay();
-    const zone = mobileAddressValidation.zone;
-
-    // Check if this day is in the zone's service days
-    if (!zone.daysOfWeek.includes(dayOfWeek)) {
-      // Find next available date in this zone
-      const nextAvailable = findNextAvailableZoneDate(zone, date);
-
+    if (!mobileAddressValidation?.area) {
       return {
         hasConflict: true,
-        message: `We don't service your area on ${date.toLocaleDateString("en-US", { weekday: "long" })}s. Next available in your zone is ${nextAvailable ? nextAvailable.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) : "next week"}.`,
-        nextAvailableDate: nextAvailable,
+        message: "Please enter a valid address to see available dates.",
+        nextAvailableDate: null,
       };
     }
 
-    return { hasConflict: false, message: "", nextAvailableDate: null };
-  };
+    const area = mobileAddressValidation.area;
+    const dayOfWeek = date.getDay();
 
-  // Find next available date for a zone
-  const findNextAvailableZoneDate = (zone: ServiceZone, fromDate: Date) => {
-    const checkDate = new Date(fromDate);
-    checkDate.setDate(checkDate.getDate() + 1);
-
-    // Look up to 14 days ahead
-    for (let i = 0; i < 14; i++) {
-      const dayOfWeek = checkDate.getDay();
-      if (zone.daysOfWeek.includes(dayOfWeek)) {
-        return checkDate;
+    if (!area.daysOfWeek.includes(dayOfWeek)) {
+      // Find next available day
+      let nextDay = new Date(date);
+      for (let i = 1; i <= 7; i++) {
+        nextDay.setDate(nextDay.getDate() + 1);
+        if (area.daysOfWeek.includes(nextDay.getDay())) {
+          return {
+            hasConflict: true,
+            message: `We don't service your area on ${date.toLocaleDateString("en-US", { weekday: "long" })}s.`,
+            nextAvailableDate: nextDay,
+          };
+        }
       }
-      checkDate.setDate(checkDate.getDate() + 1);
     }
 
-    return null;
+    if (activeStaffedVans.length === 0) {
+      return {
+        hasConflict: true,
+        message: `There are currently no active vans with assigned staff available for mobile grooming.`,
+        nextAvailableDate: null,
+      };
+    }
+
+    return {
+      hasConflict: false,
+      message: "",
+      nextAvailableDate: null,
+    };
   };
 
   const handleBackToStep7 = () => {
@@ -3522,11 +3471,13 @@ export function GroomingBookingFlow({
                   {mobileAddress && mobileAddressValidation && (
                     <div className="mt-2">
                       {mobileAddressValidation.isValid ? (
-                        <div className="flex items-center gap-2 text-sm text-green-600">
+                        <div className="flex items-center gap-2 text-emerald-600">
                           <CheckCircle2 className="size-4" />
-                          <span>
+                          <span className="text-sm">
                             Service available in{" "}
-                            {mobileAddressValidation.zone?.name}
+                            <span className="font-semibold">
+                              {mobileAddressValidation.area?.name}
+                            </span>
                           </span>
                         </div>
                       ) : (
@@ -4384,7 +4335,7 @@ export function GroomingBookingFlow({
                         </p>
                         <p className="text-muted-foreground text-xs">
                           Valid until{" "}
-                          {isMounted
+                          {isMounted && pkg.validUntil
                             ? pkg.validUntil.toLocaleDateString("en-US", {
                                 month: "short",
                                 day: "numeric",
@@ -4436,8 +4387,15 @@ export function GroomingBookingFlow({
                   {availablePackages.map((pkg) => (
                     <div key={pkg.id} className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{pkg.name}</p>
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{pkg.name}</p>
+                            {pkg.isPopular && (
+                              <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300">
+                                Popular
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-muted-foreground text-sm">
                             {pkg.description}
                           </p>

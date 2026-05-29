@@ -8,6 +8,8 @@ import {
 } from "@/data/grooming";
 import { groomingPrepaidPackages } from "@/data/grooming-prepaid-packages";
 import type { GroomingPrepaidPackage } from "@/data/grooming-prepaid-packages";
+import { mockCustomerPackages } from "@/data/customer-packages";
+import type { CustomerPackageRecord } from "@/data/customer-packages";
 import { groomingWaitlist } from "@/data/grooming-waitlist";
 import type { GroomingWaitlistEntry } from "@/data/grooming-waitlist";
 import { petNotes } from "@/data/pet-notes";
@@ -213,6 +215,17 @@ export const groomingQueries = {
     queryKey: ["grooming", "prepaid-packages"] as const,
     queryFn: async () => groomingPrepaidPackages as GroomingPrepaidPackage[],
   }),
+  customerPackages: () => ({
+    queryKey: ["grooming", "customer-packages"] as const,
+    queryFn: async () => mockCustomerPackages as CustomerPackageRecord[],
+  }),
+  customerPackagesForClient: (clientId: number | undefined) => ({
+    queryKey: ["grooming", "customer-packages", "client", clientId] as const,
+    queryFn: async () =>
+      (clientId === undefined
+        ? []
+        : mockCustomerPackages.filter((p) => p.customerId === clientId)) as CustomerPackageRecord[],
+  }),
   products: () => ({
     queryKey: ["grooming", "products"] as const,
     queryFn: async () => groomingProducts as GroomingProduct[],
@@ -330,6 +343,12 @@ export type EffectivePricing = {
     /** Signed dollar delta applied (positive = surcharge). */
     delta: number;
   };
+  /** Groomer tier adjustment that fired, if any (delta on top of service price). */
+  tierAdjustment?: {
+    tier: string;
+    /** Signed dollar delta applied. */
+    delta: number;
+  };
 };
 
 /**
@@ -438,14 +457,22 @@ export function resolveEffectivePricing(args: {
       ? pkg.sizePricing[petSize]
       : pkg.basePrice;
 
-  // Coat adjustment is a signed delta added on top of size pricing — captures
-  // "double-coat dogs need 15 extra minutes of brushing" style surcharges
-  // without requiring a full per-breed override.
+  // Coat adjustment: either a flat dollar delta (+$X) or a percentage of the
+  // size price (+X%), controlled by coatAdjustments.mode. Defaults to flat
+  // when mode is absent for backwards-compatibility with existing data.
   let coatAdjustment: EffectivePricing["coatAdjustment"] | undefined;
   let postCoatPrice = sizePrice;
   if (petCoatType && pkg.coatAdjustments) {
-    const delta = pkg.coatAdjustments[petCoatType];
-    if (typeof delta === "number" && delta !== 0) {
+    const amount = pkg.coatAdjustments[petCoatType];
+    const mode = (pkg.coatAdjustments as Record<string, unknown>).mode as
+      | "flat"
+      | "percent"
+      | undefined;
+    if (typeof amount === "number" && amount !== 0) {
+      const delta =
+        mode === "percent"
+          ? Math.round(sizePrice * (amount / 100) * 100) / 100
+          : amount;
       coatAdjustment = { coatType: petCoatType, delta };
       postCoatPrice = Math.max(0, sizePrice + delta);
     }
@@ -453,7 +480,7 @@ export function resolveEffectivePricing(args: {
 
   // Find the first matching age rule (rules are evaluated in declared order).
   let ageAdjustment: EffectivePricing["ageAdjustment"] | undefined;
-  let finalPrice = postCoatPrice;
+  let preTierPrice = postCoatPrice;
   if (petAgeMonths !== undefined && pkg.ageGroupPricing) {
     const match = pkg.ageGroupPricing.find((r) => ageInRange(r, petAgeMonths));
     if (match) {
@@ -464,7 +491,22 @@ export function resolveEffectivePricing(args: {
         mode: match.adjustment.mode,
         amount: match.adjustment.amount,
       };
-      finalPrice = adjusted;
+      preTierPrice = adjusted;
+    }
+  }
+
+  // Tier adjustment is a flat surcharge on top of the calculated price, based
+  // on the assigned stylist's tier.
+  let tierAdjustment: EffectivePricing["tierAdjustment"] | undefined;
+  let finalPrice = preTierPrice;
+  if (stylistId && pkg.tierAdjustments) {
+    const stylist = stylists.find((s) => s.id === stylistId);
+    if (stylist && pkg.tierAdjustments[stylist.capacity.skillLevel]) {
+      const delta = pkg.tierAdjustments[stylist.capacity.skillLevel]!;
+      if (delta !== 0) {
+        tierAdjustment = { tier: stylist.capacity.skillLevel, delta };
+        finalPrice = Math.max(0, preTierPrice + delta);
+      }
     }
   }
 
@@ -473,9 +515,10 @@ export function resolveEffectivePricing(args: {
     durationMin: pkg.duration,
     source: "service-default",
     baseBeforeAdjustment:
-      ageAdjustment || coatAdjustment ? sizePrice : undefined,
+      ageAdjustment || coatAdjustment || tierAdjustment ? sizePrice : undefined,
     coatAdjustment,
     ageAdjustment,
+    tierAdjustment,
   };
 }
 
@@ -818,10 +861,9 @@ export function propagatePackageChangesToUpcoming(args: {
  * master — never by junior or intermediate.
  */
 export const STYLIST_SKILL_RANK: Record<StylistSkillLevel, number> = {
-  junior: 0,
-  intermediate: 1,
-  senior: 2,
-  master: 3,
+  standard: 0,
+  premium: 1,
+  platinum: 2,
 };
 
 export function stylistMeetsSkillRequirement(

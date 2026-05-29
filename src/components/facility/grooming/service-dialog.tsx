@@ -68,15 +68,9 @@ import {
   describeAddOnConditions,
   describeAgeGroupRule,
 } from "@/lib/api/grooming";
+import { defaultGroomingConfig } from "@/lib/grooming-config";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const PET_SIZES = [
-  { key: "small", label: "Small", hint: "Under 15 lbs" },
-  { key: "medium", label: "Medium", hint: "15–40 lbs" },
-  { key: "large", label: "Large", hint: "40–70 lbs" },
-  { key: "giant", label: "Giant", hint: "70+ lbs" },
-] as const;
 
 const COAT_TYPES = [
   { key: "short", label: "Short" },
@@ -546,15 +540,26 @@ export function ServiceDialog({
   const [maxPerDay, setMaxPerDay] = useState<number>(0);
 
   // Smart pricing
-  const [sizePricing, setSizePricing] = useState({
-    small: 0,
-    medium: 0,
-    large: 0,
-    giant: 0,
+  const [sizePricing, setSizePricing] = useState<Record<string, number>>({});
+  const [coatEnabled, setCoatEnabled] = useState(false);
+
+  // Groomer Tier Modifiers
+  const [tierAdjustments, setTierAdjustments] = useState<Record<string, number>>({
+    standard: 0,
+    premium: 10,
+    platinum: 25,
   });
 
-  // Coat type adjustments (delta from size price)
-  const [coatEnabled, setCoatEnabled] = useState(false);
+  function updateTierAdjustment(tier: string, val: string) {
+    const num = parseInt(val, 10);
+    setTierAdjustments((prev) => ({
+      ...prev,
+      [tier]: isNaN(num) ? 0 : num,
+    }));
+  }
+
+  const [coatExpanded, setCoatExpanded] = useState(false);
+  const [mattedSurchargeDefault, setMattedSurchargeDefault] = useState<number>(0);
   const [coatAdjustments, setCoatAdjustments] = useState<
     Record<string, number>
   >({
@@ -568,6 +573,7 @@ export function ServiceDialog({
 
   // Breed overrides
   const [breedEnabled, setBreedEnabled] = useState(false);
+  const [breedExpanded, setBreedExpanded] = useState(false);
   const [breedOverrides, setBreedOverrides] = useState<
     Record<string, number>
   >({});
@@ -608,7 +614,7 @@ export function ServiceDialog({
       setImageUrl(editingPackage.imageUrl ?? "");
       setMinBookingNoticeHours(editingPackage.minBookingNoticeHours ?? 0);
       setMaxPerDay(editingPackage.maxPerDay ?? 0);
-      setSizePricing({ ...editingPackage.sizePricing });
+      setSizePricing(editingPackage.sizePricing);
       const existingCoat = editingPackage.coatAdjustments ?? null;
       setCoatEnabled(!!existingCoat);
       if (existingCoat) {
@@ -621,6 +627,7 @@ export function ServiceDialog({
           double: existingCoat.double ?? 0,
         });
       }
+      setMattedSurchargeDefault(editingPackage.mattedSurchargeDefault ?? 0);
       const existingBreeds = editingPackage.breedOverrides ?? {};
       setBreedEnabled(Object.keys(existingBreeds).length > 0);
       setBreedOverrides(existingBreeds);
@@ -633,6 +640,7 @@ export function ServiceDialog({
       const existingAgeRules = editingPackage.ageGroupPricing ?? [];
       setAgeGroupRules(existingAgeRules);
       setAgeGroupEnabled(existingAgeRules.length > 0);
+      setTierAdjustments(editingPackage.tierAdjustments ?? { standard: 0, premium: 10, platinum: 25 });
     } else {
       setName("");
       setDescription("");
@@ -644,8 +652,9 @@ export function ServiceDialog({
       setImageUrl("");
       setMinBookingNoticeHours(0);
       setMaxPerDay(0);
-      setSizePricing({ small: 0, medium: 0, large: 0, giant: 0 });
+      setSizePricing({});
       setCoatEnabled(false);
+      setMattedSurchargeDefault(0);
       setBreedEnabled(false);
       setBreedOverrides({});
       setProductUsage([]);
@@ -654,6 +663,7 @@ export function ServiceDialog({
       setDefaultAddOnsEnabled(false);
       setAgeGroupRules([]);
       setAgeGroupEnabled(false);
+      setTierAdjustments({ standard: 0, premium: 10, platinum: 25 });
     }
     setNewRuleAddOnId("");
   }, [open, editingPackage]);
@@ -729,16 +739,13 @@ export function ServiceDialog({
       toast.error("Service name is required");
       return;
     }
-    if (sizePricing.small === 0 && sizePricing.medium === 0) {
+    const prices = Object.values(sizePricing);
+    if (prices.length === 0 || prices.every((p) => p === 0)) {
       toast.error("Set at least one price");
       return;
     }
 
-    const basePrice =
-      sizePricing.medium ||
-      sizePricing.small ||
-      sizePricing.large ||
-      sizePricing.giant;
+    const basePrice = prices.find((p) => p > 0) || 0;
 
     const next: GroomingPackage = {
       id: editingPackage?.id ?? `gp-${Date.now()}`,
@@ -748,6 +755,7 @@ export function ServiceDialog({
       duration,
       sizePricing,
       coatAdjustments: coatEnabled ? coatAdjustments : undefined,
+      mattedSurchargeDefault: mattedSurchargeDefault > 0 ? mattedSurchargeDefault : undefined,
       breedOverrides:
         breedEnabled && Object.keys(breedOverrides).length > 0
           ? breedOverrides
@@ -775,6 +783,8 @@ export function ServiceDialog({
         ageGroupEnabled && ageGroupRules.length > 0
           ? ageGroupRules
           : undefined,
+      tierAdjustments: 
+        Object.values(tierAdjustments).some(v => v > 0) ? tierAdjustments : undefined,
     };
 
     queryClient.setQueryData<GroomingPackage[]>(
@@ -794,10 +804,7 @@ export function ServiceDialog({
     if (isEditing && editingPackage) {
       const prev = editingPackage;
       const sizePricingChanged =
-        prev.sizePricing.small !== next.sizePricing.small ||
-        prev.sizePricing.medium !== next.sizePricing.medium ||
-        prev.sizePricing.large !== next.sizePricing.large ||
-        prev.sizePricing.giant !== next.sizePricing.giant;
+        JSON.stringify(prev.sizePricing) !== JSON.stringify(next.sizePricing);
       const basePriceChanged = prev.basePrice !== next.basePrice;
       const durationChanged = prev.duration !== next.duration;
       const ageOrStylistOrCoatChanged =
@@ -1117,50 +1124,58 @@ export function ServiceDialog({
                   </Badge>
                 </div>
                 <div className="divide-y">
-                  {PET_SIZES.map(({ key, label, hint }) => (
-                    <div
-                      key={key}
-                      className="flex items-center gap-4 px-4 py-2.5"
-                    >
-                      <div className="w-28 flex-shrink-0">
-                        <p className="text-xs font-medium">{label}</p>
-                        <p className="text-[10px] text-muted-foreground">{hint}</p>
+                  {(defaultGroomingConfig.petSizeTiers || []).map(
+                    ({ id, label, maxWeightLbs }) => (
+                      <div
+                        key={id}
+                        className="flex items-center gap-4 px-4 py-2.5"
+                      >
+                        <div className="w-28 flex-shrink-0">
+                          <p className="text-xs font-medium">{label}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {maxWeightLbs ? `Under ${maxWeightLbs} lbs` : `${label} sizes`}
+                          </p>
+                        </div>
+                        <div className="relative flex-1 max-w-[140px]">
+                          <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
+                          <Input
+                            type="number"
+                            min={0}
+                            value={sizePricing[id] || ""}
+                            placeholder="0"
+                            onChange={(e) =>
+                              setSizePricing((prev) => ({
+                                ...prev,
+                                [id]: Number(e.target.value),
+                              }))
+                            }
+                            className="pl-7 h-8 text-sm"
+                          />
+                        </div>
                       </div>
-                      <div className="relative flex-1 max-w-[140px]">
-                        <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
-                        <Input
-                          type="number"
-                          min={0}
-                          value={sizePricing[key] || ""}
-                          placeholder="0"
-                          onChange={(e) =>
-                            setSizePricing((prev) => ({
-                              ...prev,
-                              [key]: Number(e.target.value),
-                            }))
-                          }
-                          className="pl-7 h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    ),
+                  )}
                 </div>
               </div>
 
               {/* 2. Adjust by Coat Type — expandable */}
-              <Collapsible open={coatEnabled} onOpenChange={setCoatEnabled}>
+              <Collapsible open={coatExpanded} onOpenChange={setCoatExpanded}>
               <CollapsibleTrigger asChild>
                 <div className="flex items-center justify-between rounded-xl border-2 px-4 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
                   <div className="flex items-center gap-3">
                     <Checkbox
                       checked={coatEnabled}
-                      className="pointer-events-none"
+                      onCheckedChange={(checked) => {
+                        setCoatEnabled(!!checked);
+                        if (checked) setCoatExpanded(true);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
                     />
                     <div>
                       <p className="text-sm font-semibold">
                         2 · Adjust by Coat Type{" "}
                         <span className="text-muted-foreground text-xs font-normal">
-                          (optional)
+                          (Optional — enable to add coat-type pricing)
                         </span>
                       </p>
                       <p className="text-[10px] text-muted-foreground">
@@ -1171,7 +1186,7 @@ export function ServiceDialog({
                   <ChevronDown
                     className={cn(
                       "size-4 text-muted-foreground transition-transform",
-                      coatEnabled && "rotate-180",
+                      coatExpanded && "rotate-180",
                     )}
                   />
                 </div>
@@ -1215,6 +1230,26 @@ export function ServiceDialog({
                       </div>
                     ))}
                   </div>
+                  
+                  <div className="bg-muted/40 px-4 py-2 border-b flex items-center justify-between border-t mt-2">
+                    <div>
+                      <p className="text-xs font-semibold">Matted Surcharge</p>
+                      <p className="text-[10px] text-muted-foreground">Default amount suggested when staff toggle "Matted" at check-in</p>
+                    </div>
+                    <div className="relative w-28">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        +$
+                      </span>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={mattedSurchargeDefault || ""}
+                        placeholder="0"
+                        onChange={(e) => setMattedSurchargeDefault(Number(e.target.value))}
+                        className="pl-8 h-8 text-sm"
+                      />
+                    </div>
+                  </div>
                 </div>
                 <PricePreview
                   basePrice={previewPrice}
@@ -1224,19 +1259,23 @@ export function ServiceDialog({
             </Collapsible>
 
             {/* 3. Breed-Specific Pricing — expandable */}
-            <Collapsible open={breedEnabled} onOpenChange={setBreedEnabled}>
+            <Collapsible open={breedExpanded} onOpenChange={setBreedExpanded}>
               <CollapsibleTrigger asChild>
                 <div className="flex items-center justify-between rounded-xl border-2 px-4 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
                   <div className="flex items-center gap-3">
                     <Checkbox
                       checked={breedEnabled}
-                      className="pointer-events-none"
+                      onCheckedChange={(checked) => {
+                        setBreedEnabled(!!checked);
+                        if (checked) setBreedExpanded(true);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
                     />
                     <div>
                       <p className="text-sm font-semibold">
                         3 · Breed-Specific Pricing{" "}
                         <span className="text-muted-foreground text-xs font-normal">
-                          (optional)
+                          (Optional — enable to add breed pricing)
                         </span>
                       </p>
                       <p className="text-[10px] text-muted-foreground">
@@ -1247,7 +1286,7 @@ export function ServiceDialog({
                   <ChevronDown
                     className={cn(
                       "size-4 text-muted-foreground transition-transform",
-                      breedEnabled && "rotate-180",
+                      breedExpanded && "rotate-180",
                     )}
                   />
                 </div>
@@ -1284,7 +1323,7 @@ export function ServiceDialog({
                       list="breed-suggestions"
                     />
                     <datalist id="breed-suggestions">
-                      {COMMON_BREEDS.map((b) => (
+                      {COMMON_BREEDS.filter((b) => !breedOverrides[b]).map((b) => (
                         <option key={b} value={b} />
                       ))}
                     </datalist>
@@ -1316,37 +1355,73 @@ export function ServiceDialog({
 
           <Separator />
 
-          {/* ── Staff assignment ── */}
+          {/* ── Staff assignment & Tier Pricing ── */}
           <section>
-            <SectionLabel>Assigned Groomers</SectionLabel>
+            <SectionLabel>Assigned Groomers & Tier Pricing</SectionLabel>
             <p className="text-xs text-muted-foreground -mt-2 mb-3">
               Leave all unchecked to allow any groomer. Check specific groomers
-              to restrict this service.
+              to restrict this service. Set optional tier surcharges next to each tier.
             </p>
-            <div className="grid grid-cols-2 gap-2">
-              {activeStylists.map((s) => {
-                const assigned = assignedStylistIds.includes(s.id);
+            
+            <div className="space-y-4">
+              {["platinum", "premium", "standard"].map((tier) => {
+                const tierGroomers = activeStylists.filter((s) => s.capacity.skillLevel === tier);
+                if (tierGroomers.length === 0) return null;
+
+                const tierLabels: Record<string, string> = {
+                  platinum: "Platinum Tier",
+                  premium: "Premium Tier",
+                  standard: "Standard Tier",
+                };
+
                 return (
-                  <div
-                    key={s.id}
-                    onClick={() => toggleStylist(s.id)}
-                    className={cn(
-                      "flex items-center gap-2.5 rounded-lg border px-3 py-2 cursor-pointer transition-colors",
-                      assigned
-                        ? "border-pink-300 bg-pink-50 dark:border-pink-700 dark:bg-pink-950/20"
-                        : "hover:bg-muted/40",
-                    )}
-                  >
-                    <Checkbox
-                      checked={assigned}
-                      onCheckedChange={() => toggleStylist(s.id)}
-                      className="pointer-events-none"
-                    />
-                    <div>
-                      <p className="text-xs font-medium">{s.name}</p>
-                      <p className="text-[10px] text-muted-foreground capitalize">
-                        {s.capacity.skillLevel}
-                      </p>
+                  <div key={tier} className="space-y-2 rounded-xl border p-3">
+                    <div className="flex items-center justify-between border-b pb-2 mb-2">
+                      <p className="text-sm font-semibold">{tierLabels[tier]}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-[10px] text-muted-foreground">Tier Surcharge:</p>
+                        <div className="relative w-20">
+                          <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
+                          <Input
+                            type="number"
+                            min={0}
+                            value={tierAdjustments[tier] || ""}
+                            placeholder="0"
+                            onChange={(e) => updateTierAdjustment(tier, e.target.value)}
+                            className={cn(
+                              "pl-6 h-7 text-xs font-semibold",
+                              !tierAdjustments[tier] ? "text-muted-foreground" : "text-foreground"
+                            )}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      {tierGroomers.map((s) => {
+                        const assigned = assignedStylistIds.includes(s.id);
+                        return (
+                          <div
+                            key={s.id}
+                            onClick={() => toggleStylist(s.id)}
+                            className={cn(
+                              "flex items-center gap-2.5 rounded-lg border px-3 py-2 cursor-pointer transition-colors",
+                              assigned
+                                ? "border-pink-300 bg-pink-50 dark:border-pink-700 dark:bg-pink-950/20"
+                                : "hover:bg-muted/40",
+                            )}
+                          >
+                            <Checkbox
+                              checked={assigned}
+                              onCheckedChange={() => toggleStylist(s.id)}
+                              className="pointer-events-none"
+                            />
+                            <div>
+                              <p className="text-xs font-medium">{s.name}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );

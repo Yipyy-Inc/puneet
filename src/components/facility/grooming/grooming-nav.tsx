@@ -17,6 +17,7 @@ import {
   Activity,
 } from "lucide-react";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
+import { useGroomingStations } from "@/hooks/use-grooming-stations";
 
 type Tab = {
   name: string;
@@ -87,13 +88,35 @@ const tabs: Tab[] = [
 
 export function GroomingNav() {
   const pathname = usePathname();
-  const { enabled: mobileEnabled } = useMobileGrooming();
+  const { enabled: mobileEnabled, hasActiveVans } = useMobileGrooming();
+  const { stations } = useGroomingStations();
+  // Mobile-only tabs hide when the facility has the feature flag off OR
+  // when there are zero active vans (solo-salon facility type) — there's
+  // nothing for Route Planner or Live Tracking to show without a van.
+  const showMobileTabs = mobileEnabled && hasActiveVans;
+  // Mobile-only facility — has vans but no stations. Route Planner takes
+  // over as the primary daily view, so it bumps to the front of the nav.
+  const isMobileOnly = hasActiveVans && stations.length === 0;
 
-  const visibleTabs = tabs.filter((tab) => {
-    if (tab.name === "Route Planner") return mobileEnabled;
-    if (tab.name === "Live Tracking") return mobileEnabled;
+  const filteredTabs = tabs.filter((tab) => {
+    if (tab.name === "Route Planner") return showMobileTabs;
+    if (tab.name === "Live Tracking") return showMobileTabs;
     return true;
   });
+  // When mobile-only, lift Route Planner to position 0 and push Calendar
+  // behind it. Order otherwise stays as authored.
+  const visibleTabs = isMobileOnly
+    ? (() => {
+        const routeIdx = filteredTabs.findIndex(
+          (t) => t.name === "Route Planner",
+        );
+        if (routeIdx <= 0) return filteredTabs;
+        const next = [...filteredTabs];
+        const [route] = next.splice(routeIdx, 1);
+        next.unshift(route);
+        return next;
+      })()
+    : filteredTabs;
 
   return (
     <nav className="flex gap-0.5 overflow-x-auto px-4">

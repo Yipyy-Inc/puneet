@@ -128,6 +128,14 @@ const DEFAULT_VANS: MobileGroomingVan[] = [
 interface MobileGroomingContextValue {
   enabled: boolean;
   vans: MobileGroomingVan[];
+  /**
+   * Single source of truth for "is mobile actually usable right now?" —
+   * a facility may have the feature flag on but zero active vans (or zero
+   * vans at all), in which case every consumer of the mobile UI (nav tabs,
+   * booking-flow location chooser, facility dialog mobile toggle) must
+   * hide. Centralized here so call sites don't re-derive the predicate.
+   */
+  hasActiveVans: boolean;
   serviceAreas: ServiceArea[];
   /** Travel zones used to compute mobile-grooming distance surcharges. */
   travelZones: TravelZone[];
@@ -532,10 +540,18 @@ export function MobileGroomingProvider({ children }: { children: ReactNode }) {
     [persistSchedules],
   );
 
-  const value = useMemo<MobileGroomingContextValue>(
-    () => ({
+  const value = useMemo<MobileGroomingContextValue>(() => {
+    // Vans whose staff assignment was cleared get auto-deactivated so the
+    // hasActiveVans gate stays consistent with what the rest of the app
+    // treats as "operable."
+    const resolvedVans = vans.map((v) =>
+      v.assignedStaffIds.length === 0 ? { ...v, active: false } : v,
+    );
+    const hasActiveVans = resolvedVans.some((v) => v.active);
+    return ({
       enabled,
-      vans,
+      vans: resolvedVans,
+      hasActiveVans,
       serviceAreas,
       arrivalWindowMinutes,
       certainAreaEnabled,
@@ -560,7 +576,8 @@ export function MobileGroomingProvider({ children }: { children: ReactNode }) {
       upsertZipTaxRate,
       deleteZipTaxRate,
       setDefaultZipTaxRate,
-    }),
+    });
+  },
     [
       enabled,
       vans,
