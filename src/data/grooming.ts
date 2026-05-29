@@ -1,5 +1,5 @@
-// Grooming Module Mock Data
-// Types are defined in @/types/grooming — re-exported here for backward compatibility
+﻿// Grooming Module Mock Data
+// Types are defined in @/types/grooming â€” re-exported here for backward compatibility
 
 export type { PetSize } from "@/types/base";
 export type {
@@ -63,7 +63,7 @@ export const stylists: Stylist[] = [
       maxDailyAppointments: 8,
       maxConcurrentAppointments: 1,
       preferredPetSizes: ["small", "medium", "large"],
-      skillLevel: "senior",
+      skillLevel: "premium",
       canHandleMatted: true,
       canHandleAnxious: true,
       canHandleAggressive: false,
@@ -96,7 +96,7 @@ export const stylists: Stylist[] = [
       maxDailyAppointments: 6,
       maxConcurrentAppointments: 1,
       preferredPetSizes: ["small", "medium"],
-      skillLevel: "intermediate",
+      skillLevel: "standard",
       canHandleMatted: true,
       canHandleAnxious: true,
       canHandleAggressive: false,
@@ -129,7 +129,7 @@ export const stylists: Stylist[] = [
       maxDailyAppointments: 7,
       maxConcurrentAppointments: 1,
       preferredPetSizes: ["medium", "large", "giant"],
-      skillLevel: "senior",
+      skillLevel: "premium",
       canHandleMatted: true,
       canHandleAnxious: true,
       canHandleAggressive: true,
@@ -157,7 +157,7 @@ export const stylists: Stylist[] = [
       maxDailyAppointments: 10,
       maxConcurrentAppointments: 1,
       preferredPetSizes: ["small", "medium", "large"],
-      skillLevel: "master",
+      skillLevel: "platinum",
       canHandleMatted: true,
       canHandleAnxious: true,
       canHandleAggressive: false,
@@ -187,7 +187,7 @@ export const stylists: Stylist[] = [
       maxDailyAppointments: 12,
       maxConcurrentAppointments: 1,
       preferredPetSizes: ["small", "medium"],
-      skillLevel: "junior",
+      skillLevel: "standard",
       canHandleMatted: false,
       canHandleAnxious: true,
       canHandleAggressive: false,
@@ -419,7 +419,7 @@ export const groomingPackages: GroomingPackage[] = [
       giant: 105,
     },
     // Breed-specific full-price overrides. Drives Step 2's "breed > coat >
-    // size" tier in {@link resolveEffectivePricing} — when a Poodle books a
+    // size" tier in {@link resolveEffectivePricing} â€” when a Poodle books a
     // Full Groom we charge the breed price regardless of size bucket.
     breedOverrides: {
       "Golden Retriever": 95,
@@ -428,7 +428,7 @@ export const groomingPackages: GroomingPackage[] = [
     },
     // Signed deltas added on top of the size price when the pet's coat type
     // matches. Double-coats need an extra blow-out, long coats need extra
-    // brushing — so we surcharge slightly.
+    // brushing â€” so we surcharge slightly.
     coatAdjustments: {
       double: 10,
       long: 5,
@@ -463,33 +463,33 @@ export const groomingPackages: GroomingPackage[] = [
       { productId: "prod-014", productName: "Bandanas - Assorted Colors", quantity: 1, unit: "count", isOptional: true },
     ],
     defaultAddOns: [
-      // Teeth Brushing — always upsell on a Full Groom.
+      // Teeth Brushing â€” always upsell on a Full Groom.
       { addOnId: "ao-01" },
-      // De-shedding Treatment — only worth attaching for double / long / wire / curly coats.
+      // De-shedding Treatment â€” only worth attaching for double / long / wire / curly coats.
       {
         addOnId: "ao-04",
         conditions: [
           { kind: "coat-type-in", values: ["double", "long", "wire", "curly"] },
         ],
       },
-      // Nail Grinding — dogs 30 lbs and up benefit most.
+      // Nail Grinding â€” dogs 30 lbs and up benefit most.
       {
         addOnId: "ao-02",
         conditions: [{ kind: "weight-gte", value: 30 }],
       },
     ],
     ageGroupPricing: [
-      // Puppy first groom — shorter session, discounted to drive adoption.
+      // Puppy first groom â€” shorter session, discounted to drive adoption.
       {
         id: "agp-puppy",
         label: "Puppy",
         maxMonths: 12,
         adjustment: { mode: "flat-subtract", amount: 15 },
       },
-      // Senior premium — extra time and careful handling.
+      // Senior premium â€” extra time and careful handling.
       {
         id: "agp-senior",
-        label: "Senior",
+        label: "premium",
         minMonths: 96,
         adjustment: { mode: "percent", amount: 20 },
       },
@@ -536,7 +536,7 @@ export const groomingPackages: GroomingPackage[] = [
       { productId: "prod-015", productName: "Bows - Assorted Colors", quantity: 1, unit: "count", isOptional: true },
     ],
     defaultAddOns: [
-      // Spa Day is the premium tier — Teeth Brushing and Blueberry Facial come standard.
+      // Spa Day is the premium tier â€” Teeth Brushing and Blueberry Facial come standard.
       { addOnId: "ao-01" },
       { addOnId: "ao-03" },
     ],
@@ -610,12 +610,12 @@ export const groomingPackages: GroomingPackage[] = [
       large: 70,
       giant: 85,
     },
-    // Step 2 eligibility — only offer this service for coats that actually
+    // Step 2 eligibility â€” only offer this service for coats that actually
     // need de-shedding. Short-coat / wire-coat dogs don't see it in the
     // booking dropdown.
     eligibleCoatTypes: ["double", "long", "curly"],
-    // De-shedding takes finesse — gate the groomer dropdown to senior+ only.
-    requiredSkillLevel: "senior",
+    // De-shedding takes finesse â€” gate the groomer dropdown to senior+ only.
+    requiredSkillLevel: "premium",
     includes: [
       "De-shedding shampoo & conditioner",
       "Undercoat removal",
@@ -667,6 +667,7 @@ export const groomingAppointments: GroomingAppointment[] = [
     ownerEmail: "john.smith@email.com",
     stylistId: "stylist-001",
     stylistName: "Jessica Martinez",
+    stationId: "gs-t-01",
     packageId: "groom-pkg-002",
     packageName: "Full Groom",
     addOns: ["Teeth Brushing", "De-matting (per 15 min)"],
@@ -697,21 +698,21 @@ export const groomingAppointments: GroomingAppointment[] = [
     alertNotes: [
       {
         id: "an-001",
-        text: "Bites when ears are touched — muzzle for ear cleaning, no exceptions.",
+        text: "Bites when ears are touched â€” muzzle for ear cleaning, no exceptions.",
         createdBy: "Jessica Martinez",
         createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
         appliesToFuture: true,
       },
       {
         id: "an-002",
-        text: "On Apoquel — owner administers before the appointment.",
+        text: "On Apoquel â€” owner administers before the appointment.",
         createdBy: "Front Desk",
         createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
         appliesToFuture: true,
       },
       {
         id: "an-003",
-        text: "Coat much more matted than last visit — flagged for matting fee.",
+        text: "Coat much more matted than last visit â€” flagged for matting fee.",
         createdBy: "Jessica Martinez",
         createdAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
         appliesToFuture: false,
@@ -722,7 +723,7 @@ export const groomingAppointments: GroomingAppointment[] = [
         id: "tc-001",
         staff: "Sarah Chen",
         message:
-          "Started the bath — coat is much more matted than expected, will take ~30 extra minutes.",
+          "Started the bath â€” coat is much more matted than expected, will take ~30 extra minutes.",
         at: new Date(Date.now() - 75 * 60 * 1000).toISOString(),
       },
       {
@@ -774,7 +775,7 @@ export const groomingAppointments: GroomingAppointment[] = [
     intake: {
       coatCondition: "severely-matted",
       behaviorNotes:
-        "Calm at first but reactive when ears were touched — used a muzzle for ear cleaning.",
+        "Calm at first but reactive when ears were touched â€” used a muzzle for ear cleaning.",
       allergies: ["Lavender scent"],
       specialInstructions: "Use hypoallergenic shampoo",
       beforePhotos: ["/pets/buddy.jpg"],
@@ -783,7 +784,7 @@ export const groomingAppointments: GroomingAppointment[] = [
       completedBy: "Jessica Martinez",
       completedAt: new Date(Date.now() - 75 * 60 * 1000).toISOString(),
       dropOffObservations:
-        "Owner mentioned Buddy was caught in the rain yesterday — coat is much more matted than usual.",
+        "Owner mentioned Buddy was caught in the rain yesterday â€” coat is much more matted than usual.",
       sessionNotes:
         "Coat was severely matted on the back legs and chest; spent ~30 extra minutes dematting. Trimmed to summer length as agreed. Nails were long and needed extra filing.",
       moodTags: ["calm", "reactive", "needed-muzzle"],
@@ -792,19 +793,19 @@ export const groomingAppointments: GroomingAppointment[] = [
         {
           id: "iss-001",
           kind: "matting-found",
-          note: "Severe matting on chest and back legs — likely needs shorter cut next visit.",
+          note: "Severe matting on chest and back legs â€” likely needs shorter cut next visit.",
           reportedBy: "Jessica Martinez",
           reportedAt: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
           status: "owner-notified",
           reviewedAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
           reviewedBy: "Manager",
           ownerMessage:
-            "Hi John — we found significant matting today and applied the matting fee. We recommend a 4-6 week schedule going forward.",
+            "Hi John â€” we found significant matting today and applied the matting fee. We recommend a 4-6 week schedule going forward.",
         },
         {
           id: "iss-002",
           kind: "ear-issue",
-          note: "Slight redness in the right ear — recommend a vet check.",
+          note: "Slight redness in the right ear â€” recommend a vet check.",
           reportedBy: "Jessica Martinez",
           reportedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
           status: "pending",
@@ -814,7 +815,7 @@ export const groomingAppointments: GroomingAppointment[] = [
         {
           id: "cl-feed-001",
           kind: "feeding",
-          label: "Feeding · 1.5 cups per meal",
+          label: "Feeding Â· 1.5 cups per meal",
           scheduledFor: "12:00 PM",
           administered: true,
           administeredAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
@@ -823,7 +824,7 @@ export const groomingAppointments: GroomingAppointment[] = [
         {
           id: "cl-med-001",
           kind: "medication",
-          label: "Joint Supplement · 1 chew",
+          label: "Joint Supplement Â· 1 chew",
           scheduledFor: "Once daily",
           administered: false,
           notes: "Give with morning meal",
@@ -859,6 +860,7 @@ export const groomingAppointments: GroomingAppointment[] = [
     ownerEmail: "emily.davis@email.com",
     stylistId: "stylist-002",
     stylistName: "Amy Chen",
+    stationId: "gs-tub-01",
     packageId: "groom-pkg-003",
     packageName: "Spa Day Deluxe",
     addOns: ["Photo Session"],
@@ -877,7 +879,7 @@ export const groomingAppointments: GroomingAppointment[] = [
     alertNotes: [
       {
         id: "an-010",
-        text: "Brachycephalic — keep dryer on low only, watch for overheating.",
+        text: "Brachycephalic â€” keep dryer on low only, watch for overheating.",
         createdBy: "Amy Chen",
         createdAt: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString(),
         appliesToFuture: true,
@@ -910,7 +912,7 @@ export const groomingAppointments: GroomingAppointment[] = [
       submittedAt: new Date(Date.now() - 90 * 60_000).toISOString(),
       answers: {
         "q-coat":
-          "Coat is doing well — no matting, but a few tangles behind the ears from her harness.",
+          "Coat is doing well â€” no matting, but a few tangles behind the ears from her harness.",
         "q-mood":
           "She's been a little more anxious around loud noises lately, otherwise fine.",
         "q-meds": false,
@@ -954,7 +956,7 @@ export const groomingAppointments: GroomingAppointment[] = [
     alertNotes: [
       {
         id: "an-020",
-        text: "Reactive to other dogs in the lobby — keep separated from other clients during drop-off and pickup.",
+        text: "Reactive to other dogs in the lobby â€” keep separated from other clients during drop-off and pickup.",
         createdBy: "Marcus Thompson",
         createdAt: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(),
         appliesToFuture: true,
@@ -1022,6 +1024,7 @@ export const groomingAppointments: GroomingAppointment[] = [
     ownerEmail: "sarah.johnson@email.com",
     stylistId: "stylist-003",
     stylistName: "Marcus Thompson",
+    stationId: "gs-t-02",
     packageId: "groom-pkg-006",
     packageName: "De-Shedding Treatment",
     addOns: [],
@@ -1371,7 +1374,7 @@ export const groomingAppointments: GroomingAppointment[] = [
 // Stock quantities are tracked in the product's measurementUnit
 // (e.g., ml for liquids, count for discrete items)
 export const groomingProducts: GroomingProduct[] = [
-  // ── Shampoos ──────────────────────────────────────────────────────────────
+  // â”€â”€ Shampoos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   {
     id: "prod-001",
     name: "Oatmeal Soothing Shampoo",
@@ -1429,7 +1432,7 @@ export const groomingProducts: GroomingProduct[] = [
     expiryDate: getDateString(180),
     isActive: true,
   },
-  // ── Conditioners ──────────────────────────────────────────────────────────
+  // â”€â”€ Conditioners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   {
     id: "prod-004",
     name: "Silk & Shine Conditioner",
@@ -1467,7 +1470,7 @@ export const groomingProducts: GroomingProduct[] = [
     lastRestocked: getDateString(-8),
     isActive: true,
   },
-  // ── Styling ───────────────────────────────────────────────────────────────
+  // â”€â”€ Styling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   {
     id: "prod-006",
     name: "Finishing Spray Cologne - Fresh Cotton",
@@ -1504,7 +1507,7 @@ export const groomingProducts: GroomingProduct[] = [
     lastRestocked: getDateString(-5),
     isActive: true,
   },
-  // ── Health & Care ─────────────────────────────────────────────────────────
+  // â”€â”€ Health & Care â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   {
     id: "prod-008",
     name: "Blueberry Facial Scrub",
@@ -1598,7 +1601,7 @@ export const groomingProducts: GroomingProduct[] = [
     lastRestocked: getDateString(-30),
     isActive: true,
   },
-  // ── Accessories & Consumables ─────────────────────────────────────────────
+  // â”€â”€ Accessories & Consumables â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   {
     id: "prod-019",
     name: "Cotton Pads",
@@ -1652,7 +1655,7 @@ export const groomingProducts: GroomingProduct[] = [
     supplier: "PawStyle Accessories",
     lastRestocked: getDateString(-25),
     isActive: true,
-    notes: "Low stock — reorder soon",
+    notes: "Low stock â€” reorder soon",
   },
   {
     id: "prod-015",
@@ -1672,7 +1675,7 @@ export const groomingProducts: GroomingProduct[] = [
     lastRestocked: getDateString(-25),
     isActive: true,
   },
-  // ── Cleaning ──────────────────────────────────────────────────────────────
+  // â”€â”€ Cleaning â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   {
     id: "prod-016",
     name: "Kennel Disinfectant Spray",
@@ -1708,9 +1711,9 @@ export const groomingProducts: GroomingProduct[] = [
     supplier: "CleanPro Solutions",
     lastRestocked: getDateString(-35),
     isActive: true,
-    notes: "Below minimum stock — needs reorder!",
+    notes: "Below minimum stock â€” needs reorder!",
   },
-  // ── Tools (non-consumable equipment) ─────────────────────────────────────
+  // â”€â”€ Tools (non-consumable equipment) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   {
     id: "prod-011",
     name: "Slicker Brush - Medium",

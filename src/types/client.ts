@@ -149,6 +149,27 @@ export const clientSchema = z.object({
   isBlocked: z.boolean().optional(),
   blockedAt: z.string().optional(),
   blockedReason: z.string().optional(),
+  // Surfaced on the staff-side client picker (booking flow Step 1) so staff
+  // can spot returning clients and flagged accounts at a glance without
+  // opening the profile.
+  lastVisitDate: z.string().optional(),
+  outstandingBalance: z.number().optional(),
+  noShowCount: z.number().optional(),
+  /** Saved card-on-file records — surfaced as one-tap "charge this card"
+   *  options on the at-pickup payment screen. Real card numbers never live
+   *  here; only the brand + last 4 + expiry come back from the gateway. */
+  savedCards: z
+    .array(
+      z.object({
+        id: z.string(),
+        brand: z.enum(["visa", "mastercard", "amex", "discover", "other"]),
+        last4: z.string(),
+        expMonth: z.number(),
+        expYear: z.number(),
+        isDefault: z.boolean().optional(),
+      }),
+    )
+    .optional(),
 });
 
 export type Client = z.infer<typeof clientSchema>;

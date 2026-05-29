@@ -27,6 +27,7 @@ import {
   computeDayDensity,
   computeSlotGrid,
   getAppointmentsForStylistOnDate,
+  getBookedStationIdsInWindow,
   getStylistWorkWindow,
   appointmentAddressSeed,
   type DayDensity,
@@ -47,6 +48,8 @@ import {
   type EffectivePricing,
 } from "@/lib/api/grooming";
 import { saveCustomPetPricingOverride } from "@/lib/grooming-pet-pricing-store";
+import { redeemPackagePass } from "@/data/customer-packages";
+import { GroomingWaitlistDialog } from "@/components/bookings/modals/service-details/GroomingWaitlistDialog";
 import { clientQueries } from "@/lib/api/client";
 import {
   ClientPetPicker,
@@ -92,12 +95,20 @@ const DEFAULT_FORM = {
    *  Required for pet-specific pricing lookup; undefined for fresh entries. */
   petId: undefined as number | undefined,
   petName: "",
+  /** Species — "Dog", "Cat", "Other". Required at minimal-record stage; the
+   *  other pet fields stay optional and are flagged later if missing. */
+  petType: "",
   petBreed: "",
   petSize: "",
   coatType: "",
   /** Pet age in months — drives age-group pricing on the selected service. */
   petAgeMonths: undefined as number | undefined,
   packageId: "",
+  /** Active prepaid `CustomerPackage` id to redeem on confirm (one pass).
+   *  Independent of `packageId` (the catalog service). When set, the booking
+   *  is recorded as a pass redemption and the customer's pass count is
+   *  decremented in `mockCustomerPackages` on submit. */
+  customerPackageId: "",
   stylistId: "",
   stationId: "",
   date: "",
@@ -193,6 +204,11 @@ export function NewAppointmentDialog({
   const [manualDurationOverride, setManualDurationOverride] = useState<
     number | undefined
   >(undefined);
+  // Required when staff override the resolver-computed price — the reason
+  // travels with the booking (and seeds the per-pet pricing override note
+  // when "Save this price for pet" is checked) so we have an audit trail
+  // for any discount/upcharge.
+  const [priceOverrideReason, setPriceOverrideReason] = useState("");
   // When true, the manual price/duration is written back to the pet on
   // submit so future bookings for the same pet/package pre-fill with it.
   const [savePriceToPet, setSavePriceToPet] = useState(false);
@@ -203,8 +219,20 @@ export function NewAppointmentDialog({
   const [autoAttachedIds, setAutoAttachedIds] = useState<string[]>([]);
   const [additionalPets, setAdditionalPets] = useState<AdditionalPet[]>([]);
   const [additionalStylistIds, setAdditionalStylistIds] = useState<string[]>([]);
+  // Waitlist dialog — opened from the "Can't find a slot?" CTA. Stays inside
+  // the booking dialog so staff don't lose their in-progress form state.
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
   // Split-service stages — when empty, the appointment runs as one block.
   const [stages, setStages] = useState<AppointmentStage[]>([]);
+  // When stages exist, the appointment's end time mirrors the last stage's
+  // end time so the calendar block, slot conflict detection, and price
+  // duration all reflect the actual total length of the split service.
+  useEffect(() => {
+    if (stages.length === 0) return;
+    const lastEnd = stages[stages.length - 1].endTime;
+    if (!lastEnd) return;
+    setForm((prev) => (prev.endTime === lastEnd ? prev : { ...prev, endTime: lastEnd }));
+  }, [stages]);
 
   // Loaded eagerly so the seed effect can map prefillFrom (Book Again) to a
   // known client via phone match — keeps the picker in "selected" mode instead
@@ -329,12 +357,26 @@ export function NewAppointmentDialog({
   const { stations } = useGroomingStations();
   const {
     enabled: mobileEnabled,
+    hasActiveVans,
     serviceAreas,
     certainAreaEnabled,
     staffSchedules,
     travelZones,
     zipTaxRates,
   } = useMobileGrooming();
+  // Whole mobile section (toggle + address + coverage) hides when the
+  // facility has zero active vans — a salon with no van shouldn't offer a
+  // van visit option.
+  const showMobileSection = mobileEnabled && hasActiveVans;
+  // Mobile-only facility — has vans but no station equipment. The mobile
+  // toggle should default ON because every booking here is a van visit.
+  const isMobileOnlyFacility = showMobileSection && stations.length === 0;
+  // Re-apply the default whenever the dialog opens — the form reset effect
+  // above always lands `isMobile: false`, so this flips it on after.
+  useEffect(() => {
+    if (!open || !isMobileOnlyFacility) return;
+    setForm((prev) => (prev.isMobile ? prev : { ...prev, isMobile: true }));
+  }, [open, isMobileOnlyFacility]);
 
   // Map the selected grooming stylist to their underlying staff id so the
   // Certain Area for Certain Days schedule (keyed by staffId) can be looked up.
@@ -421,11 +463,42 @@ export function NewAppointmentDialog({
 
   const selectedPackage = packages.find((p) => p.id === form.packageId);
 
+  // Active prepaid packs the picked client owns — only ones with passes left
+  // for the grooming module. Resets when the client changes.
+  const { data: clientCustomerPackages = [] } = useQuery(
+    groomingQueries.customerPackagesForClient(form.clientId),
+  );
+  const eligibleCustomerPackages = useMemo(
+    () =>
+      clientCustomerPackages.filter(
+        (p) =>
+          p.status === "active" &&
+          p.passesTotal - p.passesUsed > 0 &&
+          p.passes.some((pass) => pass.moduleId === "grooming"),
+      ),
+    [clientCustomerPackages],
+  );
+  const selectedCustomerPackage = eligibleCustomerPackages.find(
+    (p) => p.id === form.customerPackageId,
+  );
+
+  // Clearing the customer-package selection if the client changes (or the
+  // selected pack is no longer eligible) keeps the picker honest.
+  useEffect(() => {
+    if (
+      form.customerPackageId &&
+      !eligibleCustomerPackages.some((p) => p.id === form.customerPackageId)
+    ) {
+      setForm((prev) => ({ ...prev, customerPackageId: "" }));
+    }
+  }, [eligibleCustomerPackages, form.customerPackageId]);
+
   // Clear any manual price/duration override when the pet/package combo
   // changes so the next combo starts from the resolver-computed defaults.
   useEffect(() => {
     setManualPriceOverride(undefined);
     setManualDurationOverride(undefined);
+    setPriceOverrideReason("");
     setSavePriceToPet(false);
   }, [form.packageId, form.petId]);
 
@@ -561,7 +634,13 @@ export function NewAppointmentDialog({
         ? activeStylists.filter((s) => assignedStylistIds.includes(s.id))
         : activeStylists.filter((s) => {
             const q = s.qualifiedPackageIds;
-            if (!q || q.length === 0) return true;
+            // Distinguish "not configured yet" from "explicitly empty":
+            //   undefined  → no restriction set, treat as qualified for all
+            //                (backwards-compat with un-edited mock data)
+            //   []         → staff intentionally cleared the list → groomer
+            //                is qualified for NOTHING and must not appear
+            //   [...ids]   → only listed packages
+            if (q === undefined) return true;
             return q.includes(selectedPackage.id);
           });
     return byAssignment.filter((s) =>
@@ -623,10 +702,72 @@ export function NewAppointmentDialog({
 
   // ─── Step 3 derived data: density calendar + slot grid + map preview ─
 
+  // Pre-compute pricing for the primary pet so its resolved duration can size the calendar.
+  const primaryPricing = useMemo(() => {
+    if (selectedPackage && form.petName && form.petSize) {
+      return resolveEffectivePricing({
+        petId: form.petId,
+        petSize: form.petSize as PetSize,
+        petBreed: form.petBreed || undefined,
+        petCoatType: form.coatType
+          ? (form.coatType as import("@/types/grooming").CoatType)
+          : undefined,
+        petAgeMonths: form.petAgeMonths,
+        stylistId: form.stylistId || undefined,
+        package: selectedPackage,
+        petPricingOverrides: allPetPricing,
+      });
+    }
+    return null;
+  }, [
+    selectedPackage,
+    form.petName,
+    form.petSize,
+    form.petId,
+    form.petBreed,
+    form.coatType,
+    form.petAgeMonths,
+    form.stylistId,
+    allPetPricing,
+  ]);
+
   // Service duration used to size each slot block. The manual override
   // (Step 2) wins so a user-edited duration is reflected in the slot grid.
   const serviceDurationForSlots =
-    manualDurationOverride ?? selectedPackage?.duration ?? 0;
+    manualDurationOverride ?? primaryPricing?.durationMin ?? selectedPackage?.duration ?? 0;
+
+  // Station ids already booked during the booking's window — feeds the station
+  // picker so staff can't double-book a tub/table. Empty until date / start
+  // time / duration are all known.
+  const bookedStationIds = useMemo(() => {
+    if (!form.date || !form.startTime || serviceDurationForSlots <= 0) {
+      return new Set<string>();
+    }
+    const endTime = addMinutesToTime(form.startTime, serviceDurationForSlots);
+    return getBookedStationIdsInWindow(
+      form.date,
+      form.startTime,
+      endTime,
+      allAppointments,
+    );
+  }, [form.date, form.startTime, serviceDurationForSlots, allAppointments]);
+
+  // Size-eligible AND free at this date/time — what the picker actually offers.
+  const availableStations = useMemo(
+    () => eligibleStations.filter((s) => !bookedStationIds.has(s.id)),
+    [eligibleStations, bookedStationIds],
+  );
+  const hiddenForConflictCount =
+    eligibleStations.length - availableStations.length;
+
+  // Clear the chosen station if a date / time change pushed it into a
+  // conflict. The size-only cleanup above handles pet swaps separately.
+  useEffect(() => {
+    if (!form.stationId) return;
+    if (bookedStationIds.has(form.stationId)) {
+      setForm((prev) => ({ ...prev, stationId: "" }));
+    }
+  }, [form.stationId, bookedStationIds]);
 
   // Synthetic address seed for the new appointment, used to compute drive
   // times from prior stops. Matches the route planner's hashing scheme so
@@ -719,6 +860,85 @@ export function NewAppointmentDialog({
     newAddressSeed,
   ]);
 
+  // Daily-cap status for the chosen groomer + date. Drives the "X/Y booked"
+  // header chip and switches the empty-state message when the cap is hit.
+  const dayCapInfo = useMemo(() => {
+    if (!form.stylistId || !form.date) return null;
+    const stylist = stylistsData.find((s) => s.id === form.stylistId);
+    if (!stylist) return null;
+    const cap = stylist.capacity?.maxDailyAppointments ?? 0;
+    if (cap <= 0) return null;
+    const booked = getAppointmentsForStylistOnDate(
+      form.stylistId,
+      form.date,
+      allAppointments,
+    ).length;
+    return { cap, booked, atCap: booked >= cap };
+  }, [form.stylistId, form.date, stylistsData, allAppointments]);
+
+  // Hide every slot when the groomer has hit their daily cap — staff has to
+  // either pick another date or join the waitlist. Otherwise pass through.
+  const effectiveSlotGrid = useMemo(
+    () => (dayCapInfo?.atCap ? [] : slotGrid),
+    [dayCapInfo, slotGrid],
+  );
+
+  // Nearest upcoming date (within 60 days) where this groomer has at least
+  // one bookable slot. Drives the "Check next available date →" jump button
+  // shown when the chosen date has nothing.
+  const nextAvailableDate = useMemo(() => {
+    if (!form.stylistId || !form.date || serviceDurationForSlots <= 0)
+      return null;
+    if (effectiveSlotGrid.some((s) => s.status === "available")) return null;
+    const stylist = stylistsData.find((s) => s.id === form.stylistId);
+    if (!stylist) return null;
+    const cap = stylist.capacity?.maxDailyAppointments ?? 0;
+    const seed = new Date(form.date + "T00:00:00");
+    if (Number.isNaN(seed.getTime())) return null;
+    for (let i = 1; i <= 60; i++) {
+      const probe = new Date(seed);
+      probe.setDate(seed.getDate() + i);
+      const probeIso = probe.toISOString().split("T")[0];
+      const workWindow = getStylistWorkWindow(
+        form.stylistId,
+        probe.getDay(),
+        availability,
+      );
+      if (!workWindow) continue;
+      if (cap > 0) {
+        const booked = getAppointmentsForStylistOnDate(
+          form.stylistId,
+          probeIso,
+          allAppointments,
+        ).length;
+        if (booked >= cap) continue;
+      }
+      const probeSlots = computeSlotGrid({
+        stylistId: form.stylistId,
+        dateStr: probeIso,
+        serviceDurationMin: serviceDurationForSlots,
+        slotGranularityMin,
+        workWindow,
+        existingAppointments: allAppointments,
+        smartSchedulingEnabled,
+        bufferMin: defaultBufferMin,
+      });
+      if (probeSlots.some((s) => s.status === "available")) return probeIso;
+    }
+    return null;
+  }, [
+    form.stylistId,
+    form.date,
+    serviceDurationForSlots,
+    stylistsData,
+    availability,
+    allAppointments,
+    slotGranularityMin,
+    smartSchedulingEnabled,
+    defaultBufferMin,
+    effectiveSlotGrid,
+  ]);
+
   // Route preview data — the stylist's confirmed stops on the chosen date,
   // plus the tentative new stop hashed from `newAddressSeed`.
   const routePreviewData = useMemo(() => {
@@ -794,6 +1014,7 @@ export function NewAppointmentDialog({
     setAutoAttachedIds([]);
     setManualPriceOverride(undefined);
     setManualDurationOverride(undefined);
+    setPriceOverrideReason("");
     setSavePriceToPet(false);
     onOpenChange(false);
   }
@@ -835,6 +1056,17 @@ export function NewAppointmentDialog({
       );
       return;
     }
+    // A manual price override must come with a reason — it's the audit trail
+    // for any discount or upcharge applied at booking time.
+    if (
+      manualPriceOverride !== undefined &&
+      !priceOverrideReason.trim()
+    ) {
+      toast.error(
+        "Add a note explaining the price override before booking.",
+      );
+      return;
+    }
     // Persist the manual price/duration as a saved override on this pet so
     // future bookings of the same pet+package start from this number. Only
     // fires when staff explicitly opted in and there's a known pet to attach
@@ -854,13 +1086,39 @@ export function NewAppointmentDialog({
           packageId: form.packageId,
           customPrice: finalPrice,
           customDurationMin: finalDuration,
-          note: `Saved from booking on ${form.date || "today"}.`,
+          note:
+            priceOverrideReason.trim() ||
+            `Saved from booking on ${form.date || "today"}.`,
           createdBy: "facility-staff",
         });
         // Invalidate so the next read (next dialog open) sees the new row.
         void queryClient.invalidateQueries({
           queryKey: ["pet-service-pricing"],
         });
+      }
+    }
+
+    if (form.customerPackageId && selectedCustomerPackage) {
+      const result = redeemPackagePass(form.customerPackageId, {
+        petId: form.petId,
+        petName: form.petName,
+        serviceLabel:
+          selectedPackage?.name ??
+          selectedCustomerPackage.passes[0]?.serviceName ??
+          selectedCustomerPackage.packageName,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["grooming", "customer-packages"],
+      });
+      if (result.ok) {
+        toast.success(
+          `Redeemed 1 pass from ${selectedCustomerPackage.packageName}`,
+          {
+            description: `${result.passesLeft} pass${
+              result.passesLeft === 1 ? "" : "es"
+            } remaining.`,
+          },
+        );
       }
     }
 
@@ -905,7 +1163,11 @@ export function NewAppointmentDialog({
         petPricingOverrides: allPetPricing,
       });
       // Manual overrides win over the resolver — staff has the final say.
-      const finalPrice = manualPriceOverride ?? pricing.price;
+      // A redeemed prepaid pass zeroes the primary pet's line so the
+      // invoice reflects what the customer actually pays today.
+      const finalPrice = selectedCustomerPackage
+        ? 0
+        : (manualPriceOverride ?? pricing.price);
       const finalDuration = manualDurationOverride ?? pricing.durationMin;
       lines.push({
         petName: form.petName,
@@ -949,6 +1211,7 @@ export function NewAppointmentDialog({
     allPetPricing,
     manualPriceOverride,
     manualDurationOverride,
+    selectedCustomerPackage,
   ]);
 
   const lineItemsSubtotal = petLines.reduce((s, l) => s + l.price, 0);
@@ -1007,7 +1270,22 @@ export function NewAppointmentDialog({
     [zipTaxRates, form.clientPostalCode],
   );
 
+  const selectedClient = useMemo(
+    () =>
+      form.clientId !== undefined
+        ? clients.find((c) => c.id === form.clientId)
+        : undefined,
+    [clients, form.clientId],
+  );
+  const waitlistPets = useMemo(() => {
+    if (!selectedClient) return [];
+    return form.petId !== undefined
+      ? selectedClient.pets.filter((p) => p.id === form.petId)
+      : selectedClient.pets;
+  }, [selectedClient, form.petId]);
+
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -1026,6 +1304,7 @@ export function NewAppointmentDialog({
               ownerEmail: form.ownerEmail,
               petId: form.petId,
               petName: form.petName,
+              petType: form.petType,
               petBreed: form.petBreed,
               petSize: form.petSize,
               coatType: form.coatType,
@@ -1040,6 +1319,7 @@ export function NewAppointmentDialog({
                 ownerEmail: next.ownerEmail,
                 petId: next.petId,
                 petName: next.petName,
+                petType: next.petType,
                 petBreed: next.petBreed,
                 petSize: next.petSize,
                 coatType: next.coatType,
@@ -1188,6 +1468,57 @@ export function NewAppointmentDialog({
               </div>
             )}
           </section>
+
+          {eligibleCustomerPackages.length > 0 && (
+            <>
+              <Separator />
+              <section>
+                <SectionHeading>Use prepaid pass</SectionHeading>
+                <div>
+                  <Label className="text-xs">
+                    Apply a prepaid pass (optional)
+                  </Label>
+                  <Select
+                    value={form.customerPackageId || "none"}
+                    onValueChange={(v) =>
+                      update(
+                        "customerPackageId",
+                        v === "none" ? "" : v,
+                      )
+                    }
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="None — bill normally" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        None — bill normally
+                      </SelectItem>
+                      {eligibleCustomerPackages.map((p) => {
+                        const left = p.passesTotal - p.passesUsed;
+                        return (
+                          <SelectItem key={p.id} value={p.id}>
+                            <div className="flex items-center justify-between w-full gap-6">
+                              <span>{p.packageName}</span>
+                              <span className="text-muted-foreground text-xs">
+                                {left} of {p.passesTotal} left
+                              </span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  {selectedCustomerPackage && (
+                    <p className="mt-1 text-[10px] text-emerald-700">
+                      Service will be billed as $0 — 1 pass will be redeemed on
+                      confirm.
+                    </p>
+                  )}
+                </div>
+              </section>
+            </>
+          )}
 
           <Separator />
 
@@ -1373,12 +1704,34 @@ export function NewAppointmentDialog({
                           />
                         </div>
                       </div>
+                      {priceEdited && (
+                        <div className="mt-2">
+                          <Label className="text-xs">
+                            Reason for price override{" "}
+                            <span className="text-destructive">*</span>
+                          </Label>
+                          <Textarea
+                            value={priceOverrideReason}
+                            onChange={(e) =>
+                              setPriceOverrideReason(e.target.value)
+                            }
+                            placeholder="e.g. Matted coat surcharge, loyalty discount, comp for prior issue…"
+                            className="mt-1 min-h-[60px] text-xs"
+                          />
+                          {!priceOverrideReason.trim() && (
+                            <p className="mt-1 text-[10px] text-destructive">
+                              Required — added to the booking record.
+                            </p>
+                          )}
+                        </div>
+                      )}
                       {anyEdited && (
                         <button
                           type="button"
                           onClick={() => {
                             setManualPriceOverride(undefined);
                             setManualDurationOverride(undefined);
+                            setPriceOverrideReason("");
                             setSavePriceToPet(false);
                           }}
                           className="mt-1.5 text-[10px] text-muted-foreground hover:text-foreground"
@@ -1463,7 +1816,7 @@ export function NewAppointmentDialog({
                           </p>
                           <p className="text-[10px] text-muted-foreground mt-0.5">
                             +${ao.price}
-                            {ao.duration > 0 ? ` · ${ao.duration} min` : ""}
+                            {ao.duration > 0 ? ` · adds ${ao.duration} min` : ""}
                           </p>
                         </div>
                       </div>
@@ -1483,7 +1836,7 @@ export function NewAppointmentDialog({
             {/* Mobile grooming toggle — visible only when mobile is enabled
                 in Settings. Switches the form into mobile mode (address +
                 coverage check). */}
-            {mobileEnabled && (
+            {showMobileSection && (
               <div className="mb-3 flex items-center justify-between rounded-lg border bg-sky-50/40 px-3 py-2 dark:bg-sky-950/20">
                 <div className="flex items-center gap-2">
                   <Truck className="size-4 text-sky-600" />
@@ -1510,7 +1863,7 @@ export function NewAppointmentDialog({
             )}
 
             {/* Address + service-area coverage panel */}
-            {mobileEnabled && form.isMobile && (
+            {showMobileSection && form.isMobile && (
               <div className="mb-3 space-y-3 rounded-lg border bg-card p-3">
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-2">
@@ -1804,7 +2157,7 @@ export function NewAppointmentDialog({
                         when each stage is marked complete.
                       </p>
                     ) : (
-                      <ul className="mt-1.5 space-y-1.5">
+                      <ul className="mt-1.5 space-y-2">
                         {stages.map((st, i) => {
                           const updateStage = (
                             patch: Partial<AppointmentStage>,
@@ -1814,75 +2167,122 @@ export function NewAppointmentDialog({
                                 j === i ? { ...s2, ...patch } : s2,
                               ),
                             );
+                          const stageDuration =
+                            timeToMinutes(st.endTime) -
+                            timeToMinutes(st.startTime);
                           return (
                             <li
                               key={st.id}
-                              className="grid grid-cols-12 gap-1.5"
+                              className="rounded-md border border-violet-200/60 bg-white/60 p-1.5 dark:border-violet-900/30 dark:bg-violet-950/10"
                             >
-                              <Input
-                                value={st.label}
-                                onChange={(e) =>
-                                  updateStage({ label: e.target.value })
-                                }
-                                placeholder="Stage"
-                                className="col-span-3 h-7 text-[11px]"
-                              />
-                              <Select
-                                value={st.stylistId}
-                                onValueChange={(v) => {
-                                  const name =
-                                    activeStylists.find((s) => s.id === v)
-                                      ?.name ?? "";
-                                  updateStage({
-                                    stylistId: v,
-                                    stylistName: name,
-                                  });
-                                }}
-                              >
-                                <SelectTrigger className="col-span-4 h-7 text-[11px]">
-                                  <SelectValue placeholder="Groomer" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {activeStylists.map((s) => (
-                                    <SelectItem
-                                      key={s.id}
-                                      value={s.id}
-                                      className="text-xs"
-                                    >
-                                      {s.name}
+                              <div className="grid grid-cols-12 gap-1.5">
+                                <Input
+                                  value={st.label}
+                                  onChange={(e) =>
+                                    updateStage({ label: e.target.value })
+                                  }
+                                  placeholder="Stage"
+                                  className="col-span-4 h-7 text-[11px]"
+                                />
+                                <Select
+                                  value={st.stylistId}
+                                  onValueChange={(v) => {
+                                    const name =
+                                      activeStylists.find((s) => s.id === v)
+                                        ?.name ?? "";
+                                    updateStage({
+                                      stylistId: v,
+                                      stylistName: name,
+                                    });
+                                  }}
+                                >
+                                  <SelectTrigger className="col-span-4 h-7 text-[11px]">
+                                    <SelectValue placeholder="Groomer" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {activeStylists.map((s) => (
+                                      <SelectItem
+                                        key={s.id}
+                                        value={s.id}
+                                        className="text-xs"
+                                      >
+                                        {s.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Select
+                                  value={st.stationId || "__none__"}
+                                  onValueChange={(v) =>
+                                    updateStage({
+                                      stationId:
+                                        v === "__none__" ? undefined : v,
+                                    })
+                                  }
+                                >
+                                  <SelectTrigger className="col-span-3 h-7 text-[11px]">
+                                    <SelectValue placeholder="Station" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="__none__">
+                                      <span className="text-muted-foreground italic">
+                                        Auto-assign
+                                      </span>
                                     </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <Input
-                                value={st.startTime}
-                                onChange={(e) =>
-                                  updateStage({ startTime: e.target.value })
-                                }
-                                placeholder="HH:MM"
-                                className="col-span-2 h-7 text-[11px] tabular-nums"
-                              />
-                              <Input
-                                value={st.endTime}
-                                onChange={(e) =>
-                                  updateStage({ endTime: e.target.value })
-                                }
-                                placeholder="HH:MM"
-                                className="col-span-2 h-7 text-[11px] tabular-nums"
-                              />
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="col-span-1 h-7 px-1 text-destructive/70 hover:text-destructive"
-                                onClick={() =>
-                                  setStages((prev) =>
-                                    prev.filter((_, j) => j !== i),
-                                  )
-                                }
-                              >
-                                <Trash2 className="size-3" />
-                              </Button>
+                                    {eligibleStations.length === 0 ? (
+                                      <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                        Pick a pet size first.
+                                      </div>
+                                    ) : (
+                                      eligibleStations.map((s) => (
+                                        <SelectItem
+                                          key={s.id}
+                                          value={s.id}
+                                          className="text-xs"
+                                        >
+                                          {s.name}
+                                        </SelectItem>
+                                      ))
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="col-span-1 h-7 px-1 text-destructive/70 hover:text-destructive"
+                                  onClick={() =>
+                                    setStages((prev) =>
+                                      prev.filter((_, j) => j !== i),
+                                    )
+                                  }
+                                >
+                                  <Trash2 className="size-3" />
+                                </Button>
+                              </div>
+                              <div className="mt-1 grid grid-cols-12 gap-1.5">
+                                <Input
+                                  value={st.startTime}
+                                  onChange={(e) =>
+                                    updateStage({ startTime: e.target.value })
+                                  }
+                                  placeholder="HH:MM"
+                                  className="col-span-4 h-7 text-[11px] tabular-nums"
+                                />
+                                <Input
+                                  value={st.endTime}
+                                  onChange={(e) =>
+                                    updateStage({ endTime: e.target.value })
+                                  }
+                                  placeholder="HH:MM"
+                                  className="col-span-4 h-7 text-[11px] tabular-nums"
+                                />
+                                <div className="col-span-4 flex h-7 items-center justify-end pr-1 text-[10px] text-muted-foreground tabular-nums">
+                                  {stageDuration > 0
+                                    ? `${stageDuration} min`
+                                    : "—"}
+                                </div>
+                              </div>
                             </li>
                           );
                         })}
@@ -1976,14 +2376,18 @@ export function NewAppointmentDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">
-                      Assign at check-in
+                      Auto-assign at check-in
                     </SelectItem>
                     {eligibleStations.length === 0 && form.petSize ? (
                       <div className="px-2 py-1.5 text-xs text-muted-foreground">
                         No stations fit a {form.petSize} pet.
                       </div>
+                    ) : availableStations.length === 0 ? (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                        All eligible stations are already booked at this time.
+                      </div>
                     ) : (
-                      eligibleStations.map((s) => {
+                      availableStations.map((s) => {
                         const sizes =
                           !s.allowedPetSizes || s.allowedPetSizes.length === 0
                             ? "any size"
@@ -2008,6 +2412,15 @@ export function NewAppointmentDialog({
                 {form.petSize && (
                   <p className="text-[10px] text-muted-foreground mt-1">
                     Showing stations sized for {form.petSize} pets.
+                    {hiddenForConflictCount > 0 && (
+                      <>
+                        {" "}
+                        <span className="text-amber-700 dark:text-amber-300">
+                          {hiddenForConflictCount} hidden — already booked at
+                          this time.
+                        </span>
+                      </>
+                    )}
                   </p>
                 )}
               </div>
@@ -2037,24 +2450,83 @@ export function NewAppointmentDialog({
                         : "Pick a date to see available slots."}
                   </div>
                 ) : (
-                  <SlotGrid
-                    slots={slotGrid}
-                    selectedStartTime={form.startTime}
-                    onSelect={(start) => {
-                      update("startTime", start);
-                      update(
-                        "endTime",
-                        addMinutesToTime(start, serviceDurationForSlots),
-                      );
-                    }}
-                    smartSchedulingEnabled={smartSchedulingEnabled}
-                    showDriveTime={form.isMobile}
-                    emptyLabel={
-                      slotGrid.length === 0
-                        ? "Groomer doesn't work this day. Pick another date."
-                        : "No slots available."
-                    }
-                  />
+                  <>
+                    <div className="mb-2 flex items-center justify-between rounded-md border bg-muted/30 px-3 py-1.5 text-xs">
+                      <span className="font-semibold">
+                        {stylistsData.find((s) => s.id === form.stylistId)
+                          ?.name ?? "Groomer"}{" "}
+                        ·{" "}
+                        {new Date(
+                          form.date + "T00:00:00",
+                        ).toLocaleDateString("en-CA", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                      {dayCapInfo && (
+                        <span
+                          className={cn(
+                            "tabular-nums text-[10px]",
+                            dayCapInfo.atCap
+                              ? "text-red-700 dark:text-red-300"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          {dayCapInfo.booked}/{dayCapInfo.cap} booked
+                        </span>
+                      )}
+                    </div>
+                    <SlotGrid
+                      slots={effectiveSlotGrid}
+                      selectedStartTime={form.startTime}
+                      onSelect={(start) => {
+                        update("startTime", start);
+                        update(
+                          "endTime",
+                          addMinutesToTime(start, serviceDurationForSlots),
+                        );
+                      }}
+                      smartSchedulingEnabled={smartSchedulingEnabled}
+                      showDriveTime={form.isMobile}
+                      emptyLabel={
+                        dayCapInfo?.atCap
+                          ? `${dayCapInfo.cap}-appointment daily cap reached. Pick another date.`
+                          : "Groomer doesn't work this day. Pick another date."
+                      }
+                    />
+                    {effectiveSlotGrid.length === 0 && nextAvailableDate && (
+                      <button
+                        type="button"
+                        onClick={() => update("date", nextAvailableDate)}
+                        className="mt-2 inline-flex items-center gap-1 rounded-md border border-pink-200 bg-pink-50 px-2.5 py-1 text-[11px] font-medium text-pink-800 hover:bg-pink-100 dark:border-pink-900 dark:bg-pink-950/30 dark:text-pink-200"
+                      >
+                        Check next available date —{" "}
+                        {new Date(
+                          nextAvailableDate + "T00:00:00",
+                        ).toLocaleDateString("en-CA", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        })}{" "}
+                        →
+                      </button>
+                    )}
+                    <div className="mt-3 flex items-center justify-between rounded-md border border-dashed bg-muted/30 px-3 py-1.5">
+                      <p className="text-[11px] text-muted-foreground">
+                        Can&rsquo;t find a slot?
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={() => setWaitlistOpen(true)}
+                      >
+                        Join the Waitlist
+                      </Button>
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -2337,5 +2809,15 @@ export function NewAppointmentDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <GroomingWaitlistDialog
+      open={waitlistOpen}
+      onOpenChange={setWaitlistOpen}
+      selectedClient={selectedClient}
+      selectedPets={waitlistPets}
+      packageId={form.packageId}
+      isMobile={form.isMobile}
+      postalCode={form.clientPostalCode || undefined}
+    />
+    </>
   );
 }

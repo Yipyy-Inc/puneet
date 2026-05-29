@@ -12,6 +12,7 @@ import {
   membershipPlans,
   servicePackages,
 } from "@/data/services-pricing";
+import { mockCustomerPackages } from "@/data/customer-packages";
 import { PurchasedPackageCard } from "@/components/customer/billing/packages/PurchasedPackageCard";
 import { ActiveMembershipCard } from "@/components/customer/billing/packages/ActiveMembershipCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +38,7 @@ import {
   Plus,
   MessageSquare,
   StickyNote,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -69,6 +71,10 @@ export default function ClientOverviewPage({
   const clientPackagePurchases = customerPackagePurchases.filter(
     (p) => p.customerId === customerIdStr,
   );
+  const activePrepaidPackages = mockCustomerPackages.filter(
+    (p) => p.customerId === clientId && p.status === "active",
+  );
+  const totalPrepaidPassesRemaining = activePrepaidPackages.reduce((sum, pkg) => sum + (pkg.passesTotal - pkg.passesUsed), 0);
 
   const clientBookings = bookings.filter((b) => b.clientId === clientId);
   const upcoming = clientBookings
@@ -632,7 +638,7 @@ export default function ClientOverviewPage({
           </Card>
 
           {/* Membership & Packages */}
-          {(client.membership || client.packages?.length) && (
+          {(client.membership || client.packages?.length || activePrepaidPackages.length > 0) && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold">
@@ -664,6 +670,8 @@ export default function ClientOverviewPage({
                     </Badge>
                   </div>
                 )}
+                
+                {/* Legacy simple packages */}
                 {client.packages?.map((pkg) => (
                   <div key={pkg.id} className="rounded-lg border px-3 py-2.5">
                     <div className="flex items-center justify-between">
@@ -682,6 +690,19 @@ export default function ClientOverviewPage({
                     </div>
                   </div>
                 ))}
+
+                {/* Prepaid Packages Summary */}
+                {activePrepaidPackages.length > 0 && (
+                  <div className="bg-emerald-50/50 border-emerald-100/50 rounded-lg border px-3 py-2.5 mt-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-emerald-800">Prepaid Passes Available</p>
+                      <span className="text-sm font-bold text-emerald-700">
+                        {totalPrepaidPassesRemaining} pass{totalPrepaidPassesRemaining === 1 ? "" : "es"} left
+                      </span>
+                    </div>
+                    <p className="text-emerald-700/70 text-xs mt-0.5">Across {activePrepaidPackages.length} active package{activePrepaidPackages.length === 1 ? "" : "s"}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -689,7 +710,7 @@ export default function ClientOverviewPage({
       </div>
 
       {/* Detailed Memberships & Packages — pass-level breakdown with booking deep links */}
-      {(clientMemberships.length > 0 || clientPackagePurchases.length > 0) && (
+      {(clientMemberships.length > 0 || clientPackagePurchases.length > 0 || activePrepaidPackages.length > 0) && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">
@@ -726,6 +747,66 @@ export default function ClientOverviewPage({
                   />
                 );
               })}
+            </div>
+          )}
+
+          {activePrepaidPackages.length > 0 && (
+            <div className="grid gap-4 md:grid-cols-2">
+              {activePrepaidPackages.map((pkg) => (
+                <Card key={pkg.id}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <Package className="size-4" />
+                          {pkg.packageName}
+                        </CardTitle>
+                        <p className="text-muted-foreground text-xs mt-1">
+                          Purchased {formatDate(pkg.purchasedAt)}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="capitalize text-[10px]">
+                        {pkg.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <div className="mb-1.5 flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Passes used</span>
+                        <span className="font-semibold">
+                          {pkg.passesUsed} of {pkg.passesTotal}
+                          <span className="text-muted-foreground ml-2 font-normal">
+                            ({pkg.passesTotal - pkg.passesUsed} left)
+                          </span>
+                        </span>
+                      </div>
+                      <div className="bg-muted mt-1.5 h-2 overflow-hidden rounded-full">
+                        <div
+                          className="bg-primary h-full rounded-full"
+                          style={{
+                            width: `${(pkg.passesUsed / pkg.passesTotal) * 100}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    {pkg.redemptions && pkg.redemptions.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium uppercase text-muted-foreground tracking-wider">Redemption History</p>
+                        <div className="space-y-1.5">
+                          {pkg.redemptions.map((redemption) => (
+                            <div key={redemption.id} className="text-sm text-slate-700 border border-slate-100 rounded-md p-2.5 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                              <span className="font-medium text-slate-900">Pass {redemption.passNumber} of {pkg.passesTotal}</span> used on {new Date(redemption.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                              {redemption.petName && ` — `}<span className="font-medium">{redemption.petName}</span>
+                              {redemption.serviceLabel && ` — `}{redemption.serviceLabel}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
 

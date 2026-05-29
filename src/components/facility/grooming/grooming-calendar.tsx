@@ -21,10 +21,16 @@ import {
 } from "lucide-react";
 import { groomingQueries, getEffectiveAlertNotes } from "@/lib/api/grooming";
 import type {
+  AlertNote,
   GroomingAppointment,
   GroomingStatus,
   Stylist,
 } from "@/types/grooming";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { AppointmentPanel } from "./appointment-panel";
 import { NewAppointmentDialog } from "./new-appointment-dialog";
 import {
@@ -74,6 +80,10 @@ import {
   XCircle,
   PawPrint,
   Eraser,
+  DoorOpen,
+  BellRing,
+  Ghost,
+  Truck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -89,18 +99,58 @@ const HOURS = Array.from(
 
 type ViewMode = "day" | "week" | "month";
 
+// ─── Now-tick hook ────────────────────────────────────────────────────────────
+
+/**
+ * Returns the current local time as minutes-since-midnight, re-rendering
+ * every 30 seconds. Lifted to the parent view (DayView) so we only run one
+ * interval per calendar mount and pass the value down to each block.
+ * Returns null on the first render (SSR / hydration parity).
+ */
+function useNowMin(): number | null {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => {
+      const d = new Date();
+      setNow(d.getHours() * 60 + d.getMinutes());
+    };
+    tick();
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
 // ─── Status styles ────────────────────────────────────────────────────────────
+
+// Icon per status so each block self-narrates its state without staff having
+// to memorize the bg-color encoding. The icon sits at the leading edge of the
+// block, replacing the empty avatar slot when no pet photo exists.
+const STATUS_ICON: Record<
+  GroomingStatus,
+  React.ComponentType<{ className?: string }>
+> = {
+  scheduled: CalendarClock,
+  "checked-in": DoorOpen,
+  "in-progress": Scissors,
+  "ready-for-pickup": BellRing,
+  completed: CheckCircle2,
+  cancelled: XCircle,
+  "no-show": Ghost,
+};
 
 export const STATUS_META: Record<
   GroomingStatus,
   { bg: string; text: string; dot: string; pill: string; label: string }
 > = {
+  // Confirmed — white/light, the "default" pending state. Border on the block
+  // keeps it visible against the calendar background since the bg is plain.
   scheduled: {
-    bg: "bg-blue-100 dark:bg-blue-900/40",
-    text: "text-blue-900 dark:text-blue-100",
-    dot: "bg-blue-500",
-    pill: "bg-blue-500",
-    label: "Scheduled",
+    bg: "bg-white dark:bg-slate-900",
+    text: "text-slate-800 dark:text-slate-100",
+    dot: "bg-slate-400",
+    pill: "bg-slate-500",
+    label: "Confirmed",
   },
   "checked-in": {
     bg: "bg-sky-100 dark:bg-sky-900/40",
@@ -109,13 +159,16 @@ export const STATUS_META: Record<
     pill: "bg-sky-500",
     label: "Checked In",
   },
+  // In Progress — blue (was amber). Saturated enough to read against the
+  // light "Confirmed" bg on the same column.
   "in-progress": {
-    bg: "bg-amber-100 dark:bg-amber-900/40",
-    text: "text-amber-900 dark:text-amber-100",
-    dot: "bg-amber-500",
-    pill: "bg-amber-500",
+    bg: "bg-blue-100 dark:bg-blue-900/40",
+    text: "text-blue-900 dark:text-blue-100",
+    dot: "bg-blue-500",
+    pill: "bg-blue-500",
     label: "In Progress",
   },
+  // Ready for Pickup — green (kept).
   "ready-for-pickup": {
     bg: "bg-emerald-100 dark:bg-emerald-900/40",
     text: "text-emerald-900 dark:text-emerald-100",
@@ -137,11 +190,13 @@ export const STATUS_META: Record<
     pill: "bg-red-400",
     label: "Cancelled",
   },
+  // No Show — solid red (was rose). Most actionable miss for a manager
+  // doing a scan, so it gets the loudest color.
   "no-show": {
-    bg: "bg-rose-100 dark:bg-rose-900/30",
-    text: "text-rose-700 dark:text-rose-300",
-    dot: "bg-rose-500",
-    pill: "bg-rose-500",
+    bg: "bg-red-100 dark:bg-red-900/40",
+    text: "text-red-900 dark:text-red-100",
+    dot: "bg-red-500",
+    pill: "bg-red-500",
     label: "No Show",
   },
 };
@@ -288,6 +343,12 @@ function GroomingSidebar({
       confirmed: todayAppointments.filter(
         (a) => a.status === "scheduled" || a.status === "checked-in",
       ).length,
+      inProgress: todayAppointments.filter(
+        (a) => a.status === "in-progress",
+      ).length,
+      readyForPickup: todayAppointments.filter(
+        (a) => a.status === "ready-for-pickup",
+      ).length,
       completed: todayAppointments.filter((a) => a.status === "completed")
         .length,
     };
@@ -407,6 +468,24 @@ function GroomingSidebar({
       label: "Confirmed",
       value: stats.confirmed,
       icon: CheckCircle2,
+      bg: "bg-slate-50",
+      ring: "ring-slate-100",
+      text: "text-slate-700",
+      iconColor: "text-slate-500",
+    },
+    {
+      label: "In Progress",
+      value: stats.inProgress,
+      icon: Scissors,
+      bg: "bg-blue-50",
+      ring: "ring-blue-100",
+      text: "text-blue-600",
+      iconColor: "text-blue-500",
+    },
+    {
+      label: "Ready for Pickup",
+      value: stats.readyForPickup,
+      icon: BellRing,
       bg: "bg-emerald-50",
       ring: "ring-emerald-100",
       text: "text-emerald-600",
@@ -756,6 +835,9 @@ function AppointmentBlock({
   isDimmed,
   blockRef,
   alertCount,
+  alertNotes,
+  nowMin,
+  isToday,
 }: {
   appointment: GroomingAppointment;
   stylistColor: string;
@@ -781,17 +863,81 @@ function AppointmentBlock({
    *  red exclamation badge so groomers can see warnings without opening the
    *  appointment. */
   alertCount?: number;
+  /** Full alert-note records — when present, clicking the badge opens a
+   *  small popover listing each note instead of the full appointment. */
+  alertNotes?: AlertNote[];
+  /** Current local time in minutes-since-midnight. Drives the late / overrun /
+   *  ready-since tags. Null during the SSR/first render. */
+  nowMin?: number | null;
+  /** True when the calendar is showing today's date. Time-based exception
+   *  tags only apply to today's appointments. */
+  isToday?: boolean;
 }) {
   const startStr = stageOverride?.startTime ?? appointment.startTime;
   const endStr = stageOverride?.endTime ?? appointment.endTime;
   const start = timeToMinutes(startStr);
   const end = timeToMinutes(endStr);
   const top = ((start - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-  // Fixed compact height — cards always render as the thin single-row layout
-  // regardless of appointment duration, so the calendar stays scannable.
-  const height = 44;
+  // Fixed compact height — two tight lines (pet name + service) regardless
+  // of appointment duration so the calendar stays scannable.
+  const height = 50;
   const s = STATUS_META[appointment.status];
+  const StatusIcon = STATUS_ICON[appointment.status];
   const stageDone = !!stageOverride?.completedAt;
+
+  // Time-based exception state — only meaningful on today's view. 5-minute
+  // grace before "late" fires keeps normal arrival window from flashing red.
+  const LATE_GRACE_MIN = 5;
+  const RUNNING_LONG_MIN = 15;
+  const liveOnToday = !!isToday && typeof nowMin === "number";
+  const lateMin =
+    liveOnToday && appointment.status === "scheduled" && nowMin! > start + LATE_GRACE_MIN
+      ? nowMin! - start
+      : 0;
+
+  // During the groom — derive elapsed and estimated duration from the actual
+  // check-in time (groomer's wall clock) rather than the scheduled start.
+  // estimatedReadyTime is the groomer-adjusted target captured at check-in;
+  // fall back to scheduled (endTime - startTime) if it's missing.
+  const checkInMin = appointment.checkInTime
+    ? (() => {
+        const d = new Date(appointment.checkInTime);
+        return Number.isNaN(d.getTime())
+          ? null
+          : d.getHours() * 60 + d.getMinutes();
+      })()
+    : null;
+  const estimatedReadyMin = appointment.estimatedReadyTime
+    ? timeToMinutes(appointment.estimatedReadyTime)
+    : null;
+  const sessionEstimatedMin =
+    estimatedReadyMin !== null && checkInMin !== null
+      ? Math.max(0, estimatedReadyMin - checkInMin)
+      : end - start;
+  const elapsedMin =
+    liveOnToday &&
+    appointment.status === "in-progress" &&
+    checkInMin !== null &&
+    nowMin! >= checkInMin
+      ? nowMin! - checkInMin
+      : 0;
+  const runningLongMin =
+    appointment.status === "in-progress" &&
+    elapsedMin > sessionEstimatedMin + RUNNING_LONG_MIN
+      ? elapsedMin - sessionEstimatedMin
+      : 0;
+  const progressPct =
+    appointment.status === "in-progress" && sessionEstimatedMin > 0
+      ? Math.min(100, Math.round((elapsedMin / sessionEstimatedMin) * 100))
+      : 0;
+
+  // Ready-since approximates from the scheduled end time — close enough for
+  // the prototype; when a real `markedReadyAt` timestamp is captured we'd
+  // swap to that for accuracy.
+  const readySinceMin =
+    liveOnToday && appointment.status === "ready-for-pickup" && nowMin! > end
+      ? nowMin! - end
+      : 0;
 
   const hasExtraPets = (appointment.additionalPets?.length ?? 0) > 0;
   const allPetNames = hasExtraPets
@@ -803,14 +949,118 @@ function AppointmentBlock({
   const hasCheckedInBadge = !!appointment.expressCheckinSubmission;
 
   const alertBadge = !!alertCount && alertCount > 0 && (
-    <span
-      title={`${alertCount} alert note${alertCount > 1 ? "s" : ""} — open the appointment for details`}
-      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-red-600 px-1.5 text-[9px] font-bold text-white shadow-sm"
-    >
-      <AlertTriangle className="size-2.5" />
-      {alertCount}
-    </span>
+    <Popover>
+      {/* Span trigger (not button) because the outer AppointmentBlock is
+          already a <button>; nesting buttons is invalid HTML. role/tabIndex
+          + keyboard handler keep the span fully keyboard-accessible. */}
+      <PopoverTrigger asChild>
+        <span
+          role="button"
+          tabIndex={0}
+          // Clicking the badge must NOT open the full appointment — staff
+          // wants a quick read of the warnings without losing their place.
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") e.stopPropagation();
+          }}
+          title={`${alertCount} alert note${alertCount > 1 ? "s" : ""} — click for details`}
+          className="inline-flex shrink-0 cursor-pointer items-center gap-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+        >
+          <AlertTriangle className="size-2.5" />
+          {alertCount}
+        </span>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-72 p-0"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="border-b border-red-200 bg-red-50 px-3 py-2 dark:border-red-900 dark:bg-red-950/30">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-red-800 dark:text-red-200">
+            <AlertTriangle className="size-3.5" />
+            {alertCount} alert note{alertCount > 1 ? "s" : ""}
+          </p>
+          <p className="mt-0.5 text-[10px] text-red-700/80 dark:text-red-300/80">
+            {appointment.petName} — includes carry-forward from past visits
+          </p>
+        </div>
+        <ul className="max-h-64 divide-y divide-border overflow-y-auto">
+          {(alertNotes ?? []).map((note) => (
+            <li key={note.id} className="px-3 py-2">
+              <p className="text-xs leading-snug">{note.text}</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                {note.createdBy}
+                {" · "}
+                {new Date(note.createdAt).toLocaleDateString("en-CA", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+                {note.appliesToFuture && " · applies to future"}
+              </p>
+            </li>
+          ))}
+          {(!alertNotes || alertNotes.length === 0) && (
+            <li className="px-3 py-2 text-[11px] italic text-muted-foreground">
+              No note details available.
+            </li>
+          )}
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
+
+  // Time-based exception pill — wins over other badges visually because it's
+  // the most actionable state ("Late", "Overrun", "Ready Nm waiting").
+  const exceptionPill =
+    lateMin > 0 ? (
+      <span
+        title={`Scheduled for ${startStr} — client is ${lateMin} min late`}
+        className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm"
+      >
+        <Clock className="size-2.5" />
+        Late {lateMin}m
+      </span>
+    ) : runningLongMin > 0 ? (
+      <span
+        title={`Running ${runningLongMin} min past the estimated duration — consider sending an ETA update to ${appointment.ownerName}`}
+        className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm animate-pulse"
+      >
+        <Hourglass className="size-2.5" />
+        Running long {runningLongMin}m
+      </span>
+    ) : appointment.status === "in-progress" &&
+      liveOnToday &&
+      elapsedMin > 0 ? (
+      <span
+        title={`Elapsed ${elapsedMin} min of ~${sessionEstimatedMin} min estimated`}
+        className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm tabular-nums"
+      >
+        <Clock className="size-2.5" />
+        {elapsedMin}/{sessionEstimatedMin}m
+      </span>
+    ) : readySinceMin > 0 ? (
+      <span
+        title={`Marked ready for pickup ~${readySinceMin} min ago — nudge the client`}
+        className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm animate-pulse"
+      >
+        <BellRing className="size-2.5" />
+        Ready {readySinceMin}m
+      </span>
+    ) : null;
+
+  // Status icon + label — gives every block an explicit state cue so staff
+  // don't have to memorize the bg-color encoding. Hidden when an exception
+  // pill is showing because it already implies the state.
+  const statusChip = !exceptionPill ? (
+    <span
+      title={s.label}
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/70 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide shadow-sm dark:bg-slate-900/60"
+    >
+      <StatusIcon className="size-2.5" />
+      {s.label}
+    </span>
+  ) : null;
   const checkedInBadge = hasCheckedInBadge && (
     <span
       title="Client submitted the Express Check-In form"
@@ -881,33 +1131,83 @@ function AppointmentBlock({
         height: `${height}px`,
       }}
     >
-      <div className="flex items-center gap-2 min-w-0">
-        <div className="ring-background size-7 shrink-0 overflow-hidden rounded-full ring-2">
+      <div className="flex items-center gap-2 min-w-0 h-full">
+        <div className="ring-background relative size-8 shrink-0 overflow-hidden rounded-full ring-2">
           {appointment.petPhotoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={appointment.petPhotoUrl}
               alt={appointment.petName}
-              width={28}
-              height={28}
+              width={32}
+              height={32}
               className="size-full object-cover"
             />
           ) : (
             <div className="bg-white/60 dark:bg-slate-900/60 flex size-full items-center justify-center">
-              <PawPrint className="size-3.5 opacity-70" />
+              <StatusIcon className="size-4 opacity-70" />
             </div>
           )}
+          {/* Status corner badge — only when a photo covers the avatar so the
+              state remains visible even when the icon-fallback above is hidden. */}
+          {appointment.petPhotoUrl && (
+            <span
+              title={s.label}
+              className={cn(
+                "absolute -bottom-px -right-px flex size-3.5 items-center justify-center rounded-full ring-1 ring-white dark:ring-slate-900",
+                s.pill,
+              )}
+            >
+              <StatusIcon className="size-2 text-white" />
+            </span>
+          )}
         </div>
-        <span
-          className="font-semibold text-xs truncate leading-tight"
-          title={hasExtraPets ? allPetNames : undefined}
-        >
-          {allPetNames}
-        </span>
-        {checkedInBadge}
-        {alertBadge}
-        {cornerBadge && <span className="ml-auto">{cornerBadge}</span>}
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-px">
+          <div className="flex min-w-0 items-center gap-1">
+            <span
+              className="truncate text-xs font-semibold leading-tight"
+              title={hasExtraPets ? allPetNames : undefined}
+            >
+              {allPetNames}
+            </span>
+            {exceptionPill}
+            {!exceptionPill && statusChip}
+            {alertBadge}
+          </div>
+          <span
+            className="truncate text-[10px] leading-tight opacity-75"
+            title={appointment.packageName}
+          >
+            {appointment.packageName}
+          </span>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-px">
+          {checkedInBadge}
+          {cornerBadge}
+        </div>
       </div>
+      {/* Elapsed / estimated progress bar — only on today's in-progress
+          appointments. Color escalates from blue → amber → red as the
+          session approaches and then exceeds the estimated duration. */}
+      {appointment.status === "in-progress" &&
+        liveOnToday &&
+        sessionEstimatedMin > 0 && (
+          <span
+            className="absolute bottom-0 left-0 right-0 h-1 bg-black/10 dark:bg-white/10"
+            aria-hidden="true"
+          >
+            <span
+              className={cn(
+                "block h-full transition-all duration-500",
+                runningLongMin > 0
+                  ? "bg-red-500"
+                  : progressPct >= 85
+                    ? "bg-amber-500"
+                    : "bg-blue-500",
+              )}
+              style={{ width: `${progressPct}%` }}
+            />
+          </span>
+        )}
     </button>
   );
 }
@@ -1020,6 +1320,7 @@ function DayView({
   searchActive,
   stylistNameById,
   alertCountById,
+  alertNotesById,
 }: {
   selectedDate: string;
   appointments: GroomingAppointment[];
@@ -1048,8 +1349,18 @@ function DayView({
   matchedIds: Set<string>;
   searchActive: boolean;
   alertCountById: Record<string, number>;
+  /** Full alert-note records per appointment — feeds the click-to-open
+   *  popover on each block's alert badge so staff can read the specific
+   *  warnings without opening the full appointment view. */
+  alertNotesById: Record<string, AlertNote[]>;
 }) {
   const dateAppointments = appointments.filter((a) => a.date === selectedDate);
+
+  // One ticker per DayView mount — passed down to each block so all of them
+  // share the same "now" and re-render together.
+  const nowMin = useNowMin();
+  const todayStr = useMemo(() => formatISODate(new Date()), []);
+  const isToday = selectedDate === todayStr;
 
   // Bulk-actions state — triggered from each stylist's column header.
   const [bulkState, setBulkState] = useState<{
@@ -1132,9 +1443,19 @@ function DayView({
                         <p className="text-xs font-semibold truncate leading-tight">
                           {stylist.name}
                         </p>
-                        <p className="text-[10px] text-muted-foreground capitalize leading-tight">
-                          {stylist.capacity.skillLevel}
-                        </p>
+                        {stylist.staffLine ? (
+                          <p
+                            className="flex items-center gap-1 truncate text-[10px] leading-tight text-muted-foreground"
+                            title={`Driver: ${stylist.staffLine}`}
+                          >
+                            <Truck className="size-2.5 shrink-0" />
+                            <span className="truncate">{stylist.staffLine}</span>
+                          </p>
+                        ) : (
+                          <p className="text-[10px] text-muted-foreground capitalize leading-tight">
+                            {stylist.capacity.skillLevel}
+                          </p>
+                        )}
                       </div>
                     </button>
                   </DropdownMenuTrigger>
@@ -1279,6 +1600,9 @@ function DayView({
                                 searchActive && !matchedIds.has(apt.id)
                               }
                               alertCount={alertCountById[apt.id]}
+                              alertNotes={alertNotesById[apt.id]}
+                              nowMin={nowMin}
+                              isToday={isToday}
                             />
                           ));
                       }
@@ -1316,6 +1640,9 @@ function DayView({
                               : undefined
                           }
                           alertCount={alertCountById[apt.id]}
+                          alertNotes={alertNotesById[apt.id]}
+                          nowMin={nowMin}
+                          isToday={isToday}
                         />,
                       ];
                     })}
@@ -1701,17 +2028,24 @@ export function GroomingCalendar() {
     [appointments, filters],
   );
 
-  // Effective alert-note count per appointment. Carry-forward alerts from past
+  // Effective alert-notes per appointment. Carry-forward alerts from past
   // bookings for the same pet are included so the red badge appears even on
-  // future appointments that don't have their own alerts yet.
-  const alertCountById = useMemo(() => {
-    const map: Record<string, number> = {};
+  // future appointments that don't have their own alerts yet. We keep the
+  // full notes (not just the count) so the calendar block can pop them up
+  // inline without forcing staff into the full appointment view.
+  const alertNotesById = useMemo(() => {
+    const map: Record<string, AlertNote[]> = {};
     for (const a of appointments) {
-      const count = getEffectiveAlertNotes(a, appointments).length;
-      if (count > 0) map[a.id] = count;
+      const notes = getEffectiveAlertNotes(a, appointments);
+      if (notes.length > 0) map[a.id] = notes;
     }
     return map;
   }, [appointments]);
+  const alertCountById = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const id in alertNotesById) map[id] = alertNotesById[id].length;
+    return map;
+  }, [alertNotesById]);
 
   const searchActive = searchQuery.trim().length > 0;
 
@@ -1972,6 +2306,7 @@ export function GroomingCalendar() {
               searchActive={searchActive}
               stylistNameById={stylistNameById}
               alertCountById={alertCountById}
+              alertNotesById={alertNotesById}
             />
           )}
           {viewMode === "week" && (

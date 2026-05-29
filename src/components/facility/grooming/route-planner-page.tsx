@@ -29,6 +29,7 @@ import {
   Sparkles,
   Map as MapIcon,
   ArrowRight,
+  CalendarDays,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -85,11 +86,13 @@ function RouteMap({
   stops,
   nearbyClients,
   onNearbyClick,
+  activeAreas,
 }: {
   vanColor: string;
   stops: { coord: Coord; label: number; petName: string }[];
-  nearbyClients?: { id: number; name: string; coord: Coord }[];
+  nearbyClients?: { id: number; name: string; address: string; coord: Coord }[];
   onNearbyClick?: (clientId: number) => void;
+  activeAreas?: { id: string; name: string; color?: string }[];
 }) {
   const linePoints = [HOME_COORD, ...stops.map((s) => s.coord), HOME_COORD]
     .map((c) => `${c.x},${c.y}`)
@@ -111,6 +114,30 @@ function RouteMap({
         preserveAspectRatio="xMidYMid meet"
         className="absolute inset-0 h-full w-full"
       >
+        {/* Active Service Areas Mock Polygons */}
+        {activeAreas?.map((area) => {
+          // Generate a deterministic center for the mock area based on its name
+          let hash = 0;
+          for (let i = 0; i < area.name.length; i++) {
+            hash = area.name.charCodeAt(i) + ((hash << 5) - hash);
+          }
+          const cx = 30 + Math.abs(hash % 40);
+          const cy = 30 + Math.abs((hash >> 4) % 40);
+          const color = area.color || "#3b82f6";
+          const points = `${cx - 20},${cy - 20} ${cx + 25},${cy - 15} ${cx + 20},${cy + 25} ${cx - 25},${cy + 20}`;
+          
+          return (
+            <polygon
+              key={area.id}
+              points={points}
+              fill={color}
+              opacity={0.15}
+              stroke={color}
+              strokeWidth={1}
+              strokeDasharray="2,2"
+            />
+          );
+        })}
         {stops.length > 0 && (
           <polyline
             points={linePoints}
@@ -162,7 +189,7 @@ function RouteMap({
               stroke="#b45309"
               strokeWidth={0.6}
             />
-            <title>{c.name} — nearby client</title>
+            <title>{c.name} — {c.address}</title>
           </g>
         ))}
 
@@ -579,11 +606,15 @@ export function RoutePlannerPage() {
                   .map((cl) => {
                     const addr =
                       `${cl.address?.street ?? ""} ${cl.address?.city ?? ""}`.trim() ||
+                      "No address on file";
+                    const coordAddr =
+                      `${cl.address?.street ?? ""} ${cl.address?.city ?? ""}`.trim() ||
                       cl.name;
                     return {
                       id: cl.id,
                       name: cl.name,
-                      coord: pseudoCoord(addr),
+                      address: addr,
+                      coord: pseudoCoord(coordAddr),
                     };
                   })
                   .filter(
@@ -669,9 +700,17 @@ export function RoutePlannerPage() {
                       {/* ── Left: ordered stop list ── */}
                       <div>
                         {chain.length === 0 ? (
-                          <p className="text-muted-foreground py-8 text-center text-sm">
-                            No stops scheduled for this date.
-                          </p>
+                          <div className="py-8 text-center">
+                            <p className="text-sm text-muted-foreground mb-3">
+                              No mobile bookings today — view the calendar to check or add bookings.
+                            </p>
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href="/facility/calendar">
+                                <CalendarDays className="mr-1.5 size-4" />
+                                View Calendar
+                              </Link>
+                            </Button>
+                          </div>
                         ) : (
                           <ol className="space-y-2">
                             <li className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-xs">
@@ -798,6 +837,7 @@ export function RoutePlannerPage() {
                         </div>
                         <RouteMap
                           vanColor={vanColor}
+                          activeAreas={activeAreasForDay}
                           stops={chain.map((c, i) => ({
                             coord: c.coord,
                             label: i + 1,
@@ -810,11 +850,14 @@ export function RoutePlannerPage() {
                             // Real wiring goes to a client profile route; toast
                             // the intent so the gesture is visible in mock.
                             const cl = clients.find((c) => c.id === id);
+                            const addr =
+                              `${cl?.address?.street ?? ""} ${cl?.address?.city ?? ""}`.trim() ||
+                              "No address on file";
                             toast.message(
                               `Nearby client: ${cl?.name ?? "Client"}`,
                               {
                                 description:
-                                  "Opens their profile (use it to suggest a same-day add-on).",
+                                  `${addr} — call to suggest a same-day booking.`,
                               },
                             );
                           }}
@@ -824,6 +867,46 @@ export function RoutePlannerPage() {
                             Pins are numbered in route order. The dashed line
                             shows the drive sequence from home base through
                             every stop and back.
+                          </p>
+                        )}
+
+                        {/* Nearby clients list */}
+                        {showNearbyClients && nearby.length > 0 && (
+                          <div className="mt-3 rounded-xl border overflow-hidden">
+                            <div className="bg-amber-50 dark:bg-amber-950/20 px-3 py-2 border-b flex items-center gap-2">
+                              <Users className="size-3.5 text-amber-600" />
+                              <p className="text-xs font-semibold text-amber-900 dark:text-amber-300">
+                                {nearby.length} client{nearby.length > 1 ? "s" : ""} within 2 km — potential same-day adds
+                              </p>
+                            </div>
+                            <ul className="divide-y max-h-48 overflow-y-auto">
+                              {nearby.map((cl) => (
+                                <li
+                                  key={cl.id}
+                                  className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/40 cursor-pointer transition-colors"
+                                  onClick={() => {
+                                    const full = clients.find((c) => c.id === cl.id);
+                                    const addr = `${full?.address?.street ?? ""} ${full?.address?.city ?? ""}`.trim() || "No address on file";
+                                    toast.message(`Call ${cl.name}`, {
+                                      description: `${addr} — suggest a same-day mobile booking to fill the route.`,
+                                    });
+                                  }}
+                                >
+                                  <div className="size-2 rounded-full bg-amber-400 shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-medium truncate">{cl.name}</p>
+                                    <p className="text-[10px] text-muted-foreground truncate">{cl.address}</p>
+                                  </div>
+                                  <span className="text-[10px] text-amber-600 font-medium shrink-0">Call</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {showNearbyClients && nearby.length === 0 && chain.length > 0 && (
+                          <p className="text-muted-foreground mt-3 text-center text-[11px] italic">
+                            No unbooked clients found within 2 km of today&apos;s route.
                           </p>
                         )}
                       </div>

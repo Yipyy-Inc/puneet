@@ -340,8 +340,8 @@ export function MobileGroomingSettings() {
                         <Truck className="size-4 text-muted-foreground" />
                         {v.name || "(unnamed van)"}
                       </span>
-                      <Badge variant={v.active ? "default" : "outline"}>
-                        {v.active ? "Active" : "Inactive"}
+                      <Badge variant={v.active && v.assignedStaffIds.length > 0 ? "default" : "outline"}>
+                        {v.active && v.assignedStaffIds.length > 0 ? "Active" : "Inactive"}
                       </Badge>
                     </CardTitle>
                   </CardHeader>
@@ -364,8 +364,9 @@ export function MobileGroomingSettings() {
                     </p>
                     <div className="flex items-center gap-2 pt-1">
                       <Switch
-                        checked={v.active}
+                        checked={v.active && v.assignedStaffIds.length > 0}
                         onCheckedChange={() => toggleVanActive(v.id)}
+                        disabled={v.assignedStaffIds.length === 0}
                         className="scale-75"
                       />
                       <Button
@@ -389,6 +390,13 @@ export function MobileGroomingSettings() {
                         <Trash2 className="size-3.5" />
                       </Button>
                     </div>
+                    {v.assignedStaffIds.length === 0 && (
+                      <div className="rounded-md border border-destructive/50 bg-destructive/10 p-2 mt-2">
+                        <p className="text-[11px] font-medium text-destructive">
+                          No staff assigned — this van cannot accept bookings.
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}

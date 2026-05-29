@@ -17,6 +17,7 @@
     "format:check": "prettier -c .",
     "format": "prettier --cache -w .",
     "prune": "knip",
+    "check:pricing": "bun scripts/check-pricing-consistency.ts",
     "prepare": "husky"
   },
   "dependencies": {

@@ -37,9 +37,11 @@ import {
   PauseCircle,
   User,
   Clock,
+  Truck,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import type {
@@ -356,6 +358,11 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
     setStationStatus,
   } = useGroomingStations();
   const stations = allStations.filter((s) => s.facilityId === facilityId);
+  const { hasActiveVans } = useMobileGrooming();
+  // Mobile-only when the facility runs vans but has no station equipment —
+  // the empty state then explains the situation instead of nudging the
+  // manager to add tables/tubs they don't have.
+  const mobileIsActive = hasActiveVans;
 
   const [dialog, setDialog] = useState<{
     open: boolean;
@@ -550,7 +557,10 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
 
       {/* Sections per type */}
       {stations.length === 0 ? (
-        <EmptyGrooming onAdd={() => openDialog()} />
+        <EmptyGrooming
+          onAdd={() => openDialog()}
+          isMobileOnly={mobileIsActive}
+        />
       ) : (
         <div className="space-y-8">
           {STATION_TYPES.map((sType) => {
@@ -1228,7 +1238,36 @@ function StationDialog({
 
 // ── Empty state ────────────────────────────────────────────────────────────────
 
-function EmptyGrooming({ onAdd }: { onAdd: () => void }) {
+function EmptyGrooming({
+  onAdd,
+  isMobileOnly,
+}: {
+  onAdd: () => void;
+  isMobileOnly?: boolean;
+}) {
+  if (isMobileOnly) {
+    return (
+      <div className="bg-muted/20 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-24 text-center">
+        <div className="bg-muted mb-4 flex size-16 items-center justify-center rounded-2xl">
+          <Truck className="text-muted-foreground/50 size-8" />
+        </div>
+        <h3 className="mb-1 text-lg font-semibold">
+          No stations configured for this facility
+        </h3>
+        <p className="text-muted-foreground mb-6 max-w-md text-sm">
+          This is a mobile-only operation — grooming happens in the vans, not
+          at fixed stations. Capacity is governed by the number of active
+          staffed vans and their daily service area schedules. Use{" "}
+          <strong>Route Planner</strong> and <strong>Live Tracking</strong>{" "}
+          to manage the day.
+        </p>
+        <Button variant="outline" onClick={onAdd} className="gap-2">
+          <Plus className="size-4" />
+          Add a station anyway
+        </Button>
+      </div>
+    );
+  }
   return (
     <div className="bg-muted/20 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-24 text-center">
       <div className="bg-muted mb-4 flex size-16 items-center justify-center rounded-2xl">

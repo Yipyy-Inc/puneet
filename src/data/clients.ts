@@ -10,6 +10,30 @@ export const clients: Client[] = [
     status: "active",
     facility: "Example Pet Care Facility",
     imageUrl: "/people/person-1.jpg",
+    lastVisitDate: "2026-05-10",
+    outstandingBalance: 0,
+    noShowCount: 0,
+    savedCards: [
+      {
+        id: "card-15-1",
+        brand: "visa",
+        last4: "4242",
+        expMonth: 11,
+        expYear: 2028,
+        isDefault: true,
+      },
+    ],
+    storeCredit: {
+      balance: 25,
+      transactions: [
+        {
+          date: "2026-04-01T10:00:00Z",
+          amount: 25,
+          type: "added",
+          source: "Referral bonus",
+        },
+      ],
+    },
     address: {
       street: "123 Main Street",
       city: "Springfield",
@@ -162,6 +186,19 @@ export const clients: Client[] = [
     email: "bob@example.com",
     phone: "098-765-4321",
     preferredLanguage: "en",
+    lastVisitDate: "2026-04-18",
+    outstandingBalance: 75,
+    noShowCount: 1,
+    savedCards: [
+      {
+        id: "card-16-1",
+        brand: "mastercard",
+        last4: "8888",
+        expMonth: 4,
+        expYear: 2027,
+        isDefault: true,
+      },
+    ],
     status: "active",
     facility: "Example Pet Care Facility",
     imageUrl: "/people/person-2.jpg",
@@ -238,6 +275,9 @@ export const clients: Client[] = [
     preferredLanguage: "es",
     status: "inactive",
     facility: "Paws & Play Daycare",
+    lastVisitDate: "2025-11-22",
+    outstandingBalance: 0,
+    noShowCount: 2,
     address: {
       street: "789 Elm Street",
       city: "Shelbyville",

@@ -78,7 +78,8 @@ export default function AutomationsPage() {
       (r) =>
         r.trigger === "24h_before" ||
         r.trigger === "appointment_reminder" ||
-        r.trigger === "vaccination_expiry",
+        r.trigger === "vaccination_expiry" ||
+        r.trigger === "package_expiry",
     ),
     payment: automationRules.filter((r) => r.trigger === "payment_received"),
     forms: automationRules.filter((r) => formTriggers.includes(r.trigger)),
@@ -108,7 +109,8 @@ export default function AutomationsPage() {
     if (
       trigger === "24h_before" ||
       trigger === "appointment_reminder" ||
-      trigger === "vaccination_expiry"
+      trigger === "vaccination_expiry" ||
+      trigger === "package_expiry"
     ) {
       return <Clock className="size-4" />;
     }
@@ -139,7 +141,8 @@ export default function AutomationsPage() {
     if (
       trigger === "24h_before" ||
       trigger === "appointment_reminder" ||
-      trigger === "vaccination_expiry"
+      trigger === "vaccination_expiry" ||
+      trigger === "package_expiry"
     ) {
       return "border-amber-200 bg-amber-50 text-amber-700";
     }
@@ -170,7 +173,8 @@ export default function AutomationsPage() {
     if (
       trigger === "24h_before" ||
       trigger === "appointment_reminder" ||
-      trigger === "vaccination_expiry"
+      trigger === "vaccination_expiry" ||
+      trigger === "package_expiry"
     ) {
       return "Reminder";
     }

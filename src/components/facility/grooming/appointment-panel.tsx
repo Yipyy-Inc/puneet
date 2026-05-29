@@ -29,11 +29,30 @@ import {
   MessageCircle,
   Pencil,
   ExternalLink,
+  Hourglass,
+  CheckCircle2,
 } from "lucide-react";
 import type { GroomingAppointment, GroomingStatus } from "@/types/grooming";
 import { toast } from "sonner";
 import { STATUS_META } from "./grooming-calendar";
 import { useQuery } from "@tanstack/react-query";
+import {
+  applyCheckInResult,
+  applyMarkReadyResult,
+  applyPaymentResult,
+} from "@/lib/grooming/check-in-actions";
+import { useGroomingStations } from "@/hooks/use-grooming-stations";
+import { clients as initialClients } from "@/data/clients";
+import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
+import { findZipTaxRate } from "@/lib/service-areas";
+import {
+  MarkReadyDialog,
+  type MarkReadyConfirmation,
+} from "./mark-ready-dialog";
+import {
+  PaymentDialog,
+  type PaymentResult,
+} from "./payment-dialog";
 import {
   groomingQueries,
   getEffectiveAlertNotes,
@@ -44,7 +63,7 @@ import {
   CheckInConfirmationDialog,
   type CheckInConfirmation,
 } from "./check-in-confirmation-dialog";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 // ─── Status meta ──────────────────────────────────────────────────────────────
 
@@ -127,6 +146,20 @@ export function AppointmentPanel({
     groomingQueries.appointments(),
   );
   const [checkInOpen, setCheckInOpen] = useState(false);
+  const [markReadyOpen, setMarkReadyOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const { setStationStatus } = useGroomingStations();
+  const { data: customerPackages = [] } = useQuery(
+    groomingQueries.customerPackages(),
+  );
+  const { zipTaxRates: paymentZipTaxRates } = useMobileGrooming();
+  // Re-render every 30s so the elapsed timer + the running-long banner
+  // refresh without depending on parent state.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   if (!appointment) return null;
 
@@ -135,9 +168,78 @@ export function AppointmentPanel({
   const effectiveAlerts = getEffectiveAlertNotes(appointment, allAppointments);
   const hasAlert =
     appointment.allergies.length > 0 || !!appointment.specialInstructions;
+
+  // Running-long detection — drives the inline banner with the one-tap "Send
+  // ETA SMS" button. Quiet (no banner) until elapsed exceeds estimated by 15
+  // min, and suppressed once the owner has been notified.
+  const checkInDate = appointment.checkInTime
+    ? new Date(appointment.checkInTime)
+    : null;
+  const checkInMin =
+    checkInDate && !Number.isNaN(checkInDate.getTime())
+      ? checkInDate.getHours() * 60 + checkInDate.getMinutes()
+      : null;
+  const estimatedReadyMin = appointment.estimatedReadyTime
+    ? (() => {
+        const [h, m] = appointment.estimatedReadyTime.split(":").map(Number);
+        return h * 60 + m;
+      })()
+    : null;
+  const scheduledStartMin = (() => {
+    const [h, m] = appointment.startTime.split(":").map(Number);
+    return h * 60 + m;
+  })();
+  const scheduledEndMin = (() => {
+    const [h, m] = appointment.endTime.split(":").map(Number);
+    return h * 60 + m;
+  })();
+  const sessionEstimatedMin =
+    estimatedReadyMin !== null && checkInMin !== null
+      ? Math.max(0, estimatedReadyMin - checkInMin)
+      : scheduledEndMin - scheduledStartMin;
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const isOnToday = appointment.date === todayIso;
+  const elapsedMin =
+    isOnToday &&
+    appointment.status === "in-progress" &&
+    checkInMin !== null &&
+    nowMin >= checkInMin
+      ? nowMin - checkInMin
+      : 0;
+  const runningLongMin =
+    appointment.status === "in-progress" &&
+    elapsedMin > sessionEstimatedMin + 15
+      ? elapsedMin - sessionEstimatedMin
+      : 0;
+  const ownerEtaAlreadySent = !!appointment.ownerEtaNotifiedAt;
+
+  function handleSendEtaSms() {
+    if (!appointment) return;
+    const smsBody = `${appointment.petName}'s groom is taking a little longer than expected. We'll notify you as soon as they're ready!`;
+    toast.message(`SMS sent to ${appointment.ownerName}`, {
+      description: smsBody,
+      duration: 8000,
+    });
+    (appointment as typeof appointment & { ownerEtaNotifiedAt?: string })
+      .ownerEtaNotifiedAt = new Date().toISOString();
+    setTick((t) => t + 1);
+  }
   const priceAdjTotal = appointment.priceAdjustments.reduce(
     (sum, a) => sum + a.amount,
     0,
+  );
+  const applicableCustomerPackages = useMemo(
+    () =>
+      customerPackages.filter(
+        (p) =>
+          p.customerId === appointment.ownerId &&
+          p.status === "active" &&
+          p.passesTotal - p.passesUsed > 0 &&
+          p.passes.some((pass) => pass.moduleId === "grooming"),
+      ),
+    [customerPackages, appointment.ownerId],
   );
 
   // Quick-action availability — each button is enabled only when its status
@@ -150,11 +252,12 @@ export function AppointmentPanel({
 
   function advance(next: GroomingStatus) {
     if (next === "ready-for-pickup") {
-      const check = canMarkReadyForPickup(appointment!);
-      if (!check.allowed) {
-        toast.error("Can't mark ready yet", { description: check.reason });
-        return;
-      }
+      setMarkReadyOpen(true);
+      return;
+    }
+    if (next === "completed") {
+      setPaymentOpen(true);
+      return;
     }
     toast.success(`Status updated to "${STATUS_LABELS[next]}"`);
   }
@@ -260,6 +363,43 @@ export function AppointmentPanel({
 
           {/* ── Body (scrollable) ── */}
           <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
+            {/* Running-long banner — fires automatically once elapsed time
+                exceeds the estimated duration by 15 min. One-tap SMS to the
+                owner, then the banner switches to a calmer "ETA sent" state. */}
+            {runningLongMin > 0 && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 dark:border-amber-800 dark:bg-amber-950/30">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                      <Hourglass className="size-3.5" />
+                      Running long · {runningLongMin} min over
+                    </p>
+                    <p className="mt-0.5 text-xs text-amber-900/80 dark:text-amber-100/80">
+                      Elapsed {elapsedMin} min of ~{sessionEstimatedMin} min
+                      estimated.
+                      {ownerEtaAlreadySent
+                        ? ` ETA SMS sent to ${appointment.ownerName}.`
+                        : ` Send ${appointment.ownerName} a heads-up?`}
+                    </p>
+                  </div>
+                  {!ownerEtaAlreadySent ? (
+                    <Button
+                      size="sm"
+                      className="shrink-0 bg-amber-600 text-white hover:bg-amber-700"
+                      onClick={handleSendEtaSms}
+                    >
+                      <MessageCircle className="mr-1.5 size-3.5" />
+                      Send ETA SMS
+                    </Button>
+                  ) : (
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-semibold text-white">
+                      <CheckCircle2 className="size-3" />
+                      ETA sent
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
             {effectiveAlerts.length > 0 && (
               <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2.5 dark:border-red-900 dark:bg-red-950/30">
                 <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">
@@ -421,13 +561,42 @@ export function AppointmentPanel({
                               type="button"
                               className="rounded-md bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700"
                               onClick={() => {
+                                // Actually mark the stage complete + advance
+                                // station ownership when the next stage uses
+                                // a different table/tub.
+                                const nowIso = new Date().toISOString();
+                                const stages = appointment.stages ?? [];
+                                if (stages[i]) {
+                                  stages[i].completedAt = nowIso;
+                                }
+                                // Release the just-completed station, or hand
+                                // it to the next stage's groomer if they're
+                                // staying put.
+                                if (st.stationId && next?.stationId !== st.stationId) {
+                                  setStationStatus(
+                                    st.stationId,
+                                    "needs-cleaning",
+                                  );
+                                }
+                                if (next?.stationId) {
+                                  setStationStatus(next.stationId, "in-use", {
+                                    petName: appointment.petName,
+                                    stylistName: next.stylistName,
+                                  });
+                                }
                                 toast.success(
                                   `${st.label} complete${
                                     next
-                                      ? ` — handoff sent to ${next.stylistName}`
+                                      ? ` — handoff to ${next.stylistName}${
+                                          next.stationId &&
+                                          next.stationId !== st.stationId
+                                            ? " (station change)"
+                                            : ""
+                                        }`
                                       : ""
                                   }`,
                                 );
+                                setTick((t) => t + 1);
                               }}
                             >
                               Mark Done
@@ -637,30 +806,75 @@ export function AppointmentPanel({
         onOpenChange={setCheckInOpen}
         apt={appointment}
         onConfirm={(result: CheckInConfirmation) => {
-          (appointment as typeof appointment & {
-            intake?: typeof appointment.intake;
-          }).intake = {
-            ...(appointment.intake ?? {
-              coatCondition: "normal",
-              behaviorNotes: "",
-              allergies: appointment.allergies,
-              specialInstructions: appointment.specialInstructions,
-              beforePhotos: [],
-              mattingFeeWarning: false,
-            }),
-            dropOffObservations:
-              result.dropOffObservations ||
-              appointment.intake?.dropOffObservations,
-            sessionStartedAt: new Date().toISOString(),
-          };
-          appointment.addOns = result.addOns;
-          appointment.checkInTime = new Date().toISOString();
+          applyCheckInResult(appointment, result, {
+            clients: initialClients,
+            setStationStatus,
+            notify: (title, detail) => toast.message(title, detail),
+          });
+          const readyLine = result.estimatedReadyTime
+            ? ` · ready ~${result.estimatedReadyTime}`
+            : "";
           toast.success(`${appointment.petName} — In Progress`, {
-            description: `Station ${result.stationName} · session started`,
+            description:
+              (result.mattedSurcharge > 0
+                ? `Station ${result.stationName} · matting fee +$${result.mattedSurcharge}`
+                : `Station ${result.stationName} · session started`) + readyLine,
           });
           setCheckInOpen(false);
         }}
       />
+      <MarkReadyDialog
+        open={markReadyOpen}
+        onOpenChange={setMarkReadyOpen}
+        apt={appointment}
+        facilityName="Doggieville MTL"
+        onConfirm={(result: MarkReadyConfirmation) => {
+          const summary = applyMarkReadyResult(appointment, result, {
+            clients: initialClients,
+            setStationStatus,
+            notify: (title, detail) => toast.message(title, detail),
+            facilityName: "Doggieville MTL",
+          });
+          toast.success(`${appointment.petName} — Ready for Pickup`, {
+            description: `Owner notified · total $${summary.updatedTotal.toFixed(2)}`,
+          });
+          setMarkReadyOpen(false);
+        }}
+      />
+      {(() => {
+        const paymentClient = initialClients.find(
+          (c) => c.id === appointment.ownerId,
+        );
+        // Step 7 — same ZIP-prefix tax lookup BookingModal uses on
+        // ConfirmStep so the two displays agree to the cent.
+        const matchedTax = findZipTaxRate(
+          paymentZipTaxRates,
+          paymentClient?.address?.zip ?? "",
+        );
+        const resolvedTaxRate = matchedTax ? matchedTax.ratePercent / 100 : 0;
+        return (
+      <PaymentDialog
+        open={paymentOpen}
+        onOpenChange={setPaymentOpen}
+        apt={appointment}
+        client={paymentClient}
+        applicableCustomerPackages={applicableCustomerPackages}
+        taxRate={resolvedTaxRate}
+        onConfirm={(result: PaymentResult) => {
+          const summary = applyPaymentResult(appointment, result, {
+            clients: initialClients,
+            setStationStatus,
+            notify: (title, detail) => toast.message(title, detail),
+            facilityName: "Doggieville MTL",
+          });
+          toast.success(`${appointment.petName} — Completed`, {
+            description: `Receipt sent · $${summary.amountCharged.toFixed(2)} charged`,
+          });
+          setPaymentOpen(false);
+        }}
+      />
+        );
+      })()}
     </DialogPrimitive.Root>
   );
 }

@@ -345,12 +345,16 @@ function GroomingPackagePicker({
   applyEligibilityFilter?: boolean;
 }) {
   const accent = SERVICE_ACCENTS.grooming;
+  // Read packages through the query factory so duration / price edits made in
+  // the Grooming Rates editor (which writes to ["grooming","packages"] via
+  // setQueryData) reflect on the cards without a page reload.
+  const { data: livePackages = [] } = useQuery(groomingQueries.packages());
   // Only show active packages. The catalog card shows the starting price —
   // the price for the smallest pet size — because the final price depends
   // on the pet (size / breed / coat / stylist), which is resolved later.
   // When the facility opts in via `onlyShowApplicableServices`, also hide
   // packages whose `eligiblePetSizes` doesn't overlap with the client's pets.
-  const packages = groomingPackages.filter((p) => {
+  const packages = livePackages.filter((p) => {
     if (!p.isActive) return false;
     if (applyEligibilityFilter && selectedPets && selectedPets.length > 0) {
       return petsMatchEligibleSizes(selectedPets, p.eligiblePetSizes);
@@ -381,7 +385,34 @@ function GroomingPackagePicker({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {packages.map((pkg) => {
           const active = selectedPackageId === pkg.id;
-          const startingPrice = pkg.sizePricing.small;
+          
+          let displayPriceLabel = "From";
+          let displayPrice = pkg.sizePricing.small;
+          let displayDuration = pkg.duration;
+
+          // Switch the card from "From $X" to the resolved "Price $X" only when
+          // the primary pet's size AND coat type are both known on the profile —
+          // otherwise the calculated number would silently lean on defaults
+          // (e.g. the small bucket when weight is 0) and feel authoritative
+          // without being accurate.
+          const primaryPet = selectedPets?.[0];
+          const sizeKnown = !!primaryPet && (primaryPet.weight ?? 0) > 0;
+          const coatKnown = !!primaryPet?.coatType;
+          if (primaryPet && sizeKnown && coatKnown) {
+            const pricing = resolveEffectivePricing({
+              petId: primaryPet.id,
+              petSize: getPetSize(primaryPet) as any,
+              petCoatType: primaryPet.coatType as any,
+              petBreed: primaryPet.breed,
+              stylistId: undefined,
+              package: pkg,
+              petPricingOverrides: [],
+            });
+            displayPriceLabel = "Price";
+            displayPrice = pricing.price;
+            displayDuration = pricing.durationMin;
+          }
+
           const includesPreview = pkg.includes.slice(0, 3);
           const extraCount = Math.max(0, pkg.includes.length - 3);
           return (
@@ -441,10 +472,10 @@ function GroomingPackagePicker({
                   </h4>
                   <div className="text-right">
                     <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                      From
+                      {displayPriceLabel}
                     </p>
                     <p className={cn("text-base font-bold", accent.price)}>
-                      ${startingPrice}
+                      ${displayPrice}
                     </p>
                   </div>
                 </div>
@@ -453,7 +484,7 @@ function GroomingPackagePicker({
                 </p>
                 <div className="text-muted-foreground flex items-center gap-1 text-[11px]">
                   <Clock className="size-3" />
-                  {pkg.duration} min
+                  {displayDuration} min
                   {pkg.requiresEvaluation && (
                     <>
                       <span className="mx-1">·</span>
@@ -532,7 +563,10 @@ function GroomingStylistPicker({
         ? activeStylists.filter((s) => assignedStylistIds.includes(s.id))
         : activeStylists.filter((s) => {
             const q = s.qualifiedPackageIds;
-            if (!q || q.length === 0) return true;
+            // undefined  → no list configured, qualified for all (back-compat)
+            // []         → list explicitly empty, qualified for NOTHING
+            // [...ids]   → qualified only for listed packages
+            if (q === undefined) return true;
             return q.includes(selectedPackage.id);
           });
     return byAssignment.filter((s) =>
@@ -1961,7 +1995,18 @@ function GroomingAddOns({
                         <p className="truncate text-sm font-medium">
                           {addon.name}
                         </p>
-                        {addon.isRequired && (
+                        {/* Three distinct states — replaces the ambiguous "Default":
+                            • Included: mandatory AND no extra cost (part of the
+                              service price)
+                            • Required: mandatory but adds to the price
+                            • Pre-selected: optional but checked by service config */}
+                        {addon.isRequired && addon.price === 0 && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white">
+                            <Lock className="size-2.5" />
+                            Included
+                          </span>
+                        )}
+                        {addon.isRequired && addon.price > 0 && (
                           <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white">
                             <Lock className="size-2.5" />
                             Required
@@ -1969,7 +2014,7 @@ function GroomingAddOns({
                         )}
                         {addon.isDefault && !addon.isRequired && (
                           <span className="inline-flex items-center rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-blue-700">
-                            Default
+                            Pre-selected
                           </span>
                         )}
                       </div>
@@ -1980,9 +2025,16 @@ function GroomingAddOns({
                       )}
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
-                      <span className={cn("text-xs font-semibold", accent.price)}>
-                        +${addon.price}
-                      </span>
+                      <div className="flex flex-col items-end">
+                        <span className={cn("text-xs font-semibold", accent.price)}>
+                          +${addon.price}
+                        </span>
+                        {addon.duration && addon.duration > 0 && (
+                          <span className="text-[10px] text-muted-foreground tabular-nums">
+                            adds {addon.duration} min
+                          </span>
+                        )}
+                      </div>
                       <Switch
                         checked={checked}
                         disabled={addon.isRequired}
