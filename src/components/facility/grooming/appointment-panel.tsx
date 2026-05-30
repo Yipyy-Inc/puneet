@@ -148,6 +148,7 @@ export function AppointmentPanel({
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [markReadyOpen, setMarkReadyOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [etaSent, setEtaSent] = useState(false);
   const { setStationStatus } = useGroomingStations();
   const { data: customerPackages = [] } = useQuery(
     groomingQueries.customerPackages(),
@@ -160,6 +161,20 @@ export function AppointmentPanel({
     const id = setInterval(() => setTick((t) => t + 1), 30_000);
     return () => clearInterval(id);
   }, []);
+
+  const applicableCustomerPackages = useMemo(
+    () =>
+      !appointment
+        ? []
+        : customerPackages.filter(
+            (p) =>
+              p.customerId === appointment.ownerId &&
+              p.status === "active" &&
+              p.passesTotal - p.passesUsed > 0 &&
+              p.passes.some((pass) => pass.moduleId === "grooming"),
+          ),
+    [customerPackages, appointment],
+  );
 
   if (!appointment) return null;
 
@@ -213,7 +228,7 @@ export function AppointmentPanel({
     elapsedMin > sessionEstimatedMin + 15
       ? elapsedMin - sessionEstimatedMin
       : 0;
-  const ownerEtaAlreadySent = !!appointment.ownerEtaNotifiedAt;
+  const ownerEtaAlreadySent = etaSent || !!appointment.ownerEtaNotifiedAt;
 
   function handleSendEtaSms() {
     if (!appointment) return;
@@ -222,24 +237,11 @@ export function AppointmentPanel({
       description: smsBody,
       duration: 8000,
     });
-    (appointment as typeof appointment & { ownerEtaNotifiedAt?: string })
-      .ownerEtaNotifiedAt = new Date().toISOString();
-    setTick((t) => t + 1);
+    setEtaSent(true);
   }
   const priceAdjTotal = appointment.priceAdjustments.reduce(
     (sum, a) => sum + a.amount,
     0,
-  );
-  const applicableCustomerPackages = useMemo(
-    () =>
-      customerPackages.filter(
-        (p) =>
-          p.customerId === appointment.ownerId &&
-          p.status === "active" &&
-          p.passesTotal - p.passesUsed > 0 &&
-          p.passes.some((pass) => pass.moduleId === "grooming"),
-      ),
-    [customerPackages, appointment.ownerId],
   );
 
   // Quick-action availability — each button is enabled only when its status

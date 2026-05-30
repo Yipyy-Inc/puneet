@@ -428,6 +428,18 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     [clientProfileNotes, pinnedOverrides],
   );
 
+  // Must be declared before the early return so hook order is stable.
+  const applicableCustomerPackages = useMemo(() => {
+    if (!apt) return [];
+    return customerPackages.filter(
+      (p) =>
+        p.customerId === apt.ownerId &&
+        p.status === "active" &&
+        p.passesTotal - p.passesUsed > 0 &&
+        p.passes.some((pass) => pass.moduleId === "grooming"),
+    );
+  }, [customerPackages, apt]);
+
   if (!apt) {
     return (
       <Card>
@@ -644,19 +656,6 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     });
     setPaymentOpen(false);
   }
-
-  // The customer's package(s) applicable to this appointment — drives the
-  // auto-detected "Apply 1 pass" affordance in the payment dialog.
-  const applicableCustomerPackages = useMemo(() => {
-    if (!apt) return [];
-    return customerPackages.filter(
-      (p) =>
-        p.customerId === apt.ownerId &&
-        p.status === "active" &&
-        p.passesTotal - p.passesUsed > 0 &&
-        p.passes.some((pass) => pass.moduleId === "grooming"),
-    );
-  }, [customerPackages, apt]);
 
   function handleCancelConfirm(r: CancelResult) {
     if (!apt) return;
