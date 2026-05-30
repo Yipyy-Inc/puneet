@@ -14,7 +14,7 @@
  *     absence into a permanent "no make-up" state.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -747,7 +747,7 @@ function IneligibleDialog({
 }) {
   const [reason, setReason] = useState("");
   // Reset reason when dialog closes so the next pet starts clean.
-  useMemo(() => {
+  useEffect(() => {
     if (!candidate) setReason("");
   }, [candidate]);
 
