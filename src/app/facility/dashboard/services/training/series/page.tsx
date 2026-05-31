@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import { SeriesList } from "./_components/series-list";
 
 export default function TrainingSeriesPage() {
-  return <SeriesList />;
+  return (
+    <Suspense fallback={null}>
+      <SeriesList />
+    </Suspense>
+  );
 }

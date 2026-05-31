@@ -12,7 +12,7 @@
  *   5. Book private session   — deep-link to the booking flow, private preset
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -45,6 +45,7 @@ import {
   StickyNote,
 } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
+import { HomeworkEditDialog } from "@/components/facility/training/homework-edit-dialog";
 import type { TrainerNote, TrainerNoteCategory } from "@/types/training";
 
 interface Props {
@@ -72,6 +73,11 @@ export function TrainingProfileQuickActions({
 }: Props) {
   const [noteOpen, setNoteOpen] = useState(false);
   const [messageOpen, setMessageOpen] = useState(false);
+  const [homeworkOpen, setHomeworkOpen] = useState(false);
+  const todayISO = useMemo(
+    () => new Date().toISOString().split("T")[0]!,
+    [],
+  );
 
   // Customer-facing booking flow is shared across services; deep-link with
   // the program pre-selected if/when the trainer comes in via the catalog.
@@ -96,12 +102,7 @@ export function TrainingProfileQuickActions({
           size="sm"
           variant="outline"
           className="gap-1.5"
-          onClick={() =>
-            toast.message("Homework assignment", {
-              description:
-                "Complete the next session for this pet, then use Assign Homework in the session-completion flow — the trainer-curated assignment goes out to every present student.",
-            })
-          }
+          onClick={() => setHomeworkOpen(true)}
         >
           <BookOpen className="size-4" />
           Assign homework
@@ -145,6 +146,17 @@ export function TrainingProfileQuickActions({
         ownerName={ownerName}
         ownerEmail={ownerEmail}
         ownerPhone={ownerPhone}
+      />
+      {/* Same assign modal the Homework tab uses — writes through
+          fanOutHomeworkUpsert so the record lands in the shared
+          ["training","homework"] store and the owner sees it in their portal,
+          identical to the session-completion auto-assign path. */}
+      <HomeworkEditDialog
+        open={homeworkOpen}
+        onOpenChange={setHomeworkOpen}
+        editing={null}
+        restrictToPetId={petId}
+        todayISO={todayISO}
       />
     </>
   );

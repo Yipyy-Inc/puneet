@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -93,6 +93,7 @@ function formatTimeLabel(hhmm: string): string {
 
 export function SeriesList() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { data: serverSeries = [] } = useQuery(trainingQueries.series());
 
@@ -123,7 +124,23 @@ export function SeriesList() {
     null,
   );
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [presetCourseTypeId, setPresetCourseTypeId] = useState<string | null>(
+    null,
+  );
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Deep link from the booking flow's "Create a series for this course"
+  // shortcut: open the create dialog pre-filled for the course type, then
+  // strip the params so a refresh doesn't reopen it.
+  useEffect(() => {
+    if (searchParams.get("create") !== "1") return;
+    setEditingSeries(null);
+    setPresetCourseTypeId(searchParams.get("course"));
+    setIsEditOpen(true);
+    router.replace("/facility/dashboard/services/training/series");
+    // Run once on mount for the initial query params.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const summary = useMemo(() => {
     let total = 0;
@@ -141,11 +158,13 @@ export function SeriesList() {
 
   function handleAddNew() {
     setEditingSeries(null);
+    setPresetCourseTypeId(null);
     setIsEditOpen(true);
   }
 
   function handleEdit(s: TrainingSeries) {
     setEditingSeries(s);
+    setPresetCourseTypeId(null);
     setIsEditOpen(true);
   }
 
@@ -411,6 +430,7 @@ export function SeriesList() {
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
         editing={editingSeries}
+        presetCourseTypeId={presetCourseTypeId}
         onSave={handleSave}
       />
 

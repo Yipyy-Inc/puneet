@@ -89,6 +89,9 @@ export function saveSession(input: SaveSessionInput): PresentStudentSummary[] {
     // rating actually set).
     const exercises: SessionExerciseRating[] = [];
     for (const entry of exerciseEntries) {
+      // Curriculum exercises the trainer marked "not covered" stay on screen as
+      // a record but aren't part of what was actually taught — skip them.
+      if (entry.notCovered) continue;
       const studentEntry = entry.students[row.enrollmentId];
       if (!studentEntry) continue;
       if (studentEntry.included === false) continue;

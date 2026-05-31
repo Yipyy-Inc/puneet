@@ -54,6 +54,7 @@ export interface ProgramFormState {
   popular: boolean;
   includes: string;
   prerequisitePackageIds: string[];
+  graduateIntoPackageId: string;
   disciplineId: string;
   maxGroupSize: number | "";
   imageUrl: string;
@@ -71,6 +72,7 @@ const EMPTY_PROGRAM: ProgramFormState = {
   popular: false,
   includes: "",
   prerequisitePackageIds: [],
+  graduateIntoPackageId: "",
   disciplineId: "",
   maxGroupSize: "",
   imageUrl: "",
@@ -89,6 +91,7 @@ function seedFromPackage(pkg: TrainingPackage): ProgramFormState {
     popular: pkg.popular ?? false,
     includes: pkg.includes.join("\n"),
     prerequisitePackageIds: pkg.prerequisitePackageIds ?? [],
+    graduateIntoPackageId: pkg.graduateIntoPackageId ?? "",
     disciplineId: pkg.disciplineId ?? "",
     maxGroupSize: pkg.maxGroupSize ?? "",
     imageUrl: pkg.imageUrl ?? "",
@@ -128,6 +131,11 @@ export function ProgramDialog({ open, onOpenChange, editing, onSave }: Props) {
       return cycle === null;
     });
   }, [allPackages, editing, form.prerequisitePackageIds]);
+
+  // A program can graduate into any other program — just exclude itself.
+  const eligibleGraduateInto = useMemo(() => {
+    return allPackages.filter((p) => !editing || p.id !== editing.id);
+  }, [allPackages, editing]);
 
   function addPrereq(id: string) {
     if (!id || form.prerequisitePackageIds.includes(id)) return;
@@ -426,6 +434,38 @@ export function ProgramDialog({ open, onOpenChange, editing, onSave }: Props) {
               <AlertTriangle className="mt-0.5 size-3 shrink-0" />
               Enforced at enrollment — online flow blocks; staff get a warning
               when booking manually.
+            </p>
+          </div>
+
+          {/* Graduate into ──────────────────────────────────────────── */}
+          <div className="space-y-2">
+            <Label>Graduate into</Label>
+            <Select
+              value={form.graduateIntoPackageId || "none"}
+              onValueChange={(v) =>
+                setForm({
+                  ...form,
+                  graduateIntoPackageId: v === "none" ? "" : v,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Pick a next-step program…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">
+                  <span className="text-muted-foreground">None</span>
+                </SelectItem>
+                {eligibleGraduateInto.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-xs">
+              When a dog finishes this program, recommend this next course on
+              their graduation card. Optional.
             </p>
           </div>
 

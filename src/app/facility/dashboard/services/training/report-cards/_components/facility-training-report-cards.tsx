@@ -129,6 +129,7 @@ export function FacilityTrainingReportCards() {
   const { data: cards = [] } = useQuery(trainingQueries.allReportCards());
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [trainerFilter, setTrainerFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [editingCard, setEditingCard] = useState<TrainingReportCard | null>(
     null,
@@ -156,6 +157,13 @@ export function FacilityTrainingReportCards() {
     return { all: cards.length, draft, scheduled, sent };
   }, [cards]);
 
+  // Distinct trainers across all cards — feeds the "by trainer" filter.
+  const trainers = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of cards) if (c.createdBy) set.add(c.createdBy);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [cards]);
+
   // Filtered + sorted list — newest cards (drafts first within "all") on top.
   const visibleCards = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -165,6 +173,7 @@ export function FacilityTrainingReportCards() {
       if (statusFilter === "scheduled" && status !== "scheduled") return false;
       if (statusFilter === "sent" && status !== "sent" && status !== "viewed")
         return false;
+      if (trainerFilter !== "all" && c.createdBy !== trainerFilter) return false;
       if (q) {
         const hay =
           `${c.petName} ${c.courseName} ${c.seriesName}`.toLowerCase();
@@ -188,7 +197,7 @@ export function FacilityTrainingReportCards() {
       return a.createdAt < b.createdAt ? 1 : -1;
     });
     return filtered;
-  }, [cards, statusFilter, search]);
+  }, [cards, statusFilter, search, trainerFilter]);
 
   function refreshEditingCard(updated: TrainingReportCard) {
     // Mirror local editor state to the upserted card so the open sheet keeps
@@ -249,6 +258,23 @@ export function FacilityTrainingReportCards() {
           active={statusFilter === "sent"}
           onClick={() => setStatusFilter("sent")}
         />
+        {trainers.length > 1 && (
+          <div className="sm:ml-auto">
+            <Select value={trainerFilter} onValueChange={setTrainerFilter}>
+              <SelectTrigger className="h-8 w-[170px] text-[12px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All trainers</SelectItem>
+                {trainers.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {/* Cards list ───────────────────────────────────────────────────────── */}

@@ -122,7 +122,7 @@ export const BEHAVIOR_TAG_LABELS: Record<TrainingReportCardBehaviorTag, string> 
   anxious: "Anxious",
   "had-a-breakthrough": "Had a breakthrough",
   "needed-encouragement": "Needed encouragement",
-  "great-progress": "Great progress",
+  "great-progress": "Great session",
 };
 
 export const BEHAVIOR_TAG_BADGE_CLS: Record<

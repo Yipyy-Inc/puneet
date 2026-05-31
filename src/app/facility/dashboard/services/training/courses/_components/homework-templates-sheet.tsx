@@ -55,6 +55,7 @@ import {
   X,
 } from "lucide-react";
 import { ExercisePicker } from "@/components/facility/training/exercise-picker";
+import { VideoLinksTextarea } from "./video-links-textarea";
 import { trainingQueries } from "@/lib/api/training";
 import { getDisciplineIdForClassName } from "@/data/training-exercises";
 import type {
@@ -617,15 +618,10 @@ function TemplateEditorDialog({
                       className="min-h-[60px] text-[12.5px] leading-relaxed"
                     />
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      <Textarea
-                        value={(item.resources ?? []).join("\n")}
-                        onChange={(e) =>
-                          patchItem(item.id, {
-                            resources: e.target.value
-                              .split("\n")
-                              .map((s) => s.trim())
-                              .filter(Boolean),
-                          })
+                      <VideoLinksTextarea
+                        value={item.resources ?? []}
+                        onChange={(next) =>
+                          patchItem(item.id, { resources: next })
                         }
                         placeholder="Video / resource links — one per line"
                         className="min-h-[60px] text-[12px] leading-relaxed"

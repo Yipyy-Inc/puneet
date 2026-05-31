@@ -58,6 +58,9 @@ interface Props {
   presentStudents: PresentStudentSummary[];
   sessionDate: string;
   className: string;
+  /** Discipline this session works on — resolved upstream from the
+   *  class/session tag; preferred over name-matching the catalog. */
+  disciplineId?: string;
   /** Session number within the series — drives auto-load of the matching
    *  template ("Week N homework") when the prompt opens. */
   sessionNumber?: number;
@@ -114,6 +117,7 @@ export function SessionHomeworkPromptDialog({
   presentStudents,
   sessionDate,
   className,
+  disciplineId,
   sessionNumber,
   onDone,
 }: Props) {
@@ -124,8 +128,8 @@ export function SessionHomeworkPromptDialog({
   );
 
   const preferredDisciplineId = useMemo(
-    () => getDisciplineIdForClassName(className),
-    [className],
+    () => disciplineId ?? getDisciplineIdForClassName(className),
+    [disciplineId, className],
   );
 
   // Filtered template list for this course — fed to the Load picker and

@@ -7,9 +7,13 @@ import { useCustomServices } from "@/hooks/use-custom-services";
 import { useSettings } from "@/hooks/use-settings";
 import type { CustomServiceModule } from "@/types/facility";
 import type { Pet } from "@/types/pet";
+import type { Client } from "@/types/client";
 import { resolveIcon, isBuiltinService } from "@/lib/service-registry";
 import { SERVICE_CATEGORIES } from "../constants";
-import { TrainingScheduleStep } from "./TrainingScheduleStep";
+import {
+  TrainingScheduleStep,
+  type TrainingSelection,
+} from "./TrainingScheduleStep";
 
 // Module-level constants
 const TIME_SLOTS: string[] = [];
@@ -47,8 +51,18 @@ interface CustomServiceDetailsProps {
   selectedPets: Pet[];
   specialRequests?: string;
   setSpecialRequests?: (value: string) => void;
-  /** Training-only: filter the series list to this Program. */
+  /** Training-only: scope the series list to this Course Type (Course Catalog).
+   *  The single source of truth for what a client books. */
+  preSelectedCourseTypeId?: string;
+  /** Training-only: legacy deep link by Program — resolved to its course type. */
   preSelectedProgramId?: string;
+  /** Training-only: client picked in Step 1 — owner on a waitlist entry. */
+  selectedClient?: Client;
+  /** Training-only: closes the booking modal so the "Create a series"
+   *  shortcut can navigate away cleanly. */
+  onRequestClose?: () => void;
+  /** Training-only: lifts the chosen series/course up for the multi-dog cart. */
+  onTrainingSelectionChange?: (selection: TrainingSelection | null) => void;
 }
 
 export function CustomServiceDetails({
@@ -61,7 +75,11 @@ export function CustomServiceDetails({
   checkOutTime,
   setCheckOutTime,
   selectedPets,
+  preSelectedCourseTypeId,
   preSelectedProgramId,
+  selectedClient,
+  onRequestClose,
+  onTrainingSelectionChange,
 }: CustomServiceDetailsProps) {
   const { getModuleBySlug } = useCustomServices();
   const serviceModule = getModuleBySlug(serviceId);
@@ -81,8 +99,12 @@ export function CustomServiceDetails({
             setCheckInTime={setCheckInTime}
             checkOutTime={checkOutTime}
             setCheckOutTime={setCheckOutTime}
+            preSelectedCourseTypeId={preSelectedCourseTypeId}
             preSelectedProgramId={preSelectedProgramId}
             selectedPets={selectedPets}
+            selectedClient={selectedClient}
+            onRequestClose={onRequestClose}
+            onSelectionChange={onTrainingSelectionChange}
           />
         );
       }

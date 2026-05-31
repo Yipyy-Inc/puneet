@@ -33,6 +33,29 @@ import {
   hasPracticedToday,
 } from "@/lib/training-homework";
 import type { ExerciseProgressPoint } from "@/components/training/exercise-progress-chart";
+import {
+  getCurriculumExercisesForCourseType,
+  getCurriculumStyleForCourseType,
+  getCurriculumWeekForCourseType,
+} from "@/data/training-exercises";
+
+/** One upcoming session, enriched with its session-plan theme + exercises so
+ *  the customer can see what's coming and practice at home beforehand. */
+export interface UpcomingSessionPlan {
+  sessionNumber: number;
+  date: string;
+  startTime: string;
+  /** Curriculum theme for this session, or `null` when the course has no plan. */
+  theme: string | null;
+  /** Exercise names planned for this session (empty when no plan). */
+  exercises: string[];
+  /** True when a session plan exists → shows the "practice at home" note. */
+  hasPlan: boolean;
+  /** True when the course is adaptive (no fixed plan) → the trainer tailors
+   *  each session to the dog, so the client sees a "tailored each session"
+   *  note instead of a fixed exercise list. */
+  adaptive: boolean;
+}
 
 /** "Current Program" section payload. */
 export interface CurrentProgramSection {
@@ -43,6 +66,10 @@ export interface CurrentProgramSection {
   endDate: string | null;
   /** Next upcoming session date — `null` when the series has wrapped. */
   nextSession: TrainingSeriesSession | null;
+  /** The next few scheduled sessions, each with its session-plan theme +
+   *  exercises (when the course has a curriculum). Drives the customer
+   *  "Upcoming Sessions" view. */
+  upcomingSessions: UpcomingSessionPlan[];
   /** True when the pet has no current enrollment and should see a
    *  "Browse training classes" CTA. */
   isBetweenPrograms: boolean;
@@ -164,6 +191,7 @@ function buildCurrentProgram(input: BuildInput): CurrentProgramSection {
       startDate: null,
       endDate: null,
       nextSession: null,
+      upcomingSessions: [],
       isBetweenPrograms: true,
     };
   }
@@ -180,6 +208,7 @@ function buildCurrentProgram(input: BuildInput): CurrentProgramSection {
   let startDate: string | null = null;
   let endDate: string | null = null;
   let nextSession: TrainingSeriesSession | null = null;
+  let upcomingSessions: UpcomingSessionPlan[] = [];
   if (series) {
     startDate = series.startDate;
     // End = last session date from the calculated session list, or fall back
@@ -199,6 +228,30 @@ function buildCurrentProgram(input: BuildInput): CurrentProgramSection {
       )
       .sort((a, b) => a.date.localeCompare(b.date));
     nextSession = upcoming[0] ?? null;
+    // Enrich the next few sessions with their session-plan theme + exercises
+    // (resolved by the series' exact course type id). Adaptive courses have no
+    // fixed plan — the trainer tailors each session to the dog.
+    const adaptive =
+      getCurriculumStyleForCourseType(series.courseTypeId) === "adaptive";
+    upcomingSessions = upcoming.slice(0, 3).map((s) => {
+      const week = getCurriculumWeekForCourseType(
+        series.courseTypeId,
+        s.sessionNumber,
+      );
+      const exercises = getCurriculumExercisesForCourseType(
+        series.courseTypeId,
+        s.sessionNumber,
+      ).map((e) => e.name);
+      return {
+        sessionNumber: s.sessionNumber,
+        date: s.date,
+        startTime: s.startTime,
+        theme: week?.title ?? null,
+        exercises,
+        hasPlan: exercises.length > 0,
+        adaptive,
+      };
+    });
   }
   return {
     enrollment,
@@ -206,6 +259,7 @@ function buildCurrentProgram(input: BuildInput): CurrentProgramSection {
     startDate,
     endDate,
     nextSession,
+    upcomingSessions,
     isBetweenPrograms,
   };
 }

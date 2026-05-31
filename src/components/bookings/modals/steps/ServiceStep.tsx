@@ -1,11 +1,22 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { Lock, Ban, Check, Sparkles, ChevronRight, Info } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Lock,
+  Ban,
+  Check,
+  Sparkles,
+  ChevronRight,
+  Info,
+  GraduationCap,
+} from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SERVICE_CATEGORIES, SERVICE_ACCENTS } from "../constants";
 import { evaluationConfig } from "@/data/settings";
+import { trainingQueries } from "@/lib/api/training";
+import type { TrainingCourseType } from "@/lib/training-config";
 import { defaultServiceAddOns } from "@/data/service-addons";
 import { getPetSize } from "@/lib/pet-size";
 import type { FacilityBookingFlowConfig } from "@/types/booking";
@@ -25,6 +36,11 @@ interface ServiceStepProps {
   /** Called when the customer hits "Book this service" on the inline detail
    *  pane. Advances the wizard to the Details step. */
   onBookService?: () => void;
+  /** Training-only: called when a course type is picked from the Training
+   *  card's inline quick-picks. Locks the service to training, scopes Step 3
+   *  to that course type, and advances. Surfaces the Course Catalog directly
+   *  in Step 2 so course types — not a separate program — are the choice. */
+  onPickTrainingCourse?: (courseTypeId: string) => void;
 }
 
 const DEFAULT_ACCENT = {
@@ -44,6 +60,7 @@ export function ServiceStep({
   bookingFlow,
   selectedPets = [],
   onBookService,
+  onPickTrainingCourse,
 }: ServiceStepProps) {
   // Which card is currently expanded into its inline detail pane. Defaults to
   // whatever `selectedService` is so an already-picked service stays open.
@@ -68,6 +85,35 @@ export function ServiceStep({
     () => getAllServiceCategories(SERVICE_CATEGORIES, activeModules),
     [activeModules],
   );
+
+  // Training is course-catalog-driven: the "service option" is a Course Type,
+  // and its "From $X" comes from the cheapest live series for that course
+  // (not a separate Programs/Rates entry). This is what makes the Course
+  // Catalog the single source of truth in the booking flow.
+  const { data: trainingCourseTypes = [] } = useQuery(
+    trainingQueries.courseTypes(),
+  );
+  const { data: trainingSeries = [] } = useQuery(trainingQueries.series());
+  const trainingFromPriceByCourse = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const ct of trainingCourseTypes) {
+      const prices = trainingSeries
+        .filter(
+          (s) =>
+            s.courseTypeId === ct.id &&
+            s.status !== "cancelled" &&
+            s.status !== "completed",
+        )
+        .map((s) => s.enrollmentRules.fullPaymentAmount)
+        .filter((p): p is number => typeof p === "number" && p > 0);
+      if (prices.length > 0) m.set(ct.id, Math.min(...prices));
+    }
+    return m;
+  }, [trainingCourseTypes, trainingSeries]);
+  const trainingFromPrice = useMemo(() => {
+    const vals = Array.from(trainingFromPriceByCourse.values());
+    return vals.length > 0 ? Math.min(...vals) : undefined;
+  }, [trainingFromPriceByCourse]);
 
   type Evaluation = {
     evaluatedAt?: string;
@@ -169,9 +215,8 @@ export function ServiceStep({
         // accepts every size); this hook is kept here so custom modules
         // adding the field later automatically participate.
         if (eligibilityFilterActive) {
-          const eligibleSizes = (
-            service as { eligibleSizes?: string[] }
-          ).eligibleSizes;
+          const eligibleSizes = (service as { eligibleSizes?: string[] })
+            .eligibleSizes;
           if (eligibleSizes && eligibleSizes.length > 0) {
             const overlap = clientPetSizes.some((s) =>
               eligibleSizes.includes(s),
@@ -182,7 +227,13 @@ export function ServiceStep({
         return true;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [allCategories, bookingFlow, selectedPets, eligibilityFilterActive, clientPetSizes],
+    [
+      allCategories,
+      bookingFlow,
+      selectedPets,
+      eligibilityFilterActive,
+      clientPetSizes,
+    ],
   );
 
   // Show "Required first" nudge on evaluation card when facility requires it
@@ -258,9 +309,12 @@ export function ServiceStep({
             : (config?.slogan ?? service.description ?? "");
 
           // #2 — show "Free" instead of "$0"
+          const isTraining = service.id === "training";
           const rawPrice = isEvaluation
             ? evaluationConfig.price
-            : (config?.basePrice ?? service.basePrice);
+            : isTraining
+              ? (trainingFromPrice ?? config?.basePrice ?? service.basePrice)
+              : (config?.basePrice ?? service.basePrice);
           const displayPrice = rawPrice === 0 ? "Free" : `From $${rawPrice}`;
 
           const bannerImg = config?.bannerImage ?? service.image ?? null;
@@ -271,13 +325,10 @@ export function ServiceStep({
           const includedItems = service.included.slice(0, 3);
 
           // Inline detail pane data (rendered only for the expanded card).
-          const isExpanded =
-            expandedServiceId === service.id && !isDisabled;
+          const isExpanded = expandedServiceId === service.id && !isDisabled;
           const allIncludedItems = service.included;
           const applicableAddOns = defaultServiceAddOns.filter(
-            (a) =>
-              a.isActive &&
-              a.applicableServices?.includes(service.id),
+            (a) => a.isActive && a.applicableServices?.includes(service.id),
           );
 
           // #1 — when a card is expanded inline, take the full row.
@@ -440,87 +491,98 @@ export function ServiceStep({
               {isExpanded && (
                 <div
                   className={cn(
-                    "border-t bg-muted/30 p-4",
+                    "bg-muted/30 border-t p-4",
                     accent.subStepBorder,
                   )}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {displaySlogan && (
-                    <p className="mb-3 text-sm/snug">{displaySlogan}</p>
-                  )}
+                  {isTraining ? (
+                    <TrainingCourseQuickPicks
+                      courseTypes={trainingCourseTypes}
+                      fromPriceByCourse={trainingFromPriceByCourse}
+                      onPick={onPickTrainingCourse}
+                      onBrowseAll={onBookService}
+                    />
+                  ) : (
+                    <>
+                      {displaySlogan && (
+                        <p className="mb-3 text-sm/snug">{displaySlogan}</p>
+                      )}
 
-                  {allIncludedItems.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wide uppercase">
-                        What&rsquo;s included
-                      </p>
-                      <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                        {allIncludedItems.map((item) => (
-                          <li
-                            key={item}
-                            className="flex items-start gap-1.5 text-xs"
-                          >
-                            <Check
-                              className={cn(
-                                "mt-0.5 size-3 shrink-0",
-                                accent.icon,
-                              )}
-                            />
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                      {allIncludedItems.length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wide uppercase">
+                            What&rsquo;s included
+                          </p>
+                          <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                            {allIncludedItems.map((item) => (
+                              <li
+                                key={item}
+                                className="flex items-start gap-1.5 text-xs"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mt-0.5 size-3 shrink-0",
+                                    accent.icon,
+                                  )}
+                                />
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
-                  {applicableAddOns.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wide uppercase">
-                        Optional add-ons
-                      </p>
-                      <ul className="space-y-1">
-                        {applicableAddOns.slice(0, 6).map((addon) => (
-                          <li
-                            key={addon.id}
-                            className="flex items-center justify-between gap-2 rounded-md bg-card px-2 py-1.5 text-xs"
-                          >
-                            <span className="truncate">{addon.name}</span>
-                            <span
-                              className={cn(
-                                "shrink-0 font-semibold",
-                                accent.price,
-                              )}
-                            >
-                              ${addon.price}
-                              <span className="text-muted-foreground ml-0.5 text-[10px] font-normal">
-                                /{addon.unitLabel || "ea"}
-                              </span>
-                            </span>
-                          </li>
-                        ))}
-                        {applicableAddOns.length > 6 && (
-                          <li className="text-muted-foreground/80 text-[10px]">
-                            +{applicableAddOns.length - 6} more available at
-                            booking
-                          </li>
-                        )}
-                      </ul>
-                    </div>
-                  )}
+                      {applicableAddOns.length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wide uppercase">
+                            Optional add-ons
+                          </p>
+                          <ul className="space-y-1">
+                            {applicableAddOns.slice(0, 6).map((addon) => (
+                              <li
+                                key={addon.id}
+                                className="bg-card flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-xs"
+                              >
+                                <span className="truncate">{addon.name}</span>
+                                <span
+                                  className={cn(
+                                    "shrink-0 font-semibold",
+                                    accent.price,
+                                  )}
+                                >
+                                  ${addon.price}
+                                  <span className="text-muted-foreground ml-0.5 text-[10px] font-normal">
+                                    /{addon.unitLabel || "ea"}
+                                  </span>
+                                </span>
+                              </li>
+                            ))}
+                            {applicableAddOns.length > 6 && (
+                              <li className="text-muted-foreground/80 text-[10px]">
+                                +{applicableAddOns.length - 6} more available at
+                                booking
+                              </li>
+                            )}
+                          </ul>
+                        </div>
+                      )}
 
-                  {onBookService && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      className={cn("w-full gap-1.5", accent.btnBg)}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onBookService();
-                      }}
-                    >
-                      Book this service
-                      <ChevronRight className="size-4" />
-                    </Button>
+                      {onBookService && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className={cn("w-full gap-1.5", accent.btnBg)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onBookService();
+                          }}
+                        >
+                          Book this service
+                          <ChevronRight className="size-4" />
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -529,5 +591,112 @@ export function ServiceStep({
         })}
       </div>
     </ScrollArea>
+  );
+}
+
+/**
+ * Course Type quick-picks shown inside the Training service card. Surfaces the
+ * Course Catalog directly in Step 2 so the client chooses a course type (the
+ * single source of truth) rather than a separate Programs/Rates entry. Each
+ * pick locks the service to training, scopes Step 3 to that course, and
+ * advances. "From $X" comes from the cheapest live series for the course.
+ */
+function TrainingCourseQuickPicks({
+  courseTypes,
+  fromPriceByCourse,
+  onPick,
+  onBrowseAll,
+}: {
+  courseTypes: TrainingCourseType[];
+  fromPriceByCourse: Map<string, number>;
+  onPick?: (courseTypeId: string) => void;
+  onBrowseAll?: () => void;
+}) {
+  const accent = SERVICE_ACCENTS.training;
+  const active = courseTypes.filter((c) => c.isActive);
+
+  if (active.length === 0) {
+    return (
+      <div className="space-y-3">
+        <p className="text-muted-foreground text-xs">
+          No course types yet. Add them in the Course Catalog — the booking flow
+          pulls training options from there.
+        </p>
+        {onBrowseAll && (
+          <Button
+            type="button"
+            size="sm"
+            className={cn("w-full gap-1.5", accent.btnBg)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onBrowseAll();
+            }}
+          >
+            Continue
+            <ChevronRight className="size-4" />
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2.5">
+      <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
+        Choose a course type
+      </p>
+      <div className="space-y-1.5">
+        {active.map((ct) => {
+          const from = fromPriceByCourse.get(ct.id);
+          return (
+            <button
+              key={ct.id}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onPick) onPick(ct.id);
+                else onBrowseAll?.();
+              }}
+              className="group/ct hover:border-foreground/20 hover:bg-muted bg-card flex w-full items-center gap-2.5 rounded-lg border p-2.5 text-left transition-colors"
+            >
+              <span
+                className="size-2.5 shrink-0 rounded-full ring-1 ring-black/10"
+                style={{ backgroundColor: ct.color ?? "#6366f1" }}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold">
+                  {ct.name}
+                </span>
+                <span className="text-muted-foreground block truncate text-[11px]">
+                  {ct.description}
+                </span>
+              </span>
+              <span
+                className={cn(
+                  "shrink-0 text-xs font-bold whitespace-nowrap",
+                  accent.price,
+                )}
+              >
+                {from !== undefined ? `From $${from}` : "Per series"}
+              </span>
+              <ChevronRight className="text-muted-foreground size-4 shrink-0 transition-transform group-hover/ct:translate-x-0.5" />
+            </button>
+          );
+        })}
+      </div>
+      {onBrowseAll && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onBrowseAll();
+          }}
+          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[11px]"
+        >
+          <GraduationCap className="size-3" />
+          Not sure yet? Browse all in the next step.
+        </button>
+      )}
+    </div>
   );
 }

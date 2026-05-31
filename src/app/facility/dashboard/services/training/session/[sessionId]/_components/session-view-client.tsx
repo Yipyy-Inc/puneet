@@ -11,9 +11,12 @@ import {
   Clock,
   GraduationCap,
   MapPin,
+  Siren,
   Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { CreateIncidentModal } from "@/components/incidents/CreateIncidentModal";
 import { cn } from "@/lib/utils";
 import { trainingQueries } from "@/lib/api/training";
 import { clients } from "@/data/clients";
@@ -51,6 +54,7 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
 
   const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
   const [homeworkPromptOpen, setHomeworkPromptOpen] = useState(false);
+  const [showIncident, setShowIncident] = useState(false);
   const [savedStudents, setSavedStudents] = useState<PresentStudentSummary[]>(
     [],
   );
@@ -128,6 +132,19 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
     () => (session ? classes.find((c) => c.id === session.classId) : undefined),
     [session, classes],
   );
+
+  // Which session of the class this is (1-based, by date/time) — selects the
+  // curriculum week to pre-load on the Exercises step.
+  const sessionNumber = useMemo(() => {
+    if (!session) return 1;
+    const ordered = sessions
+      .filter((s) => s.classId === session.classId)
+      .sort((a, b) =>
+        `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`),
+      );
+    const idx = ordered.findIndex((s) => s.id === session.id);
+    return idx >= 0 ? idx + 1 : 1;
+  }, [sessions, session]);
 
   const pets = useMemo(() => clients.flatMap((c) => c.pets), []);
   const ownerByPetId = useMemo(() => {
@@ -364,6 +381,20 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
             </div>
           </div>
 
+          {/* Incident flag — safety-critical. Opens the shared incident
+              report modal (defaults to notifying the manager) so a bite,
+              injury, or unexpected behavior can be logged mid-session. */}
+          <button
+            type="button"
+            onClick={() => setShowIncident(true)}
+            className="relative inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3.5 text-sm font-semibold text-red-700 shadow-sm transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200 dark:hover:bg-red-900/40"
+            aria-label="Report an incident"
+            title="Report an incident — notifies the manager"
+          >
+            <Siren className="size-4" />
+            <span>Incident</span>
+          </button>
+
           {/* Photo capture — opens device camera (mobile) or photo library
               (desktop). Photos attach to the session and will flow into each
               student's report-card photos array on Finish. */}
@@ -430,6 +461,7 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
           <SessionExercisesSection
             session={session}
             classRecord={classRecord}
+            sessionNumber={sessionNumber}
             attendance={attendance}
             rows={rows}
             entries={exerciseEntries}
@@ -464,12 +496,21 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
         presentStudents={savedStudents}
         sessionDate={session.date}
         className={session.className}
+        disciplineId={session.disciplineId ?? classRecord?.disciplineId}
         sessionNumber={
           savedStudents.find((s) => s.seriesEnrollment)?.seriesEnrollment
             ?.currentSessionNumber ?? undefined
         }
         onDone={handleHomeworkDone}
       />
+
+      {/* Incident report — shared facility-wide modal. Trainer picks the
+          dog(s) involved; "Notify Manager" defaults on. */}
+      <Dialog open={showIncident} onOpenChange={setShowIncident}>
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+          <CreateIncidentModal onClose={() => setShowIncident(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

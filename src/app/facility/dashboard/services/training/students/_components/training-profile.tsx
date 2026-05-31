@@ -48,6 +48,7 @@ import { TrainingProfileReportCards } from "./training-profile-report-cards";
 import { TrainingProfilePackageChips } from "./training-profile-package-chips";
 import { TrainingProfileAlertBanner } from "./training-profile-alert-banner";
 import { TrainingProfileQuickActions } from "./training-profile-quick-actions";
+import { TrainingProfilePrivatePlan } from "./training-profile-private-plan";
 
 interface Props {
   petId: number;
@@ -385,6 +386,10 @@ export function TrainingProfile({ petId }: Props) {
             trainerNotes={trainerNotesForPet}
             todayISO={todayISO ?? ""}
           />
+          {/* Dog-specific session plan — only renders when the pet has an
+              adaptive (e.g. Private 1-on-1) enrollment that has no fixed
+              course curriculum to follow. */}
+          <TrainingProfilePrivatePlan petId={petId} petName={pet.name} />
         </TabsContent>
 
         <TabsContent value="history" className="space-y-3">

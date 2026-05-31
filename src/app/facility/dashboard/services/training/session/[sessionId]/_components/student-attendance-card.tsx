@@ -14,9 +14,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
+import { hasMessagingProfile } from "@/lib/messaging-profile";
+import { isClientBlocked } from "@/lib/blocked-clients";
 import type { Enrollment } from "@/types/training";
 import type { StudentBriefingRow } from "@/lib/training-pre-session";
 import type { AttendanceMark } from "./session-view-types";
+import { RequestRecordsButton } from "./request-records-button";
 
 // Pixels of horizontal drag required before the card commits to a mark.
 // Anything below this threshold snaps back so a stray finger doesn't
@@ -288,6 +291,26 @@ export function StudentAttendanceCard({
               </li>
             ))}
           </ul>
+          {/* One-tap follow-up on the vaccine alert — message the owner for an
+              updated certificate without leaving the session. Only for vaccine
+              warnings, and only when the owner is set up in the Messaging
+              module (and not blocked). */}
+          {row.vaccineWarning.hasWarning &&
+            enrollment &&
+            hasMessagingProfile(enrollment.ownerId) &&
+            !isClientBlocked(enrollment.ownerId) && (
+              <RequestRecordsButton
+                ownerName={enrollment.ownerName}
+                ownerEmail={enrollment.ownerEmail || undefined}
+                ownerPhone={enrollment.ownerPhone || undefined}
+                petName={row.petName}
+                vaccineName={row.vaccineWarning.soonestName}
+                expired={
+                  row.vaccineWarning.soonestDays !== null &&
+                  row.vaccineWarning.soonestDays < 0
+                }
+              />
+            )}
         </div>
       )}
 

@@ -329,6 +329,61 @@ const BELLA_SERIES_001: SessionSeed[] = [
   },
 ];
 
+// ── Max (petId=3) — series-004 (Reactive Rover, ACTIVE) ─────────────────────
+// Attended weeks 1–3, then missed weeks 4 & 5. Both absences fall inside the
+// 30-day make-up window (relative to the late-May demo date), so they surface
+// on the facility Make-up Sessions tab as actionable candidates (Offer make-up
+// slot / Mark ineligible) and in his owner's portal Make-up view. Without an
+// active-enrollment absence like this the tab renders empty — every other
+// recorded absence sits on the completed series-001.
+const MAX_SERIES_004: SessionSeed[] = [
+  {
+    index: 0,
+    date: "2026-04-12",
+    status: "present",
+    trainerNotes: "Stayed under threshold with a neutral dog at 30 ft.",
+    exercises: [
+      { exerciseName: "Place / mat work", rating: 2 },
+      { exerciseName: "Look-at-that (LAT) game", rating: 2 },
+    ],
+  },
+  {
+    index: 1,
+    date: "2026-04-19",
+    status: "present",
+    trainerNotes: "Engage-disengage clicking — voluntary check-ins improving.",
+    exercises: [
+      { exerciseName: "Threshold work", rating: 2 },
+      { exerciseName: "Engage-disengage game", rating: 3 },
+    ],
+  },
+  {
+    index: 2,
+    date: "2026-04-26",
+    status: "present",
+    trainerNotes: "Best session yet — held focus past two trigger dogs.",
+    exercises: [
+      { exerciseName: "Threshold work", rating: 3 },
+      { exerciseName: "Look-at-that (LAT) game", rating: 3 },
+    ],
+  },
+  {
+    index: 3,
+    date: "2026-05-03",
+    status: "absent",
+    trainerNotes: "Owner cancelled morning of — eligible for a make-up.",
+    exercises: [],
+  },
+  {
+    index: 4,
+    date: "2026-05-10",
+    status: "absent",
+    trainerNotes:
+      "No call, no show — reach out about a make-up before the window closes.",
+    exercises: [],
+  },
+];
+
 interface AttendanceBundle {
   petId: number;
   petName: string;
@@ -365,6 +420,13 @@ const bundles: AttendanceBundle[] = [
     enrollmentId: "series-enroll-series-001-1",
     courseTypeId: "basic-obedience",
     seeds: BELLA_SERIES_001,
+  },
+  {
+    petId: 3,
+    petName: "Max",
+    enrollmentId: "series-enroll-series-004-4",
+    courseTypeId: "reactive-rover",
+    seeds: MAX_SERIES_004,
   },
 ];
 

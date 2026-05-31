@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -37,14 +38,32 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { BookOpen, Plus, Edit, Trash2, CheckCircle2, XCircle } from "lucide-react";
+import {
+  BookOpen,
+  Plus,
+  Edit,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+  Sparkles,
+} from "lucide-react";
 import { HomeworkTemplatesSheet } from "./_components/homework-templates-sheet";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
 import {
   type TrainingCourseType,
+  type TrainingClassFormat,
+  type CourseCurriculumWeek,
+  type CurriculumStyle,
   defaultTrainingCourseTypes,
+  getEffectiveCurriculumStyle,
   AVAILABLE_VACCINES,
+  TRAINING_CLASS_FORMATS,
+  TRAINING_CLASS_FORMAT_LABELS,
+  CURRICULUM_STYLES,
+  CURRICULUM_STYLE_LABELS,
 } from "@/lib/training-config";
+import { CourseCurriculumEditor } from "./_components/course-curriculum-editor";
+import { trainingQueries } from "@/lib/api/training";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -78,10 +97,17 @@ export default function TrainingCourseCatalogPage() {
     changes: ApplyToUpcomingChange[];
   } | null>(null);
 
+  const { data: disciplines = [] } = useQuery(trainingQueries.disciplines());
+
   // Form state
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    whatYouWillLearn: [] as string[],
+    sessionCurriculum: [] as CourseCurriculumWeek[],
+    curriculumStyle: "structured" as CurriculumStyle,
+    disciplineId: "",
+    classFormat: "group" as TrainingClassFormat,
     defaultWeeks: 6,
     minAgeWeeks: 16,
     maxAgeWeeks: "",
@@ -96,6 +122,11 @@ export default function TrainingCourseCatalogPage() {
     setFormData({
       name: "",
       description: "",
+      whatYouWillLearn: [],
+      sessionCurriculum: [],
+      curriculumStyle: "structured",
+      disciplineId: "",
+      classFormat: "group",
       defaultWeeks: 6,
       minAgeWeeks: 16,
       maxAgeWeeks: "",
@@ -112,6 +143,18 @@ export default function TrainingCourseCatalogPage() {
     setFormData({
       name: course.name,
       description: course.description,
+      whatYouWillLearn: course.whatYouWillLearn
+        ? [...course.whatYouWillLearn]
+        : [],
+      sessionCurriculum: course.sessionCurriculum
+        ? course.sessionCurriculum.map((w) => ({
+            ...w,
+            exerciseIds: [...w.exerciseIds],
+          }))
+        : [],
+      curriculumStyle: getEffectiveCurriculumStyle(course),
+      disciplineId: course.disciplineId ?? "",
+      classFormat: course.classFormat ?? "group",
       defaultWeeks: course.defaultWeeks,
       minAgeWeeks: course.ageRange.minWeeks,
       maxAgeWeeks: course.ageRange.maxWeeks?.toString() || "",
@@ -157,10 +200,34 @@ export default function TrainingCourseCatalogPage() {
       return;
     }
 
+    const learningOutcomes = formData.whatYouWillLearn
+      .map((o) => o.trim())
+      .filter(Boolean);
+
+    // Adaptive courses carry no week-by-week plan — the trainer builds each
+    // session from scratch — so the session plan is dropped on save.
+    const isAdaptive = formData.curriculumStyle === "adaptive";
+
+    // Clamp the curriculum to the (possibly just-reduced) duration so a course
+    // never persists weeks beyond its length — the editor prunes on edit, but
+    // the duration field can shrink without touching it.
+    const curriculumWeeks = isAdaptive
+      ? []
+      : formData.sessionCurriculum.filter(
+          (w) =>
+            w.sessionNumber >= 1 && w.sessionNumber <= formData.defaultWeeks,
+        );
+
     const courseData: TrainingCourseType = {
       id: editingCourse?.id || `course-${Date.now()}`,
       name: formData.name.trim(),
       description: formData.description.trim(),
+      whatYouWillLearn:
+        learningOutcomes.length > 0 ? learningOutcomes : undefined,
+      sessionCurriculum: curriculumWeeks.length > 0 ? curriculumWeeks : undefined,
+      curriculumStyle: formData.curriculumStyle,
+      disciplineId: formData.disciplineId || undefined,
+      classFormat: formData.classFormat,
       defaultWeeks: formData.defaultWeeks,
       ageRange: {
         minWeeks: formData.minAgeWeeks,
@@ -280,12 +347,41 @@ export default function TrainingCourseCatalogPage() {
     );
   }, [courseTypes, editingCourse]);
 
+  const disciplineById = useMemo(
+    () => new Map(disciplines.map((d) => [d.id, d])),
+    [disciplines],
+  );
+
+  const selectedDiscipline = formData.disciplineId
+    ? disciplineById.get(formData.disciplineId)
+    : undefined;
+
   const _getPrerequisiteNames = (prerequisiteIds: string[]) => {
     return prerequisiteIds
       .map((id) => courseTypes.find((c) => c.id === id)?.name)
       .filter(Boolean)
       .join(", ");
   };
+
+  const addLearningOutcome = () =>
+    setFormData({
+      ...formData,
+      whatYouWillLearn: [...formData.whatYouWillLearn, ""],
+    });
+
+  const updateLearningOutcome = (idx: number, value: string) =>
+    setFormData({
+      ...formData,
+      whatYouWillLearn: formData.whatYouWillLearn.map((o, i) =>
+        i === idx ? value : o,
+      ),
+    });
+
+  const removeLearningOutcome = (idx: number) =>
+    setFormData({
+      ...formData,
+      whatYouWillLearn: formData.whatYouWillLearn.filter((_, i) => i !== idx),
+    });
 
   return (
     <div className="space-y-6">
@@ -317,6 +413,7 @@ export default function TrainingCourseCatalogPage() {
               <TableRow>
                 <TableHead>Course Name</TableHead>
                 <TableHead>Description</TableHead>
+                <TableHead>Discipline</TableHead>
                 <TableHead>Duration</TableHead>
                 <TableHead>Age Range</TableHead>
                 <TableHead>Prerequisites</TableHead>
@@ -328,7 +425,7 @@ export default function TrainingCourseCatalogPage() {
               {courseTypes.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="text-muted-foreground py-8 text-center"
                   >
                     No course types configured. Click &quot;Add Course
@@ -351,6 +448,28 @@ export default function TrainingCourseCatalogPage() {
                       <p className="text-muted-foreground truncate text-sm">
                         {course.description}
                       </p>
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const discipline = course.disciplineId
+                          ? disciplineById.get(course.disciplineId)
+                          : undefined;
+                        return discipline ? (
+                          <span className="inline-flex items-center gap-2 text-sm">
+                            <span
+                              className="size-2 shrink-0 rounded-full"
+                              style={{
+                                backgroundColor: discipline.color ?? "#94a3b8",
+                              }}
+                            />
+                            {discipline.name}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            None
+                          </span>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell>{course.defaultWeeks} weeks</TableCell>
                     <TableCell>
@@ -463,6 +582,132 @@ export default function TrainingCourseCatalogPage() {
               />
             </div>
 
+            {/* What You Will Learn — structured outcomes for the booking page
+                and client portal catalog (complements the prose description). */}
+            <div className="space-y-2">
+              <Label>What You Will Learn</Label>
+              <p className="text-muted-foreground text-xs">
+                Bulleted skills the dog will develop. This is the key content
+                shown on the online booking page and client portal catalog.
+              </p>
+              {formData.whatYouWillLearn.length > 0 && (
+                <ul className="space-y-2">
+                  {formData.whatYouWillLearn.map((outcome, idx) => (
+                    <li key={idx} className="flex items-center gap-2">
+                      <span className="text-muted-foreground shrink-0">•</span>
+                      <Input
+                        value={outcome}
+                        onChange={(e) =>
+                          updateLearningOutcome(idx, e.target.value)
+                        }
+                        placeholder="e.g., Reliable recall — come when called"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeLearningOutcome(idx)}
+                        aria-label="Remove outcome"
+                      >
+                        <XCircle className="text-muted-foreground size-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addLearningOutcome}
+              >
+                <Plus className="mr-1.5 size-4" />
+                Add learning outcome
+              </Button>
+            </div>
+
+            {/* Discipline — tags the course to a discipline so it links to the
+                exercise library and the session exercise picker can suggest
+                the right exercises for this course. */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="discipline">Discipline</Label>
+                <a
+                  href="/facility/dashboard/settings?section=training-disciplines"
+                  className="text-primary text-xs hover:underline"
+                >
+                  Manage in Settings →
+                </a>
+              </div>
+              <Select
+                value={formData.disciplineId || "__unset__"}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    disciplineId: value === "__unset__" ? "" : value,
+                  })
+                }
+              >
+                <SelectTrigger id="discipline">
+                  <SelectValue placeholder="Pick a discipline…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__unset__">
+                    <span className="text-muted-foreground">None</span>
+                  </SelectItem>
+                  {disciplines.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      <span className="inline-flex items-center gap-2">
+                        <span
+                          className="size-2 rounded-full"
+                          style={{ backgroundColor: d.color ?? "#94a3b8" }}
+                        />
+                        {d.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                {selectedDiscipline?.description ??
+                  "Connects this course to the exercise library so session logging suggests the right exercises for it."}
+              </p>
+            </div>
+
+            {/* Class Format — Group / Private / Semi-Private / Drop-In.
+                Controls which booking flow and calendar view this course uses. */}
+            <div className="space-y-2">
+              <Label htmlFor="classFormat">Class Format</Label>
+              <Select
+                value={formData.classFormat}
+                onValueChange={(value: TrainingClassFormat) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    classFormat: value,
+                    // Private 1-on-1 courses are adaptive by default — the plan
+                    // follows the individual dog (built in the student profile).
+                    curriculumStyle:
+                      value === "private" ? "adaptive" : prev.curriculumStyle,
+                  }))
+                }
+              >
+                <SelectTrigger id="classFormat">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TRAINING_CLASS_FORMATS.map((fmt) => (
+                    <SelectItem key={fmt} value={fmt}>
+                      {TRAINING_CLASS_FORMAT_LABELS[fmt]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                Determines which booking flow and calendar view this course type
+                uses.
+              </p>
+            </div>
+
             {/* Color */}
             <RateColorPicker
               value={formData.color}
@@ -524,6 +769,80 @@ export default function TrainingCourseCatalogPage() {
                 />
               </div>
             </div>
+
+            {/* Curriculum Style — Structured (fixed week-by-week plan that
+                pre-loads each session) vs Adaptive (trainer builds the exercise
+                list from scratch each session). */}
+            <div className="space-y-2">
+              <Label>Curriculum Style</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {CURRICULUM_STYLES.map((style) => {
+                  const selected = formData.curriculumStyle === style;
+                  return (
+                    <button
+                      key={style}
+                      type="button"
+                      onClick={() =>
+                        setFormData({ ...formData, curriculumStyle: style })
+                      }
+                      data-selected={selected}
+                      className="data-[selected=true]:border-primary data-[selected=true]:bg-primary/5 data-[selected=true]:ring-primary/20 flex flex-col items-start gap-0.5 rounded-lg border p-3 text-left transition data-[selected=true]:ring-2"
+                    >
+                      <span className="flex items-center gap-1.5 text-sm font-semibold">
+                        {selected && (
+                          <CheckCircle2 className="text-primary size-4" />
+                        )}
+                        {CURRICULUM_STYLE_LABELS[style]}
+                      </span>
+                      <span className="text-muted-foreground text-xs">
+                        {style === "structured"
+                          ? "Fixed weekly plan — exercises pre-load each session."
+                          : "No pre-loaded plan — trainer builds each session."}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {formData.classFormat === "private" && (
+                <p className="text-muted-foreground text-xs">
+                  Private 1-on-1 courses are Adaptive by default — build a
+                  dog-specific plan inside each student&apos;s profile instead.
+                </p>
+              )}
+            </div>
+
+            {/* Session Plan — the per-session exercise plan. Pre-loads the
+                live session's Exercises step so trainers don't start blank,
+                and surfaces session goals to clients in their portal. Only
+                shown for Structured courses; Adaptive courses have no plan. */}
+            {formData.curriculumStyle === "structured" ? (
+              <div className="space-y-2">
+                <Label>Session Plan</Label>
+                <p className="text-muted-foreground text-xs">
+                  Define which exercises are covered in each session. Clients see
+                  session goals in their portal before each class.
+                </p>
+                <CourseCurriculumEditor
+                  weeks={formData.defaultWeeks}
+                  disciplineId={formData.disciplineId || undefined}
+                  value={formData.sessionCurriculum}
+                  onChange={(next) =>
+                    setFormData({ ...formData, sessionCurriculum: next })
+                  }
+                />
+              </div>
+            ) : (
+              <div className="text-muted-foreground flex items-start gap-2.5 rounded-lg border border-dashed bg-slate-50/60 p-3 text-xs dark:bg-slate-900/40">
+                <Sparkles className="mt-0.5 size-4 shrink-0 text-amber-500" />
+                <p>
+                  Adaptive course — no fixed session plan. The trainer opens each
+                  session with an empty exercise list and builds it from scratch,
+                  working on whatever each dog needs that day. They can still
+                  pre-plan a single session as a one-off from the upcoming
+                  session card.
+                </p>
+              </div>
+            )}
 
             {/* Required Vaccines */}
             <div className="space-y-2">

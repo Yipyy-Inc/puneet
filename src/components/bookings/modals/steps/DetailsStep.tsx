@@ -5,6 +5,7 @@ import {
   GroomingDetails,
   CustomServiceDetails,
 } from "../service-details";
+import type { TrainingSelection } from "../service-details/TrainingScheduleStep";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 import type { Pet } from "@/types/pet";
 import type { Client } from "@/types/client";
@@ -12,9 +13,16 @@ import type { AppointmentStage } from "@/types/grooming";
 
 interface DetailsStepProps {
   selectedService: string;
-  /** Deep-link the training Step 3 to a specific Program — flows into
-   *  TrainingScheduleStep so the series list filters to that program only. */
+  /** Deep-link the training Step 3 to a specific Course Type (Course Catalog)
+   *  — flows into TrainingScheduleStep so the series list scopes to it. */
+  preSelectedCourseTypeId?: string;
+  /** Legacy deep link by Program — resolved to its course type downstream. */
   preSelectedProgramId?: string;
+  /** Closes the booking modal — used by the training "Create a series"
+   *  shortcut to navigate to the Series tab cleanly. */
+  onRequestClose?: () => void;
+  /** Training-only: lifts the chosen series/course up for the multi-dog cart. */
+  onTrainingSelectionChange?: (selection: TrainingSelection | null) => void;
   currentSubStep: number;
   isSubStepComplete?: (stepIndex: number) => boolean;
   // Daycare
@@ -107,7 +115,10 @@ interface DetailsStepProps {
 
 export function DetailsStep({
   selectedService,
+  preSelectedCourseTypeId,
   preSelectedProgramId,
+  onRequestClose,
+  onTrainingSelectionChange,
   currentSubStep,
   isSubStepComplete,
   daycareSelectedDates,
@@ -293,7 +304,11 @@ export function DetailsStep({
           checkOutTime={checkOutTime}
           setCheckOutTime={setCheckOutTime}
           selectedPets={selectedPets}
+          preSelectedCourseTypeId={preSelectedCourseTypeId}
           preSelectedProgramId={preSelectedProgramId}
+          selectedClient={selectedClient}
+          onRequestClose={onRequestClose}
+          onTrainingSelectionChange={onTrainingSelectionChange}
         />
       )}
     </div>

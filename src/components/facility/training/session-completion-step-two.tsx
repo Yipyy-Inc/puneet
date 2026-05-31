@@ -111,6 +111,9 @@ interface Props {
   /** Course/session name — used to pick the right discipline group at the
    *  top of the exercise picker. */
   className: string;
+  /** Discipline this session works on — resolved upstream from the
+   *  class/session tag; preferred over name-matching the catalog. */
+  disciplineId?: string;
   /** Drives the scope label on the exercises card and toggles the
    *  per-student individual notes section. */
   isPrivate: boolean;
@@ -282,6 +285,7 @@ function ExerciseRow({
 
 export function SessionCompletionStepTwo({
   className,
+  disciplineId,
   isPrivate,
   students,
   sharedExercises,
@@ -298,8 +302,8 @@ export function SessionCompletionStepTwo({
   );
 
   const preferredDisciplineId = useMemo(
-    () => getDisciplineIdForClassName(className),
-    [className],
+    () => disciplineId ?? getDisciplineIdForClassName(className),
+    [disciplineId, className],
   );
 
   const disciplineLabel = useMemo(() => {

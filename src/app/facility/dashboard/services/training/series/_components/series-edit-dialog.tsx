@@ -128,6 +128,10 @@ interface Props {
   onOpenChange: (next: boolean) => void;
   /** When non-null, the dialog opens in edit mode pre-filled from this series. */
   editing: TrainingSeries | null;
+  /** When set in create mode, pre-selects this course type (and applies its
+   *  defaults). Used by the "Create a series for this course" shortcut from
+   *  the booking flow's no-upcoming-series state. */
+  presetCourseTypeId?: string | null;
   onSave: (series: TrainingSeries) => void;
 }
 
@@ -135,6 +139,7 @@ export function SeriesEditDialog({
   open,
   onOpenChange,
   editing,
+  presetCourseTypeId,
   onSave,
 }: Props) {
   const { data: moduleSettings } = useQuery(trainingQueries.moduleSettings());
@@ -150,12 +155,26 @@ export function SeriesEditDialog({
   // Re-sync the form whenever the dialog opens with a new "editing" target.
   useEffect(() => {
     if (!open) return;
-    setForm(
-      editing
-        ? seedFromSeries(editing, defaultDropInMax, defaultDropInPrice)
-        : emptyForm(defaultDropInMax, defaultDropInPrice),
-    );
-  }, [open, editing, defaultDropInMax, defaultDropInPrice]);
+    if (editing) {
+      setForm(seedFromSeries(editing, defaultDropInMax, defaultDropInPrice));
+      return;
+    }
+    const base = emptyForm(defaultDropInMax, defaultDropInPrice);
+    // Create mode deep-link: pre-select the course type and adopt its
+    // defaults so the trainer lands on a half-filled form for that course.
+    const preset = presetCourseTypeId
+      ? defaultTrainingCourseTypes.find((c) => c.id === presetCourseTypeId)
+      : undefined;
+    if (preset) {
+      base.courseTypeId = preset.id;
+      base.numberOfWeeks = preset.defaultWeeks;
+      base.seriesName = `${preset.name} — ${getDayName(base.dayOfWeek)} ${new Date().toLocaleDateString(
+        "en-US",
+        { month: "long", year: "numeric" },
+      )}`;
+    }
+    setForm(base);
+  }, [open, editing, presetCourseTypeId, defaultDropInMax, defaultDropInPrice]);
 
   const selectedCourseType = useMemo(
     () =>

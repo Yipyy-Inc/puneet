@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import {
   CalendarCheck2,
@@ -8,9 +9,13 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
   ClipboardList,
+  DollarSign,
+  Percent,
   Sparkles,
 } from "lucide-react";
+import { trainingQueries } from "@/lib/api/training";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -84,6 +89,61 @@ export function TrainingCalendarSidebar({
     };
   }, [todaySessions]);
 
+  // Extra data the revenue / attendance / homework metrics need. Self-fetched
+  // (these queries are already warm elsewhere in the calendar) so the sidebar
+  // stays a drop-in component that only needs `sessions` from its parent.
+  const { data: classes = [] } = useQuery(trainingQueries.classes());
+  const { data: attendances = [] } = useQuery(trainingQueries.allAttendances());
+  const { data: homework = [] } = useQuery(trainingQueries.allHomework());
+
+  const classById = useMemo(
+    () => new Map(classes.map((c) => [c.id, c])),
+    [classes],
+  );
+
+  // Today's expected revenue = each session's recognized share of its series
+  // price. Group: (price × enrolled) ÷ totalSessions. Private: the per-session
+  // price (booked one session at a time).
+  const todayRevenue = useMemo(() => {
+    let revenue = 0;
+    for (const s of todaySessions) {
+      if (s.status === "cancelled") continue;
+      const cls = classById.get(s.classId);
+      if (!cls) continue;
+      revenue +=
+        cls.classType === "private"
+          ? cls.price
+          : (cls.price * cls.enrolledCount) /
+            Math.max(cls.totalSessions || 1, 1);
+    }
+    return Math.round(revenue);
+  }, [todaySessions, classById]);
+
+  // Attendance rate = students marked present (or late) ÷ all attendance marks
+  // on record. Today's sessions are still upcoming (unmarked) in the demo data,
+  // so this reflects the rate across sessions that have actually been taken —
+  // a live "% present vs enrolled" KPI rather than a perpetually-empty tile.
+  // Null (renders "—") only when nothing has been marked at all.
+  const attendanceRate = useMemo(() => {
+    if (attendances.length === 0) return null;
+    const present = attendances.filter(
+      (a) => a.status === "present" || a.status === "late",
+    ).length;
+    return Math.round((present / attendances.length) * 100);
+  }, [attendances]);
+
+  // Owner-submitted practice videos no trainer has responded to yet — a review
+  // backlog, not today-scoped.
+  const homeworkPendingReview = useMemo(() => {
+    let count = 0;
+    for (const hw of homework) {
+      for (const entry of hw.practiceLog ?? []) {
+        if (entry.videoUrl && !entry.trainerResponse) count += 1;
+      }
+    }
+    return count;
+  }, [homework]);
+
   // Pending tasks come from the auto-create task templates registered for the
   // training module. Refresh once a minute so a tile that says "3 pending" at
   // 9am rolls over correctly as the morning progresses.
@@ -123,6 +183,24 @@ export function TrainingCalendarSidebar({
       iconColor: "text-sky-500",
     },
     {
+      label: "Today's Revenue",
+      value: `$${todayRevenue.toLocaleString("en-US")}`,
+      icon: DollarSign,
+      bg: "bg-green-50",
+      ring: "ring-green-100",
+      text: "text-green-600",
+      iconColor: "text-green-500",
+    },
+    {
+      label: "Attendance",
+      value: attendanceRate === null ? "—" : `${attendanceRate}%`,
+      icon: Percent,
+      bg: "bg-violet-50",
+      ring: "ring-violet-100",
+      text: "text-violet-600",
+      iconColor: "text-violet-500",
+    },
+    {
       label: "Completed",
       value: summary.completed,
       icon: CheckCircle2,
@@ -130,6 +208,15 @@ export function TrainingCalendarSidebar({
       ring: "ring-emerald-100",
       text: "text-emerald-600",
       iconColor: "text-emerald-500",
+    },
+    {
+      label: "Homework Review",
+      value: homeworkPendingReview,
+      icon: ClipboardCheck,
+      bg: homeworkPendingReview > 0 ? "bg-amber-50" : "bg-slate-50",
+      ring: homeworkPendingReview > 0 ? "ring-amber-100" : "ring-slate-100",
+      text: homeworkPendingReview > 0 ? "text-amber-600" : "text-slate-600",
+      iconColor: homeworkPendingReview > 0 ? "text-amber-500" : "text-slate-400",
     },
     {
       label: "Pending Tasks",

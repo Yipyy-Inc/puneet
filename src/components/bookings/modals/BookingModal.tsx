@@ -99,6 +99,12 @@ import {
   type DepositPromptValue,
 } from "./BookingDepositPrompt";
 import { CustomerDepositPanel } from "./CustomerDepositPanel";
+import {
+  TrainingEnrollmentCartPanel,
+  type TrainingCartItem,
+} from "./TrainingEnrollmentCartPanel";
+import type { TrainingSelection } from "./service-details/TrainingScheduleStep";
+import type { TrainingEnrollment } from "@/lib/training-enrollment";
 
 import type { Client } from "@/types/client";
 import type { AppointmentStage } from "@/types/grooming";
@@ -124,10 +130,12 @@ export interface NewBookingModalProps {
   preSelectedClientId?: number;
   preSelectedPetId?: number;
   preSelectedService?: string;
-  /** Deep-link the training booking flow to a specific Program. The
-   *  TrainingScheduleStep filters its series list to those matching this
-   *  program id so customers who tapped Enroll on a catalog card never see
-   *  series from other programs. */
+  /** Deep-link the training booking flow to a specific Course Type from the
+   *  Course Catalog — the TrainingScheduleStep skips the course-type picker
+   *  and scopes its series list to this course. The single source of truth. */
+  preSelectedCourseTypeId?: string;
+  /** Legacy deep-link by Program (Rates tab). Resolved to the program's
+   *  course type downstream so the customer `?program=` link keeps working. */
   preSelectedProgramId?: string;
   /** When true, the Service step is hidden + skipped. Used for deep links
    *  from a service-specific catalog (e.g. the customer tapped Enroll on a
@@ -226,6 +234,7 @@ export function BookingModal({
   preSelectedClientId,
   preSelectedPetId,
   preSelectedService,
+  preSelectedCourseTypeId,
   preSelectedProgramId,
   lockService = false,
   preSelectedStartDate,
@@ -379,6 +388,14 @@ export function BookingModal({
   const [addedPets, setAddedPets] = useState<Record<number, Pet[]>>({});
   const nextDraftIdRef = useRef(-1);
 
+  // Multi-dog training: `trainingCart` holds dogs already configured in earlier
+  // passes through Steps 1–3; `currentTrainingSelection` is the series chosen
+  // for the dog being configured right now (lifted from TrainingScheduleStep).
+  // Declared before the open/close reset below so it can clear them.
+  const [trainingCart, setTrainingCart] = useState<TrainingCartItem[]>([]);
+  const [currentTrainingSelection, setCurrentTrainingSelection] =
+    useState<TrainingSelection | null>(null);
+
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
@@ -397,6 +414,9 @@ export function BookingModal({
       setDraftClients([]);
       setAddedPets({});
       nextDraftIdRef.current = -1;
+      // Clear the multi-dog training cart.
+      setTrainingCart([]);
+      setCurrentTrainingSelection(null);
     }
   }
 
@@ -558,6 +578,19 @@ export function BookingModal({
   const [selectedService, setSelectedService] = useState<string>(
     preSelectedService ?? "",
   );
+  // Effective training course type — initialized from the deep-link prop, then
+  // updated at runtime when staff/customer pick a course type from the Step 2
+  // Training card's quick-picks. Flows into Step 3 (TrainingScheduleStep) so it
+  // scopes to that course; the Course Catalog is the single source of truth.
+  const [selectedCourseTypeId, setSelectedCourseTypeId] = useState<
+    string | undefined
+  >(preSelectedCourseTypeId);
+  const handleTrainingSelectionChange = useCallback(
+    (selection: TrainingSelection | null) => {
+      setCurrentTrainingSelection(selection);
+    },
+    [],
+  );
   const accent = getServiceAccent(selectedService);
   const approvalRequired = useMemo(() => {
     if (!selectedService) return false;
@@ -577,11 +610,35 @@ export function BookingModal({
     } else {
       setServiceType("");
     }
+    // A fresh service pick clears any previously-chosen training course type.
+    setSelectedCourseTypeId(undefined);
+    // Switching to a non-training service abandons the multi-dog cart.
+    if (service !== "training") {
+      setTrainingCart([]);
+      setCurrentTrainingSelection(null);
+    }
     setCurrentSubStep(0);
     // Apply per-service notification defaults from settings
     const defaults = getNotifDefaults(service);
     setNotificationEmail(defaults.email);
     setNotificationSMS(defaults.sms);
+  };
+
+  // Step 2 Training quick-pick: lock the service to training, scope Step 3 to
+  // the chosen course type, and jump straight to the Details step.
+  const handlePickTrainingCourse = (courseTypeId: string) => {
+    setSelectedService("training");
+    setServiceType("");
+    setSelectedCourseTypeId(courseTypeId);
+    const defaults = getNotifDefaults("training");
+    setNotificationEmail(defaults.email);
+    setNotificationSMS(defaults.sms);
+    const detailsIndex = displayedSteps.findIndex((s) => s.id === "details");
+    if (detailsIndex >= 0) {
+      setCurrentStep(detailsIndex);
+      setCurrentSubStep(0);
+      setHighestStepReached((prev) => Math.max(prev, detailsIndex));
+    }
   };
 
   // Service-specific state
@@ -975,6 +1032,36 @@ export function BookingModal({
     );
   }, [selectedClient, selectedPetIds]);
 
+  // One enrollment line item per selected dog for the in-progress training
+  // selection. Multiple pets picked in Step 1 all share the same series; a
+  // different series per dog comes from the "Enroll another dog" loop, which
+  // commits these into `trainingCart`.
+  const currentTrainingLineItems = useMemo<TrainingCartItem[]>(() => {
+    if (selectedService !== "training" || !currentTrainingSelection) return [];
+    return selectedPets.map((pet) => ({
+      ...currentTrainingSelection,
+      petId: pet.id,
+      petName: pet.name,
+    }));
+  }, [selectedService, currentTrainingSelection, selectedPets]);
+
+  // "Enroll another dog" (training Confirm screen): commit the current dog(s)
+  // to the cart, then loop back to Step 1 — same client, fresh pet/course/series
+  // — so the next dog walks Steps 1–3 independently and bills as one payment.
+  const handleEnrollAnotherDog = () => {
+    if (currentTrainingLineItems.length === 0) return;
+    setTrainingCart((prev) => [...prev, ...currentTrainingLineItems]);
+    setSelectedPetIds([]);
+    setSelectedCourseTypeId(undefined);
+    setCurrentTrainingSelection(null);
+    setStartDate("");
+    setCheckInTime("");
+    setCheckOutTime("");
+    const petStepIndex = displayedSteps.findIndex((s) => s.id === "client-pet");
+    setCurrentStep(petStepIndex >= 0 ? petStepIndex : 0);
+    setCurrentSubStep(0);
+  };
+
   const guestPetSummary = useMemo(
     () => guestPetNames.map((name) => name.trim()).filter(Boolean),
     [guestPetNames],
@@ -1356,8 +1443,13 @@ export function BookingModal({
         basePrice = perPet * Math.max(pricingSelectedPetIds.length, 1);
       }
     } else if (selectedService === "training") {
+      // Multi-dog: sum each enrolled dog's series price (cart + current dog).
+      // Falls back to the static base price before any series is selected.
+      const trainingItems = [...trainingCart, ...currentTrainingLineItems];
       basePrice =
-        training.basePrice * Math.max(pricingSelectedPetIds.length, 1);
+        trainingItems.length > 0
+          ? trainingItems.reduce((sum, li) => sum + li.price, 0)
+          : training.basePrice * Math.max(pricingSelectedPetIds.length, 1);
     } else if (selectedService === "evaluation") {
       basePrice = evaluationConfig.price;
     } else if (selectedService && !isBuiltinService(selectedService)) {
@@ -1672,6 +1764,8 @@ export function BookingModal({
     groomingIsMobile,
     groomingTravelZones,
     groomingZipTaxRates,
+    trainingCart,
+    currentTrainingLineItems,
   ]);
 
   // Check if service requires evaluation
@@ -2027,10 +2121,24 @@ export function BookingModal({
     }
 
     const clientId = selectedClientId;
-    const petId: number | number[] =
-      selectedPetIds.length === 1 ? selectedPetIds[0] : selectedPetIds;
 
-    if (!clientId || !petId) return;
+    // Multi-dog training: the booking spans every dog in the cart + the dog
+    // configured this pass. Other services keep the Step-1 pet selection.
+    const trainingItems =
+      selectedService === "training"
+        ? [...trainingCart, ...currentTrainingLineItems]
+        : [];
+    const trainingPetIds = Array.from(
+      new Set(trainingItems.map((li) => li.petId)),
+    );
+    const petIdList =
+      selectedService === "training" && trainingPetIds.length > 0
+        ? trainingPetIds
+        : selectedPetIds;
+    const petId: number | number[] =
+      petIdList.length === 1 ? petIdList[0] : petIdList;
+
+    if (!clientId || petIdList.length === 0) return;
 
     // Check if service requires evaluation
     const requiresEvaluation = requiresEvaluationForService(selectedService);
@@ -2245,6 +2353,75 @@ export function BookingModal({
         note: `Saved from booking on ${startDate || "today"}.`,
         createdBy: "facility-staff",
       });
+    }
+
+    // Multi-dog training: create one series enrollment per enrolled dog and fan
+    // it out to the series caches so the trainer's roster + the client portal
+    // reflect every dog from this single transaction. Drop-ins are per-session
+    // (not series enrollments), so they're excluded here.
+    if (selectedService === "training" && !isCustomerMode && selectedClient) {
+      const enrollItems = trainingItems.filter((li) => li.kind === "enroll");
+      if (enrollItems.length > 0) {
+        const nowISO = new Date().toISOString();
+        const todayISO = nowISO.slice(0, 10);
+        const paymentStatus: TrainingEnrollment["paymentStatus"] =
+          booking.initialDeposit
+            ? "deposit"
+            : approvalRequired
+              ? "unpaid"
+              : "paid";
+        const petById = new Map(selectedClient.pets.map((p) => [p.id, p]));
+        const newEnrollments: TrainingEnrollment[] = enrollItems.map(
+          (li, i) => ({
+            id: `enroll-${li.seriesId}-${li.petId}-${Date.now()}-${i}`,
+            seriesId: li.seriesId,
+            seriesName: li.seriesName,
+            courseTypeId: li.courseTypeId,
+            courseTypeName: li.courseTypeName,
+            petId: li.petId,
+            petName: li.petName,
+            petBreed: petById.get(li.petId)?.breed ?? "",
+            ownerId: selectedClient.id,
+            ownerName: selectedClient.name,
+            ownerPhone: selectedClient.phone ?? "",
+            ownerEmail: selectedClient.email ?? "",
+            enrollmentDate: todayISO,
+            status: "enrolled",
+            sessionsAttended: 0,
+            totalSessions: li.numberOfWeeks,
+            currentSessionNumber: 1,
+            progress: 0,
+            paymentStatus,
+            notes: "",
+            createdAt: nowISO,
+            updatedAt: nowISO,
+          }),
+        );
+        const cache = queryClient.getQueryCache();
+        cache
+          .findAll({ queryKey: ["training", "series-enrollments"] })
+          .forEach((q) => {
+            queryClient.setQueryData<TrainingEnrollment[]>(
+              q.queryKey,
+              (prev = []) => [...prev, ...newEnrollments],
+            );
+          });
+        const bySeries = new Map<string, TrainingEnrollment[]>();
+        for (const e of newEnrollments) {
+          const arr = bySeries.get(e.seriesId) ?? [];
+          arr.push(e);
+          bySeries.set(e.seriesId, arr);
+        }
+        cache.findAll({ queryKey: ["training", "series"] }).forEach((q) => {
+          if (q.queryKey[3] !== "enrollments") return;
+          const add = bySeries.get(q.queryKey[2] as string);
+          if (!add) return;
+          queryClient.setQueryData<TrainingEnrollment[]>(
+            q.queryKey,
+            (prev = []) => [...prev, ...add],
+          );
+        });
+      }
     }
 
     if (isCustomerMode) {
@@ -3458,6 +3635,7 @@ export function BookingModal({
                     bookingFlow={bookingFlow}
                     selectedPets={selectedPets}
                     onBookService={canProceed ? handleNext : undefined}
+                    onPickTrainingCourse={handlePickTrainingCourse}
                   />
                 )}
                 {displayedSteps[currentStep]?.id === "client-pet" && (
@@ -3494,7 +3672,10 @@ export function BookingModal({
                 {displayedSteps[currentStep]?.id === "details" && (
                   <DetailsStep
                     selectedService={selectedService}
+                    preSelectedCourseTypeId={selectedCourseTypeId}
                     preSelectedProgramId={preSelectedProgramId}
+                    onRequestClose={() => onOpenChange(false)}
+                    onTrainingSelectionChange={handleTrainingSelectionChange}
                     currentSubStep={
                       currentSubSteps[currentSubStep]?.id ?? currentSubStep
                     }
@@ -3776,6 +3957,24 @@ export function BookingModal({
                         </>
                       )}
                     </div>
+                  )}
+
+                {!showingTipStep &&
+                  displayedSteps[currentStep]?.id === "confirm" &&
+                  !(isEstimateMode && estimateCreated) &&
+                  !(isCustomerMode && bookingRequested) &&
+                  selectedService === "training" && (
+                    <TrainingEnrollmentCartPanel
+                      cartItems={trainingCart}
+                      currentItems={currentTrainingLineItems}
+                      onRemoveCartItem={(index) =>
+                        setTrainingCart((prev) =>
+                          prev.filter((_, i) => i !== index),
+                        )
+                      }
+                      onEnrollAnotherDog={handleEnrollAnotherDog}
+                      canEnrollAnother={currentTrainingLineItems.length > 0}
+                    />
                   )}
 
                 {!showingTipStep && displayedSteps[currentStep]?.id === "confirm" &&

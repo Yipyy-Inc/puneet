@@ -730,7 +730,7 @@ const enrollmentSeedsBySeries: Record<string, EnrollmentSeed[]> = {
       status: "enrolled",
       sessionsAttended: 3,
       paymentStatus: "paid",
-      notes: "Missed weeks 2 and 4 — eligible for makeups.",
+      notes: "Missed weeks 4 and 5 — eligible for makeups.",
     },
   ],
   "series-005": [
