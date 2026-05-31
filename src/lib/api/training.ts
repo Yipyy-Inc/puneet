@@ -12,6 +12,10 @@ import {
   trainingSeriesList,
 } from "@/data/training-series";
 import { defaultTrainingDisciplines } from "@/data/training-disciplines";
+import {
+  defaultTrainingCourseTypes,
+  type CourseCurriculumWeek,
+} from "@/lib/training-config";
 import { defaultTrainingPathways } from "@/data/training-pathways";
 import { defaultHomeworkTemplates } from "@/data/training-homework-templates";
 import { trainingExercises } from "@/data/training-exercises";
@@ -32,6 +36,21 @@ import {
 import type { MakeupSession } from "@/lib/training-makeup";
 import type { TrainingDropInBooking } from "@/lib/training-drop-ins";
 import type { TrainingTimeBlock } from "@/lib/training-time-blocks";
+
+/** Seeded dog-specific private session plans (mock), keyed by petId. Charlie
+ *  (14) is a reactive dog doing 1-on-1 work (session-006, an adaptive Private
+ *  session), so a tailored plan is seeded to demonstrate the dog-specific
+ *  pre-load in the live session view + the Custom Session Plan builder. Other
+ *  pets default to an empty plan the trainer builds in the student profile. */
+const seededPrivateSessionPlans: Record<number, CourseCurriculumWeek[]> = {
+  14: [
+    {
+      sessionNumber: 1,
+      title: "Threshold & engagement",
+      exerciseIds: ["ex-behav-threshold", "ex-behav-engage", "ex-behav-lat"],
+    },
+  ],
+};
 
 export const trainingQueries = {
   trainers: () => ({
@@ -87,6 +106,19 @@ export const trainingQueries = {
   packages: () => ({
     queryKey: ["training", "packages"] as const,
     queryFn: async () => trainingPackages,
+  }),
+  /** Active course types from the Course Catalog — the single source of truth
+   *  for what a client can book/enroll in. The booking flow scopes its series
+   *  list to a chosen course type from this list. */
+  courseTypes: () => ({
+    queryKey: ["training", "course-types"] as const,
+    queryFn: async () => defaultTrainingCourseTypes.filter((c) => c.isActive),
+  }),
+  /** Unfiltered course-type catalog — used by editors that need to surface
+   *  inactive course types too. */
+  allCourseTypes: () => ({
+    queryKey: ["training", "course-types", "all"] as const,
+    queryFn: async () => defaultTrainingCourseTypes,
   }),
   series: () => ({
     queryKey: ["training", "series"] as const,
@@ -233,6 +265,22 @@ export const trainingQueries = {
   plannedExercisesForSession: (sessionId: string) => ({
     queryKey: ["training", "planned-exercises", sessionId] as const,
     queryFn: async (): Promise<string[]> => [],
+    staleTime: Infinity,
+  }),
+  /** A dog-specific, week-by-week session plan built in the student profile for
+   *  an individual pet — a "private curriculum" that follows the dog rather than
+   *  the course type. Used by adaptive / Private 1-on-1 courses where the plan
+   *  is tailored per dog. Seeded for a couple of demo dogs (below); otherwise
+   *  empty client-state, mutated via setQueryData from the student profile's
+   *  Custom Session Plan editor. The live session reads it to pre-load a private
+   *  dog's session. */
+  privateSessionPlanForPet: (petId: number) => ({
+    queryKey: ["training", "private-session-plan", petId] as const,
+    queryFn: async (): Promise<CourseCurriculumWeek[]> =>
+      seededPrivateSessionPlans[petId]?.map((w) => ({
+        ...w,
+        exerciseIds: [...w.exerciseIds],
+      })) ?? [],
     staleTime: Infinity,
   }),
   /** Catalog of make-up session records — populated when staff issue a

@@ -110,6 +110,16 @@ export const trainingClassSchema = z
     startDate: z.string(),
     endDate: z.string(),
     totalSessions: z.number(),
+    /** Discipline this class teaches (Obedience, Agility, etc.), denormalized
+     *  from its course type. Lets the session exercise picker resolve the
+     *  right exercises directly instead of relying on class-name matching.
+     *  References a TrainingDiscipline id. */
+    disciplineId: z.string().optional(),
+    /** Curriculum style denormalized from the course type — `structured`
+     *  courses pre-load a week-by-week plan, `adaptive` courses open the live
+     *  session with an empty list. Lets the session view resolve the style
+     *  directly instead of relying on class-name matching. */
+    curriculumStyle: z.enum(["structured", "adaptive"]).optional(),
   })
   .catchall(z.unknown());
 
@@ -132,6 +142,14 @@ export const trainingSessionSchema = z
     status: trainingClassStatusEnum,
     attendees: z.array(z.string()),
     notes: z.string(),
+    /** Discipline worked on this session — copied from the parent class so the
+     *  exercise picker can resolve the discipline directly. References a
+     *  TrainingDiscipline id. */
+    disciplineId: z.string().optional(),
+    /** Curriculum style copied from the parent class — `adaptive` sessions
+     *  open with an empty exercise list (no curriculum / continuity pre-load),
+     *  `structured` sessions pre-load the course plan. */
+    curriculumStyle: z.enum(["structured", "adaptive"]).optional(),
   })
   .catchall(z.unknown());
 

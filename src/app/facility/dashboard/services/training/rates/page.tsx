@@ -13,6 +13,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Link from "next/link";
 import {
   DollarSign,
   GraduationCap,
@@ -20,6 +21,7 @@ import {
   Trash2,
   Sparkles,
   MoveVertical,
+  Info,
 } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
 import type { TrainingPackage } from "@/types/training";
@@ -97,6 +99,7 @@ export default function TrainingRatesPage() {
         form.prerequisitePackageIds.length > 0
           ? form.prerequisitePackageIds
           : undefined,
+      graduateIntoPackageId: form.graduateIntoPackageId || undefined,
       disciplineId: form.disciplineId || undefined,
       // Max group size is a group-only override — drop it entirely on private.
       maxGroupSize:
@@ -145,8 +148,42 @@ export default function TrainingRatesPage() {
           Training Pricing & Rules
         </h2>
         <p className="text-muted-foreground mt-0.5 text-sm">
-          Create and manage training programs, prices, and add-ons.
+          Optional pricing &amp; packaging bundles layered on top of your course
+          types.
         </p>
+      </div>
+
+      {/* Course Catalog is the source of truth — Programs are subordinate. */}
+      <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+        <Info className="mt-0.5 size-4 shrink-0 text-blue-600" />
+        <div className="space-y-1 text-sm text-blue-900">
+          <p>
+            <span className="font-semibold">
+              Course Types are the source of truth.
+            </span>{" "}
+            The New Booking flow and client portal pull what clients can book
+            directly from the{" "}
+            <Link
+              href="/facility/dashboard/services/training/courses"
+              className="font-semibold underline underline-offset-2 hover:text-blue-700"
+            >
+              Course Catalog
+            </Link>
+            . Programs below are <span className="font-medium">optional</span>{" "}
+            multi-session packages &amp; pricing bundles built on top of a course
+            type — they don&apos;t create new bookable course types.
+          </p>
+          <p className="text-[13px] text-blue-800/90">
+            To add a new kind of training a client can book, create a{" "}
+            <Link
+              href="/facility/dashboard/services/training/courses"
+              className="font-medium underline underline-offset-2 hover:text-blue-700"
+            >
+              Course Type
+            </Link>{" "}
+            — not a Program.
+          </p>
+        </div>
       </div>
 
       {/* Summary Stats */}
@@ -225,8 +262,8 @@ export default function TrainingRatesPage() {
         <TabsContent value="programs" className="mt-0 space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-muted-foreground text-sm">
-              Each program is a bookable training package with sessions, price,
-              and validity period.
+              Each program is an optional multi-session package built on a course
+              type — a pricing bundle, not a separate bookable course.
             </p>
             <Button
               size="sm"

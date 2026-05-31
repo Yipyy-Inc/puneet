@@ -4,8 +4,8 @@
  * and homework status so the instructor walks into the session prepared.
  *
  * Built around two pure helpers:
- *   - `generatePreSessionBriefingTasks()` materializes the task entries
- *     that show up in the Training Tasks page.
+ *   - `buildPreSessionBriefingTask()` materializes a session's briefing task
+ *     for the Today's Sessions checklist on the Training Tasks page.
  *   - `aggregateStudentBriefing()` turns a session + its students into the
  *     panel-ready row data.
  */
@@ -33,8 +33,9 @@ import {
 } from "@/lib/training-homework";
 
 /** Minutes before session start when the briefing task fires. Matches the
- *  facility-side expectation; could later be a Settings → Training value. */
-export const BRIEFING_LEAD_MINUTES = 15;
+ *  facility-side expectation; could later be a Settings → Training value.
+ *  In-file only (consumed by buildPreSessionBriefingTask below). */
+const BRIEFING_LEAD_MINUTES = 15;
 
 /** How long after session start the briefing task stays in view, in case
  *  the trainer didn't open it in time. */
@@ -45,10 +46,6 @@ export const BRIEFING_GRACE_MINUTES = 45;
  *  green check. Roughly mirrors a weekly cadence. */
 export const RECENT_PRACTICE_WINDOW_DAYS = 7;
 
-/** Window forward from "now" we'll generate briefings for — keeps the task
- *  list from filling up with sessions far in the future. */
-export const BRIEFING_LOOKAHEAD_HOURS = 24;
-
 export type PreSessionBriefingStatus = "pending" | "active" | "briefed";
 
 export interface PreSessionBriefingTask {
@@ -56,6 +53,9 @@ export interface PreSessionBriefingTask {
   sessionId: string;
   classId: string;
   className: string;
+  /** Discipline this session works on — copied from the session/class tag so
+   *  the briefing's exercise picker can resolve it without name-matching. */
+  disciplineId?: string;
   location?: string;
   /** ISO datetime — the moment the briefing should be reviewed
    *  (session start − BRIEFING_LEAD_MINUTES). */
@@ -91,6 +91,41 @@ function minusMinutes(iso: string, minutes: number): string {
   return d.toISOString();
 }
 
+/** Build the briefing task for a single session (no time-window filtering).
+ *  Used by the generator below and by the Today's Tasks checklist, which needs
+ *  a task for every one of today's sessions — including ones that already
+ *  started or finished — so it can render the briefing panel + a done state. */
+export function buildPreSessionBriefingTask(
+  session: TrainingSession,
+  classRecord: TrainingClass | undefined,
+  options: { briefed?: boolean; nowMs: number },
+): PreSessionBriefingTask {
+  const sessionStartISO = combineLocalISO(session.date, session.startTime);
+  const sessionEndISO = combineLocalISO(session.date, session.endTime);
+  const startMs = new Date(sessionStartISO).getTime();
+  const briefingISO = minusMinutes(sessionStartISO, BRIEFING_LEAD_MINUTES);
+  const briefingMs = new Date(briefingISO).getTime();
+  const leadMs = BRIEFING_LEAD_MINUTES * 60 * 1000;
+  const graceMs = BRIEFING_GRACE_MINUTES * 60 * 1000;
+  const inActiveWindow =
+    options.nowMs >= briefingMs - leadMs && options.nowMs <= startMs + graceMs;
+  return {
+    id: `pre-session-${session.id}`,
+    sessionId: session.id,
+    classId: session.classId,
+    className: session.className,
+    disciplineId: session.disciplineId ?? classRecord?.disciplineId,
+    location: classRecord?.location,
+    scheduledAt: briefingISO,
+    sessionStartAt: sessionStartISO,
+    sessionEndAt: sessionEndISO,
+    trainerId: session.trainerId,
+    trainerName: session.trainerName,
+    studentCount: session.attendees.length,
+    status: options.briefed ? "briefed" : inActiveWindow ? "active" : "pending",
+  };
+}
+
 /** Walk back `days` from a `YYYY-MM-DD` string, returning another
  *  `YYYY-MM-DD`. UTC math so the answer doesn't drift across daylight-
  *  saving boundaries. */
@@ -98,75 +133,6 @@ function subtractDays(isoDate: string, days: number): string {
   const d = new Date(`${isoDate}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() - days);
   return d.toISOString().slice(0, 10);
-}
-
-/** Materialize briefing tasks for every training session that's still
- *  upcoming (or recently started) within the lookahead window. */
-export function generatePreSessionBriefingTasks(input: {
-  sessions: TrainingSession[];
-  classes: TrainingClass[];
-  briefedSessionIds?: Set<string>;
-  nowMs: number;
-  lookaheadHours?: number;
-}): PreSessionBriefingTask[] {
-  const {
-    sessions,
-    classes,
-    briefedSessionIds,
-    nowMs,
-    lookaheadHours = BRIEFING_LOOKAHEAD_HOURS,
-  } = input;
-  const classById = new Map(classes.map((c) => [c.id, c]));
-  const horizonMs = nowMs + lookaheadHours * 60 * 60 * 1000;
-  const graceMs = BRIEFING_GRACE_MINUTES * 60 * 1000;
-  const leadMs = BRIEFING_LEAD_MINUTES * 60 * 1000;
-
-  const tasks: PreSessionBriefingTask[] = [];
-  for (const session of sessions) {
-    if (session.status !== "scheduled" && session.status !== "in-progress") {
-      continue;
-    }
-    const sessionStartISO = combineLocalISO(session.date, session.startTime);
-    const sessionEndISO = combineLocalISO(session.date, session.endTime);
-    const startMs = new Date(sessionStartISO).getTime();
-    // Skip sessions that already finished long enough that the briefing is
-    // no longer useful.
-    if (startMs + graceMs < nowMs) continue;
-    if (startMs > horizonMs) continue;
-
-    const briefingISO = minusMinutes(sessionStartISO, BRIEFING_LEAD_MINUTES);
-    const briefingMs = new Date(briefingISO).getTime();
-    const inActiveWindow =
-      nowMs >= briefingMs - leadMs && nowMs <= startMs + graceMs;
-
-    const isBriefed = briefedSessionIds?.has(session.id) ?? false;
-
-    const cls = classById.get(session.classId);
-    const location = cls?.location;
-
-    tasks.push({
-      id: `pre-session-${session.id}`,
-      sessionId: session.id,
-      classId: session.classId,
-      className: session.className,
-      location,
-      scheduledAt: briefingISO,
-      sessionStartAt: sessionStartISO,
-      sessionEndAt: sessionEndISO,
-      trainerId: session.trainerId,
-      trainerName: session.trainerName,
-      studentCount: session.attendees.length,
-      status: isBriefed
-        ? "briefed"
-        : inActiveWindow
-          ? "active"
-          : "pending",
-    });
-  }
-  return tasks.sort(
-    (a, b) =>
-      new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
-  );
 }
 
 /** Most-relevant trainer notes for the briefing — limit to the per-pet most

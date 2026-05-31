@@ -200,6 +200,28 @@ export function EnrollmentConfirmationDialog({
             </p>
           </section>
 
+          {/* What you will learn */}
+          {courseType?.whatYouWillLearn &&
+            courseType.whatYouWillLearn.length > 0 && (
+              <section className="space-y-1.5">
+                <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+                  <Sparkles className="size-3" />
+                  What you will learn
+                </p>
+                <ul className="space-y-1 rounded-lg border bg-card px-3 py-2">
+                  {courseType.whatYouWillLearn.map((item, idx) => (
+                    <li
+                      key={`learn-${idx}`}
+                      className="flex items-start gap-2 text-[12.5px]/relaxed text-slate-700"
+                    >
+                      <CheckCircle2 className="text-emerald-500 mt-0.5 size-3 shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
           {/* What to bring ─────────────────────────────────────────────── */}
           {courseType?.whatToBring && courseType.whatToBring.length > 0 && (
             <section className="space-y-1.5">

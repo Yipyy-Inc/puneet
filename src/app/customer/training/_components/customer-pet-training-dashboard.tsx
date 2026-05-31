@@ -24,7 +24,9 @@ import {
   LineChart,
   MapPin,
   PawPrint,
+  Sparkles,
   Star,
+  Target,
   TrendingDown,
   TrendingUp,
   User2,
@@ -242,7 +244,7 @@ function CurrentProgramPanel({
   todayISO: string;
 }) {
   const { currentProgram, pet } = dashboard;
-  const { enrollment, series, startDate, endDate, nextSession, isBetweenPrograms } =
+  const { enrollment, series, startDate, endDate, upcomingSessions, isBetweenPrograms } =
     currentProgram;
   const progressPct = enrollment
     ? Math.round(
@@ -309,34 +311,72 @@ function CurrentProgramPanel({
             <Progress value={progressPct} className="h-2" />
           </div>
 
-          {nextSession && (
-            <div className="rounded-md border bg-slate-50/60 px-2.5 py-2">
+          {upcomingSessions.length > 0 ? (
+            <div className="space-y-2">
               <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
                 <CalendarDays className="size-3" />
-                Next session
+                Upcoming sessions
               </p>
-              <p className="mt-0.5 text-[12.5px] font-medium text-slate-800">
-                {formatDate(nextSession.date)} ·{" "}
-                {formatTime(nextSession.startTime)}
-              </p>
-              {series && (
-                <p className="text-muted-foreground mt-0.5 inline-flex flex-wrap items-center gap-x-1.5 text-[11px]">
-                  <MapPin className="size-3" />
-                  {series.location}
-                </p>
-              )}
-              <p className="text-muted-foreground mt-1 text-[10.5px]">
-                {relativeDays(nextSession.date, todayISO)}
-              </p>
+              <ul className="space-y-2">
+                {upcomingSessions.map((s) => (
+                  <li
+                    key={`${s.sessionNumber}-${s.date}`}
+                    className="rounded-md border bg-slate-50/60 px-2.5 py-2"
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+                      <p className="text-[12.5px] font-semibold text-slate-800">
+                        Session {s.sessionNumber}
+                        {s.theme ? ` · ${s.theme}` : ""}
+                      </p>
+                      <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
+                        <CalendarDays className="size-3" />
+                        {formatDate(s.date)} · {formatTime(s.startTime)} ·{" "}
+                        {relativeDays(s.date, todayISO)}
+                      </p>
+                    </div>
+                    {series?.location && (
+                      <p className="text-muted-foreground mt-0.5 inline-flex items-center gap-1 text-[11px]">
+                        <MapPin className="size-3" />
+                        {series.location}
+                      </p>
+                    )}
+                    {s.exercises.length > 0 && (
+                      <ul className="mt-1.5 space-y-0.5">
+                        {s.exercises.map((name, i) => (
+                          <li
+                            key={`${s.sessionNumber}-ex-${i}`}
+                            className="flex items-center gap-2 text-[12px] text-slate-700"
+                          >
+                            <Target className="text-indigo-500 size-3 shrink-0" />
+                            <span className="truncate">{name}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {s.hasPlan && (
+                      <p className="text-indigo-700 mt-1.5 inline-flex items-start gap-1 rounded-md bg-indigo-50/70 px-2 py-1 text-[11px]">
+                        <BookOpen className="mt-0.5 size-3 shrink-0" />
+                        Practice these at home before class to get the most out
+                        of your session.
+                      </p>
+                    )}
+                    {!s.hasPlan && s.adaptive && (
+                      <p className="text-muted-foreground mt-1.5 inline-flex items-start gap-1 text-[11px]">
+                        <Sparkles className="mt-0.5 size-3 shrink-0 text-amber-500" />
+                        Your trainer tailors each session to what your dog needs
+                        that day.
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </div>
-          )}
-
-          {!nextSession && isBetweenPrograms && (
+          ) : isBetweenPrograms ? (
             <p className="text-muted-foreground text-[12px] italic">
-              Program complete — pick the next course to keep building on
-              their training.
+              Program complete — pick the next course to keep building on their
+              training.
             </p>
-          )}
+          ) : null}
         </div>
       )}
     </Panel>

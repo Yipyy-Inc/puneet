@@ -89,6 +89,9 @@ interface Props {
   /** Course name — fuzzy-matches the program catalog to pick the right
    *  discipline group at the top of the exercise picker. */
   className: string;
+  /** Discipline this session works on — resolved upstream from the
+   *  class/session tag; preferred over name-matching the catalog. */
+  disciplineId?: string;
   /** Whether this session is private (1-on-1) — drives the scope label so
    *  staff know who the homework is for. */
   isPrivate: boolean;
@@ -102,6 +105,7 @@ interface Props {
 
 export function SessionCompletionHomework({
   className,
+  disciplineId,
   isPrivate,
   privatePetName,
   presentStudentCount,
@@ -117,8 +121,8 @@ export function SessionCompletionHomework({
   );
 
   const preferredDisciplineId = useMemo(
-    () => getDisciplineIdForClassName(className),
-    [className],
+    () => disciplineId ?? getDisciplineIdForClassName(className),
+    [disciplineId, className],
   );
 
   const disciplineLabel = useMemo(() => {

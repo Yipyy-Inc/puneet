@@ -50,6 +50,15 @@ const CAPACITY_PILL_STYLES: Record<CapacityState, string> = {
   waitlist: "bg-rose-500 text-white",
 };
 
+/** Whole-block capacity halo so full / waitlisted group classes read at a
+ *  glance on the calendar without inspecting the small pill. Classes with
+ *  open spots get no ring, keeping the grid clean. */
+const CAPACITY_RING_STYLES: Record<CapacityState, string> = {
+  open: "",
+  full: "ring-2 ring-amber-400/70",
+  waitlist: "ring-2 ring-rose-400/70",
+};
+
 export function TrainingSessionBlock({
   session,
   classRecord,
@@ -106,6 +115,19 @@ export function TrainingSessionBlock({
         ? `Class full — ${enrolledCount}/${capacity} enrolled`
         : `Class full with ${waitlistCount} on the waitlist`;
 
+  // Capacity fill ratio for the bottom progress bar (group classes only —
+  // private is 1:1). Green under 50% full, amber 50–80%, red 80–100%, so a
+  // manager scanning the calendar spots which classes still have open slots
+  // (e.g. a 5/8 amber bar vs a 7/8 red bar) without reading every count.
+  const fillRatio = capacity > 0 ? Math.min(1, enrolledCount / capacity) : 0;
+  const fillPct = Math.round(fillRatio * 100);
+  const fillColor =
+    fillRatio < 0.5
+      ? "bg-emerald-500"
+      : fillRatio < 0.8
+        ? "bg-amber-500"
+        : "bg-red-500";
+
   return (
     <button
       type="button"
@@ -121,6 +143,8 @@ export function TrainingSessionBlock({
         "px-2 py-1.5 z-10",
         s.bg,
         s.text,
+        // Capacity halo — amber when full, rose when waitlisted (group only).
+        !isPrivate && CAPACITY_RING_STYLES[cap],
         session.status === "cancelled" && "opacity-40",
         session.status === "completed" && "opacity-60",
       )}
@@ -131,8 +155,23 @@ export function TrainingSessionBlock({
       }}
       title={`${session.className} · ${session.startTime}–${session.endTime} · ${capacityTooltip}`}
     >
+      {/* Private sessions get a subtle diagonal hatch over the whole block so a
+          trainer can tell group classes from 1-on-1s at a glance — without
+          reading the "Private" badge. Uses currentColor (= the status text
+          color) so it stays legible on both light and dark backgrounds. */}
+      {isPrivate && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0 opacity-10"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(45deg, currentColor 0, currentColor 1.5px, transparent 1.5px, transparent 8px)",
+          }}
+        />
+      )}
+
       {/* Row 1: title + capacity pill + status pill. Always rendered. */}
-      <div className="flex items-center gap-1.5 min-w-0">
+      <div className="relative z-10 flex items-center gap-1.5 min-w-0">
         {isPrivate ? (
           <User2 className="size-3 shrink-0 opacity-70" aria-hidden />
         ) : (
@@ -184,7 +223,7 @@ export function TrainingSessionBlock({
 
       {/* Row 2: type pill · time · capacity verbose (group) or owner (private). */}
       {height >= 50 && (
-        <div className="mt-1 flex items-center gap-1.5 text-[10px]">
+        <div className="relative z-10 mt-1 flex items-center gap-1.5 text-[10px]">
           <span
             className={cn(
               "inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide shadow-sm",
@@ -214,6 +253,21 @@ export function TrainingSessionBlock({
               · {capacityVerbose}
             </span>
           )}
+        </div>
+      )}
+
+      {/* Capacity fill bar — a loading-bar style indicator pinned to the block's
+          bottom edge. Group classes only (private is 1:1). Width = how full the
+          class is; color escalates green → amber → red as it fills. */}
+      {!isPrivate && capacity > 0 && (
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 z-10 h-1 bg-black/10 dark:bg-white/15"
+        >
+          <div
+            className={cn("h-full transition-all", fillColor)}
+            style={{ width: `${fillPct}%` }}
+          />
         </div>
       )}
     </button>

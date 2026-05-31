@@ -597,6 +597,7 @@ export function SessionCompletionDialog({
             </div>
             <SessionCompletionStepTwo
               className={session.className}
+              disciplineId={session.disciplineId ?? classRecord?.disciplineId}
               isPrivate={isPrivate}
               students={presentStudents}
               sharedExercises={sharedExercises}
@@ -751,6 +752,7 @@ export function SessionCompletionDialog({
             {presentStudents.length > 0 && (
               <SessionCompletionHomework
                 className={session.className}
+                disciplineId={session.disciplineId ?? classRecord?.disciplineId}
                 isPrivate={isPrivate}
                 privatePetName={presentStudents[0]?.petName}
                 presentStudentCount={presentStudents.length}

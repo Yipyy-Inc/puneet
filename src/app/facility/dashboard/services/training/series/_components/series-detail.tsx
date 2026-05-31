@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -17,14 +17,17 @@ import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
+  CircleDollarSign,
   CircleSlash,
   Clock,
   DollarSign,
   FileEdit,
   Hourglass,
   MapPin,
+  MessageSquare,
   PlayCircle,
   Users,
+  Wallet,
 } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
 import {
@@ -32,10 +35,12 @@ import {
   type SeriesStatus,
   type TrainingSeries,
 } from "@/lib/training-series";
+import { summarizeSeriesRevenue } from "@/lib/training-series-revenue";
 import { distinctEnrolledForSeries } from "@/data/training-series";
 import { SeriesSessionsTab } from "./series-sessions-tab";
 import { SeriesStudentsTab } from "./series-students-tab";
 import { SeriesWaitlistTab } from "./series-waitlist-tab";
+import { SeriesMessageStudentsDialog } from "./series-message-students-dialog";
 
 const STATUS_META: Record<
   SeriesStatus,
@@ -81,6 +86,10 @@ function formatTimeLabel(hhmm: string): string {
   const period = h >= 12 ? "PM" : "AM";
   const hour12 = ((h + 11) % 12) + 1;
   return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+function formatMoney(amount: number): string {
+  return `$${amount.toLocaleString("en-US")}`;
 }
 
 function endDateFromSeries(series: TrainingSeries): string | null {
@@ -140,6 +149,16 @@ export function SeriesDetail({ seriesId }: { seriesId: string }) {
     };
   }, [series]);
 
+  const revenue = useMemo(
+    () =>
+      series
+        ? summarizeSeriesRevenue(seriesEnrollments, series.enrollmentRules)
+        : null,
+    [seriesEnrollments, series],
+  );
+
+  const [messageOpen, setMessageOpen] = useState(false);
+
   if (!series) {
     return (
       <div className="text-muted-foreground py-12 text-center text-sm">
@@ -189,6 +208,15 @@ export function SeriesDetail({ seriesId }: { seriesId: string }) {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setMessageOpen(true)}
+            >
+              <MessageSquare className="size-4" />
+              Message Students
+            </Button>
             <Button variant="outline" size="sm">
               Edit series
             </Button>
@@ -283,6 +311,67 @@ export function SeriesDetail({ seriesId }: { seriesId: string }) {
         </span>
       </div>
 
+      {/* Revenue Summary — at-a-glance money picture so managers don't have to
+          open Finance. */}
+      {revenue && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+            <DollarSign className="size-4 text-emerald-600" />
+            Revenue Summary
+          </div>
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <SeriesInfoTile icon={Users} label="Total enrolled">
+              <span className="tabular-nums">{revenue.totalEnrolled}</span>{" "}
+              paying student{revenue.totalEnrolled === 1 ? "" : "s"}
+              {revenue.compedCount > 0 && (
+                <span className="text-muted-foreground text-[11px] font-normal">
+                  {" "}
+                  · {revenue.compedCount} comped
+                </span>
+              )}
+            </SeriesInfoTile>
+            <SeriesInfoTile icon={CircleDollarSign} label="Total collected">
+              <span className="tabular-nums text-emerald-700">
+                {formatMoney(revenue.totalCollected)}
+              </span>
+              <span className="text-muted-foreground text-[11px] font-normal">
+                {" "}
+                of {formatMoney(revenue.expectedTotal)}
+              </span>
+            </SeriesInfoTile>
+            <SeriesInfoTile icon={Hourglass} label="Deposits outstanding">
+              <span className="tabular-nums">
+                {formatMoney(revenue.depositOutstanding)}
+              </span>
+              {revenue.depositOnlyCount > 0 && (
+                <span className="text-muted-foreground text-[11px] font-normal">
+                  {" "}
+                  · {revenue.depositOnlyCount} on deposit
+                </span>
+              )}
+            </SeriesInfoTile>
+            <SeriesInfoTile icon={Wallet} label="Remaining balance">
+              <span
+                className={cn(
+                  "tabular-nums",
+                  revenue.remainingBalance > 0
+                    ? "text-amber-700"
+                    : "text-emerald-700",
+                )}
+              >
+                {formatMoney(revenue.remainingBalance)}
+              </span>
+              {revenue.unpaidCount > 0 && (
+                <span className="text-muted-foreground text-[11px] font-normal">
+                  {" "}
+                  · {revenue.unpaidCount} unpaid
+                </span>
+              )}
+            </SeriesInfoTile>
+          </div>
+        </div>
+      )}
+
       {/* Tabs ─────────────────────────────────────────────────────────── */}
       <Tabs defaultValue="sessions" className="space-y-4">
         <TabsList>
@@ -325,6 +414,13 @@ export function SeriesDetail({ seriesId }: { seriesId: string }) {
           <SeriesWaitlistTab series={series} />
         </TabsContent>
       </Tabs>
+
+      <SeriesMessageStudentsDialog
+        open={messageOpen}
+        onOpenChange={setMessageOpen}
+        series={series}
+        enrollments={seriesEnrollments}
+      />
     </div>
   );
 }

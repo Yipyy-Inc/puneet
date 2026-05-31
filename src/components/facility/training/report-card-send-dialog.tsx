@@ -85,6 +85,31 @@ function defaultScheduleTime(): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+type SendMode = "now" | "in-1-hour" | "end-of-day" | "custom";
+
+const SEND_OPTIONS: { value: SendMode; label: string; hint: string }[] = [
+  {
+    value: "now",
+    label: "Send immediately",
+    hint: "Email + portal notification go out now.",
+  },
+  {
+    value: "in-1-hour",
+    label: "Send in 1 hour",
+    hint: "Queued to deliver an hour from now.",
+  },
+  {
+    value: "end-of-day",
+    label: "Send at end of day",
+    hint: "Delivers today at 5:00 PM.",
+  },
+  {
+    value: "custom",
+    label: "Custom date & time",
+    hint: "Pick an exact date and time.",
+  },
+];
+
 export function ReportCardSendDialog({
   open,
   onOpenChange,
@@ -93,10 +118,13 @@ export function ReportCardSendDialog({
 }: Props) {
   const queryClient = useQueryClient();
   const [theme, setTheme] = useState<ReportCardTheme>("everyday");
-  const [mode, setMode] = useState<"now" | "later">("now");
+  const [mode, setMode] = useState<SendMode>("now");
   const [scheduleDate, setScheduleDate] = useState<string>("");
   const [scheduleTime, setScheduleTime] = useState<string>("");
   const [previewOpen, setPreviewOpen] = useState(false);
+  // Capture "now" once on open so preset offsets (in 1h / end of day) and the
+  // future-check stay stable across re-renders while the dialog is open.
+  const [openedAtMs] = useState(() => Date.now());
 
   // Sync state when the dialog opens against a new target card.
   useEffect(() => {
@@ -104,7 +132,7 @@ export function ReportCardSendDialog({
     setTheme(card.theme);
     if (card.scheduledSendAt) {
       const d = new Date(card.scheduledSendAt);
-      setMode("later");
+      setMode("custom");
       setScheduleDate(
         `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
       );
@@ -120,15 +148,22 @@ export function ReportCardSendDialog({
   }, [open, card, todayISO]);
 
   const scheduleISO = useMemo(() => {
-    if (mode !== "later") return null;
+    if (mode === "now") return null;
+    if (mode === "in-1-hour") {
+      return new Date(openedAtMs + 60 * 60 * 1000).toISOString();
+    }
+    if (mode === "end-of-day") {
+      const d = new Date(openedAtMs);
+      d.setHours(17, 0, 0, 0);
+      // If it's already past 5 PM, roll the send to 5 PM the next day so the
+      // schedule is always in the future.
+      if (d.getTime() <= openedAtMs) d.setDate(d.getDate() + 1);
+      return d.toISOString();
+    }
     if (!scheduleDate || !scheduleTime) return null;
     return combineDateTimeISO(scheduleDate, scheduleTime);
-  }, [mode, scheduleDate, scheduleTime]);
+  }, [mode, scheduleDate, scheduleTime, openedAtMs]);
 
-  // Capture "now" once on open so the future-check stays stable across
-  // re-renders while the dialog is open. Mode + scheduleISO changes still
-  // re-evaluate `scheduleInFuture`.
-  const [openedAtMs] = useState(() => Date.now());
   const scheduleInFuture = useMemo(() => {
     if (!scheduleISO) return false;
     return new Date(scheduleISO).getTime() > openedAtMs;
@@ -138,7 +173,7 @@ export function ReportCardSendDialog({
 
   function handleConfirm() {
     if (!card) return;
-    if (mode === "later") {
+    if (mode !== "now") {
       if (!scheduleISO) {
         toast.error("Pick a date and time for the scheduled send.");
         return;
@@ -240,50 +275,49 @@ export function ReportCardSendDialog({
             </Label>
             <RadioGroup
               value={mode}
-              onValueChange={(v) => setMode(v as "now" | "later")}
+              onValueChange={(v) => setMode(v as SendMode)}
               className="grid grid-cols-1 gap-2 sm:grid-cols-2"
             >
-              <label
-                htmlFor="send-now"
-                className={cn(
-                  "flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 transition-colors",
-                  mode === "now"
-                    ? "border-slate-900 bg-slate-50"
-                    : "hover:bg-slate-50/60",
-                )}
-              >
-                <RadioGroupItem value="now" id="send-now" className="mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium">Send immediately</p>
-                  <p className="text-muted-foreground text-[11px]">
-                    Email goes out now; the card appears in the owner&apos;s
-                    portal.
-                  </p>
-                </div>
-              </label>
-              <label
-                htmlFor="send-later"
-                className={cn(
-                  "flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 transition-colors",
-                  mode === "later"
-                    ? "border-slate-900 bg-slate-50"
-                    : "hover:bg-slate-50/60",
-                )}
-              >
-                <RadioGroupItem
-                  value="later"
-                  id="send-later"
-                  className="mt-0.5"
-                />
-                <div>
-                  <p className="text-sm font-medium">Schedule for later</p>
-                  <p className="text-muted-foreground text-[11px]">
-                    Owner sees nothing until the scheduled time fires.
-                  </p>
-                </div>
-              </label>
+              {SEND_OPTIONS.map((opt) => (
+                <label
+                  key={opt.value}
+                  htmlFor={`send-${opt.value}`}
+                  className={cn(
+                    "flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 transition-colors",
+                    mode === opt.value
+                      ? "border-slate-900 bg-slate-50"
+                      : "hover:bg-slate-50/60",
+                  )}
+                >
+                  <RadioGroupItem
+                    value={opt.value}
+                    id={`send-${opt.value}`}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">{opt.label}</p>
+                    <p className="text-muted-foreground text-[11px]">
+                      {opt.hint}
+                    </p>
+                  </div>
+                </label>
+              ))}
             </RadioGroup>
-            {mode === "later" && (
+            {(mode === "in-1-hour" || mode === "end-of-day") && scheduleISO && (
+              <p className="text-muted-foreground inline-flex items-center gap-1 rounded-lg border bg-slate-50/40 px-3 py-2 text-[11px]">
+                <CalendarClock className="size-3" />
+                Delivers{" "}
+                {new Date(scheduleISO).toLocaleString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+                .
+              </p>
+            )}
+            {mode === "custom" && (
               <div className="grid grid-cols-1 gap-3 rounded-lg border bg-slate-50/40 px-3 py-2.5 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-600">

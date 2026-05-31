@@ -823,6 +823,24 @@ export default function CustomerTrainingPage() {
 
               <Separator />
 
+              {/* What You Will Learn */}
+              {selectedCourseType?.whatYouWillLearn &&
+                selectedCourseType.whatYouWillLearn.length > 0 && (
+                  <>
+                    <div className="space-y-2">
+                      <h3 className="font-semibold">What You Will Learn</h3>
+                      <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
+                        {selectedCourseType.whatYouWillLearn.map(
+                          (item, index) => (
+                            <li key={index}>{item}</li>
+                          ),
+                        )}
+                      </ul>
+                    </div>
+                    <Separator />
+                  </>
+                )}
+
               {/* What to Bring */}
               {selectedCourseType?.whatToBring &&
                 selectedCourseType.whatToBring.length > 0 && (

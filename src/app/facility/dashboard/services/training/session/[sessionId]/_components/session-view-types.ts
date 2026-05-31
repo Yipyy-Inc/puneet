@@ -21,6 +21,11 @@ export interface SessionExerciseEntry {
   exerciseName: string;
   /** Discipline tag — used to show a small chip next to the exercise name. */
   disciplineId: string;
+  /** Set true when a curriculum exercise is marked "not covered this session".
+   *  The card stays visible as a record but the exercise is excluded from the
+   *  saved session log — and the course curriculum is untouched for future
+   *  sessions. */
+  notCovered?: boolean;
   students: Record<string, StudentExerciseEntry>;
 }
 

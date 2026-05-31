@@ -104,6 +104,7 @@ export const trainingClasses: TrainingClass[] = [
   {
     id: "class-001",
     name: "Puppy Kindergarten",
+    disciplineId: "discipline-puppy",
     description:
       "Basic socialization and foundation training for puppies 8-16 weeks old.",
     trainerId: "trainer-003",
@@ -126,6 +127,7 @@ export const trainingClasses: TrainingClass[] = [
   {
     id: "class-002",
     name: "Basic Obedience",
+    disciplineId: "discipline-obedience",
     description:
       "Essential commands and manners for dogs of all ages. Covers sit, stay, come, heel, and more.",
     trainerId: "trainer-001",
@@ -148,6 +150,7 @@ export const trainingClasses: TrainingClass[] = [
   {
     id: "class-003",
     name: "Advanced Obedience",
+    disciplineId: "discipline-obedience",
     description:
       "Off-leash reliability, distance commands, and complex behaviors.",
     trainerId: "trainer-001",
@@ -170,6 +173,10 @@ export const trainingClasses: TrainingClass[] = [
   {
     id: "class-004",
     name: "Reactive Dog Workshop",
+    disciplineId: "discipline-behavior",
+    // Adaptive — the trainer works on whatever each dog needs that day, so the
+    // live session opens with an empty exercise list (no curriculum pre-load).
+    curriculumStyle: "adaptive",
     description: "Help your reactive dog learn to stay calm around triggers.",
     trainerId: "trainer-002",
     trainerName: "Sophie Martinez",
@@ -191,6 +198,7 @@ export const trainingClasses: TrainingClass[] = [
   {
     id: "class-005",
     name: "Agility Foundations",
+    disciplineId: "discipline-agility",
     description: "Introduction to agility equipment and handling skills.",
     trainerId: "trainer-004",
     trainerName: "Elena Kowalski",
@@ -212,6 +220,7 @@ export const trainingClasses: TrainingClass[] = [
   {
     id: "class-006",
     name: "Competition Agility",
+    disciplineId: "discipline-agility",
     description: "Advanced agility training for competition-ready teams.",
     trainerId: "trainer-004",
     trainerName: "Elena Kowalski",
@@ -233,6 +242,7 @@ export const trainingClasses: TrainingClass[] = [
   {
     id: "class-007",
     name: "Trick Training",
+    disciplineId: "discipline-obedience",
     description:
       "Fun tricks to impress your friends and mentally stimulate your dog.",
     trainerId: "trainer-003",
@@ -255,6 +265,7 @@ export const trainingClasses: TrainingClass[] = [
   {
     id: "class-008",
     name: "Canine Good Citizen Prep",
+    disciplineId: "discipline-obedience",
     description: "Prepare for the AKC Canine Good Citizen test.",
     trainerId: "trainer-001",
     trainerName: "Marcus Chen",
@@ -277,6 +288,10 @@ export const trainingClasses: TrainingClass[] = [
   {
     id: "class-101",
     name: "Private Obedience Coaching",
+    disciplineId: "discipline-obedience",
+    // Private 1-on-1 — adaptive by default. The plan follows the individual
+    // dog (built in the student profile), not a fixed course curriculum.
+    curriculumStyle: "adaptive",
     description:
       "1-on-1 private obedience sessions tailored to your dog's pace and goals.",
     trainerId: "trainer-001",
@@ -299,6 +314,10 @@ export const trainingClasses: TrainingClass[] = [
   {
     id: "class-102",
     name: "Reactive Dog Private Session",
+    disciplineId: "discipline-behavior",
+    // Private 1-on-1 reactive work — adaptive; the trainer builds each session
+    // around the dog's needs, optionally from a dog-specific plan.
+    curriculumStyle: "adaptive",
     description:
       "Private behavior modification sessions for reactive or anxious dogs.",
     trainerId: "trainer-002",
@@ -331,6 +350,7 @@ export const trainingSessions: TrainingSession[] = [
     id: "session-001",
     classId: "class-001",
     className: "Puppy Kindergarten",
+    disciplineId: "discipline-puppy",
     trainerId: "trainer-003",
     trainerName: "Jake Wilson",
     date: getDateString(2),
@@ -344,9 +364,83 @@ export const trainingSessions: TrainingSession[] = [
     id: "session-002",
     classId: "class-002",
     className: "Basic Obedience",
+    disciplineId: "discipline-obedience",
     trainerId: "trainer-001",
     trainerName: "Marcus Chen",
     date: getDateString(0),
+    startTime: "18:00",
+    endTime: "19:00",
+    status: "scheduled",
+    attendees: ["enroll-004", "enroll-005", "enroll-006", "enroll-007"],
+    notes: "",
+  },
+  // Weeks 2–6 of Marcus Chen's Basic Obedience class (class-002) — a full
+  // 6-session cohort so each week's Session Plan can be seen pre-loading.
+  // E.g. open Session 4 → Leave it, Drop it, Mat/place foundation already there.
+  {
+    id: "session-008",
+    classId: "class-002",
+    className: "Basic Obedience",
+    disciplineId: "discipline-obedience",
+    trainerId: "trainer-001",
+    trainerName: "Marcus Chen",
+    date: getDateString(7),
+    startTime: "18:00",
+    endTime: "19:00",
+    status: "scheduled",
+    attendees: ["enroll-004", "enroll-005", "enroll-006", "enroll-007"],
+    notes: "",
+  },
+  {
+    id: "session-009",
+    classId: "class-002",
+    className: "Basic Obedience",
+    disciplineId: "discipline-obedience",
+    trainerId: "trainer-001",
+    trainerName: "Marcus Chen",
+    date: getDateString(14),
+    startTime: "18:00",
+    endTime: "19:00",
+    status: "scheduled",
+    attendees: ["enroll-004", "enroll-005", "enroll-006", "enroll-007"],
+    notes: "",
+  },
+  {
+    id: "session-010",
+    classId: "class-002",
+    className: "Basic Obedience",
+    disciplineId: "discipline-obedience",
+    trainerId: "trainer-001",
+    trainerName: "Marcus Chen",
+    date: getDateString(21),
+    startTime: "18:00",
+    endTime: "19:00",
+    status: "scheduled",
+    attendees: ["enroll-004", "enroll-005", "enroll-006", "enroll-007"],
+    notes: "",
+  },
+  {
+    id: "session-011",
+    classId: "class-002",
+    className: "Basic Obedience",
+    disciplineId: "discipline-obedience",
+    trainerId: "trainer-001",
+    trainerName: "Marcus Chen",
+    date: getDateString(28),
+    startTime: "18:00",
+    endTime: "19:00",
+    status: "scheduled",
+    attendees: ["enroll-004", "enroll-005", "enroll-006", "enroll-007"],
+    notes: "",
+  },
+  {
+    id: "session-012",
+    classId: "class-002",
+    className: "Basic Obedience",
+    disciplineId: "discipline-obedience",
+    trainerId: "trainer-001",
+    trainerName: "Marcus Chen",
+    date: getDateString(35),
     startTime: "18:00",
     endTime: "19:00",
     status: "scheduled",
@@ -357,6 +451,7 @@ export const trainingSessions: TrainingSession[] = [
     id: "session-003",
     classId: "class-005",
     className: "Agility Foundations",
+    disciplineId: "discipline-agility",
     trainerId: "trainer-004",
     trainerName: "Elena Kowalski",
     date: getDateString(3),
@@ -372,12 +467,16 @@ export const trainingSessions: TrainingSession[] = [
     id: "session-004",
     classId: "class-007",
     className: "Trick Training",
+    disciplineId: "discipline-obedience",
     trainerId: "trainer-003",
     trainerName: "Jake Wilson",
     date: getDateString(0),
     startTime: "11:00",
     endTime: "12:00",
-    status: "scheduled",
+    // Seeded complete (the morning class already ran) so the Today's Sessions
+    // checklist demos the auto-checkoff: its Student Notes Review + Session
+    // Complete tasks both read as done on load.
+    status: "completed",
     attendees: ["enroll-001", "enroll-002"],
     notes: "",
   },
@@ -385,6 +484,7 @@ export const trainingSessions: TrainingSession[] = [
     id: "session-005",
     classId: "class-101",
     className: "Private Obedience Coaching",
+    disciplineId: "discipline-obedience",
     trainerId: "trainer-001",
     trainerName: "Marcus Chen",
     date: getDateString(0),
@@ -398,6 +498,7 @@ export const trainingSessions: TrainingSession[] = [
     id: "session-006",
     classId: "class-102",
     className: "Reactive Dog Private Session",
+    disciplineId: "discipline-behavior",
     trainerId: "trainer-002",
     trainerName: "Sophie Martinez",
     date: getDateString(0),
@@ -411,6 +512,7 @@ export const trainingSessions: TrainingSession[] = [
     id: "session-007",
     classId: "class-101",
     className: "Private Obedience Coaching",
+    disciplineId: "discipline-obedience",
     trainerId: "trainer-001",
     trainerName: "Marcus Chen",
     date: getDateString(1),
@@ -885,6 +987,39 @@ export const trainerNotes: TrainerNote[] = [
     note: "First session. Bella was nervous initially but warmed up quickly. Recommend owner practice handling exercises at home.",
     category: "progress",
     isPrivate: false,
+  },
+  {
+    // Safety-critical heads-up — surfaces in the red alert banner at the very
+    // top of the student profile (and the calendar card + pre-session briefing)
+    // so a trainer never has to open the Notes tab to learn he's a bite risk.
+    id: "note-013a",
+    enrollmentId: "enroll-001",
+    petId: 13,
+    petName: "Rex",
+    classId: "class-001",
+    className: "Puppy Kindergarten",
+    trainerId: "trainer-003",
+    trainerName: "Jake Wilson",
+    date: "2024-03-11",
+    note: "Bite history — has nipped during close-contact handling. Muzzle and go slow on any hands-on or restraint work.",
+    category: "behavior",
+    isPrivate: true,
+    isActiveAlert: true,
+  },
+  {
+    id: "note-013b",
+    enrollmentId: "enroll-001",
+    petId: 13,
+    petName: "Rex",
+    classId: "class-001",
+    className: "Puppy Kindergarten",
+    trainerId: "trainer-003",
+    trainerName: "Jake Wilson",
+    date: "2024-03-10",
+    note: "On gabapentin for handling anxiety — owner doses 2 hrs before class. Expect slower responses and keep sessions short.",
+    category: "concern",
+    isPrivate: true,
+    isActiveAlert: true,
   },
   {
     id: "note-003",
@@ -1418,6 +1553,7 @@ export const trainingPackages: TrainingPackage[] = [
       "Progress report",
     ],
     disciplineId: "discipline-obedience",
+    graduateIntoPackageId: "pkg-003",
     maxGroupSize: 10,
     imageUrl: "/training/basic-obedience.jpg",
     sortOrder: 2,

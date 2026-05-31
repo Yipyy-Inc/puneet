@@ -416,6 +416,7 @@ export function PreSessionBriefingPanel({
                 <PlannedExercisesSection
                   sessionId={task.sessionId}
                   className={task.className}
+                  disciplineId={task.disciplineId}
                 />
               )}
               {rows.map((row) => (
@@ -688,9 +689,11 @@ function PreviousSessionNotesSection({
 function PlannedExercisesSection({
   sessionId,
   className,
+  disciplineId,
 }: {
   sessionId: string;
   className: string;
+  disciplineId?: string;
 }) {
   const queryClient = useQueryClient();
   const { data: exercises = [] } = useQuery(trainingQueries.exercises());
@@ -699,8 +702,8 @@ function PlannedExercisesSection({
   );
 
   const preferredDisciplineId = useMemo(
-    () => getDisciplineIdForClassName(className),
-    [className],
+    () => disciplineId ?? getDisciplineIdForClassName(className),
+    [disciplineId, className],
   );
 
   // Defaults open when the trainer hasn't planned anything yet (so the

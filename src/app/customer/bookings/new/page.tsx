@@ -41,6 +41,7 @@ export default function NewBookingPage() {
 
   const preSelectedService = searchParams?.get("service") ?? undefined;
   const preSelectedProgramId = searchParams?.get("program") ?? undefined;
+  const preSelectedCourseTypeId = searchParams?.get("course") ?? undefined;
   const resumeBookingId = searchParams?.get("resumeBooking") ?? null;
 
   // If the customer clicked a recovery link in an email we'll restore every
@@ -112,6 +113,9 @@ export default function NewBookingPage() {
           preSelectedService={resumePreselection?.preSelectedService ?? preSelectedService}
           preSelectedProgramId={
             resumePreselection ? undefined : preSelectedProgramId
+          }
+          preSelectedCourseTypeId={
+            resumePreselection ? undefined : preSelectedCourseTypeId
           }
           // When a service-specific program is deep-linked (e.g. customer
           // tapped Enroll on a training catalog card), lock the wizard to

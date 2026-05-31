@@ -1,15 +1,21 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   AlertTriangle,
+  ArrowLeft,
+  BookOpen,
   CalendarDays,
   CheckCircle2,
+  ChevronRight,
   Clock,
   GraduationCap,
   Lock,
   MapPin,
+  Plus,
   Repeat,
   Ticket,
   User,
@@ -24,12 +30,18 @@ import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { trainingQueries } from "@/lib/api/training";
 import { trainingPackages } from "@/data/training";
 import { getDayName, type TrainingSeries } from "@/lib/training-series";
-import { matchSeriesForCourse } from "@/app/customer/training/_components/customer-training-catalog";
+import {
+  defaultTrainingCourseTypes,
+  TRAINING_CLASS_FORMAT_LABELS,
+  type TrainingCourseType,
+} from "@/lib/training-config";
 import {
   checkPrerequisitesWithProgress,
   type PrereqDetail,
 } from "@/lib/training-program-prereqs";
+import type { TrainingEnrollment } from "@/lib/training-enrollment";
 import type { Pet } from "@/types/pet";
+import type { Client } from "@/types/client";
 
 interface Props {
   startDate: string;
@@ -38,15 +50,25 @@ interface Props {
   setCheckInTime: (time: string) => void;
   checkOutTime: string;
   setCheckOutTime: (time: string) => void;
-  /** When provided, the series list filters to instances of this Program so
-   *  a customer who deep-linked from a catalog card sees only matching
-   *  series instead of the entire training catalog. */
+  /** Deep-link the flow to a specific Course Type from the Course Catalog —
+   *  skips the course-type picker so a customer who tapped a catalog card
+   *  lands straight on its series list. The single source of truth. */
+  preSelectedCourseTypeId?: string;
+  /** Legacy deep link by Program (Rates tab). Resolved to the program's
+   *  course type so the customer `?program=` link keeps working. */
   preSelectedProgramId?: string;
-  /** Pets picked in Step 1 — drives the per-series prereq check. When the
-   *  selected pet doesn't meet a series' program prerequisites, the card
-   *  shows a Lock badge + a yellow warning banner surfaces on click so
-   *  staff has to actively acknowledge to proceed. */
+  /** Pets picked in Step 1 — drives the per-series prereq check + who gets
+   *  added to the waitlist. */
   selectedPets?: Pet[];
+  /** Client picked in Step 1 — the owner attached to a waitlist entry. */
+  selectedClient?: Client;
+  /** Closes the booking modal — used by the "Create a series" shortcut so
+   *  navigating to the Series tab doesn't leave the wizard mounted behind it. */
+  onRequestClose?: () => void;
+  /** Lifts the chosen series/course up to the booking modal (for the multi-dog
+   *  enrollment cart). Called with the selection on enroll/drop-in, or null
+   *  when the selection is cleared. */
+  onSelectionChange?: (selection: TrainingSelection | null) => void;
 }
 
 const NEAR_WINDOW_DAYS = 14;
@@ -55,6 +77,22 @@ type Choice =
   | { kind: "enroll"; seriesId: string }
   | { kind: "drop-in"; seriesId: string; sessionId: string }
   | null;
+
+/** The chosen series/course, lifted up to the booking modal so it can build a
+ *  multi-dog enrollment cart (one line item per dog). */
+export interface TrainingSelection {
+  seriesId: string;
+  courseTypeId: string;
+  courseTypeName: string;
+  seriesName: string;
+  startDate: string;
+  startTime: string;
+  endTime: string;
+  numberOfWeeks: number;
+  price: number;
+  kind: "enroll" | "drop-in";
+  sessionId?: string;
+}
 
 function formatDateString(d: Date): string {
   const year = d.getFullYear();
@@ -108,6 +146,9 @@ function isBookable(series: TrainingSeries, todayISO: string): boolean {
   return lastSessionDate(series) >= todayISO;
 }
 
+const normalize = (s: string) =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
 export function TrainingScheduleStep({
   startDate,
   setStartDate,
@@ -115,53 +156,28 @@ export function TrainingScheduleStep({
   setCheckInTime,
   checkOutTime,
   setCheckOutTime,
+  preSelectedCourseTypeId,
   preSelectedProgramId,
   selectedPets = [],
+  selectedClient,
+  onRequestClose,
+  onSelectionChange,
 }: Props) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: seriesList = [] } = useQuery(trainingQueries.series());
   const { data: allSeriesEnrollments = [] } = useQuery(
     trainingQueries.allSeriesEnrollments(),
   );
-  const { data: packages = [] } = useQuery(trainingQueries.packages());
-
-  const selectedProgram = useMemo(
-    () =>
-      preSelectedProgramId
-        ? packages.find((p) => p.id === preSelectedProgramId)
-        : undefined,
-    [preSelectedProgramId, packages],
-  );
-
-  // Series eligible for this booking — if a program is locked in, restrict
-  // to instances of that program (using both the direct `programId` link
-  // and the fuzzy name matcher the catalog uses).
-  const programScopedSeries = useMemo(() => {
-    if (!selectedProgram) return seriesList;
-    const matchedByName = new Set(
-      matchSeriesForCourse(selectedProgram, seriesList).map((s) => s.id),
-    );
-    return seriesList.filter(
-      (s) => s.programId === selectedProgram.id || matchedByName.has(s.id),
-    );
-  }, [selectedProgram, seriesList]);
-
-  const [choice, setChoice] = useState<Choice>(null);
-
-  /** Acknowledgement set — series ids for which staff explicitly approved
-   *  enrolling a pet that doesn't meet prereqs. The warning banner stays
-   *  visible until staff taps "Override and proceed." */
-  const [overriddenSeriesIds, setOverriddenSeriesIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const { data: courseTypes = [] } = useQuery(trainingQueries.courseTypes());
+  const { data: disciplines = [] } = useQuery(trainingQueries.disciplines());
 
   const todayISO = useMemo(() => formatDateString(new Date()), []);
-  const selectedISO = startDate || "";
 
-  const selectedDates = useMemo(() => {
-    if (!selectedISO) return [];
-    const [y, m, d] = selectedISO.split("-").map(Number);
-    return [new Date(y, m - 1, d)];
-  }, [selectedISO]);
+  const disciplineNameById = useMemo(
+    () => new Map(disciplines.map((d) => [d.id, d.name])),
+    [disciplines],
+  );
 
   // Live spots-left per series — counts active enrollments.
   const spotsLeftBySeries = useMemo(() => {
@@ -175,23 +191,142 @@ export function TrainingScheduleStep({
     return m;
   }, [seriesList, allSeriesEnrollments]);
 
-  // Bookable universe — drops cancelled/completed series we'd never book into.
-  const bookableSeries = useMemo(
-    () => programScopedSeries.filter((s) => isBookable(s, todayISO)),
-    [programScopedSeries, todayISO],
+  // Resolve a deep-linked course type: directly by id, or by mapping a
+  // legacy Program id → the course type its series run (with a fuzzy
+  // name fallback so `?program=` keeps landing on the right catalog entry).
+  const deepLinkedCourseTypeId = useMemo<string | null>(() => {
+    if (preSelectedCourseTypeId) return preSelectedCourseTypeId;
+    if (preSelectedProgramId) {
+      const viaSeries = seriesList.find(
+        (s) => s.programId === preSelectedProgramId,
+      )?.courseTypeId;
+      if (viaSeries) return viaSeries;
+      const program = trainingPackages.find(
+        (p) => p.id === preSelectedProgramId,
+      );
+      if (program) {
+        const target = normalize(program.name);
+        const ct =
+          courseTypes.find((c) => normalize(c.name) === target) ??
+          courseTypes.find(
+            (c) =>
+              normalize(c.name).includes(target) ||
+              target.includes(normalize(c.name)),
+          );
+        if (ct) return ct.id;
+      }
+    }
+    return null;
+  }, [preSelectedCourseTypeId, preSelectedProgramId, seriesList, courseTypes]);
+
+  const isDeepLinked = !!(preSelectedCourseTypeId || preSelectedProgramId);
+
+  const [selectedCourseTypeId, setSelectedCourseTypeId] = useState<
+    string | null
+  >(preSelectedCourseTypeId ?? null);
+
+  // Adopt the deep-linked course type once it resolves (program → course
+  // mapping needs the series query to have loaded first).
+  const [prevDeepLink, setPrevDeepLink] = useState<string | null>(
+    deepLinkedCourseTypeId,
+  );
+  if (deepLinkedCourseTypeId !== prevDeepLink) {
+    setPrevDeepLink(deepLinkedCourseTypeId);
+    if (deepLinkedCourseTypeId) setSelectedCourseTypeId(deepLinkedCourseTypeId);
+  }
+
+  const [choice, setChoice] = useState<Choice>(null);
+  const [waitlistJoined, setWaitlistJoined] = useState(false);
+
+  /** Acknowledgement set — series ids for which staff explicitly approved
+   *  enrolling a pet that doesn't meet prereqs. */
+  const [overriddenSeriesIds, setOverriddenSeriesIds] = useState<Set<string>>(
+    () => new Set(),
   );
 
-  // Series with startDate >= selectedISO — these are the "enroll from start"
-  // candidates per the spec.
+  const selectedCourseType = useMemo<TrainingCourseType | undefined>(() => {
+    if (!selectedCourseTypeId) return undefined;
+    return (
+      courseTypes.find((c) => c.id === selectedCourseTypeId) ??
+      defaultTrainingCourseTypes.find((c) => c.id === selectedCourseTypeId)
+    );
+  }, [selectedCourseTypeId, courseTypes]);
+
+  function resetSeriesSelection() {
+    setChoice(null);
+    setStartDate("");
+    setCheckInTime("");
+    setCheckOutTime("");
+    setWaitlistJoined(false);
+    onSelectionChange?.(null);
+  }
+
+  /** Clear the in-progress series choice (kept times reset) and tell the
+   *  parent the line item is gone. */
+  function clearSelection() {
+    setChoice(null);
+    setCheckInTime("");
+    setCheckOutTime("");
+    onSelectionChange?.(null);
+  }
+
+  function handleSelectCourse(id: string) {
+    setSelectedCourseTypeId(id);
+    resetSeriesSelection();
+  }
+
+  function handleChangeCourse() {
+    setSelectedCourseTypeId(null);
+    resetSeriesSelection();
+  }
+
+  function goCreateSeries(courseTypeId: string) {
+    onRequestClose?.();
+    router.push(
+      `/facility/dashboard/services/training/series?create=1&course=${encodeURIComponent(
+        courseTypeId,
+      )}`,
+    );
+  }
+
+  const selectedISO = startDate || "";
+
+  const selectedDates = useMemo(() => {
+    if (!selectedISO) return [];
+    const [y, m, d] = selectedISO.split("-").map(Number);
+    return [new Date(y, m - 1, d)];
+  }, [selectedISO]);
+
+  // Bookable universe scoped to the chosen course type — the single source
+  // of truth for every downstream state.
+  const courseBookableSeries = useMemo(() => {
+    if (!selectedCourseTypeId) return [];
+    return seriesList
+      .filter(
+        (s) =>
+          s.courseTypeId === selectedCourseTypeId && isBookable(s, todayISO),
+      )
+      .sort((a, b) => a.startDate.localeCompare(b.startDate));
+  }, [seriesList, selectedCourseTypeId, todayISO]);
+
+  // Course-level states the spec calls out.
+  const courseHasNoSeries =
+    !!selectedCourseTypeId && courseBookableSeries.length === 0;
+  const courseAllFull =
+    !!selectedCourseTypeId &&
+    courseBookableSeries.length > 0 &&
+    courseBookableSeries.every(
+      (s) => (spotsLeftBySeries.get(s.id) ?? 0) === 0,
+    );
+
+  // Series with startDate >= selectedISO — "enroll from start" candidates.
   const enrollableForDate = useMemo(() => {
     if (!selectedISO) return [];
-    return bookableSeries
+    return courseBookableSeries
       .filter((s) => s.startDate >= selectedISO)
       .sort((a, b) => a.startDate.localeCompare(b.startDate));
-  }, [bookableSeries, selectedISO]);
+  }, [courseBookableSeries, selectedISO]);
 
-  // "Near" gate — when there are no series starting within NEAR_WINDOW_DAYS,
-  // surface the empty-state with the next available series.
   const nearSeries = useMemo(
     () =>
       enrollableForDate.filter(
@@ -201,17 +336,16 @@ export function TrainingScheduleStep({
   );
 
   const nextAvailableSeries = useMemo(() => {
-    return bookableSeries
+    return courseBookableSeries
       .filter((s) => s.startDate >= (selectedISO || todayISO))
       .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
-  }, [bookableSeries, selectedISO, todayISO]);
+  }, [courseBookableSeries, selectedISO, todayISO]);
 
   // Drop-in candidates — series already running (startDate ≤ selectedISO) but
-  // not finished yet (lastSessionDate ≥ selectedISO), AND the series allows
-  // drop-ins, AND there's a session on the exact selected date.
+  // not finished, allowing drop-ins, with a session on the exact selected date.
   const dropInCandidates = useMemo(() => {
     if (!selectedISO) return [];
-    return bookableSeries
+    return courseBookableSeries
       .filter(
         (s) =>
           s.enrollmentRules.allowDropIns &&
@@ -223,19 +357,14 @@ export function TrainingScheduleStep({
         session: s.sessions.find((sess) => sess.date === selectedISO),
       }))
       .filter((c) => !!c.session);
-  }, [bookableSeries, selectedISO]);
+  }, [courseBookableSeries, selectedISO]);
 
-  /** Per-series prereq lookup — resolves the program tied to the series
-   *  (via `programId` direct, or fuzzy course-type-name match) then runs
-   *  the prereq check for every selected pet. Returns the union of missing
-   *  prereqs across all selected pets, so the warning surfaces even when
-   *  multiple pets are being enrolled at once. */
+  /** Per-series prereq lookup — resolves the program tied to the series then
+   *  runs the prereq check for every selected pet. */
   function prereqIssueForSeries(
     series: TrainingSeries,
   ): { program: { id: string; name: string }; details: PrereqDetail[] } | null {
     if (selectedPets.length === 0) return null;
-    const normalize = (s: string) =>
-      s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
     const target = normalize(series.courseTypeName);
     const program =
       trainingPackages.find((p) => p.id === series.programId) ??
@@ -264,12 +393,21 @@ export function TrainingScheduleStep({
 
   function applyEnrollChoice(series: TrainingSeries) {
     setChoice({ kind: "enroll", seriesId: series.id });
-    // Set the booking dates to the series' first session — that's what the
-    // owner is signing up for. Subsequent sessions are implicit in the series
-    // and surfaced on the confirm step.
     setStartDate(series.startDate);
     setCheckInTime(series.startTime);
     setCheckOutTime(series.endTime);
+    onSelectionChange?.({
+      seriesId: series.id,
+      courseTypeId: series.courseTypeId,
+      courseTypeName: series.courseTypeName,
+      seriesName: series.seriesName,
+      startDate: series.startDate,
+      startTime: series.startTime,
+      endTime: series.endTime,
+      numberOfWeeks: series.numberOfWeeks,
+      price: series.enrollmentRules.fullPaymentAmount,
+      kind: "enroll",
+    });
   }
 
   function acknowledgePrereqOverride(seriesId: string) {
@@ -288,181 +426,586 @@ export function TrainingScheduleStep({
     setStartDate(session.date);
     setCheckInTime(session.startTime);
     setCheckOutTime(session.endTime);
+    onSelectionChange?.({
+      seriesId: series.id,
+      courseTypeId: series.courseTypeId,
+      courseTypeName: series.courseTypeName,
+      seriesName: series.seriesName,
+      startDate: session.date,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      numberOfWeeks: series.numberOfWeeks,
+      price: dropInPrice(series),
+      kind: "drop-in",
+      sessionId: session.id,
+    });
   }
 
+  /** Course-level waitlist join (every series for the course is full). Writes
+   *  one `waitlisted` TrainingEnrollment per selected dog, hung off the
+   *  earliest upcoming series that has waitlisting enabled (falling back to
+   *  the earliest series), and fans it out through the series-enrollment
+   *  caches so the trainer's Waitlist tab + Students roster see it instantly —
+   *  the same pathway the customer-portal waitlist dialog uses. */
+  function handleJoinCourseWaitlist() {
+    if (!selectedCourseType || courseBookableSeries.length === 0) return;
+    const upcoming = courseBookableSeries.filter(
+      (s) => s.status === "upcoming",
+    );
+    const candidates = upcoming.length > 0 ? upcoming : courseBookableSeries;
+    const sorted = candidates
+      .slice()
+      .sort((a, b) => a.startDate.localeCompare(b.startDate));
+    const host =
+      sorted.find((s) => s.enrollmentRules.waitlistEnabled) ?? sorted[0];
+    if (!host) return;
+
+    // Training enrollments are dog-only; fall back to all selected pets if
+    // none are tagged as dogs so the demo never silently no-ops.
+    const dogs = selectedPets.filter((p) => p.type === "Dog");
+    const petsToList = dogs.length > 0 ? dogs : selectedPets;
+
+    if (petsToList.length === 0 || !selectedClient) {
+      // No pet/owner context to attach a record to — still flip the UI so the
+      // staffer sees the intent registered.
+      setWaitlistJoined(true);
+      toast.success(`Added to the waitlist for ${selectedCourseType.name}.`);
+      return;
+    }
+
+    const nowISO = new Date().toISOString();
+    const todayISO = nowISO.slice(0, 10);
+    const newEntries: TrainingEnrollment[] = petsToList.map((pet, i) => ({
+      id: `waitlist-${host.id}-${pet.id}-${Date.now()}-${i}`,
+      seriesId: host.id,
+      seriesName: host.seriesName,
+      courseTypeId: host.courseTypeId,
+      courseTypeName: host.courseTypeName,
+      petId: pet.id,
+      petName: pet.name,
+      petBreed: pet.breed ?? "",
+      ownerId: selectedClient.id,
+      ownerName: selectedClient.name,
+      ownerPhone: selectedClient.phone ?? "",
+      ownerEmail: selectedClient.email ?? "",
+      enrollmentDate: todayISO,
+      status: "waitlisted",
+      sessionsAttended: 0,
+      totalSessions: host.numberOfWeeks,
+      currentSessionNumber: 1,
+      progress: 0,
+      paymentStatus: "unpaid",
+      notes: "",
+      preferredTimeOfDay: "no-preference",
+      createdAt: nowISO,
+      updatedAt: nowISO,
+    }));
+
+    const cache = queryClient.getQueryCache();
+    // All cross-series rollups (the "all" list the Students roster reads).
+    cache
+      .findAll({ queryKey: ["training", "series-enrollments"] })
+      .forEach((q) => {
+        queryClient.setQueryData<TrainingEnrollment[]>(
+          q.queryKey,
+          (prev = []) => [...prev, ...newEntries],
+        );
+      });
+    // The host series' own enrollment list — drives its Waitlist tab.
+    cache.findAll({ queryKey: ["training", "series"] }).forEach((q) => {
+      if (q.queryKey[3] !== "enrollments") return;
+      if (q.queryKey[2] !== host.id) return;
+      queryClient.setQueryData<TrainingEnrollment[]>(q.queryKey, (prev = []) => [
+        ...prev,
+        ...newEntries,
+      ]);
+    });
+
+    setWaitlistJoined(true);
+    const who =
+      petsToList.length === 1
+        ? petsToList[0].name
+        : `${petsToList.length} dogs`;
+    toast.success(`${who} added to the waitlist for ${selectedCourseType.name}.`, {
+      description: "We'll text + email the moment a spot opens.",
+      duration: 6_000,
+    });
+  }
+
+  // ── Phase 1: pick a course type from the Course Catalog ──────────────────
+  if (!selectedCourseTypeId || !selectedCourseType) {
+    return (
+      <CourseTypePicker
+        courseTypes={courseTypes}
+        seriesList={seriesList}
+        spotsLeftBySeries={spotsLeftBySeries}
+        disciplineNameById={disciplineNameById}
+        todayISO={todayISO}
+        onSelect={handleSelectCourse}
+      />
+    );
+  }
+
+  // ── Phase 2: pick a series for the chosen course type ────────────────────
   return (
     <div className="space-y-5">
       {/* Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-start gap-3">
-        <div className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-xl">
-          <GraduationCap className="text-primary size-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          {selectedProgram ? (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-semibold">
-                  Pick a series for {selectedProgram.name}
-                </h3>
-                <Badge
-                  variant="outline"
-                  className="gap-1 border-indigo-200 bg-indigo-50 text-indigo-700"
-                >
-                  <GraduationCap className="size-3" />
-                  Program selected
-                </Badge>
-              </div>
-              <p className="text-muted-foreground text-sm">
-                Showing only series that run this program. Pick a date —
-                we&apos;ll surface every matching series starting on or after
-                it.
-              </p>
-            </>
-          ) : (
-            <>
-              <h3 className="font-semibold">Pick a training series</h3>
-              <p className="text-muted-foreground text-sm">
-                Pick a date — we&apos;ll show you every series starting on or
-                after that date. Each one runs at a fixed time on a fixed day
-                of the week.
-              </p>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Calendar + series panel ────────────────────────────────────────── */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Calendar */}
-        <div className="overflow-hidden rounded-xl border shadow-sm">
-          <DateSelectionCalendar
-            mode="single"
-            selectedDates={selectedDates}
-            onSelectionChange={(dates) => {
-              if (dates.length > 0) {
-                setStartDate(formatDateString(dates[0]!));
-                // Clear any previous series choice — the trainer is picking a
-                // new starting date, so any previously-set times should reset
-                // until they re-pick a series.
-                setChoice(null);
-                setCheckInTime("");
-                setCheckOutTime("");
-              } else {
-                setStartDate("");
-                setCheckInTime("");
-                setCheckOutTime("");
-                setChoice(null);
-              }
-            }}
+        <div
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl"
+          style={{
+            backgroundColor: `${selectedCourseType.color ?? "#6366f1"}1a`,
+          }}
+        >
+          <GraduationCap
+            className="size-5"
+            style={{ color: selectedCourseType.color ?? "#6366f1" }}
           />
         </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-semibold">{selectedCourseType.name}</h3>
+            <Badge
+              variant="outline"
+              className="gap-1 border-indigo-200 bg-indigo-50 text-indigo-700"
+            >
+              <GraduationCap className="size-3" />
+              Course type
+            </Badge>
+          </div>
+          <p className="text-muted-foreground text-sm">
+            {courseHasNoSeries
+              ? "No scheduled series for this course yet."
+              : "Pick a date — we'll surface every series for this course starting on or after it."}
+          </p>
+        </div>
+        {!isDeepLinked && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="shrink-0 gap-1"
+            onClick={handleChangeCourse}
+          >
+            <ArrowLeft className="size-3.5" />
+            Change course
+          </Button>
+        )}
+      </div>
 
-        {/* Series panel */}
-        <div className="rounded-xl border bg-slate-50/40 p-3 dark:bg-slate-950/40">
-          {!selectedISO ? (
-            <EmptyHint
-              icon={CalendarDays}
-              title="Pick a date to see series"
-              text="Choose a date on the calendar. We'll show every training series running on or after that date."
-            />
-          ) : nearSeries.length === 0 && dropInCandidates.length === 0 ? (
-            <NoSeriesNearDate
-              selectedISO={selectedISO}
-              nextSeries={nextAvailableSeries}
-            />
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold">
-                  Available series
-                </h4>
-                <span className="text-muted-foreground text-[11px] tabular-nums">
-                  {nearSeries.length} starting near{" "}
-                  {formatLongDate(selectedISO)}
-                </span>
-              </div>
+      {courseHasNoSeries ? (
+        <NoUpcomingSeriesForCourse
+          courseType={selectedCourseType}
+          onCreateSeries={() => goCreateSeries(selectedCourseType.id)}
+        />
+      ) : courseAllFull ? (
+        <AllSeriesFullForCourse
+          courseType={selectedCourseType}
+          series={courseBookableSeries}
+          spotsLeftBySeries={spotsLeftBySeries}
+          joined={waitlistJoined}
+          onJoinWaitlist={handleJoinCourseWaitlist}
+        />
+      ) : (
+        <>
+          {/* Calendar + series panel ──────────────────────────────────── */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* Calendar */}
+            <div className="overflow-hidden rounded-xl border shadow-sm">
+              <DateSelectionCalendar
+                mode="single"
+                selectedDates={selectedDates}
+                onSelectionChange={(dates) => {
+                  if (dates.length > 0) {
+                    setStartDate(formatDateString(dates[0]!));
+                    setChoice(null);
+                    setCheckInTime("");
+                    setCheckOutTime("");
+                  } else {
+                    setStartDate("");
+                    setCheckInTime("");
+                    setCheckOutTime("");
+                    setChoice(null);
+                  }
+                  // Either branch drops the active series choice.
+                  onSelectionChange?.(null);
+                }}
+              />
+            </div>
 
-              {nearSeries.map((series) => {
-                const spotsLeft = spotsLeftBySeries.get(series.id) ?? 0;
-                const isSelected =
-                  choice?.kind === "enroll" && choice.seriesId === series.id;
-                const prereqIssue = prereqIssueForSeries(series);
-                const isAcknowledged = overriddenSeriesIds.has(series.id);
-                return (
-                  <BookingSeriesCard
-                    key={series.id}
-                    series={series}
-                    spotsLeft={spotsLeft}
-                    isSelected={isSelected}
-                    prereqIssue={prereqIssue}
-                    prereqAcknowledged={isAcknowledged}
-                    selectedPets={selectedPets}
-                    onEnroll={() => applyEnrollChoice(series)}
-                    onAcknowledgePrereq={() =>
-                      acknowledgePrereqOverride(series.id)
-                    }
-                    onClear={() => {
-                      setChoice(null);
-                      setCheckInTime("");
-                      setCheckOutTime("");
-                    }}
-                  />
-                );
-              })}
-
-              {dropInCandidates.length > 0 && (
-                <>
-                  <Separator />
+            {/* Series panel */}
+            <div className="rounded-xl border bg-slate-50/40 p-3 dark:bg-slate-950/40">
+              {!selectedISO ? (
+                <EmptyHint
+                  icon={CalendarDays}
+                  title="Pick a date to see series"
+                  text="Choose a date on the calendar. We'll show every series for this course running on or after that date."
+                />
+              ) : nearSeries.length === 0 && dropInCandidates.length === 0 ? (
+                <NoSeriesNearDate
+                  selectedISO={selectedISO}
+                  nextSeries={nextAvailableSeries}
+                />
+              ) : (
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold">
-                      Drop-in for {formatLongDate(selectedISO)}
-                    </h4>
-                    <span className="text-muted-foreground text-[11px]">
-                      Single session — already running
+                    <h4 className="text-sm font-semibold">Available series</h4>
+                    <span className="text-muted-foreground text-[11px] tabular-nums">
+                      {nearSeries.length} starting near{" "}
+                      {formatLongDate(selectedISO)}
                     </span>
                   </div>
-                  {dropInCandidates.map(({ series, session }) => {
-                    if (!session) return null;
+
+                  {nearSeries.map((series) => {
+                    const spotsLeft = spotsLeftBySeries.get(series.id) ?? 0;
                     const isSelected =
-                      choice?.kind === "drop-in" &&
-                      choice.seriesId === series.id &&
-                      choice.sessionId === session.id;
+                      choice?.kind === "enroll" &&
+                      choice.seriesId === series.id;
+                    const prereqIssue = prereqIssueForSeries(series);
+                    const isAcknowledged = overriddenSeriesIds.has(series.id);
                     return (
-                      <DropInSeriesCard
-                        key={session.id}
+                      <BookingSeriesCard
+                        key={series.id}
                         series={series}
-                        session={session}
+                        spotsLeft={spotsLeft}
                         isSelected={isSelected}
-                        onBook={() => applyDropInChoice(series, session)}
-                        onClear={() => {
-                          setChoice(null);
-                          setCheckInTime("");
-                          setCheckOutTime("");
-                        }}
+                        prereqIssue={prereqIssue}
+                        prereqAcknowledged={isAcknowledged}
+                        selectedPets={selectedPets}
+                        onEnroll={() => applyEnrollChoice(series)}
+                        onAcknowledgePrereq={() =>
+                          acknowledgePrereqOverride(series.id)
+                        }
+                        onClear={clearSelection}
                       />
                     );
                   })}
-                </>
+
+                  {dropInCandidates.length > 0 && (
+                    <>
+                      <Separator />
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-semibold">
+                          Drop-in for {formatLongDate(selectedISO)}
+                        </h4>
+                        <span className="text-muted-foreground text-[11px]">
+                          Single session — already running
+                        </span>
+                      </div>
+                      {dropInCandidates.map(({ series, session }) => {
+                        if (!session) return null;
+                        const isSelected =
+                          choice?.kind === "drop-in" &&
+                          choice.seriesId === series.id &&
+                          choice.sessionId === session.id;
+                        return (
+                          <DropInSeriesCard
+                            key={session.id}
+                            series={series}
+                            session={session}
+                            isSelected={isSelected}
+                            onBook={() => applyDropInChoice(series, session)}
+                            onClear={() => {
+                              setChoice(null);
+                              setCheckInTime("");
+                              setCheckOutTime("");
+                            }}
+                          />
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      {/* Confirmed selection summary ────────────────────────────────────── */}
-      {checkInTime && checkOutTime && choice && (
-        <SelectionSummary
-          choice={choice}
-          seriesList={seriesList}
-          selectedISO={selectedISO}
-        />
+          {/* Confirmed selection summary ──────────────────────────────── */}
+          {checkInTime && checkOutTime && choice && (
+            <SelectionSummary
+              choice={choice}
+              seriesList={seriesList}
+              selectedISO={selectedISO}
+            />
+          )}
+        </>
       )}
     </div>
   );
 }
 
 // ============================================================================
-// Pieces
+// Phase 1 — Course type picker
+// ============================================================================
+
+function CourseTypePicker({
+  courseTypes,
+  seriesList,
+  spotsLeftBySeries,
+  disciplineNameById,
+  todayISO,
+  onSelect,
+}: {
+  courseTypes: TrainingCourseType[];
+  seriesList: TrainingSeries[];
+  spotsLeftBySeries: Map<string, number>;
+  disciplineNameById: Map<string, string>;
+  todayISO: string;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div className="space-y-5">
+      <div className="flex items-start gap-3">
+        <div className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-xl">
+          <BookOpen className="text-primary size-5" />
+        </div>
+        <div>
+          <h3 className="font-semibold">Choose a course type</h3>
+          <p className="text-muted-foreground text-sm">
+            Pick a course from your Course Catalog. We&apos;ll show the
+            scheduled series that run it.
+          </p>
+        </div>
+      </div>
+
+      {courseTypes.length === 0 ? (
+        <EmptyHint
+          icon={BookOpen}
+          title="No course types yet"
+          text="Add a course type in the Course Catalog before booking training."
+        />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {courseTypes.map((ct) => {
+            const series = seriesList.filter(
+              (s) => s.courseTypeId === ct.id && isBookable(s, todayISO),
+            );
+            const total = series.length;
+            const openCount = series.filter(
+              (s) => (spotsLeftBySeries.get(s.id) ?? 0) > 0,
+            ).length;
+            const disciplineName = ct.disciplineId
+              ? disciplineNameById.get(ct.disciplineId)
+              : undefined;
+            return (
+              <CourseTypeCard
+                key={ct.id}
+                courseType={ct}
+                disciplineName={disciplineName}
+                totalSeries={total}
+                openSeries={openCount}
+                onSelect={() => onSelect(ct.id)}
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CourseTypeCard({
+  courseType,
+  disciplineName,
+  totalSeries,
+  openSeries,
+  onSelect,
+}: {
+  courseType: TrainingCourseType;
+  disciplineName?: string;
+  totalSeries: number;
+  openSeries: number;
+  onSelect: () => void;
+}) {
+  const hint =
+    totalSeries === 0
+      ? { label: "No upcoming series", cls: "bg-slate-100 text-slate-600" }
+      : openSeries === 0
+        ? {
+            label: "All series full — waitlist",
+            cls: "bg-amber-100 text-amber-700",
+          }
+        : {
+            label: `${openSeries} series available`,
+            cls: "bg-emerald-100 text-emerald-700",
+          };
+  const format = courseType.classFormat
+    ? TRAINING_CLASS_FORMAT_LABELS[courseType.classFormat]
+    : undefined;
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="group hover:border-primary/50 flex h-full flex-col gap-2 rounded-2xl border bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span
+            className="size-3 shrink-0 rounded-full ring-1 ring-black/10"
+            style={{ backgroundColor: courseType.color ?? "#6366f1" }}
+          />
+          <p className="font-semibold leading-tight">{courseType.name}</p>
+        </div>
+        <ChevronRight className="text-muted-foreground size-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        {disciplineName && (
+          <Badge variant="secondary" className="text-[11px]">
+            {disciplineName}
+          </Badge>
+        )}
+        {format && (
+          <Badge variant="outline" className="text-[11px]">
+            {format}
+          </Badge>
+        )}
+        <Badge variant="outline" className="text-[11px]">
+          {courseType.defaultWeeks} wks
+        </Badge>
+      </div>
+
+      <p className="text-muted-foreground line-clamp-2 text-xs">
+        {courseType.description}
+      </p>
+
+      <div className="mt-auto pt-1">
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+            hint.cls,
+          )}
+        >
+          <Users className="size-3" />
+          {hint.label}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+// ============================================================================
+// Course-level empty / full states
+// ============================================================================
+
+function NoUpcomingSeriesForCourse({
+  courseType,
+  onCreateSeries,
+}: {
+  courseType: TrainingCourseType;
+  onCreateSeries: () => void;
+}) {
+  return (
+    <div className="space-y-3 rounded-xl border border-dashed border-amber-200 bg-amber-50/60 p-6 text-center dark:border-amber-900/40 dark:bg-amber-950/20">
+      <CalendarDays className="text-amber-500 mx-auto size-8" />
+      <div className="space-y-1">
+        <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+          No upcoming series for {courseType.name}.
+        </p>
+        <p className="text-muted-foreground mx-auto max-w-md text-sm">
+          Ask staff to create one before this client can enroll. You can spin up
+          a series for this course right now.
+        </p>
+      </div>
+      <Button
+        type="button"
+        onClick={onCreateSeries}
+        className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+      >
+        <Plus className="size-4" />
+        Create a series for this course
+      </Button>
+    </div>
+  );
+}
+
+function AllSeriesFullForCourse({
+  courseType,
+  series,
+  spotsLeftBySeries,
+  joined,
+  onJoinWaitlist,
+}: {
+  courseType: TrainingCourseType;
+  series: TrainingSeries[];
+  spotsLeftBySeries: Map<string, number>;
+  joined: boolean;
+  onJoinWaitlist: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="text-amber-600 mt-0.5 size-4 shrink-0" />
+          <div className="space-y-0.5">
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              Every series for {courseType.name} is full.
+            </p>
+            <p className="text-muted-foreground text-sm">
+              {joined
+                ? "You're on the waitlist — we'll reach out as soon as a spot opens or a new series is scheduled."
+                : "All scheduled series are at capacity. Join the waitlist and we'll offer the next available spot."}
+            </p>
+          </div>
+        </div>
+        {joined ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled
+            className="w-full gap-1.5"
+          >
+            <CheckCircle2 className="text-emerald-600 size-4" />
+            Added to the waitlist
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            onClick={onJoinWaitlist}
+            className="w-full gap-1.5 bg-amber-600 text-white hover:bg-amber-700"
+          >
+            <Clock className="size-4" />
+            Join waitlist for {courseType.name}
+          </Button>
+        )}
+      </div>
+
+      {/* The full series, for context. */}
+      <div className="space-y-2">
+        {series.map((s) => {
+          const spotsLeft = spotsLeftBySeries.get(s.id) ?? 0;
+          return (
+            <Card key={s.id} className="opacity-90">
+              <CardContent className="flex items-center justify-between gap-3 p-3.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">
+                    {s.seriesName}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {getDayName(s.dayOfWeek)}s · {formatTime12(s.startTime)} ·
+                    starts {formatLongDate(s.startDate)}
+                  </p>
+                </div>
+                <Badge
+                  variant="outline"
+                  className="shrink-0 gap-1 border-rose-200 bg-rose-50 text-rose-700"
+                >
+                  <Users className="size-3" />
+                  Full — {s.maxCapacity}/{s.maxCapacity}
+                  <span className="sr-only">{spotsLeft} spots left</span>
+                </Badge>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Pieces (series-level)
 // ============================================================================
 
 function EmptyHint({
@@ -563,7 +1106,7 @@ function BookingSeriesCard({
       <CardContent className="space-y-2.5 p-3.5">
         <div>
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <p className="text-base font-semibold leading-tight">
+            <p className="text-base/tight font-semibold">
               {series.seriesName}
             </p>
             {hasPrereqBlocker && (
@@ -659,11 +1202,6 @@ function BookingSeriesCard({
             className="w-full"
             onClick={() => {
               if (needsAcknowledgement) {
-                // Staff has to actively acknowledge — the banner already
-                // surfaces the override CTA, so the primary button stays
-                // disabled-feeling and just scrolls to it. We render this
-                // as an outline so the warning banner is clearly the
-                // pathway forward.
                 return;
               }
               onEnroll();
@@ -776,7 +1314,7 @@ function DropInSeriesCard({
       <CardContent className="space-y-2.5 p-3.5">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-base font-semibold leading-tight">
+            <p className="text-base/tight font-semibold">
               {series.seriesName}
             </p>
             <p className="text-muted-foreground mt-0.5 text-[11px] font-bold uppercase tracking-wider">
@@ -877,4 +1415,3 @@ function SelectionSummary({
     </div>
   );
 }
-
