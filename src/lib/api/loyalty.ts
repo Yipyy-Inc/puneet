@@ -8,7 +8,23 @@ import type {
   Badge,
   ReferralRelationship,
   ReferralEvent,
+  RedemptionRecord,
+  CustomerLoyaltyAccount,
+  LoyaltyTransaction,
 } from "@/types/loyalty";
+
+import { getTransactionsByCustomer } from "@/data/loyalty-transactions";
+
+import {
+  redemptionRecords,
+  getRedemptionsByFacility,
+} from "@/data/loyalty-redemptions";
+
+import {
+  loyaltyAccounts,
+  getLoyaltyAccountsByFacility,
+  getLoyaltyAccount,
+} from "@/data/loyalty-accounts";
 
 import {
   loyaltySettings,
@@ -82,5 +98,29 @@ export const loyaltyQueries = {
     queryKey: ["loyalty", "referralEvents", relationshipId] as const,
     queryFn: async (): Promise<ReferralEvent[]> =>
       getReferralEvents(relationshipId),
+  }),
+
+  redemptions: (facilityId?: number) => ({
+    queryKey: ["loyalty", "redemptions", facilityId] as const,
+    queryFn: async (): Promise<RedemptionRecord[]> =>
+      facilityId ? getRedemptionsByFacility(facilityId) : redemptionRecords,
+  }),
+
+  accounts: (facilityId?: number) => ({
+    queryKey: ["loyalty", "accounts", facilityId] as const,
+    queryFn: async (): Promise<CustomerLoyaltyAccount[]> =>
+      facilityId ? getLoyaltyAccountsByFacility(facilityId) : loyaltyAccounts,
+  }),
+
+  account: (facilityId: number, customerId: number) => ({
+    queryKey: ["loyalty", "account", facilityId, customerId] as const,
+    queryFn: async (): Promise<CustomerLoyaltyAccount | undefined> =>
+      getLoyaltyAccount(facilityId, customerId),
+  }),
+
+  transactions: (facilityId: number, customerId: number) => ({
+    queryKey: ["loyalty", "transactions", facilityId, customerId] as const,
+    queryFn: async (): Promise<LoyaltyTransaction[]> =>
+      getTransactionsByCustomer(facilityId, customerId),
   }),
 };

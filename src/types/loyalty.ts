@@ -47,6 +47,7 @@ export const loyaltyTransactionTypeEnum = z.enum([
   "redeemed",
   "expired",
   "adjusted",
+  "manual_adjustment",
   "referral",
 ]);
 export type LoyaltyTransactionType = z.infer<typeof loyaltyTransactionTypeEnum>;
@@ -118,10 +119,22 @@ export const badgeCriteriaTypeEnum = z.enum([
   "consecutive_months",
   "referrals",
   "reviews",
+  "first_booking",
+  "reached_tier",
 ]);
 export type BadgeCriteriaType = z.infer<typeof badgeCriteriaTypeEnum>;
 
-export const badgeRewardTypeEnum = z.enum(["discount", "points", "freebie"]);
+export const badgeRewardTypeEnum = z.enum([
+  "points",
+  "credit",
+  "gift_card",
+  "discount_pct",
+  "discount_fixed",
+  "free_service",
+  // Legacy values kept for back-compat with existing marketing badge data.
+  "discount",
+  "freebie",
+]);
 export type BadgeRewardType = z.infer<typeof badgeRewardTypeEnum>;
 
 export const loyaltyPermissionEnum = z.enum([
@@ -238,6 +251,8 @@ export const badgeSchema = z.object({
   criteria: z.object({
     type: badgeCriteriaTypeEnum,
     threshold: z.number(),
+    /** Target tier id when criteria.type is "reached_tier". */
+    tierId: z.string().optional(),
   }),
   reward: z
     .object({
@@ -245,8 +260,202 @@ export const badgeSchema = z.object({
       value: z.union([z.number(), z.string()]),
     })
     .optional(),
+  /** Whether the badge is active. Defaults to on when absent. */
+  enabled: z.boolean().optional(),
 });
 export type Badge = z.infer<typeof badgeSchema>;
+
+// ============================================================================
+// Earn Rules (flexible, trigger-based — a facility may define many)
+// ============================================================================
+
+export const earnRuleTriggerTypeEnum = z.enum([
+  "booking_completed",
+  "service_type",
+  "spend_amount",
+  "visit_count",
+  "birthday",
+  "first_booking",
+  "referral_completed",
+  "review_submitted",
+  "app_download",
+  "manual",
+]);
+export type EarnRuleTriggerType = z.infer<typeof earnRuleTriggerTypeEnum>;
+
+export const earnRuleRewardTypeEnum = z.enum([
+  "points",
+  "credit",
+  "gift_card",
+  "freebie",
+  "discount_pct",
+  "discount_fixed",
+]);
+export type EarnRuleRewardType = z.infer<typeof earnRuleRewardTypeEnum>;
+
+export const earnRuleScheduleTypeEnum = z.enum([
+  "always",
+  "date_range",
+  "recurring_days",
+]);
+export type EarnRuleScheduleType = z.infer<typeof earnRuleScheduleTypeEnum>;
+
+export const earnRuleStatusEnum = z.enum(["active", "archived"]);
+export type EarnRuleStatus = z.infer<typeof earnRuleStatusEnum>;
+
+/**
+ * Flexible schedule payload. Fields are interpreted per scheduleType:
+ * - date_range: startDate / endDate (YYYY-MM-DD)
+ * - recurring_days: daysOfWeek (0 = Sunday … 6 = Saturday), with an optional
+ *   startTime / endTime (HH:mm) window.
+ */
+export const earnRuleScheduleConfigSchema = z.object({
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  daysOfWeek: z.array(z.number()).optional(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+});
+export type EarnRuleScheduleConfig = z.infer<
+  typeof earnRuleScheduleConfigSchema
+>;
+
+export const earnRuleSchema = z.object({
+  id: z.string(),
+  facilityId: z.number(),
+  name: z.string(),
+  triggerType: earnRuleTriggerTypeEnum,
+  /** Threshold for the trigger (e.g. spend amount, visit count). Null when the
+   *  trigger has no numeric threshold (birthday, manual, etc.). */
+  triggerValue: z.number().nullable(),
+  rewardType: earnRuleRewardTypeEnum,
+  rewardValue: z.number(),
+  /** Service type ids the rule applies to. Null = all services. */
+  appliesToServiceTypes: z.array(z.string()).nullable(),
+  scheduleType: earnRuleScheduleTypeEnum,
+  scheduleConfig: earnRuleScheduleConfigSchema.optional(),
+  enabled: z.boolean(),
+  /** Versioning: "active" rules apply to new transactions; "archived" rules are
+   *  retained for history and never mutated. Absent = active. */
+  status: earnRuleStatusEnum.optional(),
+  createdAt: z.string().optional(),
+  archivedAt: z.string().optional(),
+  /** Id of the prior (archived) rule this version replaced. */
+  replacesRuleId: z.string().optional(),
+});
+export type EarnRule = z.infer<typeof earnRuleSchema>;
+
+// ============================================================================
+// Tiers (fully customisable — a facility may define any number)
+// ============================================================================
+
+export const tierThresholdTypeEnum = z.enum(["points", "spend", "visits"]);
+export type TierThresholdType = z.infer<typeof tierThresholdTypeEnum>;
+
+export const tierBenefitTypeEnum = z.enum([
+  "discount_pct",
+  "discount_fixed",
+  "credit",
+  "free_service",
+  "priority_booking",
+  "bonus_points_multiplier",
+  "custom_text",
+]);
+export type TierBenefitType = z.infer<typeof tierBenefitTypeEnum>;
+
+export const tierBenefitSchema = z.object({
+  type: tierBenefitTypeEnum,
+  value: z.union([z.number(), z.string()]),
+  /** Service type ids the benefit applies to. Null/undefined = all services. */
+  appliesToServiceTypes: z.array(z.string()).nullable().optional(),
+});
+export type TierBenefit = z.infer<typeof tierBenefitSchema>;
+
+export const tierSchema = z.object({
+  id: z.string(),
+  facilityId: z.number(),
+  name: z.string(),
+  thresholdType: tierThresholdTypeEnum,
+  thresholdValue: z.number(),
+  color: z.string(),
+  /** Emoji or icon key. */
+  icon: z.string(),
+  sortOrder: z.number(),
+  benefits: z.array(tierBenefitSchema),
+});
+export type Tier = z.infer<typeof tierSchema>;
+
+// ============================================================================
+// Redemption records (canonical "RewardRedemption" per facility spec —
+// analytics-facing log of every redemption). Distinct from the older
+// integration-layer `RewardRedemption` type below, which has an incompatible
+// shape and is used by loyalty-integrations.ts.
+// ============================================================================
+
+export const redeemMethodEnum = z.enum([
+  "portal_self",
+  "staff_applied",
+  "auto_applied",
+  "checkout_applied",
+]);
+export type RedeemMethod = z.infer<typeof redeemMethodEnum>;
+
+export const redemptionRecordStatusEnum = z.enum(["active", "used", "expired"]);
+export type RedemptionRecordStatus = z.infer<
+  typeof redemptionRecordStatusEnum
+>;
+
+export const redemptionRecordSchema = z.object({
+  id: z.string(),
+  facilityId: z.number(),
+  customerId: z.number(),
+  rewardType: z.string(),
+  rewardValue: z.union([z.number(), z.string()]),
+  redeemMethod: redeemMethodEnum,
+  bookingId: z.string().nullable(),
+  invoiceId: z.string().nullable(),
+  redeemedAt: z.string(),
+  expiresAt: z.string().nullable(),
+  status: redemptionRecordStatusEnum,
+});
+export type RedemptionRecord = z.infer<typeof redemptionRecordSchema>;
+
+// ============================================================================
+// Customer loyalty account — one record per customer per facility, holding all
+// loyalty state. Created when a customer first books at a facility whose
+// LoyaltyProgram is enabled. Richer than the display-only `CustomerLoyalty`.
+// ============================================================================
+
+export const customerLoyaltyAccountSchema = z.object({
+  id: z.string(),
+  facilityId: z.number(),
+  customerId: z.number(),
+  pointsBalance: z.number().int(),
+  lifetimePointsEarned: z.number(),
+  lifetimePointsRedeemed: z.number(),
+  creditBalance: z.number(),
+  /** Tier id (matches a Tier.id), or null when below the first tier. */
+  currentTierId: z.string().nullable(),
+  tierJoinedAt: z.string().nullable(),
+  totalSpend: z.number(),
+  totalVisits: z.number(),
+  referralCode: z.string(),
+  referralCount: z.number(),
+  /** Number of reviews the customer has submitted. Drives review-based earn
+   *  rules and badges. Defaults to 0 when absent. */
+  reviewCount: z.number().optional(),
+  /** Ids of achievement badges the customer has already unlocked. The automation
+   *  engine reads this to fire each badge reward exactly once (idempotent). */
+  earnedBadgeIds: z.array(z.string()).optional(),
+  /** Timestamp of the customer's last points-earning activity. Drives
+   *  inactivity-based points expiry. Falls back to updatedAt when absent. */
+  lastActivityAt: z.string().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type CustomerLoyaltyAccount = z.infer<
+  typeof customerLoyaltyAccountSchema
+>;
 
 // ============================================================================
 // Integration Schemas (from loyalty-integrations.ts)
@@ -262,8 +471,17 @@ export const loyaltyTransactionSchema = z.object({
   description: z.string(),
   source: loyaltyTransactionSourceEnum,
   sourceId: z.string().optional(),
+  /** The earn rule version that produced this transaction. Captured at creation
+   *  time so historical transactions stay tied to the rule that earned them,
+   *  even after the rule is edited (archived) and replaced. */
+  earnRuleId: z.string().optional(),
   invoiceId: z.string().optional(),
   bookingId: z.string().optional(),
+  /** Staff member who created the transaction (e.g. a manual adjustment) and
+   *  the reason note — surfaced in the customer's history. */
+  staffId: z.string().optional(),
+  staffName: z.string().optional(),
+  reason: z.string().optional(),
   createdAt: z.string(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
@@ -587,10 +805,39 @@ export interface SpecialEventRewardsConfig {
 export interface FacilityLoyaltyConfig {
   facilityId: number;
   enabled: boolean;
+  /** Customer-facing program name (e.g. "Doggieville Rewards"). Optional;
+   *  falls back to `settings.pointsName` for display when absent. */
+  programName?: string;
+  /** Short marketing tagline shown under the program name on the customer
+   *  portal Loyalty & Rewards header. */
+  programDescription?: string;
+  /** Primary brand color (hex) for the customer portal loyalty header. */
+  primaryColor?: string;
+  /** Program icon — an emoji or a preset icon key — shown in the portal header. */
+  programIcon?: string;
+  /** Legacy single rule consumed by the points-calculation engine
+   *  (calculatePointsEarned). */
   pointsEarning: PointsEarningRule;
+  /** Flexible, trigger-based earn rules (multiple per facility). The
+   *  newer model edited by the admin Earn Rules tab. */
+  earnRules?: EarnRule[];
   pointsExpiration: PointsExpirationConfig;
+  /** Simple inactivity-based points expiry, off by default: a customer's points
+   *  expire after `pointsExpiryDays` of no activity. This is the flat canonical
+   *  model; `pointsExpiration` above holds the richer/advanced rules. */
+  pointsExpiryEnabled?: boolean;
+  pointsExpiryDays?: number;
+  /** Legacy tier list consumed by the engine (getCustomerTier). */
   tiers: LoyaltyTierConfig[];
+  /** Fully-customisable tier definitions (newer model edited by the admin
+   *  Tiers tab): configurable threshold dimension, sort order, rich benefits. */
+  tierDefinitions?: Tier[];
+  /** Whether loyalty tiers are used. When false, all customers are treated
+   *  equally and earn rules apply flat. Defaults to on. */
+  tiersEnabled?: boolean;
   rewardTypes: RewardTypeConfig[];
+  /** Achievement badges configured for this facility. */
+  badges?: Badge[];
   pointsScope: PointsScopeConfig;
   discountStacking: DiscountStackingConfig;
   referralProgram?: ReferralProgramConfig;

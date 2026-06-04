@@ -7,7 +7,9 @@ import type {
   CallingSettings,
   CallAnalytics,
   MissedCallTask,
+  CallRoutingRule,
 } from "@/types/calling";
+import { inquiryTagForIvrKey } from "@/lib/calling/inquiry-tags";
 
 // ============================================================
 // Active Calls (demo / simulation data)
@@ -34,6 +36,9 @@ export const mockActiveCall: ActiveCall = {
   upcomingAppointments: 2,
   outstandingBalance: 145.0,
   currentService: "Boarding – 3 nights (Biscuit)",
+  // Caller pressed 3 (Boarding & Daycare) in the IVR — carried through to the
+  // call log when the call ends.
+  inquiryTag: inquiryTagForIvrKey("3"),
 };
 
 export const mockIncomingCall: ActiveCall = {
@@ -77,8 +82,9 @@ export const callQueue: CallQueueEntry[] = [
     from: "+1 (514) 555-0301",
     clientName: "Amanda Foster",
     waitTime: 45,
-    reason: "Boarding inquiry",
     estimatedWait: 120,
+    // Auto-populated from the IVR: caller pressed 3 (Boarding & Daycare).
+    inquiryTag: inquiryTagForIvrKey("3"),
   },
   {
     id: "queue-002",
@@ -86,8 +92,9 @@ export const callQueue: CallQueueEntry[] = [
     from: "+1 (514) 555-0412",
     clientName: undefined,
     waitTime: 112,
-    reason: undefined,
     estimatedWait: 240,
+    // Caller pressed 4 (Billing & Payments).
+    inquiryTag: inquiryTagForIvrKey("4"),
   },
 ];
 
@@ -209,6 +216,18 @@ export const voicemailGreetings: VoicemailGreeting[] = [
   },
 ];
 
+// Dates (YYYY-MM-DD, local) the facility treats as holidays — the greeting
+// scheduler switches to the Holiday Season profile on these days.
+export const holidayCalendar: { date: string; name: string }[] = [
+  { date: "2026-01-01", name: "New Year's Day" },
+  { date: "2026-07-01", name: "Canada Day" },
+  { date: "2026-09-07", name: "Labour Day" },
+  { date: "2026-10-12", name: "Thanksgiving" },
+  { date: "2026-12-25", name: "Christmas Day" },
+  { date: "2026-12-26", name: "Boxing Day" },
+  { date: "2026-12-31", name: "New Year's Eve" },
+];
+
 // ============================================================
 // AI Call Summaries
 // ============================================================
@@ -243,6 +262,73 @@ export const aiCallSummaries: AICallSummary[] = [
     assignedTo: "Manager – Sophie R.",
     generatedAt: "2026-04-19T14:10:00Z",
     savedToProfile: true,
+  },
+  {
+    callId: "call-005",
+    callReason:
+      "General daycare inquiry — caller asked about openings next Tuesday/Thursday and daily rates for a friendly 2-year-old labradoodle.",
+    appointmentRequest: "Possible daycare for Coco on Tue & Thu next week.",
+    upsellOpportunities: ["Daycare 10-day package", "New-client behaviour evaluation"],
+    sentimentScore: 7.5,
+    riskFlag: "none",
+    followUpTask: "Call back with daycare availability and rates; offer an intro evaluation.",
+    generatedAt: "2026-05-31T14:53:00Z",
+    savedToProfile: false,
+  },
+  {
+    callId: "call-004",
+    callReason:
+      "Outbound call to confirm Biscuit's vaccination documents before the boarding stay.",
+    upsellOpportunities: [],
+    sentimentScore: 7.8,
+    riskFlag: "none",
+    generatedAt: "2026-06-01T15:32:00Z",
+    savedToProfile: true,
+  },
+  {
+    callId: "call-007",
+    callReason:
+      "Client disputed a grooming charge and asked for a manager callback — billing discrepancy.",
+    upsellOpportunities: [],
+    sentimentScore: 3.5,
+    riskFlag: "refund_risk",
+    followUpTask: "Manager to review quoted vs charged price and call Amanda back.",
+    assignedTo: "Priya N.",
+    generatedAt: "2026-05-24T14:25:00Z",
+    savedToProfile: true,
+  },
+  {
+    callId: "call-008",
+    callReason:
+      "Follow-up call to reschedule Marcus's grooming appointment from last Tuesday.",
+    upsellOpportunities: [],
+    sentimentScore: 7.2,
+    riskFlag: "none",
+    generatedAt: "2026-05-19T15:07:00Z",
+    savedToProfile: false,
+  },
+  {
+    callId: "call-010",
+    callReason:
+      "New client asked about puppy training packages and whether group sessions are offered.",
+    appointmentRequest: "Free training assessment call booked.",
+    upsellOpportunities: ["Basic obedience 6-week course", "Group session add-on"],
+    sentimentScore: 8.2,
+    riskFlag: "none",
+    generatedAt: "2026-05-06T14:35:00Z",
+    savedToProfile: true,
+  },
+  {
+    callId: "call-011",
+    callReason:
+      "URGENT — caller has a family emergency and needs boarding for a senior dog (on twice-daily medication) starting tomorrow morning for ~5 days.",
+    specialCareNotes: "Senior Labrador 'Rocky' on twice-daily medication.",
+    upsellOpportunities: [],
+    sentimentScore: 4.0,
+    riskFlag: "churn_risk",
+    followUpTask: "Call back the moment we open to confirm emergency boarding and medication handling.",
+    generatedAt: "2026-04-20T18:03:00Z",
+    savedToProfile: false,
   },
 ];
 
@@ -379,5 +465,50 @@ export const missedCallTasks: MissedCallTask[] = [
     autoSMSSent: true,
     callbackTime: "2026-04-24T07:30:00Z",
     notes: "Confirmed boarding dates for May. No issue.",
+  },
+];
+
+// ============================================================
+// Smart Routing Rules — CRM-driven, evaluated before the IVR menu.
+// Lowest priority number wins; the builder lets staff drag to reorder.
+// ============================================================
+
+export const callRoutingRules: CallRoutingRule[] = [
+  {
+    id: "route-001",
+    name: "VIP callers — straight to a manager",
+    condition: { field: "clientTags", operator: "includes", value: "vip" },
+    action: { routeTo: "staff_group", staffGroupId: "grp-management" },
+    priority: 1,
+    enabled: true,
+  },
+  {
+    id: "route-002",
+    name: "Outstanding balance — route to billing",
+    condition: { field: "outstandingBalance", operator: "gt", value: "0" },
+    action: { routeTo: "staff_group", staffGroupId: "grp-billing" },
+    priority: 2,
+    enabled: true,
+  },
+  {
+    id: "route-003",
+    name: "Care alert on file — route to vet team",
+    condition: { field: "careAlerts", operator: "has_any", value: "" },
+    action: { routeTo: "staff_group", staffGroupId: "grp-vet" },
+    priority: 3,
+    enabled: true,
+  },
+  {
+    id: "route-004",
+    name: "New client — Reception with a welcome greeting",
+    condition: { field: "isNewClient", operator: "is_true", value: "" },
+    action: {
+      routeTo: "staff_group",
+      staffGroupId: "grp-reception",
+      greeting:
+        "Welcome to Doggieville! Since this looks like your first time calling, we'll connect you with our reception team to get you set up.",
+    },
+    priority: 4,
+    enabled: true,
   },
 ];

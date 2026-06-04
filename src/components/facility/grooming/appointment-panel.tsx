@@ -42,6 +42,7 @@ import {
   applyPaymentResult,
 } from "@/lib/grooming/check-in-actions";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
+import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
 import { clients as initialClients } from "@/data/clients";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { findZipTaxRate } from "@/lib/service-areas";
@@ -56,7 +57,6 @@ import {
 import {
   groomingQueries,
   getEffectiveAlertNotes,
-  canMarkReadyForPickup,
 } from "@/lib/api/grooming";
 import { PreVisitBriefing } from "./pre-visit-briefing";
 import {
@@ -150,6 +150,7 @@ export function AppointmentPanel({
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [etaSent, setEtaSent] = useState(false);
   const { setStationStatus } = useGroomingStations();
+  const { recordEvent } = useLoyaltyEngine();
   const { data: customerPackages = [] } = useQuery(
     groomingQueries.customerPackages(),
   );
@@ -871,6 +872,15 @@ export function AppointmentPanel({
           });
           toast.success(`${appointment.petName} — Completed`, {
             description: `Receipt sent · $${summary.amountCharged.toFixed(2)} charged`,
+          });
+          // Loyalty automation off the completed grooming booking.
+          recordEvent({
+            type: "booking_completed",
+            id: String(appointment.id),
+            customerId: appointment.ownerId,
+            amount: summary.grandTotal,
+            serviceType: "grooming",
+            isService: true,
           });
           setPaymentOpen(false);
         }}

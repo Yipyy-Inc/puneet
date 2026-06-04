@@ -23,6 +23,14 @@ export type {
   ReferralProgramConfig,
   SpecialEventRewardsConfig,
   FacilityLoyaltyConfig,
+  EarnRule,
+  EarnRuleTriggerType,
+  EarnRuleRewardType,
+  EarnRuleScheduleType,
+  Tier,
+  TierBenefit,
+  TierThresholdType,
+  TierBenefitType,
 } from "@/types/loyalty";
 
 import type {
@@ -33,6 +41,8 @@ import type {
   PointsScopeConfig,
   DiscountStackingConfig,
   FacilityLoyaltyConfig,
+  EarnRule,
+  Tier,
 } from "@/types/loyalty";
 
 export { BOOKABLE_SERVICE_TYPES } from "@/types/loyalty";
@@ -665,6 +675,156 @@ export const exampleLuxuryBoardingConfig: FacilityLoyaltyConfig = {
 // ============================================================================
 // Utility Functions
 // ============================================================================
+
+/**
+ * Build a starter set of flexible, trigger-based earn rules for a facility.
+ * Used to seed the admin Earn Rules tab so it is never empty on first load.
+ */
+export function buildDefaultEarnRules(facilityId: number): EarnRule[] {
+  return [
+    {
+      id: "earn-spend",
+      facilityId,
+      name: "Points per dollar spent",
+      triggerType: "spend_amount",
+      triggerValue: 1,
+      rewardType: "points",
+      rewardValue: 1,
+      appliesToServiceTypes: null,
+      scheduleType: "always",
+      enabled: true,
+    },
+    {
+      id: "earn-birthday",
+      facilityId,
+      name: "Birthday bonus",
+      triggerType: "birthday",
+      triggerValue: null,
+      rewardType: "points",
+      rewardValue: 100,
+      appliesToServiceTypes: null,
+      scheduleType: "always",
+      enabled: true,
+    },
+    {
+      id: "earn-referral",
+      facilityId,
+      name: "Successful referral credit",
+      triggerType: "referral_completed",
+      triggerValue: null,
+      rewardType: "credit",
+      rewardValue: 25,
+      appliesToServiceTypes: null,
+      scheduleType: "always",
+      enabled: false,
+    },
+  ];
+}
+
+/**
+ * Build a starter set of fully-customisable tiers (newer Tier model) for a
+ * facility. Used to seed the admin Tiers tab so it is never empty on first load.
+ */
+export function buildDefaultTiers(facilityId: number): Tier[] {
+  return [
+    {
+      id: "tier-bronze",
+      facilityId,
+      name: "Bronze",
+      thresholdType: "points",
+      thresholdValue: 0,
+      color: "#CD7F32",
+      icon: "🥉",
+      sortOrder: 0,
+      benefits: [],
+    },
+    {
+      id: "tier-silver",
+      facilityId,
+      name: "Silver",
+      thresholdType: "points",
+      thresholdValue: 500,
+      color: "#C0C0C0",
+      icon: "🥈",
+      sortOrder: 1,
+      benefits: [
+        { type: "bonus_points_multiplier", value: 1.25 },
+        { type: "discount_pct", value: 5 },
+        { type: "priority_booking", value: "Priority booking" },
+      ],
+    },
+    {
+      id: "tier-gold",
+      facilityId,
+      name: "Gold",
+      thresholdType: "points",
+      thresholdValue: 1500,
+      color: "#FFD700",
+      icon: "🥇",
+      sortOrder: 2,
+      benefits: [
+        { type: "bonus_points_multiplier", value: 1.5 },
+        { type: "discount_pct", value: 10 },
+        { type: "free_service", value: "Free add-ons" },
+      ],
+    },
+    {
+      id: "tier-platinum",
+      facilityId,
+      name: "Platinum",
+      thresholdType: "points",
+      thresholdValue: 3000,
+      color: "#E5E4E2",
+      icon: "💎",
+      sortOrder: 3,
+      benefits: [
+        { type: "bonus_points_multiplier", value: 2 },
+        { type: "discount_pct", value: 15 },
+        { type: "free_service", value: "Monthly grooming" },
+      ],
+    },
+  ];
+}
+
+/**
+ * Build a sensible default loyalty configuration for a facility that does not
+ * yet have one. Used by the admin configuration UI so a brand-new facility
+ * starts from a working, editable program (disabled by default).
+ */
+export function buildDefaultLoyaltyConfig(
+  facilityId: number,
+): FacilityLoyaltyConfig {
+  const now = new Date().toISOString();
+  return {
+    facilityId,
+    enabled: false,
+    programName: "Loyalty & Rewards",
+    programDescription:
+      "Earn points on every visit and redeem them for rewards.",
+    primaryColor: "#6366F1",
+    programIcon: "🐾",
+    pointsEarning: defaultPerDollarEarningRule,
+    earnRules: buildDefaultEarnRules(facilityId),
+    pointsExpiration: defaultPointsExpiration,
+    pointsExpiryEnabled: false,
+    tiers: defaultTiers,
+    tierDefinitions: buildDefaultTiers(facilityId),
+    tiersEnabled: true,
+    rewardTypes: defaultRewardTypes,
+    badges: [],
+    pointsScope: defaultPointsScope,
+    discountStacking: defaultDiscountStacking,
+    settings: {
+      pointsName: "Points",
+      pointsValue: 5,
+      minimumRedemptionPoints: 100,
+      showPointsOnReceipt: true,
+      showPointsInPortal: true,
+    },
+    createdAt: now,
+    updatedAt: now,
+  };
+}
 
 /**
  * Get facility loyalty configuration

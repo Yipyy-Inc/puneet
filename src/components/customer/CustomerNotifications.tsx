@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+import { customerNotificationsStore } from "@/data/customer-notifications";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -49,60 +50,6 @@ export interface Notification {
   category: string;
 }
 
-// Mock notifications - in production, this would come from an API
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "reminder",
-    title: "Upcoming Grooming Appointment",
-    message: "Your grooming appointment for Max is tomorrow at 2:00 PM",
-    read: false,
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    link: "/customer/bookings",
-    category: "Reminders",
-  },
-  {
-    id: "2",
-    type: "receipt",
-    title: "Payment Receipt",
-    message: "Receipt for your daycare booking on March 15, 2024",
-    read: false,
-    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    link: "/customer/billing",
-    category: "Payments",
-  },
-  {
-    id: "3",
-    type: "report_card",
-    title: "Report Card Available",
-    message: "Max's daycare report card for March 14 is now available",
-    read: true,
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    link: "/customer/report-cards",
-    category: "Reports",
-  },
-  {
-    id: "4",
-    type: "vaccination",
-    title: "Vaccination Expiring Soon",
-    message: "Max's Rabies vaccination expires in 30 days",
-    read: false,
-    createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-    link: "/customer/pets",
-    category: "Health",
-  },
-  {
-    id: "5",
-    type: "booking_update",
-    title: "Booking Confirmed",
-    message: "Your boarding request for March 20-25 has been confirmed",
-    read: true,
-    createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-    link: "/customer/bookings",
-    category: "Bookings",
-  },
-];
-
 const notificationIcons: Record<Notification["type"], string> = {
   reminder: "📅",
   receipt: "🧾",
@@ -115,21 +62,18 @@ const notificationIcons: Record<Notification["type"], string> = {
 };
 
 export function CustomerNotifications() {
-  const [notifications, setNotifications] =
-    useState<Notification[]>(mockNotifications);
+  const notifications = useSyncExternalStore(
+    customerNotificationsStore.subscribe,
+    customerNotificationsStore.getSnapshot,
+    customerNotificationsStore.getSnapshot,
+  );
   const [open, setOpen] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    );
-  };
+  const markAsRead = (id: string) => customerNotificationsStore.markRead(id);
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
+  const markAllAsRead = () => customerNotificationsStore.markAllRead();
 
   // Group notifications by category
   const groupedNotifications = notifications.reduce(

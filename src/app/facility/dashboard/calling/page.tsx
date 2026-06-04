@@ -1,49 +1,87 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { DataTable } from "@/components/ui/data-table";
-import type { ColumnDef } from "@/components/ui/data-table";
 import {
   Phone, PhoneCall, PhoneOff, PhoneIncoming, PhoneOutgoing,
-  Voicemail, Play, AlertCircle, Settings, Plus,
+  Voicemail, Play, AlertCircle, Settings,
   BarChart3, Radio, Search, Download, PhoneForwarded,
   Clock, CheckCircle2, ExternalLink, User, Filter,
-  Mic, Bot, UserCheck, ChevronRight, X,
+  Mic, Bot, UserCheck, ChevronRight, X, MessageSquare,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { aiCallSummaries } from "@/data/calling";
 import Link from "next/link";
-import { callLogs, routingRules } from "@/data/communications-hub";
+import { callLogs } from "@/data/communications-hub";
 import { CallDetailsModal } from "@/components/communications/CallDetailsModal";
-import { RoutingRuleModal } from "@/components/communications/RoutingRuleModal";
 import { IncomingCallPanel } from "@/components/calling/IncomingCallPanel";
 import { ActiveCallPanel } from "@/components/calling/ActiveCallPanel";
+import { InquiryTagPill } from "@/components/calling/InquiryTagPill";
+import { FollowUpStatusPill } from "@/components/calling/FollowUpStatusPill";
+import {
+  FOLLOW_UP_META,
+  FOLLOW_UP_OPTIONS,
+  defaultFollowUpStatus,
+} from "@/lib/calling/follow-up-status";
+import type { FollowUpStatus } from "@/types/communications";
+import { staffMembers } from "@/data/staff";
+import { addStandaloneTask } from "@/data/work-tasks";
+import { INQUIRY_TAG_META } from "@/lib/calling/inquiry-tags";
 import { IVRBuilder } from "@/components/calling/IVRBuilder";
+import { RoutingRulesBuilder } from "@/components/calling/RoutingRulesBuilder";
 import { CallAnalyticsDashboard } from "@/components/calling/CallAnalyticsDashboard";
+import { CallMetricsOverview } from "@/components/calling/CallMetricsOverview";
 import { CallingSettingsPanel } from "@/components/calling/CallingSettingsPanel";
 import { VoicemailInbox } from "@/components/calling/VoicemailInbox";
+import { RecordingsList } from "@/components/calling/RecordingsList";
+import { DateRangeFilter } from "@/components/calling/DateRangeFilter";
+import { dateRangeBounds, type DateRange } from "@/lib/calling/date-range";
+import { getFacilityRole } from "@/lib/role-utils";
+import { shouldAutoFlag } from "@/lib/calling/flag-call";
 import {
   mockIncomingCall, mockUnknownIncomingCall, mockActiveCall,
   callQueue, ivrConfig, voicemailGreetings,
   defaultCallingSettings, callAnalytics, missedCallTasks,
+  callRoutingRules,
 } from "@/data/calling";
-import type { ActiveCall } from "@/types/calling";
+import type { ActiveCall, MissedCallTask } from "@/types/calling";
+import { toast } from "sonner";
 import { LocationScopePicker } from "@/components/hq/LocationScopePicker";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { deriveLocationId } from "@/data/locations";
 
 // ─── helpers ────────────────────────────────────────────────
-function formatDuration(s: number) {
-  if (s === 0) return "—";
-  return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+// Persisted per browser so staff keep their last-used Call Log filters.
+const CALL_LOG_FILTERS_KEY = "calling:callLogFilters:v1";
+
+// Radix Select forbids an empty value, so "no assignee" uses a sentinel.
+const UNASSIGNED = "__unassigned__";
+const ACTIVE_STAFF = staffMembers.filter((s) => s.isActive);
+
+/**
+ * Due target for a follow-up call-back task: same day 5pm if assigned on a
+ * weekday before 5pm, otherwise the next business morning at 9am.
+ */
+function followUpDue(now = new Date()): { dueDate: string; dueTime: string } {
+  const isWeekend = (x: Date) => x.getDay() === 0 || x.getDay() === 6;
+  const toISO = (x: Date) =>
+    `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+  const d = new Date(now);
+  if (!isWeekend(d) && d.getHours() < 17) {
+    return { dueDate: toISO(d), dueTime: "17:00" };
+  }
+  const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+  while (isWeekend(next)) next.setDate(next.getDate() + 1);
+  return { dueDate: toISO(next), dueTime: "09:00" };
 }
 
 // ─── Live Tab ───────────────────────────────────────────────
@@ -52,12 +90,21 @@ function LiveTab({
   onSimulateIncoming,
   onSimulateUnknown,
   onAnswerDemo,
+  missedTasks,
+  onCallBack,
+  onMarkHandled,
 }: {
   activeCall: ActiveCall | null;
   onSimulateIncoming: () => void;
   onSimulateUnknown: () => void;
   onAnswerDemo: () => void;
+  missedTasks: MissedCallTask[];
+  onCallBack: (task: MissedCallTask) => void;
+  onMarkHandled: (task: MissedCallTask) => void;
 }) {
+  // Hide cards that have been resolved (Mark as handled) — they drop off the
+  // live worklist but the resolution is retained on the record.
+  const openMissed = missedTasks.filter((t) => t.status !== "resolved");
   return (
     <div className="space-y-6">
       {/* Demo controls */}
@@ -166,7 +213,13 @@ function LiveTab({
                     )}
                   </p>
                   <p className="font-mono text-xs text-muted-foreground">{entry.from}</p>
-                  {entry.reason && <p className="text-xs text-muted-foreground">{entry.reason}</p>}
+                  {entry.inquiryTag ? (
+                    <div className="mt-1">
+                      <InquiryTagPill tag={entry.inquiryTag} />
+                    </div>
+                  ) : entry.reason ? (
+                    <p className="text-xs text-muted-foreground">{entry.reason}</p>
+                  ) : null}
                 </div>
                 <div className="text-right text-xs text-muted-foreground">
                   <p className="font-semibold text-amber-600">{entry.waitTime}s waiting</p>
@@ -187,14 +240,19 @@ function LiveTab({
         <h3 className="mb-3 flex items-center gap-2 font-semibold">
           <PhoneOff className="size-4 text-red-500" />
           Unanswered Calls
-          {missedCallTasks.filter((t) => t.status === "unresolved").length > 0 && (
+          {missedTasks.filter((t) => t.status === "unresolved").length > 0 && (
             <Badge variant="destructive">
-              {missedCallTasks.filter((t) => t.status === "unresolved").length}
+              {missedTasks.filter((t) => t.status === "unresolved").length}
             </Badge>
           )}
         </h3>
+        {openMissed.length === 0 ? (
+          <div className="rounded-xl border border-dashed py-8 text-center text-sm text-muted-foreground">
+            No unanswered calls — all caught up
+          </div>
+        ) : (
         <div className="space-y-2">
-          {missedCallTasks.map((task) => (
+          {openMissed.map((task) => (
             <div key={task.id} className="flex items-start gap-3 rounded-xl border bg-card p-3">
               <div className={`mt-0.5 size-2.5 shrink-0 rounded-full ${task.status === "unresolved" ? "bg-red-500" : task.status === "called_back" ? "bg-amber-500" : "bg-green-500"}`} />
               <div className="flex-1">
@@ -221,16 +279,34 @@ function LiveTab({
                   </span>
                 )}
               </div>
-              <Badge variant={task.status === "unresolved" ? "destructive" : task.status === "called_back" ? "secondary" : "default"} className="capitalize text-xs shrink-0">
-                {task.status.replace("_", " ")}
-              </Badge>
-              <Button size="sm" variant="outline" className="shrink-0 gap-1.5 text-xs" onClick={() => alert(`Calling ${task.from}…`)}>
-                <Phone className="size-3.5" />
-                Call Back
-              </Button>
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
+                <Badge variant={task.status === "unresolved" ? "destructive" : task.status === "called_back" ? "secondary" : "default"} className="capitalize text-xs">
+                  {task.status.replace("_", " ")}
+                </Badge>
+                <div className="flex gap-1.5">
+                  <Button
+                    size="sm"
+                    className="gap-1.5 bg-green-600 text-xs hover:bg-green-700"
+                    onClick={() => onCallBack(task)}
+                  >
+                    <Phone className="size-3.5" />
+                    Call Back
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs"
+                    onClick={() => onMarkHandled(task)}
+                  >
+                    <CheckCircle2 className="size-3.5" />
+                    Mark as handled
+                  </Button>
+                </div>
+              </div>
             </div>
           ))}
         </div>
+        )}
       </div>
     </div>
   );
@@ -283,12 +359,28 @@ function DialerTab() {
 function CallLogDetail({
   call,
   onClose,
+  onSaveNotes,
+  onCallBack,
+  onSendSms,
+  onSetFollowUp,
+  onAssign,
 }: {
   call: (typeof callLogs)[0];
   onClose: () => void;
+  onSaveNotes: (notes: string) => void;
+  onCallBack: () => void;
+  onSendSms: () => void;
+  onSetFollowUp: (status: FollowUpStatus) => void;
+  onAssign: (staffId: string) => void;
 }) {
   const aiSummary = aiCallSummaries.find((s) => s.callId === call.id);
   const duration = { m: Math.floor(call.duration / 60), s: call.duration % 60 };
+
+  // Pre-filled from the persisted note (e.g. auto-saved when the call ended);
+  // editable so staff can refine it. Component is keyed by call id at the render
+  // site, so this resets correctly when a different call is selected.
+  const [noteDraft, setNoteDraft] = useState(call.notes ?? "");
+  const [justSaved, setJustSaved] = useState(false);
 
   const statusConfig = {
     completed: { label: "Completed", cls: "text-green-700 bg-green-50 border-green-200", icon: <CheckCircle2 className="size-3" /> },
@@ -357,6 +449,12 @@ function CallLogDetail({
                 {call.aiHandled ? <><Bot className="size-3.5 text-violet-500" />AI</> : <><UserCheck className="size-3.5 text-blue-500" />Staff</>}
               </span>
             </div>
+            {call.inquiryTag && (
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">Inquiry</p>
+                <InquiryTagPill tag={call.inquiryTag} />
+              </div>
+            )}
             <div className="col-span-2">
               <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">Time</p>
               <span className="text-sm">{new Date(call.timestamp).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</span>
@@ -401,13 +499,97 @@ function CallLogDetail({
             </div>
           )}
 
-          {/* Notes */}
-          {call.notes && (
-            <div className="space-y-2">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Staff Notes</p>
-              <p className="text-sm text-muted-foreground">{call.notes}</p>
+          {/* Follow-up resolution — only for calls that need one */}
+          {call.followUpStatus && (
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Follow-up</p>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={call.followUpStatus}
+                  onValueChange={(v) => onSetFollowUp(v as FollowUpStatus)}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FOLLOW_UP_OPTIONS.map((opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {FOLLOW_UP_META[opt].label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FollowUpStatusPill status={call.followUpStatus} />
+              </div>
             </div>
           )}
+
+          {/* Assign for follow-up — creates a task for the chosen staff member */}
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Assigned to</p>
+            <Select
+              value={call.assignedTo || UNASSIGNED}
+              onValueChange={(v) => onAssign(v === UNASSIGNED ? "" : v)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                {ACTIVE_STAFF.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name} · {s.role}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Primary action — one-click callback to this contact */}
+          <Button
+            className="w-full gap-2 bg-green-600 hover:bg-green-700"
+            onClick={onCallBack}
+          >
+            <Phone className="size-4" />
+            Call Back
+          </Button>
+
+          {/* Send a quick SMS instead — opens Messages pre-filled */}
+          <Button
+            variant="outline"
+            className="w-full gap-2"
+            onClick={onSendSms}
+          >
+            <MessageSquare className="size-4" />
+            Send SMS
+          </Button>
+
+          {/* Staff Notes — pre-filled from notes typed during the call, editable */}
+          <div className="space-y-2">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Staff Notes</p>
+            <Textarea
+              value={noteDraft}
+              onChange={(e) => { setNoteDraft(e.target.value); setJustSaved(false); }}
+              rows={4}
+              placeholder="Add notes about this call…"
+              className="resize-none text-sm"
+            />
+            <div className="flex items-center justify-end gap-2">
+              {justSaved && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-green-600">
+                  <CheckCircle2 className="size-3" /> Saved
+                </span>
+              )}
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={noteDraft === (call.notes ?? "")}
+                onClick={() => { onSaveNotes(noteDraft); setJustSaved(true); }}
+              >
+                Save notes
+              </Button>
+            </div>
+          </div>
 
           {/* Outcome */}
           {call.outcome && (
@@ -474,21 +656,88 @@ function CallLogDetail({
 // ─── Main Page ──────────────────────────────────────────────
 export default function CallingPage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [showRoutingModal, setShowRoutingModal] = useState(false);
   const [selectedCall, setSelectedCall] = useState<(typeof callLogs)[0] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "inbound" | "outbound">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "missed" | "voicemail" | "failed">("all");
+  const [dateRange, setDateRange] = useState<DateRange>("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
   const [locationFilter, setLocationFilter] = useState<string[]>([]);
   const { locations, isMultiLocation } = useLocationContext();
+  const router = useRouter();
   const [incomingCall, setIncomingCall] = useState<ActiveCall | null>(null);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [callMinimized, setCallMinimized] = useState(false);
+  // Call log records live in state so a just-ended call (carrying the notes
+  // typed during it) can be prepended, its Staff Notes edited in place, and its
+  // follow-up status resolved. Seed each record's default follow-up state.
+  const [logs, setLogs] = useState<typeof callLogs>(() =>
+    callLogs.map((c) => {
+      const summary = aiCallSummaries.find((s) => s.callId === c.id);
+      return {
+        ...c,
+        followUpStatus: c.followUpStatus ?? defaultFollowUpStatus(c.status),
+        // Auto-flag recordings on receipt: low AI sentiment or risky keywords.
+        flagged:
+          c.flagged ??
+          (c.recordingUrl
+            ? shouldAutoFlag(c.transcription, summary?.sentimentScore)
+            : undefined),
+      };
+    }),
+  );
+  const [tab, setTab] = useState("live");
+  // Unanswered-call worklist, stateful so Call Back / Mark as handled update it.
+  const [missedTasks, setMissedTasks] = useState(missedCallTasks);
+
+  // QA scoring + scores are visible only to managers/owners. Read the facility
+  // role client-side (cookie) to avoid an SSR/hydration mismatch.
+  const [canViewQa, setCanViewQa] = useState(false);
+  useEffect(() => {
+    const role = getFacilityRole();
+    setCanViewQa(role === "owner" || role === "manager");
+  }, []);
+
+  // Persist the last-used Call Log filter selection per browser (localStorage).
+  // The save effect is declared BEFORE the restore effect so that on mount it
+  // runs while `filtersHydrated` is still false (skipping it), letting the
+  // restore effect apply saved values without being overwritten by defaults.
+  const filtersHydrated = useRef(false);
+  useEffect(() => {
+    if (!filtersHydrated.current) return;
+    try {
+      localStorage.setItem(
+        CALL_LOG_FILTERS_KEY,
+        JSON.stringify({ typeFilter, statusFilter, dateRange, customFrom, customTo }),
+      );
+    } catch {}
+  }, [typeFilter, statusFilter, dateRange, customFrom, customTo]);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CALL_LOG_FILTERS_KEY);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s.typeFilter) setTypeFilter(s.typeFilter);
+        if (s.statusFilter) setStatusFilter(s.statusFilter);
+        if (s.dateRange) setDateRange(s.dateRange);
+        if (typeof s.customFrom === "string") setCustomFrom(s.customFrom);
+        if (typeof s.customTo === "string") setCustomTo(s.customTo);
+      }
+    } catch {}
+    filtersHydrated.current = true;
+  }, []);
 
   const filteredCalls = useMemo(() => {
-    return callLogs.filter((c) => {
+    const { from, to } = dateRangeBounds(dateRange, customFrom, customTo);
+    return logs.filter((c) => {
       if (typeFilter !== "all" && c.type !== typeFilter) return false;
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
+      if (from !== null || to !== null) {
+        const t = new Date(c.timestamp).getTime();
+        if (from !== null && t < from) return false;
+        if (to !== null && t > to) return false;
+      }
       if (locationFilter.length > 0) {
         const callLocId = deriveLocationId(c.id);
         if (!locationFilter.includes(callLocId)) return false;
@@ -499,11 +748,33 @@ export default function CallingPage() {
       }
       return true;
     });
-  }, [searchQuery, typeFilter, statusFilter, locationFilter]);
+  }, [logs, searchQuery, typeFilter, statusFilter, dateRange, customFrom, customTo, locationFilter]);
 
-  const voicemails = useMemo(() => callLogs.filter((c) => c.status === "voicemail"), []);
-  const missedCalls = useMemo(() => callLogs.filter((c) => c.status === "missed"), []);
-  const callsWithRecordings = useMemo(() => callLogs.filter((c) => c.recordingUrl), []);
+  const voicemails = useMemo(() => logs.filter((c) => c.status === "voicemail"), [logs]);
+  // Voicemails still awaiting follow-up — drives the "needs attention" counts
+  // (the inbox itself still lists every voicemail).
+  const pendingVoicemails = useMemo(
+    () => voicemails.filter((c) => c.followUpStatus === "pending"),
+    [voicemails],
+  );
+  // Only missed calls still awaiting follow-up count toward the "needs attention"
+  // badge — resolving a call (scheduled / completed / no action) clears it.
+  const missedCalls = useMemo(
+    () => logs.filter((c) => c.status === "missed" && c.followUpStatus === "pending"),
+    [logs],
+  );
+  const callsWithRecordings = useMemo(() => logs.filter((c) => c.recordingUrl), [logs]);
+
+  // Flagged recordings from this week (since Sunday) — Analytics count card.
+  const flaggedThisWeek = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - start.getDay());
+    const from = start.getTime();
+    return logs.filter(
+      (c) => c.flagged && c.recordingUrl && new Date(c.timestamp).getTime() >= from,
+    ).length;
+  }, [logs]);
 
   const handleAnswer = (call: ActiveCall) => {
     setIncomingCall(null);
@@ -511,100 +782,200 @@ export default function CallingPage() {
     setActiveCall({ ...call, status: "active", isRecording: true });
   };
 
-  const recordingColumns: ColumnDef<(typeof callLogs)[0]>[] = [
-    {
-      accessorKey: "clientName",
-      header: "Contact",
-      cell: ({ row }) => {
-        const { clientId, clientName, from } = row.original;
-        return (
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-              <User className="size-3.5" />
-            </div>
-            <div>
-              {clientId ? (
-                <Link
-                  href={`/facility/dashboard/clients/${clientId}`}
-                  className="group flex items-center gap-1 hover:text-primary transition-colors"
-                >
-                  <span className="text-sm font-semibold leading-tight group-hover:underline underline-offset-2">
-                    {clientName || "Unknown"}
-                  </span>
-                  <ExternalLink className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </Link>
-              ) : (
-                <span className="text-sm font-semibold text-muted-foreground">{clientName || "Unknown"}</span>
-              )}
-              <div className="font-mono text-[11px] text-muted-foreground">{from}</div>
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "duration",
-      header: "Duration",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-1.5 text-sm">
-          <Clock className="size-3.5 text-muted-foreground" />
-          <span className="font-mono tabular-nums">{formatDuration(row.original.duration)}</span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "timestamp",
-      header: "Recorded",
-      cell: ({ row }) => {
-        const d = new Date(row.original.timestamp);
-        return (
-          <div className="text-sm">
-            <div className="font-medium">{d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}</div>
-            <div className="text-xs text-muted-foreground">{d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "actions",
-      header: "",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-1">
-          <button
-            onClick={() => alert("Playing…")}
-            title="Play recording"
-            className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <Play className="size-3.5" />Play
-          </button>
-          <button
-            onClick={() => alert("Downloading…")}
-            title="Download"
-            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <Download className="size-3.5" />
-          </button>
-          {row.original.clientId && (
-            <Link
-              href={`/facility/dashboard/clients/${row.original.clientId}`}
-              title="Open client file"
-              className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
-            >
-              <User className="size-3.5" />
-            </Link>
-          )}
-        </div>
-      ),
-    },
-  ];
+  // On call end: write a call-log record for the call, carrying the notes typed
+  // in the panel into the record's Staff Notes, then surface it in the Call Log
+  // (selected, with the side panel pre-filled) so staff don't re-type anything.
+  const handleEndCall = (notes: string) => {
+    if (activeCall) {
+      const endedAtMs = Date.now();
+      const durationSec = Math.max(
+        0,
+        Math.round((endedAtMs - new Date(activeCall.startTime).getTime()) / 1000),
+      );
+      const record: (typeof callLogs)[number] = {
+        id: activeCall.id,
+        type: activeCall.type,
+        from: activeCall.from,
+        to: activeCall.to,
+        clientId: activeCall.clientId,
+        clientName: activeCall.clientName,
+        duration: durationSec,
+        status: "completed",
+        timestamp: new Date(endedAtMs).toISOString(),
+        aiHandled: false,
+        notes: notes.trim() || undefined,
+        inquiryTag: activeCall.inquiryTag,
+        followUpStatus: defaultFollowUpStatus("completed"),
+      };
+      // Replace any prior record with the same id (e.g. re-running the demo),
+      // then prepend so the just-ended call sits at the top of the log.
+      setLogs((prev) => [record, ...prev.filter((c) => c.id !== record.id)]);
+      setSelectedCall(record);
+      setTab("calls");
+    }
+    setActiveCall(null);
+    setCallMinimized(false);
+  };
 
-  const routingColumns: ColumnDef<(typeof routingRules)[0]>[] = [
-    { accessorKey: "priority", header: "Priority", cell: ({ row }) => <Badge variant="outline">#{row.original.priority}</Badge> },
-    { accessorKey: "name", header: "Rule Name" },
-    { accessorKey: "action", header: "Action", cell: ({ row }) => <Badge variant="secondary" className="capitalize">{row.original.action.replace(/_/g, " ")}</Badge> },
-    { accessorKey: "enabled", header: "Status", cell: ({ row }) => <Badge variant={row.original.enabled ? "default" : "secondary"}>{row.original.enabled ? "Active" : "Inactive"}</Badge> },
-    { accessorKey: "actions", header: "", cell: () => <Button variant="ghost" size="sm" onClick={() => setShowRoutingModal(true)}><Settings className="size-4" /></Button> },
-  ];
+  // Edit the persisted Staff Notes from the call-log side panel.
+  const handleSaveNotes = (callId: string, notes: string) => {
+    const next = notes.trim() || undefined;
+    setLogs((prev) =>
+      prev.map((c) => (c.id === callId ? { ...c, notes: next } : c)),
+    );
+    setSelectedCall((prev) =>
+      prev && prev.id === callId ? { ...prev, notes: next } : prev,
+    );
+  };
+
+  // Assign a call to a staff member for follow-up. Records assignedTo on the
+  // call and creates a one-off task in the Tasks module for that staff member.
+  const handleAssign = (call: (typeof callLogs)[number], staffId: string) => {
+    const next = staffId || null;
+    setLogs((prev) =>
+      prev.map((c) => (c.id === call.id ? { ...c, assignedTo: next } : c)),
+    );
+    setSelectedCall((prev) =>
+      prev && prev.id === call.id ? { ...prev, assignedTo: next } : prev,
+    );
+    if (!staffId) {
+      toast.info("Follow-up unassigned");
+      return;
+    }
+    if (call.assignedTo === staffId) return; // already assigned to this person
+    const staff = ACTIVE_STAFF.find((s) => s.id === staffId);
+    if (!staff) return;
+    const callerName = call.clientName ?? call.from;
+    const inquiry = call.inquiryTag ? INQUIRY_TAG_META[call.inquiryTag].label : "follow-up";
+    const isVoicemail = call.status === "voicemail";
+    const title = isVoicemail
+      ? `Listen to voicemail + call back ${callerName}`
+      : `Call back ${callerName} re: ${inquiry}`;
+    const { dueDate, dueTime } = followUpDue();
+    addStandaloneTask({
+      id: `task-cb-${call.id}-${Date.now()}`,
+      title,
+      description: isVoicemail
+        ? `Listen to the voicemail and return the call. Linked to call ${call.id}.`
+        : `Follow up on ${call.type} call (${call.status}). Linked to call ${call.id}.`,
+      category: "customer-service",
+      priority: "high",
+      status: "pending",
+      assignedToId: staff.id,
+      assignedToName: staff.name,
+      dueDate,
+      dueTime,
+      estimatedMinutes: 10,
+      requiresPhoto: false,
+      requiresSignoff: false,
+      callLogId: call.id,
+      createdAt: new Date().toISOString(),
+    });
+    toast.success(`Assigned to ${staff.name}`, {
+      description: `Task created: "${title}" · due ${dueDate} ${dueTime}`,
+    });
+  };
+
+  // Resolve a call's follow-up status from the side-panel dropdown.
+  const handleSetFollowUp = (callId: string, status: FollowUpStatus) => {
+    setLogs((prev) =>
+      prev.map((c) => (c.id === callId ? { ...c, followUpStatus: status } : c)),
+    );
+    setSelectedCall((prev) =>
+      prev && prev.id === callId ? { ...prev, followUpStatus: status } : prev,
+    );
+  };
+
+  // Submit a QA score (1–5) + private manager note for a recorded call.
+  const handleScoreCall = (callId: string, qaScore: number, managerNote: string) => {
+    const note = managerNote.trim() || undefined;
+    setLogs((prev) =>
+      prev.map((c) => (c.id === callId ? { ...c, qaScore, managerNote: note } : c)),
+    );
+    setSelectedCall((prev) =>
+      prev && prev.id === callId ? { ...prev, qaScore, managerNote: note } : prev,
+    );
+  };
+
+  // Clear a recording's review flag after a manager has reviewed it.
+  const handleClearFlag = (callId: string) => {
+    setLogs((prev) => prev.map((c) => (c.id === callId ? { ...c, flagged: false } : c)));
+  };
+
+  // Shared: POST to Twilio outbound (to=number, from=businessNumber) and open
+  // the active call panel. Mocked here — this is the integration point.
+  const placeOutboundCall = (opts: {
+    id: string;
+    number: string;
+    clientId?: number;
+    clientName?: string;
+  }) => {
+    setActiveCall({
+      id: opts.id,
+      type: "outbound",
+      from: opts.number,
+      to: defaultCallingSettings.businessNumber,
+      clientId: opts.clientId,
+      clientName: opts.clientName,
+      startTime: new Date().toISOString(),
+      status: "active",
+      isMuted: false,
+      isRecording: defaultCallingSettings.autoRecord,
+    });
+    setCallMinimized(false);
+    toast.success(`Calling ${opts.clientName ?? opts.number} back…`, {
+      description: "Outbound call placed via Twilio.",
+    });
+  };
+
+  // Call Back from the unanswered worklist — also records the callback on the
+  // task (status + outcome).
+  const handleCallBack = (task: MissedCallTask) => {
+    placeOutboundCall({
+      id: `cb-${task.id}`,
+      number: task.from,
+      clientId: task.clientId,
+      clientName: task.clientName,
+    });
+    setMissedTasks((prev) =>
+      prev.map((t) =>
+        t.id === task.id
+          ? { ...t, status: "called_back", outcome: "called_back", callbackTime: new Date().toISOString() }
+          : t,
+      ),
+    );
+  };
+
+  // Send SMS — deep-link to the Messages module pre-filled with a missed-call
+  // template for this contact. `to` = the other party, `source` = this call.
+  const handleSendSms = (call: (typeof callLogs)[number]) => {
+    const number = call.type === "inbound" ? call.from : call.to;
+    router.push(
+      `/facility/dashboard/messaging?to=${encodeURIComponent(number)}&source=${encodeURIComponent(call.id)}`,
+    );
+  };
+
+  // Call Back from a call-log row / detail panel. Dial the other party: the
+  // caller's number for inbound calls, the number we dialed for outbound.
+  const handleLogCallBack = (call: (typeof callLogs)[number]) => {
+    placeOutboundCall({
+      id: `cb-${call.id}`,
+      number: call.type === "inbound" ? call.from : call.to,
+      clientId: call.clientId,
+      clientName: call.clientName,
+    });
+  };
+
+  // Mark as handled — resolves the task (drops it from the live worklist) and
+  // records the outcome.
+  const handleMarkHandled = (task: MissedCallTask) => {
+    setMissedTasks((prev) =>
+      prev.map((t) =>
+        t.id === task.id ? { ...t, status: "resolved", outcome: "resolved" } : t,
+      ),
+    );
+    toast.success(`Marked ${task.clientName ?? task.from} as handled`);
+  };
 
   return (
     <div>
@@ -623,7 +994,7 @@ export default function CallingPage() {
       {activeCall && (
         <ActiveCallPanel
           call={activeCall}
-          onEnd={() => { setActiveCall(null); setCallMinimized(false); }}
+          onEnd={handleEndCall}
           onTransfer={() => alert("Transfer UI coming soon…")}
           onMinimizeChange={setCallMinimized}
         />
@@ -663,13 +1034,13 @@ export default function CallingPage() {
               <p className="text-xs text-muted-foreground">Require attention</p>
             </CardContent>
           </Card>
-          <Card className={voicemails.length > 0 ? "border-2 border-orange-500/20 bg-orange-50/50" : ""}>
+          <Card className={pendingVoicemails.length > 0 ? "border-2 border-orange-500/20 bg-orange-50/50" : ""}>
             <CardContent className="pt-5">
               <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                 <Voicemail className="size-4" /> Voicemails
               </div>
-              <p className={`mt-1 text-2xl font-bold ${voicemails.length > 0 ? "text-orange-600" : ""}`}>{voicemails.length}</p>
-              <p className="text-xs text-muted-foreground">Unread messages</p>
+              <p className={`mt-1 text-2xl font-bold ${pendingVoicemails.length > 0 ? "text-orange-600" : ""}`}>{pendingVoicemails.length}</p>
+              <p className="text-xs text-muted-foreground">Awaiting follow-up</p>
             </CardContent>
           </Card>
           <Card>
@@ -678,7 +1049,7 @@ export default function CallingPage() {
                 <PhoneCall className="size-4" /> Today
               </div>
               <p className="mt-1 text-2xl font-bold">
-                {callLogs.filter((c) => new Date(c.timestamp).toDateString() === new Date().toDateString()).length}
+                {logs.filter((c) => new Date(c.timestamp).toDateString() === new Date().toDateString()).length}
               </p>
               <p className="text-xs text-muted-foreground">Inbound &amp; outbound</p>
             </CardContent>
@@ -686,7 +1057,7 @@ export default function CallingPage() {
         </div>
 
         {/* Main tabs */}
-        <Tabs defaultValue="live" className="space-y-4">
+        <Tabs value={tab} onValueChange={setTab} className="space-y-4">
           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="live" className="gap-1.5">
               <Radio className="size-4" />
@@ -704,7 +1075,7 @@ export default function CallingPage() {
             <TabsTrigger value="voicemail" className="gap-1.5">
               <Voicemail className="size-4" />
               Voicemail
-              {voicemails.length > 0 && <Badge variant="destructive" className="ml-1">{voicemails.length}</Badge>}
+              {pendingVoicemails.length > 0 && <Badge variant="destructive" className="ml-1">{pendingVoicemails.length}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="recordings" className="gap-1.5">
               <Play className="size-4" />
@@ -731,6 +1102,9 @@ export default function CallingPage() {
               onSimulateIncoming={() => setIncomingCall(mockIncomingCall)}
               onSimulateUnknown={() => setIncomingCall(mockUnknownIncomingCall)}
               onAnswerDemo={() => setActiveCall(mockActiveCall)}
+              missedTasks={missedTasks}
+              onCallBack={handleCallBack}
+              onMarkHandled={handleMarkHandled}
             />
           </TabsContent>
 
@@ -744,10 +1118,10 @@ export default function CallingPage() {
             {/* Stats strip */}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {[
-                { label: "Total", value: callLogs.length, icon: <PhoneCall className="size-4" />, color: "" },
-                { label: "Completed", value: callLogs.filter((c) => c.status === "completed").length, icon: <CheckCircle2 className="size-4" />, color: "text-green-600" },
-                { label: "Missed", value: callLogs.filter((c) => c.status === "missed").length, icon: <PhoneOff className="size-4" />, color: "text-red-500" },
-                { label: "Voicemails", value: callLogs.filter((c) => c.status === "voicemail").length, icon: <Voicemail className="size-4" />, color: "text-amber-500" },
+                { label: "Total", value: logs.length, icon: <PhoneCall className="size-4" />, color: "" },
+                { label: "Completed", value: logs.filter((c) => c.status === "completed").length, icon: <CheckCircle2 className="size-4" />, color: "text-green-600" },
+                { label: "Missed", value: missedCalls.length, icon: <PhoneOff className="size-4" />, color: "text-red-500" },
+                { label: "Voicemails", value: pendingVoicemails.length, icon: <Voicemail className="size-4" />, color: "text-amber-500" },
               ].map(({ label, value, icon, color }) => (
                 <Card key={label} className="py-0">
                   <CardContent className="flex items-center gap-3 py-4">
@@ -815,8 +1189,16 @@ export default function CallingPage() {
                   <SelectItem value="failed">Failed</SelectItem>
                 </SelectContent>
               </Select>
-              {(typeFilter !== "all" || statusFilter !== "all" || searchQuery) && (
-                <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => { setTypeFilter("all"); setStatusFilter("all"); setSearchQuery(""); }}>
+              <DateRangeFilter
+                value={dateRange}
+                onChange={setDateRange}
+                customFrom={customFrom}
+                onCustomFrom={setCustomFrom}
+                customTo={customTo}
+                onCustomTo={setCustomTo}
+              />
+              {(typeFilter !== "all" || statusFilter !== "all" || dateRange !== "all" || searchQuery) && (
+                <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => { setTypeFilter("all"); setStatusFilter("all"); setDateRange("all"); setCustomFrom(""); setCustomTo(""); setSearchQuery(""); }}>
                   <X className="size-3.5" /> Clear
                 </Button>
               )}
@@ -847,11 +1229,15 @@ export default function CallingPage() {
                           const d = new Date(call.timestamp);
                           const isToday = d.toDateString() === new Date().toDateString();
                           return (
-                            <button
+                            <div
                               key={call.id}
-                              onClick={() => setSelectedCall(isSelected ? null : call)}
-                              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 ${isSelected ? "bg-primary/5 border-l-2 border-primary" : ""}`}
+                              className={`flex items-center transition-colors hover:bg-muted/50 ${isSelected ? "bg-primary/5 border-l-2 border-primary" : ""}`}
                             >
+                              <button
+                                type="button"
+                                onClick={() => setSelectedCall(isSelected ? null : call)}
+                                className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left"
+                              >
                               {/* direction icon */}
                               <div className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${call.type === "inbound" ? "bg-green-50 text-green-600" : "bg-blue-50 text-blue-600"}`}>
                                 {call.type === "inbound" ? <PhoneIncoming className="size-4" /> : <PhoneOutgoing className="size-4" />}
@@ -865,6 +1251,7 @@ export default function CallingPage() {
                                   </span>
                                   {call.aiHandled && <Bot className="size-3 shrink-0 text-violet-500" />}
                                   {call.recordingUrl && <Mic className="size-3 shrink-0 text-muted-foreground/60" />}
+                                  {call.inquiryTag && <InquiryTagPill tag={call.inquiryTag} className="shrink-0" />}
                                 </div>
                                 <p className="font-mono text-[11px] text-muted-foreground truncate">{call.from}</p>
                               </div>
@@ -880,9 +1267,25 @@ export default function CallingPage() {
                                 <div className="text-[10px] text-muted-foreground">
                                   {isToday ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString([], { month: "short", day: "numeric" })}
                                 </div>
+                                {call.followUpStatus && (
+                                  <div className="flex justify-end">
+                                    <FollowUpStatusPill status={call.followUpStatus} />
+                                  </div>
+                                )}
                               </div>
-                              <ChevronRight className={`size-4 shrink-0 text-muted-foreground/40 transition-transform ${isSelected ? "rotate-90 text-primary" : ""}`} />
-                            </button>
+                                <ChevronRight className={`size-4 shrink-0 text-muted-foreground/40 transition-transform ${isSelected ? "rotate-90 text-primary" : ""}`} />
+                              </button>
+                              {call.status === "missed" && (
+                                <Button
+                                  size="sm"
+                                  className="mr-3 shrink-0 gap-1.5 bg-green-600 text-xs hover:bg-green-700"
+                                  onClick={() => handleLogCallBack(call)}
+                                >
+                                  <Phone className="size-3.5" />
+                                  Call Back
+                                </Button>
+                              )}
+                            </div>
                           );
                         })}
                       </div>
@@ -895,8 +1298,14 @@ export default function CallingPage() {
               {selectedCall ? (
                 <div className="w-[380px] shrink-0">
                   <CallLogDetail
+                    key={selectedCall.id}
                     call={selectedCall}
                     onClose={() => setSelectedCall(null)}
+                    onSaveNotes={(notes) => handleSaveNotes(selectedCall.id, notes)}
+                    onCallBack={() => handleLogCallBack(selectedCall)}
+                    onSendSms={() => handleSendSms(selectedCall)}
+                    onSetFollowUp={(status) => handleSetFollowUp(selectedCall.id, status)}
+                    onAssign={(staffId) => handleAssign(selectedCall, staffId)}
                   />
                 </div>
               ) : (
@@ -912,7 +1321,15 @@ export default function CallingPage() {
 
           {/* Voicemail */}
           <TabsContent value="voicemail">
-            <VoicemailInbox voicemails={voicemails} greetings={voicemailGreetings} />
+            <VoicemailInbox
+              voicemails={voicemails}
+              greetings={voicemailGreetings}
+              onSetFollowUp={handleSetFollowUp}
+              onAssign={(id, staffId) => {
+                const call = logs.find((c) => c.id === id);
+                if (call) handleAssign(call, staffId);
+              }}
+            />
           </TabsContent>
 
           {/* Recordings */}
@@ -929,7 +1346,12 @@ export default function CallingPage() {
                     <p>No recordings available</p>
                   </div>
                 ) : (
-                  <DataTable columns={recordingColumns} data={callsWithRecordings} searchColumn="clientName" searchPlaceholder="Search recordings…" />
+                  <RecordingsList
+                    recordings={callsWithRecordings}
+                    canScore={canViewQa}
+                    onScore={handleScoreCall}
+                    onClearFlag={handleClearFlag}
+                  />
                 )}
               </CardContent>
             </Card>
@@ -938,28 +1360,13 @@ export default function CallingPage() {
           {/* IVR & Routing */}
           <TabsContent value="ivr" className="space-y-6">
             <IVRBuilder config={ivrConfig} />
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Routing Rules</CardTitle>
-                    <p className="mt-1 text-sm text-muted-foreground">Priority-based call routing conditions</p>
-                  </div>
-                  <Button onClick={() => setShowRoutingModal(true)} className="gap-1.5">
-                    <Plus className="size-4" />
-                    Add Rule
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <DataTable columns={routingColumns} data={routingRules} searchColumn="name" searchPlaceholder="Search rules…" />
-              </CardContent>
-            </Card>
+            <RoutingRulesBuilder rules={callRoutingRules} />
           </TabsContent>
 
           {/* Analytics */}
-          <TabsContent value="analytics">
-            <CallAnalyticsDashboard data={callAnalytics} />
+          <TabsContent value="analytics" className="space-y-8">
+            <CallMetricsOverview logs={logs} summaries={aiCallSummaries} canViewStaffReport={canViewQa} />
+            <CallAnalyticsDashboard data={callAnalytics} flaggedThisWeek={flaggedThisWeek} />
           </TabsContent>
 
           {/* Settings */}
@@ -975,12 +1382,6 @@ export default function CallingPage() {
           {selectedCall && (
             <CallDetailsModal call={selectedCall} onClose={() => { setShowDetailsModal(false); setSelectedCall(null); }} />
           )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showRoutingModal} onOpenChange={setShowRoutingModal}>
-        <DialogContent className="max-h-[90vh] min-w-3xl overflow-y-auto">
-          <RoutingRuleModal onClose={() => setShowRoutingModal(false)} />
         </DialogContent>
       </Dialog>
 

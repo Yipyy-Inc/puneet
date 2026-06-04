@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Paperclip,
@@ -69,6 +69,8 @@ export function ComposeBar({
   bookingId,
   recipientEmail,
   senderName,
+  prefillKey,
+  prefillText,
 }: {
   onSend?: (message: string, channel: ActiveChannel, meta?: { subject?: string }) => void;
   clientName?: string;
@@ -83,9 +85,14 @@ export function ComposeBar({
   bookingId?: string | number | null;
   recipientEmail?: string | null;
   senderName?: string;
+  /** When `prefillKey` changes, the draft is replaced once with `prefillText`
+   *  (e.g. a missed-call template deep-linked from the Call Log). Editable. */
+  prefillKey?: string;
+  prefillText?: string;
 }) {
   const isCustomerMode = mode === "customer";
   const [text, setText] = useState("");
+  const prefillAppliedRef = useRef<string | null>(null);
   const [subject, setSubject] = useState("");
   const [showExtras, setShowExtras] = useState(false);
   const [showQuickLinks, setShowQuickLinks] = useState(true);
@@ -96,6 +103,24 @@ export function ComposeBar({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const savedReplies = useSavedReplies();
   const scheduledMessages = useScheduledMessages();
+
+  // Replace the draft once per prefill key (deep-linked templates, e.g. a
+  // missed-call SMS from the Call Log). Stays editable afterwards.
+  useEffect(() => {
+    if (!prefillKey || prefillText == null) return;
+    if (prefillAppliedRef.current === prefillKey) return;
+    prefillAppliedRef.current = prefillKey;
+    setText(prefillText);
+    requestAnimationFrame(() => {
+      const ta = textareaRef.current;
+      if (ta) {
+        ta.focus();
+        ta.style.height = "22px";
+        ta.style.height = `${Math.min(ta.scrollHeight, 128)}px`;
+        ta.style.overflowY = ta.scrollHeight > 128 ? "auto" : "hidden";
+      }
+    });
+  }, [prefillKey, prefillText]);
 
   const segments = useMemo(
     () => (activeChannel === "sms" ? countSegments(text) : 0),

@@ -21,7 +21,9 @@ import type { ActiveCall } from "@/types/calling";
 
 interface ActiveCallPanelProps {
   call: ActiveCall;
-  onEnd: () => void;
+  /** Receives the notes typed during the call so the parent can persist them
+   *  to the call log on end (otherwise they'd be lost when the panel unmounts). */
+  onEnd: (notes: string) => void;
   onTransfer: () => void;
   onMinimizeChange?: (minimized: boolean) => void;
 }
@@ -499,12 +501,15 @@ export function ActiveCallPanel({ call, onEnd, onTransfer, onMinimizeChange }: A
     onMinimizeChange?.(val);
   };
 
-  const shared = { call, timer, muted, onHold, showKeypad, notes, dtmfInput, setMuted, setOnHold, setShowKeypad, setNotes, setDtmfInput, onEnd, onTransfer };
+  // Hand the live notes back to the parent on end so they survive the unmount.
+  const handleEnd = () => onEnd(notes);
+
+  const shared = { call, timer, muted, onHold, showKeypad, notes, dtmfInput, setMuted, setOnHold, setShowKeypad, setNotes, setDtmfInput, onEnd: handleEnd, onTransfer };
 
   return (
     <>
       {minimized
-        ? <MinimizedPill {...{ call, timer, muted, onHold, setMuted, setOnHold, onEnd }} onExpand={() => handleMinimize(false)} />
+        ? <MinimizedPill {...{ call, timer, muted, onHold, setMuted, setOnHold, onEnd: handleEnd }} onExpand={() => handleMinimize(false)} />
         : <DesktopWidget {...shared} onMinimize={() => handleMinimize(true)} />
       }
       <MobileActiveCall {...shared} />

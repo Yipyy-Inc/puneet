@@ -55,10 +55,10 @@ import { cn } from "@/lib/utils";
 import {
   groomingQueries,
   getEffectiveAlertNotes,
-  canMarkReadyForPickup,
 } from "@/lib/api/grooming";
 import { applyCheckInResult } from "@/lib/grooming/check-in-actions";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
+import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
 import { clients as initialClients } from "@/data/clients";
 import type {
   GroomingAppointment,
@@ -366,6 +366,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   const [markReadyOpen, setMarkReadyOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const { setStationStatus } = useGroomingStations();
+  const { recordEvent } = useLoyaltyEngine();
   const { data: customerPackages = [] } = useQuery(
     groomingQueries.customerPackages(),
   );
@@ -653,6 +654,16 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     }
     toast.success(`${apt.petName} — Completed`, {
       description: `Receipt sent · $${summary.amountCharged.toFixed(2)} charged`,
+    });
+    // Loyalty automation: earn points, apply tier discount, upgrade tier, fire
+    // badges — all from the completed grooming booking.
+    recordEvent({
+      type: "booking_completed",
+      id: String(apt.id),
+      customerId: apt.ownerId,
+      amount: summary.grandTotal,
+      serviceType: "grooming",
+      isService: true,
     });
     setPaymentOpen(false);
   }

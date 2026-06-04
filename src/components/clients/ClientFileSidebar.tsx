@@ -22,6 +22,7 @@ import {
   ExternalLink,
   Settings,
   Ban,
+  Star,
 } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -148,6 +149,7 @@ export function ClientFileSidebar({
       label: "Billing & Payments",
       icon: DollarSign,
     },
+    { href: `${base}/loyalty`, label: "Loyalty", icon: Star },
     { href: `${base}/vaccinations`, label: "Vaccinations", icon: Syringe },
     { href: `${base}/forms`, label: "Forms & Waivers", icon: FileText },
     { href: `${base}/estimates`, label: "Estimates", icon: FileText },

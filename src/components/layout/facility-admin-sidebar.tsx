@@ -42,6 +42,7 @@ import {
   Gift,
   ShieldCheck,
   Boxes,
+  Award,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
@@ -327,6 +328,12 @@ export function FacilitySidebar() {
             title: "Marketing",
             url: "/facility/dashboard/marketing",
             icon: Megaphone,
+            disabled: false,
+          },
+          {
+            title: "Loyalty Program",
+            url: "/facility/dashboard/loyalty",
+            icon: Award,
             disabled: false,
           },
           {

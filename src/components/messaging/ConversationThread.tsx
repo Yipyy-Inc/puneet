@@ -96,6 +96,7 @@ export function ConversationThread({
   onToggleDetail,
   mode = "facility",
   senderBlocked = false,
+  composePrefill = null,
 }: {
   threadId: string | null;
   messages: Message[];
@@ -103,6 +104,7 @@ export function ConversationThread({
   onToggleDetail: () => void;
   mode?: "facility" | "customer";
   senderBlocked?: boolean;
+  composePrefill?: { key: string; text: string } | null;
 }) {
   const isCustomerMode = mode === "customer";
   const conversationState = useConversationState();
@@ -161,6 +163,12 @@ export function ConversationThread({
   useEffect(() => {
     setActiveChannel(defaultChannel);
   }, [threadId, defaultChannel]);
+
+  // A deep-linked template (e.g. missed-call SMS from the Call Log) forces SMS.
+  const prefillKey = composePrefill?.key;
+  useEffect(() => {
+    if (prefillKey) setActiveChannel("sms");
+  }, [prefillKey]);
 
   const chatMessages = useMemo(
     () =>
@@ -352,6 +360,8 @@ export function ConversationThread({
               : client?.email ?? null
           }
           senderName={isCustomerMode ? undefined : "PawCare Facility"}
+          prefillKey={composePrefill?.key}
+          prefillText={composePrefill?.text}
         />
       )}
     </>
