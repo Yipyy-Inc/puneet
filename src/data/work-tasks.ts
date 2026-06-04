@@ -92,6 +92,8 @@ export type StandaloneTask = {
   completedAt?: string;
   completedByName?: string;
   createdAt: string;
+  /** When the task was generated from a call-log follow-up assignment. */
+  callLogId?: string;
 };
 
 // ── Task Library ──────────────────────────────────────────────────────────────
@@ -617,3 +619,12 @@ export const standaloneTasks: StandaloneTask[] = [
     createdAt: new Date(today.getTime() - 43200000).toISOString(),
   },
 ];
+
+/**
+ * Append a one-off task to the standalone task list (e.g. a call-back task
+ * created when a manager assigns a call). Mutates the shared mock array so the
+ * Tasks module's Standalone tab picks it up on next render. Newest first.
+ */
+export function addStandaloneTask(task: StandaloneTask): void {
+  standaloneTasks.unshift(task);
+}

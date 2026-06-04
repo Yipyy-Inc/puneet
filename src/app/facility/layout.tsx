@@ -21,6 +21,7 @@ import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
 import { FacilityMobileBottomNav } from "@/components/layout/FacilityMobileBottomNav";
 import { LocationContextProviderWrapper } from "@/components/providers/LocationContextProviderWrapper";
 import { LocationStatusBadge } from "@/components/hq/LocationStatusBadge";
+import { LoyaltyProgramProvider } from "@/hooks/use-loyalty-program";
 
 export default async function FacilityLayout({
   children,
@@ -39,6 +40,7 @@ export default async function FacilityLayout({
   return (
     <LocationContextProviderWrapper>
     <SettingsProviderWrapper>
+      <LoyaltyProgramProvider>
       <BookingModalProviderWrapper>
         <SidebarProvider className="min-h-[calc(100vh-64px)]">
           <FacilitySidebar />
@@ -71,6 +73,7 @@ export default async function FacilityLayout({
           </SidebarInset>
         </SidebarProvider>
       </BookingModalProviderWrapper>
+      </LoyaltyProgramProvider>
     </SettingsProviderWrapper>
     </LocationContextProviderWrapper>
   );

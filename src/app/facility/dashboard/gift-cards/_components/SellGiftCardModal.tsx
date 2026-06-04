@@ -41,6 +41,10 @@ import { clients } from "@/data/clients";
 
 const PRESET_AMOUNTS = [25, 50, 75, 100, 150, 200];
 
+// Radix <Select.Item> forbids an empty-string value, so the optional
+// "No client" choice uses a sentinel that maps back to the empty-string state.
+const NO_CLIENT = "__none__";
+
 const CARD_DESIGNS = [
   { id: "birthday", label: "Birthday", emoji: "🎂", color: "from-pink-500 to-rose-500" },
   { id: "holiday", label: "Holiday", emoji: "🎄", color: "from-green-500 to-emerald-600" },
@@ -326,14 +330,16 @@ export function SellGiftCardModal({
                       Purchased By (Optional)
                     </Label>
                     <Select
-                      value={purchaserClientId}
-                      onValueChange={setPurchaserClientId}
+                      value={purchaserClientId || NO_CLIENT}
+                      onValueChange={(v) =>
+                        setPurchaserClientId(v === NO_CLIENT ? "" : v)
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a client" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No client</SelectItem>
+                        <SelectItem value={NO_CLIENT}>No client</SelectItem>
                         {facilityClients.map((c) => (
                           <SelectItem key={c.id} value={String(c.id)}>
                             {c.name}

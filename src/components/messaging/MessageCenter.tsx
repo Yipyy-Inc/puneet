@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ContactList } from "./ContactList";
 import { ConversationThread } from "./ConversationThread";
 import { ClientContextPanel } from "./ClientContextPanel";
-import { messages as facilityMessages } from "@/data/communications-hub";
+import { messages as facilityMessages, callLogs } from "@/data/communications-hub";
 import { clientCommunications } from "@/data/communications";
 import { facilities } from "@/data/facilities";
 import { clients } from "@/data/clients";
@@ -84,6 +85,28 @@ function getCustomerFacilityIds(customerId: number): number[] {
     .map((facility) => facility.id);
 }
 
+const phoneDigits = (s: string | undefined | null) =>
+  (s ?? "").replace(/\D/g, "").slice(-10);
+
+// Find an existing facility conversation thread for a call-log follow-up,
+// by the call's linked client, falling back to the caller's phone number.
+function findThreadForCall(source: string, toPhone: string | null): string | null {
+  const call = callLogs.find((c) => c.id === source);
+  if (call?.clientId != null) {
+    const m = facilityMessages.find((msg) => msg.clientId === call.clientId);
+    if (m) return m.threadId ?? m.id;
+  }
+  const target = phoneDigits(toPhone ?? call?.from);
+  if (target) {
+    const client = clients.find((c) => phoneDigits(c.phone) === target);
+    if (client) {
+      const m = facilityMessages.find((msg) => msg.clientId === client.id);
+      if (m) return m.threadId ?? m.id;
+    }
+  }
+  return null;
+}
+
 export function MessageCenter({
   mode = "facility",
   customerId = 15,
@@ -153,6 +176,33 @@ export function MessageCenter({
 
   const [detailOpen, setDetailOpen] = useState(true);
 
+  // Deep-link from the Call Log: ?to=callerPhone&source=callLogId opens the
+  // matching conversation with a pre-filled missed-call SMS template.
+  const searchParams = useSearchParams();
+  const sourceParam = mode === "facility" ? searchParams.get("source") : null;
+  const toParam = mode === "facility" ? searchParams.get("to") : null;
+  const [composePrefill, setComposePrefill] = useState<{
+    key: string;
+    text: string;
+  } | null>(null);
+  const prefillAppliedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (mode !== "facility" || !sourceParam) return;
+    if (prefillAppliedRef.current === sourceParam) return;
+    const threadId = findThreadForCall(sourceParam, toParam);
+    if (!threadId) return;
+    prefillAppliedRef.current = sourceParam;
+    setSelectedThreadId(threadId);
+    const call = callLogs.find((c) => c.id === sourceParam);
+    const firstName = (call?.clientName ?? "").split(" ")[0] || "there";
+    const callbackNumber = call?.to ?? toParam ?? "us";
+    setComposePrefill({
+      key: sourceParam,
+      text: `Hi ${firstName}, sorry we missed your call at Doggieville MTL. How can we help? Reply here or call us back at ${callbackNumber}.`,
+    });
+  }, [mode, sourceParam, toParam]);
+
   useEffect(() => {
     if (localStorage.getItem(detailStorageKey) === "false") {
       setDetailOpen(false);
@@ -197,6 +247,7 @@ export function MessageCenter({
           detailOpen={detailOpen}
           onToggleDetail={toggleDetail}
           senderBlocked={senderBlocked}
+          composePrefill={composePrefill}
         />
       </div>
 

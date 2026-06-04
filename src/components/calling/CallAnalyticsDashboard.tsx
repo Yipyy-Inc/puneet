@@ -8,16 +8,18 @@ import {
   Clock,
   TrendingUp,
   DollarSign,
-  Users,
   PhoneMissed,
   BarChart3,
   Repeat,
+  Flag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CallAnalytics } from "@/types/calling";
 
 interface CallAnalyticsDashboardProps {
   data: CallAnalytics;
+  /** Recordings auto-flagged for review this week. */
+  flaggedThisWeek?: number;
 }
 
 function KPICard({
@@ -147,64 +149,7 @@ function TopReasonsChart({ reasons }: { reasons: CallAnalytics["topCallReasons"]
   );
 }
 
-function StaffTable({ staff }: { staff: CallAnalytics["staffPerformance"] }) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Users className="size-4 text-teal-600" />
-          Staff Performance
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-xs text-muted-foreground">
-                <th className="pb-2 text-left font-medium">Staff Member</th>
-                <th className="pb-2 text-right font-medium">Handled</th>
-                <th className="pb-2 text-right font-medium">Avg Response</th>
-                <th className="pb-2 text-right font-medium">Missed</th>
-                <th className="pb-2 text-right font-medium">Conversion</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {staff.map((s) => (
-                <tr key={s.name}>
-                  <td className="py-2.5 font-medium">{s.name}</td>
-                  <td className="py-2.5 text-right tabular-nums">{s.callsHandled}</td>
-                  <td className="py-2.5 text-right tabular-nums text-muted-foreground">
-                    {s.avgResponseTime}s
-                  </td>
-                  <td className="py-2.5 text-right">
-                    <span
-                      className={cn(
-                        "font-semibold tabular-nums",
-                        s.missedCalls > 8 ? "text-red-600" : s.missedCalls > 5 ? "text-amber-600" : "text-green-600",
-                      )}
-                    >
-                      {s.missedCalls}
-                    </span>
-                  </td>
-                  <td className="py-2.5 text-right">
-                    <Badge
-                      variant={s.conversionRate >= 35 ? "default" : "secondary"}
-                      className="tabular-nums"
-                    >
-                      {s.conversionRate}%
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-export function CallAnalyticsDashboard({ data }: CallAnalyticsDashboardProps) {
+export function CallAnalyticsDashboard({ data, flaggedThisWeek = 0 }: CallAnalyticsDashboardProps) {
   const answerRate = Math.round(((data.totalCalls - data.missedCalls) / data.totalCalls) * 100);
   const avgDurMin = Math.floor(data.avgCallDuration / 60);
   const avgDurSec = data.avgCallDuration % 60;
@@ -283,16 +228,20 @@ export function CallAnalyticsDashboard({ data }: CallAnalyticsDashboardProps) {
           icon={Repeat}
           color="text-purple-600"
         />
+        <KPICard
+          label="Flagged This Week"
+          value={flaggedThisWeek.toString()}
+          sub="Recordings to review"
+          icon={Flag}
+          color={flaggedThisWeek > 0 ? "text-amber-600" : "text-green-600"}
+        />
       </div>
 
       {/* Heat Map */}
       <HeatMap hourlyVolume={data.hourlyVolume} />
 
-      {/* Bottom grid */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <TopReasonsChart reasons={data.topCallReasons} />
-        <StaffTable staff={data.staffPerformance} />
-      </div>
+      {/* Top call reasons */}
+      <TopReasonsChart reasons={data.topCallReasons} />
     </div>
   );
 }

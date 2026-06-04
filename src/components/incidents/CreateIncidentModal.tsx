@@ -86,6 +86,11 @@ const INCIDENT_TYPES = [
 
 type IncidentType = (typeof INCIDENT_TYPES)[number]["value"];
 
+// Radix <Select.Item> forbids an empty-string value (it's reserved for clearing
+// the selection). Use a sentinel for the "no protocol" choice and map it back to
+// the empty-string state that the rest of the form expects.
+const NO_PROTOCOL = "__none__";
+
 const SEVERITY_LEVELS = [
   {
     value: "low",
@@ -1135,9 +1140,9 @@ export function CreateIncidentModal({
             </p>
 
             <Select
-              value={selectedProtocolId}
+              value={selectedProtocolId || NO_PROTOCOL}
               onValueChange={(v) => {
-                setSelectedProtocolId(v);
+                setSelectedProtocolId(v === NO_PROTOCOL ? "" : v);
                 setAutoSuggested(true);
               }}
             >
@@ -1145,7 +1150,7 @@ export function CreateIncidentModal({
                 <SelectValue placeholder="No follow-up protocol" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">
+                <SelectItem value={NO_PROTOCOL}>
                   <span className="text-muted-foreground">
                     None — handle follow-up ad-hoc
                   </span>

@@ -30,6 +30,7 @@ import {
   Save,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { IVRPreview } from "./IVRPreview";
 import type { IVRConfig, IVRNode, IVRAction } from "@/types/calling";
 
 const actionConfig: Record<
@@ -341,14 +342,13 @@ export function IVRBuilder({ config: initialConfig }: IVRBuilderProps) {
             })}
           </div>
 
-          <Button
-            className="w-full gap-2"
-            onClick={handleSave}
-            variant={saved ? "default" : "default"}
-          >
-            <Save className="size-4" />
-            {saved ? "Saved!" : "Save IVR Configuration"}
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <IVRPreview config={config} className="sm:flex-1" />
+            <Button className="gap-2 sm:flex-1" onClick={handleSave}>
+              <Save className="size-4" />
+              {saved ? "Saved!" : "Save IVR Configuration"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

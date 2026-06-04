@@ -64,7 +64,7 @@ import { CampaignBuilderModal } from "@/components/marketing/CampaignBuilderModa
 import { PromoCodeModal } from "@/components/marketing/PromoCodeModal";
 import { FacilityBrandingSection } from "@/components/marketing/FacilityBrandingSection";
 import { PlaydateAlertsTab } from "@/components/marketing/PlaydateAlertsTab";
-import { LoyaltyBuilderModal } from "@/components/marketing/LoyaltyBuilderModal";
+import Link from "next/link";
 import { ReferralConfigModal } from "@/components/marketing/ReferralConfigModal";
 import { QuickReplyModal } from "@/components/marketing/QuickReplyModal";
 import { TemplatePreviewPanel } from "@/components/shared/TemplatePreviewPanel";
@@ -83,7 +83,6 @@ export default function MarketingPage() {
   const [showSegmentModal, setShowSegmentModal] = useState(false);
   const [showCampaignModal, setShowCampaignModal] = useState(false);
   const [showPromoModal, setShowPromoModal] = useState(false);
-  const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
   const [showReferralConfigModal, setShowReferralConfigModal] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<
     (typeof emailTemplates)[0] | null
@@ -1027,9 +1026,11 @@ export default function MarketingPage() {
                     Tier benefits and requirements
                   </p>
                 </div>
-                <Button onClick={() => setShowLoyaltyModal(true)}>
-                  <Settings className="mr-2 size-4" />
-                  Manage Settings
+                <Button asChild>
+                  <Link href="/facility/dashboard/loyalty/setup">
+                    <Settings className="mr-2 size-4" />
+                    Manage Settings
+                  </Link>
                 </Button>
               </div>
             </CardHeader>
@@ -1332,12 +1333,6 @@ export default function MarketingPage() {
       <Dialog open={showPromoModal} onOpenChange={setShowPromoModal}>
         <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <PromoCodeModal onClose={() => setShowPromoModal(false)} />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showLoyaltyModal} onOpenChange={setShowLoyaltyModal}>
-        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
-          <LoyaltyBuilderModal onClose={() => setShowLoyaltyModal(false)} />
         </DialogContent>
       </Dialog>
 

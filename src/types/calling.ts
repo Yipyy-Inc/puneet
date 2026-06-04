@@ -1,6 +1,22 @@
 import { z } from "zod";
 
 // ============================================================
+// Inquiry Tag — what the caller pressed in the IVR, auto-derived
+// from the menu key (see @/lib/calling/inquiry-tags). Gives staff
+// instant context before answering and rides through to the call log.
+// ============================================================
+
+export const inquiryTagEnum = z.enum([
+  "reception",
+  "grooming",
+  "boarding",
+  "billing",
+  "emergency",
+  "training",
+]);
+export type InquiryTag = z.infer<typeof inquiryTagEnum>;
+
+// ============================================================
 // Active Call
 // ============================================================
 
@@ -42,6 +58,7 @@ export const activeCallSchema = z.object({
   outstandingBalance: z.number().optional(),
   previousUnresolved: z.string().optional(),
   currentService: z.string().optional(),
+  inquiryTag: inquiryTagEnum.optional(),
 });
 export type ActiveCall = z.infer<typeof activeCallSchema>;
 
@@ -58,6 +75,7 @@ export const callQueueEntrySchema = z.object({
   waitTime: z.number(),
   reason: z.string().optional(),
   estimatedWait: z.number().optional(),
+  inquiryTag: inquiryTagEnum.optional(),
 });
 export type CallQueueEntry = z.infer<typeof callQueueEntrySchema>;
 
@@ -243,6 +261,66 @@ export type CallAnalytics = z.infer<typeof callAnalyticsSchema>;
 // Missed Call Tasks
 // ============================================================
 
+// ============================================================
+// Smart Routing Rules
+// Evaluated BEFORE the IVR menu using live CRM data about the
+// caller (tags, balance, care alerts, history) so the right
+// calls reach the right staff automatically. Lowest priority
+// number is evaluated first; the first matching rule wins.
+// ============================================================
+
+export const routingFieldEnum = z.enum([
+  "clientTags", // VIP, High-Maintenance, …
+  "outstandingBalance", // numeric, compared with >, <, =
+  "careAlerts", // has any active care alert
+  "lastServiceType", // grooming, boarding, …
+  "isNewClient", // boolean
+]);
+export type RoutingField = z.infer<typeof routingFieldEnum>;
+
+export const routingOperatorEnum = z.enum([
+  "includes", // clientTags / lastServiceType contains value
+  "excludes",
+  "gt", // >
+  "lt", // <
+  "eq", // =
+  "has_any", // care alert exists
+  "is_true", // isNewClient = true
+  "is_false",
+]);
+export type RoutingOperator = z.infer<typeof routingOperatorEnum>;
+
+export const routingTargetEnum = z.enum([
+  "staff_group",
+  "staff",
+  "voicemail",
+  "operator",
+]);
+export type RoutingTarget = z.infer<typeof routingTargetEnum>;
+
+export const callRoutingRuleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  condition: z.object({
+    field: routingFieldEnum,
+    operator: routingOperatorEnum,
+    // Tag name, numeric threshold (as string), or service type.
+    // Empty for value-less operators (has_any / is_true / is_false).
+    value: z.string(),
+  }),
+  action: z.object({
+    routeTo: routingTargetEnum,
+    staffGroupId: z.string().optional(),
+    staffId: z.string().optional(),
+    // Optional override greeting played before connecting (e.g. a
+    // new-client welcome). Falls back to the IVR greeting when empty.
+    greeting: z.string().optional(),
+  }),
+  priority: z.number().int(),
+  enabled: z.boolean(),
+});
+export type CallRoutingRule = z.infer<typeof callRoutingRuleSchema>;
+
 export const missedCallTaskSchema = z.object({
   id: z.string(),
   callId: z.string(),
@@ -256,5 +334,7 @@ export const missedCallTaskSchema = z.object({
   autoSMSSent: z.boolean(),
   callbackTime: z.string().optional(),
   notes: z.string().optional(),
+  // Result recorded when staff act on the card (Call Back / Mark as handled).
+  outcome: z.enum(["called_back", "resolved"]).optional(),
 });
 export type MissedCallTask = z.infer<typeof missedCallTaskSchema>;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { inquiryTagEnum } from "@/types/calling";
 
 // ============================================================================
 // Messages (from communications-hub.ts)
@@ -128,6 +129,16 @@ export type PetUpdate = z.infer<typeof petUpdateSchema>;
 // Call Logs & Routing
 // ============================================================================
 
+// Resolution state for calls that need a follow-up (missed / voicemail). null
+// for completed inbound/outbound calls that need no follow-up.
+export const followUpStatusEnum = z.enum([
+  "pending",
+  "scheduled",
+  "completed",
+  "no_action",
+]);
+export type FollowUpStatus = z.infer<typeof followUpStatusEnum>;
+
 export const callLogSchema = z.object({
   id: z.string(),
   type: z.enum(["inbound", "outbound"]),
@@ -138,6 +149,9 @@ export const callLogSchema = z.object({
   duration: z.number(),
   status: z.enum(["completed", "missed", "voicemail", "failed"]),
   timestamp: z.string(),
+  // Seconds the caller spent in the queue before being answered or abandoning.
+  // Inbound calls only; feeds the Analytics "Average queue wait" metric.
+  queueWaitSeconds: z.number().optional(),
   recordingUrl: z.string().optional(),
   transcription: z.string().optional(),
   aiHandled: z.boolean(),
@@ -150,6 +164,13 @@ export const callLogSchema = z.object({
     ])
     .optional(),
   notes: z.string().optional(),
+  inquiryTag: inquiryTagEnum.optional(),
+  followUpStatus: followUpStatusEnum.nullish(),
+  assignedTo: z.string().nullish(), // staff id responsible for the follow-up
+  handledBy: z.string().optional(), // staff member who handled the call
+  qaScore: z.number().int().min(1).max(5).optional(), // manager QA score
+  managerNote: z.string().optional(), // private QA note (manager/owner only)
+  flagged: z.boolean().optional(), // auto-flagged for manager review
 });
 export type CallLog = z.infer<typeof callLogSchema>;
 
