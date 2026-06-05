@@ -8,6 +8,7 @@ import type {
   CallAnalytics,
   MissedCallTask,
   CallRoutingRule,
+  CallTag,
 } from "@/types/calling";
 import { inquiryTagForIvrKey } from "@/lib/calling/inquiry-tags";
 
@@ -46,11 +47,11 @@ export const mockIncomingCall: ActiveCall = {
   type: "inbound",
   from: "+1 (514) 555-0198",
   to: "+1 (514) 555-0100",
-  clientId: 7,
-  clientName: "Marcus Thompson",
+  clientId: 15, // Alice Johnson — a real client record so booking pre-fill works
+  clientName: "Alice Johnson",
   clientPhoto: undefined,
-  pets: [{ name: "Duke", breed: "Labrador Mix" }],
-  tags: ["frequent_no_show"],
+  pets: [{ name: "Buddy", breed: "Golden Retriever" }],
+  tags: ["vip"],
   startTime: new Date().toISOString(),
   status: "ringing",
   isMuted: false,
@@ -466,6 +467,23 @@ export const missedCallTasks: MissedCallTask[] = [
     callbackTime: "2026-04-24T07:30:00Z",
     notes: "Confirmed boarding dates for May. No issue.",
   },
+];
+
+// ============================================================
+// Call Tags — manager-defined taxonomy of call categories.
+// Staff apply these to calls; the Analytics tab charts their
+// frequency so spikes (e.g. Complaint) surface fast.
+// ============================================================
+
+export const callTags: CallTag[] = [
+  { id: "tag-billing", name: "Billing question", color: "orange", description: "Invoice, payment, or charge inquiry" },
+  { id: "tag-complaint", name: "Complaint", color: "red", description: "Service issue needing follow-up" },
+  { id: "tag-booking", name: "Booking inquiry", color: "green", description: "New or changed reservation" },
+  { id: "tag-grooming", name: "Grooming question", color: "purple" },
+  { id: "tag-boarding", name: "Boarding inquiry", color: "teal" },
+  { id: "tag-cancellation", name: "Cancellation", color: "amber", description: "Cancelled an appointment or stay" },
+  { id: "tag-vaccination", name: "Vaccination / records", color: "blue" },
+  { id: "tag-general", name: "General info", color: "gray", description: "Hours, location, pricing" },
 ];
 
 // ============================================================

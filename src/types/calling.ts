@@ -17,6 +17,21 @@ export const inquiryTagEnum = z.enum([
 export type InquiryTag = z.infer<typeof inquiryTagEnum>;
 
 // ============================================================
+// Call Tags — a manager-defined taxonomy of call categories
+// (e.g. "Billing question", "Complaint"). Staff apply them to
+// calls; spikes per tag drive trend detection. callLog.tags is
+// an array of CallTag ids. Distinct from the IVR inquiryTag.
+// ============================================================
+
+export const callTagSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  color: z.string(), // a TagColor key (see @/lib/calling/call-tags)
+  description: z.string().optional(),
+});
+export type CallTag = z.infer<typeof callTagSchema>;
+
+// ============================================================
 // Active Call
 // ============================================================
 

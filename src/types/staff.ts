@@ -552,10 +552,17 @@ export type StaffSkill =
   | "veterinary"
   | "administration";
 
+// Temporary call-availability state — lets staff mark themselves unavailable
+// for inbound calls (busy / away) without going fully offline. Busy/away staff
+// are excluded from the Twilio ring group and Round-Robin pool.
+export type CallAvailability = "available" | "busy" | "away";
+
 export interface StaffMember {
   id: string;
   name: string;
   role: string;
   skills: StaffSkill[];
   isActive: boolean;
+  /** Defaults to "available" when unset. */
+  callAvailability?: CallAvailability;
 }

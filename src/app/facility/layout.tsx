@@ -17,11 +17,14 @@ import { FacilityNotificationsDropdown } from "@/components/facility/FacilityNot
 import { ScheduleNotificationsDropdown } from "@/components/scheduling/ScheduleNotificationsDropdown";
 import { TaskNotificationsPanel } from "@/components/tasks/TaskNotificationsPanel";
 import { CallingButton } from "@/components/layout/CallingButton";
+import { CallStatusIndicator } from "@/components/layout/CallStatusIndicator";
 import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
 import { FacilityMobileBottomNav } from "@/components/layout/FacilityMobileBottomNav";
 import { LocationContextProviderWrapper } from "@/components/providers/LocationContextProviderWrapper";
 import { LocationStatusBadge } from "@/components/hq/LocationStatusBadge";
 import { LoyaltyProgramProvider } from "@/hooks/use-loyalty-program";
+import { CallAvailabilityProvider } from "@/hooks/use-call-availability";
+import { CallTagsProvider } from "@/hooks/use-call-tags";
 
 export default async function FacilityLayout({
   children,
@@ -42,6 +45,8 @@ export default async function FacilityLayout({
     <SettingsProviderWrapper>
       <LoyaltyProgramProvider>
       <BookingModalProviderWrapper>
+        <CallAvailabilityProvider>
+        <CallTagsProvider>
         <SidebarProvider className="min-h-[calc(100vh-64px)]">
           <FacilitySidebar />
           <SidebarInset className="flex min-h-[calc(100vh-64px)] min-w-0 flex-col overflow-x-clip">
@@ -65,6 +70,7 @@ export default async function FacilityLayout({
                 <BookingRequestsTopbarDropdown />
                 <HeaderDropdown />
                 <FacilityHeader />
+                <CallStatusIndicator />
                 <UserProfileSheet showNotifications={false} />
               </div>
             </header>
@@ -72,6 +78,8 @@ export default async function FacilityLayout({
             <FacilityMobileBottomNav />
           </SidebarInset>
         </SidebarProvider>
+        </CallTagsProvider>
+        </CallAvailabilityProvider>
       </BookingModalProviderWrapper>
       </LoyaltyProgramProvider>
     </SettingsProviderWrapper>

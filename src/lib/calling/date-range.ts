@@ -32,3 +32,46 @@ export function dateRangeBounds(
   }
   return { from: null, to: null };
 }
+
+/**
+ * The immediately-preceding period of equal length, for period-over-period
+ * comparisons. Returns null for "all" (and custom without both bounds).
+ */
+export function previousPeriodBounds(
+  range: DateRange,
+  customFrom: string,
+  customTo: string,
+  now: number = Date.now(),
+): { from: number; to: number } | null {
+  if (range === "today") {
+    const s = new Date(now);
+    s.setHours(0, 0, 0, 0);
+    const start = s.getTime();
+    return { from: start - 86_400_000, to: start };
+  }
+  if (range === "week") {
+    const s = new Date(now);
+    s.setHours(0, 0, 0, 0);
+    s.setDate(s.getDate() - s.getDay());
+    const start = s.getTime();
+    return { from: start - 7 * 86_400_000, to: start };
+  }
+  if (range === "month") {
+    return { from: now - 60 * 86_400_000, to: now - 30 * 86_400_000 };
+  }
+  if (range === "custom" && customFrom && customTo) {
+    const f = new Date(`${customFrom}T00:00:00`).getTime();
+    const t = new Date(`${customTo}T23:59:59.999`).getTime();
+    return { from: f - (t - f), to: f };
+  }
+  return null;
+}
+
+/** Short label for the comparison period (""→ no comparison). */
+export const PREVIOUS_PERIOD_LABEL: Record<DateRange, string> = {
+  all: "",
+  today: "yesterday",
+  week: "last week",
+  month: "prev. 30 days",
+  custom: "prev. period",
+};

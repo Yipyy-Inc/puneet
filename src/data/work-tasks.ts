@@ -5,6 +5,11 @@
 //   position – attached to a department/role; all staff in that role see them
 //   standalone – one-off tasks assigned to a specific staff member
 
+import { callLogs } from "@/data/communications-hub";
+import { aiCallSummaries } from "@/data/calling";
+import { defaultFollowUpStatus } from "@/lib/calling/follow-up-status";
+import { buildFollowUpTask } from "@/lib/calling/follow-up-task";
+
 export type WorkTaskCategory =
   | "opening"
   | "closing"
@@ -92,8 +97,14 @@ export type StandaloneTask = {
   completedAt?: string;
   completedByName?: string;
   createdAt: string;
-  /** When the task was generated from a call-log follow-up assignment. */
+  /** When the task was generated from a call-log follow-up (the dedup key). */
   callLogId?: string;
+  /** Context carried over from the originating call. */
+  metadata?: {
+    phone?: string;
+    aiSummary?: string;
+    recordingUrl?: string;
+  };
 };
 
 // ── Task Library ──────────────────────────────────────────────────────────────
@@ -628,3 +639,42 @@ export const standaloneTasks: StandaloneTask[] = [
 export function addStandaloneTask(task: StandaloneTask): void {
   standaloneTasks.unshift(task);
 }
+
+/** Whether a follow-up task already exists for a given call (dedup guard). */
+export function hasTaskForCallLog(callLogId: string): boolean {
+  return standaloneTasks.some((t) => t.callLogId === callLogId);
+}
+
+/** Re-point an existing call's follow-up task to a new assignee. Returns
+ *  false if no task exists for that call yet. */
+export function reassignTaskForCallLog(
+  callLogId: string,
+  assignedToId: string,
+  assignedToName: string,
+): boolean {
+  const task = standaloneTasks.find((t) => t.callLogId === callLogId);
+  if (!task) return false;
+  task.assignedToId = assignedToId;
+  task.assignedToName = assignedToName;
+  return true;
+}
+
+// ── Call → Task auto-creation ─────────────────────────────────────────────────
+// Cross-module integration: every call that needs a follow-up (missed,
+// voicemail, or followUpStatus = pending) gets a Task here automatically, so
+// callbacks never rely on staff memory. Deduped by callLogId.
+
+function generateCallFollowUpTasks(): StandaloneTask[] {
+  const generated: StandaloneTask[] = [];
+  for (const call of callLogs) {
+    const followUp = call.followUpStatus ?? defaultFollowUpStatus(call.status);
+    if (followUp !== "pending") continue;
+    if (standaloneTasks.some((t) => t.callLogId === call.id)) continue;
+    if (generated.some((t) => t.callLogId === call.id)) continue;
+    const summary = aiCallSummaries.find((s) => s.callId === call.id);
+    generated.push(buildFollowUpTask(call, { summary }));
+  }
+  return generated;
+}
+
+standaloneTasks.push(...generateCallFollowUpTasks());

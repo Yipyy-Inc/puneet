@@ -761,6 +761,7 @@ export const petUpdates: PetUpdate[] = [
 export const callLogs: CallLog[] = [
   {
     id: "call-001",
+    tags: ["tag-booking", "tag-boarding"],
     type: "inbound",
     from: "+1 (514) 555-0198",
     to: "+1 (514) 555-0100",
@@ -797,6 +798,7 @@ export const callLogs: CallLog[] = [
   },
   {
     id: "call-003",
+    tags: ["tag-grooming", "tag-booking"],
     type: "inbound",
     from: "+1 (514) 555-0421",
     to: "+1 (514) 555-0100",
@@ -816,6 +818,7 @@ export const callLogs: CallLog[] = [
   },
   {
     id: "call-004",
+    tags: ["tag-vaccination"],
     type: "outbound",
     from: "+1 (514) 555-0100",
     to: "+1 (514) 555-0198",
@@ -827,13 +830,15 @@ export const callLogs: CallLog[] = [
     recordingUrl: "/recordings/call-004.mp3",
     aiHandled: false,
     notes: "Called to confirm vaccination docs for Biscuit's boarding stay.",
+    outcome: "question_answered",
     handledBy: "James K.",
     qaScore: 4,
     managerNote: "Clear, efficient confirmation call. Good documentation follow-through.",
-    followUpStatus: "pending",
+    followUpStatus: "scheduled",
   },
   {
     id: "call-005",
+    tags: ["tag-general", "tag-booking"],
     type: "inbound",
     from: "+1 (514) 555-0501",
     to: "+1 (514) 555-0100",
@@ -853,6 +858,7 @@ export const callLogs: CallLog[] = [
   },
   {
     id: "call-006",
+    tags: ["tag-grooming", "tag-booking"],
     type: "inbound",
     from: "+1 (514) 555-0639",
     to: "+1 (514) 555-0100",
@@ -870,6 +876,7 @@ export const callLogs: CallLog[] = [
   },
   {
     id: "call-007",
+    tags: ["tag-billing", "tag-complaint"],
     type: "inbound",
     from: "+1 (514) 555-0714",
     to: "+1 (514) 555-0100",
@@ -882,8 +889,8 @@ export const callLogs: CallLog[] = [
     recordingUrl: "/recordings/call-007.mp3",
     transcription: "I want to file a complaint about the charge from last week's grooming — honestly I'm pretty upset, the price was different than what I was quoted. I'd like a manager to call me back.",
     aiHandled: false,
-    outcome: "transferred_to_staff",
-    notes: "Transferred to Sophie R. for billing dispute resolution.",
+    outcome: "complaint_logged",
+    notes: "Billing dispute logged; transferred to Sophie R. for resolution.",
     inquiryTag: "billing",
     handledBy: "Priya N.",
     qaScore: 4,
@@ -892,6 +899,7 @@ export const callLogs: CallLog[] = [
   },
   {
     id: "call-008",
+    tags: ["tag-grooming"],
     type: "outbound",
     from: "+1 (514) 555-0100",
     to: "+1 (514) 555-0639",
@@ -902,11 +910,13 @@ export const callLogs: CallLog[] = [
     timestamp: "2026-05-19T15:05:00Z",
     aiHandled: false,
     notes: "Follow-up call re: rescheduling grooming appointment from last Tuesday.",
+    outcome: "transferred_to_staff",
     handledBy: "James K.",
     followUpStatus: "completed",
   },
   {
     id: "call-009",
+    tags: ["tag-grooming", "tag-booking"],
     type: "inbound",
     from: "+1 (514) 555-0822",
     to: "+1 (514) 555-0100",
@@ -922,6 +932,7 @@ export const callLogs: CallLog[] = [
   },
   {
     id: "call-010",
+    tags: ["tag-general"],
     type: "inbound",
     from: "+1 (514) 555-0901",
     to: "+1 (514) 555-0100",
@@ -929,18 +940,19 @@ export const callLogs: CallLog[] = [
     clientName: "Priya Nair",
     duration: 534,
     status: "completed",
-    timestamp: "2026-05-06T14:33:00Z",
+    timestamp: "2026-05-21T14:33:00Z",
     queueWaitSeconds: 15,
     recordingUrl: "/recordings/call-010.mp3",
     transcription: "Hi, I wanted to ask about your training packages. My puppy just turned 6 months and I'm interested in the basic obedience course. Also, do you offer group sessions?",
     aiHandled: true,
-    outcome: "question_answered",
-    notes: "AI provided training package details and booked a free assessment call.",
+    outcome: "estimate_sent",
+    notes: "AI sent puppy training package pricing and booked a free assessment call.",
     inquiryTag: "training",
     handledBy: "AI Assistant",
   },
   {
     id: "call-011",
+    tags: ["tag-boarding"],
     type: "inbound",
     from: "+1 (514) 555-0177",
     to: "+1 (514) 555-0100",
@@ -959,6 +971,7 @@ export const callLogs: CallLog[] = [
   },
   {
     id: "call-012",
+    tags: ["tag-billing"],
     type: "outbound",
     from: "+1 (514) 555-0100",
     to: "+1 (514) 555-0714",
@@ -1000,6 +1013,7 @@ function buildMissedRecoveryHistory(): CallLog[] {
       const recovered = kind === "rec";
       out.push({
         id: `call-h${weeksAgo}-${i}`,
+        tags: recovered ? ["tag-booking"] : ["tag-general"],
         type: "inbound",
         from: `+1 (438) 555-${1000 + weeksAgo * 10 + i}`,
         to: "+1 (514) 555-0100",
@@ -1019,6 +1033,27 @@ function buildMissedRecoveryHistory(): CallLog[] {
 }
 
 callLogs.push(...buildMissedRecoveryHistory());
+
+// After-hours calls (Tuesday 2026-06-02 evening, past the 19:00 close) that
+// reach nobody — these surface the PEAK_HOUR_GAP Smart Insight. Lean + resolved
+// (no_action) so they don't spawn follow-up tasks or count as pending-missed.
+function buildAfterHoursCalls(): CallLog[] {
+  const mk = (i: number, hhmm: string): CallLog => ({
+    id: `call-ah-${i}`,
+    type: "inbound",
+    from: `+1 (514) 555-09${10 + i}`,
+    to: "+1 (514) 555-0100",
+    duration: 0,
+    status: "missed",
+    timestamp: `2026-06-02T${hhmm}:00Z`,
+    aiHandled: false,
+    notes: "After-hours call — no staff on the phones. Auto-SMS sent.",
+    followUpStatus: "no_action",
+  });
+  return [mk(1, "23:08"), mk(2, "23:31"), mk(3, "23:52")];
+}
+
+callLogs.push(...buildAfterHoursCalls());
 
 export const routingRules: RoutingRule[] = [
   {

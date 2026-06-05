@@ -21,6 +21,7 @@ export const staffMembers: StaffMember[] = [
     role: "Grooming Lead",
     skills: ["grooming", "daycare"],
     isActive: true,
+    callAvailability: "busy", // mid-groom
   },
   {
     id: "staff-004",
@@ -28,6 +29,7 @@ export const staffMembers: StaffMember[] = [
     role: "Training Coordinator",
     skills: ["training", "evaluation", "boarding"],
     isActive: true,
+    callAvailability: "away", // on lunch
   },
   {
     id: "staff-005",

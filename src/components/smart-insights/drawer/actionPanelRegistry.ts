@@ -45,6 +45,9 @@ import { MessagingAnalyticsPanel } from "./panels/MessagingAnalyticsPanel";
 import { VoicemailBacklogPanel } from "./panels/VoicemailBacklogPanel";
 import { SlowReplyInboxPanel } from "./panels/SlowReplyInboxPanel";
 
+// Calling intelligence — one shared insight-driven panel for all five types
+import { CallingInsightPanel } from "./panels/CallingInsightPanel";
+
 // Phase 5 — Inventory
 import { InventoryItemEditPanel } from "./panels/InventoryItemEditPanel";
 
@@ -96,6 +99,13 @@ export const ACTION_PANEL_REGISTRY: Record<
   // Communication
   voicemail_backlog: VoicemailBacklogPanel,
   slow_reply_inbox: SlowReplyInboxPanel,
+
+  // Calling intelligence
+  call_missed_spike: CallingInsightPanel,
+  call_sentiment_drop: CallingInsightPanel,
+  call_peak_hour_gap: CallingInsightPanel,
+  call_keyword_trend: CallingInsightPanel,
+  call_upsell_untaken: CallingInsightPanel,
 
   // Inventory
   reorder: ReorderPanel,

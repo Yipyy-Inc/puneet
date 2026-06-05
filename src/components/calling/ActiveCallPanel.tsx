@@ -6,10 +6,16 @@ import {
   Mic, MicOff, Phone, PhoneForwarded, Pause, Play,
   Grid3x3, Users, Dog, DollarSign, CalendarDays, X,
   Star, AlertTriangle, UserX, ExternalLink,
-  Minimize2, Maximize2, Zap,
+  Minimize2, Maximize2, Zap, CalendarPlus, Check,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { ActiveCall } from "@/types/calling";
+import type { ActiveCall, CallTag } from "@/types/calling";
+import { useCallTags } from "@/hooks/use-call-tags";
+import { useBookingModal } from "@/hooks/use-booking-modal";
+import { clients as allClients } from "@/data/clients";
+import { facilities } from "@/data/facilities";
+import type { Client } from "@/types/client";
 
 // ─── Yipyy brand palette ─────────────────────────────────────────────────────
 // #CDEAF5  — logo signature sky (light tint, text / subtle fills)
@@ -21,9 +27,10 @@ import type { ActiveCall } from "@/types/calling";
 
 interface ActiveCallPanelProps {
   call: ActiveCall;
-  /** Receives the notes typed during the call so the parent can persist them
-   *  to the call log on end (otherwise they'd be lost when the panel unmounts). */
-  onEnd: (notes: string) => void;
+  /** Receives the notes + category tags + outcome set during the call so the
+   *  parent can persist them to the call log on end (otherwise lost on unmount).
+   *  `outcome` is "booking_created" when a booking was made during the call. */
+  onEnd: (notes: string, tagIds: string[], outcome?: "booking_created") => void;
   onTransfer: () => void;
   onMinimizeChange?: (minimized: boolean) => void;
 }
@@ -69,6 +76,49 @@ function CtrlBtn({ icon: Icon, label, active, activeBg, activeText, onClick }: {
     >
       <Icon className="size-5" />
       {label}
+    </button>
+  );
+}
+
+// ─── Call-category tag toggles (dark theme) ─────────────────────────────────
+function TagToggleRow({ callTags, selectedTags, toggleTag }: {
+  callTags: CallTag[]; selectedTags: string[]; toggleTag: (id: string) => void;
+}) {
+  if (callTags.length === 0) return null;
+  return (
+    <>
+      <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-[#CDEAF5]/25">Tag this call</p>
+      <div className="flex flex-wrap gap-1.5">
+        {callTags.map((t) => {
+          const on = selectedTags.includes(t.id);
+          return (
+            <button key={t.id} type="button" onClick={() => toggleTag(t.id)}
+              className="rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all active:scale-95"
+              style={on
+                ? { background: "rgba(14,165,233,0.22)", color: "#7dd3fc", border: "1px solid rgba(14,165,233,0.4)" }
+                : { background: "rgba(205,234,245,0.06)", color: "rgba(205,234,245,0.5)", border: "1px solid rgba(205,234,245,0.1)" }}>
+              {t.name}
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+// ─── Create-booking action (dark theme) ────────────────────────────────────
+function CreateBookingButton({ onCreateBooking, booked }: {
+  onCreateBooking: () => void; booked: boolean;
+}) {
+  return (
+    <button type="button" onClick={onCreateBooking}
+      className="flex w-full items-center justify-center gap-2 rounded-2xl py-2.5 text-[12px] font-semibold text-white transition-all active:scale-[0.98]"
+      style={booked
+        ? { background: "rgba(16,185,129,0.92)", boxShadow: "0 4px 16px rgba(16,185,129,0.3)" }
+        : { background: "rgba(14,165,233,0.95)", boxShadow: "0 4px 16px rgba(14,165,233,0.35)" }}>
+      {booked
+        ? <><Check className="size-4" />Booking created — add another?</>
+        : <><CalendarPlus className="size-4" />Create Booking</>}
     </button>
   );
 }
@@ -145,10 +195,13 @@ function MinimizedPill({ call, timer, muted, onHold, setMuted, setOnHold, onEnd,
 
 // ─── Desktop expanded floating widget ───────────────────────────────────────
 function DesktopWidget({ call, timer, muted, onHold, showKeypad, notes, dtmfInput,
+  callTags, selectedTags, toggleTag, onCreateBooking, booked,
   setMuted, setOnHold, setShowKeypad, setNotes, setDtmfInput, onEnd, onTransfer, onMinimize,
 }: {
   call: ActiveCall; timer: string; muted: boolean; onHold: boolean;
   showKeypad: boolean; notes: string; dtmfInput: string;
+  callTags: CallTag[]; selectedTags: string[]; toggleTag: (id: string) => void;
+  onCreateBooking: () => void; booked: boolean;
   setMuted: (v: boolean) => void; setOnHold: (v: boolean) => void;
   setShowKeypad: (v: boolean) => void; setNotes: (v: string) => void;
   setDtmfInput: (v: string) => void;
@@ -254,6 +307,11 @@ function DesktopWidget({ call, timer, muted, onHold, showKeypad, notes, dtmfInpu
         )}
       </div>
 
+      {/* Create Booking — below the pet/context section, opens the shared drawer */}
+      <div className="border-b px-4 py-3" style={{ borderColor: "rgba(205,234,245,0.07)" }}>
+        <CreateBookingButton onCreateBooking={onCreateBooking} booked={booked} />
+      </div>
+
       {/* Notes */}
       <div className="border-b px-4 py-3" style={{ borderColor: "rgba(205,234,245,0.07)" }}>
         <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-[#CDEAF5]/25">Call Notes</p>
@@ -262,6 +320,13 @@ function DesktopWidget({ call, timer, muted, onHold, showKeypad, notes, dtmfInpu
           className="w-full resize-none rounded-xl px-3 py-2 text-[12px] text-white placeholder:text-[#CDEAF5]/20 focus:outline-none"
           style={{ background: "rgba(205,234,245,0.06)", border: "1px solid rgba(205,234,245,0.08)" }} />
       </div>
+
+      {/* Tag this call */}
+      {callTags.length > 0 && (
+        <div className="border-b px-4 py-3" style={{ borderColor: "rgba(205,234,245,0.07)" }}>
+          <TagToggleRow callTags={callTags} selectedTags={selectedTags} toggleTag={toggleTag} />
+        </div>
+      )}
 
       {/* DTMF */}
       {showKeypad && (
@@ -317,10 +382,13 @@ function DesktopWidget({ call, timer, muted, onHold, showKeypad, notes, dtmfInpu
 
 // ─── Mobile full-screen active call ─────────────────────────────────────────
 function MobileActiveCall({ call, timer, muted, onHold, showKeypad, notes, dtmfInput,
+  callTags, selectedTags, toggleTag, onCreateBooking, booked,
   setMuted, setOnHold, setShowKeypad, setNotes, setDtmfInput, onEnd, onTransfer,
 }: {
   call: ActiveCall; timer: string; muted: boolean; onHold: boolean;
   showKeypad: boolean; notes: string; dtmfInput: string;
+  callTags: CallTag[]; selectedTags: string[]; toggleTag: (id: string) => void;
+  onCreateBooking: () => void; booked: boolean;
   setMuted: (v: boolean) => void; setOnHold: (v: boolean) => void;
   setShowKeypad: (v: boolean) => void; setNotes: (v: string) => void;
   setDtmfInput: (v: string) => void;
@@ -421,12 +489,20 @@ function MobileActiveCall({ call, timer, muted, onHold, showKeypad, notes, dtmfI
           )}
         </div>
 
+        {/* Create Booking */}
+        <div className="px-5 pb-4">
+          <CreateBookingButton onCreateBooking={onCreateBooking} booked={booked} />
+        </div>
+
         {/* Notes */}
         <div className="px-5 pb-4">
           <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)}
             placeholder="Call notes…"
             className="w-full resize-none rounded-2xl px-4 py-3 text-sm text-white placeholder:text-[#CDEAF5]/20 focus:outline-none"
             style={{ background: "rgba(205,234,245,0.07)", border: "1px solid rgba(205,234,245,0.08)" }} />
+          <div className="mt-3">
+            <TagToggleRow callTags={callTags} selectedTags={selectedTags} toggleTag={toggleTag} />
+          </div>
         </div>
 
         {/* DTMF */}
@@ -494,17 +570,48 @@ export function ActiveCallPanel({ call, onEnd, onTransfer, onMinimizeChange }: A
   const [notes, setNotes] = useState("");
   const [dtmfInput, setDtmfInput] = useState("");
   const [minimized, setMinimized] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [booked, setBooked] = useState(false);
   const timer = useCallTimer(call.startTime);
+  const { tags: callTags } = useCallTags();
+  const { openBookingModal } = useBookingModal();
+
+  const toggleTag = (id: string) =>
+    setSelectedTags((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+
+  // Open the shared Bookings drawer without leaving the call, pre-filled with
+  // the identified caller. On save, mark the call so it's logged as a booking.
+  const handleCreateBooking = () => {
+    const facility = facilities.find((f) => f.id === 11);
+    openBookingModal({
+      clients: (allClients as Client[]).filter(
+        (c) => !facility || c.facility === facility.name,
+      ),
+      facilityId: 11,
+      facilityName: facility?.name ?? "Facility",
+      preSelectedClientId: call.clientId,
+      onCreateBooking: () => {
+        setBooked(true);
+        toast.success("Booking created during call", {
+          description: "It will be logged as this call's outcome.",
+        });
+      },
+    });
+  };
 
   const handleMinimize = (val: boolean) => {
     setMinimized(val);
     onMinimizeChange?.(val);
   };
 
-  // Hand the live notes back to the parent on end so they survive the unmount.
-  const handleEnd = () => onEnd(notes);
+  // Hand the live notes + tags + outcome back to the parent on end so they
+  // survive the unmount (booking made during the call → "booking_created").
+  const handleEnd = () =>
+    onEnd(notes, selectedTags, booked ? "booking_created" : undefined);
 
-  const shared = { call, timer, muted, onHold, showKeypad, notes, dtmfInput, setMuted, setOnHold, setShowKeypad, setNotes, setDtmfInput, onEnd: handleEnd, onTransfer };
+  const shared = { call, timer, muted, onHold, showKeypad, notes, dtmfInput, callTags, selectedTags, toggleTag, onCreateBooking: handleCreateBooking, booked, setMuted, setOnHold, setShowKeypad, setNotes, setDtmfInput, onEnd: handleEnd, onTransfer };
 
   return (
     <>
