@@ -1,4 +1,5 @@
 import { smartInsightTemplates } from "@/data/smart-insights";
+import { generateCallingInsights } from "@/lib/smart-insights/calling-insights";
 import {
   getSettings,
   mergeInsightState,
@@ -22,7 +23,13 @@ import type {
 } from "@/types/smart-insights";
 
 function resolveAll(facilityId: number): Insight[] {
-  const merged = mergeInsightState(smartInsightTemplates, facilityId);
+  // Calling analytics feeds live-derived insights into the engine alongside
+  // the authored templates.
+  const all = [
+    ...smartInsightTemplates,
+    ...generateCallingInsights(facilityId),
+  ];
+  const merged = mergeInsightState(all, facilityId);
   const settings = getSettings(facilityId);
   return applySettings(merged, settings);
 }

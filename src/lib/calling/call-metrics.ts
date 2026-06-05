@@ -119,6 +119,56 @@ export function computeCallMetrics(
 }
 
 // ============================================================
+// Outcome breakdown — every call maps to exactly one outcome
+// category (derived from callLog.outcome, falling back to status
+// for missed/voicemail and "other"). Powers the donut chart.
+// ============================================================
+
+export const OUTCOME_KEYS = [
+  "booking_created",
+  "estimate_sent",
+  "info_provided",
+  "no_answer",
+  "voicemail_left",
+  "referred",
+  "complaint_logged",
+  "other",
+] as const;
+export type OutcomeKey = (typeof OUTCOME_KEYS)[number];
+
+export function outcomeCategory(c: CallLog): OutcomeKey {
+  switch (c.outcome) {
+    case "booking_created":
+      return "booking_created";
+    case "estimate_sent":
+      return "estimate_sent";
+    case "question_answered":
+      return "info_provided";
+    case "voicemail_left":
+      return "voicemail_left";
+    case "transferred_to_staff":
+      return "referred";
+    case "complaint_logged":
+      return "complaint_logged";
+  }
+  // No explicit outcome — derive from how the call ended.
+  if (c.status === "missed") return "no_answer";
+  if (c.status === "voicemail") return "voicemail_left";
+  return "other";
+}
+
+export function computeOutcomeBreakdown(
+  logs: CallLog[],
+): Record<OutcomeKey, number> {
+  const counts = Object.fromEntries(OUTCOME_KEYS.map((k) => [k, 0])) as Record<
+    OutcomeKey,
+    number
+  >;
+  for (const c of logs) counts[outcomeCategory(c)] += 1;
+  return counts;
+}
+
+// ============================================================
 // Missed Call Recovery Rate — the headline business metric.
 // Of all missed calls, the share that were called back AND
 // converted to a booking (revenue recovered from missed calls).

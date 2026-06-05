@@ -26,6 +26,7 @@ import {
   Circle,
   Loader2,
   Ban,
+  Phone,
 } from "lucide-react";
 import { standaloneTasks, type StandaloneTask, type WorkTaskCategory, type WorkTaskPriority, type WorkTaskStatus } from "@/data/work-tasks";
 import { TaskWizard } from "./TaskWizard";
@@ -197,6 +198,14 @@ export function StandaloneTasksTab() {
       render: (t) => (
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
+            {t.callLogId ? (
+              <span
+                className="flex size-5 shrink-0 items-center justify-center rounded-md bg-sky-100 text-sky-600"
+                title="Auto-created from a call"
+              >
+                <Phone className="size-3" />
+              </span>
+            ) : null}
             {isOverdue(t as StandaloneTask) && (
               <span className="size-1.5 shrink-0 rounded-full bg-red-500" />
             )}

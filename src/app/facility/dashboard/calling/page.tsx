@@ -26,6 +26,7 @@ import { CallDetailsModal } from "@/components/communications/CallDetailsModal";
 import { IncomingCallPanel } from "@/components/calling/IncomingCallPanel";
 import { ActiveCallPanel } from "@/components/calling/ActiveCallPanel";
 import { InquiryTagPill } from "@/components/calling/InquiryTagPill";
+import { CallTagSelect } from "@/components/calling/CallTagSelect";
 import { FollowUpStatusPill } from "@/components/calling/FollowUpStatusPill";
 import {
   FOLLOW_UP_META,
@@ -34,8 +35,12 @@ import {
 } from "@/lib/calling/follow-up-status";
 import type { FollowUpStatus } from "@/types/communications";
 import { staffMembers } from "@/data/staff";
-import { addStandaloneTask } from "@/data/work-tasks";
-import { INQUIRY_TAG_META } from "@/lib/calling/inquiry-tags";
+import {
+  addStandaloneTask,
+  hasTaskForCallLog,
+  reassignTaskForCallLog,
+} from "@/data/work-tasks";
+import { buildFollowUpTask } from "@/lib/calling/follow-up-task";
 import { IVRBuilder } from "@/components/calling/IVRBuilder";
 import { RoutingRulesBuilder } from "@/components/calling/RoutingRulesBuilder";
 import { CallAnalyticsDashboard } from "@/components/calling/CallAnalyticsDashboard";
@@ -66,23 +71,6 @@ const CALL_LOG_FILTERS_KEY = "calling:callLogFilters:v1";
 // Radix Select forbids an empty value, so "no assignee" uses a sentinel.
 const UNASSIGNED = "__unassigned__";
 const ACTIVE_STAFF = staffMembers.filter((s) => s.isActive);
-
-/**
- * Due target for a follow-up call-back task: same day 5pm if assigned on a
- * weekday before 5pm, otherwise the next business morning at 9am.
- */
-function followUpDue(now = new Date()): { dueDate: string; dueTime: string } {
-  const isWeekend = (x: Date) => x.getDay() === 0 || x.getDay() === 6;
-  const toISO = (x: Date) =>
-    `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
-  const d = new Date(now);
-  if (!isWeekend(d) && d.getHours() < 17) {
-    return { dueDate: toISO(d), dueTime: "17:00" };
-  }
-  const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
-  while (isWeekend(next)) next.setDate(next.getDate() + 1);
-  return { dueDate: toISO(next), dueTime: "09:00" };
-}
 
 // ─── Live Tab ───────────────────────────────────────────────
 function LiveTab({
@@ -364,6 +352,7 @@ function CallLogDetail({
   onSendSms,
   onSetFollowUp,
   onAssign,
+  onSetTags,
 }: {
   call: (typeof callLogs)[0];
   onClose: () => void;
@@ -372,6 +361,7 @@ function CallLogDetail({
   onSendSms: () => void;
   onSetFollowUp: (status: FollowUpStatus) => void;
   onAssign: (staffId: string) => void;
+  onSetTags: (tagIds: string[]) => void;
 }) {
   const aiSummary = aiCallSummaries.find((s) => s.callId === call.id);
   const duration = { m: Math.floor(call.duration / 60), s: call.duration % 60 };
@@ -563,6 +553,12 @@ function CallLogDetail({
             <MessageSquare className="size-4" />
             Send SMS
           </Button>
+
+          {/* Call tags — categorise this call (after the conversation) */}
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Call Tags</p>
+            <CallTagSelect selected={call.tags ?? []} onChange={onSetTags} />
+          </div>
 
           {/* Staff Notes — pre-filled from notes typed during the call, editable */}
           <div className="space-y-2">
@@ -785,7 +781,11 @@ export default function CallingPage() {
   // On call end: write a call-log record for the call, carrying the notes typed
   // in the panel into the record's Staff Notes, then surface it in the Call Log
   // (selected, with the side panel pre-filled) so staff don't re-type anything.
-  const handleEndCall = (notes: string) => {
+  const handleEndCall = (
+    notes: string,
+    tagIds: string[] = [],
+    outcome?: "booking_created",
+  ) => {
     if (activeCall) {
       const endedAtMs = Date.now();
       const durationSec = Math.max(
@@ -805,6 +805,8 @@ export default function CallingPage() {
         aiHandled: false,
         notes: notes.trim() || undefined,
         inquiryTag: activeCall.inquiryTag,
+        tags: tagIds.length ? tagIds : undefined,
+        outcome,
         followUpStatus: defaultFollowUpStatus("completed"),
       };
       // Replace any prior record with the same id (e.g. re-running the demo),
@@ -812,6 +814,8 @@ export default function CallingPage() {
       setLogs((prev) => [record, ...prev.filter((c) => c.id !== record.id)]);
       setSelectedCall(record);
       setTab("calls");
+      // If the call ended needing a follow-up, auto-create its task.
+      ensureFollowUpTask(record);
     }
     setActiveCall(null);
     setCallMinimized(false);
@@ -828,8 +832,37 @@ export default function CallingPage() {
     );
   };
 
+  // Set the call's category tags from the side panel (multi-select).
+  const handleSetCallTags = (callId: string, tagIds: string[]) => {
+    const next = tagIds.length ? tagIds : undefined;
+    setLogs((prev) =>
+      prev.map((c) => (c.id === callId ? { ...c, tags: next } : c)),
+    );
+    setSelectedCall((prev) =>
+      prev && prev.id === callId ? { ...prev, tags: next } : prev,
+    );
+  };
+
+  // Create the auto follow-up task for a call if it's pending and none exists
+  // yet (dedup by callLogId). Returns the created task, or null if skipped.
+  const ensureFollowUpTask = (call: (typeof callLogs)[number]) => {
+    if (call.followUpStatus !== "pending" || hasTaskForCallLog(call.id)) return null;
+    const summary = aiCallSummaries.find((s) => s.callId === call.id);
+    const staff = call.assignedTo
+      ? ACTIVE_STAFF.find((s) => s.id === call.assignedTo)
+      : undefined;
+    const task = buildFollowUpTask(call, {
+      summary,
+      assignedToId: staff?.id,
+      assignedToName: staff?.name,
+    });
+    addStandaloneTask(task);
+    return task;
+  };
+
   // Assign a call to a staff member for follow-up. Records assignedTo on the
-  // call and creates a one-off task in the Tasks module for that staff member.
+  // call, then re-points the existing follow-up task (or creates one if the
+  // call wasn't pending and so had none yet).
   const handleAssign = (call: (typeof callLogs)[number], staffId: string) => {
     const next = staffId || null;
     setLogs((prev) =>
@@ -845,38 +878,26 @@ export default function CallingPage() {
     if (call.assignedTo === staffId) return; // already assigned to this person
     const staff = ACTIVE_STAFF.find((s) => s.id === staffId);
     if (!staff) return;
-    const callerName = call.clientName ?? call.from;
-    const inquiry = call.inquiryTag ? INQUIRY_TAG_META[call.inquiryTag].label : "follow-up";
-    const isVoicemail = call.status === "voicemail";
-    const title = isVoicemail
-      ? `Listen to voicemail + call back ${callerName}`
-      : `Call back ${callerName} re: ${inquiry}`;
-    const { dueDate, dueTime } = followUpDue();
-    addStandaloneTask({
-      id: `task-cb-${call.id}-${Date.now()}`,
-      title,
-      description: isVoicemail
-        ? `Listen to the voicemail and return the call. Linked to call ${call.id}.`
-        : `Follow up on ${call.type} call (${call.status}). Linked to call ${call.id}.`,
-      category: "customer-service",
-      priority: "high",
-      status: "pending",
-      assignedToId: staff.id,
-      assignedToName: staff.name,
-      dueDate,
-      dueTime,
-      estimatedMinutes: 10,
-      requiresPhoto: false,
-      requiresSignoff: false,
-      callLogId: call.id,
-      createdAt: new Date().toISOString(),
-    });
-    toast.success(`Assigned to ${staff.name}`, {
-      description: `Task created: "${title}" · due ${dueDate} ${dueTime}`,
-    });
+    if (reassignTaskForCallLog(call.id, staff.id, staff.name)) {
+      toast.success(`Reassigned to ${staff.name}`, {
+        description: "Follow-up task updated in the Tasks module.",
+      });
+    } else {
+      const summary = aiCallSummaries.find((s) => s.callId === call.id);
+      const task = buildFollowUpTask(call, {
+        summary,
+        assignedToId: staff.id,
+        assignedToName: staff.name,
+      });
+      addStandaloneTask(task);
+      toast.success(`Assigned to ${staff.name}`, {
+        description: `Task created: "${task.title}" · due ${task.dueDate} ${task.dueTime}`,
+      });
+    }
   };
 
-  // Resolve a call's follow-up status from the side-panel dropdown.
+  // Resolve a call's follow-up status from the side-panel dropdown. Setting it
+  // to "pending" auto-creates a follow-up task (if none exists yet).
   const handleSetFollowUp = (callId: string, status: FollowUpStatus) => {
     setLogs((prev) =>
       prev.map((c) => (c.id === callId ? { ...c, followUpStatus: status } : c)),
@@ -884,6 +905,17 @@ export default function CallingPage() {
     setSelectedCall((prev) =>
       prev && prev.id === callId ? { ...prev, followUpStatus: status } : prev,
     );
+    if (status === "pending") {
+      const call = logs.find((c) => c.id === callId);
+      if (call) {
+        const task = ensureFollowUpTask({ ...call, followUpStatus: "pending" });
+        if (task) {
+          toast.success("Follow-up task created", {
+            description: `"${task.title}" added to the Tasks module.`,
+          });
+        }
+      }
+    }
   };
 
   // Submit a QA score (1–5) + private manager note for a recorded call.
@@ -1306,6 +1338,7 @@ export default function CallingPage() {
                     onSendSms={() => handleSendSms(selectedCall)}
                     onSetFollowUp={(status) => handleSetFollowUp(selectedCall.id, status)}
                     onAssign={(staffId) => handleAssign(selectedCall, staffId)}
+                    onSetTags={(tagIds) => handleSetCallTags(selectedCall.id, tagIds)}
                   />
                 </div>
               ) : (

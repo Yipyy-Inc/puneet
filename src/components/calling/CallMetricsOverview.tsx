@@ -19,11 +19,18 @@ import { cn } from "@/lib/utils";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { DateRangeFilter } from "@/components/calling/DateRangeFilter";
 import { MissedCallRecovery } from "@/components/calling/MissedCallRecovery";
+import { OutcomeBreakdown } from "@/components/calling/OutcomeBreakdown";
+import { TagFrequencyChart } from "@/components/calling/TagFrequencyChart";
 import { StaffPerformanceReport } from "@/components/calling/StaffPerformanceReport";
 import { LocationScopePicker } from "@/components/hq/LocationScopePicker";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { deriveLocationId } from "@/data/locations";
-import { dateRangeBounds, type DateRange } from "@/lib/calling/date-range";
+import {
+  dateRangeBounds,
+  previousPeriodBounds,
+  PREVIOUS_PERIOD_LABEL,
+  type DateRange,
+} from "@/lib/calling/date-range";
 import {
   computeCallMetrics,
   formatMinSec,
@@ -109,6 +116,16 @@ export function CallMetricsOverview({
       if (from !== null && t < from) return false;
       if (to !== null && t > to) return false;
       return true;
+    });
+  }, [locationLogs, dateRange, customFrom, customTo]);
+
+  // Immediately-preceding period (same length) for outcome comparison.
+  const previousLogs = useMemo(() => {
+    const b = previousPeriodBounds(dateRange, customFrom, customTo);
+    if (!b) return [];
+    return locationLogs.filter((c) => {
+      const t = new Date(c.timestamp).getTime();
+      return t >= b.from && t < b.to;
     });
   }, [locationLogs, dateRange, customFrom, customTo]);
 
@@ -219,6 +236,20 @@ export function CallMetricsOverview({
           tone={sentimentTone}
         />
       </div>
+
+      {/* Outcome breakdown donut + period-over-period comparison */}
+      <OutcomeBreakdown
+        logs={filtered}
+        previousLogs={previousLogs}
+        comparisonLabel={PREVIOUS_PERIOD_LABEL[dateRange]}
+      />
+
+      {/* Call-tag frequency + spike detection */}
+      <TagFrequencyChart
+        logs={filtered}
+        previousLogs={previousLogs}
+        comparisonLabel={PREVIOUS_PERIOD_LABEL[dateRange]}
+      />
 
       {/* IVR option breakdown */}
       <Card>

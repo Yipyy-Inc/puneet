@@ -55,6 +55,12 @@ export type InsightActionType =
   // Communication
   | "voicemail_backlog"
   | "slow_reply_inbox"
+  // Calling intelligence (sourced from calling analytics)
+  | "call_missed_spike"
+  | "call_sentiment_drop"
+  | "call_peak_hour_gap"
+  | "call_keyword_trend"
+  | "call_upsell_untaken"
   // Inventory
   | "reorder"
   | "inventory_item_edit";

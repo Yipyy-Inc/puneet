@@ -36,6 +36,8 @@ import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { cn } from "@/lib/utils";
 import type { CallingSettings, CallForwardingMode, DispatchMode } from "@/types/calling";
 import { NumberPortingWizard } from "@/components/calling/NumberPortingWizard";
+import { CallAvailabilitySettings } from "@/components/calling/CallAvailabilitySettings";
+import { CallTagsSettings } from "@/components/calling/CallTagsSettings";
 
 const dispatchOptions: {
   value: DispatchMode;
@@ -159,6 +161,12 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
           </div>
         </CardContent>
       </Card>
+
+      {/* Per-Staff Call Availability */}
+      <CallAvailabilitySettings />
+
+      {/* Call Tags / Categories */}
+      <CallTagsSettings />
 
       {/* Simultaneous Call Handling */}
       <Card>

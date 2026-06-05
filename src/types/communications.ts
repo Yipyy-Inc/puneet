@@ -158,13 +158,16 @@ export const callLogSchema = z.object({
   outcome: z
     .enum([
       "booking_created",
-      "question_answered",
-      "transferred_to_staff",
+      "estimate_sent",
+      "question_answered", // → "Info Provided" in the outcome breakdown
+      "transferred_to_staff", // → "Referred"
       "voicemail_left",
+      "complaint_logged",
     ])
     .optional(),
   notes: z.string().optional(),
   inquiryTag: inquiryTagEnum.optional(),
+  tags: z.array(z.string()).optional(), // manager-defined CallTag ids
   followUpStatus: followUpStatusEnum.nullish(),
   assignedTo: z.string().nullish(), // staff id responsible for the follow-up
   handledBy: z.string().optional(), // staff member who handled the call
