@@ -19,74 +19,185 @@ import {
   Users,
   Copy,
   CheckCircle2,
-  Share2,
+  MessageCircle,
   QrCode,
   Gift,
   TrendingUp,
-  Clock,
   UserPlus,
   Info,
   Mail,
   MessageSquare,
+  Share2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { referralCodes } from "@/data/marketing";
 import { getFacilityLoyaltyConfig } from "@/data/facility-loyalty-config";
-import { clients } from "@/data/clients";
+import { clients, getClientById } from "@/data/clients";
+import { getLoyaltyAccount } from "@/data/loyalty-accounts";
 import {
   getReferralRelationshipsByReferrer,
   getReferralStats,
 } from "@/data/referral-tracking";
-import { useCustomerLoyaltyAccess } from "@/hooks/use-loyalty-config";
+import {
+  isReferralProgramEnabled,
+  referralRewardText,
+  referralRewardFullText,
+  renderReferralTemplate,
+  REFERRAL_TRIGGER_HINTS,
+} from "@/lib/loyalty/referral-program";
 // QR Code will be generated using an external service or canvas
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
 
+type ReferralPillStatus = "pending" | "booked" | "reward_issued";
+
 interface ReferralTracking {
   id: number;
   friendName: string;
-  friendEmail?: string;
-  status: "signed_up" | "booked" | "completed" | "pending";
-  rewardStatus: "earned" | "pending" | "not_eligible";
-  rewardAmount?: number | string;
-  signedUpDate?: string;
-  bookedDate?: string;
-  completedDate?: string;
+  /** Consolidated status shown to the customer. */
+  pillStatus: ReferralPillStatus;
+  /** True once the referrer's reward has been issued. */
+  rewardEarned: boolean;
+  referredOn?: string;
 }
 
 export default function CustomerReferPage() {
   const { selectedFacility } = useCustomerFacility();
-  const { canViewReferrals } = useCustomerLoyaltyAccess();
   const isMounted = useHydrated();
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [dismissedRewardNotifications, setDismissedRewardNotifications] =
     useState<Set<number>>(new Set());
 
-  // Get facility loyalty config
+  // Get facility loyalty config — scoped to the customer's SESSION facility
+  // (not a hardcoded id), so the referral gate reflects the right facility.
   const loyaltyConfig = useMemo(() => {
     if (!selectedFacility) return null;
     return getFacilityLoyaltyConfig(selectedFacility.id);
   }, [selectedFacility]);
 
-  // Get referral code for this customer
+  // Referral program active for THIS facility? Reads the canonical
+  // referralProgramSetup (Configure Program wizard) + legacy fallback.
+  const referralEnabled = useMemo(
+    () => isReferralProgramEnabled(loyaltyConfig),
+    [loyaltyConfig],
+  );
+
+  // Personal referral code, auto-generated on the customer's loyalty account
+  // (e.g. ALICE-PET) — see generateReferralCode in the account-creation path.
   const referralCode = useMemo(() => {
-    return referralCodes.find((ref) => ref.referrerId === MOCK_CUSTOMER_ID);
-  }, []);
+    if (!selectedFacility) return "";
+    return (
+      getLoyaltyAccount(selectedFacility.id, MOCK_CUSTOMER_ID)?.referralCode ??
+      ""
+    );
+  }, [selectedFacility]);
 
   // Generate referral URL
   const referralUrl = useMemo(() => {
     if (!referralCode || !selectedFacility) return "";
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-    return `${baseUrl}/signup?ref=${referralCode.code}&facility=${selectedFacility.id}`;
+    return `${baseUrl}/signup?ref=${referralCode}&facility=${selectedFacility.id}`;
   }, [referralCode, selectedFacility]);
 
-  // Get referral program config
-  const referralProgram = useMemo(() => {
-    if (!loyaltyConfig?.referralProgram) return null;
-    return loyaltyConfig.referralProgram;
+  // The customer's first name, for the {referrerName} share-message token.
+  const referrerName = useMemo(() => {
+    const full = getClientById(MOCK_CUSTOMER_ID)?.name ?? "";
+    return full.split(/\s+/)[0] || "A friend";
+  }, []);
+
+  // Pre-composed share message from the program's shareMessageTemplate, with
+  // tokens substituted ({code}, {referrerName}, {refereeReward}, {referrerReward}).
+  const shareMessage = useMemo(() => {
+    const setup = loyaltyConfig?.referralProgramSetup;
+    if (setup) {
+      return renderReferralTemplate(setup.shareMessageTemplate, {
+        code: referralCode,
+        referrerName,
+        refereeReward: referralRewardText(
+          setup.refereeReward.rewardType,
+          setup.refereeReward.rewardValue,
+        ),
+        referrerReward: referralRewardText(
+          setup.referrerReward.rewardType,
+          setup.referrerReward.rewardValue,
+        ),
+      });
+    }
+    const friendReward =
+      loyaltyConfig?.referralProgram?.refereeReward.description ??
+      "a special reward";
+    return `I love ${selectedFacility?.name ?? "this place"}! Sign up with my code ${referralCode} to get ${friendReward}.`;
+  }, [loyaltyConfig, referralCode, referrerName, selectedFacility]);
+
+  // Normalised reward explanation — works from the new referralProgramSetup
+  // model or the legacy nested referralProgram.
+  const rewardView = useMemo(() => {
+    const setup = loyaltyConfig?.referralProgramSetup;
+    if (setup) {
+      const conditions = [
+        setup.minimumSpend != null
+          ? `Your friend must spend at least $${setup.minimumSpend}.`
+          : null,
+        setup.codeExpiryDays != null
+          ? `Your code expires ${setup.codeExpiryDays} days after it's issued.`
+          : null,
+        setup.maxUsagePerCode != null
+          ? `Your code can be used up to ${setup.maxUsagePerCode} times.`
+          : null,
+      ].filter((c): c is string => c !== null);
+      return {
+        youGet: referralRewardFullText(setup.referrerReward),
+        friendGets: referralRewardFullText(setup.refereeReward),
+        when: REFERRAL_TRIGGER_HINTS[setup.rewardTrigger],
+        conditions,
+      };
+    }
+    const legacy = loyaltyConfig?.referralProgram;
+    if (legacy) {
+      const conditions = [
+        legacy.requirements?.minimumPurchase
+          ? `Friend must make a minimum purchase of $${legacy.requirements.minimumPurchase}.`
+          : null,
+        legacy.requirements?.firstBookingOnly
+          ? "Reward applies to first booking only."
+          : null,
+        legacy.tracking?.expirationDays
+          ? `Referral code expires in ${legacy.tracking.expirationDays} days.`
+          : null,
+      ].filter((c): c is string => c !== null);
+      return {
+        youGet:
+          legacy.referrerReward.description ||
+          String(legacy.referrerReward.value),
+        friendGets:
+          legacy.refereeReward.description ||
+          String(legacy.refereeReward.value),
+        when: legacy.requirements?.firstBookingOnly
+          ? "After your friend completes their first booking."
+          : "After your friend completes a qualifying booking.",
+        conditions,
+      };
+    }
+    return null;
+  }, [loyaltyConfig]);
+
+  // Concise label for the referrer's reward, for the My Referrals table.
+  const referrerRewardLabel = useMemo(() => {
+    const setup = loyaltyConfig?.referralProgramSetup;
+    if (setup)
+      return referralRewardText(
+        setup.referrerReward.rewardType,
+        setup.referrerReward.rewardValue,
+      );
+    const legacy = loyaltyConfig?.referralProgram;
+    if (legacy)
+      return (
+        legacy.referrerReward.description || String(legacy.referrerReward.value)
+      );
+    return "A reward";
   }, [loyaltyConfig]);
 
   // Get referral relationships
@@ -102,40 +213,27 @@ export default function CustomerReferPage() {
   // Get referral tracking data from relationships
   const referralTracking = useMemo((): ReferralTracking[] => {
     return referralRelationships.map((rel) => {
-      // Find customer info
       const friend = clients.find((c) => c.id === rel.referredCustomerId);
+      // Privacy: show only the friend's first name, or "Someone" if we can't
+      // identify them yet (e.g. they signed up but aren't linked to a profile).
+      const friendName = friend?.name
+        ? (friend.name.split(/\s+/)[0] ?? "Someone")
+        : "Someone";
 
-      // Determine status
-      let status: ReferralTracking["status"] = "pending";
-      if (rel.status === "completed") {
-        status = "completed";
-      } else if (rel.firstBookingId) {
-        status = "booked";
-      } else if (rel.status === "active") {
-        status = "signed_up";
-      }
-
-      // Determine reward status
-      let rewardStatus: ReferralTracking["rewardStatus"] = "not_eligible";
-      if (rel.referrerRewardStatus === "issued") {
-        rewardStatus = "earned";
-      } else if (
-        rel.referrerRewardStatus === "pending" ||
-        rel.referrerRewardStatus === "eligible"
-      ) {
-        rewardStatus = "pending";
-      }
+      // Consolidated 3-state status: Reward Issued → Booked → Pending.
+      const pillStatus: ReferralPillStatus =
+        rel.referrerRewardStatus === "issued"
+          ? "reward_issued"
+          : rel.firstBookingId || rel.status === "completed"
+            ? "booked"
+            : "pending";
 
       return {
         id: rel.referredCustomerId,
-        friendName: friend?.name || `Customer #${rel.referredCustomerId}`,
-        friendEmail: friend?.email,
-        status,
-        rewardStatus,
-        rewardAmount: rel.referrerRewardValue,
-        signedUpDate: rel.createdAt,
-        bookedDate: rel.firstBookingDate,
-        completedDate: rel.referrerRewardIssuedAt,
+        friendName,
+        pillStatus,
+        rewardEarned: rel.referrerRewardStatus === "issued",
+        referredOn: rel.createdAt,
       };
     });
   }, [referralRelationships]);
@@ -154,13 +252,28 @@ export default function CustomerReferPage() {
     };
   }, [referralStatsData]);
 
+  // Copy referral code
+  const handleCopyCode = async () => {
+    if (!referralCode) {
+      toast.error("No referral code available");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(referralCode);
+      setCopiedCode(true);
+      toast.success("Referral code copied!");
+      setTimeout(() => setCopiedCode(false), 2000);
+    } catch {
+      toast.error("Failed to copy code");
+    }
+  };
+
   // Copy referral link
   const handleCopyLink = async () => {
     if (!referralUrl) {
       toast.error("Referral link not available");
       return;
     }
-
     try {
       await navigator.clipboard.writeText(referralUrl);
       setCopiedLink(true);
@@ -171,35 +284,15 @@ export default function CustomerReferPage() {
     }
   };
 
-  // Share referral link
-  const handleShare = async () => {
+  // Share via WhatsApp — opens wa.me with the pre-composed message + link.
+  const handleShareWhatsApp = () => {
     if (!referralUrl) {
       toast.error("Referral link not available");
       return;
     }
-
-    const shareData = {
-      title: `Join ${selectedFacility?.name || "us"}!`,
-      text: `Use my referral link to get ${referralProgram?.refereeReward.description || "a special reward"}!`,
-      url: referralUrl,
-    };
-
-    if (
-      navigator.share &&
-      navigator.canShare &&
-      navigator.canShare(shareData)
-    ) {
-      try {
-        await navigator.share(shareData);
-        toast.success("Shared successfully!");
-      } catch {
-        // User cancelled or error occurred
-        handleCopyLink();
-      }
-    } else {
-      // Fallback to copy
-      handleCopyLink();
-    }
+    const text = encodeURIComponent(`${shareMessage} ${referralUrl}`);
+    window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
+    toast.success("Opening WhatsApp...");
   };
 
   // Share via SMS
@@ -208,11 +301,8 @@ export default function CustomerReferPage() {
       toast.error("Referral link not available");
       return;
     }
-    const smsBody = encodeURIComponent(
-      `Hey! I love ${selectedFacility?.name || "this pet care place"} and thought you would too. ` +
-        `Use my referral link to get ${referralProgram?.refereeReward.description || "a special reward"}: ${referralUrl}`,
-    );
-    window.location.href = `sms:?body=${smsBody}`;
+    const body = encodeURIComponent(`${shareMessage} ${referralUrl}`);
+    window.location.href = `sms:?body=${body}`;
     toast.success("Opening SMS app...");
   };
 
@@ -223,15 +313,9 @@ export default function CustomerReferPage() {
       return;
     }
     const subject = encodeURIComponent(
-      `Join me at ${selectedFacility?.name || "this great pet care place"}!`,
+      `Join me at ${selectedFacility?.name || "my favourite pet care place"}!`,
     );
-    const body = encodeURIComponent(
-      `Hi!\n\n` +
-        `I've been using ${selectedFacility?.name || "this pet care facility"} for my pets and I think you'd love it too!\n\n` +
-        `Sign up using my referral link and you'll get ${referralProgram?.refereeReward.description || "a special reward"}:\n` +
-        `${referralUrl}\n\n` +
-        `See you there!`,
-    );
+    const body = encodeURIComponent(`${shareMessage}\n\n${referralUrl}`);
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
     toast.success("Opening email app...");
   };
@@ -240,17 +324,14 @@ export default function CustomerReferPage() {
   const earnedRewardNotifications = useMemo(() => {
     return referralTracking
       .filter(
-        (r) =>
-          r.rewardStatus === "earned" &&
-          !dismissedRewardNotifications.has(r.id),
+        (r) => r.rewardEarned && !dismissedRewardNotifications.has(r.id),
       )
       .map((r) => ({
         id: r.id,
         friendName: r.friendName,
-        rewardAmount: r.rewardAmount,
-        rewardType: referralProgram?.referrerReward.type || "credit",
+        rewardLabel: referrerRewardLabel,
       }));
-  }, [referralTracking, dismissedRewardNotifications, referralProgram]);
+  }, [referralTracking, dismissedRewardNotifications, referrerRewardLabel]);
 
   const handleDismissRewardNotification = (id: number) => {
     setDismissedRewardNotifications((prev) => {
@@ -270,33 +351,31 @@ export default function CustomerReferPage() {
     });
   };
 
-  // Get status badge
-  const getStatusBadge = (status: ReferralTracking["status"]) => {
+  // Consolidated referral status pill: Pending / Booked / Reward Issued.
+  const getReferralPill = (status: ReferralPillStatus) => {
     switch (status) {
-      case "completed":
-        return <Badge className="bg-green-500">Completed</Badge>;
+      case "reward_issued":
+        return <Badge className="bg-green-500">Reward Issued</Badge>;
       case "booked":
         return <Badge className="bg-blue-500">Booked</Badge>;
-      case "signed_up":
-        return <Badge className="bg-yellow-500">Signed Up</Badge>;
       default:
         return <Badge variant="outline">Pending</Badge>;
     }
   };
 
-  // Get reward status badge
-  const getRewardStatusBadge = (status: ReferralTracking["rewardStatus"]) => {
-    switch (status) {
-      case "earned":
-        return <Badge className="bg-green-500">Earned</Badge>;
-      case "pending":
-        return <Badge className="bg-yellow-500">Pending</Badge>;
-      default:
-        return <Badge variant="outline">Not Eligible</Badge>;
-    }
-  };
+  // Wait for the session facility to resolve before judging availability,
+  // otherwise we flash "Not Available" during hydration.
+  if (!isMounted) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex min-h-[400px] items-center justify-center">
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
-  if (!canViewReferrals) {
+  if (!referralEnabled) {
     return (
       <div className="container mx-auto p-6">
         <Card>
@@ -307,16 +386,6 @@ export default function CustomerReferPage() {
             </CardDescription>
           </CardHeader>
         </Card>
-      </div>
-    );
-  }
-
-  if (!isMounted) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="flex min-h-[400px] items-center justify-center">
-          <div className="text-muted-foreground">Loading...</div>
-        </div>
       </div>
     );
   }
@@ -344,20 +413,8 @@ export default function CustomerReferPage() {
                 Reward Earned!
               </p>
               <p className="text-sm text-green-600 dark:text-green-400">
-                You earned{" "}
-                {typeof notification.rewardAmount === "number"
-                  ? `$${notification.rewardAmount}`
-                  : notification.rewardAmount}{" "}
-                {notification.rewardType === "free_service"
-                  ? "free service"
-                  : notification.rewardType === "gift_card"
-                    ? "gift card"
-                    : notification.rewardType === "free_add_on"
-                      ? "free add-on"
-                      : notification.rewardType === "discount_code"
-                        ? "discount code"
-                        : notification.rewardType}{" "}
-                for referring {notification.friendName}!
+                You earned {notification.rewardLabel} for referring{" "}
+                {notification.friendName}!
               </p>
             </div>
           </div>
@@ -432,71 +489,99 @@ export default function CustomerReferPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Personal Referral Link */}
-        <Card>
+        {/* (1) Code display + (2) Share buttons */}
+        <Card id="referral-share" className="scroll-mt-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="size-5" />
               Your Referral Link
             </CardTitle>
             <CardDescription>
-              Share this link with friends to earn rewards
+              Share your code or link — you both get rewarded.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {referralCode ? (
               <>
-                <div className="space-y-2">
-                  <Label htmlFor="referral-link">
-                    Your Unique Referral Link
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="referral-link"
-                      value={referralUrl}
-                      readOnly
-                      className="font-mono text-sm"
-                    />
-                    <Button
-                      onClick={handleCopyLink}
-                      variant="outline"
-                      size="icon"
-                      className="shrink-0"
-                    >
-                      {copiedLink ? (
-                        <CheckCircle2 className="size-4 text-green-500" />
-                      ) : (
-                        <Copy className="size-4" />
-                      )}
-                    </Button>
+                {/* Large code display */}
+                <div className="bg-primary/5 border-primary/20 rounded-lg border p-4 text-center">
+                  <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                    Your code
+                  </div>
+                  <div className="text-primary mt-1 font-mono text-3xl font-bold tracking-wider break-all">
+                    {referralCode}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <Button onClick={handleShare} variant="default">
-                    <Share2 className="mr-2 size-4" />
-                    Share
+                  <Button onClick={handleCopyCode} variant="outline">
+                    {copiedCode ? (
+                      <CheckCircle2 className="mr-2 size-4 text-green-500" />
+                    ) : (
+                      <Copy className="mr-2 size-4" />
+                    )}
+                    Copy code
                   </Button>
-                  <Button onClick={handleShareSMS} variant="outline">
-                    <MessageSquare className="mr-2 size-4" />
-                    SMS
+                  <Button onClick={handleCopyLink} variant="outline">
+                    {copiedLink ? (
+                      <CheckCircle2 className="mr-2 size-4 text-green-500" />
+                    ) : (
+                      <Copy className="mr-2 size-4" />
+                    )}
+                    Copy link
                   </Button>
-                  <Button onClick={handleShareEmail} variant="outline">
-                    <Mail className="mr-2 size-4" />
-                    Email
-                  </Button>
+                </div>
+
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="referral-link"
+                    className="text-muted-foreground text-xs"
+                  >
+                    Your unique link
+                  </Label>
+                  <Input
+                    id="referral-link"
+                    value={referralUrl}
+                    readOnly
+                    className="font-mono text-xs"
+                  />
+                </div>
+
+                {/* Share buttons */}
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Share via</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button
+                      onClick={handleShareWhatsApp}
+                      variant="outline"
+                      className="text-green-600 dark:text-green-400"
+                    >
+                      <MessageCircle className="mr-2 size-4" />
+                      WhatsApp
+                    </Button>
+                    <Button onClick={handleShareSMS} variant="outline">
+                      <MessageSquare className="mr-2 size-4" />
+                      SMS
+                    </Button>
+                    <Button onClick={handleShareEmail} variant="outline">
+                      <Mail className="mr-2 size-4" />
+                      Email
+                    </Button>
+                  </div>
                   <Button
                     onClick={() => setShowQRCode(!showQRCode)}
-                    variant="outline"
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground"
                   >
                     <QrCode className="mr-2 size-4" />
-                    QR Code
+                    {showQRCode ? "Hide QR code" : "Show QR code"}
                   </Button>
                 </div>
 
                 {showQRCode && referralUrl && (
                   <div className="bg-muted flex flex-col items-center rounded-lg p-4">
-                    <div className="border-border flex h-[200px] w-[200px] items-center justify-center rounded-lg border-2 bg-white p-4">
+                    <div className="border-border flex size-[200px] items-center justify-center rounded-lg border-2 bg-white p-4">
                       <Image
                         src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(referralUrl)}`}
                         alt="QR Code"
@@ -511,18 +596,6 @@ export default function CustomerReferPage() {
                     </p>
                   </div>
                 )}
-
-                <div className="border-t pt-2">
-                  <div className="text-muted-foreground flex items-start gap-2 text-sm">
-                    <Info className="mt-0.5 size-4 shrink-0" />
-                    <p>
-                      Your referral code:{" "}
-                      <span className="text-foreground font-mono font-semibold">
-                        {referralCode.code}
-                      </span>
-                    </p>
-                  </div>
-                </div>
               </>
             ) : (
               <div className="text-muted-foreground py-8 text-center">
@@ -536,144 +609,66 @@ export default function CustomerReferPage() {
           </CardContent>
         </Card>
 
-        {/* Referral Reward Explanation */}
+        {/* (3) Reward explanation */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Gift className="size-5" />
               How It Works
             </CardTitle>
-            <CardDescription>
-              Earn rewards when your friends sign up and book
-            </CardDescription>
+            <CardDescription>What you and your friend both get</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {referralProgram ? (
+            {rewardView ? (
               <>
-                <div className="space-y-3">
-                  <div className="border-primary/20 bg-primary/10 rounded-lg border p-4">
-                    <div className="flex items-start gap-3">
-                      <Gift className="text-primary mt-0.5 size-5 shrink-0" />
-                      <div className="flex-1">
-                        <div className="mb-1 text-sm font-semibold">
-                          You Get:
-                        </div>
-                        <div className="text-sm">
-                          {referralProgram.referrerReward.type === "points" && (
-                            <span className="text-primary font-semibold">
-                              {referralProgram.referrerReward.value} points
-                            </span>
-                          )}
-                          {referralProgram.referrerReward.type === "credit" && (
-                            <span className="text-primary font-semibold">
-                              ${referralProgram.referrerReward.value} credit
-                            </span>
-                          )}
-                          {referralProgram.referrerReward.type ===
-                            "discount" && (
-                            <span className="text-primary font-semibold">
-                              {referralProgram.referrerReward.value}% discount
-                            </span>
-                          )}
-                          <span className="text-muted-foreground ml-2">
-                            {referralProgram.referrerReward.description}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-4">
-                    <div className="flex items-start gap-3">
-                      <UserPlus className="mt-0.5 size-5 shrink-0 text-green-600 dark:text-green-400" />
-                      <div className="flex-1">
-                        <div className="mb-1 text-sm font-semibold">
-                          Your Friend Gets:
-                        </div>
-                        <div className="text-sm">
-                          {referralProgram.refereeReward.type === "points" && (
-                            <span className="font-semibold text-green-600 dark:text-green-400">
-                              {referralProgram.refereeReward.value} points
-                            </span>
-                          )}
-                          {referralProgram.refereeReward.type === "credit" && (
-                            <span className="font-semibold text-green-600 dark:text-green-400">
-                              ${referralProgram.refereeReward.value} credit
-                            </span>
-                          )}
-                          {referralProgram.refereeReward.type ===
-                            "discount" && (
-                            <span className="font-semibold text-green-600 dark:text-green-400">
-                              {referralProgram.refereeReward.value}% off first
-                              booking
-                            </span>
-                          )}
-                          <span className="text-muted-foreground ml-2">
-                            {referralProgram.refereeReward.description}
-                          </span>
-                        </div>
+                <div className="border-primary/20 bg-primary/10 rounded-lg border p-4">
+                  <div className="flex items-start gap-3">
+                    <Gift className="text-primary mt-0.5 size-5 shrink-0" />
+                    <div>
+                      <div className="text-sm font-semibold">You get</div>
+                      <div className="text-primary text-sm font-medium">
+                        {rewardView.youGet}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {referralProgram.requirements && (
-                  <div className="space-y-2 border-t pt-3">
-                    <div className="text-sm font-semibold">Requirements:</div>
+                <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-4">
+                  <div className="flex items-start gap-3">
+                    <UserPlus className="mt-0.5 size-5 shrink-0 text-green-600 dark:text-green-400" />
+                    <div>
+                      <div className="text-sm font-semibold">
+                        Your friend gets
+                      </div>
+                      <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                        {rewardView.friendGets}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border p-4">
+                  <div className="flex items-start gap-3">
+                    <Info className="text-muted-foreground mt-0.5 size-5 shrink-0" />
+                    <div>
+                      <div className="text-sm font-semibold">When</div>
+                      <div className="text-muted-foreground text-sm">
+                        {rewardView.when}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {rewardView.conditions.length > 0 && (
+                  <div className="border-t pt-3">
+                    <div className="mb-1 text-sm font-semibold">Conditions</div>
                     <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
-                      {referralProgram.requirements.minimumPurchase && (
-                        <li>
-                          Friend must make a minimum purchase of $
-                          {referralProgram.requirements.minimumPurchase}
-                        </li>
-                      )}
-                      {referralProgram.requirements.firstBookingOnly && (
-                        <li>Reward applies to first booking only</li>
-                      )}
-                      {referralProgram.requirements.serviceTypes && (
-                        <li>
-                          Applies to:{" "}
-                          {referralProgram.requirements.serviceTypes.join(", ")}
-                        </li>
-                      )}
+                      {rewardView.conditions.map((c) => (
+                        <li key={c}>{c}</li>
+                      ))}
                     </ul>
                   </div>
                 )}
-
-                {referralProgram.tracking?.expirationDays && (
-                  <div className="border-t pt-3">
-                    <div className="text-muted-foreground flex items-start gap-2 text-sm">
-                      <Clock className="mt-0.5 size-4 shrink-0" />
-                      <p>
-                        Referral code expires in{" "}
-                        {referralProgram.tracking.expirationDays} days
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="border-t pt-3">
-                  <div className="flex items-start gap-2 text-sm">
-                    <Info className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-                    <div className="text-muted-foreground">
-                      <p className="text-foreground mb-1 font-semibold">
-                        When Reward Triggers:
-                      </p>
-                      <p>
-                        {referralProgram.requirements?.firstBookingOnly
-                          ? "After your friend completes their first booking"
-                          : "After your friend completes a qualifying booking"}
-                        {referralProgram.requirements?.minimumPurchase && (
-                          <span>
-                            {" "}
-                            with a minimum purchase of $
-                            {referralProgram.requirements.minimumPurchase}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </>
             ) : (
               <div className="text-muted-foreground py-8 text-center">
@@ -693,10 +688,10 @@ export default function CustomerReferPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="size-5" />
-            Referral Tracking
+            My Referrals
           </CardTitle>
           <CardDescription>
-            Track your referrals and earned rewards
+            Friends who used your code, and your reward status
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -709,13 +704,13 @@ export default function CustomerReferPage() {
                       Friend
                     </th>
                     <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
+                      Referred on
+                    </th>
+                    <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
                       Status
                     </th>
                     <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
                       Reward
-                    </th>
-                    <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
-                      Details
                     </th>
                   </tr>
                 </thead>
@@ -725,49 +720,28 @@ export default function CustomerReferPage() {
                       key={index}
                       className="hover:bg-muted/50 border-b transition-colors"
                     >
-                      <td className="px-4 py-3">
-                        <div>
-                          <div className="text-sm font-medium">
-                            {referral.friendName}
-                          </div>
-                          {referral.friendEmail && (
-                            <div className="text-muted-foreground text-xs">
-                              {referral.friendEmail}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {getStatusBadge(referral.status)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="space-y-1">
-                          {getRewardStatusBadge(referral.rewardStatus)}
-                          {referral.rewardAmount && (
-                            <div className="text-muted-foreground text-xs">
-                              {typeof referral.rewardAmount === "number"
-                                ? `$${referral.rewardAmount}`
-                                : referral.rewardAmount}
-                            </div>
-                          )}
-                        </div>
+                      <td className="px-4 py-3 text-sm font-medium">
+                        {referral.friendName}
                       </td>
                       <td className="text-muted-foreground px-4 py-3 text-sm">
-                        <div className="space-y-1">
-                          {referral.signedUpDate && (
-                            <div>
-                              Signed up: {formatDate(referral.signedUpDate)}
-                            </div>
-                          )}
-                          {referral.bookedDate && (
-                            <div>Booked: {formatDate(referral.bookedDate)}</div>
-                          )}
-                          {referral.completedDate && (
-                            <div>
-                              Completed: {formatDate(referral.completedDate)}
-                            </div>
-                          )}
-                        </div>
+                        {formatDate(referral.referredOn) || "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {getReferralPill(referral.pillStatus)}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span
+                          className={
+                            referral.rewardEarned
+                              ? "font-medium text-green-600 dark:text-green-400"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {referrerRewardLabel}
+                        </span>
+                        <span className="text-muted-foreground ml-1 text-xs">
+                          {referral.rewardEarned ? "(issued)" : "(pending)"}
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -775,12 +749,29 @@ export default function CustomerReferPage() {
               </table>
             </div>
           ) : (
-            <div className="text-muted-foreground py-8 text-center">
-              <Users className="mx-auto mb-2 size-12 opacity-50" />
-              <p>No referrals yet</p>
-              <p className="mt-1 text-xs">
-                Share your referral link to start earning rewards!
+            <div className="flex flex-col items-center py-10 text-center">
+              <div className="bg-primary/10 mb-3 flex size-14 items-center justify-center rounded-full">
+                <Gift className="text-primary size-7" />
+              </div>
+              <p className="font-semibold">No referrals yet</p>
+              <p className="text-muted-foreground mt-1 max-w-sm text-sm">
+                Invite a friend with your code{" "}
+                <span className="text-foreground font-mono font-semibold">
+                  {referralCode}
+                </span>{" "}
+                — when they book, you both get rewarded.
               </p>
+              <Button
+                className="mt-4"
+                onClick={() =>
+                  document
+                    .getElementById("referral-share")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+              >
+                <Share2 className="mr-2 size-4" />
+                Share now
+              </Button>
             </div>
           )}
         </CardContent>

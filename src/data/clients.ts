@@ -1,5 +1,9 @@
 import type { Client } from "@/types/client";
 
+export function getClientById(id: number): Client | undefined {
+  return clients.find((c) => c.id === id);
+}
+
 export const clients: Client[] = [
   {
     id: 15,

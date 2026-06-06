@@ -94,6 +94,46 @@ export function runPointsExpiry(
   return result;
 }
 
+/** ISO date a customer's points expire = lastActivity + expiryDays. */
+export function pointsExpiryDate(
+  account: CustomerLoyaltyAccount,
+  expiryDays: number,
+): string {
+  const base = new Date(account.lastActivityAt ?? account.updatedAt).getTime();
+  return new Date(base + expiryDays * 1000 * 60 * 60 * 24).toISOString();
+}
+
+export interface PointsExpiryEmail {
+  subject: string;
+  body: string;
+}
+
+/**
+ * "Your [N] points expire on [date]. Book now to keep your points!" — the
+ * warning email sent ~30 days before inactivity-based expiry.
+ */
+export function buildPointsExpiryEmail(vars: {
+  account: CustomerLoyaltyAccount;
+  expiryDays: number;
+  facilityName: string;
+  portalLink: string;
+  customerFirstName?: string;
+}): PointsExpiryEmail {
+  const points = vars.account.pointsBalance;
+  const date = new Date(
+    pointsExpiryDate(vars.account, vars.expiryDays),
+  ).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const lead = vars.customerFirstName
+    ? `Hi ${vars.customerFirstName}, your`
+    : "Your";
+  return {
+    subject: `Your ${points.toLocaleString()} points expire on ${date}`,
+    body:
+      `${lead} ${points.toLocaleString()} points expire on ${date}. Book now to keep your points!\n\n` +
+      `Book at ${vars.facilityName}: ${vars.portalLink}`,
+  };
+}
+
 /** Lightweight counts for the settings preview (how many accounts a run would
  *  affect today), without producing the full result. */
 export function summarizeExpiry(

@@ -124,3 +124,60 @@ export function addManualAdjustment(input: {
 
   return txn;
 }
+
+let rewardSeq = 0;
+
+/**
+ * Staff-sent reward — grants a points bonus or account credit to a customer
+ * (the "Send reward" member action). Records a manual-adjustment transaction
+ * (with the staff member's name) and updates the account balance.
+ */
+export function grantReward(input: {
+  facilityId: number;
+  customerId: number;
+  rewardType: "points" | "credit";
+  amount: number;
+  note: string;
+  staffId: string;
+  staffName: string;
+}): LoyaltyTransaction | null {
+  const account = loyaltyAccounts.find(
+    (a) =>
+      a.facilityId === input.facilityId && a.customerId === input.customerId,
+  );
+  if (!account || input.amount <= 0) return null;
+
+  const now = new Date().toISOString();
+  rewardSeq += 1;
+  const isPoints = input.rewardType === "points";
+  const suffix = input.note ? ` — ${input.note}` : "";
+
+  const txn: LoyaltyTransaction = {
+    id: `reward-${input.facilityId}-${input.customerId}-${Date.now()}-${rewardSeq}`,
+    customerId: input.customerId,
+    facilityId: input.facilityId,
+    transactionType: "manual_adjustment",
+    points: isPoints ? input.amount : 0,
+    value: isPoints ? undefined : input.amount,
+    description: isPoints
+      ? `Reward: ${input.amount} points${suffix}`
+      : `Reward: $${input.amount.toFixed(2)} credit${suffix}`,
+    reason: input.note || "Reward",
+    staffId: input.staffId,
+    staffName: input.staffName,
+    source: "manual",
+    createdAt: now,
+  };
+  loyaltyTransactions.push(txn);
+
+  if (isPoints) {
+    account.pointsBalance += input.amount;
+    account.lifetimePointsEarned += input.amount;
+  } else {
+    account.creditBalance += input.amount;
+  }
+  account.lastActivityAt = now;
+  account.updatedAt = now;
+
+  return txn;
+}

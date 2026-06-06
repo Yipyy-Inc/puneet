@@ -25,7 +25,7 @@ function rewardPhrase(rule: EarnRule): string {
   const v = rule.rewardValue;
   switch (rule.rewardType) {
     case "points":
-      return `${v} points`;
+      return `${v} ${v === 1 ? "point" : "points"}`;
     case "credit":
       return `$${v} account credit`;
     case "gift_card":
@@ -120,4 +120,105 @@ export function summarizeEarnRule(rule: EarnRule): string {
       ? "earn"
       : "get";
   return `Customers ${verb} ${rewardPhrase(rule)} ${triggerPhrase(rule)}${appliesToPhrase(rule)}${schedulePhrase(rule)}.`;
+}
+
+// ---------------------------------------------------------------------------
+// Customer-facing variant — second person, imperative, for the loyalty portal's
+// "How Points Are Earned" section.
+// ---------------------------------------------------------------------------
+
+const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
+/** The earning action, second person. A single service is folded into the verb
+ *  ("per daycare visit") for visit/service triggers. */
+function customerTriggerPhrase(
+  rule: EarnRule,
+  serviceLower: string | null,
+): string {
+  const v = rule.triggerValue;
+  switch (rule.triggerType) {
+    case "spend_amount":
+      return `per $${v && v > 0 ? v : 1} spent`;
+    case "booking_completed":
+      return "per completed booking";
+    case "visit_count":
+      return v && v > 1
+        ? `every ${v} visits`
+        : serviceLower
+          ? `per ${serviceLower} visit`
+          : "per visit";
+    case "service_type":
+      return serviceLower ? `per ${serviceLower} visit` : "per visit";
+    case "first_booking":
+      return "on your first booking";
+    case "birthday":
+      return "on your birthday";
+    case "referral_completed":
+      return "per successful referral";
+    case "review_submitted":
+      return "per review you leave";
+    case "app_download":
+      return "when you download the app";
+    case "manual":
+      return "as a special bonus";
+  }
+}
+
+function customerSchedulePhrase(rule: EarnRule): string {
+  if (rule.scheduleType === "date_range") {
+    const c = rule.scheduleConfig;
+    const start = fmtDate(c?.startDate);
+    const end = fmtDate(c?.endDate);
+    if (start && end) return `${start}–${end}`;
+    if (start) return `from ${start}`;
+    if (end) return `until ${end}`;
+    return "limited time";
+  }
+  if (rule.scheduleType === "recurring_days") {
+    const days = rule.scheduleConfig?.daysOfWeek;
+    if (days && days.length) {
+      return [...days]
+        .sort((a, b) => a - b)
+        .map((d) => DAY_NAMES[d])
+        .filter(Boolean)
+        .join(", ");
+    }
+    return "select days";
+  }
+  return "all year";
+}
+
+function customerServicesPhrase(services: string[] | null): string | null {
+  if (!services || services.length === 0) return null;
+  const names = services.map(cap);
+  return names.length === 1
+    ? `applies to ${names[0]} only`
+    : `applies to ${names.join(", ")}`;
+}
+
+/**
+ * Customer-facing one-liner for an earn rule, e.g.
+ * "Earn 50 points per daycare visit (applies to Daycare only, all year)".
+ */
+export function earnRuleCustomerSummary(rule: EarnRule): string {
+  const serviceLower =
+    rule.appliesToServiceTypes?.length === 1
+      ? rule.appliesToServiceTypes[0]
+      : null;
+  const main = `Earn ${rewardPhrase(rule)} ${customerTriggerPhrase(rule, serviceLower)}`;
+  const paren = [
+    customerServicesPhrase(rule.appliesToServiceTypes),
+    customerSchedulePhrase(rule),
+  ]
+    .filter((p): p is string => Boolean(p))
+    .join(", ");
+  return `${main} (${paren})`;
+}
+
+/** Active, customer-relevant earn rules (excludes archived/disabled rules and
+ *  staff-only "manual" awards). */
+export function activeCustomerEarnRules(rules: EarnRule[]): EarnRule[] {
+  return rules.filter(
+    (r) => r.enabled && r.status !== "archived" && r.triggerType !== "manual",
+  );
 }

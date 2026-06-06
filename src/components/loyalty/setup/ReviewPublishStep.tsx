@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { LoyaltyPortalHeaderPreview } from "@/components/loyalty/LoyaltyPortalHeaderPreview";
 import { summarizeEarnRule } from "@/lib/loyalty/earn-rule-summary";
-import { badgeConditionText } from "@/lib/loyalty/badge-summary";
+import { badgeSummaryText } from "@/lib/loyalty/badge-summary";
 import { getFacilityCustomers } from "@/lib/loyalty/publish";
 import type {
   EarnRule,
@@ -216,7 +216,7 @@ export function ReviewPublishStep({
                     <span aria-hidden="true">{b.icon || "⭐"}</span>
                     <span className="font-medium">{b.name}</span>
                     <span className="text-muted-foreground text-xs">
-                      {badgeConditionText(
+                      {badgeSummaryText(
                         b,
                         b.criteria.tierId
                           ? tiers.find((t) => t.id === b.criteria.tierId)?.name

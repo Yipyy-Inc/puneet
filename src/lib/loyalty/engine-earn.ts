@@ -179,6 +179,19 @@ export function computeEarnings(
       rule.triggerType === "service_type";
     if (scoped && !eventInScope(config, event)) continue;
 
+    // Per-rule service scope: a booking/spend rule restricted to specific
+    // service types only fires when the event's service matches (null = all).
+    // (service_type rules already enforce this in eventMatchesTrigger.)
+    if (
+      (rule.triggerType === "spend_amount" ||
+        rule.triggerType === "booking_completed") &&
+      rule.appliesToServiceTypes != null &&
+      (!event.serviceType ||
+        !rule.appliesToServiceTypes.includes(event.serviceType))
+    ) {
+      continue;
+    }
+
     const value = baseRewardValue(rule, event);
     if (value <= 0) continue;
 

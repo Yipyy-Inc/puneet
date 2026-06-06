@@ -19,7 +19,20 @@ import {
   ChevronRight,
   AlertTriangle,
   XCircle,
+  TrendingDown,
+  BadgePercent,
+  Coins,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ExpirationEditor } from "@/components/loyalty/config/ExpirationEditor";
 import { ScopeEditor } from "@/components/loyalty/config/ScopeEditor";
 import { StackingEditor } from "@/components/loyalty/config/StackingEditor";
@@ -63,6 +76,15 @@ export default function AdvancedPage() {
   const [settings, setSettings] = useState<FacilityLoyaltyConfig["settings"]>(
     () => config.settings,
   );
+  const [tierDowngrade, setTierDowngrade] = useState<boolean>(
+    () => config.tierDowngradeEnabled ?? false,
+  );
+  const [discountStrategy, setDiscountStrategy] = useState<
+    "highest_value" | "most_specific"
+  >(() => config.discountSelectionStrategy ?? "highest_value");
+  const [redemptionRate, setRedemptionRate] = useState<number>(
+    () => config.redemptionRate ?? 100,
+  );
   const [showAdvancedExpiry, setShowAdvancedExpiry] = useState(false);
 
   // Gate the preview behind hydration so SSR and first client render match.
@@ -78,7 +100,10 @@ export default function AdvancedPage() {
     JSON.stringify(expiration) !== JSON.stringify(config.pointsExpiration) ||
     JSON.stringify(scope) !== JSON.stringify(config.pointsScope) ||
     JSON.stringify(stacking) !== JSON.stringify(config.discountStacking) ||
-    JSON.stringify(settings) !== JSON.stringify(config.settings);
+    JSON.stringify(settings) !== JSON.stringify(config.settings) ||
+    tierDowngrade !== (config.tierDowngradeEnabled ?? false) ||
+    discountStrategy !== (config.discountSelectionStrategy ?? "highest_value") ||
+    redemptionRate !== (config.redemptionRate ?? 100);
 
   const handleReset = () => {
     setExpiry({
@@ -89,6 +114,9 @@ export default function AdvancedPage() {
     setScope(config.pointsScope);
     setStacking(config.discountStacking);
     setSettings(config.settings);
+    setTierDowngrade(config.tierDowngradeEnabled ?? false);
+    setDiscountStrategy(config.discountSelectionStrategy ?? "highest_value");
+    setRedemptionRate(config.redemptionRate ?? 100);
   };
 
   return (
@@ -196,6 +224,105 @@ export default function AdvancedPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingDown className="size-5 text-rose-500" />
+            Tiers
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="tier-downgrade">Allow tier downgrades</Label>
+              <p className="text-muted-foreground text-sm">
+                When off (default), members keep the highest tier they&apos;ve
+                earned even if their points, spend, or visits later fall below the
+                threshold — for example after you raise a tier&apos;s requirement.
+                Turn on to let a member&apos;s tier drop when their metric falls.
+              </p>
+            </div>
+            <Switch
+              id="tier-downgrade"
+              checked={tierDowngrade}
+              onCheckedChange={setTierDowngrade}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BadgePercent className="size-5 text-emerald-500" />
+            Loyalty Discount Vouchers
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label>When a customer holds multiple active discount vouchers</Label>
+            <p className="text-muted-foreground text-sm">
+              Only one loyalty discount is auto-applied per invoice at checkout.
+              Choose which voucher wins.
+            </p>
+            <Select
+              value={discountStrategy}
+              onValueChange={(v) =>
+                setDiscountStrategy(v as "highest_value" | "most_specific")
+              }
+            >
+              <SelectTrigger className="max-w-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="highest_value">
+                  Highest value — biggest discount
+                </SelectItem>
+                <SelectItem value="most_specific">
+                  Most specific — prefer a service-matched voucher
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Coins className="size-5 text-amber-500" />
+            Points Redemption
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="redemption-rate">Points per $1 of credit</Label>
+            <p className="text-muted-foreground text-sm">
+              How many points a customer spends for $1 of account credit when they
+              self-redeem from the portal (e.g. 100 → 100 points = $1).
+            </p>
+            <Input
+              id="redemption-rate"
+              type="number"
+              min={1}
+              step={1}
+              value={redemptionRate}
+              onChange={(e) =>
+                setRedemptionRate(Math.max(1, Math.floor(Number(e.target.value) || 0)))
+              }
+              className="max-w-37 tabular-nums"
+            />
+            <p className="text-muted-foreground text-xs">
+              100 points ={" "}
+              <span className="font-medium tabular-nums">
+                ${(100 / (redemptionRate || 100)).toFixed(2)}
+              </span>{" "}
+              credit
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <SaveBar
         dirty={dirty}
         onSave={() => {
@@ -207,6 +334,9 @@ export default function AdvancedPage() {
             pointsScope: scope,
             discountStacking: stacking,
             settings,
+            tierDowngradeEnabled: tierDowngrade,
+            discountSelectionStrategy: discountStrategy,
+            redemptionRate,
           });
           toast.success("Advanced settings saved");
         }}

@@ -12,6 +12,8 @@ import {
   buildDefaultLoyaltyConfig,
   buildDefaultEarnRules,
   buildDefaultTiers,
+  buildDefaultReferralProgram,
+  buildDefaultNotificationSettings,
 } from "@/data/facility-loyalty-config";
 import { badges as defaultBadges } from "@/data/marketing";
 import type { FacilityLoyaltyConfig } from "@/types/loyalty";
@@ -51,6 +53,10 @@ function resolveBaseConfig(facilityId: number): FacilityLoyaltyConfig {
       base.tierDefinitions && base.tierDefinitions.length > 0
         ? base.tierDefinitions
         : buildDefaultTiers(facilityId),
+    referralProgramSetup:
+      base.referralProgramSetup ?? buildDefaultReferralProgram(facilityId),
+    notificationSettings:
+      base.notificationSettings ?? buildDefaultNotificationSettings(facilityId),
   };
 }
 

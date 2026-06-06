@@ -1,11 +1,13 @@
 import type {
   Badge,
   BadgeRewardType,
+  CustomerBadge,
   CustomerLoyaltyAccount,
   FacilityLoyaltyConfig,
   LoyaltyTransaction,
   LoyaltyTransactionSource,
   LoyaltyTransactionType,
+  RedemptionRecord,
   Tier,
 } from "@/types/loyalty";
 import { getActiveEarnRules } from "./earn-rule-versioning";
@@ -17,6 +19,11 @@ import {
   tierEarnMultiplier,
 } from "./engine-tier";
 import { evaluateBadges } from "./engine-badges";
+import { tierBenefitList } from "./tier-notification";
+import {
+  badgeEarnedPortalBody,
+  badgeEarnedTitle,
+} from "./badge-notification";
 
 /**
  * Loyalty automation engine — the core of the loyalty module.
@@ -92,7 +99,12 @@ export interface AppliedDiscount {
 }
 
 export interface LoyaltyNotification {
-  type: "tier_upgrade" | "badge_unlocked";
+  type:
+    | "tier_upgrade"
+    | "badge_unlocked"
+    | "points_earned"
+    | "program_welcome"
+    | "referral_reward_applied";
   title: string;
   body: string;
   facilityId: number;
@@ -104,11 +116,17 @@ export interface EngineResult {
   account: CustomerLoyaltyAccount;
   /** Every points/credit movement this event produced, earnRuleId-stamped. */
   transactions: LoyaltyTransaction[];
+  /** Reward vouchers earned this event (discount / freebie / gift-card rewards
+   *  from earn rules or badges) — active, expiring in 30 days, redeemable later. */
+  redemptions: RedemptionRecord[];
   tierChange?: TierChange;
   unlockedBadges: UnlockedBadgeResult[];
+  /** CustomerBadge records to persist for badges earned this event (one per
+   *  customer/facility/badge, created once). */
+  customerBadges: CustomerBadge[];
   /** Tier discount the member's tier auto-applied to this transaction, if any. */
   discountApplied?: AppliedDiscount;
-  /** In-app notifications to surface (tier upgrades, badge unlocks). */
+  /** In-app notifications to surface (tier upgrades, badge unlocks, points). */
   notifications: LoyaltyNotification[];
 }
 
@@ -181,6 +199,160 @@ function tierById(tiers: Tier[], id: string | null): Tier | null {
   return tiers.find((t) => t.id === id) ?? null;
 }
 
+/** Discount/freebie/gift-card reward vouchers stay redeemable for 30 days. */
+const REWARD_VOUCHER_EXPIRY_DAYS = 30;
+
+function addDays(nowIso: string, days: number): string {
+  const t = new Date(nowIso).getTime();
+  return new Date(t + days * 24 * 60 * 60 * 1000).toISOString();
+}
+
+/**
+ * Build a reward voucher (RewardRedemption) for a non-balance reward earned from
+ * a rule or badge — active immediately, expiring in 30 days. Id is namespaced
+ * per facility+customer+event for cross-facility collision safety.
+ */
+function buildRedemption(
+  event: LoyaltyEvent,
+  rewardType: string,
+  rewardValue: number | string,
+  now: string,
+  seq: number,
+  appliesToServiceTypes: string[] | null = null,
+): RedemptionRecord {
+  return {
+    id: `lr-${event.facilityId}-${event.customerId}-${event.type}-${event.id}-${seq}`,
+    facilityId: event.facilityId,
+    customerId: event.customerId,
+    rewardType,
+    rewardValue,
+    redeemMethod: "auto_applied",
+    bookingId: event.type === "booking_completed" ? event.id : null,
+    invoiceId: event.type === "purchase" ? event.id : null,
+    issuedAt: now,
+    redeemedAt: now,
+    expiresAt: addDays(now, REWARD_VOUCHER_EXPIRY_DAYS),
+    status: "active",
+    appliesToServiceTypes,
+  };
+}
+
+type TierUpReward = NonNullable<Tier["tierUpReward"]>;
+
+function describeTierUpReward(reward: TierUpReward): string {
+  if (reward.type === "credit") {
+    return `You've earned $${reward.value} in account credit.`;
+  }
+  if (reward.type === "discount_pct") {
+    return `You've unlocked ${reward.value}% off your next visit.`;
+  }
+  return `You've unlocked $${reward.value} off your next visit.`;
+}
+
+/** The one-time reach-tier reward voucher. Id is keyed by the tier reached so a
+ *  customer earns each tier's welcome reward exactly once. */
+function buildTierUpRedemption(
+  account: CustomerLoyaltyAccount,
+  tier: Tier,
+  reward: TierUpReward,
+  now: string,
+): RedemptionRecord {
+  return {
+    id: `lt-tierup-${account.facilityId}-${account.customerId}-${tier.id}`,
+    facilityId: account.facilityId,
+    customerId: account.customerId,
+    rewardType: reward.type,
+    rewardValue: reward.value,
+    redeemMethod: "auto_applied",
+    bookingId: null,
+    invoiceId: null,
+    issuedAt: now,
+    redeemedAt: now,
+    expiresAt: addDays(now, REWARD_VOUCHER_EXPIRY_DAYS),
+    status: "active",
+  };
+}
+
+export interface TierRecalcResult {
+  /** The tier id the account should hold after recalculation (may be unchanged). */
+  currentTierId: string | null;
+  tierJoinedAt: string | null;
+  tierChange?: TierChange;
+  /** Tier-up reward voucher, when the newly-reached tier grants one. */
+  redemption?: RedemptionRecord;
+  notification?: LoyaltyNotification;
+}
+
+/**
+ * Tier recalculation (the spec's `tierRecalculate`). Finds the highest tier the
+ * account now qualifies for; upgrades fire immediately (stamping tierJoinedAt,
+ * issuing the tier's one-time reward as a RewardRedemption, and producing a
+ * "You've reached X" notification). Downgrades are suppressed unless the facility
+ * has explicitly enabled `tierDowngradeEnabled` — a customer keeps the tier they
+ * earned even if thresholds later change. Pure: never mutates its inputs.
+ */
+export function recalculateTier(
+  account: CustomerLoyaltyAccount,
+  config: FacilityLoyaltyConfig,
+  now: string,
+): TierRecalcResult {
+  const unchanged: TierRecalcResult = {
+    currentTierId: account.currentTierId,
+    tierJoinedAt: account.tierJoinedAt,
+  };
+
+  const tiers =
+    config.tiersEnabled === false ? [] : (config.tierDefinitions ?? []);
+  if (tiers.length === 0) return unchanged;
+
+  const target = resolveTier(tiers, account);
+  const targetId = target?.id ?? null;
+  if (targetId === account.currentTierId) return unchanged;
+
+  const oldSort = tierById(tiers, account.currentTierId)?.sortOrder ?? -1;
+  const newSort = target?.sortOrder ?? -1;
+  const isUpgrade = newSort > oldSort;
+
+  // Never downgrade unless the facility explicitly enabled it.
+  if (!isUpgrade && config.tierDowngradeEnabled !== true) return unchanged;
+
+  const result: TierRecalcResult = {
+    currentTierId: targetId,
+    tierJoinedAt: now,
+    tierChange: {
+      from: account.currentTierId,
+      to: targetId,
+      direction: isUpgrade ? "upgrade" : "downgrade",
+    },
+  };
+
+  if (isUpgrade && target) {
+    let rewardDetail = "";
+    if (target.tierUpReward) {
+      result.redemption = buildTierUpRedemption(
+        account,
+        target,
+        target.tierUpReward,
+        now,
+      );
+      rewardDetail = ` ${describeTierUpReward(target.tierUpReward)}`;
+    }
+    const benefits = tierBenefitList(target);
+    const unlocked = benefits.length
+      ? ` Here's what you've unlocked: ${benefits.join(", ")}.`
+      : ` Enjoy your new ${target.name} member benefits.`;
+    result.notification = {
+      type: "tier_upgrade",
+      title: `Congratulations — you've reached ${target.name}! ${target.icon}`,
+      body: `${unlocked.trimStart()}${rewardDetail}`,
+      facilityId: account.facilityId,
+      customerId: account.customerId,
+    };
+  }
+
+  return result;
+}
+
 // ----------------------------------------------------------------------------
 // Engine
 // ----------------------------------------------------------------------------
@@ -196,7 +368,14 @@ export function processLoyaltyEvent(
 ): EngineResult {
   // Disabled program → no-op (still nothing leaks across facilities).
   if (!config.enabled) {
-    return { account, transactions: [], unlockedBadges: [], notifications: [] };
+    return {
+      account,
+      transactions: [],
+      redemptions: [],
+      unlockedBadges: [],
+      customerBadges: [],
+      notifications: [],
+    };
   }
 
   const tiers = config.tiersEnabled === false ? [] : (config.tierDefinitions ?? []);
@@ -205,8 +384,10 @@ export function processLoyaltyEvent(
 
   const acc: CustomerLoyaltyAccount = { ...account };
   const transactions: LoyaltyTransaction[] = [];
+  const redemptions: RedemptionRecord[] = [];
   const notifications: LoyaltyNotification[] = [];
   let seq = 0;
+  let redSeq = 0;
   const nextTxnId = () =>
     `lt-${event.facilityId}-${event.customerId}-${event.type}-${event.id}-${seq++}`;
 
@@ -275,6 +456,20 @@ export function processLoyaltyEvent(
           ...(o.credit > 0 ? { value: o.credit } : {}),
         }),
       );
+      // Non-balance reward (discount / freebie / gift card) → redeemable voucher,
+      // carrying the rule's service scope so checkout can apply it selectively.
+      if (o.perk) {
+        redemptions.push(
+          buildRedemption(
+            event,
+            o.perk.type,
+            o.perk.value,
+            now,
+            redSeq++,
+            o.rule.appliesToServiceTypes,
+          ),
+        );
+      }
     }
   }
 
@@ -293,32 +488,19 @@ export function processLoyaltyEvent(
   acc.lastActivityAt = now;
   acc.updatedAt = now;
 
-  // --- Tier recompute (upgrades) -------------------------------------------
-  let tierChange: TierChange | undefined;
-  if (tiers.length > 0) {
-    const postTier = resolveTier(tiers, acc);
-    const newTierId = postTier?.id ?? null;
-    if (newTierId !== account.currentTierId) {
-      const oldSort = tierById(tiers, account.currentTierId)?.sortOrder ?? -1;
-      const newSort = postTier?.sortOrder ?? -1;
-      const direction = newSort >= oldSort ? "upgrade" : "downgrade";
-      acc.currentTierId = newTierId;
-      acc.tierJoinedAt = now;
-      tierChange = { from: account.currentTierId, to: newTierId, direction };
-      if (direction === "upgrade" && postTier) {
-        notifications.push({
-          type: "tier_upgrade",
-          title: `You've reached ${postTier.name}! ${postTier.icon}`,
-          body: `Enjoy your new ${postTier.name} member benefits.`,
-          facilityId: event.facilityId,
-          customerId: event.customerId,
-        });
-      }
-    }
-  }
+  // --- Tier recalculation (upgrades now; downgrades only if enabled) -------
+  const tierResult = recalculateTier(acc, config, now);
+  acc.currentTierId = tierResult.currentTierId;
+  acc.tierJoinedAt = tierResult.tierJoinedAt;
+  const tierChange = tierResult.tierChange;
+  if (tierResult.redemption) redemptions.push(tierResult.redemption);
+  if (tierResult.notification) notifications.push(tierResult.notification);
 
   // --- Badges --------------------------------------------------------------
-  const currentTier = tiers.length > 0 ? resolveTier(tiers, acc) : null;
+  // Use the tier the customer is actually credited with (post-recalc), so
+  // reached_tier badges respect a retained tier when downgrades are suppressed.
+  const currentTier =
+    tiers.length > 0 ? tierById(tiers, acc.currentTierId) : null;
   const { newlyUnlocked, earnedBadgeIds } = evaluateBadges(
     config.badges ?? [],
     {
@@ -333,7 +515,15 @@ export function processLoyaltyEvent(
   );
   acc.earnedBadgeIds = earnedBadgeIds;
 
+  const customerBadges: CustomerBadge[] = [];
   const unlockedBadges: UnlockedBadgeResult[] = newlyUnlocked.map((badge) => {
+    customerBadges.push({
+      id: `cb-${event.facilityId}-${event.customerId}-${badge.id}`,
+      facilityId: event.facilityId,
+      customerId: event.customerId,
+      badgeId: badge.id,
+      earnedAt: now,
+    });
     let points = 0;
     let credit = 0;
     if (badge.reward) {
@@ -351,11 +541,23 @@ export function processLoyaltyEvent(
           ...(credit > 0 ? { value: credit } : {}),
         }),
       );
+      // Badge granting a discount / freebie / gift card → redeemable voucher.
+      if (badge.reward.type !== "points" && badge.reward.type !== "credit") {
+        redemptions.push(
+          buildRedemption(
+            event,
+            badge.reward.type,
+            badge.reward.value,
+            now,
+            redSeq++,
+          ),
+        );
+      }
     }
     notifications.push({
       type: "badge_unlocked",
-      title: `Badge unlocked: ${badge.name} ${badge.icon}`,
-      body: badge.description,
+      title: badgeEarnedTitle(badge),
+      body: badgeEarnedPortalBody(badge),
       facilityId: event.facilityId,
       customerId: event.customerId,
     });
@@ -381,11 +583,65 @@ export function processLoyaltyEvent(
     }
   }
 
+  // --- Customer notification: points / credit earned (step 7) --------------
+  // Summarize what the customer earned this event (excludes staff manual
+  // adjustments). Tier-upgrade / badge-unlock notifications are added above.
+  const celebratory = transactions.filter(
+    (t) => t.transactionType === "earned" || t.transactionType === "referral",
+  );
+  const earnedPoints = celebratory
+    .filter((t) => t.points > 0)
+    .reduce((s, t) => s + t.points, 0);
+  const earnedCredit = celebratory
+    .filter((t) => t.points === 0 && (t.value ?? 0) > 0)
+    .reduce((s, t) => s + (t.value ?? 0), 0);
+  if (earnedPoints > 0 || earnedCredit > 0) {
+    // Portal + push only — per spec, routine point earns never trigger email
+    // (email is reserved for tier changes, badge awards, reward availability).
+    const bits: string[] = [];
+    if (earnedPoints > 0) bits.push(`${earnedPoints} points`);
+    if (earnedCredit > 0) bits.push(`$${earnedCredit} credit`);
+
+    // "for your [service] booking" when this earn came from a completed booking.
+    const service =
+      event.serviceType && event.serviceType.trim()
+        ? event.serviceType.trim()
+        : null;
+    const forClause =
+      event.type === "booking_completed"
+        ? service
+          ? ` for your ${service} booking`
+          : " for your booking"
+        : "";
+
+    // Dollar value of the new balance at the redemption rate (points per $1).
+    const rate =
+      config.redemptionRate && config.redemptionRate > 0
+        ? config.redemptionRate
+        : 100;
+    const dollarValue = (acc.pointsBalance / rate).toFixed(2);
+
+    const balanceClause =
+      earnedPoints > 0
+        ? ` Your new balance is ${acc.pointsBalance.toLocaleString()} points (= $${dollarValue} value).`
+        : " Thanks for visiting — your rewards balance has been updated.";
+
+    notifications.unshift({
+      type: "points_earned",
+      title: `You earned ${bits.join(" + ")}! 🐾`,
+      body: `You earned ${bits.join(" + ")}${forClause}.${balanceClause}`,
+      facilityId: event.facilityId,
+      customerId: event.customerId,
+    });
+  }
+
   return {
     account: acc,
     transactions,
+    redemptions,
     tierChange,
     unlockedBadges,
+    customerBadges,
     discountApplied,
     notifications,
   };

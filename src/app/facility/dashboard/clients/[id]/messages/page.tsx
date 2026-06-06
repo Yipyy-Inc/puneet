@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { clients } from "@/data/clients";
 import { clientCommunications } from "@/data/communications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,11 @@ export default function ClientMessagesPage({
   const { id } = use(params);
   const clientId = parseInt(id, 10);
   const client = clients.find((c) => c.id === clientId);
-  const [quickMsg, setQuickMsg] = useState("");
+  const searchParams = useSearchParams();
+  // Pre-compose support: e.g. a "Send thank-you" deep link from Loyalty Reports.
+  const [quickMsg, setQuickMsg] = useState(
+    () => searchParams.get("compose") ?? "",
+  );
   const [now] = useState(() => Date.now());
 
   if (!client) return null;

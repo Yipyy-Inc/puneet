@@ -382,6 +382,15 @@ export const tierSchema = z.object({
   icon: z.string(),
   sortOrder: z.number(),
   benefits: z.array(tierBenefitSchema),
+  /** One-time reward granted the first time a customer reaches this tier
+   *  (distinct from the ongoing `benefits`). The automation engine issues it as
+   *  a RewardRedemption voucher on tier upgrade. */
+  tierUpReward: z
+    .object({
+      type: z.enum(["credit", "discount_pct", "discount_fixed"]),
+      value: z.number(),
+    })
+    .optional(),
 });
 export type Tier = z.infer<typeof tierSchema>;
 
@@ -414,9 +423,18 @@ export const redemptionRecordSchema = z.object({
   redeemMethod: redeemMethodEnum,
   bookingId: z.string().nullable(),
   invoiceId: z.string().nullable(),
+  /** When the reward was issued/granted. Drives "time to redeem" analytics
+   *  (redeemedAt − issuedAt). Absent on older/legacy records. */
+  issuedAt: z.string().optional(),
   redeemedAt: z.string(),
   expiresAt: z.string().nullable(),
   status: redemptionRecordStatusEnum,
+  /** Service types a discount voucher applies to (null/absent = all services).
+   *  Drives auto-apply eligibility and the "most specific" tiebreak at checkout. */
+  appliesToServiceTypes: z.array(z.string()).nullable().optional(),
+  /** When the "expiring soon" reminder email was sent. Null/absent = not yet
+   *  warned; set by the nightly cron so a reward is only warned once. */
+  expiryWarningAt: z.string().nullable().optional(),
 });
 export type RedemptionRecord = z.infer<typeof redemptionRecordSchema>;
 
@@ -450,12 +468,32 @@ export const customerLoyaltyAccountSchema = z.object({
   /** Timestamp of the customer's last points-earning activity. Drives
    *  inactivity-based points expiry. Falls back to updatedAt when absent. */
   lastActivityAt: z.string().optional(),
+  /** When the "points expiring soon" reminder email was sent for the current
+   *  inactivity period. Null/absent = not yet warned; cleared on new activity so
+   *  a re-engaged customer can be warned again later. */
+  expiryEmailSentAt: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 export type CustomerLoyaltyAccount = z.infer<
   typeof customerLoyaltyAccountSchema
 >;
+
+// ============================================================================
+// Customer badge — one record per (customer, facility, badge), created the first
+// time a customer earns an achievement badge. The normalized counterpart to the
+// denormalized `CustomerLoyaltyAccount.earnedBadgeIds` set; powers a badge
+// gallery / "earned on" history.
+// ============================================================================
+
+export const customerBadgeSchema = z.object({
+  id: z.string(),
+  facilityId: z.number(),
+  customerId: z.number(),
+  badgeId: z.string(),
+  earnedAt: z.string(),
+});
+export type CustomerBadge = z.infer<typeof customerBadgeSchema>;
 
 // ============================================================================
 // Integration Schemas (from loyalty-integrations.ts)
@@ -772,6 +810,93 @@ export interface ReferralProgramConfig {
   };
 }
 
+// ============================================================================
+// Referral program (canonical flat setup) — edited by the guided "Configure
+// Program" wizard under Marketing → Referrals. A single record per facility,
+// distinct from the legacy nested `ReferralProgramConfig` above (kept for
+// back-compat). This is the shape the facility actually configures.
+// ============================================================================
+
+export const referralRewardTriggerEnum = z.enum([
+  "on_signup",
+  "on_first_booking",
+  "on_first_paid_booking",
+]);
+export type ReferralRewardTrigger = z.infer<typeof referralRewardTriggerEnum>;
+
+/**
+ * One side's referral reward. Referrer and referee are configured independently
+ * so any combination is possible (e.g. referrer credit + referee free service).
+ * `rewardType` uses the same enum as EarnRule so the engine can issue it through
+ * the same path.
+ */
+export const referralRewardConfigSchema = z.object({
+  rewardType: earnRuleRewardTypeEnum,
+  /** Numeric for points/credit/gift_card/discount_*, or an item/service name
+   *  string when rewardType is "freebie". */
+  rewardValue: z.union([z.number(), z.string()]),
+  /** Service type ids the reward applies to (null = all services). */
+  appliesToServiceTypes: z.array(z.string()).nullable(),
+  /** Days the issued reward voucher stays valid after it fires (null = never). */
+  expiresAfterDays: z.number().int().nullable(),
+});
+export type ReferralRewardConfig = z.infer<typeof referralRewardConfigSchema>;
+
+export const referralProgramSchema = z.object({
+  facilityId: z.number(),
+  enabled: z.boolean(),
+  /** What the existing customer (referrer) earns. */
+  referrerReward: referralRewardConfigSchema,
+  /** What the new customer (referee) gets — configured independently. */
+  refereeReward: referralRewardConfigSchema,
+  /** When the rewards fire. */
+  rewardTrigger: referralRewardTriggerEnum,
+  /** Minimum spend that must be met before the reward fires (null = none). */
+  minimumSpend: z.number().nullable(),
+  /** Max times a single referral code can be used (null = unlimited). */
+  maxUsagePerCode: z.number().int().nullable(),
+  /** Days a referral code stays valid after issue (null = never expires). */
+  codeExpiryDays: z.number().int().nullable(),
+  /** Message the referee sees on signup. Supports {code}, {referrerName},
+   *  {refereeReward} tokens. */
+  welcomeMessageTemplate: z.string(),
+  /** Message the referrer shares with friends. Supports {code},
+   *  {refereeReward}, {referrerReward} tokens. */
+  shareMessageTemplate: z.string(),
+});
+export type ReferralProgram = z.infer<typeof referralProgramSchema>;
+
+// ============================================================================
+// Loyalty notification settings — per-facility toggles + delivery method for
+// each loyalty notification type, edited in Marketing → Loyalty → Notifications.
+// ============================================================================
+
+export const loyaltyNotificationMethodEnum = z.enum(["email", "portal", "both"]);
+export type LoyaltyNotificationMethod = z.infer<
+  typeof loyaltyNotificationMethodEnum
+>;
+
+export const loyaltyNotificationSettingsSchema = z.object({
+  facilityId: z.number(),
+  welcomeEnabled: z.boolean(),
+  welcomeMethod: loyaltyNotificationMethodEnum,
+  /** Points-earned confirmation is portal/push only (never email per policy). */
+  pointsEarnedEnabled: z.boolean(),
+  tierUpgradeEnabled: z.boolean(),
+  tierUpgradeMethod: loyaltyNotificationMethodEnum,
+  badgeEarnedEnabled: z.boolean(),
+  rewardExpiryEnabled: z.boolean(),
+  /** Days before a reward expires to send the warning. */
+  rewardExpiryDays: z.number().int(),
+  pointsExpiryEnabled: z.boolean(),
+  referralRewardEnabled: z.boolean(),
+  /** Optional per-type message-template overrides (notification type → body). */
+  templates: z.record(z.string(), z.string()).optional(),
+});
+export type LoyaltyNotificationSettings = z.infer<
+  typeof loyaltyNotificationSettingsSchema
+>;
+
 export interface SpecialEventRewardsConfig {
   enabled: boolean;
   birthdayReward?: {
@@ -835,12 +960,28 @@ export interface FacilityLoyaltyConfig {
   /** Whether loyalty tiers are used. When false, all customers are treated
    *  equally and earn rules apply flat. Defaults to on. */
   tiersEnabled?: boolean;
+  /** When false (default), the engine never downgrades a customer's tier even if
+   *  a threshold change would place them below their current tier — they keep the
+   *  tier they earned. Set true to let tiers drop when the metric falls. */
+  tierDowngradeEnabled?: boolean;
+  /** When a customer holds multiple active discount vouchers at checkout, which
+   *  single one to auto-apply. Defaults to "highest_value". */
+  discountSelectionStrategy?: "highest_value" | "most_specific";
+  /** Points required per $1 of account credit when a customer self-redeems
+   *  points from the portal (default 100 → 100 points = $1). */
+  redemptionRate?: number;
   rewardTypes: RewardTypeConfig[];
   /** Achievement badges configured for this facility. */
   badges?: Badge[];
   pointsScope: PointsScopeConfig;
   discountStacking: DiscountStackingConfig;
+  /** Legacy nested referral config (retained for back-compat). */
   referralProgram?: ReferralProgramConfig;
+  /** Canonical flat referral-program setup edited by the guided "Configure
+   *  Program" wizard (Marketing → Referrals). */
+  referralProgramSetup?: ReferralProgram;
+  /** Per-facility notification toggles + delivery method (Notifications tab). */
+  notificationSettings?: LoyaltyNotificationSettings;
   specialEventRewards?: SpecialEventRewardsConfig;
   settings: {
     pointsName: string;

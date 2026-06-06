@@ -38,6 +38,8 @@ import {
   computeLatePickupFee,
   type LateFeeResult,
 } from "@/lib/late-pickup-fee";
+import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
+import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
 
 const findClient = (petId: number) =>
   clients.find((c) => c.pets.some((p) => p.id === petId));
@@ -103,6 +105,13 @@ export function BookingCard({
 }: BookingCardProps) {
   const router = useRouter();
   const { updateStatus } = useUnifiedBookings();
+  const { recordEvent } = useLoyaltyEngine();
+  const { discount: loyaltyDiscount, consume: consumeLoyaltyDiscount } =
+    useActiveLoyaltyDiscount({
+      customerId: booking.ownerId,
+      subtotal: booking.price ?? 0,
+      serviceType: booking.serviceKey,
+    });
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -200,6 +209,23 @@ export function BookingCard({
     });
     setPendingCheckout(null);
     setPendingLateFee(null);
+
+    // Mark the auto-applied loyalty discount voucher used now that the invoice
+    // is finalized.
+    if (loyaltyDiscount) consumeLoyaltyDiscount();
+
+    // Loyalty automation: a completed booking earns rewards (points, tier
+    // discount, tier upgrade, badges) for the owner.
+    if (booking.ownerId != null) {
+      recordEvent({
+        type: "booking_completed",
+        id: booking.id,
+        customerId: booking.ownerId,
+        amount: payment.amount,
+        serviceType: booking.serviceKey,
+        isService: true,
+      });
+    }
 
     const extra = payment.includedInvoices?.length
       ? ` + ${payment.includedInvoices.length} other invoices`
@@ -390,6 +416,7 @@ export function BookingCard({
                   amountDue={(booking.price ?? 0) + (pendingLateFee?.amount ?? 0)}
                   depositPaid={0}
                   invoiceTotal={(booking.price ?? 0) + (pendingLateFee?.amount ?? 0)}
+                  loyaltyDiscount={loyaltyDiscount ?? undefined}
                   onConfirm={handlePaymentConfirm}
                 />
               </div>
