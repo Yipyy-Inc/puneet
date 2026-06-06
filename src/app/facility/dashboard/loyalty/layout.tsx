@@ -18,6 +18,7 @@ import {
   Users,
   SlidersHorizontal,
   LayoutDashboard,
+  Bell,
 } from "lucide-react";
 
 const tabs = [
@@ -60,6 +61,11 @@ const tabs = [
     name: "Redemptions",
     href: "/facility/dashboard/loyalty/redemptions",
     icon: Receipt,
+  },
+  {
+    name: "Notifications",
+    href: "/facility/dashboard/loyalty/notifications",
+    icon: Bell,
   },
   {
     name: "Advanced",

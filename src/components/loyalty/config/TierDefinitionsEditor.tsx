@@ -38,6 +38,14 @@ const BENEFIT_LABELS: Record<TierBenefitType, string> = {
   custom_text: "Custom Text",
 };
 
+type TierUpRewardType = NonNullable<Tier["tierUpReward"]>["type"];
+
+const TIER_UP_REWARD_LABELS: Record<TierUpRewardType, string> = {
+  credit: "Account Credit ($)",
+  discount_pct: "Discount (%)",
+  discount_fixed: "Discount ($)",
+};
+
 function thresholdLabel(t: TierThresholdType): string {
   switch (t) {
     case "points":
@@ -293,6 +301,66 @@ function TierCard({
           <Button variant="outline" size="sm" onClick={addBenefit}>
             <Plus className="mr-1 size-4" /> Add Benefit
           </Button>
+        </div>
+
+        {/* Tier-up reward (one-time) */}
+        <div className="space-y-2 border-t pt-4">
+          <Label>Welcome reward (one-time)</Label>
+          <p className="text-muted-foreground text-xs">
+            Granted once, the first time a member reaches this tier — issued as a
+            redeemable voucher (separate from the ongoing benefits above).
+          </p>
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Select
+                value={tier.tierUpReward?.type ?? "none"}
+                onValueChange={(v) =>
+                  onPatch({
+                    tierUpReward:
+                      v === "none"
+                        ? undefined
+                        : {
+                            type: v as TierUpRewardType,
+                            value: tier.tierUpReward?.value ?? 0,
+                          },
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No welcome reward</SelectItem>
+                  {Object.entries(TIER_UP_REWARD_LABELS).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {tier.tierUpReward && (
+              <div className="w-36">
+                <Input
+                  type="number"
+                  placeholder={
+                    tier.tierUpReward.type === "discount_pct"
+                      ? "Percent"
+                      : "Amount ($)"
+                  }
+                  value={tier.tierUpReward.value}
+                  onChange={(e) =>
+                    onPatch({
+                      tierUpReward: {
+                        type: tier.tierUpReward!.type,
+                        value: requiredNumber(e.target.value),
+                      },
+                    })
+                  }
+                />
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

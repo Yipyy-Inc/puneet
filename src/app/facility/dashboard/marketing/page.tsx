@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LoyaltyMembersTable } from "@/components/loyalty/LoyaltyMembersTable";
+import { LoyaltyPerformanceBanner } from "@/components/loyalty/LoyaltyPerformanceBanner";
 import { Button } from "@/components/ui/button";
 import {
   Mail,
@@ -65,7 +67,7 @@ import { PromoCodeModal } from "@/components/marketing/PromoCodeModal";
 import { FacilityBrandingSection } from "@/components/marketing/FacilityBrandingSection";
 import { PlaydateAlertsTab } from "@/components/marketing/PlaydateAlertsTab";
 import Link from "next/link";
-import { ReferralConfigModal } from "@/components/marketing/ReferralConfigModal";
+import { ReferralProgramWizard } from "@/components/marketing/ReferralProgramWizard";
 import { QuickReplyModal } from "@/components/marketing/QuickReplyModal";
 import { TemplatePreviewPanel } from "@/components/shared/TemplatePreviewPanel";
 import { quickReplyTemplates } from "@/data/quick-replies";
@@ -979,6 +981,13 @@ export default function MarketingPage() {
 
         {/* Loyalty Tab */}
         <TabsContent value="loyalty" className="space-y-4">
+          <Tabs defaultValue="overview" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="members">Members</TabsTrigger>
+            </TabsList>
+            <TabsContent value="overview" className="space-y-4">
+          <LoyaltyPerformanceBanner />
           {/* Loyalty Overview */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <KpiTile
@@ -1141,6 +1150,11 @@ export default function MarketingPage() {
               </div>
             </CardContent>
           </Card>
+            </TabsContent>
+            <TabsContent value="members" className="space-y-4">
+              <LoyaltyMembersTable />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         {/* Referrals Tab */}
@@ -1340,8 +1354,8 @@ export default function MarketingPage() {
         open={showReferralConfigModal}
         onOpenChange={setShowReferralConfigModal}
       >
-        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
-          <ReferralConfigModal
+        <DialogContent className="max-h-[90vh] min-w-3xl overflow-y-auto">
+          <ReferralProgramWizard
             onClose={() => setShowReferralConfigModal(false)}
           />
         </DialogContent>

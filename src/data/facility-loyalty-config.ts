@@ -21,6 +21,10 @@ export type {
   ReferralRewardType,
   ReferralTriggerType,
   ReferralProgramConfig,
+  ReferralProgram,
+  ReferralRewardConfig,
+  ReferralRewardTrigger,
+  LoyaltyNotificationSettings,
   SpecialEventRewardsConfig,
   FacilityLoyaltyConfig,
   EarnRule,
@@ -43,9 +47,13 @@ import type {
   FacilityLoyaltyConfig,
   EarnRule,
   Tier,
+  ReferralProgram,
+  LoyaltyNotificationSettings,
 } from "@/types/loyalty";
 
 export { BOOKABLE_SERVICE_TYPES } from "@/types/loyalty";
+
+import { badges as defaultBadges } from "@/data/marketing";
 
 // ============================================================================
 // Default Configurations (Examples)
@@ -325,9 +333,22 @@ export const defaultRewardTypes: RewardTypeConfig[] = [
 export const exampleSimplePerDollarConfig: FacilityLoyaltyConfig = {
   facilityId: 1,
   enabled: true,
+  programName: "Paws & Play Rewards",
   pointsEarning: defaultPerDollarEarningRule,
   pointsExpiration: defaultPointsExpiration,
+  // Flat inactivity-based points expiry: points expire after 365 days of no
+  // activity; the nightly cron warns 30 days before.
+  pointsExpiryEnabled: true,
+  pointsExpiryDays: 365,
   tiers: defaultTiers,
+  // Canonical tier ladder the engine uses for tier assignment + upgrade
+  // notifications (Bronze 0 / Silver 500 / Gold 1500 / Platinum 3000).
+  tierDefinitions: buildDefaultTiers(1),
+  tiersEnabled: true,
+  // Achievement badges the engine evaluates → badge-earned notification + email.
+  badges: defaultBadges,
+  // Notification toggles + delivery method (Notifications tab) — all on.
+  notificationSettings: buildDefaultNotificationSettings(1),
   rewardTypes: defaultRewardTypes,
   pointsScope: defaultPointsScope,
   discountStacking: defaultDiscountStacking,
@@ -338,6 +359,74 @@ export const exampleSimplePerDollarConfig: FacilityLoyaltyConfig = {
     showPointsOnReceipt: true,
     showPointsInPortal: true,
   },
+  // Referral program enabled → new loyalty accounts auto-get a personal
+  // [FIRSTNAME]-[RANDOM4] referral code (see getOrCreateLoyaltyAccount).
+  referralProgramSetup: { ...buildDefaultReferralProgram(1), enabled: true },
+  // Trigger-based earn rules — drive the customer portal's dynamic
+  // "How Points Are Earned" list (earnRuleCustomerSummary).
+  earnRules: [
+    {
+      id: "earn-spend",
+      facilityId: 1,
+      name: "Points per dollar",
+      triggerType: "spend_amount",
+      triggerValue: 1,
+      rewardType: "points",
+      rewardValue: 1,
+      appliesToServiceTypes: null,
+      scheduleType: "always",
+      enabled: true,
+    },
+    {
+      id: "earn-daycare-visit",
+      facilityId: 1,
+      name: "Daycare visit bonus",
+      triggerType: "visit_count",
+      triggerValue: 1,
+      rewardType: "points",
+      rewardValue: 50,
+      appliesToServiceTypes: ["daycare"],
+      scheduleType: "always",
+      enabled: true,
+    },
+    {
+      id: "earn-birthday",
+      facilityId: 1,
+      name: "Birthday bonus",
+      triggerType: "birthday",
+      triggerValue: null,
+      rewardType: "points",
+      rewardValue: 100,
+      appliesToServiceTypes: null,
+      scheduleType: "always",
+      enabled: true,
+    },
+    {
+      id: "earn-referral",
+      facilityId: 1,
+      name: "Referral credit",
+      triggerType: "referral_completed",
+      triggerValue: null,
+      rewardType: "credit",
+      rewardValue: 25,
+      appliesToServiceTypes: null,
+      scheduleType: "always",
+      enabled: true,
+    },
+    {
+      id: "earn-summer-grooming",
+      facilityId: 1,
+      name: "Summer grooming bonus",
+      triggerType: "service_type",
+      triggerValue: null,
+      rewardType: "points",
+      rewardValue: 25,
+      appliesToServiceTypes: ["grooming"],
+      scheduleType: "date_range",
+      scheduleConfig: { startDate: "2026-06-01", endDate: "2026-08-31" },
+      enabled: true,
+    },
+  ],
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
@@ -752,6 +841,7 @@ export function buildDefaultTiers(facilityId: number): Tier[] {
         { type: "discount_pct", value: 5 },
         { type: "priority_booking", value: "Priority booking" },
       ],
+      tierUpReward: { type: "credit", value: 5 },
     },
     {
       id: "tier-gold",
@@ -767,6 +857,7 @@ export function buildDefaultTiers(facilityId: number): Tier[] {
         { type: "discount_pct", value: 10 },
         { type: "free_service", value: "Free add-ons" },
       ],
+      tierUpReward: { type: "discount_pct", value: 10 },
     },
     {
       id: "tier-platinum",
@@ -782,8 +873,65 @@ export function buildDefaultTiers(facilityId: number): Tier[] {
         { type: "discount_pct", value: 15 },
         { type: "free_service", value: "Monthly grooming" },
       ],
+      tierUpReward: { type: "credit", value: 25 },
     },
   ];
+}
+
+/**
+ * Build a sensible starter referral program (disabled by default) so the guided
+ * "Configure Program" wizard is never empty on first open. Mirrors the legacy
+ * referralProgram defaults: $25 referrer credit, 10% off for the referee, reward
+ * on first booking, codes valid 90 days.
+ */
+export function buildDefaultReferralProgram(facilityId: number): ReferralProgram {
+  return {
+    facilityId,
+    enabled: false,
+    referrerReward: {
+      rewardType: "credit",
+      rewardValue: 25,
+      appliesToServiceTypes: null,
+      expiresAfterDays: 90,
+    },
+    refereeReward: {
+      rewardType: "discount_pct",
+      rewardValue: 10,
+      appliesToServiceTypes: null,
+      expiresAfterDays: 30,
+    },
+    rewardTrigger: "on_first_booking",
+    minimumSpend: null,
+    maxUsagePerCode: null,
+    codeExpiryDays: 90,
+    welcomeMessageTemplate:
+      "Welcome to Doggieville! Your friend referred you — use code {code} to get {refereeReward} on your first visit. 🐾",
+    shareMessageTemplate:
+      "I love bringing my pup to Doggieville! Use my code {code} for {refereeReward} on your first visit — and I'll earn {referrerReward} too.",
+  };
+}
+
+/**
+ * Default loyalty notification settings — every notification enabled and
+ * delivered by both email + portal, with reward-expiry warnings 7 days out.
+ */
+export function buildDefaultNotificationSettings(
+  facilityId: number,
+): LoyaltyNotificationSettings {
+  return {
+    facilityId,
+    welcomeEnabled: true,
+    welcomeMethod: "both",
+    pointsEarnedEnabled: true,
+    tierUpgradeEnabled: true,
+    tierUpgradeMethod: "both",
+    badgeEarnedEnabled: true,
+    rewardExpiryEnabled: true,
+    rewardExpiryDays: 7,
+    pointsExpiryEnabled: true,
+    referralRewardEnabled: true,
+    templates: {},
+  };
 }
 
 /**
@@ -814,6 +962,8 @@ export function buildDefaultLoyaltyConfig(
     badges: [],
     pointsScope: defaultPointsScope,
     discountStacking: defaultDiscountStacking,
+    referralProgramSetup: buildDefaultReferralProgram(facilityId),
+    notificationSettings: buildDefaultNotificationSettings(facilityId),
     settings: {
       pointsName: "Points",
       pointsValue: 5,

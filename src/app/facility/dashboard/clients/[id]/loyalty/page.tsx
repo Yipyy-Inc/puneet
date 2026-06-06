@@ -9,34 +9,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
-import { cn } from "@/lib/utils";
 import { Coins, Crown, Gift, Wallet, Plus, Star } from "lucide-react";
 import { loyaltyQueries } from "@/lib/api/loyalty";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { AdjustPointsModal } from "@/components/loyalty/AdjustPointsModal";
-import type { LoyaltyTransaction } from "@/types/loyalty";
-
-const TYPE_LABEL: Record<LoyaltyTransaction["transactionType"], string> = {
-  earned: "Earned",
-  redeemed: "Redeemed",
-  expired: "Expired",
-  adjusted: "Adjustment",
-  manual_adjustment: "Staff adjustment",
-  referral: "Referral",
-};
+import { LoyaltyTransactionHistory } from "@/components/loyalty/LoyaltyTransactionHistory";
 
 const ADJUST_ROLES = ["owner", "general_manager", "department_manager"];
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 export default function ClientLoyaltyPage({
   params,
@@ -141,54 +122,10 @@ export default function ClientLoyaltyPage({
               <CardTitle className="text-base">Transaction History</CardTitle>
             </CardHeader>
             <CardContent>
-              {transactions.length === 0 ? (
-                <p className="text-muted-foreground text-sm">
-                  No transactions yet.
-                </p>
-              ) : (
-                <ul className="divide-y">
-                  {transactions.map((t) => (
-                    <li
-                      key={t.id}
-                      className="flex items-start justify-between gap-3 py-3"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant={
-                              t.transactionType === "manual_adjustment"
-                                ? "secondary"
-                                : "outline"
-                            }
-                          >
-                            {TYPE_LABEL[t.transactionType]}
-                          </Badge>
-                          <span className="text-muted-foreground text-xs">
-                            {formatDate(t.createdAt)}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-sm">{t.description}</p>
-                        {t.staffName && (
-                          <p className="text-muted-foreground text-xs">
-                            by {t.staffName}
-                          </p>
-                        )}
-                      </div>
-                      <div
-                        className={cn(
-                          "shrink-0 text-sm font-semibold tabular-nums",
-                          t.points > 0
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-red-600 dark:text-red-400",
-                        )}
-                      >
-                        {t.points > 0 ? "+" : ""}
-                        {t.points.toLocaleString()}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <LoyaltyTransactionHistory
+                transactions={transactions}
+                currentBalance={account.pointsBalance}
+              />
             </CardContent>
           </Card>
 

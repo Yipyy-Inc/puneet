@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2, Award } from "lucide-react";
+import { badgeSummaryText } from "@/lib/loyalty/badge-summary";
 import type {
   Badge,
   BadgeCriteriaType,
@@ -138,6 +139,16 @@ function BadgeCard({ badge, onPatch, onRemove }: BadgeCardProps) {
           >
             <Trash2 className="text-destructive size-4" />
           </Button>
+        </div>
+
+        {/* Live summary — condition + reward type/value, never truncated. */}
+        <div className="bg-muted/40 rounded-md px-3 py-2 text-sm">
+          <span className="mr-1">{badge.icon || "⭐"}</span>
+          <span className="font-medium">{badge.name || "Untitled badge"}</span>
+          {": "}
+          <span className="text-muted-foreground">
+            {badgeSummaryText(badge)}
+          </span>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

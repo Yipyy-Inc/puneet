@@ -29,6 +29,7 @@ import type { GroomingAppointment } from "@/types/grooming";
 import type { Client } from "@/types/client";
 import type { CustomerPackageRecord } from "@/data/customer-packages";
 import { computePackagePassDiscount } from "@/lib/grooming/package-pass";
+import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
 
 export type PaymentMethodKind =
   | "card-on-file"
@@ -127,15 +128,25 @@ export function PaymentDialog({
     setReceiptEmail(true);
   }, [open, apt?.id, defaultCard, lockedTipAmount]);
 
+  // ── Itemized total ─────────────────────────────────────────────────────
+  // Computed before the early return so the loyalty-discount hook runs
+  // unconditionally (Rules of Hooks); guarded for a null appointment.
+  const baseService = apt?.basePrice ?? 0;
+  const adjustmentsTotal =
+    apt?.priceAdjustments.reduce((s, a) => s + a.amount, 0) ?? 0;
+  const preTaxSubtotal = baseService + adjustmentsTotal;
+
+  // Auto-applied loyalty discount voucher (tier / badge / earn-rule reward).
+  const { discount: loyaltyDiscount, consume: consumeLoyaltyDiscount } =
+    useActiveLoyaltyDiscount({
+      customerId: client?.id,
+      subtotal: preTaxSubtotal,
+      serviceType: "grooming",
+    });
+  const loyaltyDiscountAmount = loyaltyDiscount?.amount ?? 0;
+
   if (!apt) return null;
 
-  // ── Itemized total ─────────────────────────────────────────────────────
-  const baseService = apt.basePrice;
-  const adjustmentsTotal = apt.priceAdjustments.reduce(
-    (s, a) => s + a.amount,
-    0,
-  );
-  const preTaxSubtotal = baseService + adjustmentsTotal;
   const taxAmount = preTaxSubtotal * taxRate;
 
   // Tip: locked from booking, or computed from the chosen preset / custom.
@@ -160,7 +171,10 @@ export function PaymentDialog({
     : 0;
 
   // ── Store credit — capped at the customer's balance and the post-pass total
-  const postPassTotal = Math.max(0, grandTotal - packagePassDiscount);
+  const postPassTotal = Math.max(
+    0,
+    grandTotal - packagePassDiscount - loyaltyDiscountAmount,
+  );
   const maxStoreCredit = Math.min(storeCreditBalance, postPassTotal);
   const effectiveStoreCredit = Math.min(storeCreditApplied, maxStoreCredit);
   const amountCharged = Math.max(
@@ -202,6 +216,8 @@ export function PaymentDialog({
     const channels: ("sms" | "email")[] = [];
     if (receiptSms) channels.push("sms");
     if (receiptEmail) channels.push("email");
+    // Mark the loyalty discount voucher used now that the invoice is finalized.
+    if (loyaltyDiscountAmount > 0) consumeLoyaltyDiscount();
     onConfirm({
       method: effectiveMethod,
       savedCardId:
@@ -259,6 +275,13 @@ export function PaymentDialog({
               <Row
                 label={`Package pass · ${selectedPackage?.packageName}`}
                 value={-packagePassDiscount}
+                accentNegative
+              />
+            )}
+            {loyaltyDiscount && loyaltyDiscountAmount > 0 && (
+              <Row
+                label={loyaltyDiscount.label}
+                value={-loyaltyDiscountAmount}
                 accentNegative
               />
             )}

@@ -31,7 +31,8 @@ import {
   ClipboardCheck,
   CheckCircle2,
 } from "lucide-react";
-import { daycareCheckIns, DaycareCheckIn } from "@/data/daycare";
+import { daycareCheckIns, DaycareCheckIn, daycareRates } from "@/data/daycare";
+import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
 import { clients } from "@/data/clients";
 
 interface UnifiedCheckIn {
@@ -74,6 +75,12 @@ function normalizeToUnifiedCheckIn(
   return daycareItems;
 }
 
+function calculateDaycarePrice(rateType: string, petSize: string): number {
+  const rate = daycareRates.find((r) => r.type === rateType);
+  if (!rate) return 0;
+  return rate.sizePricing[petSize as keyof typeof rate.sizePricing] || 0;
+}
+
 const petImages: Record<number, string> = {
   1: "/api/placeholder/40/40",
   2: "/api/placeholder/40/40",
@@ -89,6 +96,7 @@ const getPetImage = (petId: number) => petImages[petId];
 
 export function DaycareCheckInOutSection() {
   const isMounted = useHydrated();
+  const { recordEvent } = useLoyaltyEngine();
   const [searchQuery, setSearchQuery] = useState("");
   const [checkInOutMode, setCheckInOutMode] = useState<
     "check-in" | "check-out" | "view" | null
@@ -302,6 +310,24 @@ export function DaycareCheckInOutSection() {
       },
       duration: 5000,
     });
+
+    // Loyalty automation: a completed daycare stay earns rewards (points, tier
+    // discount, tier upgrade, badges) for the pet's owner.
+    if (checkInOutMode === "check-out") {
+      const loyaltyClient = findClientForPet(selectedItem.petId);
+      if (loyaltyClient) {
+        recordEvent({
+          type: "booking_completed",
+          id: selectedItem.id,
+          customerId: loyaltyClient.id,
+          amount: previousData
+            ? calculateDaycarePrice(previousData.rateType, previousData.petSize)
+            : 0,
+          serviceType: "daycare",
+          isService: true,
+        });
+      }
+    }
 
     setCheckInOutMode(null);
     setSelectedItem(null);

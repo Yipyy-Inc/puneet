@@ -10,14 +10,19 @@ import type {
   ReferralEvent,
   RedemptionRecord,
   CustomerLoyaltyAccount,
+  CustomerBadge,
   LoyaltyTransaction,
 } from "@/types/loyalty";
 
-import { getTransactionsByCustomer } from "@/data/loyalty-transactions";
+import {
+  loyaltyTransactions,
+  getTransactionsByCustomer,
+} from "@/data/loyalty-transactions";
 
 import {
   redemptionRecords,
   getRedemptionsByFacility,
+  getActiveRedemptionsForCustomer,
 } from "@/data/loyalty-redemptions";
 
 import {
@@ -25,6 +30,16 @@ import {
   getLoyaltyAccountsByFacility,
   getLoyaltyAccount,
 } from "@/data/loyalty-accounts";
+
+import {
+  getSpendEventsByFacility,
+  type LoyaltySpendEvent,
+} from "@/data/loyalty-spend-events";
+
+import {
+  getCustomerBadges,
+  getCustomerBadgesByFacility,
+} from "@/data/loyalty-badges";
 
 import {
   loyaltySettings,
@@ -106,6 +121,12 @@ export const loyaltyQueries = {
       facilityId ? getRedemptionsByFacility(facilityId) : redemptionRecords,
   }),
 
+  customerRewards: (facilityId: number, customerId: number) => ({
+    queryKey: ["loyalty", "customerRewards", facilityId, customerId] as const,
+    queryFn: async (): Promise<RedemptionRecord[]> =>
+      getActiveRedemptionsForCustomer(facilityId, customerId),
+  }),
+
   accounts: (facilityId?: number) => ({
     queryKey: ["loyalty", "accounts", facilityId] as const,
     queryFn: async (): Promise<CustomerLoyaltyAccount[]> =>
@@ -122,5 +143,25 @@ export const loyaltyQueries = {
     queryKey: ["loyalty", "transactions", facilityId, customerId] as const,
     queryFn: async (): Promise<LoyaltyTransaction[]> =>
       getTransactionsByCustomer(facilityId, customerId),
+  }),
+
+  transactionsAll: (facilityId: number) => ({
+    queryKey: ["loyalty", "transactionsAll", facilityId] as const,
+    queryFn: async (): Promise<LoyaltyTransaction[]> =>
+      loyaltyTransactions.filter((t) => t.facilityId === facilityId),
+  }),
+
+  customerBadges: (facilityId: number, customerId?: number) => ({
+    queryKey: ["loyalty", "customerBadges", facilityId, customerId] as const,
+    queryFn: async (): Promise<CustomerBadge[]> =>
+      customerId != null
+        ? getCustomerBadges(facilityId, customerId)
+        : getCustomerBadgesByFacility(facilityId),
+  }),
+
+  spendEvents: (facilityId: number) => ({
+    queryKey: ["loyalty", "spendEvents", facilityId] as const,
+    queryFn: async (): Promise<LoyaltySpendEvent[]> =>
+      getSpendEventsByFacility(facilityId),
   }),
 };

@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
+import { LoyaltyPerformanceBanner } from "@/components/loyalty/LoyaltyPerformanceBanner";
 import { SaveBar } from "@/components/loyalty/config/SaveBar";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
 import {
@@ -68,6 +69,9 @@ export default function LoyaltyOverviewPage() {
           Use the tabs above to configure each area.
         </p>
       </div>
+
+      {/* Live program-performance banner */}
+      <LoyaltyPerformanceBanner />
 
       {/* Guided setup CTA */}
       <Link

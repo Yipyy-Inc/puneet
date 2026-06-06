@@ -23,12 +23,17 @@ import {
   CheckCircle2,
   Clock,
   Award,
-  GiftIcon,
   Sparkles,
   ExternalLink,
   Info,
   Loader2,
   DollarSign,
+  Wallet,
+  Percent,
+  CreditCard,
+  ArrowRight,
+  Lock,
+  type LucideIcon,
 } from "lucide-react";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { toast } from "sonner";
@@ -46,15 +51,47 @@ import {
   referralCodes,
   badges,
   loyaltyRewards,
-  pointsEarningRules,
   type LoyaltyReward,
-  type PointsEarningRule,
 } from "@/data/marketing";
-import { bookings } from "@/data/bookings";
+import { buildDefaultEarnRules } from "@/data/facility-loyalty-config";
+import {
+  earnRuleCustomerSummary,
+  activeCustomerEarnRules,
+} from "@/lib/loyalty/earn-rule-summary";
+import {
+  buildRewardsWallet,
+  type WalletIcon,
+} from "@/lib/loyalty/rewards-wallet";
+import Link from "next/link";
 import { payments } from "@/data/payments";
+import { useQuery } from "@tanstack/react-query";
+import { loyaltyQueries } from "@/lib/api/loyalty";
+import {
+  badgeConditionText,
+  badgeRewardText,
+} from "@/lib/loyalty/badge-summary";
+import {
+  badgeCriteriaMet,
+  type BadgeStats,
+} from "@/lib/loyalty/engine-badges";
+import { badgeProgress } from "@/lib/loyalty/badge-progress";
+import { RedeemPointsDialog } from "@/components/customer/RedeemPointsDialog";
+import { LoyaltyTransactionHistory } from "@/components/loyalty/LoyaltyTransactionHistory";
+import { BadgeCelebration } from "@/components/customer/BadgeCelebration";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
+
+// Captured once at module load for deterministic expiry math (gated behind
+// isMounted at render time to avoid SSR hydration mismatch).
+const NOW_MS = Date.now();
+
+const WALLET_ICONS: Record<WalletIcon, LucideIcon> = {
+  credit: DollarSign,
+  discount: Percent,
+  gift_card: CreditCard,
+  freebie: Gift,
+};
 
 export default function CustomerRewardsPage() {
   const { selectedFacility } = useCustomerFacility();
@@ -65,10 +102,54 @@ export default function CustomerRewardsPage() {
     null,
   );
   const [isRedeeming, setIsRedeeming] = useState(false);
+  const [pointsRedeemOpen, setPointsRedeemOpen] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Live loyalty account (the engine model) — authoritative for points, credit,
+  // and tier. Falls back to the legacy display model until it loads.
+  const loyaltyFacilityId = selectedFacility?.id ?? 0;
+  const { data: loyaltyAccount } = useQuery({
+    ...loyaltyQueries.account(loyaltyFacilityId, MOCK_CUSTOMER_ID),
+    enabled: !!selectedFacility,
+  });
+  const { data: facilityLoyaltyConfig } = useQuery({
+    ...loyaltyQueries.facilityConfig(loyaltyFacilityId),
+    enabled: !!selectedFacility,
+  });
+  const redemptionRate = facilityLoyaltyConfig?.redemptionRate ?? 100;
+
+  // Active earn rules drive the dynamic "How Points Are Earned" list so it always
+  // mirrors the facility's current EarnRule config. Falls back to the defaults
+  // when a facility hasn't customised its rules yet.
+  const earnRules = useMemo(() => {
+    const rules =
+      facilityLoyaltyConfig?.earnRules &&
+      facilityLoyaltyConfig.earnRules.length > 0
+        ? facilityLoyaltyConfig.earnRules
+        : buildDefaultEarnRules(loyaltyFacilityId);
+    return activeCustomerEarnRules(rules);
+  }, [facilityLoyaltyConfig, loyaltyFacilityId]);
+
+  // Rewards wallet — the customer's active, unused RewardRedemptions. Keyed under
+  // ["loyalty"] so redeeming points (which creates a record) refreshes it.
+  const { data: activeRewards = [] } = useQuery({
+    ...loyaltyQueries.customerRewards(loyaltyFacilityId, MOCK_CUSTOMER_ID),
+    enabled: !!selectedFacility,
+  });
+  const walletRewards = useMemo(
+    () => buildRewardsWallet(activeRewards, NOW_MS),
+    [activeRewards],
+  );
+
+  // Full points-transaction history (canonical LoyaltyTransactions) for the
+  // "My History" tab — earned / redeemed / adjusted / expired with running balance.
+  const { data: pointTransactions = [] } = useQuery({
+    ...loyaltyQueries.transactions(loyaltyFacilityId, MOCK_CUSTOMER_ID),
+    enabled: !!selectedFacility,
+  });
 
   // Get loyalty data
   const loyaltyData = useMemo(() => {
@@ -77,44 +158,38 @@ export default function CustomerRewardsPage() {
     );
     if (!customerLoyalty) return null;
 
-    const currentTier = loyaltySettings.tiers.find(
-      (t) => t.id === customerLoyalty.tier,
-    );
-    const nextTier = loyaltySettings.tiers.find(
-      (t) => t.minPoints > customerLoyalty.points,
-    );
-    const pointsToNextTier = nextTier
-      ? nextTier.minPoints - customerLoyalty.points
-      : 0;
+    // Prefer the live engine account (points / tier / credit are kept in sync by
+    // the automation engine); the tier ids match loyaltySettings.tiers.
+    const points = loyaltyAccount?.pointsBalance ?? customerLoyalty.points;
+    const tierId = loyaltyAccount?.currentTierId ?? customerLoyalty.tier;
+    const creditBalance = loyaltyAccount?.creditBalance ?? 0;
+
+    const currentTier = loyaltySettings.tiers.find((t) => t.id === tierId);
+    const nextTier = loyaltySettings.tiers.find((t) => t.minPoints > points);
+    const pointsToNextTier = nextTier ? nextTier.minPoints - points : 0;
     const currentTierMaxPoints = nextTier ? nextTier.minPoints : Infinity;
     const currentTierMinPoints = currentTier?.minPoints || 0;
-    const progressInTier = customerLoyalty.points - currentTierMinPoints;
+    const progressInTier = points - currentTierMinPoints;
     const tierRange = currentTierMaxPoints - currentTierMinPoints;
     const progressPercentage =
       tierRange > 0 ? (progressInTier / tierRange) * 100 : 0;
 
     return {
       ...customerLoyalty,
+      points,
+      tier: tierId,
+      creditBalance,
       currentTier,
       nextTier,
       pointsToNextTier,
       progressPercentage: Math.min(100, Math.max(0, progressPercentage)),
     };
-  }, []);
+  }, [loyaltyAccount]);
 
   // Get referral codes for this customer
   const customerReferralCodes = useMemo(() => {
     return referralCodes.filter((ref) => ref.referrerId === MOCK_CUSTOMER_ID);
   }, []);
-
-  // Get customer bookings to calculate stats
-  const customerBookings = useMemo(() => {
-    if (!selectedFacility) return [];
-    return bookings.filter(
-      (b) =>
-        b.clientId === MOCK_CUSTOMER_ID && b.facilityId === selectedFacility.id,
-    );
-  }, [selectedFacility]);
 
   // Get customer payments to calculate total spent
   const customerPayments = useMemo(() => {
@@ -131,51 +206,96 @@ export default function CustomerRewardsPage() {
     return customerPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
   }, [customerPayments]);
 
-  // Calculate earned badges (mock logic - in production, this would check actual criteria)
-  const earnedBadges = useMemo(() => {
-    const bookingCount = customerBookings.length;
-    const earned: typeof badges = [];
+  // Earned (CustomerBadge records) + in-progress badges, evaluated against the
+  // canonical loyalty account stats via the same engine criteria the automation
+  // uses. Earned = has a record OR currently meets the criteria.
+  const { data: customerBadges = [] } = useQuery({
+    ...loyaltyQueries.customerBadges(loyaltyFacilityId, MOCK_CUSTOMER_ID),
+    enabled: !!selectedFacility,
+  });
 
-    badges.forEach((badge) => {
-      let earnedBadge = false;
-      if (
-        badge.criteria.type === "bookings_count" &&
-        bookingCount >= badge.criteria.threshold
-      ) {
-        earnedBadge = true;
-      } else if (
-        badge.criteria.type === "total_spent" &&
-        totalSpent >= badge.criteria.threshold
-      ) {
-        earnedBadge = true;
-      } else if (
-        badge.criteria.type === "referrals" &&
-        customerReferralCodes.length > 0
-      ) {
-        const totalReferrals = customerReferralCodes.reduce(
-          (sum, ref) => sum + ref.timesUsed,
-          0,
-        );
-        if (totalReferrals >= badge.criteria.threshold) {
-          earnedBadge = true;
-        }
+  const badgeView = useMemo(() => {
+    const facilityBadges =
+      facilityLoyaltyConfig?.badges && facilityLoyaltyConfig.badges.length > 0
+        ? facilityLoyaltyConfig.badges
+        : badges;
+    const tiers = facilityLoyaltyConfig?.tierDefinitions ?? [];
+    const stats: BadgeStats = {
+      bookingsCount: loyaltyAccount?.totalVisits ?? 0,
+      totalSpent: loyaltyAccount?.totalSpend ?? 0,
+      referrals: loyaltyAccount?.referralCount ?? 0,
+      reviews: loyaltyAccount?.reviewCount ?? 0,
+      currentTier:
+        tiers.find((t) => t.id === loyaltyAccount?.currentTierId) ?? null,
+    };
+    const earnedAtById = new Map(
+      customerBadges.map((cb) => [cb.badgeId, cb.earnedAt]),
+    );
+
+    const earned: { badge: (typeof facilityBadges)[number]; earnedAt: string | null }[] =
+      [];
+    const inProgress: {
+      badge: (typeof facilityBadges)[number];
+      progress: ReturnType<typeof badgeProgress>;
+    }[] = [];
+
+    for (const badge of facilityBadges) {
+      if (badge.enabled === false) continue;
+      const earnedAt = earnedAtById.get(badge.id) ?? null;
+      const isEarned = earnedAt != null || badgeCriteriaMet(badge, stats, tiers);
+      if (isEarned) {
+        earned.push({ badge, earnedAt });
+      } else {
+        inProgress.push({ badge, progress: badgeProgress(badge, stats, tiers) });
       }
-      if (earnedBadge) {
-        earned.push(badge);
-      }
-    });
+    }
 
-    return earned;
-  }, [customerBookings, totalSpent, customerReferralCodes]);
+    earned.sort((a, b) => (a.earnedAt ?? "").localeCompare(b.earnedAt ?? "") * -1);
+    inProgress.sort((a, b) => b.progress.ratio - a.progress.ratio);
+    return { earned, inProgress };
+  }, [facilityLoyaltyConfig, loyaltyAccount, customerBadges]);
 
-  // Format date helper (short format for table: "Jan 12")
-  const formatDate = (dateString: string) => {
-    if (!isMounted) return "";
-    return new Date(dateString).toLocaleDateString("en-US", {
+  // Celebrate badges earned since the customer last visited (tracked in
+  // localStorage). The celebration is shown by id; the badge is looked up at
+  // render so the effect only manages a string + persistence.
+  const earnedKey = useMemo(
+    () => badgeView.earned.map((e) => e.badge.id).join(","),
+    [badgeView],
+  );
+  const [celebrateId, setCelebrateId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isMounted) return;
+    const ids = earnedKey ? earnedKey.split(",") : [];
+    if (ids.length === 0) return;
+    const key = `seen-badges-${loyaltyFacilityId}-${MOCK_CUSTOMER_ID}`;
+    let seen: string[] = [];
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (raw) seen = JSON.parse(raw) as string[];
+    } catch {
+      seen = [];
+    }
+    const fresh = ids.filter((id) => !seen.includes(id));
+    if (fresh.length === 0) return;
+    try {
+      window.localStorage.setItem(key, JSON.stringify(ids));
+    } catch {
+      // ignore storage failures
+    }
+    const t = setTimeout(() => setCelebrateId(fresh[0]), 250);
+    return () => clearTimeout(t);
+  }, [isMounted, earnedKey, loyaltyFacilityId]);
+
+  const celebrateBadge = badgeView.earned.find(
+    (e) => e.badge.id === celebrateId,
+  )?.badge;
+
+  const formatEarnedDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
+      year: "numeric",
     });
-  };
 
   const copyToClipboard = (text: string, codeId: string) => {
     navigator.clipboard.writeText(text);
@@ -184,11 +304,11 @@ export default function CustomerRewardsPage() {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  // Calculate points value in dollars
+  // Redeemable dollar value of the points balance at the facility's rate.
   const pointsValue = useMemo(() => {
-    if (!loyaltyData || !loyaltySettings) return 0;
-    return (loyaltyData.points / 100) * loyaltySettings.pointsValue;
-  }, [loyaltyData]);
+    if (!loyaltyData) return 0;
+    return loyaltyData.points / redemptionRate;
+  }, [loyaltyData, redemptionRate]);
 
   if (!loyaltySettings.enabled) {
     return (
@@ -236,15 +356,21 @@ export default function CustomerRewardsPage() {
                       <div className="text-4xl font-bold">
                         {loyaltyData.points.toLocaleString()} Points
                       </div>
-                      {loyaltySettings.pointsValue > 0 && (
-                        <div className="text-muted-foreground mt-1 text-sm">
-                          ≈ ${pointsValue.toFixed(2)} value
-                        </div>
-                      )}
+                      <div className="text-muted-foreground mt-1 text-sm">
+                        {pointsValue > 0 && <>≈ ${pointsValue.toFixed(2)} in credit</>}
+                        {loyaltyData.creditBalance > 0 && (
+                          <>
+                            {pointsValue > 0 ? " · " : ""}
+                            <span className="text-emerald-600 dark:text-emerald-400">
+                              ${loyaltyData.creditBalance.toFixed(2)} credit available
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <Button asChild>
-                    <a href="#redeem">Redeem Points</a>
+                  <Button onClick={() => setPointsRedeemOpen(true)}>
+                    Redeem Points
                   </Button>
                 </div>
 
@@ -330,11 +456,11 @@ export default function CustomerRewardsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {pointsEarningRules.map(
-                (rule: PointsEarningRule, index: number) => (
+            {earnRules.length > 0 ? (
+              <div className="space-y-3">
+                {earnRules.map((rule) => (
                   <div
-                    key={index}
+                    key={rule.id}
                     className="bg-background/60 flex items-start gap-3 rounded-lg border p-3"
                   >
                     <div className="bg-primary/10 mt-0.5 rounded-full p-2">
@@ -342,60 +468,203 @@ export default function CustomerRewardsPage() {
                     </div>
                     <div className="flex-1">
                       <div className="text-sm font-medium">
-                        {rule.description}
+                        {earnRuleCustomerSummary(rule)}
                       </div>
-                      {rule.applicableServices &&
-                        rule.applicableServices.length > 0 && (
-                          <div className="text-muted-foreground mt-1 text-xs">
-                            Applies to:{" "}
-                            {rule.applicableServices
-                              .map(
-                                (s: string) =>
-                                  s.charAt(0).toUpperCase() + s.slice(1),
-                              )
-                              .join(", ")}
-                          </div>
-                        )}
-                      {rule.conditions && (
-                        <div className="text-muted-foreground mt-1 text-xs">
-                          <Info className="mr-1 inline size-3" />
-                          {rule.conditions}
-                        </div>
-                      )}
                     </div>
                   </div>
-                ),
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-muted-foreground flex items-center gap-2 py-6 text-sm">
+                <Info className="size-4 shrink-0" />
+                Earn points on every visit — ask the front desk for details.
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Tier Benefits */}
+        {/* Your Rewards — wallet of active RewardRedemptions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wallet className="size-5" />
+              Your Rewards
+            </CardTitle>
+            <CardDescription>
+              Rewards you have available to use right now
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {walletRewards.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {walletRewards.map((reward) => {
+                  const Icon = WALLET_ICONS[reward.icon];
+                  return (
+                    <div
+                      key={reward.id}
+                      className="bg-background/60 flex flex-col gap-3 rounded-lg border p-4"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-3">
+                          <div className="bg-primary/10 mt-0.5 rounded-full p-2">
+                            <Icon className="text-primary size-4" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold">
+                              {reward.title}
+                            </div>
+                            <div className="text-muted-foreground mt-0.5 text-xs">
+                              Applies to: {reward.servicesText}
+                            </div>
+                          </div>
+                        </div>
+                        {isMounted && reward.isExpiringSoon && (
+                          <Badge className="shrink-0 border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-400">
+                            Expiring soon
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge variant="secondary" className="font-semibold">
+                          {reward.valueChip}
+                        </Badge>
+                        {isMounted && (
+                          <span className="text-muted-foreground flex items-center gap-1 text-xs">
+                            <Clock className="size-3" />
+                            {reward.expiresInDays != null
+                              ? `Expires in ${reward.expiresInDays} ${
+                                  reward.expiresInDays === 1 ? "day" : "days"
+                                }`
+                              : "No expiry"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-muted-foreground flex flex-col items-center py-8 text-center">
+                <Gift className="mb-2 size-10 opacity-50" />
+                <p className="text-sm font-medium">No rewards available yet</p>
+                <p className="mt-1 text-xs">
+                  Keep earning points and watch this space — your rewards will
+                  appear here.
+                </p>
+              </div>
+            )}
+
+            {walletRewards.length > 0 && (
+              <div className="mt-4 flex justify-end">
+                <Button asChild variant="outline">
+                  <Link href="/customer/bookings">
+                    View my bookings
+                    <ArrowRight className="ml-2 size-4" />
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Tier Benefits — current (unlocked) + next (locked, to motivate) */}
         {loyaltyData?.currentTier && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Award className="size-5" />
-                Current Tier Benefits
+                Tier Benefits
               </CardTitle>
+              <CardDescription>
+                What you enjoy now — and what you&apos;re working toward
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {loyaltyData.currentTier.benefits.map((benefit, index) => (
-                  <div key={index} className="flex items-start gap-2">
-                    <CheckCircle2 className="text-primary mt-0.5 size-5 shrink-0" />
-                    <span className="text-sm">{benefit}</span>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {/* Current tier — unlocked */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="secondary"
+                      className="font-semibold"
+                      style={{
+                        backgroundColor: `${loyaltyData.currentTier.color}20`,
+                        color: loyaltyData.currentTier.color,
+                      }}
+                    >
+                      {loyaltyData.currentTier.name}
+                    </Badge>
+                    <span className="text-sm font-medium">
+                      Your {loyaltyData.currentTier.name} benefits
+                    </span>
                   </div>
-                ))}
-              </div>
-              {loyaltyData.currentTier.discountPercentage > 0 && (
-                <div className="bg-primary/10 mt-4 rounded-lg p-3">
-                  <div className="text-primary text-sm font-medium">
-                    {loyaltyData.currentTier.discountPercentage}% discount on
-                    all services
-                  </div>
+                  <ul className="space-y-2">
+                    {loyaltyData.currentTier.discountPercentage > 0 && (
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-sm">
+                          {loyaltyData.currentTier.discountPercentage}% discount
+                          on all services
+                        </span>
+                      </li>
+                    )}
+                    {loyaltyData.currentTier.benefits.map((benefit, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-sm">{benefit}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              )}
+
+                {/* Next tier — locked */}
+                {loyaltyData.nextTier ? (
+                  <div className="bg-muted/30 space-y-3 rounded-lg border border-dashed p-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Lock className="text-muted-foreground size-4" />
+                        <span className="text-sm font-medium">
+                          Unlock at {loyaltyData.nextTier.name}
+                        </span>
+                      </div>
+                      <p className="text-primary mt-1 text-xs font-semibold">
+                        {loyaltyData.pointsToNextTier.toLocaleString()} more
+                        points to go
+                      </p>
+                    </div>
+                    <ul className="space-y-2">
+                      {loyaltyData.nextTier.discountPercentage >
+                        loyaltyData.currentTier.discountPercentage && (
+                        <li className="text-muted-foreground flex items-start gap-2">
+                          <Lock className="mt-0.5 size-4 shrink-0" />
+                          <span className="text-sm">
+                            {loyaltyData.nextTier.discountPercentage}% discount
+                            on all services
+                          </span>
+                        </li>
+                      )}
+                      {loyaltyData.nextTier.benefits.map((benefit, index) => (
+                        <li
+                          key={index}
+                          className="text-muted-foreground flex items-start gap-2"
+                        >
+                          <Lock className="mt-0.5 size-4 shrink-0" />
+                          <span className="text-sm">{benefit}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="bg-muted/30 flex flex-col items-center justify-center rounded-lg border border-dashed p-4 text-center">
+                    <Sparkles className="text-primary mb-2 size-6" />
+                    <p className="text-sm font-medium">You&apos;re at the top!</p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      You&apos;ve unlocked every tier — enjoy your perks.
+                    </p>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -403,7 +672,7 @@ export default function CustomerRewardsPage() {
         {/* Tabs for different sections */}
         <Tabs defaultValue="points" className="space-y-4">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="points">Points History</TabsTrigger>
+            <TabsTrigger value="points">My History</TabsTrigger>
             <TabsTrigger value="rewards">Rewards</TabsTrigger>
             <TabsTrigger value="referrals">Referrals</TabsTrigger>
             <TabsTrigger value="badges">Badges</TabsTrigger>
@@ -413,97 +682,18 @@ export default function CustomerRewardsPage() {
           <TabsContent value="points" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Loyalty History</CardTitle>
+                <CardTitle>My History</CardTitle>
                 <CardDescription>
-                  Track how you&apos;ve earned and redeemed points
+                  Every point you&apos;ve earned, redeemed, or had adjusted —
+                  newest first
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {loyaltyData && loyaltyData.pointsHistory.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
-                            Date
-                          </th>
-                          <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
-                            Activity
-                          </th>
-                          <th className="text-muted-foreground px-4 py-3 text-right text-sm font-semibold">
-                            Points
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {loyaltyData.pointsHistory
-                          .sort(
-                            (a, b) =>
-                              new Date(b.date).getTime() -
-                              new Date(a.date).getTime(),
-                          )
-                          .map((entry, index) => {
-                            const isEarned = entry.type === "earned";
-                            const isRedeemed = entry.type === "redeemed";
-                            const isExpired = entry.type === "expired";
-
-                            return (
-                              <tr
-                                key={index}
-                                className="hover:bg-muted/50 border-b transition-colors"
-                              >
-                                <td className="px-4 py-3 text-sm font-medium">
-                                  {formatDate(entry.date)}
-                                </td>
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-2">
-                                    {isEarned ? (
-                                      <div className="rounded-full bg-green-100 p-1.5 dark:bg-green-900/20">
-                                        <TrendingUp className="size-3.5 text-green-600 dark:text-green-400" />
-                                      </div>
-                                    ) : isRedeemed ? (
-                                      <div className="rounded-full bg-blue-100 p-1.5 dark:bg-blue-900/20">
-                                        <GiftIcon className="size-3.5 text-blue-600 dark:text-blue-400" />
-                                      </div>
-                                    ) : (
-                                      <div className="rounded-full bg-red-100 p-1.5 dark:bg-red-900/20">
-                                        <Clock className="size-3.5 text-red-600 dark:text-red-400" />
-                                      </div>
-                                    )}
-                                    <span className="text-sm">
-                                      {entry.description}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                  <span
-                                    className={`font-semibold ${
-                                      isEarned
-                                        ? `text-green-600 dark:text-green-400`
-                                        : isExpired
-                                          ? `text-red-600 dark:text-red-400`
-                                          : `text-blue-600 dark:text-blue-400`
-                                    } `}
-                                  >
-                                    {entry.points > 0 ? "+" : ""}
-                                    {entry.points}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="text-muted-foreground py-8 text-center">
-                    <TrendingUp className="mx-auto mb-2 size-12 opacity-50" />
-                    <p>No points history yet</p>
-                    <p className="mt-1 text-xs">
-                      Start booking services to earn points!
-                    </p>
-                  </div>
-                )}
+                <LoyaltyTransactionHistory
+                  transactions={pointTransactions}
+                  currentBalance={loyaltyData?.points ?? 0}
+                  filterable
+                />
               </CardContent>
             </Card>
 
@@ -851,21 +1041,25 @@ export default function CustomerRewardsPage() {
 
           {/* Badges Tab */}
           <TabsContent value="badges" className="space-y-4">
+            {/* Earned badges — full colour, with earned date */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="size-5" />
-                  Earned Badges
+                  Earned badges
                 </CardTitle>
                 <CardDescription>
-                  Unlock achievements and special rewards
+                  Achievements you&apos;ve unlocked
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {earnedBadges.length > 0 ? (
+                {badgeView.earned.length > 0 ? (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {earnedBadges.map((badge) => (
-                      <Card key={badge.id} className="border-primary/20">
+                    {badgeView.earned.map(({ badge, earnedAt }) => (
+                      <Card
+                        key={badge.id}
+                        className="border-primary/30 bg-primary/5"
+                      >
                         <CardContent className="p-4">
                           <div className="flex items-start gap-3">
                             <div className="text-3xl">{badge.icon}</div>
@@ -874,20 +1068,25 @@ export default function CustomerRewardsPage() {
                                 {badge.name}
                               </div>
                               <div className="text-muted-foreground mb-2 text-sm">
-                                {badge.description}
+                                {badgeConditionText(badge)}
                               </div>
-                              {badge.reward && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Reward:{" "}
-                                  {badge.reward.type === "discount"
-                                    ? `${badge.reward.value}% off`
-                                    : badge.reward.type === "points"
-                                      ? `${badge.reward.value} points`
-                                      : badge.reward.value}
-                                </Badge>
-                              )}
+                              <div className="flex flex-wrap items-center gap-2">
+                                {badge.reward && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    Reward: {badgeRewardText(badge.reward)}
+                                  </Badge>
+                                )}
+                                {isMounted && earnedAt && (
+                                  <span className="text-muted-foreground text-xs">
+                                    Earned {formatEarnedDate(earnedAt)}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <CheckCircle2 className="size-5 shrink-0 text-green-600" />
+                            <CheckCircle2 className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                           </div>
                         </CardContent>
                       </Card>
@@ -904,8 +1103,76 @@ export default function CustomerRewardsPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* In progress — locked, grayed, with progress bars */}
+            {badgeView.inProgress.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Lock className="size-5" />
+                    In progress
+                  </CardTitle>
+                  <CardDescription>
+                    Badges you&apos;re working toward
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {badgeView.inProgress.map(({ badge, progress }) => (
+                      <Card key={badge.id} className="bg-muted/30">
+                        <CardContent className="space-y-3 p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="text-3xl opacity-40 grayscale">
+                              {badge.icon}
+                            </div>
+                            <div className="flex-1">
+                              <div className="mb-1 font-semibold">
+                                {badge.name}
+                              </div>
+                              <div className="text-muted-foreground text-sm">
+                                {badgeConditionText(badge)}
+                              </div>
+                              {badge.reward && (
+                                <Badge
+                                  variant="outline"
+                                  className="mt-2 text-xs"
+                                >
+                                  Reward: {badgeRewardText(badge.reward)}
+                                </Badge>
+                              )}
+                            </div>
+                            <Lock className="text-muted-foreground size-4 shrink-0" />
+                          </div>
+                          {progress.measurable && (
+                            <div className="space-y-1">
+                              <Progress value={progress.ratio * 100} />
+                              <div className="text-muted-foreground text-xs">
+                                {progress.label}
+                              </div>
+                            </div>
+                          )}
+                          {!progress.measurable && (
+                            <div className="text-muted-foreground text-xs">
+                              {progress.label}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
+
+        {celebrateBadge && (
+          <BadgeCelebration
+            icon={celebrateBadge.icon}
+            name={celebrateBadge.name}
+            onDone={() => setCelebrateId(null)}
+          />
+        )}
 
         {/* Redemption Confirmation Dialog */}
         <Dialog open={redeemDialogOpen} onOpenChange={setRedeemDialogOpen}>
@@ -1079,6 +1346,16 @@ export default function CustomerRewardsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {selectedFacility && (
+          <RedeemPointsDialog
+            open={pointsRedeemOpen}
+            onOpenChange={setPointsRedeemOpen}
+            facilityId={selectedFacility.id}
+            customerId={MOCK_CUSTOMER_ID}
+            redemptionRate={redemptionRate}
+          />
+        )}
       </div>
     </div>
   );

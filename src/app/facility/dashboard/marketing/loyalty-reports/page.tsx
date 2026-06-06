@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ElementType } from "react";
 import {
   Card,
   CardContent,
@@ -19,9 +19,11 @@ import {
   Download,
   Calendar,
   ArrowUpRight,
+  DollarSign,
+  MessageSquare,
 } from "lucide-react";
 import { referralRelationships } from "@/data/referral-tracking";
-import { customerLoyaltyData } from "@/data/marketing";
+import { customerLoyaltyData, loyaltySettings } from "@/data/marketing";
 import { clients } from "@/data/clients";
 import {
   BarChart,
@@ -40,9 +42,27 @@ import {
 } from "recharts";
 import { LoyaltyModuleGuard } from "@/components/loyalty/LoyaltyModuleGuard";
 import { useLoyaltyConfig } from "@/hooks/use-loyalty-config";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+import {
+  getLoyaltyAccountsByFacility,
+  getLoyaltyAccount,
+} from "@/data/loyalty-accounts";
+import { getRedemptionsByFacility } from "@/data/loyalty-redemptions";
+import { bookings } from "@/data/bookings";
+import { computeProgramPerformance } from "@/lib/loyalty/program-metrics";
+import { referralsOverTime } from "@/lib/loyalty/referral-metrics";
+import { computeLoyaltyRoi } from "@/lib/loyalty/roi-metrics";
+import { MemberLifecycleFunnel } from "@/components/loyalty/MemberLifecycleFunnel";
+import { RewardTypeBreakdown } from "@/components/loyalty/RewardTypeBreakdown";
+import { PointsLiabilityReport } from "@/components/loyalty/PointsLiabilityReport";
+import { BadgeAchievementReport } from "@/components/loyalty/BadgeAchievementReport";
 
 // Mock facility ID - TODO: Get from context
 const MOCK_FACILITY_ID = 1;
+// Captured once at module load for the deterministic "this month" window.
+const PERF_NOW_ISO = new Date().toISOString();
 
 // Colors for charts
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
@@ -55,6 +75,54 @@ export default function LoyaltyReportsPage() {
       .split("T")[0],
     endDate: new Date().toISOString().split("T")[0],
   });
+
+  // Live program-performance metrics (deep-linked from the Loyalty tab banner).
+  const searchParams = useSearchParams();
+  const highlightMetric = searchParams.get("metric");
+  const performance = useMemo(
+    () =>
+      computeProgramPerformance({
+        accounts: getLoyaltyAccountsByFacility(MOCK_FACILITY_ID),
+        redemptions: getRedemptionsByFacility(MOCK_FACILITY_ID),
+        bookings: bookings.map((b) => ({
+          clientId: b.clientId,
+          startDate: b.startDate,
+        })),
+        now: PERF_NOW_ISO,
+      }),
+    [],
+  );
+  useEffect(() => {
+    if (!highlightMetric) return;
+    document
+      .getElementById(`perf-${highlightMetric}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightMetric]);
+
+  // Referrals sent vs completed, by ISO week.
+  const referralTimeSeries = useMemo(
+    () =>
+      referralsOverTime(
+        referralRelationships.filter((r) => r.facilityId === MOCK_FACILITY_ID),
+      ),
+    [],
+  );
+
+  // Loyalty ROI — incremental revenue vs cost of rewards (headline report).
+  const roi = useMemo(
+    () =>
+      computeLoyaltyRoi({
+        accounts: getLoyaltyAccountsByFacility(MOCK_FACILITY_ID),
+        redemptions: getRedemptionsByFacility(MOCK_FACILITY_ID),
+        bookings: bookings.map((b) => ({
+          clientId: b.clientId,
+          startDate: b.startDate,
+        })),
+        now: PERF_NOW_ISO,
+        months: 6,
+      }),
+    [],
+  );
 
   // Calculate loyalty statistics
   const loyaltyStats = useMemo(() => {
@@ -133,11 +201,26 @@ export default function LoyaltyReportsPage() {
     const topReferrers = Array.from(referrerMap.entries())
       .map(([referrerId, count]) => {
         const customer = clients.find((c) => c.id === referrerId);
+        const account = getLoyaltyAccount(MOCK_FACILITY_ID, referrerId);
+        const tier = account?.currentTierId
+          ? loyaltySettings.tiers.find((t) => t.id === account.currentTierId)
+          : undefined;
+        // Pending = referrals this referrer sent that aren't completed/cancelled.
+        const pendingCount = facilityReferrals.filter(
+          (rel) =>
+            rel.referrerId === referrerId &&
+            rel.referrerRewardStatus !== "issued" &&
+            rel.status !== "cancelled",
+        ).length;
         return {
           referrerId,
           name: customer?.name || `Customer #${referrerId}`,
           email: customer?.email,
           referralsCount: count,
+          pendingCount,
+          tierName: tier?.name,
+          tierColor: tier?.color,
+          lifetimeSpend: account?.totalSpend ?? 0,
           totalRevenue: facilityReferrals
             .filter(
               (rel) =>
@@ -277,6 +360,88 @@ export default function LoyaltyReportsPage() {
               Export
             </Button>
           </div>
+        </div>
+
+        {/* Loyalty ROI — headline business metric */}
+        <Card className="border-primary/30 from-primary/10 to-background bg-linear-to-br">
+          <CardContent className="p-6">
+            <div className="grid items-center gap-6 lg:grid-cols-[1fr_minmax(0,360px)]">
+              <div>
+                <p className="text-muted-foreground text-sm font-medium">
+                  Loyalty ROI · this month
+                </p>
+                <p className="mt-1 text-2xl font-semibold sm:text-3xl">
+                  Your loyalty program generated an estimated{" "}
+                  <span className="text-primary text-3xl font-bold tabular-nums sm:text-4xl">
+                    {formatCurrency(roi.headlineIncrementalRevenue)}
+                  </span>{" "}
+                  in incremental revenue this month.
+                </p>
+                <p className="text-muted-foreground mt-2 text-sm">
+                  {roi.thisMonthRewardsCost > 0
+                    ? `${roi.thisMonthRoi}% ROI · ${formatCurrency(
+                        roi.thisMonthRewardsCost,
+                      )} in rewards issued · vs estimated baseline spend`
+                    : "No rewards issued yet this month"}
+                </p>
+              </div>
+              <div className="h-40">
+                <div className="text-muted-foreground mb-1 text-xs font-medium">
+                  Monthly ROI %
+                </div>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={roi.trend}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis width={44} tickFormatter={(v) => `${v}%`} />
+                    <Tooltip formatter={(value) => [`${value}%`, "ROI"]} />
+                    <Line
+                      type="monotone"
+                      dataKey="roi"
+                      stroke="#6366f1"
+                      strokeWidth={2}
+                      name="ROI %"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Program performance (this month) — deep-linked from the Loyalty banner */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <PerfCard
+            id="perf-revenue"
+            active={highlightMetric === "revenue"}
+            icon={DollarSign}
+            tone="emerald"
+            label="Revenue Retained (This Month)"
+            value={`$${performance.revenueRetained.toLocaleString(undefined, {
+              maximumFractionDigits: 0,
+            })}`}
+            hint="Reward value applied this month"
+          />
+          <PerfCard
+            id="perf-redemptions"
+            active={highlightMetric === "redemptions"}
+            icon={Gift}
+            tone="amber"
+            label="Redemption Rate (This Month)"
+            value={`${Math.round(performance.redemptionRate * 100)}%`}
+            hint={`${performance.membersRedeemed} of ${performance.totalMembers} members redeemed`}
+          />
+          <PerfCard
+            id="perf-retention"
+            active={highlightMetric === "retention"}
+            icon={TrendingUp}
+            tone="violet"
+            label="Member Retention"
+            value={`${Math.round(performance.memberRetention * 100)}%`}
+            hint={`vs ${Math.round(
+              performance.nonMemberRetention * 100,
+            )}% non-members · rebooked ≤60 days`}
+          />
         </div>
 
         {/* Key Metrics */}
@@ -443,6 +608,10 @@ export default function LoyaltyReportsPage() {
             <TabsTrigger value="tiers">Tier Distribution</TabsTrigger>
             <TabsTrigger value="referrals">Referral Analytics</TabsTrigger>
             <TabsTrigger value="top-referrers">Top Referrers</TabsTrigger>
+            <TabsTrigger value="lifecycle">Lifecycle</TabsTrigger>
+            <TabsTrigger value="reward-mix">Reward Mix</TabsTrigger>
+            <TabsTrigger value="badges">Badge Performance</TabsTrigger>
+            <TabsTrigger value="liability">Liability</TabsTrigger>
           </TabsList>
 
           {/* Points Activity Tab */}
@@ -613,6 +782,46 @@ export default function LoyaltyReportsPage() {
 
           {/* Referral Analytics Tab */}
           <TabsContent value="referrals" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Referrals Over Time</CardTitle>
+                <CardDescription>
+                  Referrals sent vs completed, by week
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {referralTimeSeries.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={320}>
+                    <LineChart data={referralTimeSeries}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="week" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="sent"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        name="Referrals Sent"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="completed"
+                        stroke="#10b981"
+                        strokeWidth={2}
+                        name="Referrals Completed"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-muted-foreground py-8 text-center text-sm">
+                    No referral activity yet.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader>
@@ -725,14 +934,29 @@ export default function LoyaltyReportsPage() {
                     {referralStats.topReferrers.map((referrer, index) => (
                       <div
                         key={referrer.referrerId}
-                        className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 transition-colors"
+                        className="hover:bg-muted/50 flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4 transition-colors"
                       >
                         <div className="flex items-center gap-4">
                           <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-full font-bold">
                             #{index + 1}
                           </div>
                           <div>
-                            <div className="font-semibold">{referrer.name}</div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-semibold">
+                                {referrer.name}
+                              </span>
+                              {referrer.tierName && (
+                                <span
+                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                                  style={{
+                                    backgroundColor: `${referrer.tierColor ?? "#888"}22`,
+                                    color: referrer.tierColor ?? undefined,
+                                  }}
+                                >
+                                  {referrer.tierName}
+                                </span>
+                              )}
+                            </div>
                             {referrer.email && (
                               <div className="text-muted-foreground text-sm">
                                 {referrer.email}
@@ -740,23 +964,53 @@ export default function LoyaltyReportsPage() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-6">
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                           <div className="text-right">
-                            <div className="text-muted-foreground text-sm">
-                              Referrals
+                            <div className="text-muted-foreground text-xs">
+                              Completed
                             </div>
                             <div className="text-lg font-bold">
                               {referrer.referralsCount}
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-muted-foreground text-sm">
-                              Revenue
+                            <div className="text-muted-foreground text-xs">
+                              Pending
+                            </div>
+                            <div className="text-lg font-bold text-amber-600">
+                              {referrer.pendingCount}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-muted-foreground text-xs">
+                              Referral revenue
                             </div>
                             <div className="text-lg font-bold text-green-600">
                               {formatCurrency(referrer.totalRevenue)}
                             </div>
                           </div>
+                          <div className="text-right">
+                            <div className="text-muted-foreground text-xs">
+                              Lifetime spend
+                            </div>
+                            <div className="text-lg font-bold">
+                              {formatCurrency(referrer.lifetimeSpend)}
+                            </div>
+                          </div>
+                          <Button asChild variant="outline" size="sm">
+                            <Link
+                              href={`/facility/dashboard/clients/${referrer.referrerId}/messages?compose=${encodeURIComponent(
+                                `Hi ${referrer.name.split(" ")[0]}, thank you so much for referring ${referrer.referralsCount} ${
+                                  referrer.referralsCount === 1
+                                    ? "friend"
+                                    : "friends"
+                                } to us — we truly appreciate your support! 🐾`,
+                              )}`}
+                            >
+                              <MessageSquare className="mr-1.5 size-4" />
+                              Send thank-you
+                            </Link>
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -812,8 +1066,116 @@ export default function LoyaltyReportsPage() {
               </Card>
             )}
           </TabsContent>
+
+          {/* Member Lifecycle Tab */}
+          <TabsContent value="lifecycle" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Member Lifecycle Funnel</CardTitle>
+                <CardDescription>
+                  How members progress from enrollment to active — find where
+                  they drop off. Click any stage to see those customers.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MemberLifecycleFunnel />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Reward Mix Tab */}
+          <TabsContent value="reward-mix" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Reward Type Breakdown</CardTitle>
+                <CardDescription>
+                  What customers actually redeem, and how quickly — to gauge
+                  whether your reward mix drives fast repeat visits.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RewardTypeBreakdown />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Badge Performance Tab */}
+          <TabsContent value="badges" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Badge Achievement Rate</CardTitle>
+                <CardDescription>
+                  Who earns each badge, how long it takes from their first
+                  booking, and the revenue uplift after earning — to tell whether
+                  each badge&apos;s condition is set at the right level.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <BadgeAchievementReport />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Points Liability Tab */}
+          <TabsContent value="liability" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Points Liability</CardTitle>
+                <CardDescription>
+                  Outstanding points balance, dollar exposure if redeemed, and a
+                  30/60/90-day redemption forecast for financial planning.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PointsLiabilityReport />
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </LoyaltyModuleGuard>
+  );
+}
+
+function PerfCard({
+  id,
+  active,
+  icon: Icon,
+  tone,
+  label,
+  value,
+  hint,
+}: {
+  id: string;
+  active: boolean;
+  icon: ElementType;
+  tone: "emerald" | "amber" | "violet";
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  const toneText =
+    tone === "emerald"
+      ? "text-emerald-600 dark:text-emerald-400"
+      : tone === "amber"
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-violet-600 dark:text-violet-400";
+  return (
+    <div id={id} className="scroll-mt-24">
+      <Card className={cn(active && "ring-primary ring-2")}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+            <Icon className={cn("size-4", toneText)} />
+            {label}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={cn("text-3xl font-bold tabular-nums", toneText)}>
+            {value}
+          </div>
+          <div className="text-muted-foreground mt-1 text-xs">{hint}</div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

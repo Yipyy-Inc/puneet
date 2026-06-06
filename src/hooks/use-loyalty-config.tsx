@@ -10,6 +10,7 @@
 
 import { useMemo } from "react";
 import { getFacilityLoyaltyConfig } from "@/data/facility-loyalty-config";
+import { isReferralProgramEnabled } from "@/lib/loyalty/referral-program";
 import type { FacilityLoyaltyConfig, RewardTypeConfig } from "@/types/loyalty";
 
 // Mock settings - TODO: Replace with actual useSettings hook
@@ -155,7 +156,7 @@ export function useLoyaltyConfig(locationId?: number): UseLoyaltyConfigResult {
       rewardsEnabled:
         config.rewardTypes &&
         config.rewardTypes.some((rt: RewardTypeConfig) => rt.enabled),
-      referralsEnabled: config.referralProgram?.enabled === true,
+      referralsEnabled: isReferralProgramEnabled(config),
       expirationEnabled: config.pointsExpiration?.enabled === true,
     };
   }, [config, isEnabled]);

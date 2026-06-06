@@ -52,6 +52,7 @@ import type { UnifiedBooking } from "@/hooks/use-unified-bookings";
 import { TagList } from "@/components/shared/TagList";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { PaymentCheckoutFlow } from "@/components/bookings/PaymentCheckoutFlow";
+import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
 import { TipSplitModal } from "@/components/bookings/TipSplitModal";
 import { DepositChargeModal } from "@/components/bookings/DepositChargeModal";
 import { PrepaymentModal } from "@/components/bookings/PrepaymentModal";
@@ -186,6 +187,12 @@ export default function ClientBookingDetailPage({
   useEffect(() => {
     setBooking(initialBooking);
   }, [initialBooking]);
+  const { discount: loyaltyDiscount, consume: consumeLoyaltyDiscount } =
+    useActiveLoyaltyDiscount({
+      customerId: clientId,
+      subtotal: booking?.totalCost ?? 0,
+      serviceType: booking?.service?.toLowerCase(),
+    });
   const [reportCardSent, setReportCardSent] = useState(false);
   const [pendingLateFee, setPendingLateFee] = useState<LateFeeResult | null>(
     null,
@@ -1483,7 +1490,9 @@ export default function ClientBookingDetailPage({
               service: b.service,
               amount: b.invoice?.remainingDue ?? b.totalCost,
             }))}
+          loyaltyDiscount={loyaltyDiscount ?? undefined}
           onConfirm={(payment) => {
+            if (loyaltyDiscount) consumeLoyaltyDiscount();
             const lateFee = pendingLateFee;
             setBooking((prev) => {
               if (!prev) return prev;

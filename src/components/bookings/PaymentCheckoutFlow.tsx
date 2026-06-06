@@ -47,6 +47,9 @@ interface PaymentCheckoutFlowProps {
   invoiceTotal: number;
   clientStoreCreditBalance?: number;
   otherUnpaidInvoices?: OtherUnpaidInvoice[];
+  /** Auto-applied loyalty discount voucher — shown as a line and netted off the
+   *  amount due. The caller marks it used in its onConfirm handler. */
+  loyaltyDiscount?: { label: string; amount: number };
   onConfirm: (payment: {
     method: PaymentMethod;
     amount: number;
@@ -80,6 +83,7 @@ export function PaymentCheckoutFlow({
   invoiceTotal,
   clientStoreCreditBalance = 0,
   otherUnpaidInvoices = [],
+  loyaltyDiscount,
   onConfirm,
 }: PaymentCheckoutFlowProps) {
   const [method, setMethod] = useState<PaymentMethod>("card_on_file");
@@ -100,7 +104,9 @@ export function PaymentCheckoutFlow({
     .filter((i) => includedInvoices.has(i.invoiceId))
     .reduce((s, i) => s + i.amount, 0);
 
-  const remaining = amountDue + tipAmount + otherTotal;
+  const loyaltyDiscountAmount = loyaltyDiscount?.amount ?? 0;
+  const netAmountDue = Math.max(0, amountDue - loyaltyDiscountAmount);
+  const remaining = netAmountDue + tipAmount + otherTotal;
   const splitTotal = splitPayments.reduce(
     (s, p) => s + (parseFloat(p.amount) || 0),
     0,
@@ -111,7 +117,7 @@ export function PaymentCheckoutFlow({
   const isCash = method === "cash";
 
   const handleTipPreset = (multiplier: number) => {
-    setTipAmount(Math.round(amountDue * multiplier * 100) / 100);
+    setTipAmount(Math.round(netAmountDue * multiplier * 100) / 100);
     setCustomTip("");
   };
 
@@ -154,8 +160,14 @@ export function PaymentCheckoutFlow({
           <div className="bg-muted/30 rounded-lg border p-4 text-center">
             <p className="text-muted-foreground text-xs">Amount Due</p>
             <p className="font-[tabular-nums] text-3xl font-bold">
-              ${amountDue.toFixed(2)}
+              ${netAmountDue.toFixed(2)}
             </p>
+            {loyaltyDiscount && loyaltyDiscountAmount > 0 && (
+              <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                {loyaltyDiscount.label}: −${loyaltyDiscountAmount.toFixed(2)}{" "}
+                applied
+              </p>
+            )}
             {depositPaid > 0 && (
               <p className="text-muted-foreground mt-1 text-xs">
                 Deposit paid: ${depositPaid.toFixed(2)} · Invoice total: $

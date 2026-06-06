@@ -747,3 +747,16 @@ button {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.15)' stroke-width='0.3'%3E%3Cellipse cx='30' cy='30' rx='25' ry='25'/%3E%3Cellipse cx='30' cy='30' rx='18' ry='18'/%3E%3Cellipse cx='30' cy='30' rx='10' ry='10'/%3E%3Cpath d='M30 5v50M5 30h50M12 12l36 36M48 12L12 48'/%3E%3C/g%3E%3C/svg%3E");
   background-size: 60px 60px;
 }
+
+/* Badge celebration confetti — pieces fall from the top while rotating + fading.
+   Applied via an inline `animation: confetti-fall ...` shorthand per piece. */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-12vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(108vh) rotate(720deg);
+    opacity: 0;
+  }
+}

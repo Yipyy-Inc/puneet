@@ -58,10 +58,17 @@ function summarizeForStaff(result: EngineResult): void {
   const parts: string[] = [];
   if (earnedPoints > 0) parts.push(`+${earnedPoints} pts`);
   if (earnedCredit > 0) parts.push(`+$${earnedCredit} credit`);
+  if (result.redemptions.length > 0) {
+    parts.push(
+      `${result.redemptions.length} reward voucher${result.redemptions.length === 1 ? "" : "s"}`,
+    );
+  }
   if (result.discountApplied && result.discountApplied.amount > 0) {
     parts.push(`−$${result.discountApplied.amount.toFixed(2)} member discount`);
   }
-  for (const note of result.notifications) parts.push(note.title);
+  for (const note of result.notifications) {
+    if (note.type !== "points_earned") parts.push(note.title);
+  }
 
   if (parts.length === 0) return;
   toast.success("Loyalty updated", { description: parts.join(" · ") });

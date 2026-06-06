@@ -164,10 +164,186 @@ export const redemptionRecords: RedemptionRecord[] = [
     expiresAt: "2026-09-01T00:00:00Z",
     status: "active",
   },
+  {
+    // Active discount voucher scoped to grooming, expiring soon — demonstrates
+    // the rewards wallet's service scope + amber "Expiring soon" badge.
+    id: "rdm-1013",
+    facilityId: 1,
+    customerId: 15,
+    rewardType: "discount_pct",
+    rewardValue: 5,
+    redeemMethod: "checkout_applied",
+    bookingId: null,
+    invoiceId: null,
+    issuedAt: "2026-05-12T10:00:00Z",
+    redeemedAt: "2026-05-12T10:00:00Z",
+    expiresAt: "2026-06-11T00:00:00Z",
+    status: "active",
+    appliesToServiceTypes: ["grooming"],
+  },
+  // Reward-mix samples — issuedAt + redeemedAt across all four buckets, used to
+  // demonstrate the reward-type breakdown + time-to-redeem analytics.
+  {
+    id: "rdm-rt-c1",
+    facilityId: 1,
+    customerId: 15,
+    rewardType: "credit",
+    rewardValue: 10,
+    redeemMethod: "portal_self",
+    bookingId: null,
+    invoiceId: null,
+    issuedAt: "2026-05-15T10:00:00Z",
+    redeemedAt: "2026-05-29T10:00:00Z",
+    expiresAt: null,
+    status: "used",
+  },
+  {
+    id: "rdm-rt-c2",
+    facilityId: 1,
+    customerId: 2,
+    rewardType: "credit",
+    rewardValue: 20,
+    redeemMethod: "portal_self",
+    bookingId: null,
+    invoiceId: null,
+    issuedAt: "2026-04-10T10:00:00Z",
+    redeemedAt: "2026-04-26T10:00:00Z",
+    expiresAt: null,
+    status: "used",
+  },
+  {
+    id: "rdm-rt-d1",
+    facilityId: 1,
+    customerId: 7,
+    rewardType: "discount_pct",
+    rewardValue: 10,
+    redeemMethod: "checkout_applied",
+    bookingId: "bkg-rt-01",
+    invoiceId: null,
+    issuedAt: "2026-04-25T10:00:00Z",
+    redeemedAt: "2026-05-27T10:00:00Z",
+    expiresAt: null,
+    status: "used",
+  },
+  {
+    id: "rdm-rt-d2",
+    facilityId: 1,
+    customerId: 22,
+    rewardType: "discount_fixed",
+    rewardValue: 5,
+    redeemMethod: "checkout_applied",
+    bookingId: "bkg-rt-02",
+    invoiceId: null,
+    issuedAt: "2026-05-01T10:00:00Z",
+    redeemedAt: "2026-06-03T10:00:00Z",
+    expiresAt: null,
+    status: "used",
+  },
+  {
+    id: "rdm-rt-f1",
+    facilityId: 1,
+    customerId: 2,
+    rewardType: "free_service",
+    rewardValue: "Free Nail Trim",
+    redeemMethod: "staff_applied",
+    bookingId: null,
+    invoiceId: null,
+    issuedAt: "2026-05-05T10:00:00Z",
+    redeemedAt: "2026-05-26T10:00:00Z",
+    expiresAt: null,
+    status: "used",
+  },
+  {
+    id: "rdm-rt-f2",
+    facilityId: 1,
+    customerId: 31,
+    rewardType: "freebie",
+    rewardValue: "Free Bandana",
+    redeemMethod: "staff_applied",
+    bookingId: null,
+    invoiceId: null,
+    issuedAt: "2026-04-08T10:00:00Z",
+    redeemedAt: "2026-04-30T10:00:00Z",
+    expiresAt: null,
+    status: "used",
+  },
+  {
+    id: "rdm-rt-g1",
+    facilityId: 1,
+    customerId: 22,
+    rewardType: "gift_card",
+    rewardValue: 25,
+    redeemMethod: "portal_self",
+    bookingId: null,
+    invoiceId: null,
+    issuedAt: "2026-05-20T10:00:00Z",
+    redeemedAt: "2026-05-29T10:00:00Z",
+    expiresAt: null,
+    status: "used",
+  },
+  {
+    id: "rdm-rt-g2",
+    facilityId: 1,
+    customerId: 15,
+    rewardType: "gift_card",
+    rewardValue: 50,
+    redeemMethod: "portal_self",
+    bookingId: null,
+    invoiceId: null,
+    issuedAt: "2026-04-18T10:00:00Z",
+    redeemedAt: "2026-04-28T10:00:00Z",
+    expiresAt: null,
+    status: "used",
+  },
 ];
 
 export function getRedemptionsByFacility(
   facilityId: number,
 ): RedemptionRecord[] {
   return redemptionRecords.filter((r) => r.facilityId === facilityId);
+}
+
+/**
+ * A customer's currently-usable discount vouchers: active, not expired, and of a
+ * discount reward type. Used to auto-apply a loyalty discount at checkout.
+ */
+export function getActiveDiscountRedemptions(
+  facilityId: number,
+  customerId: number,
+): RedemptionRecord[] {
+  const now = new Date().toISOString();
+  return redemptionRecords.filter(
+    (r) =>
+      r.facilityId === facilityId &&
+      r.customerId === customerId &&
+      r.status === "active" &&
+      (r.rewardType === "discount_pct" || r.rewardType === "discount_fixed") &&
+      (r.expiresAt == null || r.expiresAt > now),
+  );
+}
+
+/**
+ * All of a customer's currently-usable reward vouchers (any type): active and
+ * not past expiry. Powers the customer portal's "Your Rewards" wallet.
+ */
+export function getActiveRedemptionsForCustomer(
+  facilityId: number,
+  customerId: number,
+): RedemptionRecord[] {
+  const now = new Date().toISOString();
+  return redemptionRecords.filter(
+    (r) =>
+      r.facilityId === facilityId &&
+      r.customerId === customerId &&
+      r.status === "active" &&
+      (r.expiresAt == null || r.expiresAt > now),
+  );
+}
+
+/** Mark a redemption voucher as used (idempotent — only flips an active one). */
+export function consumeRedemption(redemptionId: string): void {
+  const r = redemptionRecords.find((x) => x.id === redemptionId);
+  if (r && r.status === "active") {
+    r.status = "used";
+  }
 }
