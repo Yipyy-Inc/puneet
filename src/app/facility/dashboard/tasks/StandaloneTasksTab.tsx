@@ -27,6 +27,7 @@ import {
   Loader2,
   Ban,
   Phone,
+  AlertTriangle,
 } from "lucide-react";
 import { standaloneTasks, type StandaloneTask, type WorkTaskCategory, type WorkTaskPriority, type WorkTaskStatus } from "@/data/work-tasks";
 import { TaskWizard } from "./TaskWizard";
@@ -204,6 +205,14 @@ export function StandaloneTasksTab() {
                 title="Auto-created from a call"
               >
                 <Phone className="size-3" />
+              </span>
+            ) : null}
+            {t.metadata?.reputationRequestId ? (
+              <span
+                className="flex size-5 shrink-0 items-center justify-center rounded-md bg-rose-100 text-rose-600"
+                title="Auto-created from a negative review"
+              >
+                <AlertTriangle className="size-3" />
               </span>
             ) : null}
             {isOverdue(t as StandaloneTask) && (

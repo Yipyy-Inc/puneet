@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Star,
   LayoutDashboard,
@@ -13,14 +12,18 @@ import {
   Globe,
   Settings2,
   Zap,
-  Send,
   Shield,
   TrendingUp,
   MapPin,
+  AlertTriangle,
+  MessageSquare,
 } from "lucide-react";
 import { reputationQueries } from "@/lib/api/reputation";
+import { useReputation } from "@/hooks/use-reputation";
 import { ReputationOverviewTab } from "@/components/marketing/ReputationOverviewTab";
 import { ReputationRequestsTab } from "@/components/marketing/ReputationRequestsTab";
+import { ReputationEscalationsTab } from "@/components/marketing/ReputationEscalationsTab";
+import { ReputationMessageBuilder } from "@/components/marketing/ReputationMessageBuilder";
 import { ReputationPerformanceTab } from "@/components/marketing/ReputationPerformanceTab";
 import { ReputationPublicReviewsTab } from "@/components/marketing/ReputationPublicReviewsTab";
 import { ReputationSettingsTab } from "@/components/marketing/ReputationSettingsTab";
@@ -30,12 +33,14 @@ import { useLocationContext } from "@/hooks/use-location-context";
 export function ReputationBoosterShell() {
   const [activeTab, setActiveTab] = useState("overview");
   const { isMultiLocation } = useLocationContext();
-  const { data: settings } = useQuery(reputationQueries.settings());
+  const { settings, requests } = useReputation();
   const { data: stats } = useQuery(reputationQueries.stats());
-  const { data: requests = [] } = useQuery(reputationQueries.requests());
 
   const escalatedCount = requests.filter((r) => r.escalatedToManager).length;
-  const isEnabled = settings?.enabled ?? false;
+  const openEscalations = requests.filter(
+    (r) => r.escalatedToManager && r.status !== "closed",
+  ).length;
+  const isEnabled = settings.enabled;
 
   return (
     <div className="space-y-6">
@@ -106,6 +111,15 @@ export function ReputationBoosterShell() {
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="escalations" className="gap-2 text-sm px-3 relative">
+            <AlertTriangle className="h-4 w-4" />
+            Escalations
+            {openEscalations > 0 && (
+              <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold">
+                {openEscalations}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="performance" className="gap-2 text-sm px-3">
             <Trophy className="h-4 w-4" />
             Performance
@@ -120,6 +134,10 @@ export function ReputationBoosterShell() {
               Locations
             </TabsTrigger>
           )}
+          <TabsTrigger value="messages" className="gap-2 text-sm px-3">
+            <MessageSquare className="h-4 w-4" />
+            Messages
+          </TabsTrigger>
           <TabsTrigger value="settings" className="gap-2 text-sm px-3">
             <Settings2 className="h-4 w-4" />
             Settings
@@ -132,6 +150,10 @@ export function ReputationBoosterShell() {
 
         <TabsContent value="requests" className="mt-6">
           <ReputationRequestsTab />
+        </TabsContent>
+
+        <TabsContent value="escalations" className="mt-6">
+          <ReputationEscalationsTab />
         </TabsContent>
 
         <TabsContent value="performance" className="mt-6">
@@ -147,6 +169,10 @@ export function ReputationBoosterShell() {
             <ReputationLocationsTab />
           </TabsContent>
         )}
+
+        <TabsContent value="messages" className="mt-6">
+          <ReputationMessageBuilder />
+        </TabsContent>
 
         <TabsContent value="settings" className="mt-6">
           <ReputationSettingsTab />

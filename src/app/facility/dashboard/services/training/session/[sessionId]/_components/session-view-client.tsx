@@ -28,6 +28,8 @@ import { SessionExercisesSection } from "./session-view-exercises";
 import { SessionCompleteConfirmDialog } from "./session-view-complete-dialog";
 import { SessionHomeworkPromptDialog } from "./session-view-homework-prompt";
 import { saveSession, type PresentStudentSummary } from "./session-view-save";
+import { useReputation } from "@/hooks/use-reputation";
+import { resolveClientByPetId } from "@/lib/reputation/resolve-client";
 import type {
   AttendanceMark,
   SessionExerciseEntry,
@@ -40,6 +42,7 @@ type Section = "attendance" | "exercises";
 export function SessionViewClient({ sessionId }: { sessionId: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { recordCheckout } = useReputation();
   const [section, setSection] = useState<Section>("attendance");
   const [attendance, setAttendance] = useState<Record<string, AttendanceMark>>(
     {},
@@ -304,6 +307,26 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
       petImageById: new Map(pets.map((p) => [p.id, p.imageUrl])),
     });
     setSavedStudents(summaries);
+
+    // Reputation Booster (Step 1): a completed session schedules a review
+    // request per present student's owner.
+    const checkoutAt = new Date().toISOString();
+    for (const row of presentRowsForSave) {
+      const resolved = resolveClientByPetId(row.petId);
+      if (!resolved) continue;
+      recordCheckout({
+        bookingId: row.petId,
+        clientId: resolved.clientId,
+        clientName: resolved.clientName,
+        petName: row.petName,
+        service: "training",
+        serviceLabel: "Training",
+        staffName: session!.trainerName,
+        triggerEvent: "training_session_completed",
+        checkoutAt,
+      });
+    }
+
     setCompleteConfirmOpen(false);
     toast.success(
       `Session marked complete. ${summaries.length} draft report card${

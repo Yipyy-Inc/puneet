@@ -25,6 +25,7 @@ import { LocationStatusBadge } from "@/components/hq/LocationStatusBadge";
 import { LoyaltyProgramProvider } from "@/hooks/use-loyalty-program";
 import { CallAvailabilityProvider } from "@/hooks/use-call-availability";
 import { CallTagsProvider } from "@/hooks/use-call-tags";
+import { ReputationProvider } from "@/hooks/use-reputation";
 
 export default async function FacilityLayout({
   children,
@@ -47,6 +48,7 @@ export default async function FacilityLayout({
       <BookingModalProviderWrapper>
         <CallAvailabilityProvider>
         <CallTagsProvider>
+        <ReputationProvider>
         <SidebarProvider className="min-h-[calc(100vh-64px)]">
           <FacilitySidebar />
           <SidebarInset className="flex min-h-[calc(100vh-64px)] min-w-0 flex-col overflow-x-clip">
@@ -78,6 +80,7 @@ export default async function FacilityLayout({
             <FacilityMobileBottomNav />
           </SidebarInset>
         </SidebarProvider>
+        </ReputationProvider>
         </CallTagsProvider>
         </CallAvailabilityProvider>
       </BookingModalProviderWrapper>

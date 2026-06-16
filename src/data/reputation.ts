@@ -28,21 +28,77 @@ export const reputationSettings: ReputationSettings = {
       url: "https://g.page/r/doggieville-mtl/review",
       reviewCount: 312,
       avgRating: 4.8,
+      weight: 60,
     },
     facebook: {
       enabled: true,
       url: "https://www.facebook.com/doggieville.mtl/reviews",
       reviewCount: 147,
       avgRating: 4.7,
+      weight: 40,
     },
     yelp: {
       enabled: false,
       url: "",
       reviewCount: 89,
       avgRating: 4.6,
+      weight: 0,
+    },
+    nextdoor: {
+      enabled: false,
+      url: "",
+      weight: 0,
+    },
+    tripadvisor: {
+      enabled: false,
+      url: "",
+      weight: 0,
     },
   },
+  platformOrder: ["google", "facebook", "yelp"],
+  channelWeighting: false,
+  feedbackRouting: "open",
   happyThreshold: 4,
+  outreachSequence: [
+    {
+      id: "seq-1",
+      channel: "sms",
+      delayMinutes: 60,
+      onlyIfNoResponse: false,
+      smsBody:
+        "Hi {{client.first_name}}! Thanks for bringing {{pet.names}} in for {{service.name}} today 🐾 How did we do? {{survey.link}}",
+      emailSubject: "How was {{pet.names}}'s {{service.name}} visit?",
+      emailBody:
+        "Hi {{client.first_name}},\n\nThank you for trusting us with {{pet.names}} for {{service.name}}! {{staff.first_name}} and the team would love to hear how it went — it only takes a few seconds.\n\n{{survey.link}}\n\nWith tail wags,\n{{staff.first_name}} & the team",
+      localized: {
+        fr: {
+          smsBody:
+            "Bonjour {{client.first_name}} ! Merci d'avoir confié {{pet.names}} pour un {{service.name}} aujourd'hui 🐾 Comment avons-nous fait ? {{survey.link}}",
+          emailSubject: "Comment s'est passée la visite {{service.name}} de {{pet.names}} ?",
+          emailBody:
+            "Bonjour {{client.first_name}},\n\nMerci de nous avoir confié {{pet.names}} pour un {{service.name}} ! {{staff.first_name}} et l'équipe aimeraient savoir comment cela s'est passé — quelques secondes suffisent.\n\n{{survey.link}}\n\nÀ bientôt,\n{{staff.first_name}} et l'équipe",
+        },
+      },
+    },
+    {
+      id: "seq-2",
+      channel: "email",
+      delayMinutes: 2880,
+      onlyIfNoResponse: true,
+      smsBody:
+        "Hi {{client.first_name}}, just a gentle reminder — we'd still love your feedback on {{pet.names}}'s visit! {{survey.link}}",
+      emailSubject: "We'd still love your feedback, {{client.first_name}} 🐾",
+      emailBody:
+        "Hi {{client.first_name}},\n\nWe noticed you haven't had a chance to tell us about {{pet.names}}'s recent {{service.name}} visit. Your feedback helps {{staff.first_name}} and the team keep improving!\n\n{{survey.link}}\n\nThank you,\nThe team",
+    },
+  ],
+  localization: { enabled: false, locales: ["en", "fr"] },
+  escalationRoutes: [
+    { service: "grooming", staffIds: ["staff-003"], staffNames: ["David Wilson"] },
+    { service: "training", staffIds: ["staff-004"], staffNames: ["Lisa Rodriguez"] },
+    { service: "daycare", staffIds: ["staff-005"], staffNames: ["Tom Anderson"] },
+    { service: "default", staffIds: ["staff-006"], staffNames: ["Manager One"] },
+  ],
   protectionRules: {
     blockOnCancelled: true,
     blockOnRefundInProgress: true,
