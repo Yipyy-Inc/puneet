@@ -56,6 +56,8 @@ import {
 import { TagList } from "@/components/shared/TagList";
 import { hasCriticalTags, hasWarningTags } from "@/data/tags-notes";
 import { getBookingOverviewHref } from "@/lib/booking-overview-route";
+import { useReputation } from "@/hooks/use-reputation";
+import { resolveClientByPetId } from "@/lib/reputation/resolve-client";
 
 // Map pet IDs to dog images
 const petImages: Record<number, string> = {
@@ -160,6 +162,7 @@ interface CheckInOutSectionProps {
 
 export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
   const router = useRouter();
+  const { recordCheckout, cancelScheduled } = useReputation();
   const isMounted = useSyncExternalStore(
     (cb) => {
       cb();
@@ -591,6 +594,21 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
     const actionLabel = "Checked Out";
     const newStatus = "checked-out";
 
+    // Reputation Booster (Step 1): log checkout (T0) → schedule review request.
+    const isBoardingItem = selectedItem.serviceType === "boarding";
+    const resolvedClient = resolveClientByPetId(selectedItem.petId);
+    const repResult = recordCheckout({
+      bookingId: Number(selectedItem.id) || selectedItem.petId,
+      clientId: resolvedClient?.clientId ?? selectedItem.petId,
+      clientName: resolvedClient?.clientName ?? selectedItem.ownerName,
+      petName: selectedItem.petName,
+      service: selectedItem.serviceType,
+      serviceLabel: isBoardingItem ? "Boarding" : "Daycare",
+      triggerEvent: isBoardingItem ? "boarding_checkout" : "daycare_checkout",
+      checkoutAt: now,
+    });
+    const scheduledRequestId = repResult.request?.id;
+
     if (selectedItem.serviceType === "boarding") {
       const previousData = boardingData.find((g) => g.id === selectedItem.id);
       setBoardingData((prev) =>
@@ -622,6 +640,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   guest.id === selectedItem.id ? previousData : guest,
                 ),
               );
+              if (scheduledRequestId) cancelScheduled(scheduledRequestId);
               toast.info("Action undone", {
                 description: `${selectedItem.petName} restored to ${previousStatus.replace("-", " ")}`,
               });
@@ -661,6 +680,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   checkIn.id === selectedItem.id ? previousData : checkIn,
                 ),
               );
+              if (scheduledRequestId) cancelScheduled(scheduledRequestId);
               toast.info("Action undone", {
                 description: `${selectedItem.petName} restored to ${previousStatus.replace("-", " ")}`,
               });

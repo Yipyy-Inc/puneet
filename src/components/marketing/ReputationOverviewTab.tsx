@@ -22,6 +22,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { reputationQueries } from "@/lib/api/reputation";
+import { useReputation } from "@/hooks/use-reputation";
 import type { ReputationRequest, ReputationRequestStatus } from "@/types/reputation";
 
 // ─── Star display ─────────────────────────────────────────────────────────────
@@ -44,10 +45,12 @@ function StarRating({ rating, size = "sm" }: { rating: number; size?: "sm" | "lg
 
 const STATUS_MAP: Record<ReputationRequestStatus, { label: string; icon: React.ReactNode; color: string }> = {
   not_sent: { label: "Not Sent", icon: <Minus className="h-3 w-3" />, color: "bg-muted text-muted-foreground" },
+  scheduled: { label: "Scheduled", icon: <Clock className="h-3 w-3" />, color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300" },
   sent: { label: "Sent", icon: <Send className="h-3 w-3" />, color: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300" },
   reminder_sent: { label: "Reminder Sent", icon: <RotateCcw className="h-3 w-3" />, color: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300" },
   rating_received: { label: "Rating Received", icon: <Star className="h-3 w-3" />, color: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" },
   public_push_sent: { label: "Public Push Sent", icon: <Globe className="h-3 w-3" />, color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" },
+  escalated: { label: "Escalated", icon: <AlertCircle className="h-3 w-3" />, color: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300" },
   closed: { label: "Closed", icon: <CheckCircle2 className="h-3 w-3" />, color: "bg-muted text-muted-foreground" },
 };
 
@@ -149,7 +152,7 @@ function ActivityItem({ req }: { req: ReputationRequest }) {
           )}
         </div>
         {req.clientComment && (
-          <p className="mt-1 text-xs text-muted-foreground italic line-clamp-1">"{req.clientComment}"</p>
+          <p className="mt-1 text-xs text-muted-foreground italic line-clamp-1">&ldquo;{req.clientComment}&rdquo;</p>
         )}
         {isNegative && req.feedbackText && (
           <div className="mt-1 flex items-center gap-1 text-xs text-red-600">
@@ -166,7 +169,9 @@ function ActivityItem({ req }: { req: ReputationRequest }) {
 
 export function ReputationOverviewTab({ onTabChange }: { onTabChange: (tab: string) => void }) {
   const { data: stats } = useQuery(reputationQueries.stats());
-  const { data: requests = [] } = useQuery(reputationQueries.requests());
+  // Live provider data (runtime + overlays) so escalations/activity match the
+  // Shell badges and the Requests tab.
+  const { requests } = useReputation();
 
   if (!stats) return null;
 
@@ -306,7 +311,7 @@ export function ReputationOverviewTab({ onTabChange }: { onTabChange: (tab: stri
       </Card>
 
       {/* Alerts */}
-      {requests.filter((r) => r.escalatedToManager).length > 0 && (
+      {requests.filter((r) => r.escalatedToManager && r.status !== "closed").length > 0 && (
         <Card className="border-red-200 bg-red-50/30 dark:bg-red-950/10 dark:border-red-900">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2 text-red-700 dark:text-red-400">
@@ -315,7 +320,7 @@ export function ReputationOverviewTab({ onTabChange }: { onTabChange: (tab: stri
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {requests.filter((r) => r.escalatedToManager).map((req) => (
+            {requests.filter((r) => r.escalatedToManager && r.status !== "closed").map((req) => (
               <div key={req.id} className="flex items-center justify-between rounded-lg bg-background border border-red-200 dark:border-red-900 p-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-red-700 text-xs font-bold">

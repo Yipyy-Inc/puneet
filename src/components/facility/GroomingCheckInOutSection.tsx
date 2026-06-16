@@ -36,6 +36,8 @@ import {
 } from "@/data/grooming";
 import { GroomingIntakeForm } from "@/components/grooming/GroomingIntakeForm";
 import { PriceAdjustmentForm } from "@/components/grooming/PriceAdjustmentForm";
+import { useReputation } from "@/hooks/use-reputation";
+import { resolveClientByPetId } from "@/lib/reputation/resolve-client";
 
 interface UnifiedGroomingAppointment {
   id: string;
@@ -94,6 +96,7 @@ const _getPetImage = (petId: number) =>
   petImages[petId] || "/api/placeholder/40/40";
 
 export function GroomingCheckInOutSection() {
+  const { recordCheckout, cancelScheduled } = useReputation();
   const [isMounted, setIsMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [checkInOutMode, setCheckInOutMode] = useState<
@@ -262,6 +265,21 @@ export function GroomingCheckInOutSection() {
         }),
       );
 
+      // Reputation Booster (Step 1): log completion (T0) → schedule review request.
+      const resolvedClient = resolveClientByPetId(selectedAppointment.petId);
+      const repResult = recordCheckout({
+        bookingId: Number(selectedAppointment.id) || selectedAppointment.petId,
+        clientId: resolvedClient?.clientId ?? selectedAppointment.petId,
+        clientName: resolvedClient?.clientName ?? selectedAppointment.ownerName,
+        petName: selectedAppointment.petName,
+        service: "grooming",
+        serviceLabel: "Grooming",
+        staffName: selectedAppointment.stylistName,
+        triggerEvent: "grooming_completed",
+        checkoutAt: now,
+      });
+      const scheduledRequestId = repResult.request?.id;
+
       // Automatically deduct products from inventory
       import("@/lib/grooming-inventory-deduction").then(
         ({ deductProductsForAppointment }) => {
@@ -332,6 +350,7 @@ export function GroomingCheckInOutSection() {
                   apt.id === selectedAppointment.id ? previousData : apt,
                 ),
               );
+              if (scheduledRequestId) cancelScheduled(scheduledRequestId);
               toast.info("Action undone");
             }
           },

@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -27,9 +25,12 @@ import {
   ChevronDown,
   ChevronUp,
   SlidersHorizontal,
+  Copy,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { reputationQueries } from "@/lib/api/reputation";
+import { useReputation } from "@/hooks/use-reputation";
+import { buildReviewPath } from "@/lib/reputation/review-link";
 import type {
   ReputationRequest,
   ReputationRequestStatus,
@@ -46,6 +47,11 @@ const STATUS_STYLES: Record<
     label: "Not Sent",
     cls: "bg-muted text-muted-foreground",
     icon: <Minus className="h-3 w-3" />,
+  },
+  scheduled: {
+    label: "Scheduled",
+    cls: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
+    icon: <Clock className="h-3 w-3" />,
   },
   sent: {
     label: "Sent",
@@ -66,6 +72,11 @@ const STATUS_STYLES: Record<
     label: "Public",
     cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
     icon: <Globe className="h-3 w-3" />,
+  },
+  escalated: {
+    label: "Escalated",
+    cls: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+    icon: <AlertCircle className="h-3 w-3" />,
   },
   closed: {
     label: "Closed",
@@ -113,6 +124,26 @@ function RatingBadge({ rating }: { rating: ReputationRating }) {
 
 type StatusTab = "all" | "outreach" | "rated" | "public" | "closed";
 
+type SortField = "sentAt" | "rating";
+
+function SortIcon({
+  field,
+  sortField,
+  sortDir,
+}: {
+  field: SortField;
+  sortField: SortField;
+  sortDir: "asc" | "desc";
+}) {
+  if (sortField !== field)
+    return <ChevronDown className="text-muted-foreground/40 size-3" />;
+  return sortDir === "asc" ? (
+    <ChevronUp className="size-3" />
+  ) : (
+    <ChevronDown className="size-3" />
+  );
+}
+
 const STATUS_TABS: { value: StatusTab; label: string }[] = [
   { value: "outreach", label: "Outreach" },
   { value: "rated", label: "Rated" },
@@ -124,8 +155,14 @@ const STATUS_TABS: { value: StatusTab; label: string }[] = [
 function matchesTab(status: ReputationRequestStatus, tab: StatusTab) {
   if (tab === "all") return true;
   if (tab === "outreach")
-    return status === "not_sent" || status === "sent" || status === "reminder_sent";
-  if (tab === "rated") return status === "rating_received";
+    return (
+      status === "not_sent" ||
+      status === "scheduled" ||
+      status === "sent" ||
+      status === "reminder_sent"
+    );
+  if (tab === "rated")
+    return status === "rating_received" || status === "escalated";
   if (tab === "public") return status === "public_push_sent";
   if (tab === "closed") return status === "closed";
   return true;
@@ -167,6 +204,32 @@ function AuditLog({ req }: { req: ReputationRequest }) {
                 </span>
               </div>
             )}
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Survey link</span>
+              <div className="flex items-center gap-2">
+                <a
+                  href={buildReviewPath(req.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-foreground inline-flex items-center gap-1 font-medium hover:underline"
+                >
+                  Open <ExternalLink className="size-3" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(
+                      window.location.origin + buildReviewPath(req.id),
+                    );
+                    toast.success("Survey link copied");
+                  }}
+                  className="text-muted-foreground hover:text-foreground inline-flex items-center"
+                  aria-label="Copy survey link"
+                >
+                  <Copy className="size-3" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -176,7 +239,7 @@ function AuditLog({ req }: { req: ReputationRequest }) {
               Client comment
             </p>
             <p className="text-foreground mt-1 text-xs italic">
-              "{req.clientComment}"
+              &ldquo;{req.clientComment}&rdquo;
             </p>
           </div>
         )}
@@ -302,16 +365,28 @@ function RequestRow({
           )}
         </td>
 
-        {/* Sent */}
+        {/* Sent / scheduled */}
         <td className="px-3 py-3">
           <div className="flex flex-col gap-0.5">
-            <span className="text-foreground inline-flex items-center gap-1 text-xs">
-              <Clock className="size-3 opacity-60" />
-              {new Date(req.sentAt).toLocaleDateString("en-CA", {
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
+            {req.status === "scheduled" && req.scheduledSendAt ? (
+              <span className="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400">
+                <Clock className="size-3" />
+                {new Date(req.scheduledSendAt).toLocaleString("en-CA", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            ) : (
+              <span className="text-foreground inline-flex items-center gap-1 text-xs">
+                <Clock className="size-3 opacity-60" />
+                {new Date(req.sentAt).toLocaleDateString("en-CA", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
+            )}
             {req.remindersCount > 0 && (
               <span className="inline-flex items-center gap-1 text-[11px] text-purple-600 dark:text-purple-400">
                 <RotateCcw className="size-3" />
@@ -343,7 +418,7 @@ function RequestRow({
 // ─── Requests tab ─────────────────────────────────────────────────────────────
 
 export function ReputationRequestsTab() {
-  const { data: requests = [] } = useQuery(reputationQueries.requests());
+  const { requests } = useReputation();
 
   const [tab, setTab] = useState<StatusTab>("all");
   const [search, setSearch] = useState("");
@@ -405,17 +480,6 @@ export function ReputationRequestsTab() {
       setSortDir("desc");
     }
   }
-
-  const SortIcon = ({ field }: { field: typeof sortField }) =>
-    sortField === field ? (
-      sortDir === "asc" ? (
-        <ChevronUp className="size-3" />
-      ) : (
-        <ChevronDown className="size-3" />
-      )
-    ) : (
-      <ChevronDown className="text-muted-foreground/40 size-3" />
-    );
 
   const services = [...new Set(requests.map((r) => r.service))];
 
@@ -525,7 +589,8 @@ export function ReputationRequestsTab() {
                     onClick={() => toggleSort("rating")}
                   >
                     <span className="inline-flex items-center gap-1">
-                      Rating <SortIcon field="rating" />
+                      Rating{" "}
+                      <SortIcon field="rating" sortField={sortField} sortDir={sortDir} />
                     </span>
                   </th>
                   <th
@@ -533,7 +598,8 @@ export function ReputationRequestsTab() {
                     onClick={() => toggleSort("sentAt")}
                   >
                     <span className="inline-flex items-center gap-1">
-                      Sent <SortIcon field="sentAt" />
+                      Sent{" "}
+                      <SortIcon field="sentAt" sortField={sortField} sortDir={sortDir} />
                     </span>
                   </th>
                   <th className="py-3 pl-3 pr-5 text-left">Staff</th>

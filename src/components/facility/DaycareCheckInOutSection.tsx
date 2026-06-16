@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { daycareCheckIns, DaycareCheckIn, daycareRates } from "@/data/daycare";
 import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
+import { useReputation } from "@/hooks/use-reputation";
 import { clients } from "@/data/clients";
 
 interface UnifiedCheckIn {
@@ -97,6 +98,7 @@ const getPetImage = (petId: number) => petImages[petId];
 export function DaycareCheckInOutSection() {
   const isMounted = useHydrated();
   const { recordEvent } = useLoyaltyEngine();
+  const { recordCheckout, cancelScheduled } = useReputation();
   const [searchQuery, setSearchQuery] = useState("");
   const [checkInOutMode, setCheckInOutMode] = useState<
     "check-in" | "check-out" | "view" | null
@@ -264,6 +266,9 @@ export function DaycareCheckInOutSection() {
     const newStatus =
       checkInOutMode === "check-in" ? "checked-in" : "checked-out";
 
+    // Set in the check-out branch below; the Undo handler cancels it if used.
+    let scheduledRequestId: string | undefined;
+
     const previousData = daycareData.find((c) => c.id === selectedItem.id);
     setDaycareData((prev) =>
       prev.map((checkIn) => {
@@ -302,6 +307,7 @@ export function DaycareCheckInOutSection() {
                 checkIn.id === selectedItem.id ? previousData : checkIn,
               ),
             );
+            if (scheduledRequestId) cancelScheduled(scheduledRequestId);
             toast.info("Action undone", {
               description: `${selectedItem.petName} restored to ${previousStatus.replace("-", " ")}`,
             });
@@ -327,6 +333,19 @@ export function DaycareCheckInOutSection() {
           isService: true,
         });
       }
+
+      // Reputation Booster (Step 1): log checkout (T0) → schedule review request.
+      const repResult = recordCheckout({
+        bookingId: Number(selectedItem.id) || selectedItem.petId,
+        clientId: loyaltyClient?.id ?? selectedItem.petId,
+        clientName: loyaltyClient?.name ?? selectedItem.ownerName,
+        petName: selectedItem.petName,
+        service: "daycare",
+        serviceLabel: "Daycare",
+        triggerEvent: "daycare_checkout",
+        checkoutAt: now,
+      });
+      scheduledRequestId = repResult.request?.id;
     }
 
     setCheckInOutMode(null);

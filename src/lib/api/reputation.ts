@@ -11,7 +11,9 @@ import type {
   ReputationDashboardStats,
   ReputationStaffStat,
   ReputationServiceStat,
+  ReputationTemplate,
 } from "@/types/reputation";
+import { buildReputationTemplate } from "@/lib/reputation/template-schema";
 
 export const reputationQueries = {
   settings: () => ({
@@ -33,5 +35,11 @@ export const reputationQueries = {
   serviceStats: () => ({
     queryKey: ["reputation", "service-stats"],
     queryFn: async (): Promise<ReputationServiceStat[]> => reputationServiceStats,
+  }),
+  /** The consolidated multilingual template object for a facility entity. */
+  template: (facilityId: number) => ({
+    queryKey: ["reputation", "template", facilityId],
+    queryFn: async (): Promise<ReputationTemplate> =>
+      buildReputationTemplate(facilityId, reputationSettings),
   }),
 };
