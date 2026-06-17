@@ -6,11 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Gift,
   DollarSign,
@@ -26,7 +32,20 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { giftCardSettings } from "@/data/gift-cards";
+import { clients } from "@/data/clients";
 
+// Portal's current customer (mirrors the customer dashboard).
+const MOCK_CUSTOMER_ID = 15;
+
+const SAVED_CARDS = [
+  { id: "visa-4242", brand: "VISA", last4: "4242", label: "Default card" },
+  { id: "mc-8888", brand: "Mastercard", last4: "8888", label: "Personal" },
+];
+
+// DESIGN TODO (pre-launch): the emoji + gradient tiles below are placeholders.
+// Before public launch, replace each design with a unique branded illustration
+// or photo matching the petcare facility aesthetic (add an `image` field and
+// render it in the tiles, the live preview, and the success/review cards).
 const CARD_DESIGNS = [
   {
     id: "birthday",
@@ -78,6 +97,16 @@ const CARD_DESIGNS = [
   },
 ];
 
+// Hourly delivery slots, 9 AM through 9 PM.
+const TIME_SLOTS = Array.from({ length: 13 }, (_, i) => {
+  const h = 9 + i;
+  const hour12 = ((h + 11) % 12) + 1;
+  return {
+    value: `${String(h).padStart(2, "0")}:00`,
+    label: `${hour12} ${h < 12 ? "AM" : "PM"}`,
+  };
+});
+
 const STEPS = [
   { id: 1, label: "Amount" },
   { id: 2, label: "Design" },
@@ -90,7 +119,10 @@ interface BuyGiftCardFlowProps {
   onComplete?: () => void;
 }
 
-export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps) {
+export function BuyGiftCardFlow({
+  facilityId,
+  onComplete,
+}: BuyGiftCardFlowProps) {
   const settings = giftCardSettings.find((s) => s.facilityId === facilityId);
   const presets = settings?.presetAmounts ?? [25, 50, 100, 150, 200];
 
@@ -104,11 +136,58 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
   const [message, setMessage] = useState("");
   const [scheduleDelivery, setScheduleDelivery] = useState(false);
   const [deliveryDate, setDeliveryDate] = useState("");
+  const [deliveryTime, setDeliveryTime] = useState("10:00");
+  const [sendCopy, setSendCopy] = useState(false);
+  const [paymentCardId, setPaymentCardId] = useState(SAVED_CARDS[0].id);
+  const [showCardSelector, setShowCardSelector] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [generatedCode, setGeneratedCode] = useState("");
 
   const resolvedAmount = amount !== "" ? amount : parseFloat(customAmount) || 0;
+
+  const purchaserEmail =
+    clients.find((c) => c.id === MOCK_CUSTOMER_ID)?.email ?? "your email";
+  const activeCard =
+    SAVED_CARDS.find((c) => c.id === paymentCardId) ?? SAVED_CARDS[0];
+
+  // Scheduled delivery is allowed from tomorrow up to a year out.
+  // Build YYYY-MM-DD from LOCAL components (toISOString would shift the day in
+  // behind-UTC timezones during the evening).
+  const toLocalISO = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const oneYearOut = new Date();
+  oneYearOut.setFullYear(oneYearOut.getFullYear() + 1);
+  const minDeliveryDate = toLocalISO(tomorrow);
+  const maxDeliveryDate = toLocalISO(oneYearOut);
+
+  const handleScheduleToggle = (on: boolean) => {
+    setScheduleDelivery(on);
+    if (on && !deliveryDate) {
+      setDeliveryDate(minDeliveryDate);
+      setDeliveryTime("10:00");
+    }
+  };
+
+  // First line of the personal message, truncated for the card preview.
+  const messagePreview = (() => {
+    const firstLine = message.split("\n")[0].trim();
+    if (!firstLine) return "";
+    return firstLine.length > 60
+      ? `${firstLine.slice(0, 60).trimEnd()}…`
+      : firstLine;
+  })();
+
+  const schedulePreview =
+    scheduleDelivery && deliveryDate
+      ? `${new Date(`${deliveryDate}T00:00:00`).toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        })} at ${TIME_SLOTS.find((s) => s.value === deliveryTime)?.label ?? ""}`
+      : null;
 
   const generateCode = () => {
     const ts = Date.now().toString(36).toUpperCase().slice(-5);
@@ -132,6 +211,26 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
     setDone(true);
   };
 
+  // Reset to a fresh purchase (used when no onComplete handler is provided).
+  const resetFlow = () => {
+    setStep(1);
+    setAmount("");
+    setCustomAmount("");
+    setSelectedDesign(CARD_DESIGNS[0]);
+    setRecipientName("");
+    setRecipientEmail("");
+    setSenderName("");
+    setMessage("");
+    setScheduleDelivery(false);
+    setDeliveryDate("");
+    setDeliveryTime("10:00");
+    setSendCopy(false);
+    setPaymentCardId(SAVED_CARDS[0].id);
+    setShowCardSelector(false);
+    setGeneratedCode("");
+    setDone(false);
+  };
+
   if (done) {
     return (
       <div className="flex flex-col items-center gap-6 py-8 text-center">
@@ -139,7 +238,7 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
           <div className="flex size-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
             <CheckCircle2 className="size-10 text-green-600" />
           </div>
-          <div className="absolute -right-1 -top-1 flex size-6 items-center justify-center rounded-full bg-green-500 text-white">
+          <div className="absolute -top-1 -right-1 flex size-6 items-center justify-center rounded-full bg-green-500 text-white">
             <Sparkles className="size-3.5" />
           </div>
         </div>
@@ -148,19 +247,21 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
         <div
           className={cn(
             "relative w-full max-w-xs overflow-hidden rounded-2xl p-6 text-white shadow-2xl",
-            `bg-gradient-to-br ${selectedDesign.gradient}`,
+            `bg-linear-to-br ${selectedDesign.gradient}`,
           )}
         >
-          <div className="absolute -right-6 -top-6 size-24 rounded-full bg-white/10" />
+          <div className="absolute -top-6 -right-6 size-24 rounded-full bg-white/10" />
           <div className="absolute -bottom-4 -left-4 size-20 rounded-full bg-white/10" />
           <div className="relative">
             <div className="flex items-center justify-between">
               <span className="text-3xl">{selectedDesign.emoji}</span>
-              <Badge className="bg-white/20 text-white hover:bg-white/30 text-xs">
+              <Badge className="bg-white/20 text-xs text-white hover:bg-white/30">
                 Gift Card
               </Badge>
             </div>
-            <p className="mt-3 text-3xl font-bold">${resolvedAmount.toFixed(2)}</p>
+            <p className="mt-3 text-3xl font-bold">
+              ${resolvedAmount.toFixed(2)}
+            </p>
             <p className="mt-1 text-sm opacity-80">For {recipientName}</p>
             <p className="mt-3 border-t border-white/20 pt-2 font-mono text-xs opacity-60">
               {generatedCode}
@@ -172,13 +273,16 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
           <p className="text-lg font-semibold">Your gift is on its way!</p>
           <p className="text-muted-foreground text-sm">
             A beautifully branded email has been sent to{" "}
-            <span className="font-medium text-foreground">{recipientEmail}</span>
-            {scheduleDelivery && deliveryDate ? ` on ${deliveryDate}` : " right now"}.
+            <span className="text-foreground font-medium">
+              {recipientEmail}
+            </span>
+            {schedulePreview ? ` on ${schedulePreview}` : " right now"}.
+            {sendCopy && " A copy has also been sent to you for your records."}
           </p>
         </div>
 
-        <Button onClick={onComplete} className="w-full max-w-xs">
-          Done
+        <Button onClick={onComplete ?? resetFlow} className="w-full max-w-xs">
+          {onComplete ? "Done" : "Buy Another Gift Card"}
         </Button>
       </div>
     );
@@ -189,7 +293,10 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
       {/* Step progress */}
       <div className="flex items-center gap-1">
         {STEPS.map((s, i) => (
-          <div key={s.id} className="flex items-center gap-1 flex-1 last:flex-none">
+          <div
+            key={s.id}
+            className="flex flex-1 items-center gap-1 last:flex-none"
+          >
             <button
               type="button"
               onClick={() => step > s.id && setStep(s.id)}
@@ -206,14 +313,14 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
             </button>
             <span
               className={cn(
-                "text-xs hidden sm:block",
+                "hidden text-xs sm:block",
                 step === s.id ? "font-semibold" : "text-muted-foreground",
               )}
             >
               {s.label}
             </span>
             {i < STEPS.length - 1 && (
-              <div className="mx-1 h-px flex-1 bg-border" />
+              <div className="bg-border mx-1 h-px flex-1" />
             )}
           </div>
         ))}
@@ -228,69 +335,96 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
               Pick a preset or enter a custom value ($10–$500)
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            {presets.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => {
-                  setAmount(p);
-                  setCustomAmount("");
-                }}
+          <div className="grid gap-5 sm:grid-cols-[1fr_180px]">
+            {/* Amount selection */}
+            <div className="space-y-5">
+              <div className="grid grid-cols-3 gap-3">
+                {presets.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => {
+                      setAmount(p);
+                      setCustomAmount("");
+                    }}
+                    className={cn(
+                      "group relative overflow-hidden rounded-xl border-2 p-4 text-center transition-all",
+                      amount === p
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "hover:border-primary/40",
+                    )}
+                  >
+                    {amount === p && (
+                      <div className="absolute inset-0 -z-10 bg-linear-to-br from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20" />
+                    )}
+                    <DollarSign
+                      className={cn(
+                        "mx-auto mb-1 size-5",
+                        amount === p ? "text-primary" : "text-muted-foreground",
+                      )}
+                    />
+                    <p
+                      className={cn(
+                        "text-lg font-bold",
+                        amount === p ? "text-primary" : "",
+                      )}
+                    >
+                      ${p}
+                    </p>
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-sm">
+                  Custom Amount
+                </Label>
+                <div className="relative">
+                  <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2">
+                    $
+                  </span>
+                  <Input
+                    className="pl-7"
+                    type="number"
+                    min={10}
+                    max={500}
+                    step={5}
+                    value={customAmount}
+                    onChange={(e) => {
+                      setCustomAmount(e.target.value);
+                      setAmount("");
+                    }}
+                    placeholder="Enter amount"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Live card preview */}
+            <div className="sm:order-last">
+              <div
                 className={cn(
-                  "group relative overflow-hidden rounded-xl border-2 p-4 text-center transition-all",
-                  amount === p
-                    ? "border-primary bg-primary/5 shadow-sm"
-                    : "hover:border-primary/40",
+                  "relative overflow-hidden rounded-2xl p-4 text-white shadow-lg transition-all",
+                  `bg-linear-to-br ${selectedDesign.gradient}`,
                 )}
               >
-                {amount === p && (
-                  <div className="absolute inset-0 -z-10 bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20" />
-                )}
-                <DollarSign
-                  className={cn(
-                    "mx-auto mb-1 size-5",
-                    amount === p ? "text-primary" : "text-muted-foreground",
-                  )}
-                />
-                <p
-                  className={cn(
-                    "text-lg font-bold",
-                    amount === p ? "text-primary" : "",
-                  )}
-                >
-                  ${p}
-                </p>
-              </button>
-            ))}
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-muted-foreground text-sm">Custom Amount</Label>
-            <div className="relative">
-              <span className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2">
-                $
-              </span>
-              <Input
-                className="pl-7"
-                type="number"
-                min={10}
-                max={500}
-                step={5}
-                value={customAmount}
-                onChange={(e) => {
-                  setCustomAmount(e.target.value);
-                  setAmount("");
-                }}
-                placeholder="Enter amount"
-              />
+                <div className="absolute -top-4 -right-4 size-16 rounded-full bg-white/10" />
+                <div className="relative">
+                  <span className="text-2xl">{selectedDesign.emoji}</span>
+                  <p className="mt-2 text-2xl font-bold">
+                    {resolvedAmount > 0
+                      ? `$${resolvedAmount.toFixed(2)}`
+                      : "$0.00"}
+                  </p>
+                  <p className="text-[10px] tracking-wide uppercase opacity-70">
+                    Gift Card
+                  </p>
+                </div>
+              </div>
+              <p className="text-muted-foreground mt-2 text-center text-xs">
+                Live preview
+              </p>
             </div>
           </div>
-          {resolvedAmount > 0 && (
-            <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 p-4 text-white">
-              <p className="text-sm opacity-80">Gift card value</p>
-              <p className="text-3xl font-bold">${resolvedAmount.toFixed(2)}</p>
-            </div>
-          )}
         </div>
       )}
 
@@ -312,14 +446,14 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
                 className={cn(
                   "overflow-hidden rounded-2xl border-2 transition-all",
                   selectedDesign.id === d.id
-                    ? "border-primary ring-2 ring-primary ring-offset-2"
-                    : "border-transparent hover:border-primary/40",
+                    ? "border-primary ring-primary ring-2 ring-offset-2"
+                    : "hover:border-primary/40 border-transparent",
                 )}
               >
                 <div
                   className={cn(
                     "flex flex-col items-center gap-1 p-4 text-white",
-                    `bg-gradient-to-br ${d.gradient}`,
+                    `bg-linear-to-br ${d.gradient}`,
                   )}
                 >
                   <span className="text-3xl">{d.emoji}</span>
@@ -390,11 +524,21 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Happy birthday! Enjoy some pampering for your fur baby..."
                 rows={3}
+                maxLength={300}
               />
               <p className="text-muted-foreground text-right text-xs">
-                {message.length}/200
+                {message.length}/300
               </p>
             </div>
+            <label className="flex cursor-pointer items-center gap-2.5">
+              <Checkbox
+                checked={sendCopy}
+                onCheckedChange={(v) => setSendCopy(v === true)}
+              />
+              <span className="text-sm">
+                Send me a copy of this gift card for my records.
+              </span>
+            </label>
             <div className="rounded-xl border p-3">
               <div className="flex items-center justify-between">
                 <Label className="flex cursor-pointer items-center gap-1.5">
@@ -403,17 +547,57 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
                 </Label>
                 <Switch
                   checked={scheduleDelivery}
-                  onCheckedChange={setScheduleDelivery}
+                  onCheckedChange={handleScheduleToggle}
                 />
               </div>
               {scheduleDelivery && (
-                <Input
-                  type="date"
-                  className="mt-2"
-                  value={deliveryDate}
-                  onChange={(e) => setDeliveryDate(e.target.value)}
-                  min={new Date().toISOString().split("T")[0]}
-                />
+                <div className="animate-in fade-in-0 slide-in-from-top-2 mt-3 space-y-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-muted-foreground text-xs">
+                        Date
+                      </Label>
+                      <DatePicker
+                        value={deliveryDate}
+                        onValueChange={(next) => setDeliveryDate(next)}
+                        min={minDeliveryDate}
+                        max={maxDeliveryDate}
+                        displayMode="dialog"
+                        showManualInput={false}
+                        placeholder="Pick a date"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-muted-foreground text-xs">
+                        Time
+                      </Label>
+                      <Select
+                        value={deliveryTime}
+                        onValueChange={setDeliveryTime}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TIME_SLOTS.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>
+                              {s.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  {schedulePreview && (
+                    <p className="text-muted-foreground text-xs">
+                      This gift card will be delivered on{" "}
+                      <span className="text-foreground font-medium">
+                        {schedulePreview}
+                      </span>
+                      .
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -434,10 +618,10 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
           <div
             className={cn(
               "relative overflow-hidden rounded-2xl p-5 text-white shadow-xl",
-              `bg-gradient-to-br ${selectedDesign.gradient}`,
+              `bg-linear-to-br ${selectedDesign.gradient}`,
             )}
           >
-            <div className="absolute -right-6 -top-6 size-28 rounded-full bg-white/10" />
+            <div className="absolute -top-6 -right-6 size-28 rounded-full bg-white/10" />
             <div className="absolute -bottom-5 -left-5 size-20 rounded-full bg-white/10" />
             <div className="relative">
               <div className="flex items-start justify-between">
@@ -450,13 +634,13 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
                     For {recipientName || "Recipient"}
                   </p>
                 </div>
-                <Badge className="bg-white/20 text-white hover:bg-white/30 text-xs">
+                <Badge className="bg-white/20 text-xs text-white hover:bg-white/30">
                   {selectedDesign.label}
                 </Badge>
               </div>
-              {message && (
-                <p className="mt-3 border-t border-white/20 pt-2 text-xs italic opacity-80">
-                  &quot;{message}&quot;
+              {messagePreview && (
+                <p className="mt-3 truncate border-t border-white/20 pt-2 text-xs italic opacity-80">
+                  &quot;{messagePreview}&quot;
                 </p>
               )}
             </div>
@@ -464,7 +648,7 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
 
           {/* Order summary */}
           <Card>
-            <CardContent className="py-4 space-y-2 text-sm">
+            <CardContent className="space-y-2 py-4 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Recipient</span>
                 <span className="font-medium">{recipientName}</span>
@@ -476,13 +660,7 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Send date</span>
                 <span className="font-medium">
-                  {scheduleDelivery && deliveryDate
-                    ? new Date(deliveryDate).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
-                    : "Immediately"}
+                  {schedulePreview ?? "Immediately"}
                 </span>
               </div>
               <div className="flex justify-between border-t pt-2">
@@ -494,26 +672,99 @@ export function BuyGiftCardFlow({ facilityId, onComplete }: BuyGiftCardFlowProps
             </CardContent>
           </Card>
 
+          {/* "Send a copy" reassurance */}
+          {sendCopy && (
+            <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+              <Mail className="size-3.5" />A copy will also be sent to{" "}
+              <span className="text-foreground font-medium">
+                {purchaserEmail}
+              </span>
+              .
+            </p>
+          )}
+
           {/* Payment method */}
-          <div className="rounded-xl border p-3">
-            <div className="flex items-center gap-3">
-              <CreditCard className="text-muted-foreground size-5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">VISA •••• 4242</p>
-                <p className="text-muted-foreground text-xs">Default card</p>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Payment method</Label>
+            {!showCardSelector ? (
+              <>
+                <div className="flex items-center gap-3 rounded-xl border p-3">
+                  <div className="bg-muted flex size-9 items-center justify-center rounded-md border">
+                    <CreditCard className="size-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">
+                      {activeCard.brand} •••• {activeCard.last4}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      {activeCard.label}
+                    </p>
+                  </div>
+                  <CheckCircle2 className="size-5 text-green-600" />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    onClick={() => setShowCardSelector(false)}
+                  >
+                    Use this card
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowCardSelector(true)}
+                  >
+                    Use different card
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2 rounded-xl border p-2">
+                {SAVED_CARDS.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setPaymentCardId(c.id);
+                      setShowCardSelector(false);
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-all",
+                      c.id === paymentCardId
+                        ? "border-primary bg-primary/5"
+                        : "hover:border-primary/40",
+                    )}
+                  >
+                    <CreditCard className="text-muted-foreground size-5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">
+                        {c.brand} •••• {c.last4}
+                      </p>
+                      <p className="text-muted-foreground text-xs">{c.label}</p>
+                    </div>
+                    {c.id === paymentCardId && (
+                      <CheckCircle2 className="text-primary size-4" />
+                    )}
+                  </button>
+                ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setShowCardSelector(false)}
+                >
+                  Cancel
+                </Button>
               </div>
-              <Button variant="ghost" size="sm" className="text-xs">
-                Change
-              </Button>
-            </div>
+            )}
           </div>
 
           {resolvedAmount >= 200 && (
             <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
               <span className="mt-0.5">🔐</span>
               <span>
-                This is a high-value card. The recipient will be asked to set a 4-digit
-                PIN when they redeem it for extra security.
+                This is a high-value card. The recipient will be asked to set a
+                4-digit PIN when they redeem it for extra security.
               </span>
             </div>
           )}

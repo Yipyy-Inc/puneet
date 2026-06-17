@@ -717,12 +717,20 @@ export const giftCardProgramSettingsSchema = z.object({
   enabled: z.boolean(),
   digitalEnabled: z.boolean(),
   physicalEnabled: z.boolean(),
+  /** Physical card stock count below which the dashboard shows a low-stock warning. */
+  lowStockThreshold: z.number().optional(),
   expiryEnabled: z.boolean(),
   expiryDays: z.number().optional(),
   partialRedemptionAllowed: z.boolean(),
   pinRequiredAbove: z.number(),
-  multiLocationRedemption: z.boolean(),
-  refundsAllowed: z.boolean(),
+  /** Where gift cards issued at one location may be redeemed (multi-location facilities). */
+  redemptionLocationScope: z.enum(["this_location", "all_locations", "selected"]),
+  /** When scope is "selected", the location ids permitted to redeem. */
+  redemptionLocationIds: z.array(z.string()).optional(),
+  /** When a service is refunded, staff may issue the refund as gift card credit. */
+  refundToGiftCard: z.boolean(),
+  /** A customer may cancel an unused gift card for a cash refund. */
+  allowGiftCardCancellation: z.boolean(),
   walletUsageRules: walletUsageRulesSchema,
   presetAmounts: z.array(z.number()),
   minAmount: z.number(),
@@ -733,6 +741,10 @@ export const giftCardProgramSettingsSchema = z.object({
     accentColor: z.string(),
     footerText: z.string().optional(),
   }),
+  /** One optional facility-uploaded gift card design, shown in the sell flow's design picker. */
+  customCardDesign: z
+    .object({ label: z.string(), imageUrl: z.string() })
+    .optional(),
   updatedAt: z.string(),
 });
 export type GiftCardProgramSettings = z.infer<typeof giftCardProgramSettingsSchema>;
@@ -766,6 +778,8 @@ export const physicalCardBatchSchema = z.object({
   generatedBy: z.string(),
   totalCards: z.number(),
   importedAt: z.string().optional(),
+  /** Fixed face value the batch was printed at. Absent = variable-load (set at POS). */
+  denomination: z.number().optional(),
   cards: z.array(physicalCardSchema),
 });
 export type PhysicalCardBatch = z.infer<typeof physicalCardBatchSchema>;
@@ -784,6 +798,7 @@ export const giftCardAuditActionEnum = z.enum([
   "refunded",
   "balance_adjusted",
   "expiry_changed",
+  "expired",
   "batch_generated",
   "batch_imported",
 ]);

@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Card,
   CardContent,
@@ -17,15 +19,21 @@ import {
 import {
   Settings,
   Save,
-  Globe,
   CreditCard,
   Wallet,
   Shield,
-  Palette,
   CheckCircle2,
   Loader2,
+  Info,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { giftCardSettings } from "@/data/gift-cards";
+import { getLocationsByFacility } from "@/data/locations";
+import { EmailBrandingCard } from "./EmailBrandingCard";
 
 const SERVICE_TOGGLES = [
   { key: "boarding", label: "Boarding" },
@@ -45,15 +53,39 @@ interface GiftCardSettingsPanelProps {
 
 export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps) {
   const settings = giftCardSettings.find((s) => s.facilityId === facilityId);
+  const facilityLocations = getLocationsByFacility(facilityId);
+  const isMultiLocation = facilityLocations.length > 1;
+  const brandName =
+    facilityLocations
+      .find((l) => l.isPrimary)
+      ?.name.split(/[–-]/)[0]
+      .trim() ?? "Your Facility";
 
   const [digitalEnabled, setDigitalEnabled] = useState(settings?.digitalEnabled ?? true);
   const [physicalEnabled, setPhysicalEnabled] = useState(settings?.physicalEnabled ?? true);
-  const [expiryEnabled, setExpiryEnabled] = useState(settings?.expiryEnabled ?? true);
+  const [lowStockThreshold, setLowStockThreshold] = useState(settings?.lowStockThreshold ?? 50);
+  const [expiryEnabled, setExpiryEnabled] = useState(settings?.expiryEnabled ?? false);
   const [expiryDays, setExpiryDays] = useState(settings?.expiryDays ?? 365);
   const [partialRedemption, setPartialRedemption] = useState(settings?.partialRedemptionAllowed ?? true);
   const [pinThreshold, setPinThreshold] = useState(settings?.pinRequiredAbove ?? 200);
-  const [multiLocation, setMultiLocation] = useState(settings?.multiLocationRedemption ?? false);
-  const [refundsAllowed, setRefundsAllowed] = useState(settings?.refundsAllowed ?? true);
+  const [redemptionScope, setRedemptionScope] = useState(
+    settings?.redemptionLocationScope ?? "this_location",
+  );
+  const [redemptionLocationIds, setRedemptionLocationIds] = useState<string[]>(
+    settings?.redemptionLocationIds ?? facilityLocations.map((l) => l.id),
+  );
+
+  const toggleRedemptionLocation = (id: string) => {
+    setRedemptionLocationIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
+  const [refundToGiftCard, setRefundToGiftCard] = useState(
+    settings?.refundToGiftCard ?? true,
+  );
+  const [allowCancellation, setAllowCancellation] = useState(
+    settings?.allowGiftCardCancellation ?? true,
+  );
   const [walletRules, setWalletRules] = useState(
     settings?.walletUsageRules ?? {
       boarding: true,
@@ -67,8 +99,6 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
       tips: false,
     },
   );
-  const [primaryColor, setPrimaryColor] = useState(settings?.emailBranding.primaryColor ?? "#7C3AED");
-  const [footerText, setFooterText] = useState(settings?.emailBranding.footerText ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -115,6 +145,33 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
             </div>
             <Switch checked={physicalEnabled} onCheckedChange={setPhysicalEnabled} />
           </div>
+          {physicalEnabled && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <Label className="font-medium">Low-Stock Warning</Label>
+                <p className="text-muted-foreground text-xs">
+                  Show an amber alert on the dashboard when available blank cards
+                  fall below this count
+                </p>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number"
+                    min={0}
+                    step={5}
+                    value={lowStockThreshold}
+                    onChange={(e) =>
+                      setLowStockThreshold(parseInt(e.target.value) || 0)
+                    }
+                    className="w-24"
+                  />
+                  <span className="text-muted-foreground text-sm">
+                    cards remaining
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -137,32 +194,165 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
             </div>
             <Switch checked={partialRedemption} onCheckedChange={setPartialRedemption} />
           </div>
+          {isMultiLocation && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <div>
+                  <Label className="font-medium">
+                    Multi-Location Redemption
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    Choose where gift cards issued here can be redeemed
+                  </p>
+                </div>
+                <RadioGroup
+                  value={redemptionScope}
+                  onValueChange={(v) =>
+                    setRedemptionScope(
+                      v as "this_location" | "all_locations" | "selected",
+                    )
+                  }
+                >
+                  <label
+                    htmlFor="redeem-this"
+                    data-active={redemptionScope === "this_location"}
+                    className="flex cursor-pointer items-start gap-3 rounded-md border p-3 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                  >
+                    <RadioGroupItem
+                      value="this_location"
+                      id="redeem-this"
+                      className="mt-0.5"
+                    />
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">This location only</p>
+                      <p className="text-muted-foreground text-xs">
+                        A card issued here can only be redeemed at this
+                        location.
+                      </p>
+                    </div>
+                  </label>
+
+                  <label
+                    htmlFor="redeem-all"
+                    data-active={redemptionScope === "all_locations"}
+                    className="flex cursor-pointer items-start gap-3 rounded-md border p-3 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                  >
+                    <RadioGroupItem
+                      value="all_locations"
+                      id="redeem-all"
+                      className="mt-0.5"
+                    />
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">All my locations</p>
+                      <p className="text-muted-foreground text-xs">
+                        Cards can be redeemed at any of your{" "}
+                        {facilityLocations.length} locations.
+                      </p>
+                    </div>
+                  </label>
+
+                  <label
+                    htmlFor="redeem-selected"
+                    data-active={redemptionScope === "selected"}
+                    className="flex cursor-pointer items-start gap-3 rounded-md border p-3 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                  >
+                    <RadioGroupItem
+                      value="selected"
+                      id="redeem-selected"
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1 space-y-2">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-medium">Selected locations</p>
+                        <p className="text-muted-foreground text-xs">
+                          Choose which locations can redeem these cards.
+                        </p>
+                      </div>
+                      {redemptionScope === "selected" && (
+                        <div className="space-y-1.5 rounded-md border bg-background p-3">
+                          {facilityLocations.map((loc) => (
+                            <label
+                              key={loc.id}
+                              className="flex cursor-pointer items-center gap-2 text-sm"
+                            >
+                              <Checkbox
+                                checked={redemptionLocationIds.includes(loc.id)}
+                                onCheckedChange={() =>
+                                  toggleRedemptionLocation(loc.id)
+                                }
+                              />
+                              <span>{loc.name}</span>
+                              {loc.isPrimary && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px]"
+                                >
+                                  Primary
+                                </Badge>
+                              )}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                </RadioGroup>
+              </div>
+            </>
+          )}
           <Separator />
           <div className="flex items-center justify-between">
-            <div>
-              <Label className="font-medium">Multi-Location Redemption</Label>
+            <div className="pr-4">
+              <Label className="font-medium">Refund to Gift Card</Label>
               <p className="text-muted-foreground text-xs">
-                Allow cards issued here to be redeemed at group locations
+                When a service is refunded, staff can issue the refund as gift
+                card credit instead of back to the original payment.
               </p>
             </div>
-            <Switch checked={multiLocation} onCheckedChange={setMultiLocation} />
+            <Switch
+              checked={refundToGiftCard}
+              onCheckedChange={setRefundToGiftCard}
+            />
           </div>
           <Separator />
           <div className="flex items-center justify-between">
-            <div>
-              <Label className="font-medium">Allow Refunds</Label>
+            <div className="pr-4">
+              <Label className="font-medium">Allow Gift Card Cancellation</Label>
               <p className="text-muted-foreground text-xs">
-                Staff can void and refund unsused gift cards
+                A customer can request a refund of an unused gift card for cash.
               </p>
             </div>
-            <Switch checked={refundsAllowed} onCheckedChange={setRefundsAllowed} />
+            <Switch
+              checked={allowCancellation}
+              onCheckedChange={setAllowCancellation}
+            />
           </div>
           <Separator />
           <div className="flex items-center justify-between">
-            <div>
-              <Label className="font-medium">Card Expiry</Label>
+            <div className="pr-4">
+              <Label className="flex items-center gap-1.5 font-medium">
+                Set card expiry
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Info className="size-3.5" />
+                      <span className="sr-only">Expiry regulation note</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    Check your local consumer protection regulations regarding
+                    gift card expiry dates.
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
               <p className="text-muted-foreground text-xs">
-                Gift cards expire after the set number of days
+                {expiryEnabled
+                  ? "Gift cards expire after the set number of days"
+                  : "Cards do not expire."}
               </p>
             </div>
             <Switch checked={expiryEnabled} onCheckedChange={setExpiryEnabled} />
@@ -245,72 +435,12 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
         </CardContent>
       </Card>
 
-      {/* Email branding */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Palette className="size-4" />
-            Email Branding
-          </CardTitle>
-          <CardDescription>
-            Customize the gift card delivery email with your facility&apos;s look
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Brand Color</Label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={primaryColor}
-                onChange={(e) => setPrimaryColor(e.target.value)}
-                className="size-10 cursor-pointer rounded-lg border p-0.5"
-              />
-              <Input
-                value={primaryColor}
-                onChange={(e) => setPrimaryColor(e.target.value)}
-                className="w-32 font-mono text-sm"
-                maxLength={7}
-              />
-              <div
-                className="h-8 w-16 rounded-md"
-                style={{ backgroundColor: primaryColor }}
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Email Footer Text</Label>
-            <Input
-              value={footerText}
-              onChange={(e) => setFooterText(e.target.value)}
-              placeholder="Thank you for choosing us — where every tail tells a happy story."
-            />
-          </div>
-
-          {/* Preview */}
-          <div
-            className="rounded-xl border p-4 text-sm"
-            style={{ borderColor: primaryColor + "40" }}
-          >
-            <div
-              className="mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-white"
-              style={{ backgroundColor: primaryColor }}
-            >
-              <Globe className="size-4" />
-              <span className="font-semibold">Email Preview</span>
-            </div>
-            <div className="space-y-1 text-center">
-              <p className="font-bold" style={{ color: primaryColor }}>
-                You&apos;ve received a Gift Card! 🎁
-              </p>
-              <p className="text-muted-foreground text-xs">Your balance: $100.00</p>
-              <p className="text-muted-foreground mt-3 text-xs italic">
-                {footerText || "Footer text will appear here"}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Branding */}
+      <EmailBrandingCard
+        brandName={brandName}
+        branding={settings?.emailBranding}
+        customDesign={settings?.customCardDesign}
+      />
 
       <Button onClick={handleSave} disabled={saving} className="w-full">
         {saving ? (
