@@ -68,6 +68,15 @@ function getFacilityName(facilityId: number): string {
   return facility?.name ?? `Facility #${facilityId}`;
 }
 
+/** All facilities a module is assigned to (falls back to the primary id). */
+function getModuleFacilityIds(mod: CustomServiceModule): number[] {
+  return mod.facilityIds?.length ? mod.facilityIds : [mod.facilityId];
+}
+
+function getModuleFacilityNames(mod: CustomServiceModule): string {
+  return getModuleFacilityIds(mod).map(getFacilityName).join(", ");
+}
+
 function ModuleListRow({
   module: mod,
   onEdit,
@@ -94,7 +103,9 @@ function ModuleListRow({
       </div>
       <div className="text-muted-foreground hidden items-center gap-1.5 text-xs lg:flex">
         <Building className="size-3" />
-        {getFacilityName(mod.facilityId)}
+        <span className="max-w-[180px] truncate">
+          {getModuleFacilityNames(mod)}
+        </span>
       </div>
       <div className="shrink-0">
         <Badge
@@ -155,7 +166,10 @@ export default function SuperAdminCustomModulesPage() {
       if (statusFilter !== "all" && m.status !== statusFilter) return false;
       if (categoryFilter !== "all" && m.category !== categoryFilter)
         return false;
-      if (facilityFilter !== "all" && m.facilityId !== parseInt(facilityFilter))
+      if (
+        facilityFilter !== "all" &&
+        !getModuleFacilityIds(m).includes(parseInt(facilityFilter))
+      )
         return false;
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -182,7 +196,7 @@ export default function SuperAdminCustomModulesPage() {
 
   // Unique facility IDs from modules
   const facilityIds = useMemo(() => {
-    const ids = [...new Set(modules.map((m) => m.facilityId))];
+    const ids = [...new Set(modules.flatMap(getModuleFacilityIds))];
     return ids.sort((a, b) => a - b);
   }, [modules]);
 
@@ -447,7 +461,7 @@ export default function SuperAdminCustomModulesPage() {
                 onDelete={() => handleSetDeleteTarget(mod.id)}
                 onToggleStatus={() => handleToggleStatus(mod)}
                 onArchive={() => handleArchive(mod.id)}
-                facilityName={getFacilityName(mod.facilityId)}
+                facilityName={getModuleFacilityNames(mod)}
               />
             ))}
           </div>

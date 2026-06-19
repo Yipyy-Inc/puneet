@@ -11,6 +11,8 @@ import {
   getGradientStyle,
   PRICING_MODEL_LABELS,
 } from "@/data/custom-services";
+import { taxRates } from "@/data/settings";
+import { PublishControls } from "./PublishControls";
 import type { CustomServiceModule } from "@/types/facility";
 
 function BooleanIcon({ value }: { value: boolean }) {
@@ -23,12 +25,12 @@ function BooleanIcon({ value }: { value: boolean }) {
 
 function SectionHeader({
   title,
-  stepIndex,
+  stepId,
   onEdit,
 }: {
   title: string;
-  stepIndex: number;
-  onEdit: (step: number) => void;
+  stepId: string;
+  onEdit: (stepId: string) => void;
 }) {
   return (
     <div className="flex items-center justify-between">
@@ -37,7 +39,7 @@ function SectionHeader({
         type="button"
         variant="ghost"
         size="sm"
-        onClick={() => onEdit(stepIndex)}
+        onClick={() => onEdit(stepId)}
         className="text-muted-foreground hover:text-foreground h-7 px-2 text-xs"
       >
         <Pencil className="size-3" />
@@ -66,12 +68,14 @@ function Row({
 
 interface WizardReviewPanelProps {
   data: CustomServiceModule;
-  onEditStep: (stepIndex: number) => void;
+  onEditStep: (stepId: string) => void;
+  onChange: (updates: Partial<CustomServiceModule>) => void;
 }
 
 export function WizardReviewPanel({
   data,
   onEditStep,
+  onChange,
 }: WizardReviewPanelProps) {
   const gradientStyle = getGradientStyle(data.iconColor, data.iconColorTo);
   const categoryMeta = getCategoryMeta(data.category);
@@ -104,7 +108,7 @@ export function WizardReviewPanel({
 
       {/* Basic Info */}
       <div className="space-y-1">
-        <SectionHeader title="Basic Info" stepIndex={0} onEdit={onEditStep} />
+        <SectionHeader title="Basic Info" stepId="basic" onEdit={onEditStep} />
         <Separator />
         <Row label="Category">
           <Badge variant="secondary">
@@ -112,6 +116,15 @@ export function WizardReviewPanel({
           </Badge>
         </Row>
         <Row label="Icon">{data.icon}</Row>
+        <Row label="Sidebar Label">
+          {data.sidebarLabel?.trim() ? (
+            data.sidebarLabel
+          ) : (
+            <span className="text-muted-foreground italic">
+              {data.name || "Full name"}
+            </span>
+          )}
+        </Row>
         <Row label="Internal Notes">
           {data.internalNotes ? (
             <span className="line-clamp-2">{data.internalNotes}</span>
@@ -125,7 +138,7 @@ export function WizardReviewPanel({
       <div className="space-y-1">
         <SectionHeader
           title="Workflow Questionnaire"
-          stepIndex={1}
+          stepId="workflow"
           onEdit={onEditStep}
         />
         <Separator />
@@ -166,13 +179,23 @@ export function WizardReviewPanel({
             ? `Enabled${workflow.capacityCeilingPerHour ? ` (${workflow.capacityCeilingPerHour}/hour)` : ""}`
             : "Excluded"}
         </Row>
+        <Row label="Payment at booking">
+          {workflow.paymentTiming === "at_booking"
+            ? "Charged at booking"
+            : workflow.paymentTiming === "deposit_only"
+              ? "Deposit only"
+              : "Invoiced later"}
+        </Row>
+        <Row label="Waiver/consent">
+          {workflow.requiresWaiver ? "Required before booking" : "Not required"}
+        </Row>
       </div>
 
       {/* Calendar */}
       <div className="space-y-1">
         <SectionHeader
           title="Calendar & Availability"
-          stepIndex={2}
+          stepId="calendar"
           onEdit={onEditStep}
         />
         <Separator />
@@ -199,70 +222,131 @@ export function WizardReviewPanel({
                 {data.calendar.assignedResourceIds.join(", ")}
               </Row>
             )}
+            {data.calendar.operatingHoursOverride?.enabled && (
+              <Row label="Operating Hours">
+                Custom (
+                {
+                  data.calendar.operatingHoursOverride.days.filter(
+                    (d) => d.isOpen,
+                  ).length
+                }{" "}
+                day(s) open)
+              </Row>
+            )}
+            {data.calendar.bookingWindow && (
+              <Row label="Booking Window">
+                {data.calendar.bookingWindow.maxAdvanceDays}d ahead ·{" "}
+                {data.calendar.bookingWindow.minAdvanceHours}h notice
+              </Row>
+            )}
+            {data.calendar.recurrence && (
+              <Row label="Recurrence">
+                {data.calendar.recurrence.mode === "recurring"
+                  ? `${data.calendar.recurrence.frequency === "biweekly" ? "Bi-weekly" : "Weekly"} (max ${data.calendar.recurrence.maxSessions})`
+                  : "One-time"}
+              </Row>
+            )}
           </>
         )}
       </div>
 
-      {/* Check-In/Out */}
-      <div className="space-y-1">
-        <SectionHeader
-          title="Check-In / Check-Out"
-          stepIndex={3}
-          onEdit={onEditStep}
-        />
-        <Separator />
-        <Row label="Enabled">
-          <BooleanIcon value={data.checkInOut.enabled} />
-        </Row>
-        {data.checkInOut.enabled && (
-          <>
-            <Row label="Check-In Type">
-              <span className="capitalize">{data.checkInOut.checkInType}</span>
+      {/* Check-In/Out — only when the questionnaire enabled this step */}
+      {data.checkInOut.enabled && (
+        <div className="space-y-1">
+          <SectionHeader
+            title="Check-In / Check-Out"
+            stepId="checkin"
+            onEdit={onEditStep}
+          />
+          <Separator />
+          <Row label="Enabled">
+            <BooleanIcon value={data.checkInOut.enabled} />
+          </Row>
+          <Row label="Check-In Type">
+            <span className="capitalize">{data.checkInOut.checkInType}</span>
+          </Row>
+          <Row label="Checkout Tracking">
+            <BooleanIcon value={data.checkInOut.checkOutTimeTracking} />
+          </Row>
+          <Row label="QR Code">
+            <BooleanIcon value={data.checkInOut.qrCodeSupport} />
+          </Row>
+          {data.checkInOut.checkInLocation && (
+            <Row label="Check-In Location">
+              <span className="capitalize">
+                {data.checkInOut.checkInLocation.replaceAll("_", " ")}
+              </span>
             </Row>
-            <Row label="Checkout Tracking">
-              <BooleanIcon value={data.checkInOut.checkOutTimeTracking} />
+          )}
+          {data.checkInOut.lateArrivalPolicy && (
+            <Row label="Late Arrival">
+              <span className="capitalize">
+                {data.checkInOut.lateArrivalPolicy.graceMinutes}m grace ·{" "}
+                {data.checkInOut.lateArrivalPolicy.action.replaceAll("_", " ")}
+              </span>
             </Row>
-            <Row label="QR Code">
-              <BooleanIcon value={data.checkInOut.qrCodeSupport} />
-            </Row>
-          </>
-        )}
-      </div>
+          )}
+          <Row label="Departure Notice">
+            <BooleanIcon
+              value={data.checkInOut.departureNotification?.enabled ?? false}
+            />
+          </Row>
+        </div>
+      )}
 
-      {/* Stay-Based */}
-      <div className="space-y-1">
-        <SectionHeader title="Stay-Based" stepIndex={4} onEdit={onEditStep} />
-        <Separator />
-        <Row label="Enabled">
-          <BooleanIcon value={data.stayBased.enabled} />
-        </Row>
-        {data.stayBased.enabled && (
-          <>
-            <Row label="Requires Room/Kennel">
-              <BooleanIcon value={data.stayBased.requiresRoomKennel} />
+      {/* Stay-Based — only when enabled (the step is skipped otherwise) */}
+      {data.stayBased.enabled && (
+        <div className="space-y-1">
+          <SectionHeader title="Stay-Based" stepId="stay" onEdit={onEditStep} />
+          <Separator />
+          <Row label="Requires Room/Kennel">
+            <BooleanIcon value={data.stayBased.requiresRoomKennel} />
+          </Row>
+          <Row label="Affects Kennel View">
+            <BooleanIcon value={data.stayBased.affectsKennelView} />
+          </Row>
+          <Row label="Daily Tasks">
+            <BooleanIcon value={data.stayBased.generatesDailyTasks} />
+          </Row>
+          {data.stayBased.roomSpaceType && (
+            <Row label="Space Type">
+              {data.stayBased.roomSpaceType === "custom"
+                ? data.stayBased.customRoomSpaceLabel || "Custom"
+                : data.stayBased.roomSpaceType
+                    .replaceAll("_", " ")
+                    .replace(/\b\w/g, (c) => c.toUpperCase())}
             </Row>
-            <Row label="Affects Kennel View">
-              <BooleanIcon value={data.stayBased.affectsKennelView} />
+          )}
+          {data.stayBased.capacityPerSpace != null && (
+            <Row label="Capacity/Space">
+              {data.stayBased.capacityPerSpace} pet(s)
             </Row>
-            <Row label="Daily Tasks">
-              <BooleanIcon value={data.stayBased.generatesDailyTasks} />
+          )}
+          {data.stayBased.earlyLateAccess && (
+            <Row label="Early/Late Access">
+              {[
+                data.stayBased.earlyLateAccess.earlyCheckIn && "Early check-in",
+                data.stayBased.earlyLateAccess.lateCheckOut && "Late check-out",
+              ]
+                .filter(Boolean)
+                .join(" · ") || "Not offered"}
             </Row>
-          </>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
-      {/* Online Booking */}
-      <div className="space-y-1">
-        <SectionHeader
-          title="Online Booking"
-          stepIndex={5}
-          onEdit={onEditStep}
-        />
-        <Separator />
-        <Row label="Enabled">
-          <BooleanIcon value={data.onlineBooking.enabled} />
-        </Row>
-        {data.onlineBooking.enabled && (
+      {/* Online Booking — only when the questionnaire enabled this step */}
+      {data.onlineBooking.enabled && (
+        <div className="space-y-1">
+          <SectionHeader
+            title="Online Booking"
+            stepId="booking"
+            onEdit={onEditStep}
+          />
+          <Separator />
+          <Row label="Enabled">
+            <BooleanIcon value={data.onlineBooking.enabled} />
+          </Row>
           <>
             <Row label="Eligible Clients">
               <span className="capitalize">
@@ -272,7 +356,20 @@ export function WizardReviewPanel({
             <Row label="Approval Required">
               <BooleanIcon value={data.onlineBooking.approvalRequired} />
             </Row>
-            <Row label="Max Dogs">{data.onlineBooking.maxDogsPerSession}</Row>
+            <Row label="Max Pets">{data.onlineBooking.maxDogsPerSession}</Row>
+            <Row label="Waitlist">
+              {data.onlineBooking.waitlist?.enabled
+                ? `Enabled${data.onlineBooking.waitlist.maxSize ? ` (max ${data.onlineBooking.waitlist.maxSize})` : ""}${data.onlineBooking.waitlist.autoConfirm ? " · auto-confirm" : ""}`
+                : "Off"}
+            </Row>
+            {data.onlineBooking.requiredDocuments &&
+              data.onlineBooking.requiredDocuments.length > 0 && (
+                <Row label="Required Docs">
+                  {data.onlineBooking.requiredDocuments
+                    .map((d) => d.replaceAll("_", " "))
+                    .join(", ")}
+                </Row>
+              )}
             <Row label="Cancel Policy">
               {data.onlineBooking.cancellationPolicy.hoursBeforeBooking}h /{" "}
               {data.onlineBooking.cancellationPolicy.feePercentage}% fee
@@ -284,15 +381,22 @@ export function WizardReviewPanel({
               data.onlineBooking.depositAmount && (
                 <Row label="Deposit Amount">
                   ${data.onlineBooking.depositAmount}
+                  {data.onlineBooking.depositType === "percentage" ? "%" : ""}
+                  {data.onlineBooking.depositRefundPolicy &&
+                    ` · ${
+                      data.onlineBooking.depositRefundPolicy.refundable
+                        ? `refundable${data.onlineBooking.depositRefundPolicy.refundableUpToHours ? ` ≤${data.onlineBooking.depositRefundPolicy.refundableUpToHours}h` : ""}`
+                        : "non-refundable"
+                    }`}
                 </Row>
               )}
           </>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Pricing */}
       <div className="space-y-1">
-        <SectionHeader title="Pricing" stepIndex={6} onEdit={onEditStep} />
+        <SectionHeader title="Pricing" stepId="pricing" onEdit={onEditStep} />
         <Separator />
         <Row label="Model">
           {PRICING_MODEL_LABELS[data.pricing.model] ?? data.pricing.model}
@@ -303,6 +407,17 @@ export function WizardReviewPanel({
         <Row label="Taxable">
           <BooleanIcon value={data.pricing.taxable} />
         </Row>
+        {data.pricing.taxable &&
+          (() => {
+            const rate =
+              taxRates.find((t) => t.id === data.pricing.taxRateId) ??
+              taxRates.find((t) => t.isDefault);
+            return rate ? (
+              <Row label="Tax Rate">
+                {rate.name} ({rate.rate}%)
+              </Row>
+            ) : null;
+          })()}
         <Row label="Tips Allowed">
           <BooleanIcon value={data.pricing.tipAllowed} />
         </Row>
@@ -317,13 +432,43 @@ export function WizardReviewPanel({
                 .join(" · ")}
             </Row>
           )}
+        {data.pricing.billingTrigger && (
+          <Row label="Billing Trigger">
+            <span className="capitalize">
+              {data.pricing.billingTrigger.replaceAll("_", " ")}
+            </span>
+          </Row>
+        )}
+        {data.pricing.packagePricing?.enabled && (
+          <Row label="Packages">
+            {data.pricing.packagePricing.packages.length} configured
+          </Row>
+        )}
+        {(data.pricing.peakPricingEnabled ||
+          data.pricing.model === "dynamic") && (
+          <Row label="Peak Pricing">
+            {data.pricing.peakPricingRules?.length
+              ? `${data.pricing.peakPricingRules.length} rule(s)`
+              : "Enabled"}
+          </Row>
+        )}
+        {data.pricing.paymentMethods &&
+          data.pricing.paymentMethods.length > 0 && (
+            <Row label="Payment Methods">
+              <span className="capitalize">
+                {data.pricing.paymentMethods
+                  .map((m) => m.replaceAll("_", " "))
+                  .join(", ")}
+              </span>
+            </Row>
+          )}
       </div>
 
       {/* Staff Assignment */}
       <div className="space-y-1">
         <SectionHeader
           title="Staff Assignment"
-          stepIndex={7}
+          stepId="staff"
           onEdit={onEditStep}
         />
         <Separator />
@@ -335,6 +480,18 @@ export function WizardReviewPanel({
             ? (data.staffAssignment.customRoleName ?? "Custom")
             : data.staffAssignment.requiredRole}
         </Row>
+        {data.staffAssignment.requiredQualification && (
+          <Row label="Qualification">
+            {data.staffAssignment.requiredQualification === "custom"
+              ? (data.staffAssignment.customQualification ?? "Custom")
+              : data.staffAssignment.requiredQualification.replaceAll("_", " ")}
+          </Row>
+        )}
+        {data.staffAssignment.staffToPetRatio != null && (
+          <Row label="Staff-to-Pet Ratio">
+            1 : {data.staffAssignment.staffToPetRatio}
+          </Row>
+        )}
         <Row label="Tasks Generated">
           {data.staffAssignment.taskGeneration.length > 0
             ? data.staffAssignment.taskGeneration.join(", ")
@@ -344,12 +501,68 @@ export function WizardReviewPanel({
           <BooleanIcon value={data.yipyyGoRequired} />
         </Row>
         <Row label="Evaluation Required">
-          <BooleanIcon value={data.requiresEvaluation} />
+          {data.requiresEvaluation ? (
+            <span className="capitalize">
+              {data.evaluationType === "custom"
+                ? (data.customEvaluationLabel ?? "Custom")
+                : (data.evaluationType ?? "temperament").replaceAll("_", " ")}
+            </span>
+          ) : (
+            <BooleanIcon value={false} />
+          )}
         </Row>
         <Row label="Show in Sidebar">
           <BooleanIcon value={data.showInSidebar} />
         </Row>
       </div>
+
+      {/* Eligibility, Dependencies & Capacity */}
+      <div className="space-y-1">
+        <SectionHeader
+          title="Rules & Capacity"
+          stepId="eligibility"
+          onEdit={onEditStep}
+        />
+        <Separator />
+        <Row label="Eligibility Rules">
+          {data.eligibilityRules?.enabled
+            ? `${data.eligibilityRules.conditions.length} condition(s)`
+            : "No restriction"}
+        </Row>
+        <Row label="Dependency">
+          {data.serviceDependencies?.addonOnly
+            ? "Add-on only"
+            : data.serviceDependencies?.requiresServices?.length
+              ? `Requires ${data.serviceDependencies.requiresServices[0].moduleName}`
+              : "Standalone"}
+        </Row>
+        {data.serviceDependencies?.minClientTenureDays ? (
+          <Row label="Client Tenure">
+            ≥ {data.serviceDependencies.minClientTenureDays} days
+          </Row>
+        ) : null}
+        {data.capacity?.enabled && (
+          <Row label="Capacity">
+            {data.capacity.maxPerSlot ?? 1} pets ·{" "}
+            {data.capacity.maxConcurrentSessions ?? 1} concurrent
+            {data.capacity.overbookingBufferPercent
+              ? ` · +${data.capacity.overbookingBufferPercent}% buffer`
+              : ""}
+          </Row>
+        )}
+        {data.geographicRestriction?.enabled && (
+          <Row label="Service Area">
+            {data.geographicRestriction.mode === "radius"
+              ? `${data.geographicRestriction.radius ?? 0} ${data.geographicRestriction.radiusUnit ?? "mi"} radius`
+              : `${data.geographicRestriction.postalCodes?.length ?? 0} area(s)`}
+          </Row>
+        )}
+      </div>
+
+      <Separator />
+
+      {/* Publish mode, validation & notification */}
+      <PublishControls data={data} onChange={onChange} />
     </div>
   );
 }

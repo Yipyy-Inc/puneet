@@ -49,6 +49,7 @@ import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
 import { facilities } from "@/data/facilities";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { resolveIcon } from "@/lib/service-registry";
+import { COLOR_HEX_MAP } from "@/data/custom-services";
 import { LocationContextSelector } from "@/components/hq/LocationContextSelector";
 import { useLocationContext } from "@/hooks/use-location-context";
 
@@ -75,9 +76,11 @@ export function FacilitySidebar() {
       .filter((m) => m.showInSidebar)
       .sort((a, b) => a.sidebarPosition - b.sidebarPosition)
       .map((m) => ({
-        title: m.name,
+        title: m.sidebarLabel?.trim() || m.name,
         url: `/facility/dashboard/services/custom/${m.slug}`,
         icon: resolveIcon(m.icon),
+        // Step 1 brand color so the module icon is tinted in the sidebar.
+        iconColor: COLOR_HEX_MAP[m.iconColor] ?? "#3b82f6",
         disabled: false,
       }));
 

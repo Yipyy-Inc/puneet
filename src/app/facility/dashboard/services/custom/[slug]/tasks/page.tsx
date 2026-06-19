@@ -16,6 +16,9 @@ export default function CustomServiceTasksPage() {
     <ModuleTasksPage
       moduleId={serviceModule.slug}
       moduleName={serviceModule.name}
+      // Task types come from the module's Step 8 configuration (superadmin);
+      // the facility can edit existing templates but not add new types.
+      allowAddTemplates={false}
     />
   );
 }

@@ -12,36 +12,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, ShieldCheck, Link2, Box } from "lucide-react";
-import type {
-  CustomServiceModule,
-  EligibilityCondition,
-  EligibilityConditionType,
-} from "@/types/facility";
-
-const CONDITION_TYPES: {
-  value: EligibilityConditionType;
-  label: string;
-}[] = [
-  { value: "pet_type", label: "Pet Type" },
-  { value: "evaluation", label: "Evaluation" },
-  { value: "membership", label: "Membership" },
-  { value: "waiver", label: "Waiver Signed" },
-  { value: "service_booked", label: "Service Booked" },
-  { value: "tag", label: "Pet Tag" },
-  { value: "vaccination", label: "Vaccination" },
-  { value: "age", label: "Pet Age" },
-  { value: "weight", label: "Pet Weight" },
-];
-
-const OPERATORS: { value: string; label: string }[] = [
-  { value: "equals", label: "Equals" },
-  { value: "not_equals", label: "Not Equals" },
-  { value: "has", label: "Has" },
-  { value: "not_has", label: "Does Not Have" },
-  { value: "greater_than", label: "Greater Than" },
-  { value: "less_than", label: "Less Than" },
-];
+import { ShieldCheck, Box } from "lucide-react";
+import type { CustomServiceModule } from "@/types/facility";
+import { EligibilityConditionBuilder } from "./EligibilityConditionBuilder";
+import { ServiceDependenciesSection } from "./ServiceDependenciesSection";
+import { GeographicRestriction } from "./GeographicRestriction";
 
 interface EligibilityStepProps {
   data: CustomServiceModule;
@@ -88,31 +63,6 @@ export function EligibilityStep({ data, onChange }: EligibilityStepProps) {
     patch: Partial<NonNullable<CustomServiceModule["capacity"]>>,
   ) => {
     onChange({ capacity: { ...cap, ...patch } });
-  };
-
-  const addCondition = () => {
-    const cond: EligibilityCondition = {
-      id: `ec-${Date.now()}`,
-      type: "pet_type",
-      operator: "equals",
-      value: "Dog",
-      label: "",
-    };
-    updateRules({ conditions: [...rules.conditions, cond] });
-  };
-
-  const updateCondition = (
-    idx: number,
-    patch: Partial<EligibilityCondition>,
-  ) => {
-    const conds = rules.conditions.map((c, i) =>
-      i === idx ? { ...c, ...patch } : c,
-    );
-    updateRules({ conditions: conds });
-  };
-
-  const removeCondition = (idx: number) => {
-    updateRules({ conditions: rules.conditions.filter((_, i) => i !== idx) });
   };
 
   return (
@@ -175,90 +125,10 @@ export function EligibilityStep({ data, onChange }: EligibilityStepProps) {
               </div>
             </div>
 
-            {rules.conditions.map((cond, idx) => (
-              <div
-                key={cond.id}
-                className="flex items-start gap-2 rounded-md border p-3"
-              >
-                <span className="text-muted-foreground mt-1.5 text-xs">
-                  {idx + 1}.
-                </span>
-                <div className="flex-1 space-y-2">
-                  <div className="flex gap-2">
-                    <Select
-                      value={cond.type}
-                      onValueChange={(v) =>
-                        updateCondition(idx, {
-                          type: v as EligibilityConditionType,
-                        })
-                      }
-                    >
-                      <SelectTrigger className="h-8 w-36 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CONDITION_TYPES.map((t) => (
-                          <SelectItem key={t.value} value={t.value}>
-                            {t.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={cond.operator}
-                      onValueChange={(v) =>
-                        updateCondition(idx, {
-                          operator: v as EligibilityCondition["operator"],
-                        })
-                      }
-                    >
-                      <SelectTrigger className="h-8 w-32 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {OPERATORS.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>
-                            {o.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      value={String(cond.value)}
-                      onChange={(e) =>
-                        updateCondition(idx, { value: e.target.value })
-                      }
-                      className="h-8 flex-1 text-xs"
-                      placeholder="Value..."
-                    />
-                  </div>
-                  <Input
-                    value={cond.label}
-                    onChange={(e) =>
-                      updateCondition(idx, { label: e.target.value })
-                    }
-                    className="h-7 text-[11px]"
-                    placeholder="Description (e.g., Only dogs allowed)"
-                  />
-                </div>
-                <button
-                  onClick={() => removeCondition(idx)}
-                  className="text-muted-foreground hover:text-destructive mt-1.5"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
-              </div>
-            ))}
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 gap-1 text-xs"
-              onClick={addCondition}
-            >
-              <Plus className="size-3" />
-              Add Condition
-            </Button>
+            <EligibilityConditionBuilder
+              conditions={rules.conditions}
+              onChange={(conditions) => updateRules({ conditions })}
+            />
 
             <div className="grid gap-1.5">
               <Label className="text-xs">Message when denied</Label>
@@ -276,84 +146,11 @@ export function EligibilityStep({ data, onChange }: EligibilityStepProps) {
       <Separator />
 
       {/* ── Part B: Dependencies ── */}
-      <div>
-        <div className="mb-4 flex items-center gap-2">
-          <Link2 className="size-5" />
-          <h3 className="text-sm font-semibold">Service Dependencies</h3>
-        </div>
-
-        <div className="space-y-3">
-          <label className="hover:bg-muted/30 flex cursor-pointer items-center gap-3 rounded-md border p-3">
-            <input
-              type="radio"
-              name="depType"
-              checked={!deps.addonOnly && !deps.requiresServices?.length}
-              onChange={() =>
-                updateDeps({
-                  addonOnly: false,
-                  requiresServices: [],
-                })
-              }
-              className="accent-primary"
-            />
-            <div>
-              <p className="text-sm font-medium">Standalone service</p>
-              <p className="text-muted-foreground text-xs">
-                Can be booked independently
-              </p>
-            </div>
-          </label>
-
-          <label className="hover:bg-muted/30 flex cursor-pointer items-center gap-3 rounded-md border p-3">
-            <input
-              type="radio"
-              name="depType"
-              checked={!!deps.requiresServices?.length}
-              onChange={() =>
-                updateDeps({
-                  addonOnly: false,
-                  requiresServices: [
-                    {
-                      moduleId: "boarding",
-                      moduleName: "Boarding",
-                      type: "concurrent",
-                    },
-                  ],
-                })
-              }
-              className="accent-primary"
-            />
-            <div>
-              <p className="text-sm font-medium">Requires another service</p>
-              <p className="text-muted-foreground text-xs">
-                Client must also have a booking for...
-              </p>
-            </div>
-          </label>
-
-          <label className="hover:bg-muted/30 flex cursor-pointer items-center gap-3 rounded-md border p-3">
-            <input
-              type="radio"
-              name="depType"
-              checked={!!deps.addonOnly}
-              onChange={() =>
-                updateDeps({
-                  addonOnly: true,
-                  addonFor: ["grooming", "boarding"],
-                  requiresServices: [],
-                })
-              }
-              className="accent-primary"
-            />
-            <div>
-              <p className="text-sm font-medium">Add-on only</p>
-              <p className="text-muted-foreground text-xs">
-                Only available as an add-on to another booking
-              </p>
-            </div>
-          </label>
-        </div>
-      </div>
+      <ServiceDependenciesSection
+        value={deps}
+        onChange={updateDeps}
+        currentModuleId={data.id}
+      />
 
       <Separator />
 
@@ -393,12 +190,26 @@ export function EligibilityStep({ data, onChange }: EligibilityStepProps) {
           <div className="mt-4 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-1.5">
-                <Label className="text-xs">Max per slot</Label>
+                <Label className="text-xs">Maximum pets per session</Label>
                 <Input
                   type="number"
                   value={cap.maxPerSlot ?? 1}
                   onChange={(e) =>
                     updateCap({ maxPerSlot: parseInt(e.target.value) || 1 })
+                  }
+                  min={1}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Maximum concurrent sessions</Label>
+                <Input
+                  type="number"
+                  value={cap.maxConcurrentSessions ?? 1}
+                  onChange={(e) =>
+                    updateCap({
+                      maxConcurrentSessions: parseInt(e.target.value) || 1,
+                    })
                   }
                   min={1}
                   className="h-8 text-xs"
@@ -423,6 +234,24 @@ export function EligibilityStep({ data, onChange }: EligibilityStepProps) {
                     <SelectItem value="120">120 min</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Overbooking buffer (%)</Label>
+                <Input
+                  type="number"
+                  value={cap.overbookingBufferPercent ?? 0}
+                  onChange={(e) =>
+                    updateCap({
+                      overbookingBufferPercent: parseInt(e.target.value) || 0,
+                    })
+                  }
+                  min={0}
+                  max={100}
+                  className="h-8 text-xs"
+                />
+                <p className="text-muted-foreground text-[11px]">
+                  Allow this % over capacity for walk-ins.
+                </p>
               </div>
             </div>
 
@@ -479,6 +308,15 @@ export function EligibilityStep({ data, onChange }: EligibilityStepProps) {
           </div>
         )}
       </div>
+
+      <Separator />
+
+      {/* ── Part D: Geographic Restriction ── */}
+      <GeographicRestriction
+        value={data.geographicRestriction}
+        onChange={(geo) => onChange({ geographicRestriction: geo })}
+        category={data.category}
+      />
     </div>
   );
 }

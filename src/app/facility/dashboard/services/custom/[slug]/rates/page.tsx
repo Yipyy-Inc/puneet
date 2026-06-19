@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import type {
   CustomServiceCheckIn,
@@ -43,6 +44,7 @@ import {
   X,
   Star,
   Package,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -50,10 +52,14 @@ function loadCustomAddOns(slug: string): ServiceAddOn[] {
   if (typeof window === "undefined") return defaultServiceAddOns;
   try {
     const raw = localStorage.getItem("settings-service-addons");
-    const all = raw ? (JSON.parse(raw) as ServiceAddOn[]) : defaultServiceAddOns;
+    const all = raw
+      ? (JSON.parse(raw) as ServiceAddOn[])
+      : defaultServiceAddOns;
     return all.filter((a) => a.applicableServices.includes(slug));
   } catch {
-    return defaultServiceAddOns.filter((a) => a.applicableServices.includes(slug));
+    return defaultServiceAddOns.filter((a) =>
+      a.applicableServices.includes(slug),
+    );
   }
 }
 
@@ -64,27 +70,32 @@ interface VariantFormState {
   price: number;
   isActive: boolean;
   isPopular: boolean;
+  capacityOverride?: number;
+  onlineBookingEnabled: boolean;
 }
-
-const EMPTY_VARIANT: VariantFormState = {
-  name: "",
-  description: "",
-  durationMinutes: 60,
-  price: 0,
-  isActive: true,
-  isPopular: false,
-};
 
 function VariantDialog({
   open,
   onOpenChange,
   editing,
   onSave,
+  defaultDuration,
+  serviceCapacity,
+  defaultOnlineBooking,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editing: CustomServiceVariant | null;
-  onSave: (form: VariantFormState, editing: CustomServiceVariant | null) => void;
+  onSave: (
+    form: VariantFormState,
+    editing: CustomServiceVariant | null,
+  ) => void;
+  /** Duration pre-filled from the service's calendar settings. */
+  defaultDuration: number;
+  /** Service-level capacity, shown as the placeholder for the override. */
+  serviceCapacity: number;
+  /** Service-level online booking setting, used as the new-variant default. */
+  defaultOnlineBooking: boolean;
 }) {
   const [form, setForm] = useState<VariantFormState>(() =>
     editing
@@ -95,8 +106,19 @@ function VariantDialog({
           price: editing.price,
           isActive: editing.isActive,
           isPopular: editing.isPopular ?? false,
+          capacityOverride: editing.capacityOverride,
+          onlineBookingEnabled: editing.onlineBookingEnabled ?? true,
         }
-      : EMPTY_VARIANT,
+      : {
+          name: "",
+          description: "",
+          durationMinutes: defaultDuration,
+          price: 0,
+          isActive: true,
+          isPopular: false,
+          capacityOverride: undefined,
+          onlineBookingEnabled: defaultOnlineBooking,
+        },
   );
 
   return (
@@ -124,7 +146,9 @@ function VariantDialog({
               placeholder="Shown to customers when they book."
               rows={2}
               value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -154,7 +178,45 @@ function VariantDialog({
                   })
                 }
               />
+              <p className="text-muted-foreground text-[11px]">
+                Pre-filled from calendar settings — editable per variant.
+              </p>
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Capacity override (optional)</Label>
+            <Input
+              type="number"
+              min={1}
+              value={form.capacityOverride ?? ""}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  capacityOverride: e.target.value
+                    ? parseInt(e.target.value) || undefined
+                    : undefined,
+                })
+              }
+              placeholder={`Service default: ${serviceCapacity}`}
+            />
+            <p className="text-muted-foreground text-[11px]">
+              Set only if this variant holds a different number of pets than the
+              service default.
+            </p>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border px-3 py-2">
+            <div>
+              <p className="text-sm font-medium">Bookable online</p>
+              <p className="text-muted-foreground text-xs">
+                Allow clients to book this variant from the portal.
+              </p>
+            </div>
+            <Switch
+              checked={form.onlineBookingEnabled}
+              onCheckedChange={(v) =>
+                setForm({ ...form, onlineBookingEnabled: v })
+              }
+            />
           </div>
           <div className="flex items-center justify-between rounded-lg border px-3 py-2">
             <div>
@@ -239,6 +301,14 @@ export default function CustomServiceRatesPage() {
 
   const activeVariants = variants.filter((v) => v.isActive).length;
   const activeAddOns = customAddOns.filter((a) => a.isActive).length;
+  // Sensible new-variant defaults sourced from the module's own config.
+  const defaultDuration =
+    serviceModule.calendar.durationOptions[0]?.minutes ?? 60;
+  const serviceCapacity =
+    serviceModule.capacity?.maxPerSlot ??
+    serviceModule.calendar.maxSimultaneousBookings ??
+    1;
+  const defaultOnlineBooking = serviceModule.onlineBooking.enabled;
   const minPrice = variants.length
     ? Math.min(...variants.map((v) => v.price))
     : serviceModule.pricing.basePrice;
@@ -264,13 +334,17 @@ export default function CustomServiceRatesPage() {
       price: form.price,
       isActive: form.isActive,
       isPopular: form.isPopular || undefined,
+      capacityOverride: form.capacityOverride,
+      onlineBookingEnabled: form.onlineBookingEnabled,
     };
     persistVariants(
       editing
         ? variants.map((v) => (v.id === editing.id ? next : v))
         : [...variants, next],
     );
-    toast.success(editing ? `"${next.name}" updated` : `"${next.name}" created`);
+    toast.success(
+      editing ? `"${next.name}" updated` : `"${next.name}" created`,
+    );
     setVariantDialogOpen(false);
     setEditingVariant(null);
 
@@ -359,57 +433,65 @@ export default function CustomServiceRatesPage() {
         </div>
       </div>
 
+      {/* Setup guide — shown on first visit, when no variants exist yet */}
+      {variants.length === 0 && (
+        <div className="border-primary/20 bg-primary/5 flex items-start gap-3 rounded-xl border p-4">
+          <div className="bg-primary/10 flex size-9 shrink-0 items-center justify-center rounded-lg">
+            <Info className="text-primary size-5" />
+          </div>
+          <div className="flex-1 space-y-2">
+            <div>
+              <p className="text-sm font-semibold">Setup Guide</p>
+              <p className="text-muted-foreground mt-0.5 text-sm">
+                Welcome to {serviceModule.name}! To start accepting bookings,
+                you need to add at least one rate option. A rate is a bookable
+                variant — for example: &quot;30-min Session $25&quot; or
+                &quot;60-min Session $45&quot;. Click{" "}
+                <span className="text-foreground font-medium">
+                  + New Variant
+                </span>{" "}
+                to get started.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingVariant(null);
+                setVariantDialogOpen(true);
+              }}
+            >
+              <Plus className="mr-1.5 size-4" />
+              New Variant
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Summary */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-sky-50">
-                <Package className="size-5 text-sky-600" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
-                  Active Variants
-                </p>
-                <p className="mt-0.5 text-2xl font-bold">{activeVariants}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-slate-100">
-                <DollarSign className="size-5 text-slate-600" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
-                  Price Range
-                </p>
-                <p className="mt-0.5 text-2xl font-bold">
-                  {minPrice === maxPrice
-                    ? `$${minPrice}`
-                    : `$${minPrice}–$${maxPrice}`}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-violet-50">
-                <Sparkles className="size-5 text-violet-600" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
-                  Active Add-ons
-                </p>
-                <p className="mt-0.5 text-2xl font-bold">{activeAddOns}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <KpiTile
+          label="Active Variants"
+          value={activeVariants}
+          hint={`${variants.length} total`}
+          icon={Package}
+          tone="indigo"
+        />
+        <KpiTile
+          label="Price Range"
+          value={
+            minPrice === maxPrice ? `$${minPrice}` : `$${minPrice}–$${maxPrice}`
+          }
+          hint={`Base $${serviceModule.pricing.basePrice}`}
+          icon={DollarSign}
+          tone="slate"
+        />
+        <KpiTile
+          label="Active Add-ons"
+          value={activeAddOns}
+          hint={`${customAddOns.length} available`}
+          icon={Sparkles}
+          tone="violet"
+        />
       </div>
 
       <Tabs defaultValue="variants" className="space-y-4">
@@ -505,6 +587,17 @@ export default function CustomServiceRatesPage() {
                             <DollarSign className="size-3" />
                             {v.price}
                           </span>
+                          {v.capacityOverride != null && (
+                            <span className="flex items-center gap-1">
+                              <Package className="size-3" />
+                              Cap {v.capacityOverride}
+                            </span>
+                          )}
+                          {v.onlineBookingEnabled === false && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              Portal off
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-1.5">
@@ -556,6 +649,9 @@ export default function CustomServiceRatesPage() {
         }}
         editing={editingVariant}
         onSave={handleVariantSave}
+        defaultDuration={defaultDuration}
+        serviceCapacity={serviceCapacity}
+        defaultOnlineBooking={defaultOnlineBooking}
       />
 
       {propagationPrompt && (
@@ -604,7 +700,6 @@ export default function CustomServiceRatesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

@@ -22,12 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ClipboardList,
   Plus,
@@ -164,9 +159,7 @@ function TaskFormModal({
 
   function handleSave() {
     if (!form.name.trim()) return;
-    const id = isNew
-      ? `${moduleId}-custom-${Date.now()}`
-      : form.id;
+    const id = isNew ? `${moduleId}-custom-${Date.now()}` : form.id;
     onSave({ ...form, id, moduleId });
     onOpenChange(false);
   }
@@ -186,7 +179,9 @@ function TaskFormModal({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isNew ? "Add Task Template" : "Edit Task Template"}</DialogTitle>
+          <DialogTitle>
+            {isNew ? "Add Task Template" : "Edit Task Template"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
@@ -257,14 +252,20 @@ function TaskFormModal({
             <div className="space-y-1.5">
               <Label htmlFor={`${uid}-offset`}>
                 Offset (minutes,{" "}
-                {form.timing.type === "before_start" ? "negative = before" : "positive = after"})
+                {form.timing.type === "before_start"
+                  ? "negative = before"
+                  : "positive = after"}
+                )
               </Label>
               <Input
                 id={`${uid}-offset`}
                 type="number"
                 value={form.timing.offsetMinutes ?? ""}
                 onChange={(e) =>
-                  patchTiming("offsetMinutes", parseInt(e.target.value) || undefined)
+                  patchTiming(
+                    "offsetMinutes",
+                    parseInt(e.target.value) || undefined,
+                  )
                 }
                 placeholder={form.timing.type === "before_start" ? "-15" : "15"}
               />
@@ -367,7 +368,9 @@ function TaskFormModal({
                     <SelectContent>
                       <SelectItem value="daily">Daily</SelectItem>
                       <SelectItem value="per_meal">Per meal</SelectItem>
-                      <SelectItem value="per_medication">Per medication</SelectItem>
+                      <SelectItem value="per_medication">
+                        Per medication
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -448,7 +451,12 @@ interface TemplateRowProps {
   onDelete: () => void;
 }
 
-function TemplateRow({ template, isDefault, onEdit, onDelete }: TemplateRowProps) {
+function TemplateRow({
+  template,
+  isDefault,
+  onEdit,
+  onDelete,
+}: TemplateRowProps) {
   const meta = CATEGORY_META[template.category] ?? CATEGORY_META.custom;
   const Icon = meta.icon;
 
@@ -493,7 +501,10 @@ function TemplateRow({ template, isDefault, onEdit, onDelete }: TemplateRowProps
               </Badge>
             )}
             {isDefault && (
-              <Badge variant="outline" className="text-muted-foreground text-xs">
+              <Badge
+                variant="outline"
+                className="text-muted-foreground text-xs"
+              >
                 Default
               </Badge>
             )}
@@ -655,7 +666,7 @@ function TodayTaskRow({
           <img
             src={photoDataUrl}
             alt="Report card photo"
-            className="size-9 shrink-0 rounded-md object-cover ring-1 ring-border"
+            className="ring-border size-9 shrink-0 rounded-md object-cover ring-1"
           />
         )}
         <div className={`flex items-center gap-1 text-xs ${statusCfg.color}`}>
@@ -754,7 +765,7 @@ function PhotoUploadDialog({
         </DialogHeader>
         {task && (
           <div className="space-y-3 py-2">
-            <div className="rounded-lg border bg-muted/40 px-3 py-2 text-xs">
+            <div className="bg-muted/40 rounded-lg border px-3 py-2 text-xs">
               <p className="font-medium">{task.name}</p>
               {task.bookingLabel && (
                 <p className="text-muted-foreground mt-0.5">
@@ -934,9 +945,7 @@ function TodayTaskFormModal({
             <Label htmlFor={`${uid}-status`}>Status</Label>
             <Select
               value={form.status}
-              onValueChange={(v) =>
-                patch("status", v as TodayTask["status"])
-              }
+              onValueChange={(v) => patch("status", v as TodayTask["status"])}
             >
               <SelectTrigger id={`${uid}-status`}>
                 <SelectValue />
@@ -1004,9 +1013,20 @@ function TodayTaskFormModal({
 interface ModuleTasksPageProps {
   moduleId: string;
   moduleName: string;
+  /**
+   * Whether the facility may add brand-new task templates. Custom modules set
+   * this to false: the task types are configured by the superadmin in the
+   * module wizard; the facility can only edit timing/assignment of existing
+   * templates.
+   */
+  allowAddTemplates?: boolean;
 }
 
-export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) {
+export function ModuleTasksPage({
+  moduleId,
+  moduleName,
+  allowAddTemplates = true,
+}: ModuleTasksPageProps) {
   const [templates, setTemplates] = useState<TaskTemplate[]>(() =>
     getTemplatesForModule(moduleId),
   );
@@ -1046,7 +1066,9 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
   // Which templates are default (ship with the app)
   const defaultIds = new Set(
     templates
-      .filter((t) => t.id.startsWith(moduleId + "-") && !t.id.includes("custom"))
+      .filter(
+        (t) => t.id.startsWith(moduleId + "-") && !t.id.includes("custom"),
+      )
       .map((t) => t.id),
   );
 
@@ -1133,9 +1155,13 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
     setPhotoUploadFor(null);
   }
 
-  const completedCount = todayTasks.filter((t) => t.status === "completed").length;
+  const completedCount = todayTasks.filter(
+    (t) => t.status === "completed",
+  ).length;
   const pendingCount = todayTasks.filter((t) => t.status === "pending").length;
-  const inProgressCount = todayTasks.filter((t) => t.status === "in_progress").length;
+  const inProgressCount = todayTasks.filter(
+    (t) => t.status === "in_progress",
+  ).length;
   const missedCount = todayTasks.filter((t) => t.status === "missed").length;
 
   // Build filter options from the loaded task set so we never show stale
@@ -1156,7 +1182,8 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
 
   const filteredTasks = useMemo(() => {
     return todayTasks.filter((t) => {
-      if (groomerFilter !== "all" && t.assignedTo !== groomerFilter) return false;
+      if (groomerFilter !== "all" && t.assignedTo !== groomerFilter)
+        return false;
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       if (bookingFilter !== "all" && t.bookingLabel !== bookingFilter)
         return false;
@@ -1200,6 +1227,20 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
 
         {/* ── Templates tab ── */}
         <TabsContent value="templates" className="mt-4 space-y-4">
+          {!allowAddTemplates && (
+            <div className="border-primary/20 bg-primary/5 flex items-start gap-2 rounded-lg border p-3 text-xs">
+              <AlertCircle className="text-primary mt-0.5 size-3.5 shrink-0" />
+              <p className="text-muted-foreground">
+                Task types for this module are configured by your Yipyy
+                administrator. You can adjust each task&apos;s{" "}
+                <span className="text-foreground font-medium">
+                  name, timing, and assignment
+                </span>
+                . To add or remove task types, contact your administrator.
+              </p>
+            </div>
+          )}
+
           {/* Stats */}
           <div className="grid gap-4 sm:grid-cols-3">
             <Card>
@@ -1235,7 +1276,9 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
               return (
                 <Card key={cat}>
                   <CardHeader className="pb-3">
-                    <CardTitle className={`flex items-center gap-2 text-base ${meta.color}`}>
+                    <CardTitle
+                      className={`flex items-center gap-2 text-base ${meta.color}`}
+                    >
                       <Icon className="size-4" />
                       {meta.label}
                     </CardTitle>
@@ -1262,18 +1305,22 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
                 <div>
                   <p className="font-medium">No task templates yet</p>
                   <p className="text-muted-foreground text-sm">
-                    Add your first task template to get started
+                    {allowAddTemplates
+                      ? "Add your first task template to get started"
+                      : "Task templates are configured by your administrator in the module setup."}
                   </p>
                 </div>
-                <Button onClick={handleAdd}>
-                  <Plus className="mr-2 size-4" />
-                  Add Task Template
-                </Button>
+                {allowAddTemplates && (
+                  <Button onClick={handleAdd}>
+                    <Plus className="mr-2 size-4" />
+                    Add Task Template
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}
 
-          {templates.length > 0 && (
+          {allowAddTemplates && templates.length > 0 && (
             <div className="flex justify-end">
               <Button onClick={handleAdd}>
                 <Plus className="mr-2 size-4" />
@@ -1341,15 +1388,12 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
               </div>
 
               {/* Filter row */}
-              <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <div className="bg-muted/30 flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2">
+                <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                   <Filter className="size-3.5" />
                   Filter
                 </div>
-                <Select
-                  value={groomerFilter}
-                  onValueChange={setGroomerFilter}
-                >
+                <Select value={groomerFilter} onValueChange={setGroomerFilter}>
                   <SelectTrigger className="h-8 min-w-[140px] text-xs">
                     <SelectValue placeholder="Groomer" />
                   </SelectTrigger>
@@ -1399,12 +1443,12 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
                       setStatusFilter("all");
                       setBookingFilter("all");
                     }}
-                    className="ml-auto text-xs font-medium text-muted-foreground hover:text-foreground"
+                    className="text-muted-foreground hover:text-foreground ml-auto text-xs font-medium"
                   >
                     Clear ({activeFilterCount})
                   </button>
                 )}
-                <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                <span className="text-muted-foreground ml-auto text-xs tabular-nums">
                   {filteredTasks.length} of {todayTasks.length}
                 </span>
               </div>
@@ -1417,7 +1461,11 @@ export function ModuleTasksPage({ moduleId, moduleName }: ModuleTasksPageProps) 
                     No tasks scheduled for today. Add task templates with
                     auto-create enabled, or add a one-off task below.
                   </p>
-                  <Button size="sm" className="mt-2" onClick={handleAddTodayTask}>
+                  <Button
+                    size="sm"
+                    className="mt-2"
+                    onClick={handleAddTodayTask}
+                  >
                     <Plus className="mr-1.5 size-3.5" />
                     Add Task
                   </Button>

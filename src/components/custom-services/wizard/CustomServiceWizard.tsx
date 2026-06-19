@@ -7,7 +7,6 @@ import {
   Stepper,
   StepperContent,
   StepperNavigation,
-  type Step,
 } from "@/components/ui/stepper";
 import {
   Card,
@@ -33,103 +32,149 @@ import {
   createDefaultCustomServiceModule,
   getModuleWorkflowQuestionnaire,
 } from "@/data/custom-services";
+import {
+  validateCustomServiceModule,
+  hasBlockingIssues,
+} from "@/lib/custom-service-validation";
 import type { CustomServiceModule } from "@/types/facility";
 
 // ========================================
 // WIZARD STEPS CONFIG
 // ========================================
+//
+// The Workflow Questionnaire (step 2) is the "brain" of the wizard: its answers
+// decide which later steps are relevant. Irrelevant steps stay in the progress
+// rail but are greyed out and auto-skipped by Next/Back. Each step declares its
+// own `visible` predicate (defaults to always visible) so adding new conditional
+// steps is just a matter of adding a rule here — no index juggling elsewhere.
 
-const WIZARD_STEPS: Step[] = [
-  { id: "basic", title: "Basic Info", description: "Name & category" },
+interface WizardStepDef {
+  id: string;
+  /** Short label + description shown in the stepper rail. */
+  title: string;
+  description: string;
+  /** Heading + blurb shown above the step content. */
+  detailTitle: string;
+  detailDescription: string;
+  /**
+   * Whether the step is relevant for the current answers. When false the step
+   * is greyed out in the rail and skipped by navigation. Default: relevant.
+   */
+  visible?: (data: CustomServiceModule) => boolean;
+  /** Whether the user may advance past this step. Default: yes. */
+  validate?: (data: CustomServiceModule) => boolean;
+}
+
+const WIZARD_STEP_DEFS: WizardStepDef[] = [
+  {
+    id: "basic",
+    title: "Basic Info",
+    description: "Name & category",
+    detailTitle: "Basic Information",
+    detailDescription:
+      "Give your service a name, choose a category, pick an icon, and add a public description.",
+    validate: (d) => d.name.trim().length > 0 && d.slug.length > 0,
+  },
   {
     id: "workflow",
     title: "Workflow Setup",
     description: "Required questionnaire",
+    detailTitle: "Required Workflow Questionnaire",
+    detailDescription:
+      "Answer the 10 required setup questions. These responses automatically configure how the service behaves and which of the following steps you'll see.",
+    validate: (d) => getModuleWorkflowQuestionnaire(d).questionnaireCompleted,
   },
-  { id: "calendar", title: "Calendar", description: "Scheduling" },
-  { id: "checkin", title: "Check-In/Out", description: "Arrival tracking" },
-  { id: "stay", title: "Stay-Based", description: "Multi-day stays" },
-  { id: "booking", title: "Online Booking", description: "Client portal" },
-  { id: "pricing", title: "Pricing", description: "Rates & billing" },
-  { id: "staff", title: "Staff", description: "Assignment & tasks" },
+  {
+    id: "calendar",
+    title: "Calendar",
+    description: "Scheduling",
+    detailTitle: "Calendar & Availability",
+    detailDescription:
+      "Configure how this service appears on your scheduling calendar, session durations, and resource assignments.",
+  },
+  {
+    id: "checkin",
+    title: "Check-In/Out",
+    description: "Arrival tracking",
+    detailTitle: "Check-In / Check-Out",
+    detailDescription:
+      "Set up how pet arrivals and departures are tracked for this service.",
+    // Q4 — skipped entirely when the service does not require check-in/out.
+    visible: (d) => getModuleWorkflowQuestionnaire(d).requiresCheckInOut,
+  },
+  {
+    id: "stay",
+    title: "Stay-Based",
+    description: "Multi-day stays",
+    detailTitle: "Stay-Based Features",
+    detailDescription:
+      "Enable for multi-day services that use physical space like kennels or suites.",
+    // Stay-based suits multi-day services. A time-slot session that also counts
+    // toward capacity (e.g. a pool) is skipped per Workflow Q2 + Q8.
+    visible: (d) => {
+      const wf = getModuleWorkflowQuestionnaire(d);
+      return !(wf.requiresTimeSlots && wf.affectsCapacityHeatmap);
+    },
+  },
+  {
+    id: "booking",
+    title: "Online Booking",
+    description: "Client portal",
+    detailTitle: "Online Booking",
+    detailDescription:
+      "Control whether clients can book this service from your public portal and set eligibility rules.",
+    // Q7 — only relevant when the service is bookable online.
+    visible: (d) => getModuleWorkflowQuestionnaire(d).bookableOnline,
+  },
+  {
+    id: "pricing",
+    title: "Pricing",
+    description: "Rates & billing",
+    detailTitle: "Pricing",
+    detailDescription:
+      "Choose a pricing model, set rates, and configure tax and billing options.",
+  },
+  {
+    id: "staff",
+    title: "Staff",
+    description: "Assignment & tasks",
+    detailTitle: "Staff Assignment",
+    detailDescription:
+      "Configure auto-assignment, required staff roles, and which tasks are auto-generated.",
+  },
   {
     id: "yipyygo",
     title: "Yipyy Express Check-in",
     description: "Pre-check-in form",
+    detailTitle: "Yipyy Express Check-in",
+    detailDescription:
+      "Configure whether customers must complete a pre-check-in form before their booking, and customize the sections shown.",
   },
-  { id: "eligibility", title: "Rules", description: "Eligibility & capacity" },
+  {
+    id: "eligibility",
+    title: "Rules",
+    description: "Eligibility & capacity",
+    detailTitle: "Eligibility, Dependencies & Capacity",
+    detailDescription:
+      "Set conditions for who can book, service dependencies, and capacity limits with waitlists.",
+  },
   {
     id: "care",
     title: "Care Instructions",
     description: "Feeding, meds & belongings",
-  },
-  { id: "review", title: "Review", description: "Confirm & save" },
-];
-
-// ========================================
-// STEP DESCRIPTIONS
-// ========================================
-
-const STEP_DETAILS: { title: string; description: string }[] = [
-  {
-    title: "Basic Information",
-    description:
-      "Give your service a name, choose a category, pick an icon, and add a public description.",
-  },
-  {
-    title: "Required Workflow Questionnaire",
-    description:
-      "Answer the 8 required setup questions. These responses automatically configure how the service behaves across calendar, booking, tasks, resources, online booking, and reporting.",
-  },
-  {
-    title: "Calendar & Availability",
-    description:
-      "Configure how this service appears on your scheduling calendar, session durations, and resource assignments.",
-  },
-  {
-    title: "Check-In / Check-Out",
-    description:
-      "Set up how pet arrivals and departures are tracked for this service.",
-  },
-  {
-    title: "Stay-Based Features",
-    description:
-      "Enable for multi-day services that use physical space like kennels or suites.",
-  },
-  {
-    title: "Online Booking",
-    description:
-      "Control whether clients can book this service from your public portal and set eligibility rules.",
-  },
-  {
-    title: "Pricing",
-    description:
-      "Choose a pricing model, set rates, and configure tax and billing options.",
-  },
-  {
-    title: "Staff Assignment",
-    description:
-      "Configure auto-assignment, required staff roles, and which tasks are auto-generated.",
-  },
-  {
-    title: "Yipyy Express Check-in",
-    description:
-      "Configure whether customers must complete a pre-check-in form before their booking, and customize the sections shown.",
-  },
-  {
-    title: "Eligibility, Dependencies & Capacity",
-    description:
-      "Set conditions for who can book, service dependencies, and capacity limits with waitlists.",
-  },
-  {
-    title: "Care Instructions",
-    description:
+    detailTitle: "Care Instructions",
+    detailDescription:
       "Choose whether feeding instructions, medications, and belongings are required, optional, or disabled for this service.",
   },
   {
-    title: "Review & Save",
-    description:
+    id: "review",
+    title: "Review",
+    description: "Confirm & save",
+    detailTitle: "Review & Save",
+    detailDescription:
       "Review all your settings before saving the module. Click Edit on any section to make changes.",
+    // Block Save until all critical pre-publish checks pass.
+    validate: (d) => !hasBlockingIssues(validateCustomServiceModule(d)),
   },
 ];
 
@@ -178,38 +223,68 @@ export function CustomServiceWizard({
     setFormData((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  // Validate step before proceeding
-  const canProceedFromStep = (step: number): boolean => {
-    if (step === 0) {
-      return formData.name.trim().length > 0 && formData.slug.length > 0;
-    }
-    if (step === 1) {
-      return getModuleWorkflowQuestionnaire(formData).questionnaireCompleted;
-    }
-    return true;
-  };
+  // All steps stay in the rail; the questionnaire answers decide which are
+  // skipped (greyed out + jumped over by navigation) rather than removed.
+  const isStepEnabled = (step: WizardStepDef) =>
+    step.visible?.(formData) ?? true;
 
+  // Steps for the rail, each tagged disabled when skipped by the answers.
+  const stepperSteps = WIZARD_STEP_DEFS.map((s) => ({
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    disabled: !isStepEnabled(s),
+  }));
+
+  // The current step is always an enabled one (we never land on a skipped step,
+  // but guard defensively by snapping forward if answers disabled it).
+  const enabledSteps = WIZARD_STEP_DEFS.filter(isStepEnabled);
+  const activeStep =
+    WIZARD_STEP_DEFS[currentStep] &&
+    isStepEnabled(WIZARD_STEP_DEFS[currentStep])
+      ? WIZARD_STEP_DEFS[currentStep]
+      : (enabledSteps.find((s) => WIZARD_STEP_DEFS.indexOf(s) >= currentStep) ??
+        enabledSteps[enabledSteps.length - 1]);
+  const activeIndex = WIZARD_STEP_DEFS.indexOf(activeStep);
+
+  const canProceed = activeStep.validate?.(formData) ?? true;
+
+  // Next/previous skip over any disabled (irrelevant) steps automatically.
   const handleNext = () => {
-    if (currentStep < WIZARD_STEPS.length - 1) {
-      setCurrentStep((s) => s + 1);
+    for (let i = activeIndex + 1; i < WIZARD_STEP_DEFS.length; i++) {
+      if (isStepEnabled(WIZARD_STEP_DEFS[i])) {
+        setCurrentStep(i);
+        return;
+      }
     }
   };
 
   const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep((s) => s - 1);
+    for (let i = activeIndex - 1; i >= 0; i--) {
+      if (isStepEnabled(WIZARD_STEP_DEFS[i])) {
+        setCurrentStep(i);
+        return;
+      }
     }
   };
 
-  const handleEditStep = (stepIndex: number) => {
-    setCurrentStep(stepIndex);
+  const goToStepId = (stepId: string) => {
+    const index = WIZARD_STEP_DEFS.findIndex((s) => s.id === stepId);
+    if (index >= 0 && isStepEnabled(WIZARD_STEP_DEFS[index])) {
+      setCurrentStep(index);
+    }
   };
 
   const handleSave = async () => {
     const workflow = getModuleWorkflowQuestionnaire(formData);
     if (!workflow.questionnaireCompleted) {
-      setCurrentStep(1);
+      goToStepId("workflow");
       toast.error("Complete the workflow questionnaire before saving.");
+      return;
+    }
+
+    if (hasBlockingIssues(validateCustomServiceModule(formData))) {
+      toast.error("Resolve the required pre-publish checks before saving.");
       return;
     }
 
@@ -233,7 +308,60 @@ export function CustomServiceWizard({
     router.push(redirectPath);
   };
 
-  const stepDetail = STEP_DETAILS[currentStep];
+  const renderStep = (stepId: string) => {
+    switch (stepId) {
+      case "basic":
+        return (
+          <BasicInfoStep
+            data={formData}
+            onChange={handleChange}
+            showFacilitySelector={showFacilitySelector}
+          />
+        );
+      case "workflow":
+        return (
+          <WorkflowQuestionnaireStep
+            data={formData}
+            resources={resources}
+            onChange={handleChange}
+          />
+        );
+      case "calendar":
+        return (
+          <CalendarAvailabilityStep
+            data={formData}
+            resources={resources}
+            onChange={handleChange}
+          />
+        );
+      case "checkin":
+        return <CheckInOutStep data={formData} onChange={handleChange} />;
+      case "stay":
+        return <StayBasedStep data={formData} onChange={handleChange} />;
+      case "booking":
+        return <OnlineBookingStep data={formData} onChange={handleChange} />;
+      case "pricing":
+        return <PricingStep data={formData} onChange={handleChange} />;
+      case "staff":
+        return <StaffAssignmentStep data={formData} onChange={handleChange} />;
+      case "yipyygo":
+        return <YipyyGoConfigStep data={formData} onChange={handleChange} />;
+      case "eligibility":
+        return <EligibilityStep data={formData} onChange={handleChange} />;
+      case "care":
+        return <CareInstructionsStep data={formData} onChange={handleChange} />;
+      case "review":
+        return (
+          <WizardReviewPanel
+            data={formData}
+            onEditStep={goToStepId}
+            onChange={handleChange}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-3 py-6 sm:px-4">
@@ -242,16 +370,19 @@ export function CustomServiceWizard({
         <CardContent className="px-3 pt-6 sm:px-6">
           <div className="hidden sm:block">
             <Stepper
-              steps={WIZARD_STEPS}
-              currentStep={currentStep}
-              onStepChange={setCurrentStep}
+              steps={stepperSteps}
+              currentStep={activeIndex}
+              onStepChange={(i) => {
+                if (isStepEnabled(WIZARD_STEP_DEFS[i])) setCurrentStep(i);
+              }}
             />
           </div>
           <div className="text-center sm:hidden">
             <p className="text-muted-foreground text-sm">
-              Step {currentStep + 1} of {WIZARD_STEPS.length}
+              Step {enabledSteps.indexOf(activeStep) + 1} of{" "}
+              {enabledSteps.length}
             </p>
-            <p className="font-medium">{WIZARD_STEPS[currentStep].title}</p>
+            <p className="font-medium">{activeStep.title}</p>
           </div>
         </CardContent>
       </Card>
@@ -259,71 +390,21 @@ export function CustomServiceWizard({
       {/* Step content with transition */}
       <Card>
         <CardHeader className="px-4 pb-2 sm:px-6">
-          <CardTitle>{stepDetail.title}</CardTitle>
-          <CardDescription>{stepDetail.description}</CardDescription>
+          <CardTitle>{activeStep.detailTitle}</CardTitle>
+          <CardDescription>{activeStep.detailDescription}</CardDescription>
         </CardHeader>
         <CardContent className="px-4 sm:px-6">
           <StepperContent>
             <div
-              key={currentStep}
+              key={activeStep.id}
               className="animate-in fade-in slide-in-from-right-2 duration-200"
             >
-              {currentStep === 0 && (
-                <BasicInfoStep
-                  data={formData}
-                  onChange={handleChange}
-                  showFacilitySelector={showFacilitySelector}
-                />
-              )}
-              {currentStep === 1 && (
-                <WorkflowQuestionnaireStep
-                  data={formData}
-                  resources={resources}
-                  onChange={handleChange}
-                />
-              )}
-              {currentStep === 2 && (
-                <CalendarAvailabilityStep
-                  data={formData}
-                  resources={resources}
-                  onChange={handleChange}
-                />
-              )}
-              {currentStep === 3 && (
-                <CheckInOutStep data={formData} onChange={handleChange} />
-              )}
-              {currentStep === 4 && (
-                <StayBasedStep data={formData} onChange={handleChange} />
-              )}
-              {currentStep === 5 && (
-                <OnlineBookingStep data={formData} onChange={handleChange} />
-              )}
-              {currentStep === 6 && (
-                <PricingStep data={formData} onChange={handleChange} />
-              )}
-              {currentStep === 7 && (
-                <StaffAssignmentStep data={formData} onChange={handleChange} />
-              )}
-              {currentStep === 8 && (
-                <YipyyGoConfigStep data={formData} onChange={handleChange} />
-              )}
-              {currentStep === 9 && (
-                <EligibilityStep data={formData} onChange={handleChange} />
-              )}
-              {currentStep === 10 && (
-                <CareInstructionsStep data={formData} onChange={handleChange} />
-              )}
-              {currentStep === 11 && (
-                <WizardReviewPanel
-                  data={formData}
-                  onEditStep={handleEditStep}
-                />
-              )}
+              {renderStep(activeStep.id)}
             </div>
 
             <StepperNavigation
-              currentStep={currentStep}
-              totalSteps={WIZARD_STEPS.length}
+              currentStep={activeIndex}
+              totalSteps={WIZARD_STEP_DEFS.length}
               onNext={handleNext}
               onPrevious={handlePrevious}
               onComplete={handleSave}
@@ -332,11 +413,17 @@ export function CustomServiceWizard({
               completeLabel={
                 isSaving
                   ? "Saving..."
-                  : isEditMode
-                    ? "Update Module"
-                    : "Save Module"
+                  : formData.scheduledPublishAt
+                    ? "Schedule Publish"
+                    : formData.status === "active"
+                      ? isEditMode
+                        ? "Update & Publish"
+                        : "Publish Now"
+                      : isEditMode
+                        ? "Update Draft"
+                        : "Save as Draft"
               }
-              canProceed={canProceedFromStep(currentStep) && !isSaving}
+              canProceed={canProceed && !isSaving}
             />
           </StepperContent>
         </CardContent>

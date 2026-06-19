@@ -5,6 +5,8 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -13,8 +15,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CustomServiceModule } from "@/types/facility";
+import type {
+  CustomServiceModule,
+  CustomServiceBookingDocument,
+} from "@/types/facility";
+import { facilitySpeciesConfig } from "@/data/settings";
 import { cn } from "@/lib/utils";
+
+const REQUIRED_DOCUMENT_OPTIONS: {
+  value: CustomServiceBookingDocument;
+  label: string;
+}[] = [
+  { value: "vaccination_records", label: "Vaccination Records" },
+  { value: "vet_reference", label: "Vet Reference" },
+  { value: "signed_waiver", label: "Signed Waiver" },
+  { value: "temperament_assessment", label: "Temperament Assessment Pass" },
+];
 
 interface OnlineBookingStepProps {
   data: CustomServiceModule;
@@ -24,6 +40,14 @@ interface OnlineBookingStepProps {
 export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
   const ob = data.onlineBooking;
 
+  const petNoun = facilitySpeciesConfig.petNounPlural;
+  const waitlist = ob.waitlist ?? { enabled: false, autoConfirm: false };
+  const requiredDocuments = ob.requiredDocuments ?? [];
+  const depositRefundPolicy = ob.depositRefundPolicy ?? {
+    refundable: true,
+    refundableUpToHours: 24,
+  };
+
   const updateOb = (updates: Partial<typeof ob>) => {
     onChange({ onlineBooking: { ...ob, ...updates } });
   };
@@ -32,6 +56,14 @@ export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
     updates: Partial<typeof ob.cancellationPolicy>,
   ) => {
     updateOb({ cancellationPolicy: { ...ob.cancellationPolicy, ...updates } });
+  };
+
+  const toggleDocument = (doc: CustomServiceBookingDocument) => {
+    updateOb({
+      requiredDocuments: requiredDocuments.includes(doc)
+        ? requiredDocuments.filter((d) => d !== doc)
+        : [...requiredDocuments, doc],
+    });
   };
 
   return (
@@ -129,11 +161,11 @@ export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
           />
         </div>
 
-        {/* Max Dogs Per Session */}
+        {/* Max Pets Per Booking — species noun from facility config */}
         <div className="space-y-1.5">
-          <Label htmlFor="max-dogs">Max Dogs per Session</Label>
+          <Label htmlFor="max-pets">Max Pets per Booking</Label>
           <Input
-            id="max-dogs"
+            id="max-pets"
             type="number"
             min={1}
             value={ob.maxDogsPerSession}
@@ -143,7 +175,138 @@ export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
             className="w-full sm:w-36"
           />
           <p className="text-muted-foreground text-xs">
-            Maximum number of dogs a single booking can include.
+            Maximum number of {petNoun} a single booking can include.
+          </p>
+        </div>
+
+        <Separator />
+
+        {/* Waitlist */}
+        <div className="space-y-3">
+          <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
+            <div className="space-y-0.5">
+              <Label
+                htmlFor="waitlist-enabled"
+                className="cursor-pointer text-sm font-medium"
+              >
+                Waitlist
+              </Label>
+              <p className="text-muted-foreground text-xs">
+                When a session is full, allow clients to join a waitlist.
+              </p>
+            </div>
+            <Switch
+              id="waitlist-enabled"
+              checked={waitlist.enabled}
+              onCheckedChange={(enabled) =>
+                updateOb({ waitlist: { ...waitlist, enabled } })
+              }
+            />
+          </div>
+
+          {waitlist.enabled && (
+            <div className="space-y-3 pl-1">
+              <div className="space-y-1.5">
+                <Label htmlFor="waitlist-size">Max waitlist size</Label>
+                <Input
+                  id="waitlist-size"
+                  type="number"
+                  min={1}
+                  value={waitlist.maxSize ?? ""}
+                  onChange={(e) =>
+                    updateOb({
+                      waitlist: {
+                        ...waitlist,
+                        maxSize: parseInt(e.target.value) || undefined,
+                      },
+                    })
+                  }
+                  placeholder="e.g. 5"
+                  className="w-full sm:w-36"
+                />
+              </div>
+              <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
+                <Label
+                  htmlFor="waitlist-auto"
+                  className="cursor-pointer text-sm font-medium"
+                >
+                  Auto-confirm from waitlist when a spot opens
+                </Label>
+                <Switch
+                  id="waitlist-auto"
+                  checked={waitlist.autoConfirm}
+                  onCheckedChange={(autoConfirm) =>
+                    updateOb({ waitlist: { ...waitlist, autoConfirm } })
+                  }
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* Required Pre-Booking Documents */}
+        <div className="space-y-2">
+          <div>
+            <Label className="text-sm font-semibold">
+              Required Pre-Booking Documents
+            </Label>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              Documents that must be on file before a client can complete an
+              online booking. Leave all unchecked for none.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {REQUIRED_DOCUMENT_OPTIONS.map((doc) => {
+              const checked = requiredDocuments.includes(doc.value);
+              return (
+                <label
+                  key={doc.value}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors",
+                    checked
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-accent/30",
+                  )}
+                >
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={() => toggleDocument(doc.value)}
+                  />
+                  <span className="text-sm font-medium">{doc.label}</span>
+                </label>
+              );
+            })}
+          </div>
+          {requiredDocuments.length === 0 && (
+            <p className="text-muted-foreground text-xs italic">
+              None — no documents required to book.
+            </p>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* Booking Confirmation Message */}
+        <div className="space-y-1.5">
+          <Label
+            htmlFor="confirmation-message"
+            className="text-sm font-semibold"
+          >
+            Booking Confirmation Message
+          </Label>
+          <Textarea
+            id="confirmation-message"
+            rows={3}
+            value={ob.confirmationMessage ?? ""}
+            onChange={(e) => updateOb({ confirmationMessage: e.target.value })}
+            placeholder="e.g. Thank you for booking a pool session! Please bring your dog's vaccination records on the day."
+            className="resize-none"
+          />
+          <p className="text-muted-foreground text-xs">
+            Shown to the client immediately after they complete a booking for
+            this service.
           </p>
         </div>
 
@@ -275,6 +438,75 @@ export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
                     ? "Percentage of the booking total"
                     : "Fixed dollar amount"}
                 </p>
+              </div>
+
+              {/* Refund policy */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">
+                  Deposit Refund Policy
+                </Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={
+                      depositRefundPolicy.refundable ? "default" : "outline"
+                    }
+                    onClick={() =>
+                      updateOb({
+                        depositRefundPolicy: {
+                          ...depositRefundPolicy,
+                          refundable: true,
+                        },
+                      })
+                    }
+                  >
+                    Refundable
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={
+                      !depositRefundPolicy.refundable ? "default" : "outline"
+                    }
+                    onClick={() =>
+                      updateOb({
+                        depositRefundPolicy: {
+                          ...depositRefundPolicy,
+                          refundable: false,
+                        },
+                      })
+                    }
+                  >
+                    Non-refundable
+                  </Button>
+                </div>
+                {depositRefundPolicy.refundable && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground text-xs">
+                      Fully refundable up to
+                    </span>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={depositRefundPolicy.refundableUpToHours ?? ""}
+                      onChange={(e) =>
+                        updateOb({
+                          depositRefundPolicy: {
+                            ...depositRefundPolicy,
+                            refundableUpToHours:
+                              parseInt(e.target.value) || undefined,
+                          },
+                        })
+                      }
+                      placeholder="24"
+                      className="w-20"
+                    />
+                    <span className="text-muted-foreground text-xs">
+                      hours before the booking
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}

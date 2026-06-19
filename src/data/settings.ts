@@ -9,6 +9,7 @@ import type {
   WeatherWarningRule,
   BusinessProfile,
   BusinessHours,
+  FacilitySpeciesConfig,
   Location,
   BookingRules,
   KennelType,
@@ -66,13 +67,7 @@ export const evaluationConfig: EvaluationConfig = {
   schedule: {
     durationOptionsMinutes: [120, 240],
     defaultDurationMinutes: 120,
-    allowedDays: [
-      "monday",
-      "tuesday",
-      "wednesday",
-      "thursday",
-      "friday",
-    ],
+    allowedDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
     bufferMinutes: 0,
     capacityPerSlot: 1,
     timeWindows: [
@@ -246,6 +241,16 @@ export const businessProfile: BusinessProfile = {
     weightUnit: "lbs",
     temperatureUnit: "celsius",
   },
+};
+
+/**
+ * Species this facility serves and the noun used to label pet fields. A
+ * multi-species facility reads as "pets"; a dog-only facility could set
+ * `petNounPlural: "dogs"`.
+ */
+export const facilitySpeciesConfig: FacilitySpeciesConfig = {
+  species: ["Dog", "Cat"],
+  petNounPlural: "pets",
 };
 
 export const businessHours: BusinessHours = {

@@ -6,6 +6,8 @@ import type {
   CustomServiceWorkflowQuestionnaire,
   CustomServiceWorkflowResourceType,
   CustomServiceTaskTemplateQuestionnaireItem,
+  CustomServiceWeekday,
+  CustomServiceOperatingDay,
 } from "@/types/facility";
 
 // ========================================
@@ -48,6 +50,51 @@ export const PRICING_MODEL_LABELS: Record<PricingModelType, string> = {
 };
 
 // ========================================
+// CALENDAR / AVAILABILITY DEFAULTS
+// ========================================
+
+/** Weekdays in display order, used by the operating-hours override grid. */
+export const CUSTOM_SERVICE_WEEKDAYS: {
+  value: CustomServiceWeekday;
+  label: string;
+}[] = [
+  { value: "mon", label: "Monday" },
+  { value: "tue", label: "Tuesday" },
+  { value: "wed", label: "Wednesday" },
+  { value: "thu", label: "Thursday" },
+  { value: "fri", label: "Friday" },
+  { value: "sat", label: "Saturday" },
+  { value: "sun", label: "Sunday" },
+];
+
+/** A fresh operating-hours override (disabled, every day 9–5). */
+export function createDefaultOperatingHoursOverride(): {
+  enabled: boolean;
+  days: CustomServiceOperatingDay[];
+} {
+  return {
+    enabled: false,
+    days: CUSTOM_SERVICE_WEEKDAYS.map((d) => ({
+      day: d.value,
+      isOpen: true,
+      openTime: "09:00",
+      closeTime: "17:00",
+    })),
+  };
+}
+
+export const DEFAULT_CUSTOM_SERVICE_BOOKING_WINDOW = {
+  maxAdvanceDays: 30,
+  minAdvanceHours: 2,
+};
+
+export const DEFAULT_CUSTOM_SERVICE_RECURRENCE = {
+  mode: "one_time",
+  frequency: "weekly",
+  maxSessions: 8,
+} as const;
+
+// ========================================
 // CATEGORY METADATA
 // ========================================
 
@@ -55,6 +102,12 @@ export interface CategoryMeta {
   id: CustomServiceCategory;
   name: string;
   description: string;
+  /**
+   * Plain-language summary of what this base type supports in practice.
+   * Surfaced as the "Module Type" indicator in the wizard so the operator
+   * can confirm they picked the right category.
+   */
+  practiceExplanation: string;
   icon: string;
   color: string;
   /** Tailwind classes for the category badge */
@@ -73,6 +126,8 @@ export const CUSTOM_SERVICE_CATEGORIES_META: CategoryMeta[] = [
     name: "Timed Session",
     description:
       "Fixed or variable-duration bookings like pool sessions or enrichment suites",
+    practiceExplanation:
+      "Timed Session modules support time-slot scheduling, fixed or variable durations, capacity limits, and check-in/check-out tracking.",
     icon: "Clock",
     color: "blue",
     badgeClass:
@@ -87,6 +142,8 @@ export const CUSTOM_SERVICE_CATEGORIES_META: CategoryMeta[] = [
     name: "Stay-Based",
     description:
       "Multi-day services that may require room or kennel assignment",
+    practiceExplanation:
+      "Stay-Based modules support multi-day reservations, nightly billing, room or kennel assignment, and check-in/check-out dates.",
     icon: "Bed",
     color: "purple",
     badgeClass:
@@ -100,6 +157,8 @@ export const CUSTOM_SERVICE_CATEGORIES_META: CategoryMeta[] = [
     id: "transport",
     name: "Transport",
     description: "Route-based services like chauffeur pickup and drop-off",
+    practiceExplanation:
+      "Transport modules support pickup/drop-off scheduling, route and vehicle assignment, and per-location billing.",
     icon: "Car",
     color: "green",
     badgeClass:
@@ -113,6 +172,8 @@ export const CUSTOM_SERVICE_CATEGORIES_META: CategoryMeta[] = [
     id: "event_based",
     name: "Event-Based",
     description: "One-off or recurring group events like birthday parties",
+    practiceExplanation:
+      "Event-Based modules support group capacity limits, ticketed signups, and one-off or recurring event dates.",
     icon: "PartyPopper",
     color: "orange",
     badgeClass:
@@ -127,6 +188,8 @@ export const CUSTOM_SERVICE_CATEGORIES_META: CategoryMeta[] = [
     name: "Add-On Only",
     description:
       "Cannot be booked standalone — must be linked to another service",
+    practiceExplanation:
+      "Add-On Only modules can't be booked alone — they attach to another service and bill as an extra line item.",
     icon: "PlusCircle",
     color: "gray",
     badgeClass:
@@ -140,6 +203,8 @@ export const CUSTOM_SERVICE_CATEGORIES_META: CategoryMeta[] = [
     id: "one_time_appointment",
     name: "One-Time Appointment",
     description: "Single scheduled appointment like therapy sessions",
+    practiceExplanation:
+      "One-Time Appointment modules support a single scheduled slot, individual provider assignment, and per-appointment billing.",
     icon: "CalendarCheck",
     color: "teal",
     badgeClass:
@@ -156,6 +221,15 @@ export function getCategoryMeta(
   categoryId: CustomServiceCategory,
 ): CategoryMeta | undefined {
   return CUSTOM_SERVICE_CATEGORIES_META.find((c) => c.id === categoryId);
+}
+
+/**
+ * Whether a module's Yipyy Express Check-in is enabled. The wizard toggle
+ * writes `yipyyGo.enabled`; older modules fall back to `yipyyGoRequired`.
+ * Modules where this is true appear in the Express Check-in settings page.
+ */
+export function isExpressCheckInEnabled(module: CustomServiceModule): boolean {
+  return module.yipyyGo?.enabled ?? module.yipyyGoRequired;
 }
 
 export const CUSTOM_SERVICE_ADDON_LIBRARY: Array<{
@@ -244,6 +318,8 @@ export function createDefaultCustomServiceWorkflowQuestionnaire(
     onlineCapacityLimit: undefined,
     affectsCapacityHeatmap: true,
     capacityCeilingPerHour: undefined,
+    paymentTiming: "at_booking",
+    requiresWaiver: false,
     questionnaireCompleted: false,
     questionnaireCompletedAt: undefined,
     ...overrides,
@@ -276,6 +352,12 @@ export function getModuleWorkflowQuestionnaire(
     affectsCapacityHeatmap:
       module.capacity?.enabled ?? module.calendar.maxSimultaneousBookings > 0,
     capacityCeilingPerHour: module.capacity?.maxPerSlot,
+    paymentTiming: module.onlineBooking.depositRequired
+      ? "deposit_only"
+      : "at_booking",
+    requiresWaiver:
+      module.eligibilityRules?.conditions.some((c) => c.type === "waiver") ??
+      false,
     questionnaireCompleted: true,
   });
 
@@ -316,6 +398,9 @@ export function normalizeCustomServiceModule(
       enabled: workflow.bookableOnline,
     },
     capacity: {
+      // Spread first so newer optional fields (maxConcurrentSessions,
+      // overbookingBufferPercent, …) survive normalization on every save.
+      ...module.capacity,
       enabled: workflow.affectsCapacityHeatmap,
       maxPerSlot:
         workflow.capacityCeilingPerHour ?? module.capacity?.maxPerSlot ?? 1,
@@ -347,7 +432,9 @@ export function createDefaultCustomServiceModule(
   return {
     id: `csm-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     facilityId,
+    facilityIds: [facilityId],
     name: "",
+    sidebarLabel: "",
     slug: "",
     icon: "PawPrint",
     iconColor: "blue-500",
@@ -363,18 +450,32 @@ export function createDefaultCustomServiceModule(
       maxSimultaneousBookings: 1,
       assignedTo: "staff",
       assignedResourceIds: [],
+      operatingHoursOverride: createDefaultOperatingHoursOverride(),
+      bookingWindow: { ...DEFAULT_CUSTOM_SERVICE_BOOKING_WINDOW },
+      recurrence: { ...DEFAULT_CUSTOM_SERVICE_RECURRENCE },
     },
     checkInOut: {
       enabled: true,
       checkInType: "manual",
       checkOutTimeTracking: true,
       qrCodeSupport: false,
+      checkInLocation: "front_desk",
+      lateArrivalPolicy: { graceMinutes: 15, action: "flag" },
+      departureNotification: {
+        enabled: false,
+        messageTemplate:
+          "Hi {owner}, {pet} has been checked out and is ready for pickup. Thank you!",
+      },
     },
     stayBased: {
       enabled: false,
       requiresRoomKennel: false,
       affectsKennelView: false,
       generatesDailyTasks: false,
+      roomSpaceType: "kennel",
+      customRoomSpaceLabel: "",
+      earlyLateAccess: { earlyCheckIn: false, lateCheckOut: false },
+      capacityPerSpace: 1,
     },
     onlineBooking: {
       enabled: true,
@@ -383,6 +484,10 @@ export function createDefaultCustomServiceModule(
       maxDogsPerSession: 1,
       cancellationPolicy: { hoursBeforeBooking: 24, feePercentage: 0 },
       depositRequired: false,
+      depositRefundPolicy: { refundable: true, refundableUpToHours: 24 },
+      waitlist: { enabled: false, autoConfirm: false },
+      confirmationMessage: "",
+      requiredDocuments: [],
     },
     pricing: {
       model: "flat_rate",
@@ -390,16 +495,33 @@ export function createDefaultCustomServiceModule(
       taxable: true,
       tipAllowed: false,
       membershipDiscountEligible: false,
+      billingTrigger: "at_booking",
+      packagePricing: { enabled: false, packages: [] },
+      peakPricingEnabled: false,
+      paymentMethods: ["card", "cash", "gift_card", "wallet"],
     },
     staffAssignment: {
       autoAssign: false,
       requiredRole: "general",
       taskGeneration: [],
+      requiredQualification: "",
+      taskAssignmentModes: {
+        setup: "same_as_booking",
+        execution: "same_as_booking",
+        cleanup: "same_as_booking",
+      },
     },
     careInstructions: {
       feeding: "optional",
       medication: "optional",
       belongings: "optional",
+      safetyNotes: "optional",
+      staffDisplay: {
+        feeding: "standard",
+        medication: "standard",
+        belongings: "standard",
+        safetyNotes: "standard",
+      },
     },
     yipyyGoRequired: false,
     requiresEvaluation: false,
@@ -476,7 +598,9 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
   {
     id: "csm-yodas-splash",
     facilityId: 11,
+    facilityIds: [11],
     name: "Yoda's Splash",
+    sidebarLabel: "Pool Sessions",
     slug: "yodas-splash",
     icon: "Droplets",
     iconColor: "cyan-500",
@@ -496,6 +620,18 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
       maxSimultaneousBookings: 4,
       assignedTo: "resource",
       assignedResourceIds: ["res-pool-1"],
+      // Pool is only open Wed–Sat even though the facility is open 7 days.
+      operatingHoursOverride: {
+        enabled: true,
+        days: CUSTOM_SERVICE_WEEKDAYS.map((d) => ({
+          day: d.value,
+          isOpen: ["wed", "thu", "fri", "sat"].includes(d.value),
+          openTime: "10:00",
+          closeTime: "18:00",
+        })),
+      },
+      bookingWindow: { maxAdvanceDays: 30, minAdvanceHours: 2 },
+      recurrence: { mode: "recurring", frequency: "weekly", maxSessions: 8 },
     },
     checkInOut: {
       enabled: true,
@@ -514,9 +650,19 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
       eligibleClients: "all",
       approvalRequired: false,
       maxDogsPerSession: 2,
-      cancellationPolicy: { hoursBeforeBooking: 12, feePercentage: 50 },
+      cancellationPolicy: {
+        hoursBeforeBooking: 12,
+        feePercentage: 50,
+        text: "Cancel at least 12 hours before your session for a full refund. Later cancellations are charged 50% of the session price.",
+      },
       depositRequired: true,
       depositAmount: 10,
+      depositType: "fixed",
+      depositRefundPolicy: { refundable: true, refundableUpToHours: 12 },
+      waitlist: { enabled: true, maxSize: 5, autoConfirm: true },
+      confirmationMessage:
+        "Thank you for booking a pool session! Please bring your dog's vaccination records on the day.",
+      requiredDocuments: ["vaccination_records", "signed_waiver"],
     },
     pricing: {
       model: "duration_based",
@@ -571,13 +717,43 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
         },
       ],
       taxable: true,
+      taxRateId: "tax-002",
       tipAllowed: true,
       membershipDiscountEligible: true,
+      billingTrigger: "at_booking",
+      packagePricing: {
+        enabled: true,
+        packages: [
+          {
+            id: "pkg-1",
+            name: "10-Session Pool Pass",
+            sessions: 10,
+            price: 150,
+          },
+        ],
+      },
+      peakPricingEnabled: true,
+      peakPricingRules: [
+        {
+          id: "peak-weekend",
+          name: "Weekend Surcharge",
+          adjustment: 15,
+          adjustmentType: "percentage",
+        },
+      ],
+      paymentMethods: ["card", "gift_card", "wallet", "package_credits"],
     },
     staffAssignment: {
       autoAssign: true,
       requiredRole: "pool_staff",
       taskGeneration: ["setup", "execution", "cleanup"],
+      requiredQualification: "water_safety",
+      staffToPetRatio: 4,
+      taskAssignmentModes: {
+        setup: "any_available",
+        execution: "same_as_booking",
+        cleanup: "any_available",
+      },
     },
     yipyyGoRequired: true,
     yipyyGo: {
@@ -623,6 +799,18 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
       ],
     },
     requiresEvaluation: true,
+    evaluationType: "swim_test",
+    careInstructions: {
+      feeding: "disabled",
+      medication: "optional",
+      belongings: "optional",
+      safetyNotes: "required",
+      staffDisplay: {
+        medication: "standard",
+        belongings: "reference",
+        safetyNotes: "highlight",
+      },
+    },
     showInSidebar: true,
     sidebarPosition: 10,
     dependencies: [],
@@ -633,23 +821,25 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
         {
           id: "ec-1",
           type: "pet_type",
-          operator: "equals",
-          value: "Dog",
-          label: "Only dogs allowed in pool",
+          operator: "in_list",
+          value: ["Dog"],
+          label: "Species: Dog",
         },
         {
           id: "ec-2",
           type: "evaluation",
-          operator: "has",
-          value: "swim",
-          label: "Pet must have passed swim evaluation",
+          operator: "equals",
+          value: "swim_test",
+          label: "Completed: Swim Test",
         },
         {
           id: "ec-3",
           type: "weight",
-          operator: "less_than",
-          value: 100,
-          label: "Pet must be under 100 lbs",
+          operator: "between",
+          value: "",
+          minValue: 0,
+          maxValue: 100,
+          label: "Weight 0–100 lbs",
         },
       ],
       deniedMessage:
@@ -742,6 +932,8 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
       onlineCapacityLimit: 2,
       affectsCapacityHeatmap: true,
       capacityCeilingPerHour: 2,
+      paymentTiming: "deposit_only",
+      requiresWaiver: true,
       questionnaireCompleted: true,
       questionnaireCompletedAt: "2024-09-15T10:00:00Z",
     }),
@@ -752,6 +944,7 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
   {
     id: "csm-paws-express",
     facilityId: 11,
+    facilityIds: [11, 1, 2],
     name: "Paws Express",
     slug: "paws-express",
     icon: "Car",
@@ -775,6 +968,14 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
       checkInType: "manual",
       checkOutTimeTracking: true,
       qrCodeSupport: false,
+      // Door-to-door service: driver checks in at the client's curb.
+      checkInLocation: "curbside",
+      lateArrivalPolicy: { graceMinutes: 10, action: "notify_staff" },
+      departureNotification: {
+        enabled: true,
+        messageTemplate:
+          "Hi {owner}, {pet} has been safely dropped off. Thanks for riding with Paws Express!",
+      },
     },
     stayBased: {
       enabled: false,
@@ -884,9 +1085,18 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
     showInSidebar: true,
     sidebarPosition: 20,
     dependencies: [],
+    geographicRestriction: {
+      enabled: true,
+      mode: "radius",
+      radius: 15,
+      radiusUnit: "mi",
+      postalCodes: [],
+    },
     capacity: {
       enabled: true,
       maxPerSlot: 6,
+      maxConcurrentSessions: 2,
+      overbookingBufferPercent: 10,
       slotDurationMinutes: 120,
       resources: [
         {
@@ -958,6 +1168,7 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
   {
     id: "csm-birthday-pawty",
     facilityId: 11,
+    facilityIds: [11],
     name: "Birthday Pawty",
     slug: "birthday-pawty",
     icon: "PartyPopper",
@@ -1014,7 +1225,8 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
         {
           id: "bp-deluxe",
           name: "Deluxe Pawty",
-          description: "3-hour party with custom theme, gourmet treats, and photo album.",
+          description:
+            "3-hour party with custom theme, gourmet treats, and photo album.",
           durationMinutes: 180,
           price: 350,
           isActive: true,
@@ -1032,7 +1244,8 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
         {
           id: "bp-cake-upgrade",
           name: "Custom Cake Upgrade",
-          description: "Upgrade to a fully custom cake from our partner bakery.",
+          description:
+            "Upgrade to a fully custom cake from our partner bakery.",
           price: 40,
           duration: 0,
           isActive: true,
@@ -1082,6 +1295,7 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
       onlineCapacityLimit: 1,
       affectsCapacityHeatmap: true,
       capacityCeilingPerHour: 1,
+      paymentTiming: "deposit_only",
       questionnaireCompleted: true,
       questionnaireCompletedAt: "2024-11-10T08:00:00Z",
     }),

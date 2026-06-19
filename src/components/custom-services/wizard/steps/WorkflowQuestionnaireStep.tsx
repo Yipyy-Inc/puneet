@@ -22,14 +22,77 @@ import type {
   CustomServiceModule,
   FacilityResource,
   CustomServiceTaskTemplateQuestionnaireItem,
+  CustomServicePaymentTiming,
 } from "@/types/facility";
 
 type WorkflowState = NonNullable<CustomServiceModule["workflow"]>;
+
+const PAYMENT_TIMING_OPTIONS: {
+  value: CustomServicePaymentTiming;
+  label: string;
+}[] = [
+  { value: "at_booking", label: "Yes — charge at booking" },
+  { value: "none", label: "No" },
+  { value: "deposit_only", label: "Deposit only" },
+];
+
+const PAYMENT_TIMING_HELP: Record<CustomServicePaymentTiming, string> = {
+  at_booking:
+    "The booking flow charges the full amount immediately when the client books.",
+  none: "No payment is collected at booking — the client is invoiced later.",
+  deposit_only:
+    "The booking flow holds or charges a partial deposit; the balance is collected later.",
+};
 
 interface WorkflowQuestionnaireStepProps {
   data: CustomServiceModule;
   resources: FacilityResource[];
   onChange: (updates: Partial<CustomServiceModule>) => void;
+}
+
+/** Joins clauses with commas and an Oxford "and" before the last one. */
+function joinClauses(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+}
+
+/** Plain-English list of what the answers configured. */
+function buildSummaryClauses(workflow: WorkflowState): string[] {
+  const clauses: string[] = [];
+
+  if (workflow.appearsOnCalendar) clauses.push("appear on the calendar");
+  if (workflow.requiresTimeSlots) clauses.push("require time slots");
+  if (workflow.requiresResource) {
+    clauses.push(`require a ${workflow.resourceType ?? "dedicated"} resource`);
+  }
+  if (workflow.requiresCheckInOut) clauses.push("support check-in/out");
+  if (workflow.generatesTasks) {
+    clauses.push(
+      `generate tasks (${workflow.taskTemplates.length} configured)`,
+    );
+  }
+  if (workflow.allowsAddOns) {
+    clauses.push(
+      `allow add-ons (${workflow.allowedAddOnIds.length} configured)`,
+    );
+  }
+  if (workflow.bookableOnline) clauses.push("be bookable online");
+  if (workflow.affectsCapacityHeatmap) clauses.push("count toward capacity");
+
+  clauses.push(
+    workflow.paymentTiming === "at_booking"
+      ? "charge payment at booking"
+      : workflow.paymentTiming === "deposit_only"
+        ? "collect a deposit at booking"
+        : "be invoiced after the service",
+  );
+
+  if (workflow.requiresWaiver) {
+    clauses.push("require a signed waiver before the first booking");
+  }
+
+  return clauses;
 }
 
 function QuestionCard({
@@ -310,6 +373,7 @@ export function WorkflowQuestionnaireStep({
                   <SelectItem value="room">Room</SelectItem>
                   <SelectItem value="pool">Pool</SelectItem>
                   <SelectItem value="van">Vehicle</SelectItem>
+                  <SelectItem value="equipment">Equipment</SelectItem>
                   <SelectItem value="yard">Yard</SelectItem>
                   <SelectItem value="custom">Custom resource</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
@@ -601,6 +665,53 @@ export function WorkflowQuestionnaireStep({
           </div>
         )}
       </QuestionCard>
+
+      <QuestionCard title="Question 9 — Does this service involve payment at the time of booking?">
+        <div
+          role="radiogroup"
+          aria-label="Payment at booking"
+          className="flex flex-wrap items-center gap-2"
+        >
+          {PAYMENT_TIMING_OPTIONS.map((opt) => (
+            <Button
+              key={opt.value}
+              type="button"
+              size="sm"
+              role="radio"
+              aria-checked={workflow.paymentTiming === opt.value}
+              variant={
+                workflow.paymentTiming === opt.value ? "default" : "outline"
+              }
+              onClick={() => updateWorkflow({ paymentTiming: opt.value })}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </div>
+        <p className="text-xs text-slate-500">
+          {PAYMENT_TIMING_HELP[workflow.paymentTiming]}
+        </p>
+      </QuestionCard>
+
+      <QuestionCard title="Question 10 — Does this service require a waiver or consent form before the first booking?">
+        <YesNoControl
+          value={workflow.requiresWaiver}
+          onChange={(value) => updateWorkflow({ requiresWaiver: value })}
+        />
+        {workflow.requiresWaiver && (
+          <p className="text-xs text-slate-500">
+            The module will prompt for waiver completion before the customer can
+            complete their first booking.
+          </p>
+        )}
+      </QuestionCard>
+
+      <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+        <span className="font-medium">
+          Based on your answers, this module will:
+        </span>{" "}
+        {joinClauses(buildSummaryClauses(workflow))}.
+      </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
         <div className="flex items-center gap-2">
