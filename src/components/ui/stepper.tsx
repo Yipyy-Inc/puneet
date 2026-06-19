@@ -9,6 +9,8 @@ interface Step {
   id: string;
   title: string;
   description?: string;
+  /** Greyed out in the rail; typically a step skipped by upstream answers. */
+  disabled?: boolean;
 }
 
 interface StepperProps {
@@ -36,41 +38,62 @@ interface StepperNavigationProps {
   className?: string;
 }
 
-function Stepper({ steps, currentStep, className }: StepperProps) {
+function Stepper({
+  steps,
+  currentStep,
+  onStepChange,
+  className,
+}: StepperProps) {
   return (
     <div className={cn("space-y-4", className)}>
       {/* Step circles row - aligned horizontally */}
       <div className="flex items-center justify-between">
-        {steps.map((step, index) => (
-          <React.Fragment key={step.id}>
-            <div className="flex flex-1 flex-col items-center">
-              <div
-                className={cn(
-                  `flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-medium`,
-                  index < currentStep
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : index === currentStep
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : `border-muted-foreground/30 bg-background text-muted-foreground`,
-                )}
-              >
-                {index < currentStep ? (
-                  <CheckIcon className="size-4" />
+        {steps.map((step, index) => {
+          const isCompleted = !step.disabled && index < currentStep;
+          const isActive = index === currentStep;
+          const interactive = !!onStepChange && !step.disabled;
+          const circleClass = cn(
+            `flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-medium`,
+            step.disabled
+              ? "border-muted-foreground/20 bg-muted text-muted-foreground/40"
+              : isCompleted || isActive
+                ? "border-primary bg-primary text-primary-foreground"
+                : `border-muted-foreground/30 bg-background text-muted-foreground`,
+            interactive &&
+              "cursor-pointer transition-transform hover:scale-105",
+          );
+          const circleContent = isCompleted ? (
+            <CheckIcon className="size-4" />
+          ) : (
+            index + 1
+          );
+          return (
+            <React.Fragment key={step.id}>
+              <div className="flex flex-1 flex-col items-center">
+                {interactive ? (
+                  <button
+                    type="button"
+                    onClick={() => onStepChange?.(index)}
+                    className={circleClass}
+                    aria-current={isActive ? "step" : undefined}
+                  >
+                    {circleContent}
+                  </button>
                 ) : (
-                  index + 1
+                  <div className={circleClass}>{circleContent}</div>
                 )}
               </div>
-            </div>
-            {index < steps.length - 1 && (
-              <div
-                className={cn(
-                  "mx-2 h-px flex-1",
-                  index < currentStep ? "bg-primary" : "bg-muted-foreground/30",
-                )}
-              />
-            )}
-          </React.Fragment>
-        ))}
+              {index < steps.length - 1 && (
+                <div
+                  className={cn(
+                    "mx-2 h-px flex-1",
+                    isCompleted ? "bg-primary" : "bg-muted-foreground/30",
+                  )}
+                />
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
       {/* Step titles row - below circles */}
       <div className="flex items-start justify-between">
@@ -82,17 +105,25 @@ function Stepper({ steps, currentStep, className }: StepperProps) {
             <div
               className={cn(
                 "text-sm font-medium",
-                index <= currentStep
-                  ? "text-foreground"
-                  : "text-muted-foreground",
+                step.disabled
+                  ? "text-muted-foreground/40"
+                  : index <= currentStep
+                    ? "text-foreground"
+                    : "text-muted-foreground",
               )}
             >
               {step.title}
             </div>
-            {step.description && (
-              <div className="text-muted-foreground mt-1 max-w-24 text-xs">
-                {step.description}
+            {step.disabled ? (
+              <div className="text-muted-foreground/40 mt-1 max-w-24 text-xs italic">
+                Skipped
               </div>
+            ) : (
+              step.description && (
+                <div className="text-muted-foreground mt-1 max-w-24 text-xs">
+                  {step.description}
+                </div>
+              )
             )}
           </div>
         ))}

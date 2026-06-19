@@ -23,6 +23,10 @@ import {
   SERVICE_TYPE_LABELS,
   getServiceTemplateKey,
 } from "@/data/yipyygo-config";
+import {
+  defaultCustomServiceModules,
+  isExpressCheckInEnabled,
+} from "@/data/custom-services";
 
 const DEFAULT_KEY = "__default__";
 
@@ -75,8 +79,27 @@ export function PerServiceFormTemplateSection({
         label: name,
       });
     }
+
+    // Custom service MODULES (built in the module wizard, e.g. "Yoda's Splash")
+    // that have Express Check-in enabled also surface here so managers can
+    // configure what their pre-check-in form sends. Deduped against any custom
+    // service already added above.
+    const seen = new Set(result.map((t) => t.key));
+    for (const m of defaultCustomServiceModules) {
+      if (m.status !== "active") continue;
+      const appliesToFacility = (m.facilityIds ?? [m.facilityId]).includes(
+        config.facilityId,
+      );
+      if (!appliesToFacility) continue;
+      if (!isExpressCheckInEnabled(m)) continue;
+      const key = getServiceTemplateKey("custom", m.name);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      result.push({ key, label: m.name });
+    }
+
     return result;
-  }, [config.serviceConfigs]);
+  }, [config.serviceConfigs, config.facilityId]);
 
   const [activeKey, setActiveKey] = useState<string>(DEFAULT_KEY);
 
@@ -173,13 +196,12 @@ export function PerServiceFormTemplateSection({
           </div>
 
           {!isDefault && (
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 p-3">
+            <div className="bg-muted/40 flex flex-wrap items-center gap-2 rounded-lg border p-3">
               {hasOverride ? (
                 <>
-                  <Info className="size-4 text-muted-foreground" />
+                  <Info className="text-muted-foreground size-4" />
                   <span className="text-sm">
-                    Editing the custom form for{" "}
-                    <strong>{activeLabel}</strong>.
+                    Editing the custom form for <strong>{activeLabel}</strong>.
                   </span>
                   <Button
                     variant="outline"
@@ -193,8 +215,8 @@ export function PerServiceFormTemplateSection({
                 </>
               ) : (
                 <>
-                  <Info className="size-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
+                  <Info className="text-muted-foreground size-4" />
+                  <span className="text-muted-foreground text-sm">
                     Currently inheriting the default form. Any edit here will
                     create a custom form for <strong>{activeLabel}</strong>.
                   </span>

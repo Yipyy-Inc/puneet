@@ -13,8 +13,41 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CustomServiceModule } from "@/types/facility";
+import type {
+  CustomServiceModule,
+  CustomServiceEvaluationType,
+  CustomServiceTaskAssignmentMode,
+} from "@/types/facility";
 import { cn } from "@/lib/utils";
+
+const EVALUATION_TYPES: {
+  value: CustomServiceEvaluationType;
+  label: string;
+}[] = [
+  { value: "temperament", label: "Temperament Assessment" },
+  { value: "swim_test", label: "Swim Test" },
+  { value: "health_check", label: "Health Check" },
+  { value: "custom", label: "Custom" },
+];
+
+const STAFF_QUALIFICATIONS: { value: string; label: string }[] = [
+  { value: "", label: "None" },
+  { value: "cpr_first_aid", label: "Pet CPR & First Aid" },
+  { value: "water_safety", label: "Water Safety / Lifeguard" },
+  { value: "dog_behavior", label: "Dog Behavior Certification" },
+  { value: "grooming_cert", label: "Professional Grooming Certification" },
+  { value: "vet_tech_license", label: "Vet Tech License" },
+  { value: "custom", label: "Custom…" },
+];
+
+const TASK_ASSIGNMENT_MODES: {
+  value: CustomServiceTaskAssignmentMode;
+  label: string;
+}[] = [
+  { value: "same_as_booking", label: "Same staff as booking" },
+  { value: "any_available", label: "Any available staff" },
+  { value: "unassigned", label: "Leave unassigned" },
+];
 
 const STANDARD_ROLES = [
   { value: "general", label: "General Staff" },
@@ -71,6 +104,18 @@ export function StaffAssignmentStep({
       ? existing.filter((t) => t !== task)
       : [...existing, task];
     updateSa({ taskGeneration: updated });
+  };
+
+  const taskMode = (task: "setup" | "execution" | "cleanup") =>
+    sa.taskAssignmentModes?.[task] ?? "same_as_booking";
+
+  const updateTaskMode = (
+    task: "setup" | "execution" | "cleanup",
+    mode: CustomServiceTaskAssignmentMode,
+  ) => {
+    updateSa({
+      taskAssignmentModes: { ...sa.taskAssignmentModes, [task]: mode },
+    });
   };
 
   return (
@@ -149,6 +194,87 @@ export function StaffAssignmentStep({
 
       <Separator />
 
+      {/* Minimum Staff Qualification */}
+      <div className="space-y-3">
+        <div>
+          <Label className="text-sm font-semibold">
+            Minimum Staff Qualification
+          </Label>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            Beyond role, require a certification or training badge before a
+            staff member can be auto- or manually assigned to this service.
+          </p>
+        </div>
+        <Select
+          value={sa.requiredQualification ? sa.requiredQualification : "none"}
+          onValueChange={(v) =>
+            updateSa({ requiredQualification: v === "none" ? "" : v })
+          }
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STAFF_QUALIFICATIONS.map((q) => (
+              <SelectItem key={q.value || "none"} value={q.value || "none"}>
+                {q.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {sa.requiredQualification === "custom" && (
+          <div className="space-y-1.5">
+            <Label htmlFor="custom-qualification">
+              Custom Qualification Name
+            </Label>
+            <Input
+              id="custom-qualification"
+              placeholder="e.g. Hydrotherapy Level 2"
+              value={sa.customQualification ?? ""}
+              onChange={(e) =>
+                updateSa({ customQualification: e.target.value })
+              }
+              className="w-full"
+            />
+          </div>
+        )}
+      </div>
+
+      <Separator />
+
+      {/* Staff-to-Pet Ratio */}
+      <div className="space-y-1.5">
+        <Label htmlFor="staff-pet-ratio" className="text-sm font-semibold">
+          Staff-to-Pet Ratio
+        </Label>
+        <p className="text-muted-foreground text-xs">
+          Maximum pets one staff member can supervise at once (e.g. pool,
+          socialization classes). Used in capacity calculations. Leave blank for
+          no limit.
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground text-sm">1 staff :</span>
+          <Input
+            id="staff-pet-ratio"
+            type="number"
+            min={1}
+            value={sa.staffToPetRatio ?? ""}
+            onChange={(e) =>
+              updateSa({
+                staffToPetRatio: e.target.value
+                  ? parseInt(e.target.value) || undefined
+                  : undefined,
+              })
+            }
+            placeholder="—"
+            className="w-24"
+          />
+          <span className="text-muted-foreground text-sm">pets</span>
+        </div>
+      </div>
+
+      <Separator />
+
       {/* Task Generation */}
       <div className="space-y-3">
         <div>
@@ -179,11 +305,44 @@ export function StaffAssignmentStep({
                   onCheckedChange={() => toggleTask(task.value)}
                   className="mt-0.5"
                 />
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-medium">{task.label}</p>
                   <p className="text-muted-foreground mt-0.5 text-xs">
                     {task.description}
                   </p>
+                  {isChecked && (
+                    <div
+                      className="mt-2 flex items-center gap-2"
+                      onClick={(e) => e.preventDefault()}
+                    >
+                      <span className="text-muted-foreground text-xs">
+                        Assign to:
+                      </span>
+                      <Select
+                        value={taskMode(task.value)}
+                        onValueChange={(v) =>
+                          updateTaskMode(
+                            task.value,
+                            v as CustomServiceTaskAssignmentMode,
+                          )
+                        }
+                      >
+                        <SelectTrigger
+                          className="h-8 w-56"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TASK_ASSIGNMENT_MODES.map((m) => (
+                            <SelectItem key={m.value} value={m.value}>
+                              {m.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </label>
             );
@@ -217,26 +376,73 @@ export function StaffAssignmentStep({
               }
             />
           </div>
-          <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
-            <div className="space-y-0.5">
-              <Label
-                htmlFor="requires-eval"
-                className="cursor-pointer text-sm font-medium"
-              >
-                Evaluation Required
-              </Label>
-              <p className="text-muted-foreground text-xs">
-                Pets must pass a facility evaluation before being eligible for
-                this service.
-              </p>
+          <div className="border-border bg-card space-y-3 rounded-xl border p-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label
+                  htmlFor="requires-eval"
+                  className="cursor-pointer text-sm font-medium"
+                >
+                  Evaluation Required
+                </Label>
+                <p className="text-muted-foreground text-xs">
+                  Pets must pass a facility evaluation before being eligible for
+                  this service.
+                </p>
+              </div>
+              <Switch
+                id="requires-eval"
+                checked={data.requiresEvaluation}
+                onCheckedChange={(requiresEvaluation) =>
+                  onChange({ requiresEvaluation })
+                }
+              />
             </div>
-            <Switch
-              id="requires-eval"
-              checked={data.requiresEvaluation}
-              onCheckedChange={(requiresEvaluation) =>
-                onChange({ requiresEvaluation })
-              }
-            />
+
+            {data.requiresEvaluation && (
+              <div className="space-y-2 border-t pt-3">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="evaluation-type"
+                    className="text-xs font-medium"
+                  >
+                    Which evaluation type is required?
+                  </Label>
+                  <Select
+                    value={data.evaluationType ?? "temperament"}
+                    onValueChange={(v) =>
+                      onChange({
+                        evaluationType: v as CustomServiceEvaluationType,
+                      })
+                    }
+                  >
+                    <SelectTrigger id="evaluation-type" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EVALUATION_TYPES.map((ev) => (
+                        <SelectItem key={ev.value} value={ev.value}>
+                          {ev.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {data.evaluationType === "custom" && (
+                  <Input
+                    placeholder="Name the required evaluation"
+                    value={data.customEvaluationLabel ?? ""}
+                    onChange={(e) =>
+                      onChange({ customEvaluationLabel: e.target.value })
+                    }
+                  />
+                )}
+                <p className="text-muted-foreground text-xs">
+                  The evaluation record must be on the pet&apos;s file before
+                  staff can confirm the booking.
+                </p>
+              </div>
+            )}
           </div>
           <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
             <div className="space-y-0.5">

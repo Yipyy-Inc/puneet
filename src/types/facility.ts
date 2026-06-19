@@ -1006,6 +1006,7 @@ export type EligibilityConditionType =
   | "vaccination"
   | "age"
   | "weight"
+  | "account_standing"
   | "custom";
 
 export interface EligibilityCondition {
@@ -1018,9 +1019,14 @@ export interface EligibilityCondition {
     | "not_has"
     | "greater_than"
     | "less_than"
-    | "in_list";
+    | "in_list"
+    | "between";
   value: string | string[] | number | boolean;
   label: string;
+  /** Inclusive lower bound for range conditions (e.g. pet age/weight). */
+  minValue?: number;
+  /** Inclusive upper bound for range conditions. */
+  maxValue?: number;
 }
 
 // ============================================================================
@@ -1087,6 +1093,121 @@ export type CustomServiceTaskTemplateTimingRule =
   | "at_check_in"
   | "after_check_out";
 
+/**
+ * Q9 — when payment is collected for a booking. Drives the payment integration:
+ * `at_booking` charges immediately, `deposit_only` holds/charges a partial
+ * deposit, `none` invoices later (no charge at booking time).
+ */
+export type CustomServicePaymentTiming = "at_booking" | "none" | "deposit_only";
+
+export type CustomServiceWeekday =
+  | "mon"
+  | "tue"
+  | "wed"
+  | "thu"
+  | "fri"
+  | "sat"
+  | "sun";
+
+/** One day's open/close window in a per-service operating-hours override. */
+export interface CustomServiceOperatingDay {
+  day: CustomServiceWeekday;
+  /** When false the service is closed that day regardless of times. */
+  isOpen: boolean;
+  /** 24h "HH:mm". */
+  openTime: string;
+  closeTime: string;
+}
+
+export type CustomServiceRecurrenceMode = "one_time" | "recurring";
+export type CustomServiceRecurrenceFrequency = "weekly" | "biweekly";
+
+/** Where check-in physically happens. Drives the staff check-in notification. */
+export type CustomServiceCheckInLocation =
+  | "front_desk"
+  | "service_location"
+  | "curbside"
+  | "mobile";
+
+/** What happens when a client passes the late-arrival grace period. */
+export type CustomServiceLateArrivalAction =
+  | "flag"
+  | "auto_cancel"
+  | "notify_staff";
+
+/** Evaluation a pet must pass before booking when evaluation is required. */
+export type CustomServiceEvaluationType =
+  | "temperament"
+  | "swim_test"
+  | "health_check"
+  | "custom";
+
+/** How an auto-generated task is assigned to staff. */
+export type CustomServiceTaskAssignmentMode =
+  | "same_as_booking"
+  | "any_available"
+  | "unassigned";
+
+/** How a service's geographic area is defined. */
+export type CustomServiceGeoRestrictionMode = "radius" | "postal_codes";
+
+/** How prominently a care-instruction section shows in the staff service view. */
+export type CareInstructionDisplay = "highlight" | "standard" | "reference";
+
+/** Kind of physical space a stay-based service occupies. Drives space views. */
+export type CustomServiceRoomSpaceType =
+  | "kennel"
+  | "suite"
+  | "pool_lane"
+  | "treatment_room"
+  | "custom";
+
+/**
+ * When the charge fires for a booking. The payment method is always
+ * platform-managed (Stripe via Yipyy); this only controls timing.
+ */
+export type CustomServiceBillingTrigger =
+  | "at_booking"
+  | "at_check_in"
+  | "at_check_out"
+  | "invoice_after"
+  | "deposit_balance";
+
+/** Payment methods offered at checkout. All flow through the platform (Stripe). */
+export type CustomServicePaymentMethod =
+  | "card"
+  | "cash"
+  | "gift_card"
+  | "wallet"
+  | "package_credits";
+
+/** A purchasable multi-session package (e.g. a 10-session pool pass). */
+export interface CustomServicePackage {
+  id: string;
+  name: string;
+  sessions: number;
+  price: number;
+}
+
+/** Documents that may be required on file before an online booking completes. */
+export type CustomServiceBookingDocument =
+  | "vaccination_records"
+  | "vet_reference"
+  | "signed_waiver"
+  | "temperament_assessment";
+
+/** Facility-level species configuration used to label pet-related fields. */
+export interface FacilitySpeciesConfig {
+  /** Species this facility serves (e.g. "Dog", "Cat"). */
+  species: string[];
+  /**
+   * Plural noun for the facility's animals, shown in client-facing labels
+   * (e.g. "pets", or "dogs" for a dog-only facility). Sourced here rather than
+   * hardcoded so multi-species facilities read correctly.
+   */
+  petNounPlural: string;
+}
+
 export interface CustomServiceTaskTemplateQuestionnaireItem {
   id: string;
   taskName: string;
@@ -1116,6 +1237,13 @@ export interface CustomServiceWorkflowQuestionnaire {
   onlineCapacityLimit?: number;
   affectsCapacityHeatmap: boolean;
   capacityCeilingPerHour?: number;
+  /** Q9 — payment collected at booking time. Drives payment integration. */
+  paymentTiming: CustomServicePaymentTiming;
+  /**
+   * Q10 — whether a waiver/consent form must be signed before the customer's
+   * first booking. When true the booking flow prompts for waiver completion.
+   */
+  requiresWaiver: boolean;
   questionnaireCompleted: boolean;
   questionnaireCompletedAt?: string;
 }
@@ -1132,6 +1260,10 @@ export interface CustomServiceVariant {
   price: number;
   isActive: boolean;
   isPopular?: boolean;
+  /** Per-variant capacity; falls back to the service default when unset. */
+  capacityOverride?: number;
+  /** Whether this specific variant can be booked online. Defaults to true. */
+  onlineBookingEnabled?: boolean;
 }
 
 export interface CustomServiceAddOn {
@@ -1145,8 +1277,24 @@ export interface CustomServiceAddOn {
 
 export interface CustomServiceModule {
   id: string;
+  /**
+   * Primary facility this module belongs to. Kept as the first entry of
+   * {@link facilityIds} for backward compatibility with single-facility views.
+   */
   facilityId: number;
+  /**
+   * All facilities of the tenant this module is assigned to. A module (e.g. a
+   * Pet Taxi) can apply to several facilities at once. Always includes
+   * {@link facilityId} as its first element.
+   */
+  facilityIds: number[];
   name: string;
+  /**
+   * Short label shown in the facility sidebar navigation. May differ from the
+   * full {@link name} (e.g. "Dog Swimming Pool Sessions" → "Pool Sessions").
+   * Falls back to {@link name} when empty.
+   */
+  sidebarLabel?: string;
   slug: string;
   icon: string;
   iconColor: string;
@@ -1162,28 +1310,104 @@ export interface CustomServiceModule {
     maxSimultaneousBookings: number;
     assignedTo: "room" | "resource" | "staff" | "combination";
     assignedResourceIds: string[];
+    /**
+     * Per-service operating hours that override the facility's global hours
+     * (e.g. a pool open only Wed–Sat). When `enabled` is false the facility
+     * hours apply.
+     */
+    operatingHoursOverride?: {
+      enabled: boolean;
+      days: CustomServiceOperatingDay[];
+    };
+    /** How far ahead and how close to start time clients may book. */
+    bookingWindow?: {
+      /** Maximum days in advance a client may book. */
+      maxAdvanceDays: number;
+      /** Minimum hours of notice required before a session. */
+      minAdvanceHours: number;
+    };
+    /** Whether sessions are one-off or repeat on a cadence. */
+    recurrence?: {
+      mode: CustomServiceRecurrenceMode;
+      frequency: CustomServiceRecurrenceFrequency;
+      /** Cap on auto-generated sessions when recurring. */
+      maxSessions: number;
+    };
   };
   checkInOut: {
     enabled: boolean;
     checkInType: "manual" | "auto";
     checkOutTimeTracking: boolean;
+    /**
+     * When true, a UNIQUE QR code is generated per booking (not a static
+     * per-service code), which the client scans on arrival to check in/out.
+     */
     qrCodeSupport: boolean;
+    /** Where check-in happens; drives the staff check-in notification. */
+    checkInLocation?: CustomServiceCheckInLocation;
+    /** Grace period + action when a client arrives late. */
+    lateArrivalPolicy?: {
+      graceMinutes: number;
+      action: CustomServiceLateArrivalAction;
+    };
+    /** Auto-notify the owner when their pet is checked out. */
+    departureNotification?: {
+      enabled: boolean;
+      messageTemplate: string;
+    };
   };
   stayBased: {
     enabled: boolean;
     requiresRoomKennel: boolean;
     affectsKennelView: boolean;
     generatesDailyTasks: boolean;
+    /** Kind of space used; determines how it appears on space-management views. */
+    roomSpaceType?: CustomServiceRoomSpaceType;
+    /** Free-text label when {@link roomSpaceType} is "custom". */
+    customRoomSpaceLabel?: string;
+    /** Allow clients to request early drop-off / late pickup, with optional fees. */
+    earlyLateAccess?: {
+      earlyCheckIn: boolean;
+      lateCheckOut: boolean;
+      /** Optional add-on fees; pricing can also be set in the Pricing step. */
+      earlyCheckInFee?: number;
+      lateCheckOutFee?: number;
+    };
+    /** How many pets can occupy one space at once (e.g. a 3-dog pool lane). */
+    capacityPerSpace?: number;
   };
   onlineBooking: {
     enabled: boolean;
     eligibleClients: "all" | "approved_only" | "active_members_only";
     approvalRequired: boolean;
+    /** Max pets a single booking can include. Labelled via facility species config. */
     maxDogsPerSession: number;
-    cancellationPolicy: { hoursBeforeBooking: number; feePercentage: number };
+    cancellationPolicy: {
+      hoursBeforeBooking: number;
+      feePercentage: number;
+      /** Customer-facing policy text the facility writes within superadmin bounds. */
+      text?: string;
+    };
     depositRequired: boolean;
     depositAmount?: number;
     depositType?: "fixed" | "percentage";
+    /** Refund policy for the deposit. */
+    depositRefundPolicy?: {
+      refundable: boolean;
+      /** Hours before the booking up to which the deposit is refundable. */
+      refundableUpToHours?: number;
+    };
+    /** When a session is full, clients may join a waitlist. */
+    waitlist?: {
+      enabled: boolean;
+      maxSize?: number;
+      /** Auto-confirm the next waitlisted client when a spot opens. */
+      autoConfirm: boolean;
+    };
+    /** Shown to the client immediately after they complete a booking. */
+    confirmationMessage?: string;
+    /** Documents that must be on file before an online booking can complete. */
+    requiredDocuments?: CustomServiceBookingDocument[];
   };
   pricing: {
     model: PricingModelType;
@@ -1199,14 +1423,44 @@ export interface CustomServiceModule {
     }[];
     parentServiceId?: string;
     taxable: boolean;
+    /** Which facility tax rate applies when {@link taxable}. Defaults to the facility default. */
+    taxRateId?: string;
     tipAllowed: boolean;
     membershipDiscountEligible: boolean;
+    /** When payment is collected. The payment integration hook. */
+    billingTrigger?: CustomServiceBillingTrigger;
+    /** Multi-session packages purchasable on the client portal. */
+    packagePricing?: {
+      enabled: boolean;
+      packages: CustomServicePackage[];
+    };
+    /** When true, {@link peakPricingRules} apply (different price for some slots/days). */
+    peakPricingEnabled?: boolean;
+    /** Payment methods offered at checkout. Unchecked methods are not offered. */
+    paymentMethods?: CustomServicePaymentMethod[];
   };
   staffAssignment: {
     autoAssign: boolean;
     requiredRole: string;
     customRoleName?: string;
     taskGeneration: ("setup" | "execution" | "cleanup")[];
+    /**
+     * Certification/training badge required beyond role before a staff member
+     * can be assigned. "" or undefined = none; "custom" uses {@link customQualification}.
+     */
+    requiredQualification?: string;
+    customQualification?: string;
+    /**
+     * Max pets one staff member can supervise simultaneously (safety-sensitive
+     * services). Used in capacity calculations. Undefined = no limit.
+     */
+    staffToPetRatio?: number;
+    /** Per-task assignment mode; falls back to "same_as_booking". */
+    taskAssignmentModes?: {
+      setup?: CustomServiceTaskAssignmentMode;
+      execution?: CustomServiceTaskAssignmentMode;
+      cleanup?: CustomServiceTaskAssignmentMode;
+    };
   };
   yipyyGoRequired: boolean;
   yipyyGo?: {
@@ -1227,8 +1481,21 @@ export interface CustomServiceModule {
     feeding: "required" | "optional" | "disabled";
     medication: "required" | "optional" | "disabled";
     belongings: "required" | "optional" | "disabled";
+    /** 4th section — physical limits, behavioral flags, emergency protocols. */
+    safetyNotes?: "required" | "optional" | "disabled";
+    /** How prominently each section appears in the staff service view. */
+    staffDisplay?: {
+      feeding?: CareInstructionDisplay;
+      medication?: CareInstructionDisplay;
+      belongings?: CareInstructionDisplay;
+      safetyNotes?: CareInstructionDisplay;
+    };
   };
   requiresEvaluation: boolean;
+  /** Which evaluation type is required when {@link requiresEvaluation}. */
+  evaluationType?: CustomServiceEvaluationType;
+  /** Free-text label when {@link evaluationType} is "custom". */
+  customEvaluationLabel?: string;
   showInSidebar: boolean;
   sidebarPosition: number;
   dependencies: string[];
@@ -1251,18 +1518,36 @@ export interface CustomServiceModule {
     addonOnly?: boolean;
     addonFor?: string[];
     excludesWith?: string[];
+    /** Client must have been a client for at least this many days. 0 = no requirement. */
+    minClientTenureDays?: number;
   };
 
   // Capacity & resource management
   capacity?: {
     enabled: boolean;
+    /** Maximum pets per session/slot. */
     maxPerSlot?: number;
     slotDurationMinutes?: number;
+    /** Maximum sessions that can run at the same time. */
+    maxConcurrentSessions?: number;
+    /** Allow this % over capacity for walk-ins. */
+    overbookingBufferPercent?: number;
     resources?: CapacityResource[];
     waitlistEnabled: boolean;
     maxWaitlist?: number;
     autoPromote: boolean;
     notifyOnAvailability: boolean;
+  };
+
+  // Geographic service area (relevant for transport / taxi services)
+  geographicRestriction?: {
+    enabled: boolean;
+    mode: CustomServiceGeoRestrictionMode;
+    /** Radius from the facility when mode is "radius". */
+    radius?: number;
+    radiusUnit?: "mi" | "km";
+    /** Allowed postal codes / neighbourhoods when mode is "postal_codes". */
+    postalCodes?: string[];
   };
 
   // Structured setup questionnaire answers that drive behavior across calendar,
@@ -1271,6 +1556,10 @@ export interface CustomServiceModule {
 
   status: CustomServiceStatus;
   disableReason?: string;
+  /** ISO datetime when a scheduled publish goes live (status stays draft until then). */
+  scheduledPublishAt?: string;
+  /** Email the facility admin when this module is published. Defaults to true. */
+  notifyFacilityAdminOnPublish?: boolean;
   createdAt: string;
   updatedAt: string;
 }

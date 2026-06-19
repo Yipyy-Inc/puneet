@@ -7,8 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { CustomServiceModule, PricingModelType } from "@/types/facility";
+import { taxRates } from "@/data/settings";
 import { cn } from "@/lib/utils";
+import { PricingBillingOptions } from "./PricingBillingOptions";
+
+const DEFAULT_TAX_RATE =
+  taxRates.find((t) => t.isDefault) ?? taxRates[0] ?? null;
 
 const PRICING_MODELS: {
   value: PricingModelType;
@@ -61,6 +73,9 @@ interface PricingStepProps {
 
 export function PricingStep({ data, onChange }: PricingStepProps) {
   const pricing = data.pricing;
+
+  // The Dynamic model inherently uses peak rules; other models opt in via toggle.
+  const peakEnabled = pricing.peakPricingEnabled || pricing.model === "dynamic";
 
   const updatePricing = useCallback(
     (updates: Partial<typeof pricing>) => {
@@ -146,7 +161,13 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
               type="button"
               role="radio"
               aria-checked={pricing.model === model.value}
-              onClick={() => updatePricing({ model: model.value })}
+              onClick={() =>
+                updatePricing(
+                  model.value === "dynamic"
+                    ? { model: "dynamic", peakPricingEnabled: true }
+                    : { model: model.value },
+                )
+              }
               className={cn(
                 `flex items-start gap-3 rounded-xl border-2 p-3 text-left transition-all`,
                 pricing.model === model.value
@@ -271,62 +292,94 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
         </div>
       )}
 
-      {/* Dynamic Peak Rules */}
-      {pricing.model === "dynamic" && (
-        <div className="space-y-2">
-          <Label className="text-sm font-semibold">Peak Pricing Rules</Label>
-          <p className="text-muted-foreground text-xs">
-            Adjustments applied on top of the base price for specific periods.
-          </p>
-          {(pricing.peakPricingRules ?? []).map((rule) => (
-            <div key={rule.id} className="flex items-center gap-2">
-              <Input
-                value={rule.name}
-                onChange={(e) => {
-                  const updated = (pricing.peakPricingRules ?? []).map((r) =>
-                    r.id === rule.id ? { ...r, name: e.target.value } : r,
-                  );
-                  updatePricing({ peakPricingRules: updated });
-                }}
-                className="flex-1"
-                placeholder="Rule name (e.g. Weekend)"
-              />
-              <Input
-                type="number"
-                value={rule.adjustment}
-                onChange={(e) => {
-                  const updated = (pricing.peakPricingRules ?? []).map((r) =>
-                    r.id === rule.id
-                      ? { ...r, adjustment: parseFloat(e.target.value) || 0 }
-                      : r,
-                  );
-                  updatePricing({ peakPricingRules: updated });
-                }}
-                className="w-20"
-                placeholder="10"
-              />
-              <span className="text-muted-foreground shrink-0 text-xs">%</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => removePeakRule(rule.id)}
-              >
-                <Trash2 className="text-destructive size-3.5" />
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addPeakRule}
-          >
-            <Plus className="size-3.5" />
-            Add Rule
-          </Button>
+      <Separator />
+
+      {/* Peak / Off-Peak Pricing */}
+      <div className="space-y-3">
+        <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
+          <div className="space-y-0.5">
+            <Label
+              htmlFor="peak-pricing"
+              className="cursor-pointer text-sm font-medium"
+            >
+              Peak / Off-Peak Pricing
+            </Label>
+            <p className="text-muted-foreground text-xs">
+              Set a different price for specific time slots or days (e.g. a
+              weekend surcharge).
+              {pricing.model === "dynamic" &&
+                " Always on for the Dynamic model."}
+            </p>
+          </div>
+          <Switch
+            id="peak-pricing"
+            checked={peakEnabled}
+            disabled={pricing.model === "dynamic"}
+            onCheckedChange={(peakPricingEnabled) =>
+              updatePricing({ peakPricingEnabled })
+            }
+          />
         </div>
-      )}
+
+        {peakEnabled && (
+          <div className="space-y-2">
+            {(pricing.peakPricingRules ?? []).map((rule) => (
+              <div key={rule.id} className="flex items-center gap-2">
+                <Input
+                  value={rule.name}
+                  onChange={(e) => {
+                    const updated = (pricing.peakPricingRules ?? []).map((r) =>
+                      r.id === rule.id ? { ...r, name: e.target.value } : r,
+                    );
+                    updatePricing({ peakPricingRules: updated });
+                  }}
+                  className="flex-1"
+                  placeholder="Rule name (e.g. Weekend)"
+                />
+                <Input
+                  type="number"
+                  value={rule.adjustment}
+                  onChange={(e) => {
+                    const updated = (pricing.peakPricingRules ?? []).map((r) =>
+                      r.id === rule.id
+                        ? { ...r, adjustment: parseFloat(e.target.value) || 0 }
+                        : r,
+                    );
+                    updatePricing({ peakPricingRules: updated });
+                  }}
+                  className="w-20"
+                  placeholder="10"
+                />
+                <span className="text-muted-foreground shrink-0 text-xs">
+                  %
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => removePeakRule(rule.id)}
+                >
+                  <Trash2 className="text-destructive size-3.5" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addPeakRule}
+            >
+              <Plus className="size-3.5" />
+              Add Rule
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <Separator />
+
+      {/* Billing trigger, packages, payment methods */}
+      <PricingBillingOptions pricing={pricing} onChange={updatePricing} />
 
       <Separator />
 
@@ -334,23 +387,52 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
       <div className="space-y-3">
         <Label className="text-sm font-semibold">Tax & Billing Options</Label>
         <div className="space-y-3">
-          <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
-            <div className="space-y-0.5">
-              <Label
-                htmlFor="taxable"
-                className="cursor-pointer text-sm font-medium"
-              >
-                Taxable
-              </Label>
-              <p className="text-muted-foreground text-xs">
-                Sales tax is applied to this service.
-              </p>
+          <div className="border-border bg-card space-y-3 rounded-xl border p-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label
+                  htmlFor="taxable"
+                  className="cursor-pointer text-sm font-medium"
+                >
+                  Taxable
+                </Label>
+                <p className="text-muted-foreground text-xs">
+                  Sales tax is applied to this service.
+                </p>
+              </div>
+              <Switch
+                id="taxable"
+                checked={pricing.taxable}
+                onCheckedChange={(taxable) => updatePricing({ taxable })}
+              />
             </div>
-            <Switch
-              id="taxable"
-              checked={pricing.taxable}
-              onCheckedChange={(taxable) => updatePricing({ taxable })}
-            />
+
+            {pricing.taxable && (
+              <div className="space-y-1.5">
+                <Label htmlFor="tax-rate" className="text-xs font-medium">
+                  Tax Rate
+                </Label>
+                <Select
+                  value={pricing.taxRateId ?? DEFAULT_TAX_RATE?.id ?? ""}
+                  onValueChange={(taxRateId) => updatePricing({ taxRateId })}
+                >
+                  <SelectTrigger id="tax-rate" className="w-full sm:w-72">
+                    <SelectValue placeholder="Select a tax rate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {taxRates.map((rate) => (
+                      <SelectItem key={rate.id} value={rate.id}>
+                        {rate.name} ({rate.rate}%)
+                        {rate.isDefault ? " · default" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-muted-foreground text-xs">
+                  Tax rates are managed in facility billing settings.
+                </p>
+              </div>
+            )}
           </div>
           <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
             <div className="space-y-0.5">

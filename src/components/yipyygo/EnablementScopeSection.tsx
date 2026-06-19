@@ -34,6 +34,7 @@ import {
   type YipyyGoRequirement,
 } from "@/data/yipyygo-config";
 import { useCustomServices } from "@/hooks/use-custom-services";
+import { isExpressCheckInEnabled } from "@/data/custom-services";
 
 interface EnablementScopeSectionProps {
   config: YipyyGoConfig;
@@ -86,9 +87,17 @@ export function EnablementScopeSection({
   };
 
   const { activeModules } = useCustomServices();
+  // Modules whose Step 9 "Require YipyyGo" (Express Check-in) toggle is on —
+  // not the StaffAssignment "YipyyGo App Required" integration flag. Scoped to
+  // this facility, matching the per-service form-template tab.
   const activeCustomModules = useMemo(
-    () => activeModules.filter((m) => m.yipyyGoRequired),
-    [activeModules],
+    () =>
+      activeModules.filter(
+        (m) =>
+          isExpressCheckInEnabled(m) &&
+          (m.facilityIds ?? [m.facilityId]).includes(config.facilityId),
+      ),
+    [activeModules, config.facilityId],
   );
 
   const standardServices: ServiceType[] = [
@@ -115,7 +124,11 @@ export function EnablementScopeSection({
       serviceType: "custom" as ServiceType,
       customServiceName: m.name,
       enabled: true,
-      requirement: "optional" as YipyyGoRequirement,
+      // Reflect the module's own completion setting (Step 9), with the same
+      // legacy fallback isExpressCheckInEnabled uses.
+      requirement: ((m.yipyyGo?.required ?? m.yipyyGoRequired)
+        ? "mandatory"
+        : "optional") as YipyyGoRequirement,
     }));
     onConfigChange({
       serviceConfigs: [...config.serviceConfigs, ...newConfigs],

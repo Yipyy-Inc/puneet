@@ -3,9 +3,32 @@
 import { Bed, Info } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import type { CustomServiceModule } from "@/types/facility";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type {
+  CustomServiceModule,
+  CustomServiceRoomSpaceType,
+} from "@/types/facility";
 import { getCategoryMeta } from "@/data/custom-services";
 import { cn } from "@/lib/utils";
+
+const ROOM_SPACE_TYPE_OPTIONS: {
+  value: CustomServiceRoomSpaceType;
+  label: string;
+}[] = [
+  { value: "kennel", label: "Kennel" },
+  { value: "suite", label: "Suite" },
+  { value: "pool_lane", label: "Pool Lane" },
+  { value: "treatment_room", label: "Treatment Room" },
+  { value: "custom", label: "Custom" },
+];
 
 interface StayBasedStepProps {
   data: CustomServiceModule;
@@ -14,6 +37,14 @@ interface StayBasedStepProps {
 
 export function StayBasedStep({ data, onChange }: StayBasedStepProps) {
   const sb = data.stayBased;
+
+  const roomSpaceType = sb.roomSpaceType ?? "kennel";
+  const customRoomSpaceLabel = sb.customRoomSpaceLabel ?? "";
+  const earlyLateAccess = sb.earlyLateAccess ?? {
+    earlyCheckIn: false,
+    lateCheckOut: false,
+  };
+  const capacityPerSpace = sb.capacityPerSpace ?? 1;
 
   const updateSb = (updates: Partial<typeof sb>) => {
     onChange({ stayBased: { ...sb, ...updates } });
@@ -143,6 +174,173 @@ export function StayBasedStep({ data, onChange }: StayBasedStepProps) {
             </span>
           </div>
         )}
+
+        <Separator />
+
+        {/* Room / Space Type */}
+        <div className="space-y-3">
+          <div>
+            <Label className="text-sm font-semibold">Room / Space Type</Label>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              What kind of space this service uses. Determines how it appears on
+              the visual space-management views.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Select
+              value={roomSpaceType}
+              onValueChange={(v) =>
+                updateSb({ roomSpaceType: v as CustomServiceRoomSpaceType })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROOM_SPACE_TYPE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {roomSpaceType === "custom" && (
+              <Input
+                value={customRoomSpaceLabel}
+                onChange={(e) =>
+                  updateSb({ customRoomSpaceLabel: e.target.value })
+                }
+                placeholder="Name this space type (e.g. Cat Condo)"
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Capacity per Space */}
+        <div className="space-y-1.5">
+          <Label htmlFor="capacity-per-space" className="text-sm font-semibold">
+            Capacity per Space
+          </Label>
+          <Input
+            id="capacity-per-space"
+            type="number"
+            min={1}
+            value={capacityPerSpace}
+            onChange={(e) =>
+              updateSb({ capacityPerSpace: parseInt(e.target.value) || 1 })
+            }
+            className="sm:w-40"
+          />
+          <p className="text-muted-foreground text-xs">
+            How many pets can occupy one space at the same time (e.g. a pool
+            lane could hold 3 dogs for a group session).
+          </p>
+        </div>
+
+        <Separator />
+
+        {/* Early Check-In / Late Check-Out */}
+        <div className="space-y-3">
+          <div>
+            <Label className="text-sm font-semibold">
+              Early Check-In / Late Check-Out
+            </Label>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              Let clients request early drop-off or late pickup. Add-on pricing
+              can be set here or in the Pricing step.
+            </p>
+          </div>
+
+          <div className="border-border bg-card flex items-center justify-between gap-4 rounded-xl border p-4">
+            <Label
+              htmlFor="early-checkin"
+              className="cursor-pointer text-sm font-medium"
+            >
+              Allow Early Check-In
+            </Label>
+            <div className="flex items-center gap-3">
+              {earlyLateAccess.earlyCheckIn && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted-foreground text-xs">Fee $</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={earlyLateAccess.earlyCheckInFee ?? ""}
+                    onChange={(e) => {
+                      const n = parseFloat(e.target.value);
+                      updateSb({
+                        earlyLateAccess: {
+                          ...earlyLateAccess,
+                          earlyCheckInFee:
+                            e.target.value === "" || Number.isNaN(n)
+                              ? undefined
+                              : n,
+                        },
+                      });
+                    }}
+                    placeholder="0"
+                    className="w-24"
+                  />
+                </div>
+              )}
+              <Switch
+                id="early-checkin"
+                checked={earlyLateAccess.earlyCheckIn}
+                onCheckedChange={(earlyCheckIn) =>
+                  updateSb({
+                    earlyLateAccess: { ...earlyLateAccess, earlyCheckIn },
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="border-border bg-card flex items-center justify-between gap-4 rounded-xl border p-4">
+            <Label
+              htmlFor="late-checkout"
+              className="cursor-pointer text-sm font-medium"
+            >
+              Allow Late Check-Out
+            </Label>
+            <div className="flex items-center gap-3">
+              {earlyLateAccess.lateCheckOut && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted-foreground text-xs">Fee $</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={earlyLateAccess.lateCheckOutFee ?? ""}
+                    onChange={(e) => {
+                      const n = parseFloat(e.target.value);
+                      updateSb({
+                        earlyLateAccess: {
+                          ...earlyLateAccess,
+                          lateCheckOutFee:
+                            e.target.value === "" || Number.isNaN(n)
+                              ? undefined
+                              : n,
+                        },
+                      });
+                    }}
+                    placeholder="0"
+                    className="w-24"
+                  />
+                </div>
+              )}
+              <Switch
+                id="late-checkout"
+                checked={earlyLateAccess.lateCheckOut}
+                onCheckedChange={(lateCheckOut) =>
+                  updateSb({
+                    earlyLateAccess: { ...earlyLateAccess, lateCheckOut },
+                  })
+                }
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Category hint */}

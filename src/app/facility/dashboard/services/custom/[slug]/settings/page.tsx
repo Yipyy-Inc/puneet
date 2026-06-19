@@ -1,7 +1,6 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -10,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
@@ -20,7 +18,6 @@ import {
   PRICING_MODEL_LABELS,
 } from "@/data/custom-services";
 import {
-  Edit,
   Info,
   Calendar,
   DollarSign,
@@ -29,7 +26,9 @@ import {
   CheckCircle2,
   XCircle,
   UserCheck,
+  Lock,
 } from "lucide-react";
+import { FacilitySettingsEditor } from "./_components/FacilitySettingsEditor";
 
 function StatusRow({ label, enabled }: { label: string; enabled: boolean }) {
   return (
@@ -52,6 +51,18 @@ function StatusRow({ label, enabled }: { label: string; enabled: boolean }) {
   );
 }
 
+function LockedBadge() {
+  return (
+    <Badge
+      variant="outline"
+      className="text-muted-foreground shrink-0 gap-1 text-xs"
+    >
+      <Lock className="size-3" />
+      Locked
+    </Badge>
+  );
+}
+
 export default function CustomServiceSettingsPage() {
   const params = useParams();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
@@ -59,28 +70,24 @@ export default function CustomServiceSettingsPage() {
   const serviceModule = getModuleBySlug(slug ?? "");
 
   if (!serviceModule) return null;
-  const editHref = `/facility/dashboard/services/custom/${serviceModule.slug}/edit`;
 
   const categoryMeta = getCategoryMeta(serviceModule.category);
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Settings</h2>
-          <p className="text-muted-foreground text-sm">
-            Configuration for {serviceModule.name}
-          </p>
-        </div>
-        <Link href={editHref}>
-          <Button className="gap-2">
-            <Edit className="size-4" />
-            Edit in Wizard
-          </Button>
-        </Link>
+      <div>
+        <h2 className="text-xl font-semibold">Settings</h2>
+        <p className="text-muted-foreground text-sm">
+          How {serviceModule.name} was configured by Yipyy. Most settings are
+          locked — you can edit a few fields below or request a change.
+        </p>
       </div>
 
+      {/* Facility-editable fields */}
+      <FacilitySettingsEditor module={serviceModule} />
+
+      {/* Read-only, superadmin-locked configuration */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Basic Info */}
         <Card>
@@ -95,12 +102,7 @@ export default function CustomServiceSettingsPage() {
                   Identity and classification of this service
                 </CardDescription>
               </div>
-              <Link href={editHref}>
-                <Button variant="outline" size="sm">
-                  <Edit className="mr-1.5 size-3.5" />
-                  Edit
-                </Button>
-              </Link>
+              <LockedBadge />
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -151,27 +153,13 @@ export default function CustomServiceSettingsPage() {
                   {serviceModule.status}
                 </Badge>
               </div>
-              <div className="flex items-start justify-between">
-                <span className="text-muted-foreground shrink-0">
-                  Description
-                </span>
-                <span className="ml-4 line-clamp-2 text-right font-medium">
-                  {serviceModule.description || "—"}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Sidebar Label</span>
+                <span className="font-medium">
+                  {serviceModule.sidebarLabel?.trim() || serviceModule.name}
                 </span>
               </div>
             </div>
-
-            {serviceModule.internalNotes && (
-              <>
-                <Separator />
-                <div>
-                  <p className="text-muted-foreground mb-1 text-xs font-medium tracking-wide uppercase">
-                    Internal Notes
-                  </p>
-                  <p className="text-sm">{serviceModule.internalNotes}</p>
-                </div>
-              </>
-            )}
           </CardContent>
         </Card>
 
@@ -186,12 +174,7 @@ export default function CustomServiceSettingsPage() {
                 </CardTitle>
                 <CardDescription>Pricing model and base rate</CardDescription>
               </div>
-              <Link href={editHref}>
-                <Button variant="outline" size="sm">
-                  <Edit className="mr-1.5 size-3.5" />
-                  Edit
-                </Button>
-              </Link>
+              <LockedBadge />
             </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
@@ -241,12 +224,7 @@ export default function CustomServiceSettingsPage() {
                   Calendar, check-in, and booking settings
                 </CardDescription>
               </div>
-              <Link href={editHref}>
-                <Button variant="outline" size="sm">
-                  <Edit className="mr-1.5 size-3.5" />
-                  Edit
-                </Button>
-              </Link>
+              <LockedBadge />
             </div>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
@@ -382,12 +360,7 @@ export default function CustomServiceSettingsPage() {
                   Staff assignment and task generation settings
                 </CardDescription>
               </div>
-              <Link href={editHref}>
-                <Button variant="outline" size="sm">
-                  <Edit className="mr-1.5 size-3.5" />
-                  Edit
-                </Button>
-              </Link>
+              <LockedBadge />
             </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
@@ -440,7 +413,7 @@ export default function CustomServiceSettingsPage() {
 
       {/* Metadata Footer */}
       <Card className="bg-muted/30">
-        <CardContent className="pt-4 pb-4">
+        <CardContent className="py-4">
           <div className="text-muted-foreground flex flex-wrap gap-6 text-xs">
             <span>
               <strong>ID:</strong> {serviceModule.id}

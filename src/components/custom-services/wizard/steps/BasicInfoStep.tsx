@@ -4,18 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Building } from "lucide-react";
 import { IconPicker } from "../IconPicker";
 import { CategorySelector } from "../CategorySelector";
+import { FacilityMultiSelect } from "../FacilityMultiSelect";
+import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { generateSlug } from "@/lib/service-registry";
-import { facilities } from "@/data/facilities";
+import { getCategoryMeta } from "@/data/custom-services";
+import { cn } from "@/lib/utils";
 import type {
   CustomServiceModule,
   CustomServiceCategory,
@@ -41,6 +37,16 @@ export function BasicInfoStep({
 
   const handleSlugChange = (slug: string) => {
     onChange({ slug: generateSlug(slug) });
+  };
+
+  const selectedMeta = getCategoryMeta(data.category);
+
+  // Live preview of the sidebar entry: custom label falls back to full name.
+  const sidebarPreviewLabel = data.sidebarLabel?.trim() || data.name;
+
+  // Keep facilityId (primary) in sync with the first selected facility.
+  const handleFacilitiesChange = (facilityIds: number[]) => {
+    onChange({ facilityIds, facilityId: facilityIds[0] ?? 0 });
   };
 
   const handleCategoryChange = (category: CustomServiceCategory) => {
@@ -82,26 +88,16 @@ export function BasicInfoStep({
         <div className="space-y-2">
           <Label className="text-sm font-semibold">
             <Building className="mr-1.5 inline size-4" />
-            Assign to Facility <span className="text-destructive">*</span>
+            Assign to Facilities <span className="text-destructive">*</span>
           </Label>
           <p className="text-muted-foreground text-xs">
-            Select which facility this custom module will be available to.
+            Select one or more facilities this custom module will be available
+            to. Modules like Pet Taxi can apply to several facilities at once.
           </p>
-          <Select
-            value={String(data.facilityId)}
-            onValueChange={(v) => onChange({ facilityId: parseInt(v) })}
-          >
-            <SelectTrigger className="w-full sm:w-[320px]">
-              <SelectValue placeholder="Select a facility" />
-            </SelectTrigger>
-            <SelectContent>
-              {facilities.map((f) => (
-                <SelectItem key={f.id} value={String(f.id)}>
-                  {f.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FacilityMultiSelect
+            value={data.facilityIds ?? [data.facilityId]}
+            onChange={handleFacilitiesChange}
+          />
         </div>
       )}
 
@@ -118,6 +114,39 @@ export function BasicInfoStep({
           selected={data.category}
           onChange={handleCategoryChange}
         />
+
+        {/* Module Type indicator — auto-set from the selected category */}
+        {selectedMeta && (
+          <div
+            className={cn(
+              "flex items-start gap-3 rounded-lg border p-3",
+              selectedMeta.tintClass,
+              "border-border/60",
+            )}
+          >
+            <div
+              className={cn(
+                "flex size-8 shrink-0 items-center justify-center rounded-md",
+                selectedMeta.iconContainerClass,
+              )}
+            >
+              <DynamicIcon name={selectedMeta.icon} className="size-4" />
+            </div>
+            <div className="space-y-0.5">
+              <p className="flex items-center gap-1.5 text-sm font-semibold">
+                <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Module Type
+                </span>
+                <span className={selectedMeta.textClass}>
+                  {selectedMeta.name}
+                </span>
+              </p>
+              <p className="text-muted-foreground text-xs/snug">
+                {selectedMeta.practiceExplanation}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <Separator />
@@ -155,6 +184,29 @@ export function BasicInfoStep({
           <p className="text-muted-foreground text-xs">
             Auto-generated. Only lowercase letters, numbers, hyphens.
           </p>
+        </div>
+      </div>
+
+      {/* Preview (sidebar) name */}
+      <div className="space-y-1.5">
+        <Label htmlFor="service-sidebar-label">Preview Name</Label>
+        <Input
+          id="service-sidebar-label"
+          placeholder={data.name || "e.g. Pool Sessions"}
+          value={data.sidebarLabel ?? ""}
+          onChange={(e) => onChange({ sidebarLabel: e.target.value })}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-muted-foreground text-xs">
+            How this module appears in the facility sidebar navigation. Leave
+            empty to use the full service name.
+          </p>
+          {sidebarPreviewLabel && (
+            <span className="border-border bg-muted/40 text-foreground inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium">
+              <DynamicIcon name={data.icon} className="size-3.5" />
+              {sidebarPreviewLabel}
+            </span>
+          )}
         </div>
       </div>
 

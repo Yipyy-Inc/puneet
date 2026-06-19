@@ -34,9 +34,14 @@ import { useHydrated } from "@/hooks/use-hydrated";
 export interface MenuItem {
   title: string;
   url: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{
+    className?: string;
+    style?: React.CSSProperties;
+  }>;
   disabled?: boolean;
   count?: number;
+  /** Optional brand color (CSS color) applied to the icon when not active. */
+  iconColor?: string;
 }
 
 export interface MenuSection {
@@ -252,6 +257,11 @@ export function GenericSidebar({
                                       "size-4 shrink-0 transition-colors",
                                       isActive && "text-muted-foreground",
                                     )}
+                                    style={
+                                      !isActive && item.iconColor
+                                        ? { color: item.iconColor }
+                                        : undefined
+                                    }
                                   />
                                   {item.count && item.count > 0 && (
                                     <div className="absolute -top-1 -left-1 size-2 rounded-full bg-red-500" />
@@ -350,6 +360,11 @@ export function GenericSidebar({
                                         "size-4 shrink-0 transition-colors",
                                         isActive && "text-muted-foreground",
                                       )}
+                                      style={
+                                        !isActive && item.iconColor
+                                          ? { color: item.iconColor }
+                                          : undefined
+                                      }
                                     />
                                     {isExpanded && (
                                       <>
@@ -425,6 +440,11 @@ export function GenericSidebar({
                                     "size-4 shrink-0 transition-colors",
                                     isActive && "text-muted-foreground",
                                   )}
+                                  style={
+                                    !isActive && item.iconColor
+                                      ? { color: item.iconColor }
+                                      : undefined
+                                  }
                                 />
                                 <span className="flex-1 truncate">
                                   {itemLabel}
