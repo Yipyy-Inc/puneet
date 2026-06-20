@@ -60,14 +60,21 @@ export function MessagingAnalyticsCharts({
         </CardHeader>
         <CardContent className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={hourlySeries} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+            <AreaChart
+              data={hourlySeries}
+              margin={{ top: 8, right: 12, left: -16, bottom: 0 }}
+            >
               <defs>
                 <linearGradient id="msgGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.45} />
                   <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#e2e8f0"
+                vertical={false}
+              />
               <XAxis
                 dataKey="hour"
                 stroke="#94a3b8"
@@ -76,7 +83,12 @@ export function MessagingAnalyticsCharts({
                 axisLine={false}
                 interval={2}
               />
-              <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis
+                stroke="#94a3b8"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+              />
               <Tooltip
                 contentStyle={{
                   borderRadius: 12,
@@ -121,7 +133,9 @@ export function MessagingAnalyticsCharts({
                   iconType="circle"
                   wrapperStyle={{ fontSize: 12 }}
                   formatter={(value, entry) => {
-                    const p = entry?.payload as unknown as ChannelPoint | undefined;
+                    const p = entry?.payload as unknown as
+                      | ChannelPoint
+                      | undefined;
                     return p ? `${value} · ${p.pct}%` : value;
                   }}
                 />
@@ -153,8 +167,18 @@ export function MessagingAnalyticsCharts({
                 layout="vertical"
                 margin={{ top: 4, right: 12, left: 16, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                <XAxis type="number" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#e2e8f0"
+                  horizontal={false}
+                />
+                <XAxis
+                  type="number"
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                />
                 <YAxis
                   dataKey="name"
                   type="category"
@@ -192,10 +216,28 @@ export function MessagingAnalyticsCharts({
         </CardHeader>
         <CardContent className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={staffSeries} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-              <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
+            <BarChart
+              data={staffSeries}
+              margin={{ top: 8, right: 12, left: -16, bottom: 0 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#e2e8f0"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="name"
+                stroke="#94a3b8"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                stroke="#94a3b8"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+              />
               <Tooltip
                 contentStyle={{
                   borderRadius: 12,
@@ -204,8 +246,18 @@ export function MessagingAnalyticsCharts({
                 }}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="replied" name="Replied" fill="#3b82f6" radius={[6, 6, 0, 0]} />
-              <Bar dataKey="resolved" name="Resolved" fill="#10b981" radius={[6, 6, 0, 0]} />
+              <Bar
+                dataKey="replied"
+                name="Replied"
+                fill="#3b82f6"
+                radius={[6, 6, 0, 0]}
+              />
+              <Bar
+                dataKey="resolved"
+                name="Resolved"
+                fill="#10b981"
+                radius={[6, 6, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

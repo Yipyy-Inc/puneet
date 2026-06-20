@@ -25,16 +25,10 @@ function formatShortDate(iso: string): string {
   });
 }
 
-function FieldRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
+function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-baseline gap-2 border-b border-gray-300 py-1">
-      <span className="w-28 shrink-0 text-[10px] uppercase tracking-wide text-gray-600">
+      <span className="w-28 shrink-0 text-[10px] tracking-wide text-gray-600 uppercase">
         {label}
       </span>
       <span className="text-[12px] text-black">{value}</span>
@@ -78,7 +72,7 @@ export function PrintableAppointmentCards({
   if (!active) return null;
 
   return (
-    <div className="hidden print:block bg-white text-black">
+    <div className="hidden bg-white text-black print:block">
       {dayAppointments.map((apt, idx) => (
         <AppointmentCard
           key={apt.id}
@@ -91,7 +85,7 @@ export function PrintableAppointmentCards({
         />
       ))}
       {dayAppointments.length === 0 && (
-        <p className="text-sm italic text-gray-600">
+        <p className="text-sm text-gray-600 italic">
           No appointments scheduled for {formatDateLong(date)}.
         </p>
       )}
@@ -163,11 +157,12 @@ function AppointmentCard({
       (v) => v.petId === appointment.petId,
     );
     const now = Date.now();
-    const status = recs.length === 0
-      ? "Unknown"
-      : recs.every((v) => new Date(v.expiryDate).getTime() > now)
-        ? "Up to date"
-        : "Expired";
+    const status =
+      recs.length === 0
+        ? "Unknown"
+        : recs.every((v) => new Date(v.expiryDate).getTime() > now)
+          ? "Up to date"
+          : "Expired";
     return { recs, status };
   }, [appointment.petId]);
 
@@ -178,11 +173,7 @@ function AppointmentCard({
   return (
     <article
       className="mx-auto flex max-w-[7.5in] flex-col gap-3 p-6"
-      style={
-        forcePageBreak
-          ? { pageBreakAfter: "always" }
-          : undefined
-      }
+      style={forcePageBreak ? { pageBreakAfter: "always" } : undefined}
     >
       {/* Header */}
       <header className="flex items-start justify-between gap-4 border-b-2 border-black pb-2">
@@ -201,7 +192,7 @@ function AppointmentCard({
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-bold leading-tight">
+            <h1 className="text-2xl leading-tight font-bold">
               {appointment.petName}
               <span className="ml-2 text-base font-normal text-gray-600">
                 {appointment.petBreed}
@@ -209,7 +200,9 @@ function AppointmentCard({
             </h1>
             <p className="text-sm">
               {formatDateLong(appointment.date)} ·{" "}
-              <strong>{appointment.startTime}–{appointment.endTime}</strong>
+              <strong>
+                {appointment.startTime}–{appointment.endTime}
+              </strong>
             </p>
             <p className="text-xs text-gray-600">
               Groomer: <strong>{appointment.stylistName}</strong> · Service:{" "}
@@ -229,7 +222,7 @@ function AppointmentCard({
               includeMargin={false}
             />
           )}
-          <span className="text-[9px] uppercase tracking-wide text-gray-500">
+          <span className="text-[9px] tracking-wide text-gray-500 uppercase">
             Scan → pet profile
           </span>
         </div>
@@ -238,7 +231,7 @@ function AppointmentCard({
       {/* Critical alerts — top of card, bordered for legibility */}
       {effectiveAlerts.length > 0 && (
         <section className="rounded-md border-2 border-black bg-gray-100 px-3 py-2">
-          <p className="mb-1 text-[10px] font-bold uppercase tracking-wider">
+          <p className="mb-1 text-[10px] font-bold tracking-wider uppercase">
             ⚠ Alerts · {effectiveAlerts.length}
           </p>
           <ul className="space-y-0.5 text-[12px]">
@@ -260,7 +253,7 @@ function AppointmentCard({
       <div className="grid grid-cols-2 gap-x-6">
         {/* Pet column */}
         <div>
-          <h2 className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-700">
+          <h2 className="mb-1 text-[10px] font-bold tracking-wider text-gray-700 uppercase">
             Pet
           </h2>
           <FieldRow label="Pet code" value={`#${appointment.petId}`} />
@@ -303,7 +296,7 @@ function AppointmentCard({
 
         {/* Client column */}
         <div>
-          <h2 className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-700">
+          <h2 className="mb-1 text-[10px] font-bold tracking-wider text-gray-700 uppercase">
             Client
           </h2>
           <FieldRow label="Name" value={appointment.ownerName} />
@@ -357,7 +350,7 @@ function AppointmentCard({
       <section className="rounded-md border border-black px-3 py-2">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-700">
+            <p className="text-[10px] font-bold tracking-wider text-gray-700 uppercase">
               Service
             </p>
             <p className="text-sm font-semibold">
@@ -371,7 +364,7 @@ function AppointmentCard({
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-wide text-gray-600">
+            <p className="text-[10px] tracking-wide text-gray-600 uppercase">
               Total
             </p>
             <p className="text-lg font-bold tabular-nums">
@@ -392,7 +385,7 @@ function AppointmentCard({
       {/* Pet notes */}
       {petProfileNotes.length > 0 && (
         <section>
-          <h2 className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-700">
+          <h2 className="mb-1 text-[10px] font-bold tracking-wider text-gray-700 uppercase">
             Pet notes
           </h2>
           <ul className="space-y-0.5 text-[11px]">
@@ -409,7 +402,7 @@ function AppointmentCard({
       {/* Client notes */}
       {clientProfileNotes.length > 0 && (
         <section>
-          <h2 className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-700">
+          <h2 className="mb-1 text-[10px] font-bold tracking-wider text-gray-700 uppercase">
             Client notes
           </h2>
           <ul className="space-y-0.5 text-[11px]">
@@ -423,7 +416,7 @@ function AppointmentCard({
       {/* Ticket comments */}
       {(appointment.ticketComments?.length ?? 0) > 0 && (
         <section>
-          <h2 className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-700">
+          <h2 className="mb-1 text-[10px] font-bold tracking-wider text-gray-700 uppercase">
             Ticket comments
           </h2>
           <ul className="space-y-0.5 text-[11px]">

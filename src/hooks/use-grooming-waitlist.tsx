@@ -128,7 +128,11 @@ function dateMatchesExpectedDate(
   return pref.daysOfWeek.includes(dow);
 }
 
-export function GroomingWaitlistProvider({ children }: { children: ReactNode }) {
+export function GroomingWaitlistProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [state, setState] = useState<State>(emptyState);
   const [hydrated, setHydrated] = useState(false);
 
@@ -166,7 +170,10 @@ export function GroomingWaitlistProvider({ children }: { children: ReactNode }) 
     (entry: GroomingWaitlistEntry) => {
       persist({
         ...state,
-        added: [...state.added, { ...entry, status: entry.status ?? "waiting" }],
+        added: [
+          ...state.added,
+          { ...entry, status: entry.status ?? "waiting" },
+        ],
       });
     },
     [state, persist],

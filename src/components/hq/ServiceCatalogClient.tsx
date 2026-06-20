@@ -16,7 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { Location } from "@/types/location";
@@ -128,7 +134,9 @@ export function ServiceCatalogClient({
             <TabsTrigger
               key={loc.id}
               value={loc.id}
-              style={{ borderColor: activeTab === loc.id ? loc.color : undefined }}
+              style={{
+                borderColor: activeTab === loc.id ? loc.color : undefined,
+              }}
             >
               <span
                 className="mr-1.5 size-2 rounded-full"
@@ -169,7 +177,7 @@ export function ServiceCatalogClient({
         {/* Per-location tabs */}
         {locations.map((loc) => (
           <TabsContent key={loc.id} value={loc.id} className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-3 text-xs">
+            <div className="bg-muted/30 flex flex-wrap items-center gap-2 rounded-lg border p-3 text-xs">
               <span
                 className="size-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: loc.color }}
@@ -209,7 +217,10 @@ export function ServiceCatalogClient({
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <p className="text-sm font-semibold">{s.name}</p>
-                        <Badge variant="outline" className="text-[10px] capitalize">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] capitalize"
+                        >
                           {CATEGORY_LABELS[s.category]}
                         </Badge>
                         {resolved.isUsingOverride && (
@@ -225,7 +236,7 @@ export function ServiceCatalogClient({
                         {s.description}
                       </p>
                       {override?.notes && (
-                        <p className="text-amber-700 dark:text-amber-300 mt-1 text-[11px] italic">
+                        <p className="mt-1 text-[11px] text-amber-700 italic dark:text-amber-300">
                           Note: {override.notes}
                         </p>
                       )}
@@ -241,7 +252,7 @@ export function ServiceCatalogClient({
                       </p>
                       {resolved.isUsingOverride &&
                         resolved.effectivePrice !== s.defaultPrice && (
-                          <p className="text-muted-foreground line-through text-[10px]">
+                          <p className="text-muted-foreground text-[10px] line-through">
                             ${s.defaultPrice} master
                           </p>
                         )}
@@ -322,7 +333,7 @@ function MasterServiceCard({
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
               {service.name}
-              <Badge variant="outline" className="capitalize text-[10px]">
+              <Badge variant="outline" className="text-[10px] capitalize">
                 {CATEGORY_LABELS[service.category]}
               </Badge>
               {!service.isActive && (
@@ -353,17 +364,21 @@ function MasterServiceCard({
             return (
               <div
                 key={loc.id}
-                className="flex items-center justify-between rounded-md border bg-muted/20 px-2.5 py-1.5"
+                className="bg-muted/20 flex items-center justify-between rounded-md border px-2.5 py-1.5"
                 style={{ borderLeft: `3px solid ${loc.color}` }}
               >
                 <div>
-                  <p className="text-[10px] font-semibold" style={{ color: loc.color }}>
+                  <p
+                    className="text-[10px] font-semibold"
+                    style={{ color: loc.color }}
+                  >
                     {loc.shortCode}
                   </p>
                   <p
                     className={cn(
                       "text-xs font-bold tabular-nums",
-                      !resolved.isActiveAtLocation && "text-muted-foreground line-through",
+                      !resolved.isActiveAtLocation &&
+                        "text-muted-foreground line-through",
                     )}
                   >
                     ${resolved.effectivePrice}
@@ -372,7 +387,7 @@ function MasterServiceCard({
                 {resolved.isActiveAtLocation ? (
                   <CheckCircle2 className="size-3.5 text-emerald-600" />
                 ) : (
-                  <XCircle className="size-3.5 text-muted-foreground" />
+                  <XCircle className="text-muted-foreground size-3.5" />
                 )}
               </div>
             );
@@ -435,7 +450,7 @@ function OverrideEditor({
       </DialogHeader>
 
       <div className="space-y-4 py-2">
-        <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
+        <div className="bg-muted/30 flex items-center justify-between rounded-lg border p-3">
           <div>
             <Label>Active at this location</Label>
             <p className="text-muted-foreground text-xs">

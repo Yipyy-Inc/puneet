@@ -52,9 +52,7 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
   // that service and skip the Service step so they don't have to re-pick the
   // module they're already working in.
   const sectionService = useMemo(() => {
-    const match = pathname?.match(
-      /^\/facility\/dashboard\/services\/([^/]+)/,
-    );
+    const match = pathname?.match(/^\/facility\/dashboard\/services\/([^/]+)/);
     const slug = match?.[1];
     return slug ? SERVICE_SECTION_SLUGS[slug] : undefined;
   }, [pathname]);

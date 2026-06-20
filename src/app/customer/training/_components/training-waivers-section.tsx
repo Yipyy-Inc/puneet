@@ -73,7 +73,7 @@ function WaiverRow({
   return (
     <li
       className={cn(
-        "rounded-lg border bg-card px-3 py-2.5 transition-colors",
+        "bg-card rounded-lg border px-3 py-2.5 transition-colors",
         checked && "border-emerald-200 bg-emerald-50/30",
       )}
     >

@@ -678,7 +678,7 @@ function EvaluationAddOnsSubStep({
                 className={cn(
                   "group flex flex-col overflow-hidden rounded-2xl border-2 transition-all duration-200",
                   isAdded
-                    ? "border-transparent bg-primary/5 shadow-md"
+                    ? "bg-primary/5 border-transparent shadow-md"
                     : "border-border hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-lg",
                 )}
               >

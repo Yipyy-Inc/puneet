@@ -87,7 +87,9 @@ export default function FacilityStaffPage() {
     "all",
   );
   const [locationFilter, setLocationFilter] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState<"active" | "on_leave" | "former">("active");
+  const [activeTab, setActiveTab] = useState<"active" | "on_leave" | "former">(
+    "active",
+  );
   const [view, setView] = useState<"grid" | "list">("grid");
 
   const [viewing, setViewing] = useState<StaffProfile | null>(null);
@@ -97,12 +99,15 @@ export default function FacilityStaffPage() {
   const [transferring, setTransferring] = useState<StaffProfile | null>(null);
   const [inviteTarget, setInviteTarget] = useState<StaffProfile | null>(null);
   const [departmentsOpen, setDepartmentsOpen] = useState(false);
-  const [statusChanging, setStatusChanging] = useState<StaffProfile | null>(null);
+  const [statusChanging, setStatusChanging] = useState<StaffProfile | null>(
+    null,
+  );
 
   // Tab-level base set
   const tabFiltered = useMemo(() => {
     return staff.filter((s) => {
-      if (activeTab === "active") return s.status === "active" || s.status === "invited";
+      if (activeTab === "active")
+        return s.status === "active" || s.status === "invited";
       if (activeTab === "on_leave") return s.status === "inactive";
       return s.status === "terminated";
     });
@@ -134,14 +139,17 @@ export default function FacilityStaffPage() {
   }, [tabFiltered, query, roleFilter, locationFilter]);
 
   const stats = useMemo(() => {
-    const activeStaff = staff.filter((s) => s.status === "active" || s.status === "invited");
+    const activeStaff = staff.filter(
+      (s) => s.status === "active" || s.status === "invited",
+    );
     const total = activeStaff.length;
     const active = staff.filter((s) => s.status === "active").length;
     const invited = staff.filter((s) => s.status === "invited").length;
     const onLeave = staff.filter((s) => s.status === "inactive").length;
     const terminated = staff.filter((s) => s.status === "terminated").length;
     const roles = new Set(activeStaff.map((s) => s.primaryRole)).size;
-    const services = new Set(activeStaff.flatMap((s) => s.serviceAssignments)).size;
+    const services = new Set(activeStaff.flatMap((s) => s.serviceAssignments))
+      .size;
     return { total, active, invited, onLeave, terminated, roles, services };
   }, [staff]);
 
@@ -420,21 +428,33 @@ export default function FacilityStaffPage() {
       <div className="flex items-center gap-1 border-b">
         <TabButton
           active={activeTab === "active"}
-          onClick={() => { setActiveTab("active"); setRoleFilter("all"); }}
-          count={staff.filter((s) => s.status === "active" || s.status === "invited").length}
+          onClick={() => {
+            setActiveTab("active");
+            setRoleFilter("all");
+          }}
+          count={
+            staff.filter((s) => s.status === "active" || s.status === "invited")
+              .length
+          }
         >
           Active employees
         </TabButton>
         <TabButton
           active={activeTab === "on_leave"}
-          onClick={() => { setActiveTab("on_leave"); setRoleFilter("all"); }}
+          onClick={() => {
+            setActiveTab("on_leave");
+            setRoleFilter("all");
+          }}
           count={stats.onLeave}
         >
           On leave
         </TabButton>
         <TabButton
           active={activeTab === "former"}
-          onClick={() => { setActiveTab("former"); setRoleFilter("all"); }}
+          onClick={() => {
+            setActiveTab("former");
+            setRoleFilter("all");
+          }}
           count={stats.terminated}
         >
           Former employees
@@ -692,7 +712,7 @@ function TabButton({
       className={cn(
         "relative px-4 py-2.5 text-sm font-medium transition-colors",
         active
-          ? "text-foreground after:bg-primary after:absolute after:bottom-0 after:inset-x-0 after:h-0.5"
+          ? "text-foreground after:bg-primary after:absolute after:inset-x-0 after:bottom-0 after:h-0.5"
           : "text-muted-foreground hover:text-foreground",
       )}
     >

@@ -1,12 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,7 +70,7 @@ function ColorPalette({
 }) {
   return (
     <div onClick={(e) => e.stopPropagation()}>
-      <p className="px-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="text-muted-foreground px-1 pb-1.5 text-[10px] font-semibold tracking-wider uppercase">
         Area color
       </p>
       <div className="grid grid-cols-6 gap-1.5">
@@ -87,9 +82,9 @@ function ColorPalette({
             onClick={() => onChange(c)}
             style={{ backgroundColor: c }}
             className={cn(
-              "size-6 rounded-full ring-2 ring-offset-2 ring-offset-background transition-transform",
+              "ring-offset-background size-6 rounded-full ring-2 ring-offset-2 transition-transform",
               value === c
-                ? "scale-110 ring-foreground"
+                ? "ring-foreground scale-110"
                 : "ring-transparent hover:scale-105",
             )}
           />
@@ -254,7 +249,7 @@ export function MobileGroomingSettings() {
                 </button>
               ))}
               <div className="ml-auto flex items-center gap-1.5 text-xs">
-                <Label className="text-[10px] uppercase text-muted-foreground">
+                <Label className="text-muted-foreground text-[10px] uppercase">
                   Custom
                 </Label>
                 <Input
@@ -271,7 +266,7 @@ export function MobileGroomingSettings() {
               </div>
             </div>
             {arrivalWindowMinutes > 0 && (
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-muted-foreground text-[11px]">
                 Example: a 10:00 AM precise time becomes a{" "}
                 <span className="font-mono">
                   {(() => {
@@ -324,10 +319,7 @@ export function MobileGroomingSettings() {
               {vans.map((v) => (
                 <Card
                   key={v.id}
-                  className={cn(
-                    "overflow-hidden",
-                    !v.active && "opacity-60",
-                  )}
+                  className={cn("overflow-hidden", !v.active && "opacity-60")}
                 >
                   <div
                     className="h-1 w-full"
@@ -337,24 +329,30 @@ export function MobileGroomingSettings() {
                   <CardHeader className="pb-2">
                     <CardTitle className="flex items-center justify-between gap-2 text-base">
                       <span className="flex items-center gap-2">
-                        <Truck className="size-4 text-muted-foreground" />
+                        <Truck className="text-muted-foreground size-4" />
                         {v.name || "(unnamed van)"}
                       </span>
-                      <Badge variant={v.active && v.assignedStaffIds.length > 0 ? "default" : "outline"}>
-                        {v.active && v.assignedStaffIds.length > 0 ? "Active" : "Inactive"}
+                      <Badge
+                        variant={
+                          v.active && v.assignedStaffIds.length > 0
+                            ? "default"
+                            : "outline"
+                        }
+                      >
+                        {v.active && v.assignedStaffIds.length > 0
+                          ? "Active"
+                          : "Inactive"}
                       </Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
                     <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                      <span className="font-medium text-foreground">
+                      <span className="text-foreground font-medium">
                         {v.licensePlate || "—"}
                       </span>
                       <span>·</span>
                       <Users className="size-3" />
-                      <span>
-                        {v.assignedStaffIds.length} staff
-                      </span>
+                      <span>{v.assignedStaffIds.length} staff</span>
                     </p>
                     <p className="text-muted-foreground flex items-start gap-1.5 text-xs">
                       <MapPin className="mt-0.5 size-3 shrink-0" />
@@ -391,8 +389,8 @@ export function MobileGroomingSettings() {
                       </Button>
                     </div>
                     {v.assignedStaffIds.length === 0 && (
-                      <div className="rounded-md border border-destructive/50 bg-destructive/10 p-2 mt-2">
-                        <p className="text-[11px] font-medium text-destructive">
+                      <div className="border-destructive/50 bg-destructive/10 mt-2 rounded-md border p-2">
+                        <p className="text-destructive text-[11px] font-medium">
                           No staff assigned — this van cannot accept bookings.
                         </p>
                       </div>
@@ -475,7 +473,7 @@ export function MobileGroomingSettings() {
                     {/* Soft colored glow in the top-right corner */}
                     <div
                       aria-hidden
-                      className="pointer-events-none absolute -right-16 -top-16 size-44 rounded-full opacity-30 blur-3xl transition-opacity duration-300 group-hover:opacity-50"
+                      className="pointer-events-none absolute -top-16 -right-16 size-44 rounded-full opacity-30 blur-3xl transition-opacity duration-300 group-hover:opacity-50"
                       style={{ backgroundColor: color }}
                     />
                     {/* Subtle dotted texture on the bottom-left */}
@@ -494,12 +492,12 @@ export function MobileGroomingSettings() {
                             <button
                               type="button"
                               aria-label="Change area color"
-                              className="relative flex size-11 shrink-0 items-center justify-center rounded-xl shadow-md ring-2 ring-white/40 transition-transform hover:scale-105 focus:outline-none focus-visible:ring-foreground"
+                              className="focus-visible:ring-foreground relative flex size-11 shrink-0 items-center justify-center rounded-xl shadow-md ring-2 ring-white/40 transition-transform hover:scale-105 focus:outline-none"
                               style={{ backgroundColor: color }}
                             >
                               <TypeIcon className="size-5 text-white drop-shadow-sm" />
-                              <span className="absolute -bottom-1 -right-1 flex size-4 items-center justify-center rounded-full bg-card opacity-0 shadow ring-1 ring-border transition-opacity group-hover:opacity-100">
-                                <Palette className="size-2.5 text-muted-foreground" />
+                              <span className="bg-card ring-border absolute -right-1 -bottom-1 flex size-4 items-center justify-center rounded-full opacity-0 shadow ring-1 transition-opacity group-hover:opacity-100">
+                                <Palette className="text-muted-foreground size-2.5" />
                               </span>
                             </button>
                           </PopoverTrigger>
@@ -512,9 +510,7 @@ export function MobileGroomingSettings() {
                               value={color}
                               onChange={(nextColor) => {
                                 updateServiceArea({ ...a, color: nextColor });
-                                toast.success(
-                                  `${a.name || "Area"} recolored`,
-                                );
+                                toast.success(`${a.name || "Area"} recolored`);
                               }}
                             />
                           </PopoverContent>
@@ -522,10 +518,10 @@ export function MobileGroomingSettings() {
 
                         {/* Name + type */}
                         <div className="min-w-0 flex-1 pt-0.5">
-                          <h4 className="truncate font-semibold leading-tight">
+                          <h4 className="truncate leading-tight font-semibold">
                             {a.name || "(unnamed area)"}
                           </h4>
-                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          <p className="text-muted-foreground mt-0.5 text-[11px]">
                             {typeLabel}
                           </p>
                         </div>
@@ -533,7 +529,7 @@ export function MobileGroomingSettings() {
                         {/* Status pill */}
                         <span
                           className={cn(
-                            "inline-flex shrink-0 items-center gap-1 rounded-full border bg-card/70 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider backdrop-blur",
+                            "bg-card/70 inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase backdrop-blur",
                             a.active
                               ? "border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300"
                               : "border-border text-muted-foreground",
@@ -554,7 +550,7 @@ export function MobileGroomingSettings() {
                       {/* Stat chips */}
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span
-                          className="inline-flex items-center gap-1.5 rounded-lg border bg-card/70 px-2 py-1 text-xs backdrop-blur"
+                          className="bg-card/70 inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs backdrop-blur"
                           style={{ borderColor: `${color}55` }}
                         >
                           <span
@@ -567,7 +563,7 @@ export function MobileGroomingSettings() {
                             {countLabel}
                           </span>
                         </span>
-                        <span className="inline-flex items-center gap-1 rounded-lg border bg-card/70 px-2 py-1 text-[11px] text-muted-foreground backdrop-blur">
+                        <span className="bg-card/70 text-muted-foreground inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] backdrop-blur">
                           <CalendarDays className="size-3" />
                           {formatDaysOfWeek(a.daysOfWeek)}
                         </span>
@@ -577,14 +573,14 @@ export function MobileGroomingSettings() {
                       {a.type === "postal" &&
                         a.postalCodes &&
                         a.postalCodes.length > 0 && (
-                          <p className="truncate font-mono text-[11px] text-muted-foreground">
+                          <p className="text-muted-foreground truncate font-mono text-[11px]">
                             {a.postalCodes.slice(0, 6).join(" · ")}
                             {a.postalCodes.length > 6 &&
                               ` · +${a.postalCodes.length - 6} more`}
                           </p>
                         )}
                       {a.type === "radius" && (
-                        <p className="truncate text-[11px] text-muted-foreground">
+                        <p className="text-muted-foreground truncate text-[11px]">
                           <MapPin className="mr-1 inline size-3" />
                           {a.centerAddress || "(no center address)"}
                         </p>
@@ -594,9 +590,7 @@ export function MobileGroomingSettings() {
                       <div className="flex items-center gap-2 border-t border-dashed pt-3">
                         <Switch
                           checked={a.active}
-                          onCheckedChange={() =>
-                            toggleServiceAreaActive(a.id)
-                          }
+                          onCheckedChange={() => toggleServiceAreaActive(a.id)}
                           className="scale-75"
                         />
                         <Button
@@ -611,7 +605,7 @@ export function MobileGroomingSettings() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="size-8 text-destructive/70 hover:text-destructive"
+                          className="text-destructive/70 hover:text-destructive size-8"
                           onClick={() => {
                             deleteServiceArea(a.id);
                             toast.success("Service area removed");
@@ -647,9 +641,7 @@ export function MobileGroomingSettings() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {editing ? "Edit Van" : "Add Van"}
-            </DialogTitle>
+            <DialogTitle>{editing ? "Edit Van" : "Add Van"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
@@ -714,7 +706,7 @@ export function MobileGroomingSettings() {
                       primaryDriverId: e.target.value || undefined,
                     })
                   }
-                  className="h-9 w-full rounded-md border bg-card px-2 text-sm"
+                  className="bg-card h-9 w-full rounded-md border px-2 text-sm"
                 >
                   <option value="">Choose a primary driver…</option>
                   {groomers.map((s) => (
@@ -743,7 +735,7 @@ export function MobileGroomingSettings() {
                       secondGroomerId: e.target.value || undefined,
                     })
                   }
-                  className="h-9 w-full rounded-md border bg-card px-2 text-sm"
+                  className="bg-card h-9 w-full rounded-md border px-2 text-sm"
                 >
                   <option value="">No second groomer</option>
                   {groomers

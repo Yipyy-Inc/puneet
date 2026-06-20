@@ -17,9 +17,7 @@ export function getActiveServiceAreasForDay(
   areas: ServiceArea[],
   dayOfWeek: number,
 ): ServiceArea[] {
-  return areas.filter(
-    (a) => a.active && a.daysOfWeek.includes(dayOfWeek),
-  );
+  return areas.filter((a) => a.active && a.daysOfWeek.includes(dayOfWeek));
 }
 
 /**
@@ -31,10 +29,7 @@ function normalisePostal(raw: string): string {
   return raw.toUpperCase().replace(/\s+/g, "");
 }
 
-function postalCodeMatches(
-  clientCode: string,
-  areaCode: string,
-): boolean {
+function postalCodeMatches(clientCode: string, areaCode: string): boolean {
   const c = normalisePostal(clientCode);
   const a = normalisePostal(areaCode);
   if (c === a) return true;
@@ -338,10 +333,7 @@ export function computeBookingTotals(args: {
 
   let zone: TravelZone | null = null;
   if (isMobile && basePostalCode && clientPostalCode) {
-    const miles = estimatePostalDistanceMiles(
-      basePostalCode,
-      clientPostalCode,
-    );
+    const miles = estimatePostalDistanceMiles(basePostalCode, clientPostalCode);
     zone = findZoneForDistance(zones, miles);
   }
   const zoneSurcharge = computeZoneSurcharge(zone, serviceSubtotal);

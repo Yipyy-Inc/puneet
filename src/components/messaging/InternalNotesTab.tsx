@@ -16,7 +16,10 @@ function relTime(iso: string) {
   if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export function InternalNotesTab({
@@ -53,10 +56,14 @@ export function InternalNotesTab({
 
   const togglePin = (id: string) => {
     setNotes((prev) => {
-      const updated = prev.map((n) => (n.id === id ? { ...n, pinned: !n.pinned } : n));
+      const updated = prev.map((n) =>
+        n.id === id ? { ...n, pinned: !n.pinned } : n,
+      );
       return [...updated].sort((a, b) => {
         if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
       });
     });
   };
@@ -72,8 +79,12 @@ export function InternalNotesTab({
       <div className="flex items-center justify-between border-b border-slate-100 bg-amber-50/40 px-5 py-3">
         <div className="flex items-center gap-2">
           <Lock className="size-4 text-amber-600" />
-          <span className="text-sm font-semibold text-amber-800">Staff-only notes</span>
-          <Badge className="bg-amber-100 text-[10px] text-amber-700">{notes.length}</Badge>
+          <span className="text-sm font-semibold text-amber-800">
+            Staff-only notes
+          </span>
+          <Badge className="bg-amber-100 text-[10px] text-amber-700">
+            {notes.length}
+          </Badge>
         </div>
         <Button
           size="sm"
@@ -102,7 +113,10 @@ export function InternalNotesTab({
                 variant="ghost"
                 size="sm"
                 className="h-8 rounded-full text-xs"
-                onClick={() => { setIsAdding(false); setBody(""); }}
+                onClick={() => {
+                  setIsAdding(false);
+                  setBody("");
+                }}
               >
                 Cancel
               </Button>
@@ -123,7 +137,9 @@ export function InternalNotesTab({
           <div className="flex flex-col items-center py-16 text-center">
             <Lock className="size-10 text-slate-200" />
             <p className="mt-3 text-sm text-slate-400">No internal notes yet</p>
-            <p className="mt-1 text-xs text-slate-300">Staff notes are never visible to clients</p>
+            <p className="mt-1 text-xs text-slate-300">
+              Staff notes are never visible to clients
+            </p>
           </div>
         ) : (
           <div className="space-y-0">
@@ -143,10 +159,14 @@ export function InternalNotesTab({
                     </Badge>
                   </div>
                 )}
-                <p className="pr-16 text-sm text-slate-700 leading-relaxed">{note.body}</p>
+                <p className="pr-16 text-sm leading-relaxed text-slate-700">
+                  {note.body}
+                </p>
                 <div className="mt-2 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                    <span className="font-semibold text-slate-500">{note.author}</span>
+                    <span className="font-semibold text-slate-500">
+                      {note.author}
+                    </span>
                     <span>·</span>
                     <span>{relTime(note.createdAt)}</span>
                   </div>
@@ -157,7 +177,11 @@ export function InternalNotesTab({
                       onClick={() => togglePin(note.id)}
                       className="rounded p-1 text-slate-300 hover:bg-amber-100 hover:text-amber-600"
                     >
-                      {note.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
+                      {note.pinned ? (
+                        <PinOff className="size-3.5" />
+                      ) : (
+                        <Pin className="size-3.5" />
+                      )}
                     </button>
                     <button
                       type="button"

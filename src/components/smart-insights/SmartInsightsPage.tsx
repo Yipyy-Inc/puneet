@@ -30,9 +30,8 @@ const UNDO_WINDOW_MS = 10_000;
 
 export function SmartInsightsPage() {
   const [filter, setFilter] = useState<CategoryFilter>("all");
-  const [locationFilter, setLocationFilter] = useState<string>(
-    LOCATION_FILTER_ALL,
-  );
+  const [locationFilter, setLocationFilter] =
+    useState<string>(LOCATION_FILTER_ALL);
   const [drawerInsight, setDrawerInsight] = useState<Insight | null>(null);
 
   const { isHQView, isMultiLocation, locations, currentLocationId } =
@@ -56,7 +55,10 @@ export function SmartInsightsPage() {
     return insights;
   }, [insights, isHQView, locationFilter, currentLocationId]);
 
-  const active = useMemo(() => activeInsights(locationScoped), [locationScoped]);
+  const active = useMemo(
+    () => activeInsights(locationScoped),
+    [locationScoped],
+  );
   const dismissed = useMemo(
     () => dismissedInsights(locationScoped),
     [locationScoped],
@@ -176,10 +178,7 @@ export function SmartInsightsPage() {
         </div>
       )}
 
-      <DismissedInsightsView
-        dismissed={dismissed}
-        onRestore={handleRestore}
-      />
+      <DismissedInsightsView dismissed={dismissed} onRestore={handleRestore} />
 
       <InsightActionDrawer
         facilityId={FACILITY_ID}

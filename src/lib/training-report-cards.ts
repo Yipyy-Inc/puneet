@@ -105,17 +105,21 @@ export const TRAINING_MOOD_EMOJI: Record<TrainingReportCardMood, string> = {
 /** Multi-select behavior-tag catalog — what the trainer picks in the
  *  report-card editor and what the parent sees on the card. Order is the
  *  natural pick order the user described. */
-export const TRAINING_REPORT_CARD_BEHAVIOR_TAGS: readonly TrainingReportCardBehaviorTag[] = [
-  "focused",
-  "energetic",
-  "distracted",
-  "anxious",
-  "had-a-breakthrough",
-  "needed-encouragement",
-  "great-progress",
-] as const;
+export const TRAINING_REPORT_CARD_BEHAVIOR_TAGS: readonly TrainingReportCardBehaviorTag[] =
+  [
+    "focused",
+    "energetic",
+    "distracted",
+    "anxious",
+    "had-a-breakthrough",
+    "needed-encouragement",
+    "great-progress",
+  ] as const;
 
-export const BEHAVIOR_TAG_LABELS: Record<TrainingReportCardBehaviorTag, string> = {
+export const BEHAVIOR_TAG_LABELS: Record<
+  TrainingReportCardBehaviorTag,
+  string
+> = {
   focused: "Focused",
   energetic: "Energetic",
   distracted: "Distracted",
@@ -296,10 +300,10 @@ function autoDraftNarrative(
   petName: string,
   seriesName: string,
 ): string {
-  const sorted = attendances.slice().sort((a, b) => a.sessionNumber - b.sessionNumber);
-  const withExercises = sorted.filter(
-    (a) => (a.exercises?.length ?? 0) > 0,
-  );
+  const sorted = attendances
+    .slice()
+    .sort((a, b) => a.sessionNumber - b.sessionNumber);
+  const withExercises = sorted.filter((a) => (a.exercises?.length ?? 0) > 0);
   if (withExercises.length === 0) {
     return kind === "series-completion"
       ? `${petName} completed every session of ${seriesName}.`
@@ -373,9 +377,7 @@ function autoDraftSeriesSummary(
     .slice(0, 2)
     .map((e) => e.name);
   const topPhrase =
-    top.length === 0
-      ? ""
-      : ` Highlights this series: ${top.join(" and ")}.`;
+    top.length === 0 ? "" : ` Highlights this series: ${top.join(" and ")}.`;
   return `${petName} completed ${present} of ${total} sessions in ${seriesName}.${topPhrase}`;
 }
 
@@ -433,8 +435,14 @@ function buildExerciseProgression(
 }
 
 export function buildTrainingReportCard(input: BuildInput): TrainingReportCard {
-  const { kind, enrollment, throughSessionNumber, createdBy, createdById, date } =
-    input;
+  const {
+    kind,
+    enrollment,
+    throughSessionNumber,
+    createdBy,
+    createdById,
+    date,
+  } = input;
   const scope = input.attendances.filter(
     (a) =>
       a.enrollmentId === enrollment.id &&
@@ -488,7 +496,8 @@ export function buildTrainingReportCard(input: BuildInput): TrainingReportCard {
   }
 
   const createdAt = input.createdAt ?? new Date().toISOString();
-  const idSuffix = kind === "series-completion" ? "graduation" : `s${throughSessionNumber}`;
+  const idSuffix =
+    kind === "series-completion" ? "graduation" : `s${throughSessionNumber}`;
 
   // Graduation-only enrichments — per-exercise start/end progression list
   // + a suggested next program snapshotted from the course type catalog.
@@ -502,7 +511,10 @@ export function buildTrainingReportCard(input: BuildInput): TrainingReportCard {
     // then follow that package's `graduateIntoPackageId`. We match by name
     // because the series enrollment carries the course-type name, not id.
     const normalize = (s: string) =>
-      s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      s
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
     const target = normalize(enrollment.courseTypeName);
     const sourcePkg = trainingPackages.find(
       (p) => normalize(p.name) === target,
@@ -600,8 +612,9 @@ export function fanOutReportCardDelete(
 ): void {
   const cache = queryClient.getQueryCache();
   cache.findAll({ queryKey: ["training", "report-cards"] }).forEach((query) => {
-    queryClient.setQueryData<TrainingReportCard[]>(query.queryKey, (prev = []) =>
-      prev.filter((r) => r.id !== id),
+    queryClient.setQueryData<TrainingReportCard[]>(
+      query.queryKey,
+      (prev = []) => prev.filter((r) => r.id !== id),
     );
   });
 }

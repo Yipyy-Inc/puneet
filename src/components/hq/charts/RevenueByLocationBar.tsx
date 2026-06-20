@@ -22,7 +22,11 @@ export function RevenueByLocationBar({ data, locations, height = 240 }: Props) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" vertical={false} />
+        <CartesianGrid
+          strokeDasharray="3 3"
+          className="stroke-border/40"
+          vertical={false}
+        />
         <XAxis
           dataKey="locationName"
           tick={{ fontSize: 11, fill: "currentColor" }}
@@ -50,7 +54,9 @@ export function RevenueByLocationBar({ data, locations, height = 240 }: Props) {
         <Bar dataKey="revenue" radius={[8, 8, 0, 0]}>
           {data.map((entry) => {
             const loc = locations.find((l) => l.id === entry.locationId);
-            return <Cell key={entry.locationId} fill={loc?.color ?? "#0ea5e9"} />;
+            return (
+              <Cell key={entry.locationId} fill={loc?.color ?? "#0ea5e9"} />
+            );
           })}
         </Bar>
       </BarChart>

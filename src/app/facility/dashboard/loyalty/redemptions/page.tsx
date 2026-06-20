@@ -1,12 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@/components/ui/data-table";
@@ -19,7 +14,13 @@ import type {
   RedeemMethod,
   RedemptionRecordStatus,
 } from "@/types/loyalty";
-import { Receipt, CheckCircle2, Clock, XCircle, DollarSign } from "lucide-react";
+import {
+  Receipt,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  DollarSign,
+} from "lucide-react";
 
 const METHOD_LABELS: Record<RedeemMethod, string> = {
   portal_self: "Portal (self-serve)",
@@ -29,8 +30,7 @@ const METHOD_LABELS: Record<RedeemMethod, string> = {
 };
 
 const STATUS_STYLES: Record<RedemptionRecordStatus, string> = {
-  active:
-    "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  active: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
   used: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
   expired: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
 };
@@ -76,7 +76,9 @@ const columns: ColumnDef<RedemptionRecord>[] = [
     accessorKey: "redeemMethod",
     header: "Method",
     cell: ({ row }) => (
-      <Badge variant="secondary">{METHOD_LABELS[row.original.redeemMethod]}</Badge>
+      <Badge variant="secondary">
+        {METHOD_LABELS[row.original.redeemMethod]}
+      </Badge>
     ),
   },
   {

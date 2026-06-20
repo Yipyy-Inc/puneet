@@ -30,7 +30,13 @@ const isRedeemedTxn = (t: LoyaltyTransaction) => t.points < 0;
 
 const PAGE_SIZE = 20;
 
-type Kind = "earned" | "badge" | "redeemed" | "expired" | "adjusted" | "referral";
+type Kind =
+  | "earned"
+  | "badge"
+  | "redeemed"
+  | "expired"
+  | "adjusted"
+  | "referral";
 
 const KIND_LABEL: Record<Kind, string> = {
   earned: "Earned",
@@ -168,11 +174,13 @@ export function LoyaltyTransactionHistory({
               const kind = kindOf(txn);
               return (
                 <TableRow key={txn.id}>
-                  <TableCell className="text-muted-foreground whitespace-nowrap text-sm">
+                  <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                     {formatDate(txn.createdAt)}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={kind === "adjusted" ? "secondary" : "outline"}>
+                    <Badge
+                      variant={kind === "adjusted" ? "secondary" : "outline"}
+                    >
                       {KIND_LABEL[kind]}
                     </Badge>
                   </TableCell>

@@ -5,11 +5,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -37,13 +33,8 @@ import { trainingQueries } from "@/lib/api/training";
 import { SKILL_LEVEL_LABELS } from "@/types/training";
 import type { Pet } from "@/types/pet";
 import type { TrainingPackage } from "@/types/training";
-import {
-  distinctEnrolledForSeries,
-} from "@/data/training-series";
-import {
-  getDayName,
-  type TrainingSeries,
-} from "@/lib/training-series";
+import { distinctEnrolledForSeries } from "@/data/training-series";
+import { getDayName, type TrainingSeries } from "@/lib/training-series";
 import {
   checkPrerequisitesWithProgress,
   hasCompletedPrerequisites,
@@ -108,9 +99,7 @@ export function matchSeriesForCourse(
   return series.filter((s) => {
     if (s.status !== "upcoming") return false;
     const candidate = normalize(s.courseTypeName);
-    return (
-      candidate.includes(target) || target.includes(candidate)
-    );
+    return candidate.includes(target) || target.includes(candidate);
   });
 }
 
@@ -124,9 +113,7 @@ export function CustomerTrainingCatalog({
   onJoinProgramWaitlist,
 }: Props) {
   const { data: packages = [] } = useQuery(trainingQueries.packages());
-  const { data: disciplines = [] } = useQuery(
-    trainingQueries.disciplines(),
-  );
+  const { data: disciplines = [] } = useQuery(trainingQueries.disciplines());
   const { data: pathways = [] } = useQuery(trainingQueries.trainingPathways());
 
   const disciplineById = useMemo(
@@ -160,15 +147,10 @@ export function CustomerTrainingCatalog({
       ? active
       : active.filter((p) => {
           const disciplineName = p.disciplineId
-            ? disciplineById.get(p.disciplineId)?.name ?? ""
+            ? (disciplineById.get(p.disciplineId)?.name ?? "")
             : "";
           const skillLabel = SKILL_LEVEL_LABELS[p.skillLevel] ?? "";
-          return [
-            p.name,
-            p.description,
-            disciplineName,
-            skillLabel,
-          ]
+          return [p.name, p.description, disciplineName, skillLabel]
             .join(" ")
             .toLowerCase()
             .includes(q);
@@ -220,8 +202,7 @@ export function CustomerTrainingCatalog({
             const allFull =
               upcomingWithSpots.length > 0 &&
               upcomingWithSpots.every((row) => row.spotsLeft === 0);
-            const hasPrereqs =
-              (course.prerequisitePackageIds?.length ?? 0) > 0;
+            const hasPrereqs = (course.prerequisitePackageIds?.length ?? 0) > 0;
             // Richer per-pet prereq details — used for the catalog
             // tooltip that surfaces "currently in {prereq} — N of M".
             const eligibilityByPet = pets.map((p) => ({
@@ -293,7 +274,8 @@ function CourseCard({
   const includes = course.includes ?? [];
   const showIncludes = includes.slice(0, 4);
   const overflow = includes.length - showIncludes.length;
-  const skillLevelLabel = SKILL_LEVEL_LABELS[course.skillLevel] ?? course.skillLevel;
+  const skillLevelLabel =
+    SKILL_LEVEL_LABELS[course.skillLevel] ?? course.skillLevel;
 
   return (
     <Card className="flex h-full flex-col overflow-hidden p-0">
@@ -323,7 +305,7 @@ function CourseCard({
         {course.popular && (
           <Badge
             variant="default"
-            className="absolute left-2 top-2 gap-1 bg-amber-500 text-white shadow-sm"
+            className="absolute top-2 left-2 gap-1 bg-amber-500 text-white shadow-sm"
             title="Popular pick"
           >
             <Star className="size-3 fill-current" />
@@ -337,7 +319,7 @@ function CourseCard({
           <h3 className="text-lg/tight font-semibold text-slate-900">
             {course.name}
           </h3>
-          <p className="text-lg/tight font-bold tabular-nums text-slate-900">
+          <p className="text-lg/tight font-bold text-slate-900 tabular-nums">
             ${course.price}
           </p>
         </div>
@@ -381,7 +363,10 @@ function CourseCard({
           </Badge>
           <Badge
             variant="outline"
-            className={cn("gap-1 text-[10px]", CLASS_TYPE_CLS[course.classType])}
+            className={cn(
+              "gap-1 text-[10px]",
+              CLASS_TYPE_CLS[course.classType],
+            )}
           >
             {course.classType === "private" ? (
               <User2 className="size-3" />
@@ -417,7 +402,7 @@ function CourseCard({
       <CardContent className="flex flex-1 flex-col space-y-3 pt-0 pb-3">
         {/* What's included ────────────────────────────────────────────── */}
         <div className="flex-1">
-          <p className="text-muted-foreground mb-1.5 text-[10px] font-bold uppercase tracking-wider">
+          <p className="text-muted-foreground mb-1.5 text-[10px] font-bold tracking-wider uppercase">
             What&apos;s included
           </p>
           {showIncludes.length === 0 ? (
@@ -435,7 +420,7 @@ function CourseCard({
                   key={`${course.id}-inc-${idx}`}
                   className="flex items-start gap-1.5 text-[12px]/relaxed text-slate-700"
                 >
-                  <Check className="text-emerald-500 mt-0.5 size-3 shrink-0" />
+                  <Check className="mt-0.5 size-3 shrink-0 text-emerald-500" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -453,7 +438,7 @@ function CourseCard({
         {/* Upcoming sessions ───────────────────────────────────────────── */}
         {upcomingWithSpots.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
               <CalendarClock className="size-3" />
               Upcoming sessions
             </p>
@@ -479,11 +464,7 @@ function CourseCard({
             onEnroll={onEnroll}
             onJoinWaitlist={onJoinWaitlist}
           />
-          <Button
-            onClick={onSelect}
-            variant="outline"
-            className="gap-1"
-          >
+          <Button onClick={onSelect} variant="outline" className="gap-1">
             View Available Classes
             <ArrowRight className="size-4" />
           </Button>
@@ -608,18 +589,13 @@ function EnrollAction({
       <TooltipProvider delayDuration={200}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              disabled
-              className="gap-1.5 bg-emerald-600/60 text-white"
-            >
+            <Button disabled className="gap-1.5 bg-emerald-600/60 text-white">
               <Lock className="size-4" />
               Enroll when eligible
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs text-[12px]">
-            <PrereqTooltipBody
-              eligibilityByPet={eligibilityByPet}
-            />
+            <PrereqTooltipBody eligibilityByPet={eligibilityByPet} />
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -676,9 +652,7 @@ function PrereqsBadge({
           </button>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs text-[12px]">
-          <p className="mb-1 font-semibold">
-            Prerequisites for {courseName}
-          </p>
+          <p className="mb-1 font-semibold">Prerequisites for {courseName}</p>
           <PrereqTooltipBody eligibilityByPet={eligibilityByPet} />
         </TooltipContent>
       </Tooltip>
@@ -707,14 +681,11 @@ function PrereqTooltipBody({
       {eligibilityByPet.map(({ pet, eligible, details }) => {
         if (eligible) {
           return (
-            <li
-              key={pet.id}
-              className="inline-flex items-start gap-1"
-            >
-              <Check className="text-emerald-500 mt-0.5 size-3 shrink-0" />
+            <li key={pet.id} className="inline-flex items-start gap-1">
+              <Check className="mt-0.5 size-3 shrink-0 text-emerald-500" />
               <span>
-                <span className="font-semibold">{pet.name}</span>{" "}
-                meets every prerequisite.
+                <span className="font-semibold">{pet.name}</span> meets every
+                prerequisite.
               </span>
             </li>
           );

@@ -106,16 +106,16 @@ export function IVRPreview({
               IVR Preview
             </DialogTitle>
             <DialogDescription>
-              Read-only simulation — nothing is saved. Audio uses your browser&apos;s
-              text-to-speech (Twilio TTS in production).
+              Read-only simulation — nothing is saved. Audio uses your
+              browser&apos;s text-to-speech (Twilio TTS in production).
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-1">
             {/* Greeting (menu root) */}
-            <div className="rounded-xl border bg-card p-3">
+            <div className="bg-card rounded-xl border p-3">
               <div className="mb-1.5 flex items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
                   Main greeting
                 </p>
                 <Button
@@ -125,19 +125,25 @@ export function IVRPreview({
                   className="h-7 gap-1.5 text-xs"
                   onClick={() => play("greeting", config.greeting)}
                 >
-                  {active === "greeting" ? <Volume2 className="size-3.5" /> : <PlayCircle className="size-3.5" />}
+                  {active === "greeting" ? (
+                    <Volume2 className="size-3.5" />
+                  ) : (
+                    <PlayCircle className="size-3.5" />
+                  )}
                   {active === "greeting" ? "Playing…" : "Play"}
                 </Button>
               </div>
-              <p className="text-sm leading-relaxed text-foreground">{config.greeting}</p>
+              <p className="text-foreground text-sm leading-relaxed">
+                {config.greeting}
+              </p>
             </div>
 
             {/* Interactive menu tree */}
             <div>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-wide uppercase">
                 Menu — click an option to hear what the caller hears
               </p>
-              <div className="space-y-1.5 border-l-2 border-dashed border-border pl-3">
+              <div className="border-border space-y-1.5 border-l-2 border-dashed pl-3">
                 {sortedNodes.map((node) => {
                   const isActive = active === node.id;
                   return (
@@ -146,7 +152,7 @@ export function IVRPreview({
                       type="button"
                       onClick={() => play(node.id, nodePrompt(node))}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-lg border bg-card px-3 py-2 text-left transition-colors hover:bg-muted/50",
+                        "bg-card hover:bg-muted/50 flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors",
                         isActive && "border-sky-400 ring-1 ring-sky-300",
                       )}
                     >
@@ -154,8 +160,10 @@ export function IVRPreview({
                         {node.key}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold">{node.label}</span>
-                        <span className="block text-[11px] text-muted-foreground">
+                        <span className="block truncate text-sm font-semibold">
+                          {node.label}
+                        </span>
+                        <span className="text-muted-foreground block text-[11px]">
                           {ACTION_LABEL[node.action]}
                           {node.destination ? ` · ${node.destination}` : ""}
                         </span>
@@ -163,22 +171,24 @@ export function IVRPreview({
                       {isActive ? (
                         <Volume2 className="size-4 shrink-0 text-sky-600" />
                       ) : (
-                        <PlayCircle className="size-4 shrink-0 text-muted-foreground" />
+                        <PlayCircle className="text-muted-foreground size-4 shrink-0" />
                       )}
                     </button>
                   );
                 })}
                 {sortedNodes.length === 0 && (
-                  <p className="py-2 text-sm text-muted-foreground">No menu options configured.</p>
+                  <p className="text-muted-foreground py-2 text-sm">
+                    No menu options configured.
+                  </p>
                 )}
               </div>
             </div>
 
             {/* After-hours greeting */}
             {config.afterHoursMessage && (
-              <div className="rounded-xl border bg-card p-3">
+              <div className="bg-card rounded-xl border p-3">
                 <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
                     After-hours greeting
                   </p>
                   <Button
@@ -186,18 +196,26 @@ export function IVRPreview({
                     size="sm"
                     variant={active === "afterhours" ? "default" : "outline"}
                     className="h-7 gap-1.5 text-xs"
-                    onClick={() => play("afterhours", config.afterHoursMessage ?? "")}
+                    onClick={() =>
+                      play("afterhours", config.afterHoursMessage ?? "")
+                    }
                   >
-                    {active === "afterhours" ? <Volume2 className="size-3.5" /> : <PlayCircle className="size-3.5" />}
+                    {active === "afterhours" ? (
+                      <Volume2 className="size-3.5" />
+                    ) : (
+                      <PlayCircle className="size-3.5" />
+                    )}
                     {active === "afterhours" ? "Playing…" : "Play"}
                   </Button>
                 </div>
-                <p className="text-sm leading-relaxed text-foreground">{config.afterHoursMessage}</p>
+                <p className="text-foreground text-sm leading-relaxed">
+                  {config.afterHoursMessage}
+                </p>
               </div>
             )}
 
             <div className="flex items-center justify-between gap-2">
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
                 <Phone className="size-3.5" />
                 Preview only — your IVR changes are not saved.
               </p>

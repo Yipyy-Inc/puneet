@@ -149,9 +149,7 @@ export function TemplateEditorDialog({
   };
 
   const canSave =
-    name.trim().length > 0 &&
-    services.length > 0 &&
-    content.trim().length > 0;
+    name.trim().length > 0 && services.length > 0 && content.trim().length > 0;
 
   const handleSave = () => {
     if (!canSave) return;
@@ -299,7 +297,7 @@ export function TemplateEditorDialog({
             <Separator />
 
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
                 Default settings
               </p>
               <p className="text-muted-foreground text-xs">

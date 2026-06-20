@@ -68,7 +68,10 @@ export function AcceptOfferClient({ enrollmentId }: Props) {
     [enrollments, enrollmentId],
   );
   const series = useMemo(
-    () => (enrollment ? seriesList.find((s) => s.id === enrollment.seriesId) : undefined),
+    () =>
+      enrollment
+        ? seriesList.find((s) => s.id === enrollment.seriesId)
+        : undefined,
     [seriesList, enrollment],
   );
 
@@ -167,7 +170,7 @@ export function AcceptOfferClient({ enrollmentId }: Props) {
       <CenteredCard>
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-2 text-center">
-            <div className="bg-emerald-100 text-emerald-700 flex size-12 items-center justify-center rounded-2xl">
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
               <CheckCircle2 className="size-6" />
             </div>
             <h1 className="text-xl font-semibold">You&apos;re in!</h1>
@@ -189,15 +192,11 @@ export function AcceptOfferClient({ enrollmentId }: Props) {
   }
 
   // Expired / cancelled view.
-  if (
-    !offer ||
-    offer.outcome === "expired" ||
-    offer.outcome === "cancelled"
-  ) {
+  if (!offer || offer.outcome === "expired" || offer.outcome === "cancelled") {
     return (
       <CenteredCard>
         <div className="space-y-3 text-center">
-          <AlarmClock className="text-rose-500 mx-auto size-10" />
+          <AlarmClock className="mx-auto size-10 text-rose-500" />
           <h1 className="text-lg font-semibold">This offer has closed</h1>
           <p className="text-muted-foreground text-sm">
             {offer?.outcome === "cancelled"
@@ -223,15 +222,15 @@ export function AcceptOfferClient({ enrollmentId }: Props) {
           variant="outline"
           className="gap-1 border-amber-200 bg-amber-50 text-amber-800"
         >
-          <Sparkles className="size-3" />
-          A spot opened up for {enrollment.petName}
+          <Sparkles className="size-3" />A spot opened up for{" "}
+          {enrollment.petName}
         </Badge>
         <h1 className="text-2xl font-bold tracking-tight">
           Confirm your enrollment
         </h1>
         <p className="text-muted-foreground text-sm">
           We&apos;re holding{" "}
-          <span className="font-medium text-foreground">
+          <span className="text-foreground font-medium">
             {enrollment.seriesName}
           </span>{" "}
           for you for{" "}
@@ -255,7 +254,7 @@ export function AcceptOfferClient({ enrollmentId }: Props) {
       <Card>
         <CardContent className="space-y-3 p-4">
           <div className="flex items-start gap-2">
-            <CreditCard className="text-indigo-600 mt-0.5 size-4 shrink-0" />
+            <CreditCard className="mt-0.5 size-4 shrink-0 text-indigo-600" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold">Payment</p>
               <p className="text-muted-foreground mt-0.5 text-xs">
@@ -306,7 +305,16 @@ function SeriesSummary({
   series,
 }: {
   enrollment: TrainingEnrollment;
-  series: { dayOfWeek: number; startTime: string; endTime: string; numberOfWeeks: number; instructorName: string; location: string; startDate: string; seriesName: string };
+  series: {
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    numberOfWeeks: number;
+    instructorName: string;
+    location: string;
+    startDate: string;
+    seriesName: string;
+  };
 }) {
   return (
     <Card>

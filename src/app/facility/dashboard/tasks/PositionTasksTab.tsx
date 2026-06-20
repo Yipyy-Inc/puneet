@@ -73,8 +73,10 @@ function PositionGroupCard({ group }: { group: PositionTaskGroup }) {
   const totalMinutes = tasks.reduce((s, t) => s + t.estimatedMinutes, 0);
 
   return (
-    <Card className={cn("overflow-hidden transition-all", !active && "opacity-60")}>
-      <CardHeader className="px-5 pb-0 pt-4">
+    <Card
+      className={cn("overflow-hidden transition-all", !active && "opacity-60")}
+    >
+      <CardHeader className="px-5 pt-4 pb-0">
         <div className="flex items-start gap-4">
           {/* Dept icon */}
           <div
@@ -97,7 +99,9 @@ function PositionGroupCard({ group }: { group: PositionTaskGroup }) {
               )}
             </div>
             {group.description && (
-              <p className="text-muted-foreground mt-0.5 text-xs">{group.description}</p>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                {group.description}
+              </p>
             )}
             <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-slate-600">
               {dept && (
@@ -107,7 +111,12 @@ function PositionGroupCard({ group }: { group: PositionTaskGroup }) {
                     DEPT_COLOR_MAP[deptColor],
                   )}
                 >
-                  <span className={cn("size-1.5 rounded-full", DEPT_DOT_MAP[deptColor])} />
+                  <span
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      DEPT_DOT_MAP[deptColor],
+                    )}
+                  />
                   {dept.name}
                 </span>
               )}
@@ -116,8 +125,8 @@ function PositionGroupCard({ group }: { group: PositionTaskGroup }) {
                 {tasks.length} task{tasks.length !== 1 ? "s" : ""}
               </span>
               <span className="flex items-center gap-1">
-                <Clock className="text-muted-foreground size-3" />
-                ~{totalMinutes} min per shift
+                <Clock className="text-muted-foreground size-3" />~
+                {totalMinutes} min per shift
               </span>
             </div>
           </div>
@@ -150,7 +159,7 @@ function PositionGroupCard({ group }: { group: PositionTaskGroup }) {
 
       {/* Expanded task list */}
       {expanded && (
-        <CardContent className="px-5 pb-4 pt-4">
+        <CardContent className="px-5 pt-4 pb-4">
           <div className="border-t pt-4">
             <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-wider uppercase">
               Tasks assigned to this position
@@ -174,7 +183,10 @@ function PositionGroupCard({ group }: { group: PositionTaskGroup }) {
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <Badge
-                      className={cn("px-1.5 py-0 text-[10px]", PRIORITY_COLORS[task.priority])}
+                      className={cn(
+                        "px-1.5 py-0 text-[10px]",
+                        PRIORITY_COLORS[task.priority],
+                      )}
                       variant="secondary"
                     >
                       {task.priority}
@@ -233,7 +245,12 @@ function UnassignedDeptCard({
         <p className="text-sm font-medium">{dept.name}</p>
         <p className="text-muted-foreground text-xs">{dept.description}</p>
       </div>
-      <Button variant="outline" size="sm" className="gap-2 shrink-0" onClick={onAdd}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="shrink-0 gap-2"
+        onClick={onAdd}
+      >
         <Plus className="size-4" />
         Assign Tasks
       </Button>
@@ -246,7 +263,9 @@ function UnassignedDeptCard({
 export function PositionTasksTab() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
-  const assignedDeptIds = new Set(positionTaskGroups.map((g) => g.departmentId));
+  const assignedDeptIds = new Set(
+    positionTaskGroups.map((g) => g.departmentId),
+  );
   const unassignedDepts = departments.filter((d) => !assignedDeptIds.has(d.id));
 
   return (
@@ -254,7 +273,8 @@ export function PositionTasksTab() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <p className="text-muted-foreground text-sm">
-          Tasks tied to a department — every staff member in that role sees them each shift.
+          Tasks tied to a department — every staff member in that role sees them
+          each shift.
         </p>
         <Button onClick={() => setWizardOpen(true)} className="gap-2">
           <Plus className="size-4" />
@@ -265,17 +285,25 @@ export function PositionTasksTab() {
       {/* Stats strip */}
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-3">
         <div className="bg-card flex flex-col gap-1 rounded-xl border px-4 py-3">
-          <span className="text-muted-foreground text-[11px]">Positions with tasks</span>
-          <span className="text-2xl font-bold">{positionTaskGroups.filter((g) => g.isActive).length}</span>
+          <span className="text-muted-foreground text-[11px]">
+            Positions with tasks
+          </span>
+          <span className="text-2xl font-bold">
+            {positionTaskGroups.filter((g) => g.isActive).length}
+          </span>
         </div>
         <div className="bg-card flex flex-col gap-1 rounded-xl border px-4 py-3">
-          <span className="text-muted-foreground text-[11px]">Total tasks assigned</span>
+          <span className="text-muted-foreground text-[11px]">
+            Total tasks assigned
+          </span>
           <span className="text-2xl font-bold">
             {positionTaskGroups.reduce((s, g) => s + g.taskIds.length, 0)}
           </span>
         </div>
         <div className="bg-card flex flex-col gap-1 rounded-xl border px-4 py-3">
-          <span className="text-muted-foreground text-[11px]">Unassigned positions</span>
+          <span className="text-muted-foreground text-[11px]">
+            Unassigned positions
+          </span>
           <span className="text-2xl font-bold">{unassignedDepts.length}</span>
         </div>
       </div>
@@ -293,7 +321,9 @@ export function PositionTasksTab() {
       {/* Unassigned positions */}
       {unassignedDepts.length > 0 && (
         <div className="space-y-3">
-          <p className="text-sm font-semibold text-slate-500">Positions without tasks</p>
+          <p className="text-sm font-semibold text-slate-500">
+            Positions without tasks
+          </p>
           <div className="space-y-2">
             {unassignedDepts.map((dept) => (
               <UnassignedDeptCard
@@ -306,7 +336,11 @@ export function PositionTasksTab() {
         </div>
       )}
 
-      <TaskWizard open={wizardOpen} onClose={() => setWizardOpen(false)} defaultType="position" />
+      <TaskWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        defaultType="position"
+      />
     </div>
   );
 }

@@ -28,14 +28,86 @@ interface ExpiringHolder {
 }
 
 const HOLDERS: ExpiringHolder[] = [
-  { id: "c-701", firstName: "Catherine", lastName: "Léger", petName: "Joey", packageName: "Grooming 5-pack", expiryDate: "Jun 8", sessionsRemaining: 2, phone: "+1 514-555-0123" },
-  { id: "c-702", firstName: "Alexandre", lastName: "Picard", petName: "Roxy", packageName: "Daycare 10-pack", expiryDate: "Jun 12", sessionsRemaining: 4, phone: "+1 514-555-0234" },
-  { id: "c-703", firstName: "Isabelle", lastName: "Bouchard", petName: "Maple", packageName: "Grooming 5-pack", expiryDate: "Jun 15", sessionsRemaining: 1, phone: "+1 514-555-0345" },
-  { id: "c-704", firstName: "Daniel", lastName: "Ouellet", petName: "Chase", packageName: "Training 6-pack", expiryDate: "Jun 17", sessionsRemaining: 3, phone: "+1 514-555-0456" },
-  { id: "c-705", firstName: "Camille", lastName: "Fortin", petName: "Willow", packageName: "Daycare 10-pack", expiryDate: "Jun 18", sessionsRemaining: 5, phone: "+1 514-555-0567" },
-  { id: "c-706", firstName: "Mathieu", lastName: "Roy", petName: "Zeus", packageName: "Boarding 3-pack", expiryDate: "Jun 19", sessionsRemaining: 2, phone: "+1 514-555-0678" },
-  { id: "c-707", firstName: "Audrey", lastName: "Beaulieu", petName: "Mia", packageName: "Grooming 5-pack", expiryDate: "Jun 20", sessionsRemaining: 3, phone: "+1 514-555-0789" },
-  { id: "c-708", firstName: "Vincent", lastName: "Dubois", petName: "Hank", packageName: "Daycare 10-pack", expiryDate: "Jun 19", sessionsRemaining: 3, phone: "+1 514-555-0890" },
+  {
+    id: "c-701",
+    firstName: "Catherine",
+    lastName: "Léger",
+    petName: "Joey",
+    packageName: "Grooming 5-pack",
+    expiryDate: "Jun 8",
+    sessionsRemaining: 2,
+    phone: "+1 514-555-0123",
+  },
+  {
+    id: "c-702",
+    firstName: "Alexandre",
+    lastName: "Picard",
+    petName: "Roxy",
+    packageName: "Daycare 10-pack",
+    expiryDate: "Jun 12",
+    sessionsRemaining: 4,
+    phone: "+1 514-555-0234",
+  },
+  {
+    id: "c-703",
+    firstName: "Isabelle",
+    lastName: "Bouchard",
+    petName: "Maple",
+    packageName: "Grooming 5-pack",
+    expiryDate: "Jun 15",
+    sessionsRemaining: 1,
+    phone: "+1 514-555-0345",
+  },
+  {
+    id: "c-704",
+    firstName: "Daniel",
+    lastName: "Ouellet",
+    petName: "Chase",
+    packageName: "Training 6-pack",
+    expiryDate: "Jun 17",
+    sessionsRemaining: 3,
+    phone: "+1 514-555-0456",
+  },
+  {
+    id: "c-705",
+    firstName: "Camille",
+    lastName: "Fortin",
+    petName: "Willow",
+    packageName: "Daycare 10-pack",
+    expiryDate: "Jun 18",
+    sessionsRemaining: 5,
+    phone: "+1 514-555-0567",
+  },
+  {
+    id: "c-706",
+    firstName: "Mathieu",
+    lastName: "Roy",
+    petName: "Zeus",
+    packageName: "Boarding 3-pack",
+    expiryDate: "Jun 19",
+    sessionsRemaining: 2,
+    phone: "+1 514-555-0678",
+  },
+  {
+    id: "c-707",
+    firstName: "Audrey",
+    lastName: "Beaulieu",
+    petName: "Mia",
+    packageName: "Grooming 5-pack",
+    expiryDate: "Jun 20",
+    sessionsRemaining: 3,
+    phone: "+1 514-555-0789",
+  },
+  {
+    id: "c-708",
+    firstName: "Vincent",
+    lastName: "Dubois",
+    petName: "Hank",
+    packageName: "Daycare 10-pack",
+    expiryDate: "Jun 19",
+    sessionsRemaining: 3,
+    phone: "+1 514-555-0890",
+  },
 ];
 
 const DEFAULT_TEMPLATE = `Hi {{firstName}}, your {{packageName}} for {{petName}} expires {{expiryDate}} and you still have {{sessionsRemaining}} session(s) remaining. Book now so you don't lose them: doggieville.ca/book. Reply STOP to opt out.`;
@@ -45,7 +117,10 @@ const TOTAL_SESSIONS_AT_RISK = HOLDERS.reduce(
   0,
 );
 
-export function ExpiringPackagePanel({ onComplete, onCancel }: InsightPanelProps) {
+export function ExpiringPackagePanel({
+  onComplete,
+  onCancel,
+}: InsightPanelProps) {
   const [step, setStep] = useState<"compose" | "preview">("compose");
   const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
 
@@ -53,7 +128,7 @@ export function ExpiringPackagePanel({ onComplete, onCancel }: InsightPanelProps
     return (
       <div className="flex h-full flex-col gap-5 px-1">
         <div className="rounded-lg border bg-slate-50 p-3">
-          <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+          <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs tracking-wide uppercase">
             <Package className="size-3.5" />
             {HOLDERS.length} clients · {TOTAL_SESSIONS_AT_RISK} sessions at risk
           </div>
@@ -62,7 +137,7 @@ export function ExpiringPackagePanel({ onComplete, onCancel }: InsightPanelProps
               <li key={h.id} className="flex justify-between gap-2">
                 <Link
                   href={insightLinks.client(h.id)}
-                  className="truncate hover:text-primary hover:underline"
+                  className="hover:text-primary truncate hover:underline"
                 >
                   {h.firstName} {h.lastName.charAt(0)}. · {h.petName}
                 </Link>
@@ -94,9 +169,8 @@ export function ExpiringPackagePanel({ onComplete, onCancel }: InsightPanelProps
             onChange={(e) => setTemplate(e.target.value)}
           />
           <p className="text-muted-foreground text-xs">
-            Tokens: <code>{"{{firstName}}"}</code>,{" "}
-            <code>{"{{petName}}"}</code>, <code>{"{{packageName}}"}</code>,{" "}
-            <code>{"{{expiryDate}}"}</code>,{" "}
+            Tokens: <code>{"{{firstName}}"}</code>, <code>{"{{petName}}"}</code>
+            , <code>{"{{packageName}}"}</code>, <code>{"{{expiryDate}}"}</code>,{" "}
             <code>{"{{sessionsRemaining}}"}</code>
           </p>
         </div>
@@ -125,7 +199,9 @@ export function ExpiringPackagePanel({ onComplete, onCancel }: InsightPanelProps
     <div className="flex h-full flex-col gap-5 px-1">
       <PreviewBeforeSend
         channel="sms"
-        recipients={HOLDERS.map((h) => `${h.firstName} ${h.lastName.charAt(0)}.`)}
+        recipients={HOLDERS.map(
+          (h) => `${h.firstName} ${h.lastName.charAt(0)}.`,
+        )}
         body={resolved}
         meta={[
           { label: "Recipients", value: HOLDERS.length },

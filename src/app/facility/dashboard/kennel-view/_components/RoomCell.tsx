@@ -93,7 +93,10 @@ export function RoomCell({
           </ContextMenuItem>
         )}
         {!isBlocked ? (
-          <ContextMenuItem onSelect={() => onBlockRoom?.()} variant="destructive">
+          <ContextMenuItem
+            onSelect={() => onBlockRoom?.()}
+            variant="destructive"
+          >
             <Ban className="size-4" />
             Block room…
           </ContextMenuItem>

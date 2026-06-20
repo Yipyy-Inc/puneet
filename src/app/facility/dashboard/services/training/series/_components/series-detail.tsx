@@ -3,12 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -108,7 +103,7 @@ function SeriesInfoTile({
 }) {
   return (
     <div className="rounded-xl border border-slate-200/70 bg-white px-3 py-2.5 shadow-sm">
-      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-slate-500 uppercase">
         <Icon className="size-3" />
         {label}
       </div>
@@ -264,7 +259,7 @@ export function SeriesDetail({ seriesId }: { seriesId: string }) {
       <div className="bg-card flex flex-wrap gap-x-6 gap-y-2 rounded-xl border px-4 py-3 text-sm text-slate-700">
         <span className="inline-flex items-center gap-1.5">
           <CalendarDays className="size-3.5 text-slate-400" />
-          <span className="tabular-nums font-semibold">
+          <span className="font-semibold tabular-nums">
             {series.sessions.length}
           </span>{" "}
           total sessions
@@ -272,7 +267,7 @@ export function SeriesDetail({ seriesId }: { seriesId: string }) {
         {summary && summary.completedSessions > 0 && (
           <span className="inline-flex items-center gap-1.5">
             <CheckCircle2 className="size-3.5 text-emerald-500" />
-            <span className="tabular-nums font-semibold">
+            <span className="font-semibold tabular-nums">
               {summary.completedSessions}
             </span>{" "}
             completed
@@ -281,7 +276,7 @@ export function SeriesDetail({ seriesId }: { seriesId: string }) {
         {summary && summary.scheduledSessions > 0 && (
           <span className="inline-flex items-center gap-1.5">
             <Hourglass className="size-3.5 text-sky-500" />
-            <span className="tabular-nums font-semibold">
+            <span className="font-semibold tabular-nums">
               {summary.scheduledSessions}
             </span>{" "}
             upcoming
@@ -290,7 +285,7 @@ export function SeriesDetail({ seriesId }: { seriesId: string }) {
         {summary && summary.cancelledSessions > 0 && (
           <span className="inline-flex items-center gap-1.5">
             <CircleSlash className="size-3.5 text-rose-500" />
-            <span className="tabular-nums font-semibold">
+            <span className="font-semibold tabular-nums">
               {summary.cancelledSessions}
             </span>{" "}
             cancelled
@@ -298,7 +293,7 @@ export function SeriesDetail({ seriesId }: { seriesId: string }) {
         )}
         <span className="inline-flex items-center gap-1.5">
           <DollarSign className="size-3.5 text-slate-400" />
-          <span className="tabular-nums font-semibold">
+          <span className="font-semibold tabular-nums">
             ${series.enrollmentRules.fullPaymentAmount}
           </span>{" "}
           per student
@@ -331,7 +326,7 @@ export function SeriesDetail({ seriesId }: { seriesId: string }) {
               )}
             </SeriesInfoTile>
             <SeriesInfoTile icon={CircleDollarSign} label="Total collected">
-              <span className="tabular-nums text-emerald-700">
+              <span className="text-emerald-700 tabular-nums">
                 {formatMoney(revenue.totalCollected)}
               </span>
               <span className="text-muted-foreground text-[11px] font-normal">
@@ -378,7 +373,7 @@ export function SeriesDetail({ seriesId }: { seriesId: string }) {
           <TabsTrigger value="sessions" className="gap-1.5">
             <CalendarDays className="size-3.5" />
             Sessions
-            <span className="text-muted-foreground ml-1 tabular-nums text-[11px]">
+            <span className="text-muted-foreground ml-1 text-[11px] tabular-nums">
               {series.sessions.length}
             </span>
           </TabsTrigger>

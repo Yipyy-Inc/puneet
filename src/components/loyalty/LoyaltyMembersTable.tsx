@@ -82,8 +82,7 @@ const STATUS_LABEL: Record<Status, string> = {
 const STATUS_TONE: Record<Status, string> = {
   active:
     "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-  inactive:
-    "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  inactive: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
   lapsed: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
 };
 
@@ -138,9 +137,7 @@ function toCsv(rows: MemberRow[]): string {
     STATUS_LABEL[r.status],
   ]);
   return [header, ...body]
-    .map((cols) =>
-      cols.map((c) => `"${c.replace(/"/g, '""')}"`).join(","),
-    )
+    .map((cols) => cols.map((c) => `"${c.replace(/"/g, '""')}"`).join(","))
     .join("\n");
 }
 
@@ -158,7 +155,10 @@ export function LoyaltyMembersTable() {
     [config.tierDefinitions],
   );
   const tierMap = useMemo(() => {
-    const map = new Map<string, { name: string; color: string; sortOrder: number }>();
+    const map = new Map<
+      string,
+      { name: string; color: string; sortOrder: number }
+    >();
     for (const t of tierDefs) {
       map.set(t.id, { name: t.name, color: t.color, sortOrder: t.sortOrder });
     }
@@ -173,9 +173,15 @@ export function LoyaltyMembersTable() {
   const [sortKey, setSortKey] = useState<SortKey>("points");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  const [historyFor, setHistoryFor] = useState<CustomerLoyaltyAccount | null>(null);
-  const [adjustFor, setAdjustFor] = useState<CustomerLoyaltyAccount | null>(null);
-  const [rewardFor, setRewardFor] = useState<CustomerLoyaltyAccount | null>(null);
+  const [historyFor, setHistoryFor] = useState<CustomerLoyaltyAccount | null>(
+    null,
+  );
+  const [adjustFor, setAdjustFor] = useState<CustomerLoyaltyAccount | null>(
+    null,
+  );
+  const [rewardFor, setRewardFor] = useState<CustomerLoyaltyAccount | null>(
+    null,
+  );
 
   const rows = useMemo<MemberRow[]>(() => {
     return accounts.map((a) => {
@@ -249,7 +255,16 @@ export function LoyaltyMembersTable() {
       }
       return cmp * dir;
     });
-  }, [rows, search, tierFilter, statusFilter, dateFrom, dateTo, sortKey, sortDir]);
+  }, [
+    rows,
+    search,
+    tierFilter,
+    statusFilter,
+    dateFrom,
+    dateTo,
+    sortKey,
+    sortDir,
+  ]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -340,13 +355,58 @@ export function LoyaltyMembersTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <SortHead label="Customer" k="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortHead label="Tier" k="tier" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortHead label="Points" k="points" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
-              <SortHead label="Lifetime" k="lifetimeEarned" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
-              <SortHead label="Spend" k="spend" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
-              <SortHead label="Last activity" k="lastActivity" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortHead label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortHead
+                label="Customer"
+                k="name"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={toggleSort}
+              />
+              <SortHead
+                label="Tier"
+                k="tier"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={toggleSort}
+              />
+              <SortHead
+                label="Points"
+                k="points"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={toggleSort}
+                align="right"
+              />
+              <SortHead
+                label="Lifetime"
+                k="lifetimeEarned"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={toggleSort}
+                align="right"
+              />
+              <SortHead
+                label="Spend"
+                k="spend"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={toggleSort}
+                align="right"
+              />
+              <SortHead
+                label="Last activity"
+                k="lastActivity"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={toggleSort}
+              />
+              <SortHead
+                label="Status"
+                k="status"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={toggleSort}
+              />
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -375,9 +435,15 @@ export function LoyaltyMembersTable() {
                     {r.tierColor ? (
                       <span
                         className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium"
-                        style={{ backgroundColor: `${r.tierColor}22`, color: r.tierColor }}
+                        style={{
+                          backgroundColor: `${r.tierColor}22`,
+                          color: r.tierColor,
+                        }}
                       >
-                        <span className="size-2 rounded-full" style={{ backgroundColor: r.tierColor }} />
+                        <span
+                          className="size-2 rounded-full"
+                          style={{ backgroundColor: r.tierColor }}
+                        />
                         {r.tierName}
                       </span>
                     ) : (
@@ -393,7 +459,7 @@ export function LoyaltyMembersTable() {
                   <TableCell className="text-right tabular-nums">
                     ${r.spend.toLocaleString()}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-sm">
+                  <TableCell className="text-sm whitespace-nowrap">
                     {fmtDate(r.lastActivityISO)}
                   </TableCell>
                   <TableCell>
@@ -409,21 +475,31 @@ export function LoyaltyMembersTable() {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" aria-label="Actions">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Actions"
+                        >
                           <MoreHorizontal className="size-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setHistoryFor(r.account)}>
+                        <DropdownMenuItem
+                          onClick={() => setHistoryFor(r.account)}
+                        >
                           <History className="mr-2 size-4" /> View history
                         </DropdownMenuItem>
                         {canManage && (
-                          <DropdownMenuItem onClick={() => setAdjustFor(r.account)}>
+                          <DropdownMenuItem
+                            onClick={() => setAdjustFor(r.account)}
+                          >
                             <Plus className="mr-2 size-4" /> Adjust points
                           </DropdownMenuItem>
                         )}
                         {canManage && (
-                          <DropdownMenuItem onClick={() => setRewardFor(r.account)}>
+                          <DropdownMenuItem
+                            onClick={() => setRewardFor(r.account)}
+                          >
                             <Gift className="mr-2 size-4" /> Send reward
                           </DropdownMenuItem>
                         )}
@@ -446,7 +522,10 @@ export function LoyaltyMembersTable() {
         open={!!historyFor}
         onOpenChange={(o) => !o && setHistoryFor(null)}
       >
-        <SheetContent side="right" className="w-full gap-0 overflow-y-auto sm:max-w-2xl">
+        <SheetContent
+          side="right"
+          className="w-full gap-0 overflow-y-auto sm:max-w-2xl"
+        >
           {historyFor && (
             <MemberHistoryBody
               account={historyFor}
@@ -547,15 +626,25 @@ function MemberHistoryBody({
   return (
     <>
       <SheetHeader>
-        <SheetTitle>{customerName ?? `Client #${account.customerId}`}</SheetTitle>
-        <SheetDescription>Loyalty balances and transaction history</SheetDescription>
+        <SheetTitle>
+          {customerName ?? `Client #${account.customerId}`}
+        </SheetTitle>
+        <SheetDescription>
+          Loyalty balances and transaction history
+        </SheetDescription>
       </SheetHeader>
       <div className="space-y-5 px-4 pb-6">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="Points" value={account.pointsBalance.toLocaleString()} />
-          <Stat label="Credit" value={`$${account.creditBalance.toLocaleString()}`} />
+          <Stat
+            label="Credit"
+            value={`$${account.creditBalance.toLocaleString()}`}
+          />
           <Stat label="Tier" value={tierName ?? "—"} />
-          <Stat label="Redeemed" value={account.lifetimePointsRedeemed.toLocaleString()} />
+          <Stat
+            label="Redeemed"
+            value={account.lifetimePointsRedeemed.toLocaleString()}
+          />
         </div>
         <div>
           <h3 className="mb-2 text-sm font-semibold">Transaction history</h3>
@@ -565,7 +654,9 @@ function MemberHistoryBody({
           />
         </div>
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/facility/dashboard/clients/${account.customerId}/loyalty`}>
+          <Link
+            href={`/facility/dashboard/clients/${account.customerId}/loyalty`}
+          >
             Open full profile
             <ExternalLink className="ml-1.5 size-4" />
           </Link>

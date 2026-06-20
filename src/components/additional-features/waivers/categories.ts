@@ -68,9 +68,8 @@ export function bucketByCategory<T extends Bucketable>(
     if (item.categoryId && byId.has(item.categoryId)) {
       target = item.categoryId;
     } else {
-      const tags = item.services && item.services.length > 0
-        ? item.services
-        : [item.type];
+      const tags =
+        item.services && item.services.length > 0 ? item.services : [item.type];
       for (const tag of tags) {
         const id = serviceCategoryByTag.get(tag);
         if (id) {
@@ -82,7 +81,8 @@ export function bucketByCategory<T extends Bucketable>(
     byId.get(target ?? UNCATEGORIZED_ID)!.push(item);
   }
 
-  const ordered: { categoryId: string; categoryName: string; items: T[] }[] = [];
+  const ordered: { categoryId: string; categoryName: string; items: T[] }[] =
+    [];
   for (const cat of categories) {
     ordered.push({
       categoryId: cat.id,

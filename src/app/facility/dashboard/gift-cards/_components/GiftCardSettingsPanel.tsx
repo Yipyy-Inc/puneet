@@ -51,7 +51,9 @@ interface GiftCardSettingsPanelProps {
   facilityId: number;
 }
 
-export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps) {
+export function GiftCardSettingsPanel({
+  facilityId,
+}: GiftCardSettingsPanelProps) {
   const settings = giftCardSettings.find((s) => s.facilityId === facilityId);
   const facilityLocations = getLocationsByFacility(facilityId);
   const isMultiLocation = facilityLocations.length > 1;
@@ -61,13 +63,25 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
       ?.name.split(/[–-]/)[0]
       .trim() ?? "Your Facility";
 
-  const [digitalEnabled, setDigitalEnabled] = useState(settings?.digitalEnabled ?? true);
-  const [physicalEnabled, setPhysicalEnabled] = useState(settings?.physicalEnabled ?? true);
-  const [lowStockThreshold, setLowStockThreshold] = useState(settings?.lowStockThreshold ?? 50);
-  const [expiryEnabled, setExpiryEnabled] = useState(settings?.expiryEnabled ?? false);
+  const [digitalEnabled, setDigitalEnabled] = useState(
+    settings?.digitalEnabled ?? true,
+  );
+  const [physicalEnabled, setPhysicalEnabled] = useState(
+    settings?.physicalEnabled ?? true,
+  );
+  const [lowStockThreshold, setLowStockThreshold] = useState(
+    settings?.lowStockThreshold ?? 50,
+  );
+  const [expiryEnabled, setExpiryEnabled] = useState(
+    settings?.expiryEnabled ?? false,
+  );
   const [expiryDays, setExpiryDays] = useState(settings?.expiryDays ?? 365);
-  const [partialRedemption, setPartialRedemption] = useState(settings?.partialRedemptionAllowed ?? true);
-  const [pinThreshold, setPinThreshold] = useState(settings?.pinRequiredAbove ?? 200);
+  const [partialRedemption, setPartialRedemption] = useState(
+    settings?.partialRedemptionAllowed ?? true,
+  );
+  const [pinThreshold, setPinThreshold] = useState(
+    settings?.pinRequiredAbove ?? 200,
+  );
   const [redemptionScope, setRedemptionScope] = useState(
     settings?.redemptionLocationScope ?? "this_location",
   );
@@ -123,7 +137,9 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
             <CreditCard className="size-4" />
             Card Types
           </CardTitle>
-          <CardDescription>Enable which gift card formats your facility offers</CardDescription>
+          <CardDescription>
+            Enable which gift card formats your facility offers
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
@@ -133,7 +149,10 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
                 Customers purchase online and receive a branded email
               </p>
             </div>
-            <Switch checked={digitalEnabled} onCheckedChange={setDigitalEnabled} />
+            <Switch
+              checked={digitalEnabled}
+              onCheckedChange={setDigitalEnabled}
+            />
           </div>
           <Separator />
           <div className="flex items-center justify-between">
@@ -143,7 +162,10 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
                 Staff activates pre-printed cards at POS
               </p>
             </div>
-            <Switch checked={physicalEnabled} onCheckedChange={setPhysicalEnabled} />
+            <Switch
+              checked={physicalEnabled}
+              onCheckedChange={setPhysicalEnabled}
+            />
           </div>
           {physicalEnabled && (
             <>
@@ -151,8 +173,8 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
               <div className="space-y-2">
                 <Label className="font-medium">Low-Stock Warning</Label>
                 <p className="text-muted-foreground text-xs">
-                  Show an amber alert on the dashboard when available blank cards
-                  fall below this count
+                  Show an amber alert on the dashboard when available blank
+                  cards fall below this count
                 </p>
                 <div className="flex items-center gap-3">
                   <Input
@@ -182,7 +204,9 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
             <Settings className="size-4" />
             Redemption Rules
           </CardTitle>
-          <CardDescription>Control how and when gift cards can be redeemed</CardDescription>
+          <CardDescription>
+            Control how and when gift cards can be redeemed
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
@@ -192,7 +216,10 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
                 Allow customers to redeem only part of a card balance
               </p>
             </div>
-            <Switch checked={partialRedemption} onCheckedChange={setPartialRedemption} />
+            <Switch
+              checked={partialRedemption}
+              onCheckedChange={setPartialRedemption}
+            />
           </div>
           {isMultiLocation && (
             <>
@@ -217,7 +244,7 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
                   <label
                     htmlFor="redeem-this"
                     data-active={redemptionScope === "this_location"}
-                    className="flex cursor-pointer items-start gap-3 rounded-md border p-3 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                    className="data-[active=true]:border-primary data-[active=true]:bg-primary/5 flex cursor-pointer items-start gap-3 rounded-md border p-3"
                   >
                     <RadioGroupItem
                       value="this_location"
@@ -236,7 +263,7 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
                   <label
                     htmlFor="redeem-all"
                     data-active={redemptionScope === "all_locations"}
-                    className="flex cursor-pointer items-start gap-3 rounded-md border p-3 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                    className="data-[active=true]:border-primary data-[active=true]:bg-primary/5 flex cursor-pointer items-start gap-3 rounded-md border p-3"
                   >
                     <RadioGroupItem
                       value="all_locations"
@@ -255,7 +282,7 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
                   <label
                     htmlFor="redeem-selected"
                     data-active={redemptionScope === "selected"}
-                    className="flex cursor-pointer items-start gap-3 rounded-md border p-3 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                    className="data-[active=true]:border-primary data-[active=true]:bg-primary/5 flex cursor-pointer items-start gap-3 rounded-md border p-3"
                   >
                     <RadioGroupItem
                       value="selected"
@@ -264,13 +291,15 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
                     />
                     <div className="flex-1 space-y-2">
                       <div className="space-y-0.5">
-                        <p className="text-sm font-medium">Selected locations</p>
+                        <p className="text-sm font-medium">
+                          Selected locations
+                        </p>
                         <p className="text-muted-foreground text-xs">
                           Choose which locations can redeem these cards.
                         </p>
                       </div>
                       {redemptionScope === "selected" && (
-                        <div className="space-y-1.5 rounded-md border bg-background p-3">
+                        <div className="bg-background space-y-1.5 rounded-md border p-3">
                           {facilityLocations.map((loc) => (
                             <label
                               key={loc.id}
@@ -318,7 +347,9 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
           <Separator />
           <div className="flex items-center justify-between">
             <div className="pr-4">
-              <Label className="font-medium">Allow Gift Card Cancellation</Label>
+              <Label className="font-medium">
+                Allow Gift Card Cancellation
+              </Label>
               <p className="text-muted-foreground text-xs">
                 A customer can request a refund of an unused gift card for cash.
               </p>
@@ -355,7 +386,10 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
                   : "Cards do not expire."}
               </p>
             </div>
-            <Switch checked={expiryEnabled} onCheckedChange={setExpiryEnabled} />
+            <Switch
+              checked={expiryEnabled}
+              onCheckedChange={setExpiryEnabled}
+            />
           </div>
           {expiryEnabled && (
             <div className="flex items-center gap-3">
@@ -367,7 +401,9 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
                 onChange={(e) => setExpiryDays(parseInt(e.target.value) || 365)}
                 className="w-24"
               />
-              <span className="text-muted-foreground text-sm">days after issue</span>
+              <span className="text-muted-foreground text-sm">
+                days after issue
+              </span>
             </div>
           )}
         </CardContent>
@@ -380,7 +416,9 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
             <Shield className="size-4" />
             Security
           </CardTitle>
-          <CardDescription>PIN requirement for high-value card redemptions</CardDescription>
+          <CardDescription>
+            PIN requirement for high-value card redemptions
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           <Label>Require PIN for cards above</Label>
@@ -410,7 +448,8 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
             Wallet Usage Rules
           </CardTitle>
           <CardDescription>
-            Choose which services customers can pay for using their wallet balance
+            Choose which services customers can pay for using their wallet
+            balance
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -420,7 +459,10 @@ export function GiftCardSettingsPanel({ facilityId }: GiftCardSettingsPanelProps
                 <div className="flex items-center gap-2">
                   <Label className="cursor-pointer font-normal">{label}</Label>
                   {!walletRules[key] && (
-                    <Badge variant="outline" className="text-xs text-muted-foreground">
+                    <Badge
+                      variant="outline"
+                      className="text-muted-foreground text-xs"
+                    >
                       Off
                     </Badge>
                   )}

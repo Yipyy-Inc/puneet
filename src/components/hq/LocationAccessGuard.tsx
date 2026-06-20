@@ -81,7 +81,9 @@ function DeniedCard({
             )}
           </div>
           <h3 className="text-lg font-semibold">
-            {reason === "hq" ? "HQ-level access required" : "Location not accessible"}
+            {reason === "hq"
+              ? "HQ-level access required"
+              : "Location not accessible"}
           </h3>
           <p className="text-muted-foreground text-sm">
             {reason === "hq"

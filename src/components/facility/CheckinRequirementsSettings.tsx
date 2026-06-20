@@ -59,7 +59,8 @@ export function CheckinRequirementsSettings() {
     feeding: defaultConfig?.sections.feeding ?? "required",
     medication: defaultConfig?.sections.medication ?? "required",
     belongings: defaultConfig?.sections.belongings ?? "optional",
-    additionalContacts: defaultConfig?.sections.additionalContacts ?? "required",
+    additionalContacts:
+      defaultConfig?.sections.additionalContacts ?? "required",
     vaccination: defaultConfig?.sections.vaccination ?? "required",
     waiver: defaultConfig?.sections.waiver ?? "required",
   });

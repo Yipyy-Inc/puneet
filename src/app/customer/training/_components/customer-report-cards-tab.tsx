@@ -52,7 +52,12 @@ interface Props {
  *  label. Rounds to the nearest integer so the report card reads with the
  *  same vocabulary the trainer used in-session. */
 function ratingLabelForAvg(avg: number): string {
-  const rounded = Math.max(1, Math.min(5, Math.round(avg))) as 1 | 2 | 3 | 4 | 5;
+  const rounded = Math.max(1, Math.min(5, Math.round(avg))) as
+    | 1
+    | 2
+    | 3
+    | 4
+    | 5;
   return EXERCISE_RATING_LABELS[rounded];
 }
 
@@ -159,8 +164,8 @@ export function CustomerReportCardsTab({ customerId }: Props) {
   const { data: moduleSettings } = useQuery(trainingQueries.moduleSettings());
   useEffect(() => {
     if (!moduleSettings?.graduationFollowUpEnabled) return;
-    const delayMs = Math.max(1, moduleSettings.graduationFollowUpDays) *
-      24 * 60 * 60 * 1000;
+    const delayMs =
+      Math.max(1, moduleSettings.graduationFollowUpDays) * 24 * 60 * 60 * 1000;
     const template =
       moduleSettings.graduationFollowUpTemplate ??
       "{petName} has graduated — have you seen the upcoming {programName} classes?";
@@ -193,19 +198,19 @@ export function CustomerReportCardsTab({ customerId }: Props) {
     return (
       <div className="text-muted-foreground rounded-xl border border-dashed py-16 text-center text-sm">
         <Inbox className="text-muted-foreground/30 mx-auto mb-2 size-8" />
-        No report cards yet — your instructor will send a progress summary
-        after each session.
+        No report cards yet — your instructor will send a progress summary after
+        each session.
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 shadow-sm">
+      <div className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3 text-sm text-slate-700">
-          <FileText className="text-indigo-500 size-4" />
+          <FileText className="size-4 text-indigo-500" />
           <span>
-            <span className="font-semibold tabular-nums text-slate-900">
+            <span className="font-semibold text-slate-900 tabular-nums">
               {cards.length}
             </span>{" "}
             report card{cards.length === 1 ? "" : "s"}
@@ -221,8 +226,8 @@ export function CustomerReportCardsTab({ customerId }: Props) {
           )}
         </div>
         <p className="text-muted-foreground text-[12px]">
-          Each card is a progress summary across every session — not a recap
-          of just one.
+          Each card is a progress summary across every session — not a recap of
+          just one.
         </p>
       </div>
 
@@ -265,7 +270,7 @@ function CustomerCard({
   return (
     <li
       className={cn(
-        "overflow-hidden rounded-xl border bg-card shadow-sm",
+        "bg-card overflow-hidden rounded-xl border shadow-sm",
         isGraduation && "ring-2 ring-amber-300",
         isNew && !isGraduation && "ring-2 ring-indigo-200",
       )}
@@ -282,7 +287,9 @@ function CustomerCard({
         onClick={onToggle}
         className={cn(
           "flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-colors",
-          isGraduation ? "bg-amber-50/60 hover:bg-amber-50" : "hover:bg-slate-50",
+          isGraduation
+            ? "bg-amber-50/60 hover:bg-amber-50"
+            : "hover:bg-slate-50",
         )}
       >
         <div className="flex min-w-0 items-start gap-3">
@@ -305,7 +312,7 @@ function CustomerCard({
             )}
             <span
               className={cn(
-                "absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full ring-2 ring-white shadow-sm",
+                "absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full shadow-sm ring-2 ring-white",
                 isGraduation
                   ? "bg-amber-500 text-white"
                   : "bg-indigo-500 text-white",
@@ -406,7 +413,7 @@ function CustomerCard({
           >
             <div className="mb-1.5 flex items-center gap-2">
               <Award className="size-4" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">
+              <span className="text-[10px] font-bold tracking-wider uppercase">
                 Where {card.petName} is right now
               </span>
             </div>
@@ -427,11 +434,11 @@ function CustomerCard({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider">
+                <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-medium tracking-wider uppercase">
                   <TrendingUp className="size-3" />
                   Progress
                 </span>
-                <span className="font-semibold tabular-nums text-slate-800">
+                <span className="font-semibold text-slate-800 tabular-nums">
                   {card.sessionsAttended}/{card.totalSessions} sessions ·{" "}
                   {progressPct}%
                 </span>
@@ -439,7 +446,7 @@ function CustomerCard({
               <Progress value={progressPct} className="h-2" />
             </div>
             <div className="space-y-1.5">
-              <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider">
+              <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-medium tracking-wider uppercase">
                 <Users className="size-3" />
                 Attendance
               </p>
@@ -471,7 +478,7 @@ function CustomerCard({
 
           {card.sessionSummary && (
             <div className="rounded-lg border-l-2 border-l-indigo-300 bg-indigo-50/40 px-3 py-2.5">
-              <p className="text-indigo-700 mb-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+              <p className="mb-1 inline-flex items-center gap-1 text-[10px] font-bold tracking-wider text-indigo-700 uppercase">
                 <Quote className="size-3" />
                 {isGraduation ? "Series wrap-up" : "What we worked on"}
               </p>
@@ -483,7 +490,7 @@ function CustomerCard({
 
           {card.exercisesCovered.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+              <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                 <Star className="size-3" />
                 Exercises covered ({card.exercisesCovered.length})
               </p>
@@ -529,7 +536,7 @@ function CustomerCard({
 
           {card.assignedHomework.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+              <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                 <BookOpen className="size-3" />
                 Homework to work on
               </p>
@@ -560,16 +567,13 @@ function CustomerCard({
 
           {card.photos.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+              <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                 <Camera className="size-3" />
                 Photos from the session
               </p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {card.photos.map((photo, idx) => (
-                  <figure
-                    key={`${card.id}-photo-${idx}`}
-                    className="space-y-1"
-                  >
+                  <figure key={`${card.id}-photo-${idx}`} className="space-y-1">
                     <div className="relative aspect-square overflow-hidden rounded-lg bg-slate-100">
                       <Image
                         src={photo.url}
@@ -593,7 +597,7 @@ function CustomerCard({
 
           {card.progressNarrative && (
             <div className="rounded-lg border bg-slate-50/40 px-3 py-2.5">
-              <p className="text-muted-foreground mb-1 text-[10px] font-bold uppercase tracking-wider">
+              <p className="text-muted-foreground mb-1 text-[10px] font-bold tracking-wider uppercase">
                 Progression so far
               </p>
               <p className="text-[13px]/relaxed text-slate-700">
@@ -602,15 +606,14 @@ function CustomerCard({
             </div>
           )}
 
-
           {isGraduation && (
             <div className="space-y-2">
               <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-3 text-center">
-                <Award className="text-amber-500 mx-auto mb-1 size-6" />
+                <Award className="mx-auto mb-1 size-6 text-amber-500" />
                 <p className="text-sm font-semibold text-amber-800">
                   Congratulations, {card.petName}!
                 </p>
-                <p className="text-amber-700 mt-0.5 text-[12px]">
+                <p className="mt-0.5 text-[12px] text-amber-700">
                   Series complete. We&apos;re so proud of how far you&apos;ve
                   both come.
                 </p>
@@ -619,11 +622,11 @@ function CustomerCard({
               {card.recommendedNextProgram ? (
                 <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 px-3 py-3 dark:border-indigo-900/40 dark:bg-indigo-950/30">
                   <div className="flex items-start gap-2.5">
-                    <div className="bg-indigo-500 text-white flex size-9 shrink-0 items-center justify-center rounded-xl shadow-sm">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500 text-white shadow-sm">
                       <GraduationCap className="size-4" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-indigo-700 dark:text-indigo-200 text-[10px] font-bold uppercase tracking-wider">
+                      <p className="text-[10px] font-bold tracking-wider text-indigo-700 uppercase dark:text-indigo-200">
                         Next step
                       </p>
                       <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -674,7 +677,10 @@ function StarRow({ value, count }: { value: number; count: number }) {
   const hasHalf = value - full >= 0.5;
   return (
     <span className="inline-flex shrink-0 items-center gap-1 tabular-nums">
-      <span className="inline-flex items-center" aria-label={`${value} out of 5 stars`}>
+      <span
+        className="inline-flex items-center"
+        aria-label={`${value} out of 5 stars`}
+      >
         {Array.from({ length: 5 }).map((_, i) => {
           const filled = i < full;
           const half = !filled && i === full && hasHalf;
@@ -735,7 +741,7 @@ function ExercisePanel({
     <div className="rounded-lg border bg-white px-3 py-2.5">
       <p
         className={cn(
-          "mb-1.5 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider",
+          "mb-1.5 inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase",
           toneCls,
         )}
       >

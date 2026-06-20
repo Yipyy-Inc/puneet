@@ -75,7 +75,7 @@ export function BookingInvoicesTab() {
   if (!client) {
     return (
       <Card>
-        <CardContent className="py-12 text-center text-sm text-muted-foreground">
+        <CardContent className="text-muted-foreground py-12 text-center text-sm">
           Sign in to view your invoices.
         </CardContent>
       </Card>
@@ -98,10 +98,10 @@ export function BookingInvoicesTab() {
         </div>
         {totalDue > 0 && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-right">
-            <p className="text-amber-900/70 text-[10px] font-semibold tracking-wider uppercase">
+            <p className="text-[10px] font-semibold tracking-wider text-amber-900/70 uppercase">
               Outstanding
             </p>
-            <p className="text-amber-900 text-lg font-bold font-[tabular-nums]">
+            <p className="font-[tabular-nums] text-lg font-bold text-amber-900">
               ${totalDue.toFixed(2)}
             </p>
           </div>

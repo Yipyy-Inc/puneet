@@ -57,8 +57,8 @@ const ServiceAreaMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full w-full items-center justify-center bg-muted/30">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      <div className="bg-muted/30 flex h-full w-full items-center justify-center">
+        <Loader2 className="text-muted-foreground size-6 animate-spin" />
       </div>
     ),
   },
@@ -299,7 +299,9 @@ export function ServiceAreaDialog({
     };
     if (method === "draw") {
       // Strip any optional altitude — ServiceArea stores [lat, lng] pairs.
-      base.polygon = polygon.map(([lat, lng]) => [lat, lng] as [number, number]);
+      base.polygon = polygon.map(
+        ([lat, lng]) => [lat, lng] as [number, number],
+      );
     } else {
       base.postalCodes = zips;
     }
@@ -344,9 +346,9 @@ export function ServiceAreaDialog({
                     onClick={() => setColor(c)}
                     style={{ backgroundColor: c }}
                     className={cn(
-                      "size-6 rounded-full ring-2 ring-offset-2 ring-offset-background transition-transform",
+                      "ring-offset-background size-6 rounded-full ring-2 ring-offset-2 transition-transform",
                       color === c
-                        ? "scale-110 ring-foreground"
+                        ? "ring-foreground scale-110"
                         : "ring-transparent hover:scale-105",
                     )}
                   />
@@ -376,15 +378,15 @@ export function ServiceAreaDialog({
                   );
                 })}
               </div>
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-muted-foreground text-[10px]">
                 {formatDaysOfWeek(days)}
               </p>
             </div>
 
-            <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
+            <div className="bg-muted/30 flex items-center justify-between rounded-lg border px-3 py-2">
               <div>
                 <p className="text-sm font-medium">Active</p>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-muted-foreground text-[10px]">
                   Online bookings check the active flag
                 </p>
               </div>
@@ -394,22 +396,20 @@ export function ServiceAreaDialog({
             <div className="space-y-2">
               <Label className="text-xs">Method</Label>
               <div className="grid grid-cols-2 gap-2">
-                {(
-                  [
-                    {
-                      value: "draw" as const,
-                      icon: Pencil,
-                      title: "Draw",
-                      hint: "Draw on the map",
-                    },
-                    {
-                      value: "postal" as const,
-                      icon: Hash,
-                      title: "Zipcode",
-                      hint: "Enter ZIPs",
-                    },
-                  ]
-                ).map((opt) => {
+                {[
+                  {
+                    value: "draw" as const,
+                    icon: Pencil,
+                    title: "Draw",
+                    hint: "Draw on the map",
+                  },
+                  {
+                    value: "postal" as const,
+                    icon: Hash,
+                    title: "Zipcode",
+                    hint: "Enter ZIPs",
+                  },
+                ].map((opt) => {
                   const Icon = opt.icon;
                   const isActive = method === opt.value;
                   return (
@@ -436,7 +436,7 @@ export function ServiceAreaDialog({
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-semibold">{opt.title}</p>
-                        <p className="mt-0.5 text-[10px] text-muted-foreground">
+                        <p className="text-muted-foreground mt-0.5 text-[10px]">
                           {opt.hint}
                         </p>
                       </div>
@@ -448,16 +448,16 @@ export function ServiceAreaDialog({
 
             {/* Method-specific controls */}
             {method === "draw" ? (
-              <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+              <div className="bg-muted/20 space-y-2 rounded-lg border p-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs">Drawing</Label>
-                  <span className="text-[10px] tabular-nums text-muted-foreground">
+                  <span className="text-muted-foreground text-[10px] tabular-nums">
                     {polygon.length} pt{polygon.length === 1 ? "" : "s"}
                   </span>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Click the map to drop points. Click the first (green) point
-                  to close the shape — at least 3 points needed.
+                <p className="text-muted-foreground text-[11px]">
+                  Click the map to drop points. Click the first (green) point to
+                  close the shape — at least 3 points needed.
                 </p>
                 <div className="flex gap-1.5">
                   <Button
@@ -473,7 +473,7 @@ export function ServiceAreaDialog({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 flex-1 gap-1.5 text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive h-8 flex-1 gap-1.5"
                     disabled={polygon.length === 0}
                     onClick={handleClear}
                   >
@@ -490,14 +490,14 @@ export function ServiceAreaDialog({
             ) : (
               <div className="space-y-2">
                 <Label className="text-xs">ZIP codes</Label>
-                <div className="rounded-lg border bg-card p-2">
+                <div className="bg-card rounded-lg border p-2">
                   <div className="flex flex-wrap items-center gap-1.5">
                     {zips.map((z) => {
                       const b = ZIP_BOUNDARIES.find((x) => x.zip === z);
                       return (
                         <span
                           key={z}
-                          className="inline-flex items-center gap-1 rounded-full border bg-muted/60 py-0.5 pl-2 pr-1 text-xs font-medium"
+                          className="bg-muted/60 inline-flex items-center gap-1 rounded-full border py-0.5 pr-1 pl-2 text-xs font-medium"
                         >
                           {z}
                           {b && (
@@ -509,7 +509,7 @@ export function ServiceAreaDialog({
                             type="button"
                             aria-label={`Remove ${z}`}
                             onClick={() => removeZip(z)}
-                            className="ml-0.5 rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            className="text-muted-foreground hover:bg-muted hover:text-foreground ml-0.5 rounded-full p-0.5"
                           >
                             <X className="size-3" />
                           </button>
@@ -517,7 +517,7 @@ export function ServiceAreaDialog({
                       );
                     })}
                     <div className="relative min-w-[10rem] flex-1">
-                      <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                      <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
                       <Input
                         value={zipQuery}
                         onChange={(e) => {
@@ -536,14 +536,12 @@ export function ServiceAreaDialog({
                           }
                         }}
                         placeholder={
-                          zips.length === 0
-                            ? "Search ZIP…"
-                            : "Add another…"
+                          zips.length === 0 ? "Search ZIP…" : "Add another…"
                         }
                         className="h-8 border-0 bg-transparent pl-7 text-sm shadow-none focus-visible:ring-0"
                       />
                       {zipSearchOpen && zipResults.length > 0 && (
-                        <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-y-auto rounded-lg border bg-popover p-1 shadow-lg">
+                        <div className="bg-popover absolute top-full right-0 left-0 z-30 mt-1 max-h-64 overflow-y-auto rounded-lg border p-1 shadow-lg">
                           {zipResults.map((r) => (
                             <button
                               key={r.zip}
@@ -552,7 +550,7 @@ export function ServiceAreaDialog({
                                 e.preventDefault();
                                 addZip(r.zip);
                               }}
-                              className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted"
+                              className="hover:bg-muted flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs"
                             >
                               <span className="font-medium">{r.zip}</span>
                               <span className="text-muted-foreground">
@@ -566,7 +564,7 @@ export function ServiceAreaDialog({
                   </div>
                 </div>
                 {zips.length === 0 ? (
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-muted-foreground text-[10px]">
                     Search and pick ZIP codes — the map will show the union of
                     their boundaries.
                   </p>
@@ -595,30 +593,30 @@ export function ServiceAreaDialog({
             />
 
             {/* Overlay toggles — float over the map top-right */}
-            <div className="absolute right-3 top-3 z-[400] flex w-fit flex-col gap-1 rounded-lg border bg-card/95 p-2 shadow-md backdrop-blur">
-              <label className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-xs">
+            <div className="bg-card/95 absolute top-3 right-3 z-[400] flex w-fit flex-col gap-1 rounded-lg border p-2 shadow-md backdrop-blur">
+              <label className="flex cursor-pointer items-center gap-1.5 text-xs whitespace-nowrap">
                 <Switch
                   checked={showOtherAreas}
                   onCheckedChange={setShowOtherAreas}
                   className="scale-75"
                 />
-                <Layers className="size-3.5 text-muted-foreground" />
+                <Layers className="text-muted-foreground size-3.5" />
                 Other service areas
               </label>
-              <label className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-xs">
+              <label className="flex cursor-pointer items-center gap-1.5 text-xs whitespace-nowrap">
                 <Switch
                   checked={showActiveClients}
                   onCheckedChange={setShowActiveClients}
                   className="scale-75"
                 />
-                <Users className="size-3.5 text-muted-foreground" />
+                <Users className="text-muted-foreground size-3.5" />
                 Active clients
               </label>
             </div>
 
             {/* Active drawing summary chip */}
             {method === "draw" && polygon.length > 0 && (
-              <div className="absolute bottom-3 left-3 z-[400] rounded-full border bg-card/95 px-3 py-1 text-xs font-medium shadow-md backdrop-blur">
+              <div className="bg-card/95 absolute bottom-3 left-3 z-[400] rounded-full border px-3 py-1 text-xs font-medium shadow-md backdrop-blur">
                 <span className="text-muted-foreground">Points: </span>
                 <span className="tabular-nums">{polygon.length}</span>
               </div>
@@ -626,7 +624,7 @@ export function ServiceAreaDialog({
 
             {/* Active ZIP summary chip */}
             {method === "postal" && zips.length > 0 && (
-              <div className="absolute bottom-3 left-3 z-[400] flex items-center gap-1.5 rounded-full border bg-card/95 px-3 py-1 text-xs font-medium shadow-md backdrop-blur">
+              <div className="bg-card/95 absolute bottom-3 left-3 z-[400] flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium shadow-md backdrop-blur">
                 <Badge
                   className="border-0 px-1.5 py-0 text-[10px]"
                   style={{ backgroundColor: color, color: "#fff" }}
@@ -639,7 +637,7 @@ export function ServiceAreaDialog({
           </div>
         </div>
 
-        <DialogFooter className="border-t bg-muted/30 px-6 py-3">
+        <DialogFooter className="bg-muted/30 border-t px-6 py-3">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

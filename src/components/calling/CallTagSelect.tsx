@@ -78,7 +78,7 @@ export function CallTagSelect({
         <PopoverContent align="start" className="w-60 p-1">
           <div className="max-h-64 overflow-y-auto">
             {tags.length === 0 && (
-              <p className="p-2 text-xs text-muted-foreground">
+              <p className="text-muted-foreground p-2 text-xs">
                 No tags defined yet. Add them in Settings → Call Tags.
               </p>
             )}
@@ -90,11 +90,13 @@ export function CallTagSelect({
                   key={t.id}
                   type="button"
                   onClick={() => toggle(t.id)}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                  className="hover:bg-muted flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm"
                 >
-                  <span className={cn("size-2.5 shrink-0 rounded-full", c.solid)} />
+                  <span
+                    className={cn("size-2.5 shrink-0 rounded-full", c.solid)}
+                  />
                   <span className="flex-1 truncate">{t.name}</span>
-                  {on && <Check className="size-4 text-primary" />}
+                  {on && <Check className="text-primary size-4" />}
                 </button>
               );
             })}

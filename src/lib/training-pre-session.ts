@@ -388,7 +388,9 @@ function collectPetAlerts(
   // Dedupe by label+detail so a tag and a note saying the same thing don't
   // double-up. Critical-tag stays first when it tied with a note.
   const seen = new Set<string>();
-  const ordered = alerts.sort((a, b) => alertPriorityRank(a) - alertPriorityRank(b));
+  const ordered = alerts.sort(
+    (a, b) => alertPriorityRank(a) - alertPriorityRank(b),
+  );
   return ordered.filter((a) => {
     const key = `${a.kind}::${a.label}::${a.detail}`;
     if (seen.has(key)) return false;
@@ -485,7 +487,9 @@ export function aggregateStudentBriefing(
     }
     // Newest submissions first — most relevant to the trainer about to walk
     // into the session.
-    homeworkVideos.sort((a, b) => b.attachedAtISO.localeCompare(a.attachedAtISO));
+    homeworkVideos.sort((a, b) =>
+      b.attachedAtISO.localeCompare(a.attachedAtISO),
+    );
 
     // Attendance summary scoped to this series enrollment (or to this pet
     // if we can't pin a single enrollment) — drives the "X of Y attended"
@@ -556,7 +560,9 @@ export function aggregateStudentBriefing(
 
 function priorityForRow(row: StudentBriefingRow): number {
   if (row.vaccineWarning.hasWarning) return 0;
-  if (row.notes.some((n) => n.category === "concern" || n.category === "behavior")) {
+  if (
+    row.notes.some((n) => n.category === "concern" || n.category === "behavior")
+  ) {
     return 1;
   }
   if (row.consecutiveNoShows >= 2) return 2;
@@ -657,9 +663,7 @@ export function aggregateHomeworkSummary(
   // Also bridge through class enrollments so pets without any series-side
   // attendance still have a chance to surface (defensive — won't fire in
   // the current seed but keeps the helper resilient).
-  const enrollmentByPet = new Map(
-    enrollments.map((e) => [e.petId, e]),
-  );
+  const enrollmentByPet = new Map(enrollments.map((e) => [e.petId, e]));
   void enrollmentByPet;
 
   const rosterByPetId = new Map(rows.map((r) => [r.petId, r]));

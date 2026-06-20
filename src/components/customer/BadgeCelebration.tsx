@@ -61,7 +61,9 @@ export function BadgeCelebration({
       ))}
 
       <div className="animate-in fade-in zoom-in-95 bg-background/95 flex flex-col items-center gap-2 rounded-2xl border px-10 py-7 shadow-xl backdrop-blur-sm duration-500">
-        <div className="animate-in zoom-in-50 text-6xl duration-700">{icon}</div>
+        <div className="animate-in zoom-in-50 text-6xl duration-700">
+          {icon}
+        </div>
         <div className="text-primary text-xs font-semibold tracking-widest uppercase">
           Badge unlocked!
         </div>

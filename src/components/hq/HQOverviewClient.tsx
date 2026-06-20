@@ -76,7 +76,12 @@ function StatCard({
             <p className="text-2xl font-bold tracking-tight">{value}</p>
             {sub && <p className="text-muted-foreground text-xs">{sub}</p>}
           </div>
-          <div className={cn("flex size-10 items-center justify-center rounded-xl", s.bgSoft)}>
+          <div
+            className={cn(
+              "flex size-10 items-center justify-center rounded-xl",
+              s.bgSoft,
+            )}
+          >
             <Icon className={cn("size-5", s.text)} />
           </div>
         </div>
@@ -90,12 +95,18 @@ function StatCard({
                   : "bg-rose-500/10 text-rose-600 dark:text-rose-400",
               )}
             >
-              {positive ? <TrendingUp className="size-2.5" /> : <TrendingDown className="size-2.5" />}
+              {positive ? (
+                <TrendingUp className="size-2.5" />
+              ) : (
+                <TrendingDown className="size-2.5" />
+              )}
               {positive ? "+" : ""}
               {growth.toFixed(1)}%
             </span>
           )}
-          <span className="text-muted-foreground text-[10px]">vs last month</span>
+          <span className="text-muted-foreground text-[10px]">
+            vs last month
+          </span>
           {trend && (
             <Sparkline
               values={trend}
@@ -124,7 +135,9 @@ function LocationCard({
   s: LocationColorClasses;
 }) {
   const m = loc.metrics;
-  const utilS = m ? styleFromKey(utilizationKey(m.staffUtilization)) : styleFromKey("emerald");
+  const utilS = m
+    ? styleFromKey(utilizationKey(m.staffUtilization))
+    : styleFromKey("emerald");
   return (
     <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-md">
       <div className={cn("absolute inset-x-0 top-0 h-0.5", s.bg)} />
@@ -140,7 +153,9 @@ function LocationCard({
               {loc.shortCode}
             </div>
             <div className="min-w-0">
-              <CardTitle className="truncate text-sm font-semibold">{loc.name}</CardTitle>
+              <CardTitle className="truncate text-sm font-semibold">
+                {loc.name}
+              </CardTitle>
               <p className="text-muted-foreground flex items-center gap-1 text-[11px]">
                 <MapPin className="size-3" />
                 {loc.city}
@@ -162,7 +177,9 @@ function LocationCard({
         <div>
           <div className="mb-1.5 flex items-center justify-between text-[11px]">
             <span className="text-muted-foreground">Revenue share</span>
-            <span className={cn("font-bold tabular-nums", s.text)}>{percentage.toFixed(1)}%</span>
+            <span className={cn("font-bold tabular-nums", s.text)}>
+              {percentage.toFixed(1)}%
+            </span>
           </div>
           <MetricBar percent={percentage} fillClassName={s.bg} size="sm" />
         </div>
@@ -170,7 +187,9 @@ function LocationCard({
         <div className="grid grid-cols-2 gap-2">
           <div className={cn("rounded-lg px-2.5 py-2", s.bgSofter)}>
             <p className="text-muted-foreground text-[10px]">Revenue</p>
-            <p className="text-sm font-bold tabular-nums">${revenue.toLocaleString()}</p>
+            <p className="text-sm font-bold tabular-nums">
+              ${revenue.toLocaleString()}
+            </p>
             {m && (
               <span
                 className={cn(
@@ -185,7 +204,9 @@ function LocationCard({
           </div>
           <div className={cn("rounded-lg px-2.5 py-2", s.bgSofter)}>
             <p className="text-muted-foreground text-[10px]">Bookings</p>
-            <p className="text-sm font-bold tabular-nums">{m?.bookings ?? "--"}</p>
+            <p className="text-sm font-bold tabular-nums">
+              {m?.bookings ?? "--"}
+            </p>
             {m && (
               <span
                 className={cn(
@@ -200,12 +221,16 @@ function LocationCard({
           </div>
           <div className="bg-muted/40 rounded-lg px-2.5 py-2">
             <p className="text-muted-foreground text-[10px]">Occupancy</p>
-            <p className="text-sm font-bold tabular-nums">{m?.occupancyRate ?? "--"}%</p>
+            <p className="text-sm font-bold tabular-nums">
+              {m?.occupancyRate ?? "--"}%
+            </p>
             <p className="text-muted-foreground text-[10px]">avg rate</p>
           </div>
           <div className="bg-muted/40 rounded-lg px-2.5 py-2">
             <p className="text-muted-foreground text-[10px]">New clients</p>
-            <p className="text-sm font-bold tabular-nums">{m?.newCustomers ?? "--"}</p>
+            <p className="text-sm font-bold tabular-nums">
+              {m?.newCustomers ?? "--"}
+            </p>
             <p className="text-muted-foreground text-[10px]">this month</p>
           </div>
         </div>
@@ -214,15 +239,23 @@ function LocationCard({
           <div>
             <div className="mb-1 flex items-center justify-between text-[10px]">
               <span className="text-muted-foreground">Staff utilization</span>
-              <span className={cn("font-semibold", utilS.text)}>{m.staffUtilization}%</span>
+              <span className={cn("font-semibold", utilS.text)}>
+                {m.staffUtilization}%
+              </span>
             </div>
-            <MetricBar percent={m.staffUtilization} fillClassName={utilS.bg} size="xs" />
+            <MetricBar
+              percent={m.staffUtilization}
+              fillClassName={utilS.bg}
+              size="xs"
+            />
           </div>
         )}
 
         <div>
           <div className="mb-1 flex items-center justify-between text-[10px]">
-            <span className="text-muted-foreground">Revenue trend · Jan–Apr</span>
+            <span className="text-muted-foreground">
+              Revenue trend · Jan–Apr
+            </span>
           </div>
           <Sparkline
             values={trend}
@@ -234,7 +267,11 @@ function LocationCard({
         </div>
 
         <Link href="/facility/hq/comparison" className="block">
-          <Button variant="ghost" size="sm" className="mt-1 h-7 w-full gap-1.5 text-xs">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-1 h-7 w-full gap-1.5 text-xs"
+          >
             View details
             <ArrowRight className="size-3" />
           </Button>
@@ -249,7 +286,8 @@ export function HQOverviewClient({ metrics, locations }: Props) {
 
   const totalRevenue = metrics.totalRevenue;
   const totalBookings = metrics.totalBookings;
-  const totalCustomers = metrics.totalNewCustomers + metrics.totalReturningCustomers;
+  const totalCustomers =
+    metrics.totalNewCustomers + metrics.totalReturningCustomers;
   const topLoc = locations.find((l) => l.id === metrics.topPerformingLocation);
   const topLocS = topLoc ? locationStyles(topLoc) : styleFromKey("sky");
 
@@ -267,7 +305,9 @@ export function HQOverviewClient({ metrics, locations }: Props) {
             <Sparkles className="size-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">HQ Command Center</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              HQ Command Center
+            </h1>
             <p className="text-muted-foreground text-sm">
               Network overview · {locations.length} locations · April 2026
             </p>
@@ -343,9 +383,18 @@ export function HQOverviewClient({ metrics, locations }: Props) {
       {/* Top performer hero + revenue split */}
       <div className="grid gap-4 lg:grid-cols-3">
         {topLoc && (
-          <Card className={cn("relative overflow-hidden lg:col-span-2", topLocS.borderSoft)}>
+          <Card
+            className={cn(
+              "relative overflow-hidden lg:col-span-2",
+              topLocS.borderSoft,
+            )}
+          >
             <div
-              className={cn("absolute inset-0 bg-linear-to-br opacity-40", topLocS.gradFrom, topLocS.gradTo)}
+              className={cn(
+                "absolute inset-0 bg-linear-to-br opacity-40",
+                topLocS.gradFrom,
+                topLocS.gradTo,
+              )}
             />
             <CardContent className="relative flex flex-wrap items-center gap-4 pt-5 pb-5">
               <div
@@ -356,10 +405,15 @@ export function HQOverviewClient({ metrics, locations }: Props) {
               >
                 {topLoc.shortCode}
               </div>
-              <div className="flex-1 min-w-[200px]">
+              <div className="min-w-[200px] flex-1">
                 <div className="flex items-center gap-2">
-                  <Crown className="size-4 text-amber-500" fill="currentColor" />
-                  <span className="text-sm font-semibold">Top Performer This Month</span>
+                  <Crown
+                    className="size-4 text-amber-500"
+                    fill="currentColor"
+                  />
+                  <span className="text-sm font-semibold">
+                    Top Performer This Month
+                  </span>
                 </div>
                 <p className="mt-0.5 text-base font-bold">{topLoc.name}</p>
                 <p className="text-muted-foreground text-[11px]">
@@ -372,10 +426,20 @@ export function HQOverviewClient({ metrics, locations }: Props) {
                   value={`$${topLoc.metrics?.revenue.toLocaleString() ?? "—"}`}
                   className={topLocS.text}
                 />
-                <Stat label="Occupancy" value={`${topLoc.metrics?.occupancyRate ?? "—"}%`} />
-                <Stat label="Bookings" value={topLoc.metrics?.bookings.toLocaleString() ?? "—"} />
+                <Stat
+                  label="Occupancy"
+                  value={`${topLoc.metrics?.occupancyRate ?? "—"}%`}
+                />
+                <Stat
+                  label="Bookings"
+                  value={topLoc.metrics?.bookings.toLocaleString() ?? "—"}
+                />
                 <Link href="/facility/hq/comparison">
-                  <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                  >
                     Breakdown <ArrowRight className="size-3" />
                   </Button>
                 </Link>
@@ -386,8 +450,12 @@ export function HQOverviewClient({ metrics, locations }: Props) {
 
         <Card className="overflow-hidden">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold">Revenue distribution</CardTitle>
-            <p className="text-muted-foreground text-[11px]">By location · this month</p>
+            <CardTitle className="text-sm font-semibold">
+              Revenue distribution
+            </CardTitle>
+            <p className="text-muted-foreground text-[11px]">
+              By location · this month
+            </p>
           </CardHeader>
           <CardContent className="space-y-3">
             <StackedDistribution
@@ -437,7 +505,9 @@ export function HQOverviewClient({ metrics, locations }: Props) {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-base font-semibold">Locations</h2>
-            <p className="text-muted-foreground text-xs">Live performance per branch</p>
+            <p className="text-muted-foreground text-xs">
+              Live performance per branch
+            </p>
           </div>
           <Link href="/facility/hq/settings">
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
@@ -447,8 +517,12 @@ export function HQOverviewClient({ metrics, locations }: Props) {
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {locations.map((loc) => {
-            const rev = metrics.revenueByLocation.find((r) => r.locationId === loc.id);
-            const trend = metrics.revenueTrend.map((row) => (row[loc.id] as number) ?? 0);
+            const rev = metrics.revenueByLocation.find(
+              (r) => r.locationId === loc.id,
+            );
+            const trend = metrics.revenueTrend.map(
+              (row) => (row[loc.id] as number) ?? 0,
+            );
             const s = locationStyles(loc);
             return (
               <LocationCard
@@ -515,8 +589,13 @@ export function HQOverviewClient({ metrics, locations }: Props) {
                       0,
                     );
                     return (
-                      <tr key={row.date} className="hover:bg-muted/30 group transition-colors">
-                        <td className="py-2.5 text-xs font-medium">{row.date}</td>
+                      <tr
+                        key={row.date}
+                        className="hover:bg-muted/30 group transition-colors"
+                      >
+                        <td className="py-2.5 text-xs font-medium">
+                          {row.date}
+                        </td>
                         {locations.map((loc) => (
                           <td
                             key={loc.id}
@@ -554,7 +633,8 @@ export function HQOverviewClient({ metrics, locations }: Props) {
                       );
                     })}
                     <td className="pt-2.5 text-right text-xs font-bold tabular-nums">
-                      ${metrics.revenueTrend
+                      $
+                      {metrics.revenueTrend
                         .reduce(
                           (sum, row) =>
                             sum +
@@ -624,9 +704,20 @@ export function HQOverviewClient({ metrics, locations }: Props) {
           return (
             <Link key={link.href} href={link.href}>
               <Card className="group relative cursor-pointer overflow-hidden transition-all duration-200 hover:shadow-md">
-                <div className={cn("absolute inset-0 bg-linear-to-br opacity-40 transition-opacity duration-300 group-hover:opacity-70", s.gradFrom, s.gradTo)} />
+                <div
+                  className={cn(
+                    "absolute inset-0 bg-linear-to-br opacity-40 transition-opacity duration-300 group-hover:opacity-70",
+                    s.gradFrom,
+                    s.gradTo,
+                  )}
+                />
                 <CardContent className="relative flex items-center gap-3 pt-4 pb-4">
-                  <div className={cn("flex size-9 items-center justify-center rounded-xl", s.bgSoft)}>
+                  <div
+                    className={cn(
+                      "flex size-9 items-center justify-center rounded-xl",
+                      s.bgSoft,
+                    )}
+                  >
                     <link.icon className={cn("size-4.5", s.text)} />
                   </div>
                   <div>
@@ -660,9 +751,10 @@ function Stat({
 }) {
   return (
     <div className="text-center">
-      <p className={cn("text-base font-bold tabular-nums", className)}>{value}</p>
+      <p className={cn("text-base font-bold tabular-nums", className)}>
+        {value}
+      </p>
       <p className="text-muted-foreground text-[10px]">{label}</p>
     </div>
   );
 }
-

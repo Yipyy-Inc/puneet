@@ -110,7 +110,9 @@ export default function NewBookingPage() {
           facilityId={selectedFacility.id}
           facilityName={selectedFacility.name}
           preSelectedClientId={customer.id}
-          preSelectedService={resumePreselection?.preSelectedService ?? preSelectedService}
+          preSelectedService={
+            resumePreselection?.preSelectedService ?? preSelectedService
+          }
           preSelectedProgramId={
             resumePreselection ? undefined : preSelectedProgramId
           }
@@ -131,7 +133,9 @@ export default function NewBookingPage() {
           preSelectedDaycareSectionId={
             resumePreselection?.preSelectedDaycareSectionId
           }
-          preSelectedExtraServices={resumePreselection?.preSelectedExtraServices}
+          preSelectedExtraServices={
+            resumePreselection?.preSelectedExtraServices
+          }
           preSelectedFeedingSchedule={
             resumePreselection?.preSelectedFeedingSchedule
           }
@@ -171,16 +175,20 @@ export default function NewBookingPage() {
               ? `${booking.startDate}T${booking.checkInTime}:00`
               : `${booking.startDate}T09:00:00`;
 
-            const normalizedExtras: ExtraService[] | undefined = booking
-              .extraServices
-              ? booking.extraServices
-                  .map((es): ExtraService | null =>
-                    typeof es === "string"
-                      ? null
-                      : { serviceId: es.serviceId, quantity: es.quantity, petId: es.petId },
-                  )
-                  .filter((es): es is ExtraService => es !== null)
-              : undefined;
+            const normalizedExtras: ExtraService[] | undefined =
+              booking.extraServices
+                ? booking.extraServices
+                    .map((es): ExtraService | null =>
+                      typeof es === "string"
+                        ? null
+                        : {
+                            serviceId: es.serviceId,
+                            quantity: es.quantity,
+                            petId: es.petId,
+                          },
+                    )
+                    .filter((es): es is ExtraService => es !== null)
+                : undefined;
 
             const customerMemberships = allMemberships.filter(
               (m) => m.customerId === String(customer.id),

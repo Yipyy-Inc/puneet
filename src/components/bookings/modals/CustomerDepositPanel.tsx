@@ -74,7 +74,7 @@ export function CustomerDepositPanel({
           </p>
         </div>
         <div className="text-right">
-          <p className="text-amber-700 text-[10px] tracking-wide uppercase">
+          <p className="text-[10px] tracking-wide text-amber-700 uppercase">
             Due now
           </p>
           <p className="text-lg font-bold text-amber-900 tabular-nums">
@@ -104,7 +104,7 @@ export function CustomerDepositPanel({
                 type="button"
                 onClick={() => onSelectPaymentMethod(card.id)}
                 className={cn(
-                  "flex w-full items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2 text-left transition",
+                  "bg-card flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition",
                   active
                     ? "border-amber-400 ring-2 ring-amber-300"
                     : "hover:bg-muted",
@@ -119,7 +119,7 @@ export function CustomerDepositPanel({
                     •••• {card.cardLast4}
                   </span>
                   {card.isDefault && (
-                    <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-blue-700">
+                    <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold text-blue-700 uppercase">
                       Default
                     </span>
                   )}
@@ -129,9 +129,7 @@ export function CustomerDepositPanel({
                     {String(card.cardExpMonth).padStart(2, "0")}/
                     {String(card.cardExpYear).slice(-2)}
                   </span>
-                  {active && (
-                    <Check className="size-4 text-emerald-600" />
-                  )}
+                  {active && <Check className="size-4 text-emerald-600" />}
                 </div>
               </button>
             );

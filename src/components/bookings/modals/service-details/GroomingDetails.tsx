@@ -385,7 +385,7 @@ function GroomingPackagePicker({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {packages.map((pkg) => {
           const active = selectedPackageId === pkg.id;
-          
+
           let displayPriceLabel = "From";
           let displayPrice = pkg.sizePricing.small;
           let displayDuration = pkg.duration;
@@ -422,7 +422,7 @@ function GroomingPackagePicker({
               onClick={() => onSelect(pkg.id)}
               aria-pressed={active}
               className={cn(
-                "group relative flex flex-col overflow-hidden rounded-2xl border bg-card text-left transition",
+                "group bg-card relative flex flex-col overflow-hidden rounded-2xl border text-left transition",
                 active
                   ? cn("ring-2", accent.ring, accent.border, "shadow-md")
                   : "hover:shadow-sm",
@@ -432,7 +432,9 @@ function GroomingPackagePicker({
               <div
                 className={cn(
                   "relative h-32 w-full overflow-hidden",
-                  pkg.imageUrl ? "" : cn(accent.bg, "flex items-center justify-center"),
+                  pkg.imageUrl
+                    ? ""
+                    : cn(accent.bg, "flex items-center justify-center"),
                 )}
               >
                 {pkg.imageUrl ? (
@@ -467,9 +469,7 @@ function GroomingPackagePicker({
               {/* Body */}
               <div className="flex flex-1 flex-col gap-2 p-3">
                 <div className="flex items-start justify-between gap-2">
-                  <h4 className="text-sm/tight font-semibold">
-                    {pkg.name}
-                  </h4>
+                  <h4 className="text-sm/tight font-semibold">{pkg.name}</h4>
                   <div className="text-right">
                     <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
                       {displayPriceLabel}
@@ -610,19 +610,19 @@ function GroomingStylistPicker({
   }, [orderedStylists, stylistId, setStylistId]);
 
   return (
-    <div className="rounded-2xl border bg-card p-4">
+    <div className="bg-card rounded-2xl border p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <Label className="text-sm font-semibold">
             Groomer <span className="text-destructive">*</span>
           </Label>
           {selectedPackage?.requiredSkillLevel && (
-            <p className="text-[10px] text-muted-foreground mt-0.5">
+            <p className="text-muted-foreground mt-0.5 text-[10px]">
               Requires {selectedPackage.requiredSkillLevel}+ skill level
             </p>
           )}
         </div>
-        <Users className="size-4 text-muted-foreground" />
+        <Users className="text-muted-foreground size-4" />
       </div>
       <Select value={stylistId} onValueChange={setStylistId}>
         <SelectTrigger className="mt-2">
@@ -630,7 +630,7 @@ function GroomingStylistPicker({
         </SelectTrigger>
         <SelectContent>
           {orderedStylists.length === 0 ? (
-            <div className="px-2 py-1.5 text-xs text-muted-foreground">
+            <div className="text-muted-foreground px-2 py-1.5 text-xs">
               No groomers qualified for this service.
             </div>
           ) : (
@@ -642,11 +642,11 @@ function GroomingStylistPicker({
                     <span>{s.name}</span>
                     <span className="flex items-center gap-1">
                       {isLast && (
-                        <span className="rounded-full bg-emerald-100 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+                        <span className="rounded-full bg-emerald-100 px-1.5 py-px text-[9px] font-semibold tracking-wide text-emerald-800 uppercase dark:bg-emerald-900/40 dark:text-emerald-200">
                           Last groomer
                         </span>
                       )}
-                      <span className="text-[10px] text-muted-foreground capitalize">
+                      <span className="text-muted-foreground text-[10px] capitalize">
                         {s.capacity.skillLevel}
                       </span>
                     </span>
@@ -660,13 +660,13 @@ function GroomingStylistPicker({
 
       {/* Additional groomers — chips so multiple can be toggled without
           opening a second dropdown. */}
-      <div className="mt-3 rounded-md border bg-muted/30 px-2.5 py-2">
+      <div className="bg-muted/30 mt-3 rounded-md border px-2.5 py-2">
         <div className="flex items-center justify-between">
-          <Label className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+          <Label className="text-muted-foreground flex items-center gap-1 text-[10px] tracking-wide uppercase">
             <Users className="size-3" />
             Additional groomers
           </Label>
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-muted-foreground text-[10px]">
             {additionalStylistIds.length} selected
           </span>
         </div>
@@ -698,7 +698,7 @@ function GroomingStylistPicker({
               );
             })}
         </div>
-        <p className="mt-1 text-[10px] text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-[10px]">
           For big-dog jobs or shadowing — payroll credits everyone selected.
         </p>
       </div>
@@ -758,15 +758,15 @@ function GroomingStationPicker({
   }
 
   return (
-    <div className="rounded-2xl border bg-card p-4">
+    <div className="bg-card rounded-2xl border p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <Label className="text-sm font-semibold">Station</Label>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
+          <p className="text-muted-foreground mt-0.5 text-[10px]">
             Tables/tubs that fit {largestPetSize} dogs.
           </p>
         </div>
-        <Building2 className="size-4 text-muted-foreground" />
+        <Building2 className="text-muted-foreground size-4" />
       </div>
       <Select
         value={stationId || "__none__"}
@@ -782,7 +782,7 @@ function GroomingStationPicker({
             </span>
           </SelectItem>
           {eligibleStations.length === 0 ? (
-            <div className="px-2 py-1.5 text-xs text-muted-foreground">
+            <div className="text-muted-foreground px-2 py-1.5 text-xs">
               No eligible stations for this pet size.
             </div>
           ) : (
@@ -790,7 +790,7 @@ function GroomingStationPicker({
               <SelectItem key={s.id} value={s.id}>
                 <div className="flex w-full items-center justify-between gap-3">
                   <span>{s.name}</span>
-                  <span className="text-[10px] text-muted-foreground capitalize">
+                  <span className="text-muted-foreground text-[10px] capitalize">
                     {s.type}
                   </span>
                 </div>
@@ -829,9 +829,7 @@ function GroomingStagesEditor({
     // Start the new stage right after the previous one (or 09:00) so the
     // editor produces a contiguous schedule by default.
     const lastEnd =
-      stages.length > 0
-        ? stages[stages.length - 1].endTime
-        : "09:00";
+      stages.length > 0 ? stages[stages.length - 1].endTime : "09:00";
     const [h, m] = lastEnd.split(":").map(Number);
     const startMins = h * 60 + m;
     const endMins = Math.min(startMins + Math.floor(baseDuration / 2), 23 * 60);
@@ -882,7 +880,7 @@ function GroomingStagesEditor({
           <Label className="text-sm font-semibold text-violet-700 dark:text-violet-300">
             Split into sequential stages
           </Label>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
+          <p className="text-muted-foreground mt-0.5 text-[10px]">
             Optional. Chain stages across multiple groomers — e.g., bath by
             Sarah, then cut by Marcus.
           </p>
@@ -900,7 +898,7 @@ function GroomingStagesEditor({
       </div>
 
       {stages.length === 0 ? (
-        <p className="mt-2 text-[11px] italic text-muted-foreground">
+        <p className="text-muted-foreground mt-2 text-[11px] italic">
           One continuous block by default. Add a stage to split.
         </p>
       ) : (
@@ -908,15 +906,13 @@ function GroomingStagesEditor({
           {stages.map((stage, idx) => (
             <div
               key={stage.id}
-              className="grid grid-cols-12 items-end gap-2 rounded-lg border bg-card p-2.5"
+              className="bg-card grid grid-cols-12 items-end gap-2 rounded-lg border p-2.5"
             >
               <div className="col-span-3">
                 <Label className="text-[10px]">Label</Label>
                 <Input
                   value={stage.label}
-                  onChange={(e) =>
-                    updateStage(idx, { label: e.target.value })
-                  }
+                  onChange={(e) => updateStage(idx, { label: e.target.value })}
                   className="mt-0.5 h-8 text-xs"
                 />
               </div>
@@ -967,7 +963,7 @@ function GroomingStagesEditor({
                   type="button"
                   size="sm"
                   variant="ghost"
-                  className="h-8 px-2 text-destructive/70 hover:text-destructive"
+                  className="text-destructive/70 hover:text-destructive h-8 px-2"
                   onClick={() => removeStage(idx)}
                 >
                   <Trash2 className="size-3.5" />
@@ -1029,21 +1025,21 @@ function GroomingPriceOverride({
   const finalDuration = manualDuration ?? resolved.durationMin;
 
   return (
-    <div className="rounded-2xl border bg-card p-4">
+    <div className="bg-card rounded-2xl border p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <Label className="text-sm font-semibold">Pricing & duration</Label>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
+          <p className="text-muted-foreground mt-0.5 text-[10px]">
             Resolved from {primaryPet.name} / {getPetSize(primaryPet)} /{" "}
             {selectedPackage!.name}. Edit to override.
           </p>
         </div>
-        <DollarSign className="size-4 text-muted-foreground" />
+        <DollarSign className="text-muted-foreground size-4" />
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3">
         <div>
-          <Label className="text-[11px] flex items-center gap-1">
+          <Label className="flex items-center gap-1 text-[11px]">
             Price <span className="text-muted-foreground">($)</span>
           </Label>
           <Input
@@ -1064,13 +1060,13 @@ function GroomingPriceOverride({
             className="mt-1 text-sm"
           />
           {manualPrice !== undefined && manualPrice !== resolved.price && (
-            <p className="text-[10px] text-amber-700 mt-1">
+            <p className="mt-1 text-[10px] text-amber-700">
               Override · resolved was ${resolved.price.toFixed(2)}
             </p>
           )}
         </div>
         <div>
-          <Label className="text-[11px] flex items-center gap-1">
+          <Label className="flex items-center gap-1 text-[11px]">
             Duration <span className="text-muted-foreground">(min)</span>
           </Label>
           <Input
@@ -1092,7 +1088,7 @@ function GroomingPriceOverride({
           />
           {manualDuration !== undefined &&
             manualDuration !== resolved.durationMin && (
-              <p className="text-[10px] text-amber-700 mt-1">
+              <p className="mt-1 text-[10px] text-amber-700">
                 Override · resolved was {resolved.durationMin} min
               </p>
             )}
@@ -1166,11 +1162,8 @@ function GroomingSchedule({
   const [waitlistOpen, setWaitlistOpen] = useState(false);
 
   // Smart-scheduling settings drive slot granularity + recommended-buffer dots.
-  const {
-    smartSchedulingEnabled,
-    slotGranularityMin,
-    defaultBufferMin,
-  } = useGroomingScheduling();
+  const { smartSchedulingEnabled, slotGranularityMin, defaultBufferMin } =
+    useGroomingScheduling();
 
   const { data: allAppointments = [] } = useQuery(
     groomingQueries.appointments(),
@@ -1186,8 +1179,7 @@ function GroomingSchedule({
     stylistsData.find((s) => s.id === stylistId)?.calendarColor ?? "#ec4899";
 
   const selectedPkg = groomingPackages.find((p) => p.id === packageId);
-  const serviceDurationForSlots =
-    manualDuration ?? selectedPkg?.duration ?? 0;
+  const serviceDurationForSlots = manualDuration ?? selectedPkg?.duration ?? 0;
 
   // Density dot for each calendar day — null = closed / off-day.
   const getDensityForDate = useCallback(
@@ -1335,11 +1327,7 @@ function GroomingSchedule({
       const dow = d.getDay();
       const ds = formatDateString(d);
       if (postalCode) {
-        const r = checkPostalCodeOnDay(
-          mobile.serviceAreas,
-          postalCode,
-          dow,
-        );
+        const r = checkPostalCodeOnDay(mobile.serviceAreas, postalCode, dow);
         if (r.status === "not-covered") {
           disabled.push(d);
           messages[ds] = "Outside your service area on this day.";
@@ -1404,7 +1392,15 @@ function GroomingSchedule({
   const arrivalWindows = useMemo(() => {
     if (!isMobile || !startDate) return [];
     const dow = new Date(startDate + "T00:00:00").getDay();
-    const dayKey = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][dow] as keyof typeof hours;
+    const dayKey = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ][dow] as keyof typeof hours;
     const dayHours = hours[dayKey];
     if (!dayHours || !dayHours.isOpen) return [];
     const win = mobile.arrivalWindowMinutes;
@@ -1431,9 +1427,13 @@ function GroomingSchedule({
   const facilityHasMobile = mobile.enabled && mobile.vans.length > 0;
 
   const finalBlockedDates = [...blockedDates, ...coverageDisabledDates];
-  const finalBlockedMessages = { ...blockedMessages, ...coverageDisabledMessages };
+  const finalBlockedMessages = {
+    ...blockedMessages,
+    ...coverageDisabledMessages,
+  };
 
-  const packageDuration = serviceDurationForSlots || selectedPkg?.duration || 60;
+  const packageDuration =
+    serviceDurationForSlots || selectedPkg?.duration || 60;
 
   return (
     <div className="space-y-5">
@@ -1458,7 +1458,7 @@ function GroomingSchedule({
 
       {/* Mobile / Salon segmented control — only when facility has vans */}
       {facilityHasMobile && (
-        <div className="rounded-xl border bg-card p-1">
+        <div className="bg-card rounded-xl border p-1">
           <div role="tablist" className="grid grid-cols-2 gap-1">
             <button
               type="button"
@@ -1508,8 +1508,8 @@ function GroomingSchedule({
         <div className="flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2">
           <MapPin className="mt-0.5 size-3.5 shrink-0 text-sky-600" />
           <p className="text-xs text-sky-900">
-            Showing dates the van covers your area ({postalCode}). Other
-            dates are dimmed.
+            Showing dates the van covers your area ({postalCode}). Other dates
+            are dimmed.
           </p>
         </div>
       )}
@@ -1520,7 +1520,7 @@ function GroomingSchedule({
           so the user can still pick a date. */}
       {!isMobile && stylistId ? (
         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-          <div className="overflow-hidden rounded-xl border bg-card p-2 shadow-sm">
+          <div className="bg-card overflow-hidden rounded-xl border p-2 shadow-sm">
             <DensityCalendar
               value={startDate}
               onChange={(next) => {
@@ -1533,7 +1533,7 @@ function GroomingSchedule({
               getDensityForDate={getDensityForDate}
               minDate={todayIso}
             />
-            <div className="mt-2 flex items-center gap-3 px-1 text-[10px] text-muted-foreground">
+            <div className="text-muted-foreground mt-2 flex items-center gap-3 px-1 text-[10px]">
               <span className="inline-flex items-center gap-1">
                 <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
                 Plenty
@@ -1548,9 +1548,9 @@ function GroomingSchedule({
               </span>
             </div>
           </div>
-          <div className="rounded-xl border bg-card p-3 shadow-sm">
+          <div className="bg-card rounded-xl border p-3 shadow-sm">
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
                 {startDate
                   ? new Date(startDate + "T00:00:00").toLocaleDateString(
                       "en-CA",
@@ -1558,7 +1558,7 @@ function GroomingSchedule({
                     )
                   : "Pick a date"}
               </p>
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-muted-foreground text-[10px]">
                 {packageDuration} min slots
               </span>
             </div>
@@ -1579,7 +1579,7 @@ function GroomingSchedule({
                 }}
               />
             ) : (
-              <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-center text-xs text-muted-foreground">
+              <div className="bg-muted/30 text-muted-foreground rounded-lg border border-dashed p-4 text-center text-xs">
                 Pick a day on the calendar to see open times.
               </div>
             )}
@@ -1659,7 +1659,7 @@ function GroomingSchedule({
                     setCheckOutTime(fmt(endMins));
                   }}
                   className={cn(
-                    "rounded-xl border bg-card px-3 py-2 text-left transition",
+                    "bg-card rounded-xl border px-3 py-2 text-left transition",
                     active
                       ? cn(accent.border, "ring-2", accent.ring)
                       : "hover:bg-muted",
@@ -1676,8 +1676,8 @@ function GroomingSchedule({
             })}
           </div>
           <p className="text-muted-foreground text-[10px]">
-            Exact time depends on the van&rsquo;s route — we&rsquo;ll text
-            you when we&rsquo;re ~15 min away.
+            Exact time depends on the van&rsquo;s route — we&rsquo;ll text you
+            when we&rsquo;re ~15 min away.
           </p>
         </div>
       )}
@@ -1685,8 +1685,8 @@ function GroomingSchedule({
       {/* Always-visible secondary CTA so customers can opt into a waitlist
           when no time works for them. */}
       {showWaitlist && (
-        <div className="flex items-center justify-between rounded-xl border border-dashed bg-muted/30 px-3 py-2.5">
-          <p className="text-xs text-muted-foreground">
+        <div className="bg-muted/30 flex items-center justify-between rounded-xl border border-dashed px-3 py-2.5">
+          <p className="text-muted-foreground text-xs">
             Can&rsquo;t find a time?
           </p>
           <Button
@@ -1718,7 +1718,9 @@ function formatClockLabel(hhmm: string) {
   const [h, m] = hhmm.split(":").map(Number);
   const period = h >= 12 ? "PM" : "AM";
   const hour12 = h % 12 || 12;
-  return m === 0 ? `${hour12} ${period}` : `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+  return m === 0
+    ? `${hour12} ${period}`
+    : `${hour12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
 // ─── Step 1: Add-ons (auto-attach + per-pet toggles) ────────────────────────
@@ -1837,9 +1839,7 @@ function GroomingAddOns({
 
   // For each pet, do we have this add-on in extraServices?
   const hasFor = (addonId: string, petId: number) =>
-    extraServices.some(
-      (es) => es.serviceId === addonId && es.petId === petId,
-    );
+    extraServices.some((es) => es.serviceId === addonId && es.petId === petId);
 
   const toggle = (addon: ServiceAddOn, petId: number, on: boolean) => {
     if (addon.isRequired) return; // Locked — required add-ons can't be removed.
@@ -1869,16 +1869,16 @@ function GroomingAddOns({
 
   if (selectedPets.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+      <div className="text-muted-foreground rounded-2xl border border-dashed p-6 text-center text-sm">
         Select a pet first to see available add-ons.
       </div>
     );
   }
   if (available.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-        No add-ons are configured for grooming. You&rsquo;re all set —
-        continue to schedule.
+      <div className="text-muted-foreground rounded-2xl border border-dashed p-6 text-center text-sm">
+        No add-ons are configured for grooming. You&rsquo;re all set — continue
+        to schedule.
       </div>
     );
   }
@@ -1919,7 +1919,7 @@ function GroomingAddOns({
                 <div
                   key={ao.id}
                   className={cn(
-                    "flex items-center justify-between gap-3 rounded-xl border bg-card px-3 py-2.5",
+                    "bg-card flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5",
                     checked && accent.border,
                     isAuto && "bg-pink-50/40 dark:bg-pink-950/10",
                   )}
@@ -1928,7 +1928,7 @@ function GroomingAddOns({
                     <div className="flex items-center gap-1.5">
                       <p className="truncate text-sm font-medium">{ao.name}</p>
                       {isAuto && (
-                        <span className="inline-flex items-center gap-0.5 rounded-full bg-pink-600 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white">
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-pink-600 px-1.5 py-0.5 text-[9px] font-semibold text-white uppercase">
                           <Sparkles className="size-2.5" />
                           Auto-attached
                         </span>
@@ -1955,7 +1955,7 @@ function GroomingAddOns({
             })}
           </div>
           {groomingAddOnSubtotal > 0 && (
-            <div className="flex items-center justify-between rounded-xl border bg-muted/40 px-4 py-2">
+            <div className="bg-muted/40 flex items-center justify-between rounded-xl border px-4 py-2">
               <span className="text-xs font-medium">
                 Package add-ons subtotal
               </span>
@@ -1984,10 +1984,9 @@ function GroomingAddOns({
                   <div
                     key={`${pet.id}-${addon.id}`}
                     className={cn(
-                      "flex items-center justify-between gap-3 rounded-xl border bg-card px-3 py-2.5",
+                      "bg-card flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5",
                       checked && !addon.isRequired && accent.border,
-                      addon.isRequired &&
-                        "border-emerald-300 bg-emerald-50/50",
+                      addon.isRequired && "border-emerald-300 bg-emerald-50/50",
                     )}
                   >
                     <div className="min-w-0 flex-1">
@@ -2001,19 +2000,19 @@ function GroomingAddOns({
                             • Required: mandatory but adds to the price
                             • Pre-selected: optional but checked by service config */}
                         {addon.isRequired && addon.price === 0 && (
-                          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white">
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-semibold text-white uppercase">
                             <Lock className="size-2.5" />
                             Included
                           </span>
                         )}
                         {addon.isRequired && addon.price > 0 && (
-                          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white">
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-semibold text-white uppercase">
                             <Lock className="size-2.5" />
                             Required
                           </span>
                         )}
                         {addon.isDefault && !addon.isRequired && (
-                          <span className="inline-flex items-center rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-blue-700">
+                          <span className="inline-flex items-center rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold text-blue-700 uppercase">
                             Pre-selected
                           </span>
                         )}
@@ -2026,11 +2025,13 @@ function GroomingAddOns({
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
                       <div className="flex flex-col items-end">
-                        <span className={cn("text-xs font-semibold", accent.price)}>
+                        <span
+                          className={cn("text-xs font-semibold", accent.price)}
+                        >
                           +${addon.price}
                         </span>
                         {addon.duration && addon.duration > 0 && (
-                          <span className="text-[10px] text-muted-foreground tabular-nums">
+                          <span className="text-muted-foreground text-[10px] tabular-nums">
                             adds {addon.duration} min
                           </span>
                         )}
@@ -2050,7 +2051,7 @@ function GroomingAddOns({
         ))}
       </div>
 
-      <div className="flex items-center justify-between rounded-xl border bg-muted/40 px-4 py-2.5">
+      <div className="bg-muted/40 flex items-center justify-between rounded-xl border px-4 py-2.5">
         <span className="text-sm font-medium">Add-ons subtotal</span>
         <span className="text-base font-bold tabular-nums">
           ${subtotal.toFixed(2)}

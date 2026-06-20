@@ -76,7 +76,11 @@ export interface TrainingEnrollment {
 
 /** Outcome lifecycle for an Offer Spot invitation. Drives the badges on the
  *  Waitlist tab and the customer-facing accept screen. */
-export type WaitlistOfferOutcome = "active" | "accepted" | "expired" | "cancelled";
+export type WaitlistOfferOutcome =
+  | "active"
+  | "accepted"
+  | "expired"
+  | "cancelled";
 
 export interface WaitlistOffer {
   /** When the invitation was sent — wall-clock ISO. */

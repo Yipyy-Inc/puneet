@@ -11,8 +11,7 @@ export default function BadgesPage() {
   const { config, updateConfig } = useLoyaltyProgram();
   const [draft, setDraft] = useState<Badge[]>(() => config.badges ?? []);
 
-  const dirty =
-    JSON.stringify(draft) !== JSON.stringify(config.badges ?? []);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(config.badges ?? []);
 
   return (
     <div className="space-y-6">

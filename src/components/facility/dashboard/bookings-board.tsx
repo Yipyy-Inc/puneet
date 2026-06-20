@@ -41,9 +41,13 @@ export function BookingsBoard() {
       case "scheduled":
         return queryScoped.filter((b) => b.status === "scheduled");
       case "checked-in":
-        return queryScoped.filter((b) => b.status === "checked-in" && !b.isGoingHomeToday);
+        return queryScoped.filter(
+          (b) => b.status === "checked-in" && !b.isGoingHomeToday,
+        );
       case "going-home":
-        return queryScoped.filter((b) => b.isGoingHomeToday && b.status === "checked-in");
+        return queryScoped.filter(
+          (b) => b.isGoingHomeToday && b.status === "checked-in",
+        );
       case "checked-out":
         return queryScoped.filter((b) => b.status === "checked-out");
     }
@@ -78,9 +82,9 @@ export function BookingsBoard() {
   return (
     <Card
       id="bookings-board"
-      className="overflow-hidden border bg-card scroll-mt-24"
+      className="bg-card scroll-mt-24 overflow-hidden border"
     >
-      <CardHeader className="relative space-y-0 overflow-hidden border-b bg-gradient-to-br from-card via-card to-sky-50/40 pb-4 dark:to-sky-950/20">
+      <CardHeader className="from-card via-card relative space-y-0 overflow-hidden border-b bg-gradient-to-br to-sky-50/40 pb-4 dark:to-sky-950/20">
         <div className="pointer-events-none absolute -top-10 right-0 h-32 w-32 rounded-full bg-gradient-to-br from-sky-200/40 via-cyan-200/20 to-transparent blur-2xl dark:from-sky-500/15 dark:via-cyan-500/10" />
         <div className="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">

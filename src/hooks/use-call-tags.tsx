@@ -35,7 +35,9 @@ export function CallTagsProvider({ children }: { children: ReactNode }) {
 
   const updateTag = useCallback(
     (id: string, patch: Partial<Omit<CallTag, "id">>) =>
-      setTags((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t))),
+      setTags((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+      ),
     [],
   );
 

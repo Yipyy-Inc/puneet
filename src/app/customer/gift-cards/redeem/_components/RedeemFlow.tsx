@@ -28,8 +28,12 @@ type Step = "lookup" | "amount" | "pin" | "confirm" | "done";
 
 export function RedeemFlow() {
   const [cardCode, setCardCode] = useState("");
-  const [lookupState, setLookupState] = useState<"idle" | "searching" | "found" | "error">("idle");
-  const [foundCard, setFoundCard] = useState<(typeof giftCards)[0] | null>(null);
+  const [lookupState, setLookupState] = useState<
+    "idle" | "searching" | "found" | "error"
+  >("idle");
+  const [foundCard, setFoundCard] = useState<(typeof giftCards)[0] | null>(
+    null,
+  );
   const [step, setStep] = useState<Step>("lookup");
   const [redeemAmount, setRedeemAmount] = useState(0);
   const [pin, setPin] = useState("");
@@ -58,14 +62,14 @@ export function RedeemFlow() {
 
     if (!card) {
       setLookupState("error");
-      setErrorMsg("No gift card found with that code. Please check and try again.");
+      setErrorMsg(
+        "No gift card found with that code. Please check and try again.",
+      );
       return;
     }
     if (card.status !== "active") {
       setLookupState("error");
-      setErrorMsg(
-        `This gift card cannot be redeemed — it is ${card.status}.`,
-      );
+      setErrorMsg(`This gift card cannot be redeemed — it is ${card.status}.`);
       return;
     }
     setFoundCard(card);
@@ -99,21 +103,23 @@ export function RedeemFlow() {
     <div className="space-y-5">
       {/* Current wallet balance */}
       {wallet && (
-        <Card className="bg-gradient-to-r from-violet-600 to-purple-700 text-white border-none">
+        <Card className="border-none bg-gradient-to-r from-violet-600 to-purple-700 text-white">
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Wallet className="size-5 opacity-80" />
                 <div>
                   <p className="text-xs opacity-70">Current Wallet Balance</p>
-                  <p className="text-2xl font-bold">${wallet.balance.toFixed(2)}</p>
+                  <p className="text-2xl font-bold">
+                    ${wallet.balance.toFixed(2)}
+                  </p>
                 </div>
               </div>
               <Link href="/customer/wallet">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-white/80 hover:text-white hover:bg-white/20 text-xs"
+                  className="text-xs text-white/80 hover:bg-white/20 hover:text-white"
                 >
                   View Wallet
                 </Button>
@@ -173,7 +179,7 @@ export function RedeemFlow() {
       {/* Step: Amount */}
       {step === "amount" && foundCard && (
         <div className="space-y-4">
-          <div className="rounded-xl bg-gradient-to-r from-violet-50 to-purple-50 p-4 dark:from-violet-950/30 dark:to-purple-950/30 border">
+          <div className="rounded-xl border bg-gradient-to-r from-violet-50 to-purple-50 p-4 dark:from-violet-950/30 dark:to-purple-950/30">
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2">
@@ -201,7 +207,9 @@ export function RedeemFlow() {
           </div>
 
           <div className="space-y-3">
-            <Label className="font-medium">How much would you like to add to your wallet?</Label>
+            <Label className="font-medium">
+              How much would you like to add to your wallet?
+            </Label>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-sm">$0</span>
@@ -328,19 +336,14 @@ export function RedeemFlow() {
               className="text-center font-mono text-2xl tracking-[0.5em]"
               inputMode="numeric"
             />
-            {pinError && (
-              <p className="text-destructive text-sm">{pinError}</p>
-            )}
+            {pinError && <p className="text-destructive text-sm">{pinError}</p>}
             <p className="text-muted-foreground text-xs">
               Hint: use 1234 for this demo
             </p>
           </div>
 
           <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => setStep("amount")}
-            >
+            <Button variant="ghost" onClick={() => setStep("amount")}>
               Back
             </Button>
             <Button
@@ -348,7 +351,11 @@ export function RedeemFlow() {
               disabled={pin.length < 4 || loading}
               onClick={handlePinVerify}
             >
-              {loading ? <Loader2 className="size-4 animate-spin" /> : "Verify PIN"}
+              {loading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                "Verify PIN"
+              )}
             </Button>
           </div>
         </div>
@@ -363,7 +370,9 @@ export function RedeemFlow() {
             <CardContent className="space-y-3 py-4 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Card Code</span>
-                <span className="font-mono font-medium">****{foundCard.code.slice(-6)}</span>
+                <span className="font-mono font-medium">
+                  ****{foundCard.code.slice(-6)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Amount to Redeem</span>
@@ -378,7 +387,9 @@ export function RedeemFlow() {
                 </span>
               </div>
               <div className="flex justify-between border-t pt-2">
-                <span className="text-muted-foreground">New Wallet Balance</span>
+                <span className="text-muted-foreground">
+                  New Wallet Balance
+                </span>
                 <span className="font-bold text-green-600">
                   ${((wallet?.balance ?? 0) + redeemAmount).toFixed(2)}
                 </span>

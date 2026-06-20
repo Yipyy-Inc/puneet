@@ -165,7 +165,14 @@ export interface StaffProfile {
   /** ISO timestamp of the last status change */
   statusChangedAt?: string;
   /** Reason code for the current status (set when moving to inactive or terminated) */
-  statusReason?: "vacation" | "medical_leave" | "resigned" | "terminated_cause" | "performance" | "rehired" | "other";
+  statusReason?:
+    | "vacation"
+    | "medical_leave"
+    | "resigned"
+    | "terminated_cause"
+    | "performance"
+    | "rehired"
+    | "other";
   /** Free-text note added when the status was last changed */
   statusNote?: string;
   lastActive: string;
@@ -818,7 +825,10 @@ export interface CustomFacilityRole {
  * granted or revoked that permission for the role.
  */
 export type RolePresetOverrides = Partial<
-  Record<FacilityStaffRole, Partial<Record<PermissionKey, AccessScope | "revoked">>>
+  Record<
+    FacilityStaffRole,
+    Partial<Record<PermissionKey, AccessScope | "revoked">>
+  >
 >;
 
 /** Lookup table of custom roles by id. */
@@ -873,8 +883,6 @@ export function resolvePermission(
     operating_hours: 2,
     anytime: 3,
   };
-  const widest = scopes.reduce((best, s) =>
-    rank[s] > rank[best] ? s : best,
-  );
+  const widest = scopes.reduce((best, s) => (rank[s] > rank[best] ? s : best));
   return { granted: true, scope: widest };
 }

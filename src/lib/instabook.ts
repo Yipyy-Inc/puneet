@@ -42,7 +42,9 @@ export function resolveInstabookEligibility({
     return { eligible: true, source: "customer-setting" };
   }
 
-  const activeMembership = customerMemberships.find((m) => m.status === "active");
+  const activeMembership = customerMemberships.find(
+    (m) => m.status === "active",
+  );
   if (activeMembership) {
     const plan = membershipPlans.find((p) => p.id === activeMembership.planId);
     const instabookServices = plan?.instabookServices;

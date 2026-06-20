@@ -101,9 +101,9 @@ export function LoginSecurityCard({
 
   // 2FA
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [twoFactorMethod, setTwoFactorMethod] = useState<"sms" | "authenticator">(
-    "authenticator",
-  );
+  const [twoFactorMethod, setTwoFactorMethod] = useState<
+    "sms" | "authenticator"
+  >("authenticator");
 
   // Sessions
   const [sessions, setSessions] = useState<ActiveSession[]>(MOCK_SESSIONS);
@@ -314,7 +314,9 @@ export function LoginSecurityCard({
                   />
                   <button
                     type="button"
-                    aria-label={showNewPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showNewPassword ? "Hide password" : "Show password"
+                    }
                     className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md"
                     onClick={() => setShowNewPassword((v) => !v)}
                   >
@@ -432,9 +434,7 @@ export function LoginSecurityCard({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-base font-semibold">
-                Active sessions
-              </Label>
+              <Label className="text-base font-semibold">Active sessions</Label>
               <p className="text-muted-foreground mt-0.5 text-xs">
                 Devices currently signed in to your account.
               </p>
@@ -450,7 +450,7 @@ export function LoginSecurityCard({
               </Button>
             )}
           </div>
-          <div className="divide-border/70 overflow-hidden rounded-lg border divide-y">
+          <div className="divide-border/70 divide-y overflow-hidden rounded-lg border">
             {sessions.map((session) => {
               const Icon = session.icon;
               return (

@@ -199,7 +199,9 @@ function ServiceRuleRow({
           step={rule.amountType === "percentage" ? 1 : 0.01}
           value={rule.amount}
           disabled={!rule.enabled}
-          onChange={(e) => onChange({ amount: parseFloat(e.target.value) || 0 })}
+          onChange={(e) =>
+            onChange({ amount: parseFloat(e.target.value) || 0 })
+          }
           className="h-8 w-20 text-right font-[tabular-nums]"
         />
       </div>

@@ -66,7 +66,7 @@ export function ServiceCard({
         `relative flex min-h-[340px] flex-col overflow-hidden rounded-xl border-2 text-left transition-all`,
         disabled && "cursor-not-allowed opacity-50",
         !disabled && "cursor-pointer",
-        selected && !disabled && "border-transparent bg-primary/5 shadow-md",
+        selected && !disabled && "bg-primary/5 border-transparent shadow-md",
         !selected &&
           !disabled &&
           `border-border hover:border-primary/50 hover:shadow-sm`,
@@ -82,7 +82,7 @@ export function ServiceCard({
       )}
       <div className="bg-muted relative h-44 w-full shrink-0">
         {selected && !disabled && (
-          <div className="absolute top-2.5 right-2.5 z-10 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
+          <div className="bg-primary text-primary-foreground absolute top-2.5 right-2.5 z-10 flex size-7 items-center justify-center rounded-full shadow-md">
             <Check className="size-4" strokeWidth={3} />
           </div>
         )}

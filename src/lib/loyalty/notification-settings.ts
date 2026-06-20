@@ -13,7 +13,9 @@ export interface NotificationChannels {
   email: boolean;
 }
 
-function methodChannels(method: "email" | "portal" | "both"): NotificationChannels {
+function methodChannels(
+  method: "email" | "portal" | "both",
+): NotificationChannels {
   return {
     portal: method === "portal" || method === "both",
     email: method === "email" || method === "both",
@@ -30,7 +32,9 @@ export function notificationChannels(
   if (!settings) return ALL_ON;
   switch (type) {
     case "program_welcome":
-      return settings.welcomeEnabled ? methodChannels(settings.welcomeMethod) : OFF;
+      return settings.welcomeEnabled
+        ? methodChannels(settings.welcomeMethod)
+        : OFF;
     case "points_earned":
       // Portal/push only by policy — never email per-transaction.
       return { portal: settings.pointsEarnedEnabled, email: false };
@@ -89,7 +93,8 @@ export const NOTIFICATION_ROWS: NotificationRowMeta[] = [
     key: "pointsEarned",
     enabledField: "pointsEarnedEnabled",
     label: "Points earned",
-    description: "Confirmation after every booking that earns points (portal only).",
+    description:
+      "Confirmation after every booking that earns points (portal only).",
   },
   {
     key: "tierUpgrade",
@@ -114,7 +119,8 @@ export const NOTIFICATION_ROWS: NotificationRowMeta[] = [
     key: "pointsExpiry",
     enabledField: "pointsExpiryEnabled",
     label: "Points expiry warning",
-    description: "Reminder before inactive points expire (if points expiry is on).",
+    description:
+      "Reminder before inactive points expire (if points expiry is on).",
   },
   {
     key: "referralReward",

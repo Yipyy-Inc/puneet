@@ -8,12 +8,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { TrendingUp, AlertTriangle, ChevronRight } from "lucide-react";
@@ -43,7 +38,7 @@ export function CashReportsPanel({ sessions, currencySymbol }: Props) {
   );
 
   const drillBucket = drillKey
-    ? buckets.find((b) => b.key === drillKey) ?? null
+    ? (buckets.find((b) => b.key === drillKey) ?? null)
     : null;
 
   const totals = useMemo(() => {
@@ -74,9 +69,7 @@ export function CashReportsPanel({ sessions, currencySymbol }: Props) {
       key: "txnCount",
       label: "Cash txns",
       defaultVisible: true,
-      render: (b) => (
-        <span className="text-sm tabular-nums">{b.txnCount}</span>
-      ),
+      render: (b) => <span className="text-sm tabular-nums">{b.txnCount}</span>,
     },
     {
       key: "cashCaptured",
@@ -85,7 +78,7 @@ export function CashReportsPanel({ sessions, currencySymbol }: Props) {
       sortable: true,
       sortValue: (b) => b.cashCaptured,
       render: (b) => (
-        <span className="font-semibold tabular-nums text-emerald-700">
+        <span className="font-semibold text-emerald-700 tabular-nums">
           {fmt(b.cashCaptured)}
         </span>
       ),
@@ -97,7 +90,7 @@ export function CashReportsPanel({ sessions, currencySymbol }: Props) {
       render: (b) => (
         <span
           className={cn(
-            "tabular-nums text-sm",
+            "text-sm tabular-nums",
             b.movementsNet < 0 && "text-rose-600",
             b.movementsNet > 0 && "text-emerald-600",
           )}
@@ -121,9 +114,11 @@ export function CashReportsPanel({ sessions, currencySymbol }: Props) {
           <Badge
             variant="outline"
             className={cn(
-              "tabular-nums text-xs",
-              status === "balanced" && "border-emerald-300 bg-emerald-50 text-emerald-700",
-              status === "over" && "border-amber-300 bg-amber-50 text-amber-700",
+              "text-xs tabular-nums",
+              status === "balanced" &&
+                "border-emerald-300 bg-emerald-50 text-emerald-700",
+              status === "over" &&
+                "border-amber-300 bg-amber-50 text-amber-700",
               status === "short" && "border-rose-300 bg-rose-50 text-rose-700",
             )}
           >
@@ -136,7 +131,7 @@ export function CashReportsPanel({ sessions, currencySymbol }: Props) {
       key: "drill",
       label: "",
       defaultVisible: true,
-      render: () => <ChevronRight className="size-4 text-muted-foreground" />,
+      render: () => <ChevronRight className="text-muted-foreground size-4" />,
     },
   ];
 
@@ -248,15 +243,15 @@ function DrillContent({
         <SheetTitle>{bucket.label}</SheetTitle>
         <SheetDescription>
           {bucket.sessions.length} session
-          {bucket.sessions.length === 1 ? "" : "s"} · {bucket.txnCount} cash txns
-          · {fmt(bucket.cashCaptured)} captured
+          {bucket.sessions.length === 1 ? "" : "s"} · {bucket.txnCount} cash
+          txns · {fmt(bucket.cashCaptured)} captured
         </SheetDescription>
       </SheetHeader>
 
       <div className="mt-4 space-y-4 px-1">
         {/* Source breakdown */}
         <div>
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h4 className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
             By source
           </h4>
           <div className="space-y-1.5">
@@ -266,16 +261,16 @@ function DrillContent({
               if (v === 0) return null;
               return (
                 <div key={src} className="flex items-center gap-2 text-sm">
-                  <span className="w-16 capitalize text-muted-foreground">
+                  <span className="text-muted-foreground w-16 capitalize">
                     {SOURCE_LABELS[src]}
                   </span>
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-sm bg-muted">
+                  <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-sm">
                     <div
                       className="h-full rounded-sm bg-emerald-500"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <span className="w-10 text-right text-xs text-muted-foreground tabular-nums">
+                  <span className="text-muted-foreground w-10 text-right text-xs tabular-nums">
                     {pct.toFixed(0)}%
                   </span>
                   <span className="w-20 text-right font-medium tabular-nums">
@@ -289,15 +284,12 @@ function DrillContent({
 
         {/* Per-session breakdown */}
         <div>
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h4 className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
             Sessions in this period
           </h4>
           <ul className="space-y-2">
             {bucket.sessions.map((s) => (
-              <li
-                key={s.id}
-                className="rounded-sm border px-3 py-2 text-sm"
-              >
+              <li key={s.id} className="rounded-sm border px-3 py-2 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">
                     {new Date(s.businessDate + "T00:00:00").toLocaleDateString(
@@ -309,11 +301,11 @@ function DrillContent({
                       },
                     )}
                   </span>
-                  <span className="font-semibold tabular-nums text-emerald-700">
+                  <span className="font-semibold text-emerald-700 tabular-nums">
                     {fmt(s.cashCaptured)}
                   </span>
                 </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
+                <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-3 text-xs">
                   <span>{s.capturedTxns.length} txns</span>
                   <span>·</span>
                   <span>{s.opening.countedBy}</span>
@@ -325,9 +317,7 @@ function DrillContent({
                       s.varianceStatus === "short" && "text-rose-700",
                     )}
                   >
-                    {s.variance != null
-                      ? fmtSigned(s.variance)
-                      : "—"}
+                    {s.variance != null ? fmtSigned(s.variance) : "—"}
                   </span>
                 </div>
               </li>
@@ -361,7 +351,7 @@ function SummaryTile({
   return (
     <div className={cn("rounded-md border px-3 py-2", toneCls)}>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-wider">
+        <span className="text-[10px] font-semibold tracking-wider uppercase">
           {label}
         </span>
         <Icon className="size-3.5 opacity-70" />

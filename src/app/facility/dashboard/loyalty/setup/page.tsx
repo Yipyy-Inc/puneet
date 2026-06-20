@@ -82,7 +82,9 @@ export default function LoyaltySetupWizardPage() {
   const [earnRules, setEarnRules] = useState<EarnRule[]>(() =>
     getActiveEarnRules(config.earnRules ?? []),
   );
-  const [tiers, setTiers] = useState<Tier[]>(() => config.tierDefinitions ?? []);
+  const [tiers, setTiers] = useState<Tier[]>(
+    () => config.tierDefinitions ?? [],
+  );
   const [tiersEnabled, setTiersEnabled] = useState<boolean>(
     () => config.tiersEnabled ?? true,
   );
@@ -127,7 +129,10 @@ export default function LoyaltySetupWizardPage() {
   };
 
   const persistProgram = (enabled: boolean) => {
-    const reconciledEarn = reconcileEarnRules(config.earnRules ?? [], earnRules);
+    const reconciledEarn = reconcileEarnRules(
+      config.earnRules ?? [],
+      earnRules,
+    );
     patchConfig({
       programName: basics.programName.trim() || undefined,
       programDescription: basics.tagline.trim() || undefined,
@@ -205,9 +210,7 @@ export default function LoyaltySetupWizardPage() {
               onClick={() => setStep(s.n)}
               className={cn(
                 "flex flex-1 items-center gap-2.5 rounded-lg border p-3 text-left transition-colors",
-                active
-                  ? "border-primary bg-primary/5"
-                  : "hover:bg-muted/40",
+                active ? "border-primary bg-primary/5" : "hover:bg-muted/40",
               )}
             >
               <span

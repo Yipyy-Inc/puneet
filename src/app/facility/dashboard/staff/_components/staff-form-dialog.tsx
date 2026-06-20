@@ -622,7 +622,9 @@ function RoleSection({
                 aria-checked={active}
                 tabIndex={0}
                 onClick={toggle}
-                onKeyDown={(e) => (e.key === " " || e.key === "Enter") && toggle()}
+                onKeyDown={(e) =>
+                  (e.key === " " || e.key === "Enter") && toggle()
+                }
                 className={cn(
                   "flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-left transition-all select-none",
                   active
@@ -634,7 +636,11 @@ function RoleSection({
                   <ServiceIcon module={svc} className="size-4" />
                 </div>
                 <div className="text-sm font-medium">{meta.label}</div>
-                <Checkbox checked={active} tabIndex={-1} className="ml-auto pointer-events-none" />
+                <Checkbox
+                  checked={active}
+                  tabIndex={-1}
+                  className="pointer-events-none ml-auto"
+                />
               </div>
             );
           })}

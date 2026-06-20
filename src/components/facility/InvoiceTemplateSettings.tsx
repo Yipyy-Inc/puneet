@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -128,8 +123,7 @@ export function InvoiceTemplateSettings() {
 
   const previewHtml = useMemo(() => {
     if (!hasMounted) return "";
-    const origin =
-      typeof window !== "undefined" ? window.location.origin : "";
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
     return buildInvoiceDocumentHtml(template, PREVIEW_DATA, origin);
   }, [template, hasMounted]);
 
@@ -147,7 +141,7 @@ export function InvoiceTemplateSettings() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Invoice Template</h2>
-          <p className="text-muted-foreground mt-1 text-sm max-w-2xl">
+          <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
             Brand the invoice your clients receive. Logo, contact info, footer
             message, and signature line — all configurable. Live preview on the
             right updates as you type.
@@ -179,7 +173,7 @@ export function InvoiceTemplateSettings() {
               <div>
                 <Label className="text-xs">Logo</Label>
                 <div className="mt-1.5 flex items-center gap-3">
-                  <div className="flex size-20 items-center justify-center rounded-lg border border-dashed bg-muted/30">
+                  <div className="bg-muted/30 flex size-20 items-center justify-center rounded-lg border border-dashed">
                     {template.logoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -355,9 +349,7 @@ export function InvoiceTemplateSettings() {
                 {template.showThankYou && (
                   <Input
                     value={template.thankYouMessage}
-                    onChange={(e) =>
-                      update("thankYouMessage", e.target.value)
-                    }
+                    onChange={(e) => update("thankYouMessage", e.target.value)}
                     className="mt-2 text-sm"
                     placeholder="We'll see you again soon!"
                   />
@@ -385,9 +377,7 @@ export function InvoiceTemplateSettings() {
                     <Label className="text-[11px]">Signature label</Label>
                     <Input
                       value={template.signatureLabel}
-                      onChange={(e) =>
-                        update("signatureLabel", e.target.value)
-                      }
+                      onChange={(e) => update("signatureLabel", e.target.value)}
                       className="mt-1 text-sm"
                       placeholder="Client Signature"
                     />
@@ -401,7 +391,7 @@ export function InvoiceTemplateSettings() {
         {/* Preview */}
         <div className="lg:sticky lg:top-20 lg:self-start">
           <Card className="overflow-hidden">
-            <CardHeader className="bg-muted/40 border-b py-3 flex flex-row items-center justify-between">
+            <CardHeader className="bg-muted/40 flex flex-row items-center justify-between border-b py-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <FileText className="size-4" />
                 Live preview

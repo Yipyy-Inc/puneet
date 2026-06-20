@@ -13,11 +13,11 @@ export function ExerciseLibrarySection() {
     <section
       id="exercise-library"
       aria-labelledby="exercise-library-heading"
-      className="space-y-3 scroll-mt-24"
+      className="scroll-mt-24 space-y-3"
     >
       <header className="flex flex-wrap items-start justify-between gap-3 rounded-xl border bg-linear-to-br from-indigo-50/60 via-white to-white px-4 py-3 shadow-sm">
         <div className="flex items-start gap-3">
-          <div className="bg-indigo-100 text-indigo-700 flex size-10 shrink-0 items-center justify-center rounded-xl shadow-sm">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 shadow-sm">
             <Library className="size-5" />
           </div>
           <div>
@@ -31,13 +31,13 @@ export function ExerciseLibrarySection() {
               The foundation of all training data. Disciplines define the
               categories; exercises feed the Session Completion picker, the
               report cards, and the progress charts. Add custom items, hide
-              predefined ones you don&apos;t use, and drag exercises within
-              a tier to set the order trainers see them.
+              predefined ones you don&apos;t use, and drag exercises within a
+              tier to set the order trainers see them.
             </p>
           </div>
         </div>
         <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
-          <Sparkles className="text-indigo-400 size-3" />
+          <Sparkles className="size-3 text-indigo-400" />
           Always findable from Settings → Training
         </span>
       </header>

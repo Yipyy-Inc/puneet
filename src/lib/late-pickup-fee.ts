@@ -16,7 +16,9 @@ export interface LateFeeInput {
   scopeKey?: string | number;
 }
 
-export function computeLatePickupFee(input: LateFeeInput): LateFeeResult | null {
+export function computeLatePickupFee(
+  input: LateFeeInput,
+): LateFeeResult | null {
   const rules = getStoredPricingRules(input.scopeKey);
   if (!rules?.latePickupFees?.length) return null;
 

@@ -552,7 +552,9 @@ export default function PromoCodesPage() {
                           Copy Code
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handleEdit(item as unknown as PromoCode)}
+                          onClick={() =>
+                            handleEdit(item as unknown as PromoCode)
+                          }
                         >
                           <Edit className="mr-2 size-4" />
                           Edit

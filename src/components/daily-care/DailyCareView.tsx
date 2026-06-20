@@ -14,10 +14,7 @@ import { ArrowLeft, BookOpen, Settings, Printer } from "lucide-react";
 import { getCurrentGuests } from "@/data/boarding";
 import { useDailyCareConfig } from "@/hooks/use-daily-care-config";
 import { useDateCareLog } from "@/hooks/use-care-log";
-import {
-  generateScheduledTasks,
-  todayIso,
-} from "@/lib/care-log-scheduler";
+import { generateScheduledTasks, todayIso } from "@/lib/care-log-scheduler";
 import { ProgressHeader } from "./ProgressHeader";
 import { Section } from "./Section";
 import { TaskLogModal } from "./TaskLogModal";
@@ -111,12 +108,21 @@ export function DailyCareView() {
       ).length;
       const [h, m] = step.time.split(":").map((n) => parseInt(n, 10));
       const stepMin = (h ?? 0) * 60 + (m ?? 0);
-      if (remaining > 0 && nowMinutes > stepMin + config.alertOverdueAfterMinutes) {
+      if (
+        remaining > 0 &&
+        nowMinutes > stepMin + config.alertOverdueAfterMinutes
+      ) {
         return acc + remaining;
       }
       return acc;
     }, 0);
-  }, [sortedSteps, tasksByStep, executions, nowMinutes, config.alertOverdueAfterMinutes]);
+  }, [
+    sortedSteps,
+    tasksByStep,
+    executions,
+    nowMinutes,
+    config.alertOverdueAfterMinutes,
+  ]);
 
   function handleLog(task: ScheduledTask, existing?: TaskExecution) {
     setModalState({ task, existing });
@@ -263,7 +269,7 @@ export function DailyCareView() {
                       <button
                         key={guest.id}
                         onClick={() => setSelectedJournalGuestId(guest.id)}
-                        className="flex w-full items-center gap-3 rounded-md border bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
+                        className="bg-card hover:bg-muted/50 flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors"
                       >
                         <Avatar className="size-9 shrink-0">
                           {guest.petPhotoUrl && (

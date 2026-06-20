@@ -70,10 +70,7 @@ import {
   badgeConditionText,
   badgeRewardText,
 } from "@/lib/loyalty/badge-summary";
-import {
-  badgeCriteriaMet,
-  type BadgeStats,
-} from "@/lib/loyalty/engine-badges";
+import { badgeCriteriaMet, type BadgeStats } from "@/lib/loyalty/engine-badges";
 import { badgeProgress } from "@/lib/loyalty/badge-progress";
 import { RedeemPointsDialog } from "@/components/customer/RedeemPointsDialog";
 import { LoyaltyTransactionHistory } from "@/components/loyalty/LoyaltyTransactionHistory";
@@ -232,8 +229,10 @@ export default function CustomerRewardsPage() {
       customerBadges.map((cb) => [cb.badgeId, cb.earnedAt]),
     );
 
-    const earned: { badge: (typeof facilityBadges)[number]; earnedAt: string | null }[] =
-      [];
+    const earned: {
+      badge: (typeof facilityBadges)[number];
+      earnedAt: string | null;
+    }[] = [];
     const inProgress: {
       badge: (typeof facilityBadges)[number];
       progress: ReturnType<typeof badgeProgress>;
@@ -242,15 +241,21 @@ export default function CustomerRewardsPage() {
     for (const badge of facilityBadges) {
       if (badge.enabled === false) continue;
       const earnedAt = earnedAtById.get(badge.id) ?? null;
-      const isEarned = earnedAt != null || badgeCriteriaMet(badge, stats, tiers);
+      const isEarned =
+        earnedAt != null || badgeCriteriaMet(badge, stats, tiers);
       if (isEarned) {
         earned.push({ badge, earnedAt });
       } else {
-        inProgress.push({ badge, progress: badgeProgress(badge, stats, tiers) });
+        inProgress.push({
+          badge,
+          progress: badgeProgress(badge, stats, tiers),
+        });
       }
     }
 
-    earned.sort((a, b) => (a.earnedAt ?? "").localeCompare(b.earnedAt ?? "") * -1);
+    earned.sort(
+      (a, b) => (a.earnedAt ?? "").localeCompare(b.earnedAt ?? "") * -1,
+    );
     inProgress.sort((a, b) => b.progress.ratio - a.progress.ratio);
     return { earned, inProgress };
   }, [facilityLoyaltyConfig, loyaltyAccount, customerBadges]);
@@ -357,12 +362,15 @@ export default function CustomerRewardsPage() {
                         {loyaltyData.points.toLocaleString()} Points
                       </div>
                       <div className="text-muted-foreground mt-1 text-sm">
-                        {pointsValue > 0 && <>≈ ${pointsValue.toFixed(2)} in credit</>}
+                        {pointsValue > 0 && (
+                          <>≈ ${pointsValue.toFixed(2)} in credit</>
+                        )}
                         {loyaltyData.creditBalance > 0 && (
                           <>
                             {pointsValue > 0 ? " · " : ""}
                             <span className="text-emerald-600 dark:text-emerald-400">
-                              ${loyaltyData.creditBalance.toFixed(2)} credit available
+                              ${loyaltyData.creditBalance.toFixed(2)} credit
+                              available
                             </span>
                           </>
                         )}
@@ -658,7 +666,9 @@ export default function CustomerRewardsPage() {
                 ) : (
                   <div className="bg-muted/30 flex flex-col items-center justify-center rounded-lg border border-dashed p-4 text-center">
                     <Sparkles className="text-primary mb-2 size-6" />
-                    <p className="text-sm font-medium">You&apos;re at the top!</p>
+                    <p className="text-sm font-medium">
+                      You&apos;re at the top!
+                    </p>
                     <p className="text-muted-foreground mt-1 text-xs">
                       You&apos;ve unlocked every tier — enjoy your perks.
                     </p>

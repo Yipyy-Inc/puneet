@@ -1,11 +1,5 @@
-import type {
-  CustomerLoyaltyAccount,
-  RedemptionRecord,
-} from "@/types/loyalty";
-import {
-  redemptionDollarValue,
-  type BookingLite,
-} from "./program-metrics";
+import type { CustomerLoyaltyAccount, RedemptionRecord } from "@/types/loyalty";
+import { redemptionDollarValue, type BookingLite } from "./program-metrics";
 
 /**
  * Pure Loyalty ROI model for the headline owner report. Incremental revenue is

@@ -42,9 +42,7 @@ function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value
       .map(canonicalize)
-      .sort((a, b) =>
-        JSON.stringify(a) < JSON.stringify(b) ? -1 : 1,
-      );
+      .sort((a, b) => (JSON.stringify(a) < JSON.stringify(b) ? -1 : 1));
   }
   if (value && typeof value === "object") {
     const out: Record<string, unknown> = {};
@@ -62,8 +60,7 @@ export function earnRuleSubstantivelyChanged(
 ): boolean {
   return SUBSTANTIVE_KEYS.some(
     (k) =>
-      JSON.stringify(canonicalize(a[k])) !==
-      JSON.stringify(canonicalize(b[k])),
+      JSON.stringify(canonicalize(a[k])) !== JSON.stringify(canonicalize(b[k])),
   );
 }
 

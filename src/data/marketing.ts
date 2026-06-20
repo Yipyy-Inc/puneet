@@ -344,7 +344,7 @@ export const SEGMENT_FILTER_FIELDS: SegmentFilterFieldDef[] = [
     operators: ["equals", "in"],
     valueType: "multi_select",
     options: [
-      { value: "loc-dv-main",  label: "Plateau (PLT)" },
+      { value: "loc-dv-main", label: "Plateau (PLT)" },
       { value: "loc-dv-ouest", label: "NDG (NDG)" },
       { value: "loc-dv-laval", label: "Laval (LVL)" },
     ],
@@ -356,7 +356,7 @@ export const SEGMENT_FILTER_FIELDS: SegmentFilterFieldDef[] = [
     operators: ["equals", "in"],
     valueType: "multi_select",
     options: [
-      { value: "loc-dv-main",  label: "Plateau (PLT)" },
+      { value: "loc-dv-main", label: "Plateau (PLT)" },
       { value: "loc-dv-ouest", label: "NDG (NDG)" },
       { value: "loc-dv-laval", label: "Laval (LVL)" },
     ],
@@ -376,7 +376,7 @@ export const SEGMENT_FILTER_FIELDS: SegmentFilterFieldDef[] = [
     operators: ["equals"],
     valueType: "select",
     options: [
-      { value: "loc-dv-main",  label: "Plateau (PLT)" },
+      { value: "loc-dv-main", label: "Plateau (PLT)" },
       { value: "loc-dv-ouest", label: "NDG (NDG)" },
       { value: "loc-dv-laval", label: "Laval (LVL)" },
     ],

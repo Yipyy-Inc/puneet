@@ -38,7 +38,10 @@ export function StackedDistribution({
         return (
           <div
             key={seg.key}
-            className={cn("h-full transition-all duration-700 ease-out", seg.className)}
+            className={cn(
+              "h-full transition-all duration-700 ease-out",
+              seg.className,
+            )}
             style={{ width: `${pct}%` }}
             title={seg.label ?? `${seg.key}: ${seg.value}`}
           />

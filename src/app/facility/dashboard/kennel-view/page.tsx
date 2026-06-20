@@ -23,10 +23,7 @@ import type { CustomServiceCheckIn } from "@/data/custom-service-checkins";
 import { COLOR_HEX_MAP } from "@/data/custom-services";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { roomCategories, facilityRooms } from "@/data/rooms";
-import {
-  daycarePlayAreas,
-  daycareSections,
-} from "@/data/daycare-areas";
+import { daycarePlayAreas, daycareSections } from "@/data/daycare-areas";
 import type { RoomCategory } from "@/types/rooms";
 import type { OccupancyKennel } from "./_lib/calendar-types";
 import { useBookingModal } from "@/hooks/use-booking-modal";
@@ -183,7 +180,9 @@ const mockBookingOverlays: Record<
 
 function buildInitialKennels(): Kennel[] {
   return facilityRooms
-    .filter((r) => r.active || mockBookingOverlays[r.id]?.status === "maintenance")
+    .filter(
+      (r) => r.active || mockBookingOverlays[r.id]?.status === "maintenance",
+    )
     .map((room) => {
       const category = roomCategories.find((c) => c.id === room.categoryId);
       const overlay = mockBookingOverlays[room.id];
@@ -210,8 +209,7 @@ function buildInitialKennels(): Kennel[] {
         enrichment.checkOutTime = related.checkOutTime;
         enrichment.hasFeedingInstructions =
           (related.feedingInstructions?.length ?? 0) > 0;
-        enrichment.hasMedications =
-          (related.medications?.length ?? 0) > 0;
+        enrichment.hasMedications = (related.medications?.length ?? 0) > 0;
       }
       return {
         id: room.id,
@@ -451,7 +449,10 @@ export default function KennelViewPage() {
         preSelectedRoomId: sectionId,
         preSelectedStartDate: date,
         onCreateBooking: (newBooking) => {
-          console.log("Daycare booking created from occupancy grid", newBooking);
+          console.log(
+            "Daycare booking created from occupancy grid",
+            newBooking,
+          );
         },
       });
     },
@@ -735,7 +736,6 @@ export default function KennelViewPage() {
           </Card>
         </>
       )}
-
     </div>
   );
 }

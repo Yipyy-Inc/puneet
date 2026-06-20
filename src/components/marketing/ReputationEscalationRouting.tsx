@@ -35,7 +35,11 @@ export function ReputationEscalationRouting({
       (id) => ACTIVE_STAFF.find((s) => s.id === id)?.name ?? id,
     );
 
-    const updated: ReputationEscalationRoute = { service, staffIds: ids, staffNames: names };
+    const updated: ReputationEscalationRoute = {
+      service,
+      staffIds: ids,
+      staffNames: names,
+    };
     onChange(
       existing
         ? routes.map((r) => (r.service === service ? updated : r))
@@ -82,7 +86,8 @@ export function ReputationEscalationRouting({
         );
       })}
       <p className="text-muted-foreground text-xs">
-        Pick one person or several. A negative review for a service notifies and creates a follow-up task for everyone assigned to it.
+        Pick one person or several. A negative review for a service notifies and
+        creates a follow-up task for everyone assigned to it.
       </p>
     </div>
   );

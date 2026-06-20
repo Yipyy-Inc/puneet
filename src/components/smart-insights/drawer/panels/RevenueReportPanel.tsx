@@ -26,13 +26,76 @@ interface OpenInvoice {
 }
 
 const INVOICES: OpenInvoice[] = [
-  { id: "INV-9821", date: "May 14", clientId: "c-1501", client: "Sandra Beaulieu", petName: "Rocky", amount: 285, status: "open", reason: "Check-out not closed" },
-  { id: "INV-9824", date: "May 15", clientId: "c-1502", client: "Tomás García", petName: "Luna", amount: 165, status: "unpaid", reason: "Card declined" },
-  { id: "INV-9830", date: "May 16", clientId: "c-1503", client: "Ines Lemay", petName: "Charlie", amount: 420, status: "open", reason: "Late pickup, fee pending" },
-  { id: "INV-9835", date: "May 17", clientId: "c-1504", client: "Daniel Brodeur", petName: "Nala", amount: 95, status: "unpaid", reason: "Awaiting bank transfer" },
-  { id: "INV-9841", date: "May 18", clientId: "c-1505", client: "Olivia Frenette", petName: "Mochi", amount: 540, status: "open", reason: "Boarding extension not invoiced" },
-  { id: "INV-9847", date: "May 19", clientId: "c-1506", client: "Hugo St-Pierre", petName: "Zoey", amount: 215, status: "uncollected_deposit", reason: "Deposit not collected" },
-  { id: "INV-9853", date: "May 19", clientId: "c-1507", client: "Jordan Mills", petName: "Coco", amount: 180, status: "open", reason: "Add-on not billed" },
+  {
+    id: "INV-9821",
+    date: "May 14",
+    clientId: "c-1501",
+    client: "Sandra Beaulieu",
+    petName: "Rocky",
+    amount: 285,
+    status: "open",
+    reason: "Check-out not closed",
+  },
+  {
+    id: "INV-9824",
+    date: "May 15",
+    clientId: "c-1502",
+    client: "Tomás García",
+    petName: "Luna",
+    amount: 165,
+    status: "unpaid",
+    reason: "Card declined",
+  },
+  {
+    id: "INV-9830",
+    date: "May 16",
+    clientId: "c-1503",
+    client: "Ines Lemay",
+    petName: "Charlie",
+    amount: 420,
+    status: "open",
+    reason: "Late pickup, fee pending",
+  },
+  {
+    id: "INV-9835",
+    date: "May 17",
+    clientId: "c-1504",
+    client: "Daniel Brodeur",
+    petName: "Nala",
+    amount: 95,
+    status: "unpaid",
+    reason: "Awaiting bank transfer",
+  },
+  {
+    id: "INV-9841",
+    date: "May 18",
+    clientId: "c-1505",
+    client: "Olivia Frenette",
+    petName: "Mochi",
+    amount: 540,
+    status: "open",
+    reason: "Boarding extension not invoiced",
+  },
+  {
+    id: "INV-9847",
+    date: "May 19",
+    clientId: "c-1506",
+    client: "Hugo St-Pierre",
+    petName: "Zoey",
+    amount: 215,
+    status: "uncollected_deposit",
+    reason: "Deposit not collected",
+  },
+  {
+    id: "INV-9853",
+    date: "May 19",
+    clientId: "c-1507",
+    client: "Jordan Mills",
+    petName: "Coco",
+    amount: 180,
+    status: "open",
+    reason: "Add-on not billed",
+  },
 ];
 
 const TOTAL = INVOICES.reduce((s, i) => s + i.amount, 0);
@@ -49,7 +112,10 @@ const STATUS_LABEL: Record<OpenInvoice["status"], string> = {
   uncollected_deposit: "No deposit",
 };
 
-export function RevenueReportPanel({ onComplete, onCancel }: InsightPanelProps) {
+export function RevenueReportPanel({
+  onComplete,
+  onCancel,
+}: InsightPanelProps) {
   const [reconciled, setReconciled] = useState<Set<string>>(new Set());
 
   const toggle = (id: string) => {
@@ -64,14 +130,16 @@ export function RevenueReportPanel({ onComplete, onCancel }: InsightPanelProps) 
   return (
     <div className="flex h-full flex-col gap-5 px-1">
       <div className="rounded-lg border bg-slate-50 p-3 text-sm">
-        <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+        <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs tracking-wide uppercase">
           <FileText className="size-3.5" />
           Open invoices · past 7 days
         </div>
         <p>
           <span className="font-semibold">{INVOICES.length}</span> invoices ·
           gap from rolling avg:{" "}
-          <span className="font-semibold text-red-700">${TOTAL.toLocaleString()}</span>
+          <span className="font-semibold text-red-700">
+            ${TOTAL.toLocaleString()}
+          </span>
         </p>
       </div>
 
@@ -95,7 +163,7 @@ export function RevenueReportPanel({ onComplete, onCancel }: InsightPanelProps) 
                   <Receipt className="text-muted-foreground size-3.5" />
                   <Link
                     href={insightLinks.billing(inv.id)}
-                    className="text-sm font-semibold hover:text-primary hover:underline"
+                    className="hover:text-primary text-sm font-semibold hover:underline"
                   >
                     {inv.id}
                   </Link>

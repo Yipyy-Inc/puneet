@@ -90,10 +90,7 @@ export function MemberLifecycleFunnel() {
         Click any stage to see the customers in it.
       </p>
 
-      <Sheet
-        open={!!openStage}
-        onOpenChange={(o) => !o && setOpenStage(null)}
-      >
+      <Sheet open={!!openStage} onOpenChange={(o) => !o && setOpenStage(null)}>
         <SheetContent
           side="right"
           className="w-full gap-0 overflow-y-auto sm:max-w-md"

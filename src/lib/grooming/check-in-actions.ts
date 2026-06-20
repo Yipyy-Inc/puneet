@@ -1,22 +1,10 @@
-import type {
-  AlertNote,
-  GroomingAppointment,
-} from "@/types/grooming";
-import type {
-  GroomingStation,
-  GroomingStationStatus,
-} from "@/types/rooms";
+import type { AlertNote, GroomingAppointment } from "@/types/grooming";
+import type { GroomingStation, GroomingStationStatus } from "@/types/rooms";
 import type { Client } from "@/types/client";
 import type { Pet } from "@/types/pet";
-import type {
-  CheckInConfirmation,
-} from "@/components/facility/grooming/check-in-confirmation-dialog";
-import type {
-  MarkReadyConfirmation,
-} from "@/components/facility/grooming/mark-ready-dialog";
-import type {
-  PaymentResult,
-} from "@/components/facility/grooming/payment-dialog";
+import type { CheckInConfirmation } from "@/components/facility/grooming/check-in-confirmation-dialog";
+import type { MarkReadyConfirmation } from "@/components/facility/grooming/mark-ready-dialog";
+import type { PaymentResult } from "@/components/facility/grooming/payment-dialog";
 import { groomingAddOnsList } from "@/data/grooming-pricing-rules";
 import { redeemPackagePass } from "@/data/customer-packages";
 
@@ -149,9 +137,7 @@ export function applyCheckInResult(
   // Only "notable" values get promoted (clean / calm / better-than-usual /
   // none are positive signals — not worth alerting future groomers about).
   const promotedAlerts: AlertNote[] = [];
-  const existingAlertTexts = new Set(
-    (apt.alertNotes ?? []).map((n) => n.text),
-  );
+  const existingAlertTexts = new Set((apt.alertNotes ?? []).map((n) => n.text));
   function promoteAlert(text: string) {
     if (existingAlertTexts.has(text)) return;
     const note: AlertNote = {
@@ -395,25 +381,29 @@ export function applyPaymentResult(
   // ── 1. Stamp payment metadata + status onto the appointment ────────────
   apt.status = "completed";
   apt.checkOutTime = nowIso;
-  (apt as typeof apt & {
-    paymentStatus?: "pending" | "paid" | "refunded";
-    paidAt?: string;
-    paymentMethod?: PaymentResult["method"];
-    tipAmount?: number;
-    appliedStoreCredit?: number;
-    appliedPackagePassId?: string;
-  }).paymentStatus = "paid";
+  (
+    apt as typeof apt & {
+      paymentStatus?: "pending" | "paid" | "refunded";
+      paidAt?: string;
+      paymentMethod?: PaymentResult["method"];
+      tipAmount?: number;
+      appliedStoreCredit?: number;
+      appliedPackagePassId?: string;
+    }
+  ).paymentStatus = "paid";
   (apt as typeof apt & { paidAt?: string }).paidAt = nowIso;
-  (apt as typeof apt & { paymentMethod?: PaymentResult["method"] })
-    .paymentMethod = result.method;
+  (
+    apt as typeof apt & { paymentMethod?: PaymentResult["method"] }
+  ).paymentMethod = result.method;
   (apt as typeof apt & { tipAmount?: number }).tipAmount = result.tipAmount;
   if (result.appliedStoreCredit > 0) {
-    (apt as typeof apt & { appliedStoreCredit?: number })
-      .appliedStoreCredit = result.appliedStoreCredit;
+    (apt as typeof apt & { appliedStoreCredit?: number }).appliedStoreCredit =
+      result.appliedStoreCredit;
   }
   if (result.appliedPackagePassId) {
-    (apt as typeof apt & { appliedPackagePassId?: string })
-      .appliedPackagePassId = result.appliedPackagePassId;
+    (
+      apt as typeof apt & { appliedPackagePassId?: string }
+    ).appliedPackagePassId = result.appliedPackagePassId;
   }
 
   // ── 2. Redeem package pass if applied ──────────────────────────────────
@@ -475,13 +465,10 @@ export function applyPaymentResult(
     }
   })();
   const receiptBody = `Receipt · ${methodLabel} · charged $${result.amountCharged.toFixed(2)} (total $${result.grandTotal.toFixed(2)}). Thanks for visiting ${deps.facilityName}!`;
-  deps.notify(
-    `Receipt sent to ${apt.ownerName} (${channelLabel})`,
-    {
-      description: receiptBody,
-      duration: 8000,
-    },
-  );
+  deps.notify(`Receipt sent to ${apt.ownerName} (${channelLabel})`, {
+    description: receiptBody,
+    duration: 8000,
+  });
 
   return {
     amountCharged: result.amountCharged,

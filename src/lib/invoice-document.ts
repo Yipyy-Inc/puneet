@@ -72,7 +72,8 @@ export function buildInvoiceDocumentHtml(
   const accent = template.accentColor || "#0f172a";
 
   const logoSrc = template.logoUrl
-    ? template.logoUrl.startsWith("http") || template.logoUrl.startsWith("data:")
+    ? template.logoUrl.startsWith("http") ||
+      template.logoUrl.startsWith("data:")
       ? template.logoUrl
       : `${origin}${template.logoUrl}`
     : "";

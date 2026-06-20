@@ -43,10 +43,7 @@ import { TimeBlockDialog, type TimeBlock } from "./time-block-dialog";
 import { WaitlistPanel } from "./waitlist-panel";
 import { PrintableDaySheet } from "./printable-day-sheet";
 import { PrintableAppointmentCards } from "./printable-appointment-cards";
-import {
-  BulkActionsDialog,
-  type BulkActionMode,
-} from "./bulk-actions-dialog";
+import { BulkActionsDialog, type BulkActionMode } from "./bulk-actions-dialog";
 import { getMissedTaskCountForModule } from "@/lib/today-tasks";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { useGroomingWaitlist } from "@/hooks/use-grooming-waitlist";
@@ -271,10 +268,7 @@ function colorForService(name: string): string {
 // Stable per-stylist color used for the calendar accent. Honors the stylist's
 // configured calendarColor when present, otherwise hashes the id into the
 // same SERVICE_PALETTE so adjacent groomers stay visually distinct.
-function colorForStylist(
-  stylistId: string,
-  configured?: string,
-): string {
+function colorForStylist(stylistId: string, configured?: string): string {
   if (configured) return configured;
   let hash = 0;
   for (let i = 0; i < stylistId.length; i++) {
@@ -305,7 +299,8 @@ function GroomingSidebar({
     [selectedDate],
   );
   const [displayMonth, setDisplayMonth] = useState(
-    () => new Date(selectedDateObj.getFullYear(), selectedDateObj.getMonth(), 1),
+    () =>
+      new Date(selectedDateObj.getFullYear(), selectedDateObj.getMonth(), 1),
   );
 
   const calendarDays = useMemo(() => {
@@ -342,9 +337,8 @@ function GroomingSidebar({
       confirmed: todayAppointments.filter(
         (a) => a.status === "scheduled" || a.status === "checked-in",
       ).length,
-      inProgress: todayAppointments.filter(
-        (a) => a.status === "in-progress",
-      ).length,
+      inProgress: todayAppointments.filter((a) => a.status === "in-progress")
+        .length,
       readyForPickup: todayAppointments.filter(
         (a) => a.status === "ready-for-pickup",
       ).length,
@@ -414,7 +408,11 @@ function GroomingSidebar({
   }, [appointments, viewMode, selectedDate]);
 
   const reportPeriodLabel =
-    viewMode === "day" ? "today" : viewMode === "week" ? "this week" : "this month";
+    viewMode === "day"
+      ? "today"
+      : viewMode === "week"
+        ? "this week"
+        : "this month";
 
   const serviceBreakdown = useMemo(() => {
     const inView = appointments.filter((a) => {
@@ -699,19 +697,19 @@ function GroomingSidebar({
         <div className="space-y-1.5 rounded-xl border border-emerald-100 bg-emerald-50/40 px-3 py-2.5">
           <div className="flex items-center justify-between">
             <span className="text-[11px] text-slate-600">Appointments</span>
-            <span className="text-[12px] font-bold tabular-nums text-slate-800">
+            <span className="text-[12px] font-bold text-slate-800 tabular-nums">
               {calendarReport.appointments}
             </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[11px] text-slate-600">Pets</span>
-            <span className="text-[12px] font-bold tabular-nums text-slate-800">
+            <span className="text-[12px] font-bold text-slate-800 tabular-nums">
               {calendarReport.pets}
             </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[11px] text-slate-600">Finished</span>
-            <span className="text-[12px] font-bold tabular-nums text-slate-800">
+            <span className="text-[12px] font-bold text-slate-800 tabular-nums">
               {calendarReport.finished}
             </span>
           </div>
@@ -720,7 +718,7 @@ function GroomingSidebar({
             <span className="text-[11px] font-medium text-slate-700">
               Earned
             </span>
-            <span className="text-[12px] font-bold tabular-nums text-emerald-700">
+            <span className="text-[12px] font-bold text-emerald-700 tabular-nums">
               ${calendarReport.earnedRevenue.toFixed(0)}
             </span>
           </div>
@@ -728,7 +726,7 @@ function GroomingSidebar({
             <span className="text-[11px] font-medium text-slate-700">
               Expected
             </span>
-            <span className="text-base font-black tabular-nums text-emerald-800">
+            <span className="text-base font-black text-emerald-800 tabular-nums">
               ${calendarReport.expectedRevenue.toFixed(0)}
             </span>
           </div>
@@ -890,7 +888,9 @@ function AppointmentBlock({
   const RUNNING_LONG_MIN = 15;
   const liveOnToday = !!isToday && typeof nowMin === "number";
   const lateMin =
-    liveOnToday && appointment.status === "scheduled" && nowMin! > start + LATE_GRACE_MIN
+    liveOnToday &&
+    appointment.status === "scheduled" &&
+    nowMin! > start + LATE_GRACE_MIN
       ? nowMin! - start
       : 0;
 
@@ -963,7 +963,7 @@ function AppointmentBlock({
             if (e.key === "Enter" || e.key === " ") e.stopPropagation();
           }}
           title={`${alertCount} alert note${alertCount > 1 ? "s" : ""} — click for details`}
-          className="inline-flex shrink-0 cursor-pointer items-center gap-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+          className="inline-flex shrink-0 cursor-pointer items-center gap-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm hover:bg-red-700 focus-visible:ring-2 focus-visible:ring-red-300 focus-visible:outline-none"
         >
           <AlertTriangle className="size-2.5" />
           {alertCount}
@@ -983,11 +983,11 @@ function AppointmentBlock({
             {appointment.petName} — includes carry-forward from past visits
           </p>
         </div>
-        <ul className="max-h-64 divide-y divide-border overflow-y-auto">
+        <ul className="divide-border max-h-64 divide-y overflow-y-auto">
           {(alertNotes ?? []).map((note) => (
             <li key={note.id} className="px-3 py-2">
               <p className="text-xs leading-snug">{note.text}</p>
-              <p className="mt-1 text-[10px] text-muted-foreground">
+              <p className="text-muted-foreground mt-1 text-[10px]">
                 {note.createdBy}
                 {" · "}
                 {new Date(note.createdAt).toLocaleDateString("en-CA", {
@@ -1000,7 +1000,7 @@ function AppointmentBlock({
             </li>
           ))}
           {(!alertNotes || alertNotes.length === 0) && (
-            <li className="px-3 py-2 text-[11px] italic text-muted-foreground">
+            <li className="text-muted-foreground px-3 py-2 text-[11px] italic">
               No note details available.
             </li>
           )}
@@ -1015,7 +1015,7 @@ function AppointmentBlock({
     lateMin > 0 ? (
       <span
         title={`Scheduled for ${startStr} — client is ${lateMin} min late`}
-        className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm"
+        className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase shadow-sm"
       >
         <Clock className="size-2.5" />
         Late {lateMin}m
@@ -1023,7 +1023,7 @@ function AppointmentBlock({
     ) : runningLongMin > 0 ? (
       <span
         title={`Running ${runningLongMin} min past the estimated duration — consider sending an ETA update to ${appointment.ownerName}`}
-        className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm animate-pulse"
+        className="inline-flex shrink-0 animate-pulse items-center gap-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase shadow-sm"
       >
         <Hourglass className="size-2.5" />
         Running long {runningLongMin}m
@@ -1033,7 +1033,7 @@ function AppointmentBlock({
       elapsedMin > 0 ? (
       <span
         title={`Elapsed ${elapsedMin} min of ~${sessionEstimatedMin} min estimated`}
-        className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm tabular-nums"
+        className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase tabular-nums shadow-sm"
       >
         <Clock className="size-2.5" />
         {elapsedMin}/{sessionEstimatedMin}m
@@ -1041,7 +1041,7 @@ function AppointmentBlock({
     ) : readySinceMin > 0 ? (
       <span
         title={`Marked ready for pickup ~${readySinceMin} min ago — nudge the client`}
-        className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm animate-pulse"
+        className="inline-flex shrink-0 animate-pulse items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase shadow-sm"
       >
         <BellRing className="size-2.5" />
         Ready {readySinceMin}m
@@ -1054,7 +1054,7 @@ function AppointmentBlock({
   const statusChip = !exceptionPill ? (
     <span
       title={s.label}
-      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/70 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide shadow-sm dark:bg-slate-900/60"
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/70 px-1 py-0.5 text-[9px] font-semibold tracking-wide uppercase shadow-sm dark:bg-slate-900/60"
     >
       <StatusIcon className="size-2.5" />
       {s.label}
@@ -1111,17 +1111,18 @@ function AppointmentBlock({
         onClick(appointment);
       }}
       className={cn(
-        "group absolute left-1 right-1 rounded-lg border border-black/5 backdrop-blur-sm",
-        "text-left transition-all overflow-hidden cursor-pointer shadow-sm",
-        "hover:shadow-md hover:scale-[1.01] active:scale-[0.99]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "group absolute right-1 left-1 rounded-lg border border-black/5 backdrop-blur-sm",
+        "cursor-pointer overflow-hidden text-left shadow-sm transition-all",
+        "hover:scale-[1.01] hover:shadow-md active:scale-[0.99]",
+        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
         "px-2 py-1",
         s.bg,
         s.text,
         appointment.status === "cancelled" && "opacity-40",
         appointment.status === "completed" && "opacity-55",
         isSecondary && "opacity-75",
-        isMatch && "ring-2 ring-blue-500 ring-offset-1 shadow-lg z-20 scale-[1.02]",
+        isMatch &&
+          "z-20 scale-[1.02] shadow-lg ring-2 ring-blue-500 ring-offset-1",
         isDimmed && "opacity-15 saturate-50",
         !isMatch && !isDimmed && "z-10",
       )}
@@ -1130,7 +1131,7 @@ function AppointmentBlock({
         height: `${height}px`,
       }}
     >
-      <div className="flex items-center gap-2 min-w-0 h-full">
+      <div className="flex h-full min-w-0 items-center gap-2">
         <div className="ring-background relative size-8 shrink-0 overflow-hidden rounded-full ring-2">
           {appointment.petPhotoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -1142,7 +1143,7 @@ function AppointmentBlock({
               className="size-full object-cover"
             />
           ) : (
-            <div className="bg-white/60 dark:bg-slate-900/60 flex size-full items-center justify-center">
+            <div className="flex size-full items-center justify-center bg-white/60 dark:bg-slate-900/60">
               <StatusIcon className="size-4 opacity-70" />
             </div>
           )}
@@ -1152,7 +1153,7 @@ function AppointmentBlock({
             <span
               title={s.label}
               className={cn(
-                "absolute -bottom-px -right-px flex size-3.5 items-center justify-center rounded-full ring-1 ring-white dark:ring-slate-900",
+                "absolute -right-px -bottom-px flex size-3.5 items-center justify-center rounded-full ring-1 ring-white dark:ring-slate-900",
                 s.pill,
               )}
             >
@@ -1163,7 +1164,7 @@ function AppointmentBlock({
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-px">
           <div className="flex min-w-0 items-center gap-1">
             <span
-              className="truncate text-xs font-semibold leading-tight"
+              className="truncate text-xs leading-tight font-semibold"
               title={hasExtraPets ? allPetNames : undefined}
             >
               {allPetNames}
@@ -1191,7 +1192,7 @@ function AppointmentBlock({
         liveOnToday &&
         sessionEstimatedMin > 0 && (
           <span
-            className="absolute bottom-0 left-0 right-0 h-1 bg-black/10 dark:bg-white/10"
+            className="absolute right-0 bottom-0 left-0 h-1 bg-black/10 dark:bg-white/10"
             aria-hidden="true"
           >
             <span
@@ -1226,7 +1227,7 @@ function TimeBlockBlock({ block }: { block: TimeBlock }) {
       title={`${block.reason} · ${block.startTime}–${block.endTime}${
         block.notes ? ` · ${block.notes}` : ""
       }`}
-      className="absolute left-1 right-1 z-[5] overflow-hidden rounded-lg border border-slate-400/40 px-2 py-1 text-slate-700 dark:border-slate-500/40 dark:text-slate-200"
+      className="absolute right-1 left-1 z-[5] overflow-hidden rounded-lg border border-slate-400/40 px-2 py-1 text-slate-700 dark:border-slate-500/40 dark:text-slate-200"
       style={{
         top: `${top}px`,
         height: `${height}px`,
@@ -1253,17 +1254,17 @@ function TimeBlockBlock({ block }: { block: TimeBlock }) {
 function EmptyDay({ onNew }: { onNew: () => void }) {
   return (
     <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
-      <div className="flex size-12 items-center justify-center rounded-xl bg-muted">
-        <Scissors className="size-5 text-muted-foreground" />
+      <div className="bg-muted flex size-12 items-center justify-center rounded-xl">
+        <Scissors className="text-muted-foreground size-5" />
       </div>
       <div>
         <p className="text-sm font-medium">No appointments today</p>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <p className="text-muted-foreground mt-0.5 text-xs">
           Start by booking a new appointment
         </p>
       </div>
       <Button size="sm" variant="outline" onClick={onNew}>
-        <Plus className="size-4 mr-1.5" />
+        <Plus className="mr-1.5 size-4" />
         New Appointment
       </Button>
     </div>
@@ -1389,7 +1390,9 @@ function DayView({
     if (!searchActive || matchedIds.size === 0) return null;
     const match = dateAppointments
       .filter((a) => matchedIds.has(a.id))
-      .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))[0];
+      .sort(
+        (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime),
+      )[0];
     return match?.id ?? null;
   }, [dateAppointments, matchedIds, searchActive]);
 
@@ -1407,11 +1410,11 @@ function DayView({
   if (activeStylists.length === 0) return <EmptyDay onNew={onNew} />;
 
   return (
-    <div className="flex-1 overflow-auto rounded-xl border bg-card shadow-sm">
+    <div className="bg-card flex-1 overflow-auto rounded-xl border shadow-sm">
       <div style={{ minWidth: `${64 + activeStylists.length * 168}px` }}>
         {/* Stylist headers */}
         <div
-          className="sticky top-0 z-20 flex border-b bg-card/95 backdrop-blur-sm"
+          className="bg-card/95 sticky top-0 z-20 flex border-b backdrop-blur-sm"
           style={{ paddingLeft: "4rem" }}
         >
           {activeStylists.map((stylist) => {
@@ -1422,36 +1425,38 @@ function DayView({
             return (
               <div
                 key={stylist.id}
-                className="flex-1 min-w-[168px] border-l px-3 py-2.5"
+                className="min-w-[168px] flex-1 border-l px-3 py-2.5"
                 style={{ borderTop: `2px solid ${headerColor}` }}
               >
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="flex w-full items-center gap-2.5 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-muted/60"
+                      className="hover:bg-muted/60 flex w-full items-center gap-2.5 rounded-md px-1 py-0.5 text-left transition-colors"
                       title="Bulk actions for this groomer's day"
                     >
                       <div
-                        className="flex size-7 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm flex-shrink-0"
+                        className="flex size-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm"
                         style={{ backgroundColor: headerColor }}
                       >
                         {stylist.name.charAt(0)}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold truncate leading-tight">
+                        <p className="truncate text-xs leading-tight font-semibold">
                           {stylist.name}
                         </p>
                         {stylist.staffLine ? (
                           <p
-                            className="flex items-center gap-1 truncate text-[10px] leading-tight text-muted-foreground"
+                            className="text-muted-foreground flex items-center gap-1 truncate text-[10px] leading-tight"
                             title={`Driver: ${stylist.staffLine}`}
                           >
                             <Truck className="size-2.5 shrink-0" />
-                            <span className="truncate">{stylist.staffLine}</span>
+                            <span className="truncate">
+                              {stylist.staffLine}
+                            </span>
                           </p>
                         ) : (
-                          <p className="text-[10px] text-muted-foreground capitalize leading-tight">
+                          <p className="text-muted-foreground text-[10px] leading-tight capitalize">
                             {stylist.capacity.skillLevel}
                           </p>
                         )}
@@ -1478,7 +1483,7 @@ function DayView({
                       Bulk Book Again
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="gap-2 text-destructive focus:text-destructive"
+                      className="text-destructive focus:text-destructive gap-2"
                       onClick={() =>
                         openBulk("cancel", stylist.id, stylist.name)
                       }
@@ -1496,8 +1501,12 @@ function DayView({
         <div className="flex">
           <div className="w-16 flex-shrink-0 select-none" aria-hidden>
             {HOURS.map((h) => (
-              <div key={h} className="relative" style={{ height: `${HOUR_HEIGHT}px` }}>
-                <span className="absolute -top-[9px] right-2 text-[10px] text-muted-foreground/70 leading-none">
+              <div
+                key={h}
+                className="relative"
+                style={{ height: `${HOUR_HEIGHT}px` }}
+              >
+                <span className="text-muted-foreground/70 absolute -top-[9px] right-2 text-[10px] leading-none">
                   {formatHour(h)}
                 </span>
               </div>
@@ -1558,7 +1567,7 @@ function DayView({
               <ContextMenu key={stylist.id}>
                 <ContextMenuTrigger asChild>
                   <div
-                    className="flex-1 min-w-[168px] relative border-l cursor-pointer"
+                    className="relative min-w-[168px] flex-1 cursor-pointer border-l"
                     onClick={handleColumnClick}
                     onContextMenu={handleColumnContextMenu}
                     role="button"
@@ -1566,8 +1575,12 @@ function DayView({
                     aria-label={`Schedule slot for ${stylist.name}`}
                   >
                     {HOURS.map((h) => (
-                      <div key={h} style={{ height: `${HOUR_HEIGHT}px` }} className="border-b border-border/30">
-                        <div className="h-1/2 border-b border-dashed border-border/20" />
+                      <div
+                        key={h}
+                        style={{ height: `${HOUR_HEIGHT}px` }}
+                        className="border-border/30 border-b"
+                      >
+                        <div className="border-border/20 h-1/2 border-b border-dashed" />
                       </div>
                     ))}
                     {stylistBlocks.map((b) => (
@@ -1592,12 +1605,8 @@ function DayView({
                                 completedAt: st.completedAt,
                               }}
                               onClick={onBlockClick}
-                              isMatch={
-                                searchActive && matchedIds.has(apt.id)
-                              }
-                              isDimmed={
-                                searchActive && !matchedIds.has(apt.id)
-                              }
+                              isMatch={searchActive && matchedIds.has(apt.id)}
+                              isDimmed={searchActive && !matchedIds.has(apt.id)}
                               alertCount={alertCountById[apt.id]}
                               alertNotes={alertNotesById[apt.id]}
                               nowMin={nowMin}
@@ -1616,10 +1625,9 @@ function DayView({
                       if (isSecondary) {
                         staffLine = `with ${apt.stylistName}`;
                       } else if (coGroomerNames.length > 0) {
-                        staffLine = [
-                          apt.stylistName,
-                          ...coGroomerNames,
-                        ].join(" + ");
+                        staffLine = [apt.stylistName, ...coGroomerNames].join(
+                          " + ",
+                        );
                       } else if (stylist.staffLine) {
                         staffLine = stylist.staffLine;
                       }
@@ -1634,9 +1642,7 @@ function DayView({
                           isMatch={searchActive && matchedIds.has(apt.id)}
                           isDimmed={searchActive && !matchedIds.has(apt.id)}
                           blockRef={
-                            apt.id === firstMatchId
-                              ? firstMatchRef
-                              : undefined
+                            apt.id === firstMatchId ? firstMatchRef : undefined
                           }
                           alertCount={alertCountById[apt.id]}
                           alertNotes={alertNotesById[apt.id]}
@@ -1715,12 +1721,15 @@ function WeekView({
   const weekDays = getWeekDays(selectedDate);
 
   return (
-    <div className="flex-1 overflow-auto rounded-xl border bg-card shadow-sm">
+    <div className="bg-card flex-1 overflow-auto rounded-xl border shadow-sm">
       <div className="grid grid-cols-7 divide-x">
         {weekDays.map((day, idx) => {
           const ds = formatISODate(day);
           const dayApts = appointments.filter(
-            (a) => a.date === ds && a.status !== "cancelled" && a.status !== "no-show",
+            (a) =>
+              a.date === ds &&
+              a.status !== "cancelled" &&
+              a.status !== "no-show",
           );
           const isToday = ds === today;
           const isSelected = ds === selectedDate;
@@ -1731,13 +1740,13 @@ function WeekView({
               key={ds}
               onClick={() => onDayClick(ds)}
               className={cn(
-                "flex flex-col gap-1.5 p-3 text-left hover:bg-muted/50 transition-colors min-h-[160px]",
+                "hover:bg-muted/50 flex min-h-[160px] flex-col gap-1.5 p-3 text-left transition-colors",
                 isSelected && "bg-pink-50/60 dark:bg-pink-950/20",
               )}
             >
               <div className="flex items-center justify-between gap-1.5">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-medium text-muted-foreground uppercase">
+                  <span className="text-muted-foreground text-[11px] font-medium uppercase">
                     {DAY_ABBR[idx]}
                   </span>
                   <span
@@ -1760,7 +1769,9 @@ function WeekView({
                 />
               </div>
               {dayApts.length === 0 ? (
-                <span className="text-[10px] text-muted-foreground/50 mt-1">No appts</span>
+                <span className="text-muted-foreground/50 mt-1 text-[10px]">
+                  No appts
+                </span>
               ) : (
                 <div className="flex flex-col gap-1">
                   {dayApts.slice(0, 4).map((apt) => {
@@ -1791,7 +1802,7 @@ function WeekView({
                     );
                   })}
                   {dayApts.length > 4 && (
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-muted-foreground text-[10px]">
                       +{dayApts.length - 4} more
                     </span>
                   )}
@@ -1833,10 +1844,13 @@ function MonthView({
   const cells = getMonthDays(selectedDate);
 
   return (
-    <div className="flex-1 overflow-auto rounded-xl border bg-card shadow-sm">
+    <div className="bg-card flex-1 overflow-auto rounded-xl border shadow-sm">
       <div className="grid grid-cols-7 border-b">
         {DAY_ABBR.map((d) => (
-          <div key={d} className="px-3 py-2 text-center text-[11px] font-semibold text-muted-foreground uppercase">
+          <div
+            key={d}
+            className="text-muted-foreground px-3 py-2 text-center text-[11px] font-semibold uppercase"
+          >
             {d}
           </div>
         ))}
@@ -1844,11 +1858,16 @@ function MonthView({
       <div className="grid grid-cols-7 divide-x divide-y">
         {cells.map((day, i) => {
           if (!day) {
-            return <div key={`empty-${i}`} className="min-h-[100px] bg-muted/20" />;
+            return (
+              <div key={`empty-${i}`} className="bg-muted/20 min-h-[100px]" />
+            );
           }
           const ds = formatISODate(day);
           const dayApts = appointments.filter(
-            (a) => a.date === ds && a.status !== "cancelled" && a.status !== "no-show",
+            (a) =>
+              a.date === ds &&
+              a.status !== "cancelled" &&
+              a.status !== "no-show",
           );
           const isToday = ds === today;
           const isSelected = ds === selectedDate;
@@ -1859,7 +1878,7 @@ function MonthView({
               key={ds}
               onClick={() => onDayClick(ds)}
               className={cn(
-                "min-h-[100px] p-2 text-left hover:bg-muted/50 transition-colors flex flex-col gap-1",
+                "hover:bg-muted/50 flex min-h-[100px] flex-col gap-1 p-2 text-left transition-colors",
                 isSelected && "bg-pink-50/60 dark:bg-pink-950/20",
               )}
             >
@@ -1890,7 +1909,7 @@ function MonthView({
                   <div
                     key={apt.id}
                     className={cn(
-                      "flex items-center gap-1 rounded px-1 py-0.5 text-[10px] font-medium w-full",
+                      "flex w-full items-center gap-1 rounded px-1 py-0.5 text-[10px] font-medium",
                       s.bg,
                       s.text,
                       isMatch && "ring-2 ring-blue-500 ring-offset-1",
@@ -1910,7 +1929,9 @@ function MonthView({
                 );
               })}
               {dayApts.length > 3 && (
-                <span className="text-[10px] text-muted-foreground">+{dayApts.length - 3} more</span>
+                <span className="text-muted-foreground text-[10px]">
+                  +{dayApts.length - 3} more
+                </span>
               )}
             </button>
           );
@@ -1942,15 +1963,18 @@ export function GroomingCalendar() {
   const [selectedAppointment, setSelectedAppointment] =
     useState<GroomingAppointment | null>(null);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
-  const [quickBookSlot, setQuickBookSlot] = useState<
-    { stylistId: string; time: string } | null
-  >(null);
+  const [quickBookSlot, setQuickBookSlot] = useState<{
+    stylistId: string;
+    time: string;
+  } | null>(null);
   const [filters, setFilters] = useState<CalendarFilterState>(EMPTY_FILTERS);
   const [searchQuery, setSearchQuery] = useState("");
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
-  const [pendingBlockSlot, setPendingBlockSlot] = useState<
-    { stylistId: string; time: string; existingBlockId: string | null } | null
-  >(null);
+  const [pendingBlockSlot, setPendingBlockSlot] = useState<{
+    stylistId: string;
+    time: string;
+    existingBlockId: string | null;
+  } | null>(null);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
 
   const { data: appointments = [] } = useQuery(groomingQueries.appointments());
@@ -2172,225 +2196,233 @@ export function GroomingCalendar() {
 
   return (
     <>
-    <div className="flex h-full gap-6 print:hidden">
-      <GroomingSidebar
-        selectedDate={selectedDate}
-        todayStr={todayStr}
-        appointments={filteredAppointments}
-        viewMode={viewMode}
-        onDateChange={setSelectedDate}
-      />
+      <div className="flex h-full gap-6 print:hidden">
+        <GroomingSidebar
+          selectedDate={selectedDate}
+          todayStr={todayStr}
+          appointments={filteredAppointments}
+          viewMode={viewMode}
+          onDateChange={setSelectedDate}
+        />
 
-      {/* ── Main View Area ── */}
-      <div className="flex-1 flex flex-col min-w-0 gap-4 bg-slate-50/50 dark:bg-slate-900/20 rounded-[2rem] p-6 border shadow-sm">
-        {/* Top Controls */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="outline" className="rounded-full px-5 shadow-sm h-10 border-slate-200 hover:bg-slate-100 bg-white" onClick={() => setSelectedDate(todayStr)}>
-              Today
-            </Button>
-            <div className="flex bg-white dark:bg-slate-950 p-1 rounded-full border shadow-sm">
-              {(["day", "week", "month"] as ViewMode[]).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setViewMode(v)}
-                  className={cn(
-                    "px-5 py-1.5 text-sm font-medium rounded-full capitalize transition-all",
-                    viewMode === v
-                      ? "bg-slate-100 dark:bg-slate-800 text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search pet, owner, phone..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="rounded-full w-56 pl-9 h-10 shadow-sm bg-white dark:bg-slate-950 border-slate-200"
-              />
-            </div>
-            <CalendarFilters
-              filters={filters}
-              onChange={setFilters}
-              stylists={stylistsData}
-              appointments={appointments}
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="rounded-full h-10 px-4 shadow-sm gap-2 border-slate-200 hover:bg-slate-100 bg-white"
-                  title="Print options"
-                >
-                  <Printer className="h-4 w-4" /> Print
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem
-                  onClick={() => handlePrint("day-summary")}
-                  className="gap-2"
-                >
-                  <CalendarDays className="size-4" />
-                  Daily Summary
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handlePrint("cards")}
-                  className="gap-2"
-                >
-                  <Scissors className="size-4" />
-                  Appointment Cards
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button className="rounded-full h-10 px-5 shadow-sm bg-blue-600 hover:bg-blue-700 text-white" onClick={handleNewEvent}>
-              <Plus className="h-4 w-4 mr-1.5" /> New Event
-            </Button>
-          </div>
-        </div>
-
-        {/* Header Title */}
-        <div className="flex items-center justify-between mt-2 mb-2">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center size-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
-              <ActivitySquare className="h-5 w-5" />
-            </div>
-            <h2 className="text-xl font-bold">Client Schedule</h2>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-full px-3 py-1">
-              <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
-              {activeEventCount} active events
-            </span>
-            {viewMode === "day" && (waitlistByDate[selectedDate] ?? 0) > 0 && (
-              <button
-                type="button"
-                onClick={() => setWaitlistDate(selectedDate)}
-                className="flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:bg-amber-950/50"
+        {/* ── Main View Area ── */}
+        <div className="flex min-w-0 flex-1 flex-col gap-4 rounded-[2rem] border bg-slate-50/50 p-6 shadow-sm dark:bg-slate-900/20">
+          {/* Top Controls */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                className="h-10 rounded-full border-slate-200 bg-white px-5 shadow-sm hover:bg-slate-100"
+                onClick={() => setSelectedDate(todayStr)}
               >
-                <Hourglass className="size-3.5" />
-                {waitlistByDate[selectedDate]} on waitlist
-              </button>
+                Today
+              </Button>
+              <div className="flex rounded-full border bg-white p-1 shadow-sm dark:bg-slate-950">
+                {(["day", "week", "month"] as ViewMode[]).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setViewMode(v)}
+                    className={cn(
+                      "rounded-full px-5 py-1.5 text-sm font-medium capitalize transition-all",
+                      viewMode === v
+                        ? "text-foreground bg-slate-100 shadow-sm dark:bg-slate-800"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+                <Input
+                  placeholder="Search pet, owner, phone..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-10 w-56 rounded-full border-slate-200 bg-white pl-9 shadow-sm dark:bg-slate-950"
+                />
+              </div>
+              <CalendarFilters
+                filters={filters}
+                onChange={setFilters}
+                stylists={stylistsData}
+                appointments={appointments}
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="h-10 gap-2 rounded-full border-slate-200 bg-white px-4 shadow-sm hover:bg-slate-100"
+                    title="Print options"
+                  >
+                    <Printer className="h-4 w-4" /> Print
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem
+                    onClick={() => handlePrint("day-summary")}
+                    className="gap-2"
+                  >
+                    <CalendarDays className="size-4" />
+                    Daily Summary
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handlePrint("cards")}
+                    className="gap-2"
+                  >
+                    <Scissors className="size-4" />
+                    Appointment Cards
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                className="h-10 rounded-full bg-blue-600 px-5 text-white shadow-sm hover:bg-blue-700"
+                onClick={handleNewEvent}
+              >
+                <Plus className="mr-1.5 h-4 w-4" /> New Event
+              </Button>
+            </div>
+          </div>
+
+          {/* Header Title */}
+          <div className="mt-2 mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
+                <ActivitySquare className="h-5 w-5" />
+              </div>
+              <h2 className="text-xl font-bold">Client Schedule</h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/50 px-3 py-1 text-sm font-medium text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500"></span>
+                {activeEventCount} active events
+              </span>
+              {viewMode === "day" &&
+                (waitlistByDate[selectedDate] ?? 0) > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setWaitlistDate(selectedDate)}
+                    className="flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:bg-amber-950/50"
+                  >
+                    <Hourglass className="size-3.5" />
+                    {waitlistByDate[selectedDate]} on waitlist
+                  </button>
+                )}
+              <span className="text-muted-foreground hidden text-sm lg:inline">
+                Click any date & time to create a quick appointment.
+              </span>
+            </div>
+          </div>
+
+          {/* Calendar Grid Container */}
+          <div className="bg-background flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border shadow-sm">
+            {viewMode === "day" && (
+              <DayView
+                selectedDate={selectedDate}
+                appointments={filteredAppointments}
+                timeBlocks={timeBlocks}
+                stylists={calendarColumns}
+                fullStylists={stylistsData}
+                onBlockClick={handleBlockClick}
+                onNew={handleNewEvent}
+                onSlotClick={handleSlotClick}
+                onSlotContext={handleSlotContext}
+                onConfirmBlock={handleConfirmBlock}
+                onConfirmUnblock={handleConfirmUnblock}
+                pendingExistingBlockId={
+                  pendingBlockSlot?.existingBlockId ?? null
+                }
+                matchedIds={searchMatchedIds}
+                searchActive={searchActive}
+                stylistNameById={stylistNameById}
+                alertCountById={alertCountById}
+                alertNotesById={alertNotesById}
+              />
             )}
-            <span className="text-sm text-muted-foreground hidden lg:inline">
-              Click any date & time to create a quick appointment.
-            </span>
+            {viewMode === "week" && (
+              <WeekView
+                selectedDate={selectedDate}
+                today={todayStr}
+                appointments={filteredAppointments}
+                onDayClick={handleDayClick}
+                matchedIds={searchMatchedIds}
+                searchActive={searchActive}
+                waitlistByDate={waitlistByDate}
+                onWaitlistOpen={setWaitlistDate}
+                stylistColorById={stylistColorById}
+                alertCountById={alertCountById}
+              />
+            )}
+            {viewMode === "month" && (
+              <MonthView
+                selectedDate={selectedDate}
+                today={todayStr}
+                appointments={filteredAppointments}
+                onDayClick={handleDayClick}
+                matchedIds={searchMatchedIds}
+                searchActive={searchActive}
+                waitlistByDate={waitlistByDate}
+                onWaitlistOpen={setWaitlistDate}
+                stylistColorById={stylistColorById}
+                alertCountById={alertCountById}
+              />
+            )}
           </div>
         </div>
 
-        {/* Calendar Grid Container */}
-        <div className="flex-1 min-h-0 bg-background rounded-2xl border shadow-sm overflow-hidden flex flex-col">
-          {viewMode === "day" && (
-            <DayView
-              selectedDate={selectedDate}
-              appointments={filteredAppointments}
-              timeBlocks={timeBlocks}
-              stylists={calendarColumns}
-              fullStylists={stylistsData}
-              onBlockClick={handleBlockClick}
-              onNew={handleNewEvent}
-              onSlotClick={handleSlotClick}
-              onSlotContext={handleSlotContext}
-              onConfirmBlock={handleConfirmBlock}
-              onConfirmUnblock={handleConfirmUnblock}
-              pendingExistingBlockId={pendingBlockSlot?.existingBlockId ?? null}
-              matchedIds={searchMatchedIds}
-              searchActive={searchActive}
-              stylistNameById={stylistNameById}
-              alertCountById={alertCountById}
-              alertNotesById={alertNotesById}
-            />
-          )}
-          {viewMode === "week" && (
-            <WeekView
-              selectedDate={selectedDate}
-              today={todayStr}
-              appointments={filteredAppointments}
-              onDayClick={handleDayClick}
-              matchedIds={searchMatchedIds}
-              searchActive={searchActive}
-              waitlistByDate={waitlistByDate}
-              onWaitlistOpen={setWaitlistDate}
-              stylistColorById={stylistColorById}
-              alertCountById={alertCountById}
-            />
-          )}
-          {viewMode === "month" && (
-            <MonthView
-              selectedDate={selectedDate}
-              today={todayStr}
-              appointments={filteredAppointments}
-              onDayClick={handleDayClick}
-              matchedIds={searchMatchedIds}
-              searchActive={searchActive}
-              waitlistByDate={waitlistByDate}
-              onWaitlistOpen={setWaitlistDate}
-              stylistColorById={stylistColorById}
-              alertCountById={alertCountById}
-            />
-          )}
-        </div>
+        <AppointmentPanel
+          open={panelOpen}
+          onOpenChange={setPanelOpen}
+          appointment={selectedAppointment}
+        />
+
+        <NewAppointmentDialog
+          open={newDialogOpen}
+          onOpenChange={handleDialogOpenChange}
+          defaultDate={selectedDate}
+          defaultStartTime={quickBookSlot?.time}
+          defaultStylistId={quickBookSlot?.stylistId}
+        />
+
+        <TimeBlockDialog
+          open={blockDialogOpen}
+          onOpenChange={handleBlockDialogOpenChange}
+          stylistId={pendingBlockSlot?.stylistId ?? ""}
+          stylistName={pendingBlockStylistName}
+          date={selectedDate}
+          startTime={pendingBlockSlot?.time ?? "09:00"}
+          onSave={handleSaveBlock}
+        />
+
+        <WaitlistPanel
+          open={waitlistDate !== null}
+          onOpenChange={(open) => {
+            if (!open) setWaitlistDate(null);
+          }}
+          date={waitlistDate ?? selectedDate}
+          entries={
+            waitlistDate ? waitlist.filter((w) => w.date === waitlistDate) : []
+          }
+        />
       </div>
 
-      <AppointmentPanel
-        open={panelOpen}
-        onOpenChange={setPanelOpen}
-        appointment={selectedAppointment}
-      />
-
-      <NewAppointmentDialog
-        open={newDialogOpen}
-        onOpenChange={handleDialogOpenChange}
-        defaultDate={selectedDate}
-        defaultStartTime={quickBookSlot?.time}
-        defaultStylistId={quickBookSlot?.stylistId}
-      />
-
-      <TimeBlockDialog
-        open={blockDialogOpen}
-        onOpenChange={handleBlockDialogOpenChange}
-        stylistId={pendingBlockSlot?.stylistId ?? ""}
-        stylistName={pendingBlockStylistName}
+      <PrintableDaySheet
         date={selectedDate}
-        startTime={pendingBlockSlot?.time ?? "09:00"}
-        onSave={handleSaveBlock}
+        appointments={filteredAppointments}
+        allAppointments={appointments}
+        timeBlocks={timeBlocks}
+        stylists={calendarColumns}
+        active={printMode === "day-summary"}
       />
-
-      <WaitlistPanel
-        open={waitlistDate !== null}
-        onOpenChange={(open) => {
-          if (!open) setWaitlistDate(null);
-        }}
-        date={waitlistDate ?? selectedDate}
-        entries={
-          waitlistDate
-            ? waitlist.filter((w) => w.date === waitlistDate)
-            : []
-        }
+      <PrintableAppointmentCards
+        date={selectedDate}
+        appointments={filteredAppointments}
+        allAppointments={appointments}
+        active={printMode === "cards"}
       />
-    </div>
-
-    <PrintableDaySheet
-      date={selectedDate}
-      appointments={filteredAppointments}
-      allAppointments={appointments}
-      timeBlocks={timeBlocks}
-      stylists={calendarColumns}
-      active={printMode === "day-summary"}
-    />
-    <PrintableAppointmentCards
-      date={selectedDate}
-      appointments={filteredAppointments}
-      allAppointments={appointments}
-      active={printMode === "cards"}
-    />
     </>
   );
 }

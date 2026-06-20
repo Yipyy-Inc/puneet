@@ -393,7 +393,7 @@ export default function GroomingSettingsPage() {
           </div>
           <Separator />
           <ToggleRow
-            label="Send &quot;Ready for pickup&quot; notification"
+            label='Send "Ready for pickup" notification'
             hint="Auto-fires when an appointment moves to Ready for Pickup."
             checked={settings.sendReadyNotification}
             onCheckedChange={(v) => update("sendReadyNotification", v)}
@@ -421,7 +421,7 @@ export default function GroomingSettingsPage() {
             </div>
           )}
           <Separator />
-          <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+          <div className="bg-muted/40 rounded-lg border p-3 text-sm">
             <p className="font-medium">Express Check-in form</p>
             <p className="text-muted-foreground mt-0.5 text-xs">
               The pre-visit form for grooming is now managed alongside every
@@ -474,9 +474,7 @@ export default function GroomingSettingsPage() {
                 <SelectItem value="immediate">
                   Immediately after completion
                 </SelectItem>
-                <SelectItem value="scheduled">
-                  At a scheduled time
-                </SelectItem>
+                <SelectItem value="scheduled">At a scheduled time</SelectItem>
                 <SelectItem value="manual">Manual send only</SelectItem>
               </SelectContent>
             </Select>
@@ -556,10 +554,7 @@ export default function GroomingSettingsPage() {
                 min={0}
                 value={settings.cancellationFeeAmount}
                 onChange={(e) =>
-                  update(
-                    "cancellationFeeAmount",
-                    Number(e.target.value) || 0,
-                  )
+                  update("cancellationFeeAmount", Number(e.target.value) || 0)
                 }
                 disabled={!isEditing}
               />
@@ -661,19 +656,19 @@ export default function GroomingSettingsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="py-2 pr-4 text-[11px] font-medium uppercase tracking-wide">
+                <tr className="text-muted-foreground border-b text-left">
+                  <th className="py-2 pr-4 text-[11px] font-medium tracking-wide uppercase">
                     Event
                   </th>
-                  <th className="py-2 px-2 text-[11px] font-medium uppercase tracking-wide">
+                  <th className="px-2 py-2 text-[11px] font-medium tracking-wide uppercase">
                     <Bell className="mx-auto size-3.5" />
                     <span className="sr-only">In-app</span>
                   </th>
-                  <th className="py-2 px-2 text-[11px] font-medium uppercase tracking-wide">
+                  <th className="px-2 py-2 text-[11px] font-medium tracking-wide uppercase">
                     <Mail className="mx-auto size-3.5" />
                     <span className="sr-only">Email</span>
                   </th>
-                  <th className="py-2 px-2 text-[11px] font-medium uppercase tracking-wide">
+                  <th className="px-2 py-2 text-[11px] font-medium tracking-wide uppercase">
                     <MessageSquare className="mx-auto size-3.5" />
                     <span className="sr-only">SMS</span>
                   </th>
@@ -694,9 +689,7 @@ export default function GroomingSettingsPage() {
                         <td className="py-2 pr-4 font-medium">
                           {EVENT_LABELS[event]}
                         </td>
-                        {(
-                          ["inApp", "email", "sms"] as const
-                        ).map((ch) => (
+                        {(["inApp", "email", "sms"] as const).map((ch) => (
                           <td key={ch} className="px-2 py-2 text-center">
                             <Switch
                               checked={chans[ch]}

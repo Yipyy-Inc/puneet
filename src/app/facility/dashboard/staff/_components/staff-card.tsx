@@ -59,9 +59,7 @@ export function StaffCard({
   const { viewer } = useFacilityRbac();
   const canSeeAudit =
     viewer.primaryRole === "owner" || viewer.primaryRole === "manager";
-  const latestEntry = canSeeAudit
-    ? getLatestStaffAuditEntry(profile.id)
-    : null;
+  const latestEntry = canSeeAudit ? getLatestStaffAuditEntry(profile.id) : null;
 
   const locationLabels = profile.assignedLocations
     .map((id) => FACILITY_LOCATIONS.find((l) => l.id === id)?.label)
@@ -212,7 +210,9 @@ export function StaffCard({
           <div className="border-border/40 bg-muted/30 mt-2 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5">
             <div className="size-1.5 shrink-0 rounded-full bg-violet-500/60" />
             <p className="text-muted-foreground truncate text-[10px]">
-              <span className="font-medium">{latestEntry.actorName.split(" ")[0]}</span>
+              <span className="font-medium">
+                {latestEntry.actorName.split(" ")[0]}
+              </span>
               {" · "}
               {latestEntry.action.replace(/_/g, " ")}
               {" · "}

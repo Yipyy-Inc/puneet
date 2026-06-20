@@ -46,9 +46,7 @@ export function RewardTypesEditor({ value, onChange }: RewardTypesEditorProps) {
 
   // Apply an edit to a single type and emit the full ALL_TYPES array.
   const updateType = (type: RewardType, next: RewardTypeConfig) => {
-    onChange(
-      ALL_TYPES.map((t) => (t === type ? next : entryFor(t))),
-    );
+    onChange(ALL_TYPES.map((t) => (t === type ? next : entryFor(t))));
   };
 
   return (

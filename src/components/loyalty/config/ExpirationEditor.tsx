@@ -21,7 +21,9 @@ type ExpirationPolicy = NonNullable<
   PointsExpirationConfig["timeBased"]
 >["expirationPolicy"];
 type WarningsConfig = NonNullable<PointsExpirationConfig["warnings"]>;
-type TierRow = NonNullable<PointsExpirationConfig["tierBased"]>["tiers"][number];
+type TierRow = NonNullable<
+  PointsExpirationConfig["tierBased"]
+>["tiers"][number];
 
 interface ExpirationEditorProps {
   value: PointsExpirationConfig;
@@ -61,7 +63,8 @@ export function ExpirationEditor({ value, onChange }: ExpirationEditorProps) {
       },
     });
 
-  const updateTiers = (next: TierRow[]) => patch({ tierBased: { tiers: next } });
+  const updateTiers = (next: TierRow[]) =>
+    patch({ tierBased: { tiers: next } });
 
   const updateWarnings = (changes: Partial<WarningsConfig>) =>
     patch({
@@ -141,8 +144,12 @@ export function ExpirationEditor({ value, onChange }: ExpirationEditorProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="fifo">FIFO (Oldest First)</SelectItem>
-                        <SelectItem value="lifo">LIFO (Newest First)</SelectItem>
+                        <SelectItem value="fifo">
+                          FIFO (Oldest First)
+                        </SelectItem>
+                        <SelectItem value="lifo">
+                          LIFO (Newest First)
+                        </SelectItem>
                         <SelectItem value="proportional">
                           Proportional
                         </SelectItem>

@@ -530,8 +530,7 @@ export default function YipyyGoFormPage({
             </CardTitle>
             <CardDescription className="text-base">
               Thank you for completing your Express Check-in. We&apos;re excited
-              to meet <strong className="text-foreground">{pet.name}</strong>{" "}
-              on{" "}
+              to meet <strong className="text-foreground">{pet.name}</strong> on{" "}
               <strong className="text-foreground">{arrivalDate}</strong>
               {booking.checkInTime ? ` at ${booking.checkInTime}` : ""}.
             </CardDescription>

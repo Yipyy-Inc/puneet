@@ -34,11 +34,46 @@ interface PeakDay {
 }
 
 const WEEK: PeakDay[] = [
-  { label: "Mon May 25", date: "2026-05-25", peakWindow: "8:00 – 10:00 AM", bookings: 41, staff: 2, needsCoverage: true },
-  { label: "Tue May 26", date: "2026-05-26", peakWindow: "8:00 – 10:00 AM", bookings: 38, staff: 2, needsCoverage: true },
-  { label: "Wed May 27", date: "2026-05-27", peakWindow: "8:00 – 10:00 AM", bookings: 35, staff: 2, needsCoverage: true },
-  { label: "Thu May 28", date: "2026-05-28", peakWindow: "8:00 – 10:00 AM", bookings: 22, staff: 2, needsCoverage: false },
-  { label: "Fri May 29", date: "2026-05-29", peakWindow: "8:00 – 10:00 AM", bookings: 18, staff: 2, needsCoverage: false },
+  {
+    label: "Mon May 25",
+    date: "2026-05-25",
+    peakWindow: "8:00 – 10:00 AM",
+    bookings: 41,
+    staff: 2,
+    needsCoverage: true,
+  },
+  {
+    label: "Tue May 26",
+    date: "2026-05-26",
+    peakWindow: "8:00 – 10:00 AM",
+    bookings: 38,
+    staff: 2,
+    needsCoverage: true,
+  },
+  {
+    label: "Wed May 27",
+    date: "2026-05-27",
+    peakWindow: "8:00 – 10:00 AM",
+    bookings: 35,
+    staff: 2,
+    needsCoverage: true,
+  },
+  {
+    label: "Thu May 28",
+    date: "2026-05-28",
+    peakWindow: "8:00 – 10:00 AM",
+    bookings: 22,
+    staff: 2,
+    needsCoverage: false,
+  },
+  {
+    label: "Fri May 29",
+    date: "2026-05-29",
+    peakWindow: "8:00 – 10:00 AM",
+    bookings: 18,
+    staff: 2,
+    needsCoverage: false,
+  },
 ];
 
 export function WeekScheduleGapPanel({
@@ -60,7 +95,7 @@ export function WeekScheduleGapPanel({
     return (
       <div className="flex h-full flex-col gap-5 px-1">
         <div className="rounded-lg border bg-slate-50 p-3 text-sm">
-          <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+          <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs tracking-wide uppercase">
             <CalendarRange className="size-3.5" />
             Week of May 25 · {insight.locationName}
           </div>
@@ -80,7 +115,7 @@ export function WeekScheduleGapPanel({
               <div>
                 <Link
                   href={insightLinks.schedule(d.date)}
-                  className="font-semibold hover:text-primary hover:underline"
+                  className="hover:text-primary font-semibold hover:underline"
                 >
                   {d.label}
                 </Link>
@@ -90,7 +125,10 @@ export function WeekScheduleGapPanel({
               </div>
               <div className="flex items-center gap-2">
                 {d.needsCoverage && (
-                  <Badge variant="outline" className="border-red-300 bg-red-100 text-red-800">
+                  <Badge
+                    variant="outline"
+                    className="border-red-300 bg-red-100 text-red-800"
+                  >
                     Gap
                   </Badge>
                 )}
@@ -130,7 +168,7 @@ export function WeekScheduleGapPanel({
     return (
       <div className="flex h-full flex-col gap-5 px-1">
         <div className="rounded-lg border bg-slate-50 p-3 text-sm">
-          <p className="text-muted-foreground text-xs uppercase tracking-wide">
+          <p className="text-muted-foreground text-xs tracking-wide uppercase">
             Adding shift to
           </p>
           <p className="font-semibold">{selectedDay?.label}</p>
@@ -190,7 +228,12 @@ export function WeekScheduleGapPanel({
         changes={[
           { field: "Date", to: selectedDay?.label ?? "—" },
           { field: "Location", to: insight.locationName },
-          { field: "Staff", to: selectedStaff ? `${selectedStaff.name} (${selectedStaff.role})` : "—" },
+          {
+            field: "Staff",
+            to: selectedStaff
+              ? `${selectedStaff.name} (${selectedStaff.role})`
+              : "—",
+          },
           { field: "Time", to: `${startTime} – ${endTime}` },
         ]}
       />

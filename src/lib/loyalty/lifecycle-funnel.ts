@@ -1,7 +1,4 @@
-import type {
-  CustomerLoyaltyAccount,
-  RedemptionRecord,
-} from "@/types/loyalty";
+import type { CustomerLoyaltyAccount, RedemptionRecord } from "@/types/loyalty";
 
 /**
  * Pure member-lifecycle funnel for the churn report. Stages are cumulative —

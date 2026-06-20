@@ -30,7 +30,10 @@ const ALL = "__all__";
 export function LocationFilter({ value, onChange, locations }: Props) {
   return (
     <div className="flex items-center gap-2">
-      <Label htmlFor="loc-filter" className="text-muted-foreground text-xs uppercase tracking-wide">
+      <Label
+        htmlFor="loc-filter"
+        className="text-muted-foreground text-xs tracking-wide uppercase"
+      >
         <MapPin className="mr-1 inline size-3.5" />
         Location
       </Label>

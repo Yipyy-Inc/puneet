@@ -47,7 +47,9 @@ export function InsightActionDrawer({ facilityId, insight, onClose }: Props) {
     );
   };
 
-  const Panel = insight ? (ACTION_PANEL_REGISTRY[insight.actionType] ?? null) : null;
+  const Panel = insight
+    ? (ACTION_PANEL_REGISTRY[insight.actionType] ?? null)
+    : null;
 
   return (
     <Dialog open={insight !== null} onOpenChange={(open) => !open && onClose()}>

@@ -61,8 +61,7 @@ export function MoveCopyConfirmDialog({
     ? positions.find((p) => p.id === pending.positionId)
     : undefined;
 
-  const sameEmployee =
-    pending?.sourceEmployeeId === pending?.targetEmployeeId;
+  const sameEmployee = pending?.sourceEmployeeId === pending?.targetEmployeeId;
   const sameDate = pending?.sourceDate === pending?.targetDate;
 
   return (

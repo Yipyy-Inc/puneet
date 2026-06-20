@@ -94,7 +94,7 @@ export function TrainingTodayTasks() {
       <section className="bg-card rounded-xl border shadow-sm">
         <header className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5">
           <div className="flex flex-wrap items-center gap-2">
-            <CalendarCheck className="text-indigo-500 size-4" />
+            <CalendarCheck className="size-4 text-indigo-500" />
             <h2 className="text-sm font-bold tracking-tight text-slate-800">
               Today&apos;s Sessions
             </h2>
@@ -141,15 +141,12 @@ export function TrainingTodayTasks() {
               return (
                 <li
                   key={session.id}
-                  className={cn(
-                    "px-4 py-3",
-                    completed && "bg-emerald-50/30",
-                  )}
+                  className={cn("px-4 py-3", completed && "bg-emerald-50/30")}
                 >
                   {/* Session header */}
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                    <span className="inline-flex items-center gap-1 text-[12px] font-bold tabular-nums text-slate-700">
-                      <Clock className="text-slate-400 size-3" />
+                    <span className="inline-flex items-center gap-1 text-[12px] font-bold text-slate-700 tabular-nums">
+                      <Clock className="size-3 text-slate-400" />
                       {formatTime(session.startTime)}
                     </span>
                     <span className="truncate text-sm font-semibold text-slate-800">
@@ -238,17 +235,15 @@ function TaskRow({
   return (
     <div className="flex items-center gap-2.5">
       {done ? (
-        <CheckCircle2 className="text-emerald-600 size-4 shrink-0" />
+        <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
       ) : (
-        <Circle className="text-slate-300 size-4 shrink-0" />
+        <Circle className="size-4 shrink-0 text-slate-300" />
       )}
       <div className="min-w-0 flex-1">
         <p
           className={cn(
             "text-[12.5px] font-medium",
-            done
-              ? "text-muted-foreground line-through"
-              : "text-slate-700",
+            done ? "text-muted-foreground line-through" : "text-slate-700",
           )}
         >
           {label}

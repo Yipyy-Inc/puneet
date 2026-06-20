@@ -92,7 +92,7 @@ function AddonCardToggle({
       className={cn(
         `flex min-h-[280px] cursor-pointer flex-col overflow-hidden rounded-xl border-2 text-left transition-all`,
         selected
-          ? "border-transparent bg-primary/5"
+          ? "bg-primary/5 border-transparent"
           : `border-border hover:border-primary/50`,
         className,
       )}
@@ -153,7 +153,7 @@ function AddonCardQuantity({
     <Card
       className={cn(
         "flex min-h-[320px] flex-col overflow-hidden",
-        selected && "shadow-sm bg-primary/5",
+        selected && "bg-primary/5 shadow-sm",
         className,
       )}
     >

@@ -77,17 +77,15 @@ function relativeDays(iso: string, todayISO: string): string {
 
 export function CustomerHomeworkTab({ customerId }: Props) {
   const queryClient = useQueryClient();
-  const todayISO = useMemo(
-    () => new Date().toISOString().split("T")[0]!,
-    [],
-  );
+  const todayISO = useMemo(() => new Date().toISOString().split("T")[0]!, []);
 
   const { data: enrollments = [] } = useQuery(
     trainingQueries.allSeriesEnrollments(),
   );
   const { data: homework = [] } = useQuery(trainingQueries.allHomework());
   const { data: moduleSettings } = useQuery(trainingQueries.moduleSettings());
-  const requireVideo = moduleSettings?.requireVideoForHomeworkSubmission ?? false;
+  const requireVideo =
+    moduleSettings?.requireVideoForHomeworkSubmission ?? false;
 
   const [showCompleted, setShowCompleted] = useState(false);
 
@@ -102,7 +100,11 @@ export function CustomerHomeworkTab({ customerId }: Props) {
     // Bucket homework per pet via its enrollment.
     const byPet = new Map<
       number,
-      { enrollment: TrainingEnrollment; active: TrainingHomework[]; completed: TrainingHomework[] }
+      {
+        enrollment: TrainingEnrollment;
+        active: TrainingHomework[];
+        completed: TrainingHomework[];
+      }
     >();
     for (const e of ownerEnrollments) {
       if (!byPet.has(e.petId)) {
@@ -200,15 +202,15 @@ export function CustomerHomeworkTab({ customerId }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 shadow-sm">
+      <div className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3 text-sm text-slate-700">
-          <Sparkles className="text-indigo-500 size-4" />
+          <Sparkles className="size-4 text-indigo-500" />
           <span>
-            <span className="font-semibold tabular-nums text-slate-900">
+            <span className="font-semibold text-slate-900 tabular-nums">
               {totalPracticedToday}
             </span>{" "}
             of{" "}
-            <span className="font-semibold tabular-nums text-slate-900">
+            <span className="font-semibold text-slate-900 tabular-nums">
               {totalActive}
             </span>{" "}
             practiced today
@@ -224,7 +226,7 @@ export function CustomerHomeworkTab({ customerId }: Props) {
         {groups.map((group) => (
           <section key={group.petId} className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-xl ring-2 ring-white shadow-sm">
+              <div className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-xl shadow-sm ring-2 ring-white">
                 <PawPrint className="size-4" />
               </div>
               <div>
@@ -415,7 +417,6 @@ function HomeworkCard({
     };
   }
 
-
   return (
     <li className="bg-card rounded-xl border shadow-sm">
       <div className="space-y-3 px-4 py-3">
@@ -519,7 +520,7 @@ function HomeworkCard({
 
           {requireVideo && !submittedVideoUrl && !practiced && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/40 dark:bg-amber-950/30">
-              <p className="text-amber-800 dark:text-amber-200 inline-flex items-center gap-1.5 text-[12px] font-medium">
+              <p className="inline-flex items-center gap-1.5 text-[12px] font-medium text-amber-800 dark:text-amber-200">
                 <Video className="size-3.5" />
                 Your trainer requires a short video for this submission.
               </p>
@@ -547,10 +548,7 @@ function HomeworkCard({
               <div className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
                   <PlayCircle className="size-3" />
-                  Video submitted{" "}
-                  {todayEntry?.videoAttachedAt
-                    ? "today"
-                    : ""}
+                  Video submitted {todayEntry?.videoAttachedAt ? "today" : ""}
                   {todaysResponse
                     ? " — trainer responded below"
                     : " — your trainer can review it next session"}
@@ -654,11 +652,11 @@ function TrainerResponseBlock({
     : null;
   return (
     <div className="space-y-1 rounded-lg border border-indigo-200 bg-indigo-50/70 px-3 py-2 dark:border-indigo-900/40 dark:bg-indigo-950/30">
-      <p className="text-indigo-700 dark:text-indigo-200 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+      <p className="inline-flex items-center gap-1 text-[10px] font-bold tracking-wider text-indigo-700 uppercase dark:text-indigo-200">
         <Sparkles className="size-3" />
         Trainer says
         {practiceDate && (
-          <span className="text-muted-foreground ml-1 normal-case font-normal tracking-normal">
+          <span className="text-muted-foreground ml-1 font-normal tracking-normal normal-case">
             · about your {formatDate(practiceDate)} clip
           </span>
         )}
@@ -686,10 +684,7 @@ function HomeworkMediaGallery({
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
       {media.map((item, idx) => (
-        <figure
-          key={`${title}-media-${idx}`}
-          className="space-y-1.5"
-        >
+        <figure key={`${title}-media-${idx}`} className="space-y-1.5">
           {item.type === "video" ? (
             <div className="relative aspect-video overflow-hidden rounded-lg bg-slate-900">
               <iframe
@@ -718,7 +713,8 @@ function HomeworkMediaGallery({
             ) : (
               <ImageIcon className="size-3" />
             )}
-            {item.caption ?? (item.type === "video" ? "Demo video" : "Reference photo")}
+            {item.caption ??
+              (item.type === "video" ? "Demo video" : "Reference photo")}
           </figcaption>
         </figure>
       ))}

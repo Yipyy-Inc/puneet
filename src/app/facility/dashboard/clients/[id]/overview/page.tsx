@@ -74,7 +74,10 @@ export default function ClientOverviewPage({
   const activePrepaidPackages = mockCustomerPackages.filter(
     (p) => p.customerId === clientId && p.status === "active",
   );
-  const totalPrepaidPassesRemaining = activePrepaidPackages.reduce((sum, pkg) => sum + (pkg.passesTotal - pkg.passesUsed), 0);
+  const totalPrepaidPassesRemaining = activePrepaidPackages.reduce(
+    (sum, pkg) => sum + (pkg.passesTotal - pkg.passesUsed),
+    0,
+  );
 
   const clientBookings = bookings.filter((b) => b.clientId === clientId);
   const upcoming = clientBookings
@@ -607,38 +610,42 @@ export default function ClientOverviewPage({
                   </span>
                 </div>
               )}
-              {client.additionalContacts && client.additionalContacts.length > 0 && (
-                <div className="mt-2 space-y-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                  <p className="font-medium">
-                    Additional Contacts ({client.additionalContacts.length})
-                  </p>
-                  {client.additionalContacts.map((contact) => (
-                    <div key={contact.id}>
-                      <p className="font-medium">
-                        {contact.name}
-                        {contact.relationship && ` (${contact.relationship})`}{" "}
-                        · {contact.phone}
-                      </p>
-                      {contact.tags.length > 0 && (
-                        <p className="mt-0.5 text-amber-700/80">
-                          {contact.tags
-                            .map((t) =>
-                              t === "dropoff"
-                                ? "Drop-off"
-                                : t.charAt(0).toUpperCase() + t.slice(1),
-                            )
-                            .join(" · ")}
+              {client.additionalContacts &&
+                client.additionalContacts.length > 0 && (
+                  <div className="mt-2 space-y-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    <p className="font-medium">
+                      Additional Contacts ({client.additionalContacts.length})
+                    </p>
+                    {client.additionalContacts.map((contact) => (
+                      <div key={contact.id}>
+                        <p className="font-medium">
+                          {contact.name}
+                          {contact.relationship &&
+                            ` (${contact.relationship})`}{" "}
+                          · {contact.phone}
                         </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+                        {contact.tags.length > 0 && (
+                          <p className="mt-0.5 text-amber-700/80">
+                            {contact.tags
+                              .map((t) =>
+                                t === "dropoff"
+                                  ? "Drop-off"
+                                  : t.charAt(0).toUpperCase() + t.slice(1),
+                              )
+                              .join(" · ")}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
             </CardContent>
           </Card>
 
           {/* Membership & Packages */}
-          {(client.membership || client.packages?.length || activePrepaidPackages.length > 0) && (
+          {(client.membership ||
+            client.packages?.length ||
+            activePrepaidPackages.length > 0) && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold">
@@ -670,7 +677,7 @@ export default function ClientOverviewPage({
                     </Badge>
                   </div>
                 )}
-                
+
                 {/* Legacy simple packages */}
                 {client.packages?.map((pkg) => (
                   <div key={pkg.id} className="rounded-lg border px-3 py-2.5">
@@ -693,14 +700,20 @@ export default function ClientOverviewPage({
 
                 {/* Prepaid Packages Summary */}
                 {activePrepaidPackages.length > 0 && (
-                  <div className="bg-emerald-50/50 border-emerald-100/50 rounded-lg border px-3 py-2.5 mt-2">
+                  <div className="mt-2 rounded-lg border border-emerald-100/50 bg-emerald-50/50 px-3 py-2.5">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-emerald-800">Prepaid Passes Available</p>
+                      <p className="text-sm font-medium text-emerald-800">
+                        Prepaid Passes Available
+                      </p>
                       <span className="text-sm font-bold text-emerald-700">
-                        {totalPrepaidPassesRemaining} pass{totalPrepaidPassesRemaining === 1 ? "" : "es"} left
+                        {totalPrepaidPassesRemaining} pass
+                        {totalPrepaidPassesRemaining === 1 ? "" : "es"} left
                       </span>
                     </div>
-                    <p className="text-emerald-700/70 text-xs mt-0.5">Across {activePrepaidPackages.length} active package{activePrepaidPackages.length === 1 ? "" : "s"}</p>
+                    <p className="mt-0.5 text-xs text-emerald-700/70">
+                      Across {activePrepaidPackages.length} active package
+                      {activePrepaidPackages.length === 1 ? "" : "s"}
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -710,12 +723,12 @@ export default function ClientOverviewPage({
       </div>
 
       {/* Detailed Memberships & Packages — pass-level breakdown with booking deep links */}
-      {(clientMemberships.length > 0 || clientPackagePurchases.length > 0 || activePrepaidPackages.length > 0) && (
+      {(clientMemberships.length > 0 ||
+        clientPackagePurchases.length > 0 ||
+        activePrepaidPackages.length > 0) && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold">
-              Memberships & Packages
-            </h2>
+            <h2 className="text-base font-semibold">Memberships & Packages</h2>
             <p className="text-muted-foreground text-xs">
               Click any used pass to jump to its booking
             </p>
@@ -761,11 +774,14 @@ export default function ClientOverviewPage({
                           <Package className="size-4" />
                           {pkg.packageName}
                         </CardTitle>
-                        <p className="text-muted-foreground text-xs mt-1">
+                        <p className="text-muted-foreground mt-1 text-xs">
                           Purchased {formatDate(pkg.purchasedAt)}
                         </p>
                       </div>
-                      <Badge variant="outline" className="capitalize text-[10px]">
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] capitalize"
+                      >
                         {pkg.status}
                       </Badge>
                     </div>
@@ -773,7 +789,9 @@ export default function ClientOverviewPage({
                   <CardContent className="space-y-4">
                     <div>
                       <div className="mb-1.5 flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Passes used</span>
+                        <span className="text-muted-foreground">
+                          Passes used
+                        </span>
                         <span className="font-semibold">
                           {pkg.passesUsed} of {pkg.passesTotal}
                           <span className="text-muted-foreground ml-2 font-normal">
@@ -792,13 +810,30 @@ export default function ClientOverviewPage({
                     </div>
                     {pkg.redemptions && pkg.redemptions.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-xs font-medium uppercase text-muted-foreground tracking-wider">Redemption History</p>
+                        <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+                          Redemption History
+                        </p>
                         <div className="space-y-1.5">
                           {pkg.redemptions.map((redemption) => (
-                            <div key={redemption.id} className="text-sm text-slate-700 border border-slate-100 rounded-md p-2.5 bg-slate-50/50 hover:bg-slate-50 transition-colors">
-                              <span className="font-medium text-slate-900">Pass {redemption.passNumber} of {pkg.passesTotal}</span> used on {new Date(redemption.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                              {redemption.petName && ` — `}<span className="font-medium">{redemption.petName}</span>
-                              {redemption.serviceLabel && ` — `}{redemption.serviceLabel}
+                            <div
+                              key={redemption.id}
+                              className="rounded-md border border-slate-100 bg-slate-50/50 p-2.5 text-sm text-slate-700 transition-colors hover:bg-slate-50"
+                            >
+                              <span className="font-medium text-slate-900">
+                                Pass {redemption.passNumber} of{" "}
+                                {pkg.passesTotal}
+                              </span>{" "}
+                              used on{" "}
+                              {new Date(redemption.date).toLocaleDateString(
+                                "en-US",
+                                { month: "short", day: "numeric" },
+                              )}
+                              {redemption.petName && ` — `}
+                              <span className="font-medium">
+                                {redemption.petName}
+                              </span>
+                              {redemption.serviceLabel && ` — `}
+                              {redemption.serviceLabel}
                             </div>
                           ))}
                         </div>
@@ -830,9 +865,7 @@ export default function ClientOverviewPage({
                         "Extension applied on behalf of the customer",
                       )
                     }
-                    onRequestTransfer={() =>
-                      toast.success("Transfer recorded")
-                    }
+                    onRequestTransfer={() => toast.success("Transfer recorded")}
                     onRequestRefund={() =>
                       toast.success("Refund issued for unused passes")
                     }

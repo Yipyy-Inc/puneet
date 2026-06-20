@@ -71,7 +71,7 @@ export function Section({
       data-overdue={isOverdue}
       data-current={isCurrent}
       data-complete={total > 0 && done === total}
-      className="data-[overdue=true]:border-red-300 data-[current=true]:border-amber-300 data-[complete=true]:opacity-75"
+      className="data-[complete=true]:opacity-75 data-[current=true]:border-amber-300 data-[overdue=true]:border-red-300"
     >
       <CardHeader className="pb-3">
         <div className="flex items-center gap-3">
@@ -105,7 +105,7 @@ export function Section({
               <Clock className="size-3" />
               {format12h(step.time)}
               {step.description && (
-                <span className="hidden sm:inline truncate">
+                <span className="hidden truncate sm:inline">
                   · {step.description}
                 </span>
               )}
@@ -115,7 +115,7 @@ export function Section({
             <div className="font-[tabular-nums] text-sm font-semibold">
               {done} / {total}
             </div>
-            <div className="text-muted-foreground text-[10px] uppercase tracking-wider">
+            <div className="text-muted-foreground text-[10px] tracking-wider uppercase">
               done
             </div>
           </div>

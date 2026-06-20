@@ -24,11 +24,7 @@ import {
 
 import type { BookingRequest, BookingRequestService } from "@/types/booking";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { defaultServiceAddOns } from "@/data/service-addons";
 import { facilityRooms } from "@/data/rooms";
 import { cn } from "@/lib/utils";
@@ -115,13 +111,7 @@ function Section({
   );
 }
 
-function Field({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="grid grid-cols-[110px_1fr] items-baseline gap-3 py-1.5 first:pt-0 last:pb-0">
       <div className="text-muted-foreground text-xs">{label}</div>
@@ -181,13 +171,13 @@ export function BookingRequestDetailDialog({
       >
         <div className="relative overflow-hidden">
           <div
-            className={cn(
-              "absolute inset-0 bg-linear-to-br opacity-90",
-              grad,
-            )}
+            className={cn("absolute inset-0 bg-linear-to-br opacity-90", grad)}
             aria-hidden
           />
-          <div className="absolute inset-0 bg-linear-to-b from-transparent to-black/20" aria-hidden />
+          <div
+            className="absolute inset-0 bg-linear-to-b from-transparent to-black/20"
+            aria-hidden
+          />
           <div className="relative flex items-start gap-4 p-6">
             <div className="bg-card/95 text-foreground flex size-14 shrink-0 items-center justify-center rounded-2xl text-xl font-bold shadow-md backdrop-blur-sm">
               {initial}
@@ -200,14 +190,14 @@ export function BookingRequestDetailDialog({
                 Booking request from {request.clientName}
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
-                <span className="bg-white/20 text-white inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium backdrop-blur-sm">
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 font-medium text-white backdrop-blur-sm">
                   {variant === "waitlist" ? "Waitlisted" : "Pending review"}
                 </span>
-                <span className="bg-white/15 text-white/95 inline-flex items-center gap-1 rounded-full px-2 py-0.5 backdrop-blur-sm">
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-white/95 backdrop-blur-sm">
                   <Clock className="size-3" />
                   Submitted {relativeTime(request.createdAt)}
                 </span>
-                <span className="bg-white/15 text-white/95 inline-flex items-center gap-1 rounded-full px-2 py-0.5 backdrop-blur-sm">
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-white/95 backdrop-blur-sm">
                   <Calendar className="size-3" />
                   {formatLongDate(request.appointmentAt)} ·{" "}
                   {formatTime(request.appointmentAt)}
@@ -217,7 +207,7 @@ export function BookingRequestDetailDialog({
             <button
               onClick={() => onOpenChange(false)}
               aria-label="Close"
-              className="text-white/80 hover:bg-white/15 hover:text-white flex size-8 shrink-0 items-center justify-center rounded-full transition-colors"
+              className="flex size-8 shrink-0 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/15 hover:text-white"
             >
               <X className="size-4" />
             </button>
@@ -358,8 +348,8 @@ export function BookingRequestDetailDialog({
                     <li key={fs.id} className="space-y-2 py-3">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-foreground text-sm font-medium">
-                          {occasions} {occasions === 1 ? "meal" : "meals"} /
-                          day · {fs.frequency.replace(/_/g, " ")}
+                          {occasions} {occasions === 1 ? "meal" : "meals"} / day
+                          · {fs.frequency.replace(/_/g, " ")}
                         </span>
                         <span className="text-muted-foreground text-xs">
                           {sourceLabel}
@@ -508,7 +498,7 @@ export function BookingRequestDetailDialog({
             <Button
               size="sm"
               onClick={() => handleAction(onSchedule)}
-              className="bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600/30 shadow-none"
+              className="bg-emerald-600 text-white shadow-none hover:bg-emerald-700 focus-visible:ring-emerald-600/30"
             >
               <Check className="size-3.5" />
               Schedule booking

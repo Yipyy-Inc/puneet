@@ -106,7 +106,9 @@ export function ScheduledMessagesView() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">Scheduled Messages</h2>
+        <h2 className="text-2xl font-bold text-slate-900">
+          Scheduled Messages
+        </h2>
         <p className="mt-1 text-sm text-slate-500">
           Messages waiting to send. Edit or cancel any time before they go out.
         </p>
@@ -132,7 +134,9 @@ export function ScheduledMessagesView() {
                 <span
                   className={cn(
                     "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
-                    active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500",
+                    active
+                      ? "bg-white/20 text-white"
+                      : "bg-slate-100 text-slate-500",
                   )}
                 >
                   {counts[key]}
@@ -169,7 +173,7 @@ export function ScheduledMessagesView() {
         <div className="space-y-6">
           {grouped.map(([day, items]) => (
             <div key={day}>
-              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold tracking-wider text-slate-400 uppercase">
                 <Calendar className="size-3.5" />
                 {day}
                 <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">

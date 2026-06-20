@@ -1,4 +1,8 @@
-export type HQRole = "hq_admin" | "location_admin" | "location_manager" | "location_staff";
+export type HQRole =
+  | "hq_admin"
+  | "location_admin"
+  | "location_manager"
+  | "location_staff";
 
 export interface LocationHours {
   open: string;
@@ -95,9 +99,18 @@ export interface HQOverviewMetrics {
   facilityId: number;
   period: string;
   totalRevenue: number;
-  revenueByLocation: { locationId: string; locationName: string; revenue: number; percentage: number }[];
+  revenueByLocation: {
+    locationId: string;
+    locationName: string;
+    revenue: number;
+    percentage: number;
+  }[];
   totalBookings: number;
-  bookingsByLocation: { locationId: string; locationName: string; count: number }[];
+  bookingsByLocation: {
+    locationId: string;
+    locationName: string;
+    count: number;
+  }[];
   totalNewCustomers: number;
   totalReturningCustomers: number;
   avgOccupancyRate: number;

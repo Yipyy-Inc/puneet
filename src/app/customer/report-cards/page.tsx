@@ -248,13 +248,7 @@ export default function CustomerReportCardsPage() {
     });
 
     return filtered;
-  }, [
-    customerReportCards,
-    selectedPetId,
-    searchQuery,
-    sortBy,
-    petById,
-  ]);
+  }, [customerReportCards, selectedPetId, searchQuery, sortBy, petById]);
 
   const timelineItems = useMemo(() => {
     return filteredAndSortedCards.map((card) => {
@@ -328,7 +322,7 @@ export default function CustomerReportCardsPage() {
         </div>
 
         {/* Filters */}
-        <div className="overflow-hidden rounded-2xl border border-primary/20 bg-card shadow-sm">
+        <div className="border-primary/20 bg-card overflow-hidden rounded-2xl border shadow-sm">
           {/* Search + Sort */}
           <div className="flex items-center gap-3 px-5 py-3">
             <Search className="text-primary/40 size-4 shrink-0" />
@@ -336,7 +330,7 @@ export default function CustomerReportCardsPage() {
               placeholder="Search by pet, notes, or activity…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-auto flex-1 border-none bg-transparent p-0 text-sm shadow-none placeholder:text-muted-foreground/40 focus-visible:ring-0"
+              className="placeholder:text-muted-foreground/40 h-auto flex-1 border-none bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
             />
             <button
               onClick={() =>
@@ -361,7 +355,7 @@ export default function CustomerReportCardsPage() {
             {/* Pet */}
             {customer && customer.pets.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-muted-foreground w-14 shrink-0 text-[10px] font-semibold uppercase tracking-widest">
+                <span className="text-muted-foreground w-14 shrink-0 text-[10px] font-semibold tracking-widest uppercase">
                   Pet
                 </span>
                 <button

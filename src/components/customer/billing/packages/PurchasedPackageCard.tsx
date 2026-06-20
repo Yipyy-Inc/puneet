@@ -91,14 +91,18 @@ export function PurchasedPackageCard({
   const available = purchase.passes.filter(
     (p) => p.status === "available",
   ).length;
-  const consumedPct = Math.round(((used + refunded + expired) / purchase.totalPasses) * 100);
+  const consumedPct = Math.round(
+    ((used + refunded + expired) / purchase.totalPasses) * 100,
+  );
 
   const daysLeft = daysUntilFrom(purchase.expiresAt, nowMs);
   const purchasedMs = new Date(purchase.purchaseDate).getTime();
   const expiresMs = new Date(purchase.expiresAt).getTime();
   const totalMs = Math.max(1, expiresMs - purchasedMs);
   const remainingMs = expiresMs - nowMs;
-  const validityPct = Math.round(Math.max(0, Math.min(100, (remainingMs / totalMs) * 100)));
+  const validityPct = Math.round(
+    Math.max(0, Math.min(100, (remainingMs / totalMs) * 100)),
+  );
 
   const isExpiringSoon = daysLeft > 0 && daysLeft <= 30;
   const isExpired = daysLeft <= 0 && available > 0;
@@ -249,7 +253,8 @@ export function PurchasedPackageCard({
             Package policy
           </div>
           <p className="text-muted-foreground">
-            {policy.policyNotes ?? "Refer to facility policies for refunds and extensions."}
+            {policy.policyNotes ??
+              "Refer to facility policies for refunds and extensions."}
           </p>
         </div>
 

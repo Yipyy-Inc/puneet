@@ -9,22 +9,28 @@ interface Props {
   currencySymbol: string;
 }
 
-export function NoSessionPanel({ onOpen, priorClosingTotal, currencySymbol }: Props) {
+export function NoSessionPanel({
+  onOpen,
+  priorClosingTotal,
+  currencySymbol,
+}: Props) {
   return (
     <div className="rounded-xl border border-dashed border-amber-200 bg-amber-50/40 p-10 text-center">
       <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-amber-100 text-amber-700">
         <Sun className="size-6" />
       </div>
-      <h3 className="text-lg font-semibold">Register hasn&apos;t been opened today</h3>
-      <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+      <h3 className="text-lg font-semibold">
+        Register hasn&apos;t been opened today
+      </h3>
+      <p className="text-muted-foreground mx-auto mt-1 max-w-md text-sm">
         Before taking the first cash sale, count the drawer and record the
         opening float. Once opened, every cash payment routes into today&apos;s
         session automatically.
       </p>
       {priorClosingTotal !== undefined && (
-        <p className="mt-3 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mt-3 text-xs">
           Yesterday closed at{" "}
-          <span className="font-semibold tabular-nums text-foreground">
+          <span className="text-foreground font-semibold tabular-nums">
             {currencySymbol}
             {priorClosingTotal.toFixed(2)}
           </span>

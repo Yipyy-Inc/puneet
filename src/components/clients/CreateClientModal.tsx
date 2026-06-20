@@ -345,8 +345,8 @@ function PetVaccineCard({
           </Badge>
         </div>
         <p className="text-muted-foreground text-xs">
-          No vaccines configured for this animal type. The facility has not
-          set any vaccination requirements for {speciesLabel.toLowerCase()}s.
+          No vaccines configured for this animal type. The facility has not set
+          any vaccination requirements for {speciesLabel.toLowerCase()}s.
         </p>
       </div>
     );
@@ -373,7 +373,7 @@ function PetVaccineCard({
             key={`${v.name}-${i}`}
             className={cn(
               "grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded-md border p-2",
-              v.addLater && "border-dashed bg-muted/30",
+              v.addLater && "bg-muted/30 border-dashed",
             )}
           >
             <div className="flex items-center gap-2">
@@ -391,9 +391,7 @@ function PetVaccineCard({
             {!v.addLater ? (
               <DatePicker
                 value={v.expiryDate}
-                onValueChange={(next) =>
-                  updateVaccine(i, { expiryDate: next })
-                }
+                onValueChange={(next) => updateVaccine(i, { expiryDate: next })}
                 displayMode="dialog"
                 popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
                 calendarClassName="p-1"
@@ -430,8 +428,8 @@ function PetVaccineCard({
           Proof of Vaccination
         </Label>
         <p className="text-muted-foreground mb-2 text-[11px]">
-          Upload one or more pages covering all vaccines above. JPG, PNG, or
-          PDF — max 10MB per file.
+          Upload one or more pages covering all vaccines above. JPG, PNG, or PDF
+          — max 10MB per file.
         </p>
 
         <label className="border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-muted/50 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed p-4 transition-colors">
@@ -530,8 +528,8 @@ function VaccineStep({
     <div className="animate-in fade-in space-y-4 py-2 duration-200">
       <p className="text-muted-foreground text-sm">
         Enter the expiry date for each required vaccine and upload proof of
-        vaccination. You can upload multiple images or PDF pages — the
-        facility will verify them.
+        vaccination. You can upload multiple images or PDF pages — the facility
+        will verify them.
       </p>
 
       {pets.map((pet, i) => (
@@ -539,9 +537,7 @@ function VaccineStep({
           key={`${pet.name}-${i}`}
           pet={pet}
           petIndex={i}
-          record={
-            petVaccines[i] ?? createEmptyPetVaccineRecord(pet.type)
-          }
+          record={petVaccines[i] ?? createEmptyPetVaccineRecord(pet.type)}
           updateRecord={updatePetVaccineRecord}
         />
       ))}
@@ -1041,7 +1037,11 @@ export function CreateClientModal({
               value={additionalContacts}
               onChange={(contacts) => {
                 setAdditionalContacts(contacts);
-                if (Object.keys(errors).some((k) => k.startsWith("additionalContact-"))) {
+                if (
+                  Object.keys(errors).some((k) =>
+                    k.startsWith("additionalContact-"),
+                  )
+                ) {
                   setErrors((prev) => {
                     const next = { ...prev };
                     Object.keys(next).forEach((k) => {

@@ -119,7 +119,10 @@ export function PostShiftOpportunityDialog({
   // Pre-fill department when dialog opens
   useEffect(() => {
     if (open && defaultDepartmentId) {
-      setForm((p) => ({ ...p, departmentId: p.departmentId || defaultDepartmentId }));
+      setForm((p) => ({
+        ...p,
+        departmentId: p.departmentId || defaultDepartmentId,
+      }));
     }
   }, [open, defaultDepartmentId]);
 

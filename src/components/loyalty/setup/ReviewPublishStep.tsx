@@ -129,7 +129,10 @@ export function ReviewPublishStep({
             </span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button asChild className="bg-emerald-600 text-white hover:bg-emerald-700">
+            <Button
+              asChild
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+            >
               <Link href="/customer/rewards" target="_blank">
                 Preview customer portal
                 <ExternalLink className="ml-1.5 size-4" />

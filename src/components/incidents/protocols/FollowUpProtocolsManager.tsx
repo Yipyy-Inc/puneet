@@ -55,8 +55,7 @@ const CONTACT_ICONS = {
 } as const;
 
 export function FollowUpProtocolsManager() {
-  const [protocols, setProtocols] =
-    useState<FollowUpProtocol[]>(seedProtocols);
+  const [protocols, setProtocols] = useState<FollowUpProtocol[]>(seedProtocols);
   const [search, setSearch] = useState("");
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<FollowUpProtocol | null>(null);
@@ -157,9 +156,7 @@ export function FollowUpProtocolsManager() {
           {filtered.map((protocol) => (
             <Card
               key={protocol.id}
-              className={
-                protocol.isActive ? "" : "opacity-60"
-              }
+              className={protocol.isActive ? "" : "opacity-60"}
             >
               <CardContent className="space-y-3 p-5">
                 {/* Title row */}
@@ -214,7 +211,7 @@ export function FollowUpProtocolsManager() {
 
                 {/* Steps preview */}
                 <div className="bg-muted/40 space-y-1.5 rounded-lg p-3">
-                  <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
+                  <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
                     {protocol.steps.length} step
                     {protocol.steps.length === 1 ? "" : "s"}
                   </p>
@@ -310,7 +307,7 @@ export function FollowUpProtocolsManager() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => confirmDelete && handleDelete(confirmDelete)}
-              className="bg-destructive text-white hover:bg-destructive/90"
+              className="bg-destructive hover:bg-destructive/90 text-white"
             >
               Delete
             </AlertDialogAction>

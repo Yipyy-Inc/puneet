@@ -234,7 +234,8 @@ export const facilityStaff: StaffProfile[] = [
     employment: {
       hireDate: "2019-03-15",
       employmentType: "full_time",
-      notes: "Senior groomer. Certified Master Groomer. Specializes in show grooming and breed-specific cuts.",
+      notes:
+        "Senior groomer. Certified Master Groomer. Specializes in show grooming and breed-specific cuts.",
     },
     status: "active",
     lastActive: "2026-04-14T09:00:00",
@@ -261,7 +262,8 @@ export const facilityStaff: StaffProfile[] = [
     employment: {
       hireDate: "2021-06-01",
       employmentType: "full_time",
-      notes: "Specializes in Asian fusion styles and creative grooming. Fear Free Certified.",
+      notes:
+        "Specializes in Asian fusion styles and creative grooming. Fear Free Certified.",
     },
     status: "active",
     lastActive: "2026-04-14T08:30:00",
@@ -288,7 +290,8 @@ export const facilityStaff: StaffProfile[] = [
     employment: {
       hireDate: "2020-09-15",
       employmentType: "full_time",
-      notes: "Large breed specialist and canine behavior certified. Expert with anxious pets.",
+      notes:
+        "Large breed specialist and canine behavior certified. Expert with anxious pets.",
     },
     status: "active",
     lastActive: "2026-04-14T07:45:00",
@@ -310,12 +313,17 @@ export const facilityStaff: StaffProfile[] = [
     primaryRole: "groomer",
     additionalRoles: [],
     serviceAssignments: ["grooming"],
-    assignedLocations: ["loc-mtl-plateau", "loc-mtl-westmount", "loc-mtl-laval"],
+    assignedLocations: [
+      "loc-mtl-plateau",
+      "loc-mtl-westmount",
+      "loc-mtl-laval",
+    ],
     showOnCalendar: true,
     employment: {
       hireDate: "2017-01-10",
       employmentType: "full_time",
-      notes: "Most experienced groomer. Certified Master Groomer and National Cat Groomers Institute Certified.",
+      notes:
+        "Most experienced groomer. Certified Master Groomer and National Cat Groomers Institute Certified.",
     },
     status: "active",
     lastActive: "2026-04-14T09:15:00",
@@ -342,7 +350,8 @@ export const facilityStaff: StaffProfile[] = [
     employment: {
       hireDate: "2022-04-20",
       employmentType: "part_time",
-      notes: "Handles walk-ins and express grooming. Currently on medical leave.",
+      notes:
+        "Handles walk-ins and express grooming. Currently on medical leave.",
     },
     status: "inactive",
     lastActive: "2026-03-20T14:00:00",

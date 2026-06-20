@@ -117,8 +117,16 @@ const auditLog: StaffAuditEntry[] = [
     actorName: "Nathalie Côté",
     actorRole: "manager",
     changes: [
-      { field: "Additional roles", oldValue: "—", newValue: "Daycare Attendant" },
-      { field: "Services", oldValue: "Reception", newValue: "Reception, Daycare" },
+      {
+        field: "Additional roles",
+        oldValue: "—",
+        newValue: "Daycare Attendant",
+      },
+      {
+        field: "Services",
+        oldValue: "Reception",
+        newValue: "Reception, Daycare",
+      },
     ],
   },
   {
@@ -219,7 +227,11 @@ const auditLog: StaffAuditEntry[] = [
     actorName: "Nathalie Côté",
     actorRole: "manager",
     changes: [
-      { field: "Employment type", oldValue: "Part time", newValue: "Full time" },
+      {
+        field: "Employment type",
+        oldValue: "Part time",
+        newValue: "Full time",
+      },
       { field: "Hourly rate", oldValue: "$18/hr", newValue: "$22/hr" },
     ],
     note: "Converted from part-time to full-time effective May 1.",
@@ -234,7 +246,11 @@ const auditLog: StaffAuditEntry[] = [
     actorName: "Émilie Laurent",
     actorRole: "owner",
     changes: [
-      { field: "Phone", oldValue: "+1-514-555-0101", newValue: "+1-514-555-0199" },
+      {
+        field: "Phone",
+        oldValue: "+1-514-555-0101",
+        newValue: "+1-514-555-0199",
+      },
     ],
   },
   {
@@ -283,7 +299,8 @@ export function diffProfile(
   const changes: FieldChange[] = [];
 
   const push = (field: string, oldVal: string, newVal: string) => {
-    if (oldVal !== newVal) changes.push({ field, oldValue: oldVal, newValue: newVal });
+    if (oldVal !== newVal)
+      changes.push({ field, oldValue: oldVal, newValue: newVal });
   };
 
   // Identity
@@ -345,7 +362,10 @@ export function diffProfile(
       next.payroll.hourlyRate > 0 ? `$${next.payroll.hourlyRate}/hr` : "—",
     );
   }
-  if (prev.payroll.generalServiceCommission !== next.payroll.generalServiceCommission) {
+  if (
+    prev.payroll.generalServiceCommission !==
+    next.payroll.generalServiceCommission
+  ) {
     push(
       "Service commission",
       prev.payroll.generalServiceCommission > 0
@@ -399,7 +419,13 @@ export function logStaffUpdated(
   changes: FieldChange[],
   note?: string,
 ): StaffAuditEntry {
-  return append({ action: "staff_updated", ...subject, ...actor, changes, note });
+  return append({
+    action: "staff_updated",
+    ...subject,
+    ...actor,
+    changes,
+    note,
+  });
 }
 
 export function logStatusChanged(
@@ -455,7 +481,13 @@ export function logPayrollChanged(
   changes: FieldChange[],
   note?: string,
 ): StaffAuditEntry {
-  return append({ action: "payroll_changed", ...subject, ...actor, changes, note });
+  return append({
+    action: "payroll_changed",
+    ...subject,
+    ...actor,
+    changes,
+    note,
+  });
 }
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
@@ -468,7 +500,9 @@ export interface StaffAuditFilters {
   to?: string;
 }
 
-export function getStaffAuditLog(filters?: StaffAuditFilters): StaffAuditEntry[] {
+export function getStaffAuditLog(
+  filters?: StaffAuditFilters,
+): StaffAuditEntry[] {
   let list = [...auditLog].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
@@ -476,12 +510,9 @@ export function getStaffAuditLog(filters?: StaffAuditFilters): StaffAuditEntry[]
     list = list.filter((e) => e.subjectId === filters.subjectId);
   if (filters?.actorId)
     list = list.filter((e) => e.actorId === filters.actorId);
-  if (filters?.action)
-    list = list.filter((e) => e.action === filters.action);
-  if (filters?.from)
-    list = list.filter((e) => e.timestamp >= filters.from!);
-  if (filters?.to)
-    list = list.filter((e) => e.timestamp <= filters.to!);
+  if (filters?.action) list = list.filter((e) => e.action === filters.action);
+  if (filters?.from) list = list.filter((e) => e.timestamp >= filters.from!);
+  if (filters?.to) list = list.filter((e) => e.timestamp <= filters.to!);
   return list;
 }
 

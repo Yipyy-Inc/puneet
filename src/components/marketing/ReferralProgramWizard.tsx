@@ -95,7 +95,9 @@ export function ReferralProgramWizard({ onClose }: { onClose: () => void }) {
   // when the stored program doesn't match the current schema.
   const [draft, setDraft] = useState<ReferralProgram>(() => {
     const parsed = referralProgramSchema.safeParse(config.referralProgramSetup);
-    return parsed.success ? parsed.data : buildDefaultReferralProgram(facilityId);
+    return parsed.success
+      ? parsed.data
+      : buildDefaultReferralProgram(facilityId);
   });
 
   const patch = (p: Partial<ReferralProgram>) =>
@@ -111,7 +113,10 @@ export function ReferralProgramWizard({ onClose }: { onClose: () => void }) {
     type: EarnRuleRewardType,
   ) =>
     // Reset the value to a type-appropriate default when switching kinds.
-    patchReward(side, { rewardType: type, rewardValue: isItemReward(type) ? "" : 0 });
+    patchReward(side, {
+      rewardType: type,
+      rewardValue: isItemReward(type) ? "" : 0,
+    });
 
   const isLast = step === STEPS.length - 1;
   const tokens = previewTokens(draft);
@@ -181,9 +186,7 @@ export function ReferralProgramWizard({ onClose }: { onClose: () => void }) {
                 {label}
               </span>
             </button>
-            {i < STEPS.length - 1 && (
-              <span className="bg-border h-px flex-1" />
-            )}
+            {i < STEPS.length - 1 && <span className="bg-border h-px flex-1" />}
           </li>
         ))}
       </ol>
@@ -193,8 +196,8 @@ export function ReferralProgramWizard({ onClose }: { onClose: () => void }) {
           <div className="space-y-4">
             <p className="text-muted-foreground text-sm">
               Referrer and friend rewards are set independently — mix any
-              combination (e.g. $25 credit for the referrer, a free nail trim for
-              the friend).
+              combination (e.g. $25 credit for the referrer, a free nail trim
+              for the friend).
             </p>
             <RewardFields
               icon={Gift}

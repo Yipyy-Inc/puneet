@@ -40,8 +40,8 @@ export function LocationContextSelector() {
   const triggerBg = isHQView
     ? "bg-sky-500"
     : currentLocation
-    ? locationStyles(currentLocation).bg
-    : "bg-slate-400";
+      ? locationStyles(currentLocation).bg
+      : "bg-slate-400";
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -50,7 +50,7 @@ export function LocationContextSelector() {
           className={cn(
             "group flex w-full items-center rounded-xl border transition-all duration-200",
             "border-sidebar-border/60 bg-sidebar-accent/40 hover:bg-sidebar-accent",
-            "focus-visible:ring-primary focus-visible:outline-none focus-visible:ring-1",
+            "focus-visible:ring-primary focus-visible:ring-1 focus-visible:outline-none",
             isExpanded ? "gap-2.5 px-3 py-2" : "justify-center p-2",
           )}
           aria-label="Switch location"
@@ -62,7 +62,11 @@ export function LocationContextSelector() {
                 triggerBg,
               )}
             >
-              {isHQView ? <Globe className="size-3.5" /> : shortLabel.slice(0, 3)}
+              {isHQView ? (
+                <Globe className="size-3.5" />
+              ) : (
+                shortLabel.slice(0, 3)
+              )}
             </div>
             <span className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full border border-white bg-emerald-500" />
           </div>
@@ -74,7 +78,7 @@ export function LocationContextSelector() {
                 <p className="text-muted-foreground text-[10px]/tight">
                   {isHQView
                     ? `${locations.length} locations`
-                    : currentLocation?.city ?? ""}
+                    : (currentLocation?.city ?? "")}
                 </p>
               </div>
               <ChevronDown
@@ -105,7 +109,9 @@ export function LocationContextSelector() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium">All Locations (HQ)</p>
-            <p className="text-muted-foreground text-[10px]">Cross-location view</p>
+            <p className="text-muted-foreground text-[10px]">
+              Cross-location view
+            </p>
           </div>
           {isHQView && <Check className="text-primary size-3.5 shrink-0" />}
         </DropdownMenuItem>
@@ -144,7 +150,9 @@ export function LocationContextSelector() {
                 <p className="text-muted-foreground flex items-center gap-1 text-[10px]">
                   <MapPin className="size-2.5" />
                   {loc.city}
-                  {!loc.isActive && <span className="ml-1 text-rose-400">· Inactive</span>}
+                  {!loc.isActive && (
+                    <span className="ml-1 text-rose-400">· Inactive</span>
+                  )}
                 </p>
               </div>
               {isActive && <Check className="text-primary size-3.5 shrink-0" />}

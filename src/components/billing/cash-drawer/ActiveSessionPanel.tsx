@@ -56,9 +56,7 @@ export function ActiveSessionPanel({
             <span className="relative inline-flex size-3 rounded-full bg-emerald-500" />
           </span>
           <div>
-            <p className="font-semibold text-emerald-900">
-              Register is open
-            </p>
+            <p className="font-semibold text-emerald-900">Register is open</p>
             <p className="flex items-center gap-3 text-xs text-emerald-700">
               <span className="inline-flex items-center gap-1">
                 <Clock className="size-3" />
@@ -95,19 +93,19 @@ export function ActiveSessionPanel({
           </CardHeader>
           <CardContent className="space-y-2 pb-3">
             {recentTxns.length === 0 && (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                No cash payments yet. They&apos;ll appear here the moment a
-                cash sale completes.
+              <p className="text-muted-foreground py-6 text-center text-sm">
+                No cash payments yet. They&apos;ll appear here the moment a cash
+                sale completes.
               </p>
             )}
             {recentTxns.map((t) => (
               <div
                 key={t.paymentId}
-                className="flex items-center justify-between rounded-sm border px-3 py-2 text-sm hover:bg-muted/40"
+                className="hover:bg-muted/40 flex items-center justify-between rounded-sm border px-3 py-2 text-sm"
               >
                 <div className="min-w-0">
                   <p className="truncate font-medium">{t.description}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     {new Date(t.capturedAt).toLocaleTimeString("en-CA", {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -115,7 +113,7 @@ export function ActiveSessionPanel({
                     · {t.staffName} · {SOURCE_LABELS[t.source]}
                   </p>
                 </div>
-                <span className="ml-3 shrink-0 font-semibold tabular-nums text-emerald-700">
+                <span className="ml-3 shrink-0 font-semibold text-emerald-700 tabular-nums">
                   +{fmt(t.amount)}
                 </span>
               </div>
@@ -146,7 +144,7 @@ export function ActiveSessionPanel({
           </CardHeader>
           <CardContent className="space-y-2 pb-3">
             {movements.length === 0 && (
-              <p className="py-6 text-center text-sm text-muted-foreground">
+              <p className="text-muted-foreground py-6 text-center text-sm">
                 No movements yet. Use this for tip-outs, safe drops, petty cash.
               </p>
             )}
@@ -165,7 +163,7 @@ export function ActiveSessionPanel({
                     {ADJUSTMENT_REASON_LABELS[m.reason]}
                   </p>
                   {m.note && (
-                    <p className="truncate text-[11px] text-muted-foreground">
+                    <p className="text-muted-foreground truncate text-[11px]">
                       {m.note}
                     </p>
                   )}

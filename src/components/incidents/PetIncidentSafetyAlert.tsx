@@ -50,19 +50,20 @@ export function PetIncidentSafetyAlert({
   if (visible.length === 0) return null;
 
   // Sort newest first, prioritise critical/high severity
-  const sorted = visible
-    .slice()
-    .sort((a, b) => {
-      const sevWeight: Record<string, number> = {
-        critical: 3,
-        high: 2,
-        medium: 1,
-        low: 0,
-      };
-      const sevDelta = (sevWeight[b.severity] ?? 0) - (sevWeight[a.severity] ?? 0);
-      if (sevDelta !== 0) return sevDelta;
-      return new Date(b.incidentDate).getTime() - new Date(a.incidentDate).getTime();
-    });
+  const sorted = visible.slice().sort((a, b) => {
+    const sevWeight: Record<string, number> = {
+      critical: 3,
+      high: 2,
+      medium: 1,
+      low: 0,
+    };
+    const sevDelta =
+      (sevWeight[b.severity] ?? 0) - (sevWeight[a.severity] ?? 0);
+    if (sevDelta !== 0) return sevDelta;
+    return (
+      new Date(b.incidentDate).getTime() - new Date(a.incidentDate).getTime()
+    );
+  });
 
   const hasCritical = sorted.some(
     (i) => i.severity === "critical" || i.severity === "high",
@@ -101,7 +102,7 @@ export function PetIncidentSafetyAlert({
             {sorted.length === 1 ? "" : "s"}
           </p>
           {!settings.sharedIncidentHistory && (
-            <p className="text-amber-700 dark:text-amber-400 mt-0.5 text-[10px] italic">
+            <p className="mt-0.5 text-[10px] text-amber-700 italic dark:text-amber-400">
               Shared incident history is OFF — turn it on in HQ Settings to see
               incidents from other locations.
             </p>
@@ -119,12 +120,12 @@ export function PetIncidentSafetyAlert({
               return (
                 <div
                   key={inc.id}
-                  className="flex items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+                  className="bg-background flex items-center gap-2 rounded-md border px-2.5 py-1.5"
                 >
                   <Badge
                     variant="outline"
                     className={cn(
-                      "shrink-0 capitalize text-[10px]",
+                      "shrink-0 text-[10px] capitalize",
                       SEVERITY_TONE[inc.severity],
                     )}
                   >

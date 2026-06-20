@@ -67,7 +67,10 @@ const NOTE_CATEGORY_META: Record<
   TrainerNoteCategory,
   { label: string; cls: string }
 > = {
-  concern: { label: "Concern", cls: "border-rose-200 bg-rose-50 text-rose-700" },
+  concern: {
+    label: "Concern",
+    cls: "border-rose-200 bg-rose-50 text-rose-700",
+  },
   behavior: {
     label: "Behavior",
     cls: "border-amber-200 bg-amber-50 text-amber-700",
@@ -172,9 +175,7 @@ export function PreSessionBriefingPanel({
     trainingQueries.enrollments(),
   );
   const { data: trainerNotes = [] } = useQuery(trainingQueries.trainerNotes());
-  const { data: attendances = [] } = useQuery(
-    trainingQueries.allAttendances(),
-  );
+  const { data: attendances = [] } = useQuery(trainingQueries.allAttendances());
   const { data: homework = [] } = useQuery(trainingQueries.allHomework());
   const { data: sessions = [] } = useQuery(trainingQueries.sessions());
 
@@ -278,10 +279,10 @@ export function PreSessionBriefingPanel({
           {/* Top row — kicker label + countdown chip */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 flex size-9 items-center justify-center rounded-xl">
+              <div className="flex size-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
                 <ClipboardCheckIcon />
               </div>
-              <p className="text-indigo-700 dark:text-indigo-200 text-[10px] font-bold uppercase tracking-[0.18em]">
+              <p className="text-[10px] font-bold tracking-[0.18em] text-indigo-700 uppercase dark:text-indigo-200">
                 Pre-session briefing
               </p>
             </div>
@@ -310,27 +311,27 @@ export function PreSessionBriefingPanel({
           {/* Session facts grid — date, time, location, instructor. */}
           <ul className="grid grid-cols-1 gap-1.5 text-[13px] sm:grid-cols-2">
             <li className="flex items-start gap-2 text-slate-700 dark:text-slate-200">
-              <CalendarCheck className="text-indigo-500 mt-0.5 size-4 shrink-0" />
+              <CalendarCheck className="mt-0.5 size-4 shrink-0 text-indigo-500" />
               <span>
-                <span className="text-muted-foreground block text-[10px] font-bold uppercase tracking-wider">
+                <span className="text-muted-foreground block text-[10px] font-bold tracking-wider uppercase">
                   Date
                 </span>
                 {formatLongDate(task.sessionStartAt)}
               </span>
             </li>
             <li className="flex items-start gap-2 text-slate-700 dark:text-slate-200">
-              <Clock className="text-indigo-500 mt-0.5 size-4 shrink-0" />
+              <Clock className="mt-0.5 size-4 shrink-0 text-indigo-500" />
               <span>
-                <span className="text-muted-foreground block text-[10px] font-bold uppercase tracking-wider">
+                <span className="text-muted-foreground block text-[10px] font-bold tracking-wider uppercase">
                   Time
                 </span>
                 {formatTimeRange(task.sessionStartAt, task.sessionEndAt)}
               </span>
             </li>
             <li className="flex items-start gap-2 text-slate-700 dark:text-slate-200">
-              <MapPin className="text-indigo-500 mt-0.5 size-4 shrink-0" />
+              <MapPin className="mt-0.5 size-4 shrink-0 text-indigo-500" />
               <span>
-                <span className="text-muted-foreground block text-[10px] font-bold uppercase tracking-wider">
+                <span className="text-muted-foreground block text-[10px] font-bold tracking-wider uppercase">
                   Location
                 </span>
                 {task.location || "Not specified"}
@@ -346,13 +347,13 @@ export function PreSessionBriefingPanel({
                     className="size-full object-cover"
                   />
                 ) : (
-                  <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 flex size-full items-center justify-center text-[8px] font-bold">
+                  <span className="flex size-full items-center justify-center bg-indigo-100 text-[8px] font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
                     {trainerInitials || "?"}
                   </span>
                 )}
               </span>
               <span>
-                <span className="text-muted-foreground block text-[10px] font-bold uppercase tracking-wider">
+                <span className="text-muted-foreground block text-[10px] font-bold tracking-wider uppercase">
                   Trainer
                 </span>
                 {task.trainerName}
@@ -364,7 +365,7 @@ export function PreSessionBriefingPanel({
             summary.concernCount > 0 ||
             summary.noShowCount > 0) && (
             <div className="flex flex-wrap items-center gap-1.5 border-t border-dashed pt-2">
-              <span className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+              <span className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
                 Heads-up
               </span>
               {summary.vaccineCount > 0 && (
@@ -427,9 +428,7 @@ export function PreSessionBriefingPanel({
                 />
               ))}
               {previousSessionSummary && (
-                <PreviousSessionNotesSection
-                  summary={previousSessionSummary}
-                />
+                <PreviousSessionNotesSection summary={previousSessionSummary} />
               )}
             </>
           )}
@@ -553,14 +552,14 @@ function AlertSection({ rows }: { rows: StudentBriefingRow[] }) {
   return (
     <section className="space-y-2 rounded-xl border-2 border-rose-300 bg-rose-50/70 p-3 shadow-sm dark:border-rose-900/60 dark:bg-rose-950/30">
       <div className="flex items-center gap-2">
-        <div className="bg-rose-600 text-white flex size-7 items-center justify-center rounded-lg">
+        <div className="flex size-7 items-center justify-center rounded-lg bg-rose-600 text-white">
           <AlertTriangle className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-rose-900 dark:text-rose-100 text-sm font-bold uppercase tracking-wide">
+          <p className="text-sm font-bold tracking-wide text-rose-900 uppercase dark:text-rose-100">
             Alerts — read first
           </p>
-          <p className="text-rose-800/80 dark:text-rose-200/80 text-[11.5px]">
+          <p className="text-[11.5px] text-rose-800/80 dark:text-rose-200/80">
             {alertedRows.length} student
             {alertedRows.length === 1 ? "" : "s"} · {totalAlerts} alert
             {totalAlerts === 1 ? "" : "s"} on file
@@ -577,7 +576,7 @@ function AlertSection({ rows }: { rows: StudentBriefingRow[] }) {
             <div className="flex items-start gap-2.5">
               <div className="relative shrink-0">
                 {row.petImageUrl ? (
-                  <div className="size-9 overflow-hidden rounded-xl ring-2 ring-white shadow-sm">
+                  <div className="size-9 overflow-hidden rounded-xl shadow-sm ring-2 ring-white">
                     <Image
                       src={row.petImageUrl}
                       alt={row.petName}
@@ -588,7 +587,7 @@ function AlertSection({ rows }: { rows: StudentBriefingRow[] }) {
                     />
                   </div>
                 ) : (
-                  <div className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-xl ring-2 ring-white shadow-sm">
+                  <div className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-xl shadow-sm ring-2 ring-white">
                     <PawPrint className="size-4" />
                   </div>
                 )}
@@ -656,9 +655,9 @@ function PreviousSessionNotesSection({
     year: "numeric",
   });
   return (
-    <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <section className="bg-card overflow-hidden rounded-xl border shadow-sm">
       <div className="flex items-start gap-3 border-b bg-slate-50/60 px-3 py-2.5 dark:bg-slate-900/40">
-        <div className="bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200 flex size-9 items-center justify-center rounded-xl">
+        <div className="flex size-9 items-center justify-center rounded-xl bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
           <StickyNote className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
@@ -674,7 +673,7 @@ function PreviousSessionNotesSection({
         </div>
       </div>
       <div className="p-3">
-        <p className="whitespace-pre-line text-[13px]/relaxed text-slate-700 dark:text-slate-200">
+        <p className="text-[13px]/relaxed whitespace-pre-line text-slate-700 dark:text-slate-200">
           {summary.summary}
         </p>
       </div>
@@ -737,13 +736,13 @@ function PlannedExercisesSection({
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <section className="bg-card overflow-hidden rounded-xl border shadow-sm">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-900/40"
       >
-        <div className="bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-200 flex size-9 items-center justify-center rounded-xl">
+        <div className="flex size-9 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-200">
           <Target className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
@@ -777,7 +776,7 @@ function PlannedExercisesSection({
           {/* Add an exercise — picker auto-prioritizes the course discipline. */}
           <div className="flex items-end gap-2">
             <div className="min-w-0 flex-1">
-              <p className="text-muted-foreground mb-1 text-[10px] font-bold uppercase tracking-wider">
+              <p className="text-muted-foreground mb-1 text-[10px] font-bold tracking-wider uppercase">
                 Add from library
               </p>
               <ExercisePicker
@@ -806,7 +805,7 @@ function PlannedExercisesSection({
           {/* Selected chips list — order = signup order. */}
           {plannedIds.length === 0 ? (
             <div className="text-muted-foreground rounded-md border border-dashed py-4 text-center text-[12px]">
-              <Sparkles className="text-amber-400 mx-auto mb-1 size-4" />
+              <Sparkles className="mx-auto mb-1 size-4 text-amber-400" />
               Nothing planned yet. Pick from the library above — these will
               pre-load when you open the Session View.
             </div>
@@ -860,21 +859,19 @@ function HomeworkSummarySection({
 }) {
   // Default open when at least one dog skipped practice — that's the signal
   // the trainer most often wants to act on before class.
-  const [open, setOpen] = useState(
-    summary.submittedCount < summary.totalCount,
-  );
+  const [open, setOpen] = useState(summary.submittedCount < summary.totalCount);
 
   const previousLabel = formatPracticeDate(summary.previousSessionDate);
   const skippedCount = summary.totalCount - summary.submittedCount;
 
   return (
-    <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <section className="bg-card overflow-hidden rounded-xl border shadow-sm">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-900/40"
       >
-        <div className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 flex size-9 items-center justify-center rounded-xl">
+        <div className="flex size-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
           <BookOpen className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
@@ -919,7 +916,7 @@ function HomeworkSummarySection({
             >
               <div className="shrink-0">
                 {row.petImageUrl ? (
-                  <div className="size-9 overflow-hidden rounded-xl ring-2 ring-white shadow-sm">
+                  <div className="size-9 overflow-hidden rounded-xl shadow-sm ring-2 ring-white">
                     <Image
                       src={row.petImageUrl}
                       alt={row.petName}
@@ -930,7 +927,7 @@ function HomeworkSummarySection({
                     />
                   </div>
                 ) : (
-                  <div className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-xl ring-2 ring-white shadow-sm">
+                  <div className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-xl shadow-sm ring-2 ring-white">
                     <PawPrint className="size-4" />
                   </div>
                 )}
@@ -1118,7 +1115,7 @@ function StudentCard({
     (row.consecutiveNoShows >= 2 ? 1 : 0);
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div className="bg-card overflow-hidden rounded-xl border shadow-sm">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -1238,7 +1235,7 @@ function StudentCard({
         <div className="space-y-3 border-t px-3 py-3">
           {/* Behavioral notes */}
           <section className="space-y-1.5">
-            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
               <StickyNote className="size-3" />
               Trainer notes
             </p>
@@ -1281,7 +1278,7 @@ function StudentCard({
           {/* Vaccine alert */}
           {row.vaccineWarning.hasWarning && (
             <section className="rounded-md border border-rose-200 bg-rose-50/60 px-2.5 py-2">
-              <p className="text-rose-700 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+              <p className="inline-flex items-center gap-1 text-[10px] font-bold tracking-wider text-rose-700 uppercase">
                 <Syringe className="size-3" />
                 Vaccination alert
               </p>
@@ -1305,7 +1302,7 @@ function StudentCard({
 
           {/* Homework status */}
           <section className="space-y-1.5">
-            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
               <BookOpen className="size-3" />
               Homework
             </p>
@@ -1356,7 +1353,7 @@ function StudentCard({
                   </span>
                 )}
                 {!row.homework.lastPracticedISO && (
-                  <span className="text-rose-600 inline-flex items-center gap-1 text-[10.5px] italic">
+                  <span className="inline-flex items-center gap-1 text-[10.5px] text-rose-600 italic">
                     <AlertTriangle className="size-3" />
                     Owner hasn&apos;t logged any practice
                   </span>
@@ -1372,7 +1369,7 @@ function StudentCard({
               <button
                 type="button"
                 onClick={() => setVideosOpen((v) => !v)}
-                className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase"
               >
                 <Video className="size-3" />
                 Homework videos · {row.homeworkVideos.length}
@@ -1389,7 +1386,7 @@ function StudentCard({
                       key={`${submission.homeworkId}-${submission.practiceDate}`}
                       className="overflow-hidden rounded-md border bg-slate-50/40"
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-card px-2.5 py-1.5">
+                      <div className="bg-card flex flex-wrap items-center justify-between gap-2 border-b px-2.5 py-1.5">
                         <div className="min-w-0">
                           <p className="truncate text-[12.5px] font-semibold text-slate-800">
                             {submission.homeworkTitle}
@@ -1419,7 +1416,7 @@ function StudentCard({
           {/* Quick wins */}
           {row.notes.some((n) => n.category === "achievement") && (
             <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px] italic">
-              <Trophy className="text-amber-500 size-3" />
+              <Trophy className="size-3 text-amber-500" />
               Don&apos;t forget to celebrate recent wins above.
             </p>
           )}

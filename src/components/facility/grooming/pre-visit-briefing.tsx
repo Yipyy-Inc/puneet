@@ -57,10 +57,7 @@ function formatDateLong(iso?: string): string {
   });
 }
 
-function formatAnswer(
-  _q: CustomQuestion | undefined,
-  value: unknown,
-): string {
+function formatAnswer(_q: CustomQuestion | undefined, value: unknown): string {
   if (value === undefined || value === null) return "—";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (Array.isArray(value)) return value.length ? value.join(", ") : "—";
@@ -107,7 +104,7 @@ export function PreVisitBriefing({
   return (
     <div className={cn("space-y-3", isNarrow ? "" : "space-y-4")}>
       {/* Pre-visit form responses */}
-      <div className="rounded-xl border bg-card shadow-sm">
+      <div className="bg-card rounded-xl border shadow-sm">
         <div className="flex items-center justify-between gap-2 border-b px-4 py-2.5">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <ClipboardList className="text-muted-foreground size-4" />
@@ -141,7 +138,7 @@ export function PreVisitBriefing({
                 if (q.type === "file_upload") return null;
                 return (
                   <div key={q.id} className="min-w-0">
-                    <dt className="text-muted-foreground text-[10px] uppercase tracking-wide">
+                    <dt className="text-muted-foreground text-[10px] tracking-wide uppercase">
                       {q.label}
                     </dt>
                     <dd className="text-sm wrap-break-word">
@@ -153,7 +150,7 @@ export function PreVisitBriefing({
               {submission.photosFromClient &&
                 submission.photosFromClient.length > 0 && (
                   <div className="col-span-full">
-                    <dt className="text-muted-foreground mb-1.5 text-[10px] uppercase tracking-wide">
+                    <dt className="text-muted-foreground mb-1.5 text-[10px] tracking-wide uppercase">
                       Photos from the client
                     </dt>
                     <dd className="flex flex-wrap gap-2">
@@ -163,7 +160,7 @@ export function PreVisitBriefing({
                           key={`${url}-${i}`}
                           src={url}
                           alt={`Client photo ${i + 1}`}
-                          className="size-16 rounded-md object-cover ring-1 ring-border"
+                          className="ring-border size-16 rounded-md object-cover ring-1"
                         />
                       ))}
                     </dd>
@@ -180,7 +177,7 @@ export function PreVisitBriefing({
       </div>
 
       {/* Coat + size + service quick facts */}
-      <div className="rounded-xl border bg-card shadow-sm">
+      <div className="bg-card rounded-xl border shadow-sm">
         <div className="flex items-center gap-2 border-b px-4 py-2.5 text-sm font-semibold">
           <Sparkle className="text-muted-foreground size-4" />
           Pet &amp; Service
@@ -198,7 +195,7 @@ export function PreVisitBriefing({
         </div>
         {appointment.addOns.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 border-t px-4 py-2.5">
-            <span className="text-muted-foreground text-[10px] uppercase tracking-wide">
+            <span className="text-muted-foreground text-[10px] tracking-wide uppercase">
               Add-ons
             </span>
             {appointment.addOns.map((ao) => (
@@ -211,7 +208,7 @@ export function PreVisitBriefing({
       </div>
 
       {/* Last visit recap */}
-      <div className="rounded-xl border bg-card shadow-sm">
+      <div className="bg-card rounded-xl border shadow-sm">
         <div className="flex items-center justify-between gap-2 border-b px-4 py-2.5">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <History className="text-muted-foreground size-4" />
@@ -227,7 +224,7 @@ export function PreVisitBriefing({
           {lastVisit ? (
             <div className="space-y-2.5 text-sm">
               <p className="text-muted-foreground text-xs">
-                <span className="font-medium text-foreground">
+                <span className="text-foreground font-medium">
                   {lastVisit.packageName}
                 </span>
                 {lastVisit.addOns.length > 0 && (
@@ -236,7 +233,7 @@ export function PreVisitBriefing({
               </p>
               {lastVisit.intake?.sessionNotes && (
                 <div>
-                  <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
+                  <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
                     Groomer&apos;s notes
                   </p>
                   <p className="text-sm/snug">
@@ -247,7 +244,7 @@ export function PreVisitBriefing({
               {lastVisit.intake?.moodTags &&
                 lastVisit.intake.moodTags.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-muted-foreground text-[10px] uppercase tracking-wide">
+                    <span className="text-muted-foreground text-[10px] tracking-wide uppercase">
                       Mood
                     </span>
                     {lastVisit.intake.moodTags.map((t) => (
@@ -263,7 +260,7 @@ export function PreVisitBriefing({
                 )}
               {(lastVisit.intake?.issues?.length ?? 0) > 0 && (
                 <div className="rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1.5 dark:border-amber-900 dark:bg-amber-950/30">
-                  <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                  <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold tracking-wide text-amber-800 uppercase dark:text-amber-200">
                     <ShieldAlert className="size-3" />
                     Issues flagged last time
                   </p>
@@ -287,7 +284,7 @@ export function PreVisitBriefing({
                 <div className="grid gap-3 sm:grid-cols-2">
                   {(lastVisit.intake?.beforePhotos?.length ?? 0) > 0 && (
                     <div>
-                      <p className="text-muted-foreground mb-1 flex items-center gap-1 text-[10px] uppercase tracking-wide">
+                      <p className="text-muted-foreground mb-1 flex items-center gap-1 text-[10px] tracking-wide uppercase">
                         <Camera className="size-3" /> Before
                       </p>
                       <div className="flex flex-wrap gap-1.5">
@@ -297,7 +294,7 @@ export function PreVisitBriefing({
                             key={`b-${u}-${i}`}
                             src={u}
                             alt=""
-                            className="size-12 rounded-md object-cover ring-1 ring-border"
+                            className="ring-border size-12 rounded-md object-cover ring-1"
                           />
                         ))}
                       </div>
@@ -305,7 +302,7 @@ export function PreVisitBriefing({
                   )}
                   {(lastVisit.afterPhotos?.length ?? 0) > 0 && (
                     <div>
-                      <p className="text-muted-foreground mb-1 flex items-center gap-1 text-[10px] uppercase tracking-wide">
+                      <p className="text-muted-foreground mb-1 flex items-center gap-1 text-[10px] tracking-wide uppercase">
                         <Camera className="size-3" /> After
                       </p>
                       <div className="flex flex-wrap gap-1.5">
@@ -315,7 +312,7 @@ export function PreVisitBriefing({
                             key={p.id}
                             src={p.url}
                             alt=""
-                            className="size-12 rounded-md object-cover ring-1 ring-border"
+                            className="ring-border size-12 rounded-md object-cover ring-1"
                           />
                         ))}
                       </div>
@@ -338,7 +335,7 @@ export function PreVisitBriefing({
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-muted/40 rounded-md px-2.5 py-2 text-center">
-      <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
+      <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
         {label}
       </p>
       <p className="text-xs font-semibold capitalize">{value}</p>

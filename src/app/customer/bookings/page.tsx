@@ -4,12 +4,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import {
-  Calendar,
-  CheckCircle,
-  Clock,
-  Plus,
-} from "lucide-react";
+import { Calendar, CheckCircle, Clock, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -34,10 +29,7 @@ import {
 } from "./_components/BookingFilters";
 import { UpcomingBookingCard } from "./_components/UpcomingBookingCard";
 import { PastBookingCard } from "./_components/PastBookingCard";
-import {
-  getPetForBooking,
-  type Booking,
-} from "./_components/booking-helpers";
+import { getPetForBooking, type Booking } from "./_components/booking-helpers";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -97,7 +89,10 @@ export default function CustomerBookingsPage() {
   const filteredBookings = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return customerBookings.filter((b) => {
-      if (serviceFilter !== "all" && b.service.toLowerCase() !== serviceFilter) {
+      if (
+        serviceFilter !== "all" &&
+        b.service.toLowerCase() !== serviceFilter
+      ) {
         return false;
       }
       if (!q) return true;
@@ -388,7 +383,11 @@ function StatCard({
   tone?: "amber";
 }) {
   return (
-    <Card className={tone === "amber" ? "border-amber-200 dark:border-amber-800" : ""}>
+    <Card
+      className={
+        tone === "amber" ? "border-amber-200 dark:border-amber-800" : ""
+      }
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle
           className={

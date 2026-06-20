@@ -66,7 +66,10 @@ export function BatchCardsModal({
               </span>
               <Badge
                 variant="outline"
-                className={cn("shrink-0 text-xs capitalize", STATUS_STYLES[card.status])}
+                className={cn(
+                  "shrink-0 text-xs capitalize",
+                  STATUS_STYLES[card.status],
+                )}
               >
                 {card.status}
               </Badge>

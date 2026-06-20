@@ -157,19 +157,14 @@ export function generateScheduledTasks(
       if (!guest.feedingTimes.includes(step.time)) continue;
       matchedTimes.add(step.time);
       tasks.push(
-        feedingTask(
-          guest,
-          time,
-          alertTags,
-          step.name,
-          step.id,
-          baseTask,
-        ),
+        feedingTask(guest, time, alertTags, step.name, step.id, baseTask),
       );
     }
     for (const time of guest.feedingTimes) {
       if (matchedTimes.has(time)) continue;
-      tasks.push(feedingTask(guest, time, alertTags, undefined, undefined, baseTask));
+      tasks.push(
+        feedingTask(guest, time, alertTags, undefined, undefined, baseTask),
+      );
     }
 
     // Medications — each med dose at each scheduled time, gated by frequency
@@ -198,7 +193,9 @@ export function generateScheduledTasks(
 
     // Add-ons — each add-on appears at its scheduled time
     for (const addon of guest.addOns ?? []) {
-      const matchedStep = addonSteps.find((s) => s.time === addon.scheduledTime);
+      const matchedStep = addonSteps.find(
+        (s) => s.time === addon.scheduledTime,
+      );
       tasks.push({
         ...baseTask,
         id: `addon-${guest.id}-${addon.id}`,
@@ -229,7 +226,13 @@ export function generateScheduledTasks(
     }
     for (const step of beddingSteps) {
       tasks.push(
-        careTask(baseTask, "bedding_change", step, [guest.kennelName], alertTags),
+        careTask(
+          baseTask,
+          "bedding_change",
+          step,
+          [guest.kennelName],
+          alertTags,
+        ),
       );
     }
     for (const step of customSteps) {
@@ -283,7 +286,10 @@ function feedingTask(
     shift: getShiftForTime(time),
     details: stepLabel ?? defaultLabel,
     subDetails,
-    alertTags: guest.allergies.length > 0 ? ["Allergy", ...alertTags.filter((t) => t !== "Allergy")] : alertTags,
+    alertTags:
+      guest.allergies.length > 0
+        ? ["Allergy", ...alertTags.filter((t) => t !== "Allergy")]
+        : alertTags,
     sourceStepId: stepId,
   };
 }

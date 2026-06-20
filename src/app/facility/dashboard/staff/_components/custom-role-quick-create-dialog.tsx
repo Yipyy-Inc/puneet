@@ -22,7 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Sparkles, Users, SlidersHorizontal, ChevronDown } from "lucide-react";
+import {
+  Plus,
+  Sparkles,
+  Users,
+  SlidersHorizontal,
+  ChevronDown,
+} from "lucide-react";
 import {
   ACCENT_CHOICES,
   AccentPicker,
@@ -213,7 +219,7 @@ export function CustomRoleQuickCreateDialog({
             <button
               type="button"
               onClick={() => setTuneOpen((v) => !v)}
-              className="flex w-full items-center justify-between gap-2 rounded-xl border border-border/60 bg-card px-3 py-2.5 text-left transition-all hover:bg-muted/40"
+              className="border-border/60 bg-card hover:bg-muted/40 flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left transition-all"
             >
               <div className="flex items-center gap-2">
                 <div className="bg-primary/10 text-primary rounded-lg p-1.5">
@@ -241,7 +247,11 @@ export function CustomRoleQuickCreateDialog({
                   onChange={(key, value) => {
                     setPermissions((prev) => {
                       const next = { ...prev };
-                      if (value === "none" || value === "preset" || value === "revoked") {
+                      if (
+                        value === "none" ||
+                        value === "preset" ||
+                        value === "revoked"
+                      ) {
                         delete next[key];
                       } else {
                         next[key] = value;

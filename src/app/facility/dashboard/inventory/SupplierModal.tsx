@@ -83,7 +83,9 @@ export function SupplierModal({ open, supplier, onClose, onSave }: Props) {
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{supplier ? "Edit Supplier" : "Add Supplier"}</DialogTitle>
+          <DialogTitle>
+            {supplier ? "Edit Supplier" : "Add Supplier"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="max-h-[65vh] space-y-5 overflow-y-auto py-1 pr-1">
@@ -241,7 +243,10 @@ export function SupplierModal({ open, supplier, onClose, onSave }: Props) {
                         size="icon"
                         className="size-9 shrink-0"
                         onClick={() =>
-                          copyToClipboard(form.orderingPortalUsername!, "Username")
+                          copyToClipboard(
+                            form.orderingPortalUsername!,
+                            "Username",
+                          )
                         }
                       >
                         <Copy className="size-3.5" />
@@ -282,7 +287,10 @@ export function SupplierModal({ open, supplier, onClose, onSave }: Props) {
                         size="icon"
                         className="size-9 shrink-0"
                         onClick={() =>
-                          copyToClipboard(form.orderingPortalPassword!, "Password")
+                          copyToClipboard(
+                            form.orderingPortalPassword!,
+                            "Password",
+                          )
                         }
                       >
                         <Copy className="size-3.5" />

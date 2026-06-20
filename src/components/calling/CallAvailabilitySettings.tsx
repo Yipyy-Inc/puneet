@@ -37,7 +37,13 @@ export function CallAvailabilitySettings() {
   } = useCallAvailability();
 
   // Ring pool = "you" (live status) + each active staff member's seeded status.
-  const roster: { id: string; name: string; role: string; status: CallAvailability; isSelf: boolean }[] = [
+  const roster: {
+    id: string;
+    name: string;
+    role: string;
+    status: CallAvailability;
+    isSelf: boolean;
+  }[] = [
     { id: "self", name: "You", role: "Signed in", status, isSelf: true },
     ...ACTIVE_STAFF.map((s) => ({
       id: s.id,
@@ -56,7 +62,7 @@ export function CallAvailabilitySettings() {
           <UserCheck className="size-4 text-green-600" />
           Call Availability
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Mark yourself busy or away to drop out of the ring group without going
           offline. Resets automatically after the timeout.
         </p>
@@ -90,12 +96,14 @@ export function CallAvailabilitySettings() {
             })}
           </div>
           {status !== "available" && (
-            <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="text-muted-foreground mt-2 flex items-center gap-3 text-xs">
               <span className="flex items-center gap-1.5">
                 <Timer className="size-3.5" />
                 Auto-resets in{" "}
-                <span className="font-semibold tabular-nums text-foreground">
-                  {secondsUntilReset != null ? formatCountdown(secondsUntilReset) : "—"}
+                <span className="text-foreground font-semibold tabular-nums">
+                  {secondsUntilReset != null
+                    ? formatCountdown(secondsUntilReset)
+                    : "—"}
                 </span>
               </span>
               <Button
@@ -112,10 +120,10 @@ export function CallAvailabilitySettings() {
         </div>
 
         {/* Auto-reset timeout */}
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 px-3 py-2.5">
+        <div className="bg-muted/30 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-2.5">
           <div>
             <p className="text-sm font-medium">Auto-reset timeout</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Busy/Away returns to Available after this long.
             </p>
           </div>
@@ -144,9 +152,9 @@ export function CallAvailabilitySettings() {
               {inPool} of {roster.length} available for calls
             </Badge>
           </div>
-          <p className="mb-2 text-xs text-muted-foreground">
-            Applies to Ring All Devices and Round-Robin dispatch — busy/away staff
-            are skipped.
+          <p className="text-muted-foreground mb-2 text-xs">
+            Applies to Ring All Devices and Round-Robin dispatch — busy/away
+            staff are skipped.
           </p>
           <div className="divide-y rounded-xl border">
             {roster.map((r) => {
@@ -160,26 +168,40 @@ export function CallAvailabilitySettings() {
                     excluded && "bg-muted/30",
                   )}
                 >
-                  <span className={cn("size-2.5 shrink-0 rounded-full", m.dot)} />
+                  <span
+                    className={cn("size-2.5 shrink-0 rounded-full", m.dot)}
+                  />
                   <div className="min-w-0 flex-1">
-                    <p className={cn("truncate text-sm font-medium", excluded && "text-muted-foreground")}>
+                    <p
+                      className={cn(
+                        "truncate text-sm font-medium",
+                        excluded && "text-muted-foreground",
+                      )}
+                    >
                       {r.name}
                       {r.isSelf && (
-                        <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                        <span className="text-muted-foreground ml-1.5 text-xs font-normal">
                           ({r.role})
                         </span>
                       )}
                     </p>
                     {!r.isSelf && (
-                      <p className="truncate text-xs text-muted-foreground">{r.role}</p>
+                      <p className="text-muted-foreground truncate text-xs">
+                        {r.role}
+                      </p>
                     )}
                   </div>
                   {excluded ? (
-                    <Badge variant="secondary" className={cn("shrink-0 text-xs", m.text)}>
+                    <Badge
+                      variant="secondary"
+                      className={cn("shrink-0 text-xs", m.text)}
+                    >
                       {m.label} — excluded
                     </Badge>
                   ) : (
-                    <span className={cn("shrink-0 text-xs font-medium", m.text)}>
+                    <span
+                      className={cn("shrink-0 text-xs font-medium", m.text)}
+                    >
                       {m.label}
                     </span>
                   )}

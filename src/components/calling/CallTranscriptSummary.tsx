@@ -18,7 +18,7 @@ export function CallTranscriptSummary({
 
   if (!transcription && !aiSummary) {
     return (
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         No transcription available for this call.
       </p>
     );
@@ -35,12 +35,14 @@ export function CallTranscriptSummary({
   return (
     <div className="space-y-2">
       {transcription && (
-        <div className="rounded-lg bg-muted/40 px-3 py-2">
-          <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="bg-muted/40 rounded-lg px-3 py-2">
+          <p className="text-muted-foreground mb-1 flex items-center gap-1 text-[10px] font-semibold tracking-wide uppercase">
             <FileText className="size-3" />
             Transcript
           </p>
-          <p className="text-xs leading-relaxed text-foreground">{transcription}</p>
+          <p className="text-foreground text-xs leading-relaxed">
+            {transcription}
+          </p>
         </div>
       )}
 
@@ -48,26 +50,37 @@ export function CallTranscriptSummary({
         <div className="rounded-lg border border-violet-100 bg-violet-50/60 px-3 py-2">
           <div className="mb-1.5 flex items-center gap-1.5">
             <Bot className="size-3.5 text-violet-500" />
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
               AI Summary
             </p>
-            <span className={cn("ml-auto text-[11px] font-semibold", sentimentColor)}>
+            <span
+              className={cn(
+                "ml-auto text-[11px] font-semibold",
+                sentimentColor,
+              )}
+            >
               Sentiment {aiSummary.sentimentScore}/10
             </span>
           </div>
           <div className="space-y-1.5 text-xs">
             <p>
               <span className="font-semibold text-violet-800">Reason: </span>
-              <span className="text-muted-foreground">{aiSummary.callReason}</span>
+              <span className="text-muted-foreground">
+                {aiSummary.callReason}
+              </span>
             </p>
             {aiSummary.followUpTask && (
               <p>
-                <span className="font-semibold text-violet-800">Follow-up: </span>
-                <span className="text-muted-foreground">{aiSummary.followUpTask}</span>
+                <span className="font-semibold text-violet-800">
+                  Follow-up:{" "}
+                </span>
+                <span className="text-muted-foreground">
+                  {aiSummary.followUpTask}
+                </span>
               </p>
             )}
             {aiSummary.riskFlag !== "none" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold capitalize text-red-700">
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700 capitalize">
                 <AlertCircle className="size-3" />
                 {aiSummary.riskFlag.replace(/_/g, " ")}
               </span>
@@ -80,7 +93,9 @@ export function CallTranscriptSummary({
                 </p>
                 <ul className="space-y-0.5">
                   {aiSummary.upsellOpportunities.map((u) => (
-                    <li key={u} className="text-muted-foreground">• {u}</li>
+                    <li key={u} className="text-muted-foreground">
+                      • {u}
+                    </li>
                   ))}
                 </ul>
               </div>

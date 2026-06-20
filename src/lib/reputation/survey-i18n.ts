@@ -93,7 +93,8 @@ const FR: SurveyStrings = {
   invalidBody:
     "Le lien d'évaluation a peut-être expiré ou a déjà été utilisé. Si vous pensez qu'il s'agit d'une erreur, veuillez contacter {business}.",
   rateTitle: "Comment s'est passée la visite de {pet} aujourd'hui ?",
-  rateSub: "Votre visite {service} avec {business}. Touchez une étoile pour évaluer.",
+  rateSub:
+    "Votre visite {service} avec {business}. Touchez une étoile pour évaluer.",
   poweredBy: "Propulsé par Yipyy Reputation Booster",
   labels: {
     1: "Très décevant",
@@ -107,7 +108,8 @@ const FR: SurveyStrings = {
   thrilledTitle: "Nous sommes ravis ! 🎉",
   loveQ: "Qu'avez-vous le plus aimé de la visite de {pet} ?",
   gatedLoveQ: "Qu'avez-vous le plus aimé de notre service ?",
-  positivePlaceholder: "Dites aux autres ce qui a rendu la visite de {pet} formidable…",
+  positivePlaceholder:
+    "Dites aux autres ce qui a rendu la visite de {pet} formidable…",
   postPublic: "Publiez-le publiquement",
   orPrivate: "Ou envoyez-le-nous directement",
   onlyToUs: "Envoyez-le-nous",
@@ -120,19 +122,22 @@ const FR: SurveyStrings = {
   negTitle: "Nous sommes vraiment désolés.",
   negSub:
     "Nous n'avons pas répondu à vos attentes aujourd'hui. Dites-nous ce qui s'est passé afin que nous puissions corriger la situation immédiatement.",
-  negPlaceholder: "Qu'est-ce qui n'a pas fonctionné lors de la visite de {pet} ?",
+  negPlaceholder:
+    "Qu'est-ce qui n'a pas fonctionné lors de la visite de {pet} ?",
   sendToManager: "Envoyer au gestionnaire",
   escalatedTitle: "Merci — nous nous en occupons.",
   escalatedBody:
     "Votre avis a été transmis directement à notre gestionnaire, qui vous contactera personnellement pour arranger les choses. Merci de nous donner l'occasion de corriger la situation.",
   sharedTitle: "Merci d'avoir partagé ! 💛",
-  sharedBody: "Vos bons mots comptent énormément pour nous et l'équipe de {business}.",
+  sharedBody:
+    "Vos bons mots comptent énormément pour nous et l'équipe de {business}.",
   modalTitle: "Votre commentaire a été copié !",
   modalBody:
     "Nous avons copié votre commentaire dans votre presse-papiers. Connectez-vous à {platform} à l'écran suivant, collez et publiez — c'est tout !",
   openPlatform: "Ouvrir {platform}",
   done: "Terminé",
-  noPlatforms: "Aucune plateforme d'avis publique n'est configurée pour le moment.",
+  noPlatforms:
+    "Aucune plateforme d'avis publique n'est configurée pour le moment.",
 };
 
 const STRINGS: Record<string, SurveyStrings> = { en: EN, fr: FR };

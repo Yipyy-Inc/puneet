@@ -181,8 +181,8 @@ export function ActiveMembershipCard({
           {inCooldown && (
             <p className="mt-1.5 font-medium text-amber-700">
               Plan changes available in {cooldownRemaining} day
-              {cooldownRemaining === 1 ? "" : "s"} (
-              {policy.cooldownDays}-day cooldown after signup).
+              {cooldownRemaining === 1 ? "" : "s"} ({policy.cooldownDays}-day
+              cooldown after signup).
             </p>
           )}
         </div>
@@ -233,7 +233,9 @@ export function ActiveMembershipCard({
                 enabled={policy.allowCancel}
                 onClick={onCancel}
                 disabledReason={
-                  !policy.allowCancel ? "Contact the facility to cancel" : undefined
+                  !policy.allowCancel
+                    ? "Contact the facility to cancel"
+                    : undefined
                 }
                 icon={<XCircle className="size-4" />}
                 label="Cancel"

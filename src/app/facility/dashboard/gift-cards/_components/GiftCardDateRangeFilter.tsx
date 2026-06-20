@@ -64,7 +64,9 @@ export function isWithinRange(dateStr: string, range: DateRange): boolean {
   const parts = dateStr.slice(0, 10).split("-").map(Number);
   // Parse as a local date so comparisons don't drift across time zones.
   const d = new Date(parts[0], (parts[1] ?? 1) - 1, parts[2] ?? 1);
-  return d.getTime() >= range.start.getTime() && d.getTime() <= range.end.getTime();
+  return (
+    d.getTime() >= range.start.getTime() && d.getTime() <= range.end.getTime()
+  );
 }
 
 const PRESETS: { key: Exclude<RangePreset, "custom">; label: string }[] = [
@@ -147,7 +149,7 @@ export function GiftCardDateRangeFilter({ value, onChange }: Props) {
             sideOffset={8}
             className="border-border/60 w-auto p-3 shadow-2xl"
           >
-            <p className="text-muted-foreground mb-2 px-1 text-xs font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground mb-2 px-1 text-xs font-semibold tracking-wide uppercase">
               Custom Range
             </p>
             <DateSelectionCalendar

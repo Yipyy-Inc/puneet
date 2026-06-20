@@ -444,10 +444,7 @@ export default function BoardingSettingsPage() {
                     <X className="mr-2 size-4" />
                     Cancel
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleSave("earlyCheckout")}
-                  >
+                  <Button size="sm" onClick={() => handleSave("earlyCheckout")}>
                     <Save className="mr-2 size-4" />
                     Save
                   </Button>
@@ -499,13 +496,13 @@ export default function BoardingSettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(
-                        Object.keys(POLICY_LABEL) as EarlyCheckoutPolicy[]
-                      ).map((key) => (
-                        <SelectItem key={key} value={key}>
-                          {POLICY_LABEL[key]}
-                        </SelectItem>
-                      ))}
+                      {(Object.keys(POLICY_LABEL) as EarlyCheckoutPolicy[]).map(
+                        (key) => (
+                          <SelectItem key={key} value={key}>
+                            {POLICY_LABEL[key]}
+                          </SelectItem>
+                        ),
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

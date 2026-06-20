@@ -39,11 +39,7 @@ function resolveAssignee(
   }
 }
 
-function addOffset(
-  baseIso: string,
-  days: number,
-  hours: number,
-): string {
+function addOffset(baseIso: string, days: number, hours: number): string {
   const date = new Date(baseIso);
   date.setDate(date.getDate() + days);
   date.setHours(date.getHours() + hours);

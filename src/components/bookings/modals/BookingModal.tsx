@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -40,10 +46,7 @@ import { ServiceStep, ClientPetStep, DetailsStep, ConfirmStep } from "./steps";
 import { TipWizardContent } from "./steps/TipWizardContent";
 import { PackagePromptWizardContent } from "./steps/PackagePromptWizardContent";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  groomingQueries,
-  resolveEffectivePricing,
-} from "@/lib/api/grooming";
+import { groomingQueries, resolveEffectivePricing } from "@/lib/api/grooming";
 import { getPetSize } from "@/lib/pet-size";
 import { computeBookingTotals, findZipTaxRate } from "@/lib/service-areas";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
@@ -85,10 +88,7 @@ import { facilityStaff } from "@/data/facility-staff";
 import { groomingPackages } from "@/data/grooming";
 import { saveCustomPetPricingOverride } from "@/lib/grooming-pet-pricing-store";
 import { notificationToggles } from "@/data/settings";
-import {
-  digitalWaivers,
-  waiverSignatures,
-} from "@/data/additional-features";
+import { digitalWaivers, waiverSignatures } from "@/data/additional-features";
 import {
   loadDepositRules,
   findApplicableDepositRule,
@@ -286,10 +286,8 @@ export function BookingModal({
   // Travel-zone surcharge (Step 6) + ZIP-prefix tax (Step 7). Same lookups
   // the facility dialog and PaymentDialog use — single source of truth so
   // ConfirmStep and the at-pickup screen agree by construction.
-  const {
-    travelZones: groomingTravelZones,
-    zipTaxRates: groomingZipTaxRates,
-  } = useMobileGrooming();
+  const { travelZones: groomingTravelZones, zipTaxRates: groomingZipTaxRates } =
+    useMobileGrooming();
   // Real impl would read this from the facility config; the demo uses a
   // downtown Montréal anchor consistent with the facility dialog.
   const FACILITY_BASE_POSTAL = "H2X 1Z4";
@@ -441,7 +439,10 @@ export function BookingModal({
   // dates, room, add-ons, and feeding/medication details.
   const displayedSteps = STEPS.filter(
     (step) =>
-      !(step.id === "client-pet" && (editMode || (preSelectedClientId && preSelectedPetId))) &&
+      !(
+        step.id === "client-pet" &&
+        (editMode || (preSelectedClientId && preSelectedPetId))
+      ) &&
       !(step.id === "service" && editMode) &&
       // Hide the Service step entirely when the caller deep-linked into a
       // specific service (e.g. customer tapped Enroll on a training program).
@@ -796,10 +797,9 @@ export function BookingModal({
   // Customer-mode card selection. When a deposit rule applies, the customer
   // must pick a card before they can submit; staff mode uses the existing
   // BookingDepositPrompt flow instead.
-  const [
-    customerPaymentMethodId,
-    setCustomerPaymentMethodId,
-  ] = useState<string | null>(null);
+  const [customerPaymentMethodId, setCustomerPaymentMethodId] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     // "Returning" = the client has at least one historical booking.
@@ -854,7 +854,8 @@ export function BookingModal({
   }, [selectedService]);
   const [tipAmount, setTipAmount] = useState(0);
   const [showingTipStep, setShowingTipStep] = useState(false);
-  const [showingPackagePromptStep, setShowingPackagePromptStep] = useState(false);
+  const [showingPackagePromptStep, setShowingPackagePromptStep] =
+    useState(false);
   const [includesEvaluation, setIncludesEvaluation] = useState(false);
   const [depositPrompt, setDepositPrompt] = useState<DepositPromptValue>({
     collectNow: true,
@@ -1365,7 +1366,8 @@ export function BookingModal({
     // small explainer subline under the service row in ConfirmStep so
     // customers (and staff) understand where the number came from. Does
     // NOT affect basePrice itself, which is already the fully-resolved sum.
-    const groomingPriceBreakdown: Array<{ petName: string; lines: string[] }> = [];
+    const groomingPriceBreakdown: Array<{ petName: string; lines: string[] }> =
+      [];
 
     if (selectedService === "daycare") {
       const pricePerDay =
@@ -1622,7 +1624,9 @@ export function BookingModal({
     let evaluationFeeTotal = 0;
     if (includesEvaluation && evaluationConfig.price > 0) {
       const petsNeedingEval = pricingPets.filter((pet) => {
-        const p = pet as { evaluations?: Array<{ status: string; isExpired?: boolean }> };
+        const p = pet as {
+          evaluations?: Array<{ status: string; isExpired?: boolean }>;
+        };
         return !p.evaluations?.some(
           (e) => e.status === "passed" && e.isExpired !== true,
         );
@@ -1636,7 +1640,10 @@ export function BookingModal({
     }
 
     let subtotal =
-      pricingComputation.total + medicationFeeTotal + feedingFeeTotal + evaluationFeeTotal;
+      pricingComputation.total +
+      medicationFeeTotal +
+      feedingFeeTotal +
+      evaluationFeeTotal;
 
     let totalDiscount = pricingComputation.discountTotal || 0;
     const adjustments = [...(pricingComputation.adjustments || [])];
@@ -1798,9 +1805,8 @@ export function BookingModal({
       calculatePrice.total,
     );
     setDepositPrompt((prev) => ({
-      collectNow: prev.ruleLabel === applicableDepositRule.label
-        ? prev.collectNow
-        : true,
+      collectNow:
+        prev.ruleLabel === applicableDepositRule.label ? prev.collectNow : true,
       amount: required,
       method: prev.method ?? "card",
       ruleLabel: applicableDepositRule.label,
@@ -1923,10 +1929,15 @@ export function BookingModal({
 
   const applicablePackages = useMemo(() => {
     if (!selectedClient || !selectedService) return [];
-    
+
     // Using an explicit type to match UnifiedApplicablePackage from PackagePromptWizardContent
-    const packages: { id: string; name: string; passesLeft: number; totalPasses: number }[] = [];
-    
+    const packages: {
+      id: string;
+      name: string;
+      passesLeft: number;
+      totalPasses: number;
+    }[] = [];
+
     // 1. Legacy packages (from client.packages)
     if (selectedClient.packages) {
       for (const pkg of selectedClient.packages) {
@@ -1934,7 +1945,10 @@ export function BookingModal({
           // For legacy packages, we might need a rough heuristic if they don't have a serviceId mapping,
           // but let's assume they map to the module/service if their name or moduleId matches.
           // For now, if they are just active, we might include them, or strictly check moduleId.
-          if (pkg.moduleId === selectedService || pkg.name.toLowerCase().includes(selectedService)) {
+          if (
+            pkg.moduleId === selectedService ||
+            pkg.name.toLowerCase().includes(selectedService)
+          ) {
             packages.push({
               id: pkg.id,
               name: pkg.name,
@@ -2010,10 +2024,14 @@ export function BookingModal({
       setCurrentStep(nextStep);
       setCurrentSubStep(0);
       setHighestStepReached((prev) => Math.max(prev, nextStep));
-      
+
       // Intercept before confirm step to show package prompt or tip screen
       if (nextStepId === "confirm" && !isEstimateMode) {
-        if (applicablePackages.length > 0 && !redeemedPackageId && !isCustomerMode) {
+        if (
+          applicablePackages.length > 0 &&
+          !redeemedPackageId &&
+          !isCustomerMode
+        ) {
           setShowingPackagePromptStep(true);
         } else if (tipConfig?.enabled) {
           setShowingTipStep(true);
@@ -2046,11 +2064,15 @@ export function BookingModal({
     // Tip step is showing — go back to package prompt (if applicable) or previous step
     if (showingTipStep) {
       setShowingTipStep(false);
-      if (applicablePackages.length > 0 && !redeemedPackageId && !isCustomerMode) {
+      if (
+        applicablePackages.length > 0 &&
+        !redeemedPackageId &&
+        !isCustomerMode
+      ) {
         setShowingPackagePromptStep(true);
         return;
       }
-      
+
       const prevStep = currentStep - 1;
       const prevStepId = displayedSteps[prevStep]?.id;
       setCurrentStep(prevStep);
@@ -2076,7 +2098,11 @@ export function BookingModal({
       if (tipConfig?.enabled) {
         setShowingTipStep(true);
         return;
-      } else if (applicablePackages.length > 0 && !redeemedPackageId && !isCustomerMode) {
+      } else if (
+        applicablePackages.length > 0 &&
+        !redeemedPackageId &&
+        !isCustomerMode
+      ) {
         setShowingPackagePromptStep(true);
         return;
       }
@@ -2498,8 +2524,7 @@ export function BookingModal({
       const { getYipyyGoConfig } =
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require("@/data/yipyygo-config") as typeof import("@/data/yipyygo-config");
-      const sendBefore =
-        getYipyyGoConfig(facilityId)?.timing.initialSendTime;
+      const sendBefore = getYipyyGoConfig(facilityId)?.timing.initialSendTime;
       toast.success("Express Check-In form sent", {
         description: `Heading to ${channel}${
           sendBefore ? ` · ${sendBefore}h before the appointment` : ""
@@ -3200,7 +3225,11 @@ export function BookingModal({
     >
       <DialogContent className="flex h-dvh w-full max-w-none flex-col overflow-hidden rounded-none border-0 p-0 sm:h-[90vh] sm:w-[95vw] sm:rounded-lg sm:border lg:min-w-[1024px] xl:min-w-[1200px] [&>button]:hidden">
         <DialogTitle className="sr-only">
-          {editMode ? "Edit Booking" : isEstimateMode ? "New Estimate" : "New Booking"}
+          {editMode
+            ? "Edit Booking"
+            : isEstimateMode
+              ? "New Estimate"
+              : "New Booking"}
         </DialogTitle>
         <div className="flex min-h-0 flex-1">
           {/* Side Navigation Tabs */}
@@ -3209,46 +3238,50 @@ export function BookingModal({
             <div className="bg-background shrink-0 border-b p-4">
               <h2 className="flex items-center gap-2 text-lg font-semibold">
                 <Plus className="size-5" />
-                {editMode ? "Edit Booking" : (() => {
-                  const preSelectedClient = clients.find(
-                    (c) => c.id === preSelectedClientId,
-                  );
-                  const preSelectedPet = preSelectedClient?.pets.find(
-                    (p) => p.id === preSelectedPetId,
-                  );
-                  if (preSelectedPet) {
-                    return `Book ${preSelectedPet.name}`;
-                  } else if (preSelectedClient) {
-                    return `Book for ${preSelectedClient.name}`;
-                  } else if (selectedService === "daycare") {
-                    return daycare.clientFacingName;
-                  } else if (selectedService === "boarding") {
-                    return boarding.clientFacingName;
-                  } else {
-                    return isEstimateMode ? "New Estimate" : "New Booking";
-                  }
-                })()}
+                {editMode
+                  ? "Edit Booking"
+                  : (() => {
+                      const preSelectedClient = clients.find(
+                        (c) => c.id === preSelectedClientId,
+                      );
+                      const preSelectedPet = preSelectedClient?.pets.find(
+                        (p) => p.id === preSelectedPetId,
+                      );
+                      if (preSelectedPet) {
+                        return `Book ${preSelectedPet.name}`;
+                      } else if (preSelectedClient) {
+                        return `Book for ${preSelectedClient.name}`;
+                      } else if (selectedService === "daycare") {
+                        return daycare.clientFacingName;
+                      } else if (selectedService === "boarding") {
+                        return boarding.clientFacingName;
+                      } else {
+                        return isEstimateMode ? "New Estimate" : "New Booking";
+                      }
+                    })()}
               </h2>
               <p className="text-muted-foreground mt-1 text-sm">
-                {editMode ? "Update dates, room, and add-ons" : (() => {
-                  const preSelectedClient = clients.find(
-                    (c) => c.id === preSelectedClientId,
-                  );
-                  const preSelectedPet = preSelectedClient?.pets.find(
-                    (p) => p.id === preSelectedPetId,
-                  );
-                  if (preSelectedPet) {
-                    return `Create a new booking for ${preSelectedPet.name}`;
-                  } else if (preSelectedClient) {
-                    return `Create a new booking for ${preSelectedClient.name}`;
-                  } else if (selectedService === "daycare") {
-                    return daycare.slogan;
-                  } else if (selectedService === "boarding") {
-                    return boarding.slogan;
-                  } else {
-                    return "Create a new booking for your facility";
-                  }
-                })()}
+                {editMode
+                  ? "Update dates, room, and add-ons"
+                  : (() => {
+                      const preSelectedClient = clients.find(
+                        (c) => c.id === preSelectedClientId,
+                      );
+                      const preSelectedPet = preSelectedClient?.pets.find(
+                        (p) => p.id === preSelectedPetId,
+                      );
+                      if (preSelectedPet) {
+                        return `Create a new booking for ${preSelectedPet.name}`;
+                      } else if (preSelectedClient) {
+                        return `Create a new booking for ${preSelectedClient.name}`;
+                      } else if (selectedService === "daycare") {
+                        return daycare.slogan;
+                      } else if (selectedService === "boarding") {
+                        return boarding.slogan;
+                      } else {
+                        return "Create a new booking for your facility";
+                      }
+                    })()}
               </p>
             </div>
             {/* #2 — Progress indicator */}
@@ -3441,7 +3474,9 @@ export function BookingModal({
                         <div className="mt-1.5 ml-8 space-y-0.5">
                           {currentSubSteps.map((subStep, subIdx) => {
                             const isSubActive = currentSubStep === subIdx;
-                            const isSubCompleted = isSubStepComplete(subStep.id);
+                            const isSubCompleted = isSubStepComplete(
+                              subStep.id,
+                            );
                             const isVisitedAndCompleted =
                               subIdx < currentSubStep && isSubCompleted;
 
@@ -3539,7 +3574,6 @@ export function BookingModal({
                 })}
               </div>
             </ScrollArea>
-
           </div>
 
           {/* Main Content Area */}
@@ -3575,7 +3609,9 @@ export function BookingModal({
                     ? "Show Your Appreciation"
                     : displayedSteps[currentStep]?.title}
               </h2>
-              {!showingPackagePromptStep && !showingTipStep && displayedSteps[currentStep]?.id === "details" &&
+              {!showingPackagePromptStep &&
+                !showingTipStep &&
+                displayedSteps[currentStep]?.id === "details" &&
                 (selectedService === "daycare" ||
                   selectedService === "boarding" ||
                   selectedService === "evaluation") && (
@@ -3623,491 +3659,500 @@ export function BookingModal({
                 />
               </div>
             ) : (
-            <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
-              <div className="p-6">
-                {displayedSteps[currentStep]?.id === "service" && (
-                  <ServiceStep
-                    selectedService={selectedService}
-                    setSelectedService={handleServiceChange}
-                    setServiceType={setServiceType}
-                    setCurrentSubStep={setCurrentSubStep}
-                    configs={configs}
-                    bookingFlow={bookingFlow}
-                    selectedPets={selectedPets}
-                    onBookService={canProceed ? handleNext : undefined}
-                    onPickTrainingCourse={handlePickTrainingCourse}
-                  />
-                )}
-                {displayedSteps[currentStep]?.id === "client-pet" && (
-                  <ClientPetStep
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    filteredClients={filteredClients}
-                    selectedClientId={selectedClientId}
-                    setSelectedClientId={setSelectedClientId}
-                    selectedPetIds={selectedPetIds}
-                    setSelectedPetIds={setSelectedPetIds}
-                    selectedClient={selectedClient}
-                    preSelectedClientId={preSelectedClientId}
-                    preSelectedProgramId={preSelectedProgramId}
-                    selectedService={selectedService}
-                    configs={configs}
-                    isEstimateMode={isEstimateMode}
-                    isGuestEstimate={isGuestEstimate}
-                    setIsGuestEstimate={setIsGuestEstimate}
-                    guestName={guestName}
-                    setGuestName={setGuestName}
-                    guestEmail={guestEmail}
-                    setGuestEmail={setGuestEmail}
-                    guestPhone={guestPhone}
-                    setGuestPhone={setGuestPhone}
-                    guestPetNames={guestPetNames}
-                    setGuestPetNames={setGuestPetNamesSynced}
-                    guestPetWeights={guestPetWeights}
-                    setGuestPetWeights={setGuestPetWeights}
-                    onAddClient={handleAddClient}
-                    onAddPet={handleAddPet}
-                  />
-                )}
-                {displayedSteps[currentStep]?.id === "details" && (
-                  <DetailsStep
-                    selectedService={selectedService}
-                    preSelectedCourseTypeId={selectedCourseTypeId}
-                    preSelectedProgramId={preSelectedProgramId}
-                    onRequestClose={() => onOpenChange(false)}
-                    onTrainingSelectionChange={handleTrainingSelectionChange}
-                    currentSubStep={
-                      currentSubSteps[currentSubStep]?.id ?? currentSubStep
-                    }
-                    isSubStepComplete={isSubStepComplete}
-                    daycareSelectedDates={daycareSelectedDates}
-                    setDaycareSelectedDates={setDaycareSelectedDates}
-                    daycareDateTimes={daycareDateTimes}
-                    setDaycareDateTimes={setDaycareDateTimes}
-                    roomAssignments={roomAssignments}
-                    setRoomAssignments={setRoomAssignments}
-                    boardingRangeStart={boardingRangeStart}
-                    setBoardingRangeStart={setBoardingRangeStart}
-                    boardingRangeEnd={boardingRangeEnd}
-                    setBoardingRangeEnd={setBoardingRangeEnd}
-                    boardingDateTimes={boardingDateTimes}
-                    setBoardingDateTimes={setBoardingDateTimes}
-                    startDate={startDate}
-                    setStartDate={setStartDate}
-                    endDate={endDate}
-                    setEndDate={setEndDate}
-                    checkInTime={checkInTime}
-                    setCheckInTime={setCheckInTime}
-                    checkOutTime={checkOutTime}
-                    setCheckOutTime={setCheckOutTime}
-                    serviceType={serviceType}
-                    setServiceType={setServiceType}
-                    feedingSchedule={feedingSchedule}
-                    setFeedingSchedule={setFeedingSchedule}
-                    medications={medications}
-                    setMedications={setMedications}
-                    feedingMedicationTab={feedingMedicationTab}
-                    setFeedingMedicationTab={setFeedingMedicationTab}
-                    extraServices={extraServices}
-                    setExtraServices={setExtraServices}
-                    selectedPets={effectiveSelectedPets}
-                    applyEligibilityFilter={
-                      bookingFlow.onlyShowApplicableServices === true
-                    }
-                    groomingIsMobile={groomingIsMobile}
-                    setGroomingIsMobile={setGroomingIsMobile}
-                    selectedClient={selectedClient}
-                    groomingStylistId={groomingStylistId}
-                    setGroomingStylistId={setGroomingStylistId}
-                    groomingAdditionalStylistIds={groomingAdditionalStylistIds}
-                    setGroomingAdditionalStylistIds={
-                      setGroomingAdditionalStylistIds
-                    }
-                    groomingStationId={groomingStationId}
-                    setGroomingStationId={setGroomingStationId}
-                    groomingStages={groomingStages}
-                    setGroomingStages={setGroomingStages}
-                    groomingManualPrice={groomingManualPrice}
-                    setGroomingManualPrice={setGroomingManualPrice}
-                    groomingManualDuration={groomingManualDuration}
-                    setGroomingManualDuration={setGroomingManualDuration}
-                    groomingSavePriceToPet={groomingSavePriceToPet}
-                    setGroomingSavePriceToPet={setGroomingSavePriceToPet}
-                    groomingSelectedAddOnIds={groomingSelectedAddOnIds}
-                    setGroomingSelectedAddOnIds={setGroomingSelectedAddOnIds}
-                    groomingAutoAttachedAddOnIds={groomingAutoAttachedAddOnIds}
-                    setGroomingAutoAttachedAddOnIds={
-                      setGroomingAutoAttachedAddOnIds
-                    }
-                  />
-                )}
-
-                {/* Include Evaluation toggle — facility side only, confirm step, non-evaluation services */}
-                {!isCustomerMode && !showingTipStep && displayedSteps[currentStep]?.id === "confirm" &&
-                  selectedService !== "evaluation" &&
-                  !(isEstimateMode && estimateCreated) && (
-                    <div className="mx-1 mb-4 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex size-8 items-center justify-center rounded-lg bg-amber-100">
-                          <ClipboardCheck className="size-4 text-amber-700" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-amber-900">
-                            Include Evaluation
-                          </p>
-                          <p className="text-[11px] text-amber-700">
-                            Schedule a pet evaluation on the first day of this
-                            booking
-                          </p>
-                        </div>
-                      </div>
-                      <Switch
-                        checked={includesEvaluation}
-                        onCheckedChange={setIncludesEvaluation}
-                      />
-                    </div>
+              <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
+                <div className="p-6">
+                  {displayedSteps[currentStep]?.id === "service" && (
+                    <ServiceStep
+                      selectedService={selectedService}
+                      setSelectedService={handleServiceChange}
+                      setServiceType={setServiceType}
+                      setCurrentSubStep={setCurrentSubStep}
+                      configs={configs}
+                      bookingFlow={bookingFlow}
+                      selectedPets={selectedPets}
+                      onBookService={canProceed ? handleNext : undefined}
+                      onPickTrainingCourse={handlePickTrainingCourse}
+                    />
                   )}
-
-                {/* Staff-facing deposit prompt */}
-                {!isCustomerMode &&
-                  !showingTipStep &&
-                  displayedSteps[currentStep]?.id === "confirm" &&
-                  !(isEstimateMode && estimateCreated) &&
-                  applicableDepositRule && (
-                    <BookingDepositPrompt
-                      rule={applicableDepositRule}
-                      bookingTotal={calculatePrice.total}
-                      value={depositPrompt}
-                      onChange={setDepositPrompt}
+                  {displayedSteps[currentStep]?.id === "client-pet" && (
+                    <ClientPetStep
+                      searchQuery={searchQuery}
+                      setSearchQuery={setSearchQuery}
+                      filteredClients={filteredClients}
+                      selectedClientId={selectedClientId}
+                      setSelectedClientId={setSelectedClientId}
+                      selectedPetIds={selectedPetIds}
+                      setSelectedPetIds={setSelectedPetIds}
+                      selectedClient={selectedClient}
+                      preSelectedClientId={preSelectedClientId}
+                      preSelectedProgramId={preSelectedProgramId}
+                      selectedService={selectedService}
+                      configs={configs}
+                      isEstimateMode={isEstimateMode}
+                      isGuestEstimate={isGuestEstimate}
+                      setIsGuestEstimate={setIsGuestEstimate}
+                      guestName={guestName}
+                      setGuestName={setGuestName}
+                      guestEmail={guestEmail}
+                      setGuestEmail={setGuestEmail}
+                      guestPhone={guestPhone}
+                      setGuestPhone={setGuestPhone}
+                      guestPetNames={guestPetNames}
+                      setGuestPetNames={setGuestPetNamesSynced}
+                      guestPetWeights={guestPetWeights}
+                      setGuestPetWeights={setGuestPetWeights}
+                      onAddClient={handleAddClient}
+                      onAddPet={handleAddPet}
+                    />
+                  )}
+                  {displayedSteps[currentStep]?.id === "details" && (
+                    <DetailsStep
+                      selectedService={selectedService}
+                      preSelectedCourseTypeId={selectedCourseTypeId}
+                      preSelectedProgramId={preSelectedProgramId}
+                      onRequestClose={() => onOpenChange(false)}
+                      onTrainingSelectionChange={handleTrainingSelectionChange}
+                      currentSubStep={
+                        currentSubSteps[currentSubStep]?.id ?? currentSubStep
+                      }
+                      isSubStepComplete={isSubStepComplete}
+                      daycareSelectedDates={daycareSelectedDates}
+                      setDaycareSelectedDates={setDaycareSelectedDates}
+                      daycareDateTimes={daycareDateTimes}
+                      setDaycareDateTimes={setDaycareDateTimes}
+                      roomAssignments={roomAssignments}
+                      setRoomAssignments={setRoomAssignments}
+                      boardingRangeStart={boardingRangeStart}
+                      setBoardingRangeStart={setBoardingRangeStart}
+                      boardingRangeEnd={boardingRangeEnd}
+                      setBoardingRangeEnd={setBoardingRangeEnd}
+                      boardingDateTimes={boardingDateTimes}
+                      setBoardingDateTimes={setBoardingDateTimes}
+                      startDate={startDate}
+                      setStartDate={setStartDate}
+                      endDate={endDate}
+                      setEndDate={setEndDate}
+                      checkInTime={checkInTime}
+                      setCheckInTime={setCheckInTime}
+                      checkOutTime={checkOutTime}
+                      setCheckOutTime={setCheckOutTime}
+                      serviceType={serviceType}
+                      setServiceType={setServiceType}
+                      feedingSchedule={feedingSchedule}
+                      setFeedingSchedule={setFeedingSchedule}
+                      medications={medications}
+                      setMedications={setMedications}
+                      feedingMedicationTab={feedingMedicationTab}
+                      setFeedingMedicationTab={setFeedingMedicationTab}
+                      extraServices={extraServices}
+                      setExtraServices={setExtraServices}
+                      selectedPets={effectiveSelectedPets}
+                      applyEligibilityFilter={
+                        bookingFlow.onlyShowApplicableServices === true
+                      }
+                      groomingIsMobile={groomingIsMobile}
+                      setGroomingIsMobile={setGroomingIsMobile}
+                      selectedClient={selectedClient}
+                      groomingStylistId={groomingStylistId}
+                      setGroomingStylistId={setGroomingStylistId}
+                      groomingAdditionalStylistIds={
+                        groomingAdditionalStylistIds
+                      }
+                      setGroomingAdditionalStylistIds={
+                        setGroomingAdditionalStylistIds
+                      }
+                      groomingStationId={groomingStationId}
+                      setGroomingStationId={setGroomingStationId}
+                      groomingStages={groomingStages}
+                      setGroomingStages={setGroomingStages}
+                      groomingManualPrice={groomingManualPrice}
+                      setGroomingManualPrice={setGroomingManualPrice}
+                      groomingManualDuration={groomingManualDuration}
+                      setGroomingManualDuration={setGroomingManualDuration}
+                      groomingSavePriceToPet={groomingSavePriceToPet}
+                      setGroomingSavePriceToPet={setGroomingSavePriceToPet}
+                      groomingSelectedAddOnIds={groomingSelectedAddOnIds}
+                      setGroomingSelectedAddOnIds={setGroomingSelectedAddOnIds}
+                      groomingAutoAttachedAddOnIds={
+                        groomingAutoAttachedAddOnIds
+                      }
+                      setGroomingAutoAttachedAddOnIds={
+                        setGroomingAutoAttachedAddOnIds
+                      }
                     />
                   )}
 
-                {/* Customer-facing deposit panel: pay-now + card picker */}
-                {isCustomerMode &&
-                  !showingTipStep &&
-                  displayedSteps[currentStep]?.id === "confirm" &&
-                  !bookingRequested &&
-                  applicableDepositRule &&
-                  selectedClientId !== null &&
-                  selectedClientId > 0 &&
-                  (() => {
-                    const required = computeDepositAmount(
-                      applicableDepositRule,
-                      calculatePrice.total,
-                    );
-                    if (required <= 0) return null;
-                    return (
-                      <div className="mx-1 mb-4">
-                        <CustomerDepositPanel
-                          rule={applicableDepositRule}
-                          depositAmount={required}
-                          bookingTotal={calculatePrice.total}
-                          clientId={selectedClientId}
-                          selectedPaymentMethodId={customerPaymentMethodId}
-                          onSelectPaymentMethod={setCustomerPaymentMethodId}
+                  {/* Include Evaluation toggle — facility side only, confirm step, non-evaluation services */}
+                  {!isCustomerMode &&
+                    !showingTipStep &&
+                    displayedSteps[currentStep]?.id === "confirm" &&
+                    selectedService !== "evaluation" &&
+                    !(isEstimateMode && estimateCreated) && (
+                      <div className="mx-1 mb-4 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex size-8 items-center justify-center rounded-lg bg-amber-100">
+                            <ClipboardCheck className="size-4 text-amber-700" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-amber-900">
+                              Include Evaluation
+                            </p>
+                            <p className="text-[11px] text-amber-700">
+                              Schedule a pet evaluation on the first day of this
+                              booking
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={includesEvaluation}
+                          onCheckedChange={setIncludesEvaluation}
                         />
                       </div>
-                    );
-                  })()}
+                    )}
 
-                {/* Customer booking request confirmation state */}
-                {isCustomerMode && bookingRequested && (
-                  <div className="flex flex-col items-center px-6 py-12 text-center">
-                    <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100">
-                      <Check className="size-7 text-emerald-600" />
-                    </div>
-                    <h3 className="mt-4 text-lg font-bold text-slate-800">
-                      Booking Request Received!
-                    </h3>
-                    <p className="text-muted-foreground mt-3 max-w-sm text-sm leading-relaxed">
-                      {bookingRequestMessage ||
-                        bookingFlow.bookingRequestConfirmationMessage ||
-                        "Thank you! We've received your booking request and will verify all the details. You'll receive a confirmation email shortly once everything is reviewed and approved."}
-                    </p>
-                    <Button
-                      className="mt-6"
-                      onClick={() => {
-                        resetForm();
-                        onOpenChange(false);
-                      }}
-                    >
-                      Done
-                    </Button>
-                  </div>
-                )}
+                  {/* Staff-facing deposit prompt */}
+                  {!isCustomerMode &&
+                    !showingTipStep &&
+                    displayedSteps[currentStep]?.id === "confirm" &&
+                    !(isEstimateMode && estimateCreated) &&
+                    applicableDepositRule && (
+                      <BookingDepositPrompt
+                        rule={applicableDepositRule}
+                        bookingTotal={calculatePrice.total}
+                        value={depositPrompt}
+                        onChange={setDepositPrompt}
+                      />
+                    )}
 
-                {/* Estimate success state */}
-                {!showingTipStep && displayedSteps[currentStep]?.id === "confirm" &&
-                  isEstimateMode &&
-                  estimateCreated && (
+                  {/* Customer-facing deposit panel: pay-now + card picker */}
+                  {isCustomerMode &&
+                    !showingTipStep &&
+                    displayedSteps[currentStep]?.id === "confirm" &&
+                    !bookingRequested &&
+                    applicableDepositRule &&
+                    selectedClientId !== null &&
+                    selectedClientId > 0 &&
+                    (() => {
+                      const required = computeDepositAmount(
+                        applicableDepositRule,
+                        calculatePrice.total,
+                      );
+                      if (required <= 0) return null;
+                      return (
+                        <div className="mx-1 mb-4">
+                          <CustomerDepositPanel
+                            rule={applicableDepositRule}
+                            depositAmount={required}
+                            bookingTotal={calculatePrice.total}
+                            clientId={selectedClientId}
+                            selectedPaymentMethodId={customerPaymentMethodId}
+                            onSelectPaymentMethod={setCustomerPaymentMethodId}
+                          />
+                        </div>
+                      );
+                    })()}
+
+                  {/* Customer booking request confirmation state */}
+                  {isCustomerMode && bookingRequested && (
                     <div className="flex flex-col items-center px-6 py-12 text-center">
-                      {estimateSent ? (
-                        <>
-                          <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100">
-                            <Check className="size-7 text-emerald-600" />
-                          </div>
-                          <h3 className="mt-4 text-lg font-bold text-slate-800">
-                            Estimate Sent!
-                          </h3>
-                          {generatedEstimateId && (
-                            <Badge
-                              variant="outline"
-                              className="mt-2 font-mono text-xs tracking-wider"
-                            >
-                              {generatedEstimateId}
-                            </Badge>
-                          )}
-                          <p className="text-muted-foreground mt-1 max-w-sm text-sm">
-                            The estimate has been sent to{" "}
-                            <span className="font-medium text-slate-700">
-                              {isGuestEstimate
-                                ? guestEmail ||
-                                  guestName ||
-                                  "the inquiry contact"
-                                : selectedClient?.name}
-                            </span>
-                            .
-                          </p>
-                          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3">
-                            <p className="text-xl font-bold text-emerald-800 tabular-nums">
-                              ${calculatePrice.total.toFixed(2)}
+                      <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100">
+                        <Check className="size-7 text-emerald-600" />
+                      </div>
+                      <h3 className="mt-4 text-lg font-bold text-slate-800">
+                        Booking Request Received!
+                      </h3>
+                      <p className="text-muted-foreground mt-3 max-w-sm text-sm leading-relaxed">
+                        {bookingRequestMessage ||
+                          bookingFlow.bookingRequestConfirmationMessage ||
+                          "Thank you! We've received your booking request and will verify all the details. You'll receive a confirmation email shortly once everything is reviewed and approved."}
+                      </p>
+                      <Button
+                        className="mt-6"
+                        onClick={() => {
+                          resetForm();
+                          onOpenChange(false);
+                        }}
+                      >
+                        Done
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Estimate success state */}
+                  {!showingTipStep &&
+                    displayedSteps[currentStep]?.id === "confirm" &&
+                    isEstimateMode &&
+                    estimateCreated && (
+                      <div className="flex flex-col items-center px-6 py-12 text-center">
+                        {estimateSent ? (
+                          <>
+                            <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100">
+                              <Check className="size-7 text-emerald-600" />
+                            </div>
+                            <h3 className="mt-4 text-lg font-bold text-slate-800">
+                              Estimate Sent!
+                            </h3>
+                            {generatedEstimateId && (
+                              <Badge
+                                variant="outline"
+                                className="mt-2 font-mono text-xs tracking-wider"
+                              >
+                                {generatedEstimateId}
+                              </Badge>
+                            )}
+                            <p className="text-muted-foreground mt-1 max-w-sm text-sm">
+                              The estimate has been sent to{" "}
+                              <span className="font-medium text-slate-700">
+                                {isGuestEstimate
+                                  ? guestEmail ||
+                                    guestName ||
+                                    "the inquiry contact"
+                                  : selectedClient?.name}
+                              </span>
+                              .
                             </p>
-                            <p className="text-xs text-emerald-600">
-                              Estimated total
-                            </p>
-                          </div>
-                          <Button
-                            className="mt-6"
-                            onClick={() => {
-                              resetForm();
-                              onOpenChange(false);
-                            }}
-                          >
-                            Done
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex size-16 items-center justify-center rounded-full bg-blue-100">
-                            <Check className="size-7 text-blue-600" />
-                          </div>
-                          <h3 className="mt-4 text-lg font-bold text-slate-800">
-                            Estimate Created
-                          </h3>
-                          {generatedEstimateId && (
-                            <Badge
-                              variant="outline"
-                              className="mt-2 font-mono text-xs tracking-wider"
-                            >
-                              {generatedEstimateId}
-                            </Badge>
-                          )}
-                          <p className="text-muted-foreground mt-1 max-w-sm text-sm">
-                            Estimate for{" "}
-                            <span className="font-medium text-slate-700">
-                              {isGuestEstimate
-                                ? guestName || guestEmail || "New Inquiry"
-                                : selectedClient?.name}
-                            </span>{" "}
-                            —{" "}
-                            {isGuestEstimate
-                              ? guestPetSummary.length > 0
-                                ? guestPetSummary.join(", ")
-                                : "No pets added"
-                              : selectedPets.map((p) => p.name).join(", ")}
-                          </p>
-                          <div className="mt-4 rounded-xl border bg-slate-50 px-5 py-3">
-                            <p className="text-xl font-bold tabular-nums">
-                              ${calculatePrice.total.toFixed(2)}
-                            </p>
-                            <p className="text-muted-foreground text-xs">
-                              {selectedService} · {serviceType || "Standard"}
-                            </p>
-                          </div>
-                          <div className="mt-6 flex gap-3">
+                            <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3">
+                              <p className="text-xl font-bold text-emerald-800 tabular-nums">
+                                ${calculatePrice.total.toFixed(2)}
+                              </p>
+                              <p className="text-xs text-emerald-600">
+                                Estimated total
+                              </p>
+                            </div>
                             <Button
-                              variant="outline"
+                              className="mt-6"
                               onClick={() => {
                                 resetForm();
                                 onOpenChange(false);
                               }}
                             >
-                              Save as Draft
+                              Done
                             </Button>
-                            <Button
-                              className="gap-1.5"
-                              onClick={handleSendEstimate}
-                            >
-                              <svg
-                                className="size-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2}
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex size-16 items-center justify-center rounded-full bg-blue-100">
+                              <Check className="size-7 text-blue-600" />
+                            </div>
+                            <h3 className="mt-4 text-lg font-bold text-slate-800">
+                              Estimate Created
+                            </h3>
+                            {generatedEstimateId && (
+                              <Badge
+                                variant="outline"
+                                className="mt-2 font-mono text-xs tracking-wider"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"
-                                />
-                              </svg>
-                              Send to Customer
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
+                                {generatedEstimateId}
+                              </Badge>
+                            )}
+                            <p className="text-muted-foreground mt-1 max-w-sm text-sm">
+                              Estimate for{" "}
+                              <span className="font-medium text-slate-700">
+                                {isGuestEstimate
+                                  ? guestName || guestEmail || "New Inquiry"
+                                  : selectedClient?.name}
+                              </span>{" "}
+                              —{" "}
+                              {isGuestEstimate
+                                ? guestPetSummary.length > 0
+                                  ? guestPetSummary.join(", ")
+                                  : "No pets added"
+                                : selectedPets.map((p) => p.name).join(", ")}
+                            </p>
+                            <div className="mt-4 rounded-xl border bg-slate-50 px-5 py-3">
+                              <p className="text-xl font-bold tabular-nums">
+                                ${calculatePrice.total.toFixed(2)}
+                              </p>
+                              <p className="text-muted-foreground text-xs">
+                                {selectedService} · {serviceType || "Standard"}
+                              </p>
+                            </div>
+                            <div className="mt-6 flex gap-3">
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  resetForm();
+                                  onOpenChange(false);
+                                }}
+                              >
+                                Save as Draft
+                              </Button>
+                              <Button
+                                className="gap-1.5"
+                                onClick={handleSendEstimate}
+                              >
+                                <svg
+                                  className="size-4"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={2}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"
+                                  />
+                                </svg>
+                                Send to Customer
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
 
-                {!showingTipStep &&
-                  displayedSteps[currentStep]?.id === "confirm" &&
-                  !(isEstimateMode && estimateCreated) &&
-                  !(isCustomerMode && bookingRequested) &&
-                  selectedService === "training" && (
-                    <TrainingEnrollmentCartPanel
-                      cartItems={trainingCart}
-                      currentItems={currentTrainingLineItems}
-                      onRemoveCartItem={(index) =>
-                        setTrainingCart((prev) =>
-                          prev.filter((_, i) => i !== index),
-                        )
-                      }
-                      onEnrollAnotherDog={handleEnrollAnotherDog}
-                      canEnrollAnother={currentTrainingLineItems.length > 0}
-                    />
-                  )}
+                  {!showingTipStep &&
+                    displayedSteps[currentStep]?.id === "confirm" &&
+                    !(isEstimateMode && estimateCreated) &&
+                    !(isCustomerMode && bookingRequested) &&
+                    selectedService === "training" && (
+                      <TrainingEnrollmentCartPanel
+                        cartItems={trainingCart}
+                        currentItems={currentTrainingLineItems}
+                        onRemoveCartItem={(index) =>
+                          setTrainingCart((prev) =>
+                            prev.filter((_, i) => i !== index),
+                          )
+                        }
+                        onEnrollAnotherDog={handleEnrollAnotherDog}
+                        canEnrollAnother={currentTrainingLineItems.length > 0}
+                      />
+                    )}
 
-                {!showingTipStep && displayedSteps[currentStep]?.id === "confirm" &&
-                  !(isEstimateMode && estimateCreated) &&
-                  !(isCustomerMode && bookingRequested) && (
-                    <ConfirmStep
-                      selectedClient={selectedClient}
-                      selectedPets={selectedPets}
-                      selectedService={selectedService}
-                      serviceType={serviceType}
-                      startDate={startDate}
-                      endDate={endDate}
-                      checkInTime={checkInTime}
-                      checkOutTime={checkOutTime}
-                      daycareSelectedDates={daycareSelectedDates}
-                      boardingRangeStart={boardingRangeStart}
-                      boardingRangeEnd={boardingRangeEnd}
-                      boardingDateTimes={boardingDateTimes}
-                      roomAssignments={roomAssignments}
-                      feedingSchedule={feedingSchedule}
-                      medications={medications}
-                      extraServices={calculatePrice.effectiveExtraServices}
-                      addOnsCatalog={storedAddOns}
-                      calculatePrice={calculatePrice}
-                      facilityTaxes={
-                        facilityTaxConfig?.taxes
+                  {!showingTipStep &&
+                    displayedSteps[currentStep]?.id === "confirm" &&
+                    !(isEstimateMode && estimateCreated) &&
+                    !(isCustomerMode && bookingRequested) && (
+                      <ConfirmStep
+                        selectedClient={selectedClient}
+                        selectedPets={selectedPets}
+                        selectedService={selectedService}
+                        serviceType={serviceType}
+                        startDate={startDate}
+                        endDate={endDate}
+                        checkInTime={checkInTime}
+                        checkOutTime={checkOutTime}
+                        daycareSelectedDates={daycareSelectedDates}
+                        boardingRangeStart={boardingRangeStart}
+                        boardingRangeEnd={boardingRangeEnd}
+                        boardingDateTimes={boardingDateTimes}
+                        roomAssignments={roomAssignments}
+                        feedingSchedule={feedingSchedule}
+                        medications={medications}
+                        extraServices={calculatePrice.effectiveExtraServices}
+                        addOnsCatalog={storedAddOns}
+                        calculatePrice={calculatePrice}
+                        facilityTaxes={facilityTaxConfig?.taxes
                           .filter(
                             (t) =>
                               t.enabled &&
                               (t.appliesTo === "all" ||
                                 t.appliesTo === "services_only"),
                           )
-                          .map((t) => ({ name: t.name, rate: t.rate }))
-                      }
-                      notificationEmail={notificationEmail}
-                      setNotificationEmail={setNotificationEmail}
-                      notificationSMS={notificationSMS}
-                      setNotificationSMS={setNotificationSMS}
-                      expressCheckInEnabled={expressCheckInEnabled}
-                      setExpressCheckInEnabled={setExpressCheckInEnabled}
-                      redeemedPackageId={redeemedPackageId}
-                      setRedeemedPackageId={setRedeemedPackageId}
-                      selectedStaffId={selectedStaffId}
-                      setSelectedStaffId={setSelectedStaffId}
-                      isMobileGrooming={groomingIsMobile}
-                      onWaiverSigned={(waiverId) =>
-                        setSessionSignedWaiverIds((prev) => {
-                          const next = new Set(prev);
-                          next.add(waiverId);
-                          return next;
-                        })
-                      }
-                      tipConfig={tipConfig}
-                      tipAmount={tipAmount}
-                      onTipChange={setTipAmount}
-                      onEditStep={(stepIdx, subStep) => {
-                        setCurrentStep(stepIdx);
-                        setCurrentSubStep(subStep ?? 0);
-                      }}
-                    />
-                  )}
-              </div>
-            </ScrollArea>
+                          .map((t) => ({ name: t.name, rate: t.rate }))}
+                        notificationEmail={notificationEmail}
+                        setNotificationEmail={setNotificationEmail}
+                        notificationSMS={notificationSMS}
+                        setNotificationSMS={setNotificationSMS}
+                        expressCheckInEnabled={expressCheckInEnabled}
+                        setExpressCheckInEnabled={setExpressCheckInEnabled}
+                        redeemedPackageId={redeemedPackageId}
+                        setRedeemedPackageId={setRedeemedPackageId}
+                        selectedStaffId={selectedStaffId}
+                        setSelectedStaffId={setSelectedStaffId}
+                        isMobileGrooming={groomingIsMobile}
+                        onWaiverSigned={(waiverId) =>
+                          setSessionSignedWaiverIds((prev) => {
+                            const next = new Set(prev);
+                            next.add(waiverId);
+                            return next;
+                          })
+                        }
+                        tipConfig={tipConfig}
+                        tipAmount={tipAmount}
+                        onTipChange={setTipAmount}
+                        onEditStep={(stepIdx, subStep) => {
+                          setCurrentStep(stepIdx);
+                          setCurrentSubStep(subStep ?? 0);
+                        }}
+                      />
+                    )}
+                </div>
+              </ScrollArea>
             )}
 
             {/* Navigation Buttons */}
-            {!(isEstimateMode && estimateCreated) && !(isCustomerMode && bookingRequested) && (
-              <div className="bg-background flex justify-between border-t p-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handlePrevious}
-                  disabled={currentStep === 0}
-                >
-                  Previous
-                </Button>
-                <div className="flex gap-2">
+            {!(isEstimateMode && estimateCreated) &&
+              !(isCustomerMode && bookingRequested) && (
+                <div className="bg-background flex justify-between border-t p-4">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => {
-                      // If user has made progress, confirm before discarding
-                      if (currentStep > 0 || selectedService) {
-                        setShowCancelConfirm(true);
-                      } else {
-                        onOpenChange(false);
-                      }
-                    }}
+                    onClick={handlePrevious}
+                    disabled={currentStep === 0}
                   >
-                    Cancel
+                    Previous
                   </Button>
-                  {currentStep < displayedSteps.length - 1 || showingTipStep || showingPackagePromptStep ? (
+                  <div className="flex gap-2">
                     <Button
                       type="button"
-                      onClick={handleNext}
-                      disabled={!canProceed}
-                      className={
-                        selectedService && canProceed
-                          ? `${accent.btnBg} text-white`
-                          : ""
-                      }
+                      variant="outline"
+                      onClick={() => {
+                        // If user has made progress, confirm before discarding
+                        if (currentStep > 0 || selectedService) {
+                          setShowCancelConfirm(true);
+                        } else {
+                          onOpenChange(false);
+                        }
+                      }}
                     >
-                      {showingPackagePromptStep
-                        ? "Skip"
-                        : showingTipStep
-                          ? "Continue to Review"
-                          : "Next"}
+                      Cancel
                     </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      onClick={handleComplete}
-                      disabled={!canProceed}
-                      className={
-                        selectedService && canProceed
-                          ? `${accent.btnBg} text-white`
-                          : ""
-                      }
-                    >
-                      {editMode
-                        ? "Save Changes"
-                        : isEstimateMode
-                          ? "Create Estimate"
-                          : isCustomerMode
-                            ? "Request Booking"
-                            : approvalRequired
-                              ? "Submit Request"
-                              : "Create Booking"}
-                    </Button>
-                  )}
+                    {currentStep < displayedSteps.length - 1 ||
+                    showingTipStep ||
+                    showingPackagePromptStep ? (
+                      <Button
+                        type="button"
+                        onClick={handleNext}
+                        disabled={!canProceed}
+                        className={
+                          selectedService && canProceed
+                            ? `${accent.btnBg} text-white`
+                            : ""
+                        }
+                      >
+                        {showingPackagePromptStep
+                          ? "Skip"
+                          : showingTipStep
+                            ? "Continue to Review"
+                            : "Next"}
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        onClick={handleComplete}
+                        disabled={!canProceed}
+                        className={
+                          selectedService && canProceed
+                            ? `${accent.btnBg} text-white`
+                            : ""
+                        }
+                      >
+                        {editMode
+                          ? "Save Changes"
+                          : isEstimateMode
+                            ? "Create Estimate"
+                            : isCustomerMode
+                              ? "Request Booking"
+                              : approvalRequired
+                                ? "Submit Request"
+                                : "Create Booking"}
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
         </div>
       </DialogContent>
@@ -4117,7 +4162,9 @@ export function BookingModal({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {editMode ? "Discard changes?" : `Discard this ${isEstimateMode ? "estimate" : "booking"}?`}
+              {editMode
+                ? "Discard changes?"
+                : `Discard this ${isEstimateMode ? "estimate" : "booking"}?`}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {editMode
@@ -4134,7 +4181,9 @@ export function BookingModal({
                 onOpenChange(false);
               }}
             >
-              {editMode ? "Discard changes" : `Discard ${isEstimateMode ? "estimate" : "booking"}`}
+              {editMode
+                ? "Discard changes"
+                : `Discard ${isEstimateMode ? "estimate" : "booking"}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

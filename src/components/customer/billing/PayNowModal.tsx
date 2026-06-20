@@ -55,13 +55,8 @@ export function PayNowModal({
           ? savedCards.find((c) => c.id === selectedCardId)
           : null;
       const last4 =
-        mode === "saved"
-          ? card?.cardLast4
-          : newCardNumber.slice(-4) || "0000";
-      const brand =
-        mode === "saved"
-          ? card?.cardBrand?.toUpperCase()
-          : "CARD";
+        mode === "saved" ? card?.cardLast4 : newCardNumber.slice(-4) || "0000";
+      const brand = mode === "saved" ? card?.cardBrand?.toUpperCase() : "CARD";
       toast.success(
         `Payment of $${amountDue.toFixed(2)} processed for ${invoiceNumber}`,
         {
@@ -98,9 +93,9 @@ export function PayNowModal({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <div className="rounded-lg border bg-muted/30 px-4 py-3 flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Amount due</span>
-            <span className="text-lg font-semibold font-[tabular-nums]">
+          <div className="bg-muted/30 flex items-center justify-between rounded-lg border px-4 py-3">
+            <span className="text-muted-foreground text-sm">Amount due</span>
+            <span className="font-[tabular-nums] text-lg font-semibold">
               ${amountDue.toFixed(2)}
             </span>
           </div>
@@ -204,7 +199,9 @@ export function PayNowModal({
                     className="mt-1 font-mono"
                     value={newCardExpiry}
                     onChange={(e) => {
-                      const cleaned = e.target.value.replace(/[^\d]/g, "").slice(0, 4);
+                      const cleaned = e.target.value
+                        .replace(/[^\d]/g, "")
+                        .slice(0, 4);
                       const formatted =
                         cleaned.length > 2
                           ? `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`
@@ -230,7 +227,7 @@ export function PayNowModal({
                   />
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+              <label className="text-muted-foreground flex cursor-pointer items-center gap-2 text-xs">
                 <input
                   type="checkbox"
                   checked={saveCard}

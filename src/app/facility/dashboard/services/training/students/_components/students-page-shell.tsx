@@ -9,7 +9,10 @@ import { HomeworkBoard } from "./homework-board";
 
 type View = "students" | "homework";
 
-const VIEW_META: Record<View, { label: string; description: string; icon: typeof GraduationCap }> = {
+const VIEW_META: Record<
+  View,
+  { label: string; description: string; icon: typeof GraduationCap }
+> = {
   students: {
     label: "Students",
     description:

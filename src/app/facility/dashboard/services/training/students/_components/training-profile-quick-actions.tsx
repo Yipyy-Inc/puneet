@@ -74,10 +74,7 @@ export function TrainingProfileQuickActions({
   const [noteOpen, setNoteOpen] = useState(false);
   const [messageOpen, setMessageOpen] = useState(false);
   const [homeworkOpen, setHomeworkOpen] = useState(false);
-  const todayISO = useMemo(
-    () => new Date().toISOString().split("T")[0]!,
-    [],
-  );
+  const todayISO = useMemo(() => new Date().toISOString().split("T")[0]!, []);
 
   // Customer-facing booking flow is shared across services; deep-link with
   // the program pre-selected if/when the trainer comes in via the catalog.
@@ -243,8 +240,8 @@ function AddNoteDialog({
             Add note for {petName}
           </DialogTitle>
           <DialogDescription>
-            Logged against this pet&apos;s training notes. Toggle Pin to put
-            it at the top of the Overview tab.
+            Logged against this pet&apos;s training notes. Toggle Pin to put it
+            at the top of the Overview tab.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
@@ -377,8 +374,8 @@ function SendMessageDialog({
             Message {ownerName}
           </DialogTitle>
           <DialogDescription>
-            Sends through the configured channel. The customer portal logs
-            the conversation against this pet.
+            Sends through the configured channel. The customer portal logs the
+            conversation against this pet.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
@@ -464,4 +461,3 @@ function SendMessageDialog({
     </Dialog>
   );
 }
-

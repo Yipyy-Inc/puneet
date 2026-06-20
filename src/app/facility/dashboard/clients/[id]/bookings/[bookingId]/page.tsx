@@ -57,10 +57,7 @@ import { TipSplitModal } from "@/components/bookings/TipSplitModal";
 import { DepositChargeModal } from "@/components/bookings/DepositChargeModal";
 import { PrepaymentModal } from "@/components/bookings/PrepaymentModal";
 import { CareCompletionGateDialog } from "@/components/bookings/CareCompletionWarning";
-import {
-  getPendingCareItems,
-  careSectionDomIds,
-} from "@/lib/care-completion";
+import { getPendingCareItems, careSectionDomIds } from "@/lib/care-completion";
 import { buildInvoiceDocumentHtml } from "@/lib/invoice-document";
 import { loadInvoiceTemplate } from "@/data/invoice-template";
 import {
@@ -794,7 +791,8 @@ export default function ClientBookingDetailPage({
                   year: "numeric",
                 });
               const dateRange =
-                booking.startDate && booking.endDate &&
+                booking.startDate &&
+                booking.endDate &&
                 booking.startDate !== booking.endDate
                   ? `${formatDate(booking.startDate)} – ${formatDate(booking.endDate)}`
                   : booking.startDate
@@ -814,15 +812,14 @@ export default function ClientBookingDetailPage({
                 clientPhone: client.phone,
                 petName: pet?.name,
                 serviceLabel: booking.service,
-                items:
-                  inv?.items ?? [
-                    {
-                      name: booking.service,
-                      unitPrice: booking.basePrice,
-                      quantity: 1,
-                      price: booking.totalCost,
-                    },
-                  ],
+                items: inv?.items ?? [
+                  {
+                    name: booking.service,
+                    unitPrice: booking.basePrice,
+                    quantity: 1,
+                    price: booking.totalCost,
+                  },
+                ],
                 fees: inv?.fees,
                 subtotal: inv?.subtotal ?? booking.totalCost,
                 discount: inv?.discount,
@@ -964,14 +961,14 @@ export default function ClientBookingDetailPage({
                     {pets.map((p) => (
                       <div
                         key={p.id}
-                        className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-3 transition-all hover:border-border hover:shadow-sm"
+                        className="border-border/70 bg-card hover:border-border flex items-center gap-3 rounded-2xl border p-3 transition-all hover:shadow-sm"
                       >
                         <Link
                           href={`/facility/dashboard/clients/${clientId}/pets/${p.id}`}
                           className="relative block size-12 shrink-0"
                         >
                           {p.imageUrl ? (
-                            <div className="size-12 overflow-hidden rounded-2xl ring-2 ring-background">
+                            <div className="ring-background size-12 overflow-hidden rounded-2xl ring-2">
                               <img
                                 src={p.imageUrl}
                                 alt={p.name}
@@ -979,7 +976,7 @@ export default function ClientBookingDetailPage({
                               />
                             </div>
                           ) : (
-                            <div className="bg-primary/10 text-primary flex size-12 items-center justify-center rounded-2xl font-bold ring-2 ring-background">
+                            <div className="bg-primary/10 text-primary ring-background flex size-12 items-center justify-center rounded-2xl font-bold ring-2">
                               {p.name.charAt(0)}
                             </div>
                           )}
@@ -989,7 +986,7 @@ export default function ClientBookingDetailPage({
                           <div className="flex flex-wrap items-center gap-1.5">
                             <Link
                               href={`/facility/dashboard/clients/${clientId}/pets/${p.id}`}
-                              className="text-sm font-semibold leading-none hover:underline"
+                              className="text-sm leading-none font-semibold hover:underline"
                             >
                               {p.name}
                             </Link>
@@ -1399,9 +1396,9 @@ export default function ClientBookingDetailPage({
           preSelectedDaycareSectionId={booking.sectionId ?? undefined}
           preSelectedDaycareDates={booking.daycareSelectedDates}
           preSelectedExtraServices={
-            (booking.extraServices?.filter(
+            booking.extraServices?.filter(
               (s): s is ExtraService => typeof s !== "string",
-            ) ?? [])
+            ) ?? []
           }
           preSelectedFeedingSchedule={booking.feedingSchedule}
           preSelectedMedications={booking.medications}

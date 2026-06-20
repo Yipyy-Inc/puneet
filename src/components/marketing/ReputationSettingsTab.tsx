@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,9 +64,9 @@ function Section({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Icon className="h-4 w-4 text-primary" />
+        <CardTitle className="flex items-center gap-2 text-base">
+          <div className="bg-primary/10 flex h-7 w-7 items-center justify-center rounded-lg">
+            <Icon className="text-primary h-4 w-4" />
           </div>
           {title}
         </CardTitle>
@@ -85,14 +91,23 @@ function Toggle({
   description?: string;
 }) {
   return (
-    <label className="flex items-start gap-3 cursor-pointer group">
-      <div className="relative mt-0.5 shrink-0" onClick={() => onChange(!checked)}>
-        <div className={`h-5 w-9 rounded-full transition-colors ${checked ? "bg-primary" : "bg-muted"}`} />
-        <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : "translate-x-0.5"}`} />
+    <label className="group flex cursor-pointer items-start gap-3">
+      <div
+        className="relative mt-0.5 shrink-0"
+        onClick={() => onChange(!checked)}
+      >
+        <div
+          className={`h-5 w-9 rounded-full transition-colors ${checked ? "bg-primary" : "bg-muted"}`}
+        />
+        <div
+          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : "translate-x-0.5"}`}
+        />
       </div>
       <div>
-        <p className="text-sm font-medium leading-none">{label}</p>
-        {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+        <p className="text-sm leading-none font-medium">{label}</p>
+        {description && (
+          <p className="text-muted-foreground mt-1 text-xs">{description}</p>
+        )}
       </div>
     </label>
   );
@@ -108,13 +123,17 @@ function TriggerRow({
   onChange: (enabled: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between py-2.5 border-b last:border-0">
+    <div className="flex items-center justify-between border-b py-2.5 last:border-0">
       <div className="flex items-center gap-3">
-        <div className={`h-2 w-2 rounded-full ${trigger.enabled ? "bg-emerald-500" : "bg-muted-foreground/30"}`} />
+        <div
+          className={`h-2 w-2 rounded-full ${trigger.enabled ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
+        />
         <div>
           <p className="text-sm font-medium">{trigger.label}</p>
           {trigger.serviceType === "custom" && (
-            <Badge variant="secondary" className="text-xs mt-0.5 h-4">Custom Service</Badge>
+            <Badge variant="secondary" className="mt-0.5 h-4 text-xs">
+              Custom Service
+            </Badge>
           )}
         </div>
       </div>
@@ -131,7 +150,12 @@ const NOTIFY_OPTIONS: { value: ReputationNotifyOn; label: string }[] = [
 ];
 
 /** Parse a number input, falling back (and clamping) so a cleared field can't store NaN. */
-function safeInt(value: string, fallback: number, min: number, max: number): number {
+function safeInt(
+  value: string,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
   const n = parseInt(value, 10);
   if (Number.isNaN(n)) return fallback;
   return Math.min(max, Math.max(min, n));
@@ -146,7 +170,10 @@ export function ReputationSettingsTab() {
 
   const s: ReputationSettings = settings ?? initial;
 
-  function update<K extends keyof ReputationSettings>(key: K, value: ReputationSettings[K]) {
+  function update<K extends keyof ReputationSettings>(
+    key: K,
+    value: ReputationSettings[K],
+  ) {
     setSettings((prev) => ({ ...(prev ?? s), [key]: value }));
     setSaved(false);
   }
@@ -157,7 +184,10 @@ export function ReputationSettingsTab() {
   }
 
   function updateTrigger(event: string, enabled: boolean) {
-    update("triggers", s.triggers.map((t) => (t.event === event ? { ...t, enabled } : t)));
+    update(
+      "triggers",
+      s.triggers.map((t) => (t.event === event ? { ...t, enabled } : t)),
+    );
   }
 
   function save() {
@@ -168,50 +198,79 @@ export function ReputationSettingsTab() {
 
   return (
     <div className="space-y-5">
-
       {/* Automation pipeline — Step 1 trigger preview + test */}
       <AutomationPipelineCard settings={s} />
 
       {/* Master toggle */}
-      <Card className={`${s.enabled ? "border-emerald-300 dark:border-emerald-700 bg-emerald-50/30 dark:bg-emerald-950/10" : "border-dashed"}`}>
+      <Card
+        className={`${s.enabled ? "border-emerald-300 bg-emerald-50/30 dark:border-emerald-700 dark:bg-emerald-950/10" : "border-dashed"}`}
+      >
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${s.enabled ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
+              <div
+                className={`flex h-10 w-10 items-center justify-center rounded-xl ${s.enabled ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}
+              >
                 <Zap className="h-5 w-5" />
               </div>
               <div>
                 <p className="font-semibold">Reputation Booster</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {s.enabled ? "Active — review requests are being sent automatically" : "Inactive — no review requests are being sent"}
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  {s.enabled
+                    ? "Active — review requests are being sent automatically"
+                    : "Inactive — no review requests are being sent"}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Badge variant={s.enabled ? "default" : "secondary"} className={s.enabled ? "bg-emerald-100 text-emerald-700 border-0" : ""}>
+              <Badge
+                variant={s.enabled ? "default" : "secondary"}
+                className={
+                  s.enabled ? "border-0 bg-emerald-100 text-emerald-700" : ""
+                }
+              >
                 {s.enabled ? "Enabled" : "Disabled"}
               </Badge>
-              <Toggle checked={s.enabled} onChange={(v) => update("enabled", v)} label="" />
+              <Toggle
+                checked={s.enabled}
+                onChange={(v) => update("enabled", v)}
+                label=""
+              />
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Triggers */}
-      <Section title="Trigger Events" description="Choose which events automatically send a review request to the client." icon={Zap}>
+      <Section
+        title="Trigger Events"
+        description="Choose which events automatically send a review request to the client."
+        icon={Zap}
+      >
         <div>
           {s.triggers.map((t) => (
-            <TriggerRow key={t.event} trigger={t} onChange={(enabled) => updateTrigger(t.event, enabled)} />
+            <TriggerRow
+              key={t.event}
+              trigger={t}
+              onChange={(enabled) => updateTrigger(t.event, enabled)}
+            />
           ))}
         </div>
-        <div className="flex items-start gap-2 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900 p-3">
-          <Info className="h-4 w-4 shrink-0 mt-0.5 text-blue-600" />
-          <p className="text-xs text-blue-700 dark:text-blue-300">Custom services you create will appear automatically in this list once configured in the Services module.</p>
+        <div className="flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+          <p className="text-xs text-blue-700 dark:text-blue-300">
+            Custom services you create will appear automatically in this list
+            once configured in the Services module.
+          </p>
         </div>
       </Section>
 
       {/* Outreach sequence (multi-step) */}
-      <Section title="Send Sequence" description="Build a multi-step outreach: an initial send plus backup reminders that only fire if the client hasn't responded." icon={Clock}>
+      <Section
+        title="Send Sequence"
+        description="Build a multi-step outreach: an initial send plus backup reminders that only fire if the client hasn't responded."
+        icon={Clock}
+      >
         <div className="space-y-4">
           <ReputationSequenceBuilder
             steps={
@@ -231,7 +290,12 @@ export function ReputationSettingsTab() {
 
           <div className="space-y-1.5">
             <Label className="text-sm">Daily send limit per client</Label>
-            <Select value={String(s.dailySendLimitPerClient)} onValueChange={(v) => update("dailySendLimitPerClient", parseInt(v))}>
+            <Select
+              value={String(s.dailySendLimitPerClient)}
+              onValueChange={(v) =>
+                update("dailySendLimitPerClient", parseInt(v))
+              }
+            >
               <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>
@@ -241,13 +305,20 @@ export function ReputationSettingsTab() {
                 <SelectItem value="3">3 per day</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">If a client completes multiple services on the same day, only one review request is sent.</p>
+            <p className="text-muted-foreground text-xs">
+              If a client completes multiple services on the same day, only one
+              review request is sent.
+            </p>
           </div>
         </div>
       </Section>
 
       {/* Channels */}
-      <Section title="Delivery Channels" description="Choose how review requests are delivered to clients." icon={MessageSquare}>
+      <Section
+        title="Delivery Channels"
+        description="Choose how review requests are delivered to clients."
+        icon={MessageSquare}
+      >
         <div className="space-y-3">
           <Toggle
             checked={s.channels.sms}
@@ -272,7 +343,7 @@ export function ReputationSettingsTab() {
       >
         <div className="space-y-2">
           <Label className="text-sm">Interception threshold</Label>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Reviews at or above this score are treated as public-ready; below it
             they&apos;re intercepted for private follow-up.
           </p>
@@ -292,7 +363,7 @@ export function ReputationSettingsTab() {
               </button>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Currently: {s.happyThreshold}★ and up are public-ready;{" "}
             {s.happyThreshold - 1}★ and below stay private.
           </p>
@@ -309,9 +380,9 @@ export function ReputationSettingsTab() {
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
             <p className="text-xs text-amber-800 dark:text-amber-300">
               Heads up: selectively asking only happy clients for public reviews
-              (&ldquo;review gating&rdquo;) may violate the FTC Act and Google / Yelp
-              policies — they can remove your reviews. Most businesses should keep
-              this off.
+              (&ldquo;review gating&rdquo;) may violate the FTC Act and Google /
+              Yelp policies — they can remove your reviews. Most businesses
+              should keep this off.
             </p>
           </div>
         ) : (
@@ -336,31 +407,60 @@ export function ReputationSettingsTab() {
       </Section>
 
       {/* Protection rules */}
-      <Section title="Protection Rules" description="Block review requests when certain conditions are present — prevents tone-deaf outreach." icon={Shield}>
+      <Section
+        title="Protection Rules"
+        description="Block review requests when certain conditions are present — prevents tone-deaf outreach."
+        icon={Shield}
+      >
         <div className="space-y-3">
           <Toggle
             checked={s.protectionRules.blockOnCancelled}
-            onChange={(v) => update("protectionRules", { ...s.protectionRules, blockOnCancelled: v })}
+            onChange={(v) =>
+              update("protectionRules", {
+                ...s.protectionRules,
+                blockOnCancelled: v,
+              })
+            }
             label="Block on cancelled bookings"
           />
           <Toggle
             checked={s.protectionRules.blockOnRefundInProgress}
-            onChange={(v) => update("protectionRules", { ...s.protectionRules, blockOnRefundInProgress: v })}
+            onChange={(v) =>
+              update("protectionRules", {
+                ...s.protectionRules,
+                blockOnRefundInProgress: v,
+              })
+            }
             label="Block when refund is in progress"
           />
           <Toggle
             checked={s.protectionRules.blockOnCriticalIncident}
-            onChange={(v) => update("protectionRules", { ...s.protectionRules, blockOnCriticalIncident: v })}
+            onChange={(v) =>
+              update("protectionRules", {
+                ...s.protectionRules,
+                blockOnCriticalIncident: v,
+              })
+            }
             label="Block when booking has a critical incident"
           />
           <Toggle
             checked={s.protectionRules.blockOnOptOut}
-            onChange={(v) => update("protectionRules", { ...s.protectionRules, blockOnOptOut: v })}
+            onChange={(v) =>
+              update("protectionRules", {
+                ...s.protectionRules,
+                blockOnOptOut: v,
+              })
+            }
             label="Block for clients who opted out"
           />
           <Toggle
             checked={s.protectionRules.blockOnOpenDispute}
-            onChange={(v) => update("protectionRules", { ...s.protectionRules, blockOnOpenDispute: v })}
+            onChange={(v) =>
+              update("protectionRules", {
+                ...s.protectionRules,
+                blockOnOpenDispute: v,
+              })
+            }
             label="Block when client has an open dispute"
           />
 
@@ -372,10 +472,22 @@ export function ReputationSettingsTab() {
                 min={1}
                 max={365}
                 value={s.protectionRules.cooldownDays}
-                onChange={(e) => update("protectionRules", { ...s.protectionRules, cooldownDays: safeInt(e.target.value, s.protectionRules.cooldownDays, 1, 365) })}
+                onChange={(e) =>
+                  update("protectionRules", {
+                    ...s.protectionRules,
+                    cooldownDays: safeInt(
+                      e.target.value,
+                      s.protectionRules.cooldownDays,
+                      1,
+                      365,
+                    ),
+                  })
+                }
                 className="w-24"
               />
-              <span className="text-sm text-muted-foreground">days between requests to the same client</span>
+              <span className="text-muted-foreground text-sm">
+                days between requests to the same client
+              </span>
             </div>
           </div>
 
@@ -387,10 +499,17 @@ export function ReputationSettingsTab() {
                 min={1}
                 max={90}
                 value={s.negativePauseDays}
-                onChange={(e) => update("negativePauseDays", safeInt(e.target.value, s.negativePauseDays, 1, 90))}
+                onChange={(e) =>
+                  update(
+                    "negativePauseDays",
+                    safeInt(e.target.value, s.negativePauseDays, 1, 90),
+                  )
+                }
                 className="w-24"
               />
-              <span className="text-sm text-muted-foreground">pause all requests after a negative rating</span>
+              <span className="text-muted-foreground text-sm">
+                pause all requests after a negative rating
+              </span>
             </div>
           </div>
         </div>
@@ -409,25 +528,46 @@ export function ReputationSettingsTab() {
       </Section>
 
       {/* Reminders */}
-      <Section title="Smart Reminders" description="One gentle nudge for happy clients who rated but never clicked through to post publicly. (No-response reminders are configured in the Send Sequence above.)" icon={Bell}>
+      <Section
+        title="Smart Reminders"
+        description="One gentle nudge for happy clients who rated but never clicked through to post publicly. (No-response reminders are configured in the Send Sequence above.)"
+        icon={Bell}
+      >
         <div className="space-y-5">
-          <div className="rounded-xl border p-4 space-y-3">
+          <div className="space-y-3 rounded-xl border p-4">
             <p className="text-sm font-semibold">Happy-but-silent follow-up</p>
             <Toggle
               checked={s.reminders.happyNoClickReminderEnabled}
-              onChange={(v) => update("reminders", { ...s.reminders, happyNoClickReminderEnabled: v })}
+              onChange={(v) =>
+                update("reminders", {
+                  ...s.reminders,
+                  happyNoClickReminderEnabled: v,
+                })
+              }
               label="Remind happy clients who haven't clicked a review link"
               description="One gentle nudge — never more than once"
             />
             {s.reminders.happyNoClickReminderEnabled && (
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Send after (hours)</Label>
+                <Label className="text-muted-foreground text-xs">
+                  Send after (hours)
+                </Label>
                 <Input
                   type="number"
                   min={24}
                   max={120}
                   value={s.reminders.happyNoClickReminderHours}
-                  onChange={(e) => update("reminders", { ...s.reminders, happyNoClickReminderHours: safeInt(e.target.value, s.reminders.happyNoClickReminderHours, 24, 120) })}
+                  onChange={(e) =>
+                    update("reminders", {
+                      ...s.reminders,
+                      happyNoClickReminderHours: safeInt(
+                        e.target.value,
+                        s.reminders.happyNoClickReminderHours,
+                        24,
+                        120,
+                      ),
+                    })
+                  }
                   className="w-36"
                 />
               </div>
@@ -444,9 +584,12 @@ export function ReputationSettingsTab() {
       >
         <div className="space-y-3">
           {s.staffNotifications.map((sn, idx) => (
-            <div key={sn.staffId} className="flex items-center justify-between gap-3 rounded-xl border p-3">
+            <div
+              key={sn.staffId}
+              className="flex items-center justify-between gap-3 rounded-xl border p-3"
+            >
               <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center text-xs font-bold text-primary">
+                <div className="from-primary/20 to-primary/40 text-primary flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold">
                   {sn.staffName.charAt(0)}
                 </div>
                 <p className="text-sm font-medium">{sn.staffName}</p>
@@ -459,12 +602,18 @@ export function ReputationSettingsTab() {
                   update("staffNotifications", updated);
                 }}
               >
-                <SelectTrigger className="w-52 h-8 text-xs">
+                <SelectTrigger className="h-8 w-52 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {NOTIFY_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                    <SelectItem
+                      key={o.value}
+                      value={o.value}
+                      className="text-xs"
+                    >
+                      {o.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -476,10 +625,18 @@ export function ReputationSettingsTab() {
           <Label className="text-sm">Manager alert email(s)</Label>
           <Input
             value={s.managerAlertEmails.join(", ")}
-            onChange={(e) => update("managerAlertEmails", e.target.value.split(",").map((x) => x.trim()))}
+            onChange={(e) =>
+              update(
+                "managerAlertEmails",
+                e.target.value.split(",").map((x) => x.trim()),
+              )
+            }
             placeholder="manager@yourbusiness.com"
           />
-          <p className="text-xs text-muted-foreground">Immediate alerts are sent here for 1–2 star ratings. Separate multiple addresses with commas.</p>
+          <p className="text-muted-foreground text-xs">
+            Immediate alerts are sent here for 1–2 star ratings. Separate
+            multiple addresses with commas.
+          </p>
         </div>
       </Section>
 
@@ -500,7 +657,11 @@ export function ReputationSettingsTab() {
 
 // ─── Automation pipeline (Step 1) ─────────────────────────────────────────────
 
-function AutomationPipelineCard({ settings }: { settings: ReputationSettings }) {
+function AutomationPipelineCard({
+  settings,
+}: {
+  settings: ReputationSettings;
+}) {
   const { recordCheckout, runtimeRequests } = useReputation();
 
   const step = initialStep(settings);
@@ -557,8 +718,16 @@ function AutomationPipelineCard({ settings }: { settings: ReputationSettings }) 
   }
 
   const steps = [
-    { label: "Checkout", sub: "Pet marked checked out (T0)", icon: CheckCircle2 },
-    { label: "Delay (Δt)", sub: describeMinutes(step.delayMinutes), icon: Clock },
+    {
+      label: "Checkout",
+      sub: "Pet marked checked out (T0)",
+      icon: CheckCircle2,
+    },
+    {
+      label: "Delay (Δt)",
+      sub: describeMinutes(step.delayMinutes),
+      icon: Clock,
+    },
     {
       label: "Send",
       sub: channel ? `via ${channel.toUpperCase()}` : "no channel enabled",
@@ -569,8 +738,8 @@ function AutomationPipelineCard({ settings }: { settings: ReputationSettings }) 
   return (
     <Card className="border-amber-200 bg-amber-50/40 dark:border-amber-900/40 dark:bg-amber-950/10">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/40">
             <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
           </div>
           Automated Post-Service Trigger
@@ -584,12 +753,14 @@ function AutomationPipelineCard({ settings }: { settings: ReputationSettings }) 
         <div className="flex items-center gap-1.5">
           {steps.map((step, i) => (
             <div key={step.label} className="flex flex-1 items-center gap-1.5">
-              <div className="flex-1 rounded-xl border bg-background px-3 py-2.5">
+              <div className="bg-background flex-1 rounded-xl border px-3 py-2.5">
                 <div className="flex items-center gap-2">
-                  <step.icon className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <step.icon className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium leading-none">{step.label}</p>
-                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                    <p className="text-sm leading-none font-medium">
+                      {step.label}
+                    </p>
+                    <p className="text-muted-foreground mt-1 truncate text-xs">
                       {step.sub}
                     </p>
                   </div>
@@ -603,7 +774,7 @@ function AutomationPipelineCard({ settings }: { settings: ReputationSettings }) 
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {settings.enabled ? (
               <>
                 <span className="font-medium text-emerald-600">Live</span> —{" "}

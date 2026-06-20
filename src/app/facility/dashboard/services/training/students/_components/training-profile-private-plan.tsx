@@ -33,9 +33,7 @@ export function TrainingProfilePrivatePlan({ petId, petName }: Props) {
   const { data: allEnrollments = [] } = useQuery(
     trainingQueries.allSeriesEnrollments(),
   );
-  const { data: courseTypes = [] } = useQuery(
-    trainingQueries.allCourseTypes(),
-  );
+  const { data: courseTypes = [] } = useQuery(trainingQueries.allCourseTypes());
   const { data: plan = [] } = useQuery(
     trainingQueries.privateSessionPlanForPet(petId),
   );
@@ -81,7 +79,7 @@ export function TrainingProfilePrivatePlan({ petId, petName }: Props) {
   return (
     <Card className="overflow-hidden">
       <div className="flex items-start gap-3 border-b bg-violet-50/60 px-4 py-3 dark:bg-violet-950/20">
-        <div className="bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-200 flex size-9 shrink-0 items-center justify-center rounded-xl">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-200">
           <PawPrint className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
@@ -100,8 +98,8 @@ export function TrainingProfilePrivatePlan({ petId, petName }: Props) {
           <p className="text-muted-foreground mt-0.5 text-xs">
             {adaptiveEnrollment.courseTypeName} is adaptive — no fixed course
             plan. Build a session-by-session plan tailored to {petName}. This
-            private curriculum follows the dog (not the course) and pre-loads the
-            live session when {petName} is in a 1-on-1 session.
+            private curriculum follows the dog (not the course) and pre-loads
+            the live session when {petName} is in a 1-on-1 session.
           </p>
         </div>
       </div>

@@ -329,7 +329,8 @@ export const incidents: Incident[] = [
         id: "task-inc006-02",
         incidentId: "INC-006",
         title: "12-hour status update call",
-        description: "Update owner with any new info; confirm Buddy is settled.",
+        description:
+          "Update owner with any new info; confirm Buddy is settled.",
         assignedTo: "Emma Wilson",
         dueDate: "2026-04-29T00:20:00Z",
         status: "completed",

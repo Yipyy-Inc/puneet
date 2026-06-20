@@ -96,7 +96,7 @@ const COMMON_BREEDS = [
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+    <p className="text-muted-foreground mb-3 text-[11px] font-semibold tracking-wider uppercase">
       {children}
     </p>
   );
@@ -112,8 +112,8 @@ function PricePreview({
   const hasCoatAdj = Object.values(coatAdjustments).some((v) => v !== 0);
   if (!basePrice) return null;
   return (
-    <div className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-      <div className="flex items-center gap-1 mb-1">
+    <div className="bg-muted/40 text-muted-foreground rounded-lg px-3 py-2 text-xs">
+      <div className="mb-1 flex items-center gap-1">
         <Info className="size-3" />
         <span className="font-medium">Live Preview</span>
       </div>
@@ -218,14 +218,21 @@ function DefaultAddOnRuleRow({
 
   const summary = describeAddOnConditions(conditions);
   const PET_SIZE_OPTIONS = ["small", "medium", "large", "giant"];
-  const COAT_TYPE_OPTIONS = ["short", "medium", "long", "wire", "curly", "double"];
+  const COAT_TYPE_OPTIONS = [
+    "short",
+    "medium",
+    "long",
+    "wire",
+    "curly",
+    "double",
+  ];
   const isMultiSelect =
     draftKind === "pet-size-in" || draftKind === "coat-type-in";
   const multiOptions =
     draftKind === "pet-size-in" ? PET_SIZE_OPTIONS : COAT_TYPE_OPTIONS;
 
   return (
-    <div className="rounded-lg border bg-card px-3 py-2.5">
+    <div className="bg-card rounded-lg border px-3 py-2.5">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-xs font-semibold">
@@ -263,7 +270,7 @@ function DefaultAddOnRuleRow({
           {conditions.map((c, i) => (
             <li
               key={i}
-              className="flex items-center justify-between gap-2 rounded bg-muted/40 px-2 py-1 text-[10px]"
+              className="bg-muted/40 flex items-center justify-between gap-2 rounded px-2 py-1 text-[10px]"
             >
               <span>{describeAddOnConditions([c])}</span>
               <button
@@ -280,7 +287,7 @@ function DefaultAddOnRuleRow({
       )}
 
       {/* Add-condition row */}
-      <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md bg-muted/20 p-2">
+      <div className="bg-muted/20 mt-2 flex flex-wrap items-center gap-2 rounded-md p-2">
         <Select
           value={draftKind}
           onValueChange={(v) => {
@@ -331,9 +338,7 @@ function DefaultAddOnRuleRow({
             value={draftScalar}
             onChange={(e) => setDraftScalar(e.target.value)}
             placeholder={
-              draftKind === "breed-includes"
-                ? "e.g. Poodle"
-                : "e.g. 30"
+              draftKind === "breed-includes" ? "e.g. Poodle" : "e.g. 30"
             }
             className="h-7 w-28 text-[11px]"
           />
@@ -391,7 +396,7 @@ function AgeGroupRuleRow({
   }
 
   return (
-    <div className="rounded-lg border bg-card px-3 py-2.5">
+    <div className="bg-card rounded-lg border px-3 py-2.5">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <Input
@@ -417,7 +422,7 @@ function AgeGroupRuleRow({
       {/* Age range */}
       <div className="mt-2 grid grid-cols-2 gap-2">
         <div>
-          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <Label className="text-muted-foreground text-[10px] tracking-wide uppercase">
             Min months
           </Label>
           <Input
@@ -430,7 +435,7 @@ function AgeGroupRuleRow({
           />
         </div>
         <div>
-          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <Label className="text-muted-foreground text-[10px] tracking-wide uppercase">
             Max months
           </Label>
           <Input
@@ -470,7 +475,7 @@ function AgeGroupRuleRow({
             className="h-7 w-20 text-xs"
             step={rule.adjustment.mode === "percent" ? 1 : 0.5}
           />
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-muted-foreground text-[11px]">
             {rule.adjustment.mode === "percent" ? "%" : "$"}
           </span>
         </div>
@@ -542,7 +547,9 @@ export function ServiceDialog({
   const [coatEnabled, setCoatEnabled] = useState(false);
 
   // Groomer Tier Modifiers
-  const [tierAdjustments, setTierAdjustments] = useState<Record<string, number>>({
+  const [tierAdjustments, setTierAdjustments] = useState<
+    Record<string, number>
+  >({
     standard: 0,
     premium: 10,
     platinum: 25,
@@ -557,7 +564,8 @@ export function ServiceDialog({
   }
 
   const [coatExpanded, setCoatExpanded] = useState(false);
-  const [mattedSurchargeDefault, setMattedSurchargeDefault] = useState<number>(0);
+  const [mattedSurchargeDefault, setMattedSurchargeDefault] =
+    useState<number>(0);
   const [coatAdjustments, setCoatAdjustments] = useState<
     Record<string, number>
   >({
@@ -572,9 +580,9 @@ export function ServiceDialog({
   // Breed overrides
   const [breedEnabled, setBreedEnabled] = useState(false);
   const [breedExpanded, setBreedExpanded] = useState(false);
-  const [breedOverrides, setBreedOverrides] = useState<
-    Record<string, number>
-  >({});
+  const [breedOverrides, setBreedOverrides] = useState<Record<string, number>>(
+    {},
+  );
   const [newBreed, setNewBreed] = useState("");
   const [newBreedPrice, setNewBreedPrice] = useState("");
 
@@ -638,7 +646,13 @@ export function ServiceDialog({
       const existingAgeRules = editingPackage.ageGroupPricing ?? [];
       setAgeGroupRules(existingAgeRules);
       setAgeGroupEnabled(existingAgeRules.length > 0);
-      setTierAdjustments(editingPackage.tierAdjustments ?? { standard: 0, premium: 10, platinum: 25 });
+      setTierAdjustments(
+        editingPackage.tierAdjustments ?? {
+          standard: 0,
+          premium: 10,
+          platinum: 25,
+        },
+      );
     } else {
       setName("");
       setDescription("");
@@ -753,7 +767,8 @@ export function ServiceDialog({
       duration,
       sizePricing,
       coatAdjustments: coatEnabled ? coatAdjustments : undefined,
-      mattedSurchargeDefault: mattedSurchargeDefault > 0 ? mattedSurchargeDefault : undefined,
+      mattedSurchargeDefault:
+        mattedSurchargeDefault > 0 ? mattedSurchargeDefault : undefined,
       breedOverrides:
         breedEnabled && Object.keys(breedOverrides).length > 0
           ? breedOverrides
@@ -778,11 +793,10 @@ export function ServiceDialog({
           ? defaultAddOnRules
           : undefined,
       ageGroupPricing:
-        ageGroupEnabled && ageGroupRules.length > 0
-          ? ageGroupRules
-          : undefined,
-      tierAdjustments: 
-        Object.values(tierAdjustments).some(v => v > 0) ? tierAdjustments : undefined,
+        ageGroupEnabled && ageGroupRules.length > 0 ? ageGroupRules : undefined,
+      tierAdjustments: Object.values(tierAdjustments).some((v) => v > 0)
+        ? tierAdjustments
+        : undefined,
     };
 
     queryClient.setQueryData<GroomingPackage[]>(
@@ -935,7 +949,7 @@ export function ServiceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Scissors className="size-4 text-pink-500" />
@@ -965,7 +979,7 @@ export function ServiceDialog({
                   placeholder="Shown to clients during online booking…"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="mt-1 text-sm resize-none"
+                  className="mt-1 resize-none text-sm"
                   rows={2}
                 />
               </div>
@@ -983,7 +997,7 @@ export function ServiceDialog({
                 </div>
               </div>
               <div>
-                <Label className="text-xs flex items-center gap-1.5">
+                <Label className="flex items-center gap-1.5 text-xs">
                   <ImageIcon className="size-3" />
                   Photo / Icon{" "}
                   <span className="text-muted-foreground font-normal">
@@ -997,11 +1011,11 @@ export function ServiceDialog({
                   onChange={(e) => setImageUrl(e.target.value)}
                   className="mt-1 text-sm"
                 />
-                <p className="text-[10px] text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-[10px]">
                   Shown on the online booking page next to the service name.
                 </p>
                 {imageUrl && (
-                  <div className="mt-2 inline-flex items-center gap-2 rounded-lg border bg-muted/40 px-2 py-1.5">
+                  <div className="bg-muted/40 mt-2 inline-flex items-center gap-2 rounded-lg border px-2 py-1.5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={imageUrl}
@@ -1011,25 +1025,29 @@ export function ServiceDialog({
                         (e.target as HTMLImageElement).style.opacity = "0.2";
                       }}
                     />
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-muted-foreground text-[10px]">
                       Preview
                     </span>
                   </div>
                 )}
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2.5">
+              <div className="bg-muted/40 flex items-center justify-between rounded-lg px-3 py-2.5">
                 <div>
-                  <p className="text-xs font-medium">Available for online booking</p>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-xs font-medium">
+                    Available for online booking
+                  </p>
+                  <p className="text-muted-foreground text-[10px]">
                     Clients can book this service themselves
                   </p>
                 </div>
                 <Switch checked={isOnline} onCheckedChange={setIsOnline} />
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2.5">
+              <div className="bg-muted/40 flex items-center justify-between rounded-lg px-3 py-2.5">
                 <div>
-                  <p className="text-xs font-medium">Requires evaluation first</p>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-xs font-medium">
+                    Requires evaluation first
+                  </p>
+                  <p className="text-muted-foreground text-[10px]">
                     Staff must assess pet before confirming
                   </p>
                 </div>
@@ -1048,7 +1066,7 @@ export function ServiceDialog({
             <SectionLabel>Booking Rules</SectionLabel>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs flex items-center gap-1.5">
+                <Label className="flex items-center gap-1.5 text-xs">
                   <Clock className="size-3" />
                   Minimum Booking Notice
                 </Label>
@@ -1064,18 +1082,18 @@ export function ServiceDialog({
                     }
                     className="text-sm"
                   />
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  <span className="text-muted-foreground text-xs whitespace-nowrap">
                     hours
                   </span>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-[10px]">
                   {minBookingNoticeHours > 0
                     ? `Clients can't book online within ${minBookingNoticeHours}h of the appointment. Staff can override manually.`
                     : "No minimum — clients can book up to the start time."}
                 </p>
               </div>
               <div>
-                <Label className="text-xs flex items-center gap-1.5">
+                <Label className="flex items-center gap-1.5 text-xs">
                   <CalendarDays className="size-3" />
                   Maximum Per Day
                 </Label>
@@ -1088,7 +1106,7 @@ export function ServiceDialog({
                   onChange={(e) => setMaxPerDay(Number(e.target.value) || 0)}
                   className="mt-1 text-sm"
                 />
-                <p className="text-[10px] text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-[10px]">
                   {maxPerDay > 0
                     ? `Limit to ${maxPerDay} bookings per day across all groomers.`
                     : "Unlimited bookings per day."}
@@ -1102,18 +1120,18 @@ export function ServiceDialog({
           {/* ── Smart Pricing — three stacked sections (size always visible, coat/breed expandable) ── */}
           <section>
             <SectionLabel>Smart Pricing</SectionLabel>
-            <p className="text-xs text-muted-foreground -mt-2 mb-4">
+            <p className="text-muted-foreground -mt-2 mb-4 text-xs">
               Set prices for each pet size, then optionally adjust by coat type
               or breed. The system auto-calculates the correct price at booking.
             </p>
 
             <div className="space-y-3">
               {/* 1. By Pet Size — always visible */}
-              <div className="rounded-xl border-2 overflow-hidden">
-                <div className="bg-pink-50/60 dark:bg-pink-950/20 px-4 py-2.5 border-b flex items-center justify-between">
+              <div className="overflow-hidden rounded-xl border-2">
+                <div className="flex items-center justify-between border-b bg-pink-50/60 px-4 py-2.5 dark:bg-pink-950/20">
                   <div>
                     <p className="text-sm font-semibold">1 · By Pet Size</p>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-muted-foreground text-[10px]">
                       Required — set a price for each size your facility accepts
                     </p>
                   </div>
@@ -1130,12 +1148,14 @@ export function ServiceDialog({
                       >
                         <div className="w-28 flex-shrink-0">
                           <p className="text-xs font-medium">{label}</p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {maxWeightLbs ? `Under ${maxWeightLbs} lbs` : `${label} sizes`}
+                          <p className="text-muted-foreground text-[10px]">
+                            {maxWeightLbs
+                              ? `Under ${maxWeightLbs} lbs`
+                              : `${label} sizes`}
                           </p>
                         </div>
-                        <div className="relative flex-1 max-w-[140px]">
-                          <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
+                        <div className="relative max-w-[140px] flex-1">
+                          <DollarSign className="text-muted-foreground absolute top-1/2 left-2.5 size-3 -translate-y-1/2" />
                           <Input
                             type="number"
                             min={0}
@@ -1147,7 +1167,7 @@ export function ServiceDialog({
                                 [id]: Number(e.target.value),
                               }))
                             }
-                            className="pl-7 h-8 text-sm"
+                            className="h-8 pl-7 text-sm"
                           />
                         </div>
                       </div>
@@ -1158,196 +1178,211 @@ export function ServiceDialog({
 
               {/* 2. Adjust by Coat Type — expandable */}
               <Collapsible open={coatExpanded} onOpenChange={setCoatExpanded}>
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between rounded-xl border-2 px-4 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={coatEnabled}
-                      onCheckedChange={(checked) => {
-                        setCoatEnabled(!!checked);
-                        if (checked) setCoatExpanded(true);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <div>
-                      <p className="text-sm font-semibold">
-                        2 · Adjust by Coat Type{" "}
-                        <span className="text-muted-foreground text-xs font-normal">
-                          (Optional — enable to add coat-type pricing)
-                        </span>
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        Add surcharges for complex coats (long, wire, curly, double)
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronDown
-                    className={cn(
-                      "size-4 text-muted-foreground transition-transform",
-                      coatExpanded && "rotate-180",
-                    )}
-                  />
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="mt-2 rounded-xl border overflow-hidden">
-                  <div className="bg-muted/40 px-4 py-2 border-b">
-                    <p className="text-xs font-semibold">
-                      Coat Surcharge{" "}
-                      <span className="text-muted-foreground font-normal">
-                        (added on top of size price)
-                      </span>
-                    </p>
-                  </div>
-                  <div className="divide-y">
-                    {COAT_TYPES.map(({ key, label }) => (
-                      <div
-                        key={key}
-                        className="flex items-center gap-4 px-4 py-2"
-                      >
-                        <p className="w-20 text-xs font-medium flex-shrink-0">
-                          {label}
-                        </p>
-                        <div className="relative flex-1 max-w-[140px]">
-                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                            +$
-                          </span>
-                          <Input
-                            type="number"
-                            min={0}
-                            value={coatAdjustments[key] ?? 0}
-                            onChange={(e) =>
-                              setCoatAdjustments((prev) => ({
-                                ...prev,
-                                [key]: Number(e.target.value),
-                              }))
-                            }
-                            className="pl-8 h-8 text-sm"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="bg-muted/40 px-4 py-2 border-b flex items-center justify-between border-t mt-2">
-                    <div>
-                      <p className="text-xs font-semibold">Matted Surcharge</p>
-                      <p className="text-[10px] text-muted-foreground">Default amount suggested when staff toggle &quot;Matted&quot; at check-in</p>
-                    </div>
-                    <div className="relative w-28">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                        +$
-                      </span>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={mattedSurchargeDefault || ""}
-                        placeholder="0"
-                        onChange={(e) => setMattedSurchargeDefault(Number(e.target.value))}
-                        className="pl-8 h-8 text-sm"
+                <CollapsibleTrigger asChild>
+                  <div className="hover:bg-muted/30 flex cursor-pointer items-center justify-between rounded-xl border-2 px-4 py-2.5 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        checked={coatEnabled}
+                        onCheckedChange={(checked) => {
+                          setCoatEnabled(!!checked);
+                          if (checked) setCoatExpanded(true);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
                       />
+                      <div>
+                        <p className="text-sm font-semibold">
+                          2 · Adjust by Coat Type{" "}
+                          <span className="text-muted-foreground text-xs font-normal">
+                            (Optional — enable to add coat-type pricing)
+                          </span>
+                        </p>
+                        <p className="text-muted-foreground text-[10px]">
+                          Add surcharges for complex coats (long, wire, curly,
+                          double)
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <PricePreview
-                  basePrice={previewPrice}
-                  coatAdjustments={coatAdjustments}
-                />
-              </CollapsibleContent>
-            </Collapsible>
-
-            {/* 3. Breed-Specific Pricing — expandable */}
-            <Collapsible open={breedExpanded} onOpenChange={setBreedExpanded}>
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between rounded-xl border-2 px-4 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={breedEnabled}
-                      onCheckedChange={(checked) => {
-                        setBreedEnabled(!!checked);
-                        if (checked) setBreedExpanded(true);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
+                    <ChevronDown
+                      className={cn(
+                        "text-muted-foreground size-4 transition-transform",
+                        coatExpanded && "rotate-180",
+                      )}
                     />
-                    <div>
-                      <p className="text-sm font-semibold">
-                        3 · Breed-Specific Pricing{" "}
-                        <span className="text-muted-foreground text-xs font-normal">
-                          (Optional — enable to add breed pricing)
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-2 overflow-hidden rounded-xl border">
+                    <div className="bg-muted/40 border-b px-4 py-2">
+                      <p className="text-xs font-semibold">
+                        Coat Surcharge{" "}
+                        <span className="text-muted-foreground font-normal">
+                          (added on top of size price)
                         </span>
                       </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        Override the size price for specific breeds (e.g., Doodles)
-                      </p>
                     </div>
-                  </div>
-                  <ChevronDown
-                    className={cn(
-                      "size-4 text-muted-foreground transition-transform",
-                      breedExpanded && "rotate-180",
-                    )}
-                  />
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="mt-3 rounded-xl border overflow-hidden">
-                  {Object.entries(breedOverrides).length > 0 && (
                     <div className="divide-y">
-                      {Object.entries(breedOverrides).map(([breed, price]) => (
+                      {COAT_TYPES.map(({ key, label }) => (
                         <div
-                          key={breed}
-                          className="flex items-center justify-between px-4 py-2"
+                          key={key}
+                          className="flex items-center gap-4 px-4 py-2"
                         >
-                          <p className="text-xs font-medium">{breed}</p>
-                          <div className="flex items-center gap-3">
-                            <p className="text-xs font-semibold">${price}</p>
-                            <button
-                              onClick={() => removeBreedOverride(breed)}
-                              className="text-destructive text-xs hover:underline"
-                            >
-                              Remove
-                            </button>
+                          <p className="w-20 flex-shrink-0 text-xs font-medium">
+                            {label}
+                          </p>
+                          <div className="relative max-w-[140px] flex-1">
+                            <span className="text-muted-foreground absolute top-1/2 left-2.5 -translate-y-1/2 text-xs">
+                              +$
+                            </span>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={coatAdjustments[key] ?? 0}
+                              onChange={(e) =>
+                                setCoatAdjustments((prev) => ({
+                                  ...prev,
+                                  [key]: Number(e.target.value),
+                                }))
+                              }
+                              className="h-8 pl-8 text-sm"
+                            />
                           </div>
                         </div>
                       ))}
                     </div>
-                  )}
-                  <div className="flex gap-2 p-3 bg-muted/20">
-                    <Input
-                      placeholder="Breed name"
-                      value={newBreed}
-                      onChange={(e) => setNewBreed(e.target.value)}
-                      className="h-8 text-xs flex-1"
-                      list="breed-suggestions"
-                    />
-                    <datalist id="breed-suggestions">
-                      {COMMON_BREEDS.filter((b) => !breedOverrides[b]).map((b) => (
-                        <option key={b} value={b} />
-                      ))}
-                    </datalist>
-                    <div className="relative w-24 flex-shrink-0">
-                      <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="Price"
-                        value={newBreedPrice}
-                        onChange={(e) => setNewBreedPrice(e.target.value)}
-                        className="pl-6 h-8 text-xs"
-                      />
+
+                    <div className="bg-muted/40 mt-2 flex items-center justify-between border-t border-b px-4 py-2">
+                      <div>
+                        <p className="text-xs font-semibold">
+                          Matted Surcharge
+                        </p>
+                        <p className="text-muted-foreground text-[10px]">
+                          Default amount suggested when staff toggle
+                          &quot;Matted&quot; at check-in
+                        </p>
+                      </div>
+                      <div className="relative w-28">
+                        <span className="text-muted-foreground absolute top-1/2 left-2.5 -translate-y-1/2 text-xs">
+                          +$
+                        </span>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={mattedSurchargeDefault || ""}
+                          placeholder="0"
+                          onChange={(e) =>
+                            setMattedSurchargeDefault(Number(e.target.value))
+                          }
+                          className="h-8 pl-8 text-sm"
+                        />
+                      </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 px-3 flex-shrink-0"
-                      onClick={addBreedOverride}
-                    >
-                      <Plus className="size-3" />
-                    </Button>
                   </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+                  <PricePreview
+                    basePrice={previewPrice}
+                    coatAdjustments={coatAdjustments}
+                  />
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* 3. Breed-Specific Pricing — expandable */}
+              <Collapsible open={breedExpanded} onOpenChange={setBreedExpanded}>
+                <CollapsibleTrigger asChild>
+                  <div className="hover:bg-muted/30 flex cursor-pointer items-center justify-between rounded-xl border-2 px-4 py-2.5 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        checked={breedEnabled}
+                        onCheckedChange={(checked) => {
+                          setBreedEnabled(!!checked);
+                          if (checked) setBreedExpanded(true);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div>
+                        <p className="text-sm font-semibold">
+                          3 · Breed-Specific Pricing{" "}
+                          <span className="text-muted-foreground text-xs font-normal">
+                            (Optional — enable to add breed pricing)
+                          </span>
+                        </p>
+                        <p className="text-muted-foreground text-[10px]">
+                          Override the size price for specific breeds (e.g.,
+                          Doodles)
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronDown
+                      className={cn(
+                        "text-muted-foreground size-4 transition-transform",
+                        breedExpanded && "rotate-180",
+                      )}
+                    />
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-3 overflow-hidden rounded-xl border">
+                    {Object.entries(breedOverrides).length > 0 && (
+                      <div className="divide-y">
+                        {Object.entries(breedOverrides).map(
+                          ([breed, price]) => (
+                            <div
+                              key={breed}
+                              className="flex items-center justify-between px-4 py-2"
+                            >
+                              <p className="text-xs font-medium">{breed}</p>
+                              <div className="flex items-center gap-3">
+                                <p className="text-xs font-semibold">
+                                  ${price}
+                                </p>
+                                <button
+                                  onClick={() => removeBreedOverride(breed)}
+                                  className="text-destructive text-xs hover:underline"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    )}
+                    <div className="bg-muted/20 flex gap-2 p-3">
+                      <Input
+                        placeholder="Breed name"
+                        value={newBreed}
+                        onChange={(e) => setNewBreed(e.target.value)}
+                        className="h-8 flex-1 text-xs"
+                        list="breed-suggestions"
+                      />
+                      <datalist id="breed-suggestions">
+                        {COMMON_BREEDS.filter((b) => !breedOverrides[b]).map(
+                          (b) => (
+                            <option key={b} value={b} />
+                          ),
+                        )}
+                      </datalist>
+                      <div className="relative w-24 flex-shrink-0">
+                        <DollarSign className="text-muted-foreground absolute top-1/2 left-2 size-3 -translate-y-1/2" />
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="Price"
+                          value={newBreedPrice}
+                          onChange={(e) => setNewBreedPrice(e.target.value)}
+                          className="h-8 pl-6 text-xs"
+                        />
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 flex-shrink-0 px-3"
+                        onClick={addBreedOverride}
+                      >
+                        <Plus className="size-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           </section>
 
@@ -1356,14 +1391,17 @@ export function ServiceDialog({
           {/* ── Staff assignment & Tier Pricing ── */}
           <section>
             <SectionLabel>Assigned Groomers & Tier Pricing</SectionLabel>
-            <p className="text-xs text-muted-foreground -mt-2 mb-3">
+            <p className="text-muted-foreground -mt-2 mb-3 text-xs">
               Leave all unchecked to allow any groomer. Check specific groomers
-              to restrict this service. Set optional tier surcharges next to each tier.
+              to restrict this service. Set optional tier surcharges next to
+              each tier.
             </p>
-            
+
             <div className="space-y-4">
               {["platinum", "premium", "standard"].map((tier) => {
-                const tierGroomers = activeStylists.filter((s) => s.capacity.skillLevel === tier);
+                const tierGroomers = activeStylists.filter(
+                  (s) => s.capacity.skillLevel === tier,
+                );
                 if (tierGroomers.length === 0) return null;
 
                 const tierLabels: Record<string, string> = {
@@ -1374,27 +1412,35 @@ export function ServiceDialog({
 
                 return (
                   <div key={tier} className="space-y-2 rounded-xl border p-3">
-                    <div className="flex items-center justify-between border-b pb-2 mb-2">
-                      <p className="text-sm font-semibold">{tierLabels[tier]}</p>
+                    <div className="mb-2 flex items-center justify-between border-b pb-2">
+                      <p className="text-sm font-semibold">
+                        {tierLabels[tier]}
+                      </p>
                       <div className="flex items-center gap-2">
-                        <p className="text-[10px] text-muted-foreground">Tier Surcharge:</p>
+                        <p className="text-muted-foreground text-[10px]">
+                          Tier Surcharge:
+                        </p>
                         <div className="relative w-20">
-                          <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
+                          <DollarSign className="text-muted-foreground absolute top-1/2 left-2 size-3 -translate-y-1/2" />
                           <Input
                             type="number"
                             min={0}
                             value={tierAdjustments[tier] || ""}
                             placeholder="0"
-                            onChange={(e) => updateTierAdjustment(tier, e.target.value)}
+                            onChange={(e) =>
+                              updateTierAdjustment(tier, e.target.value)
+                            }
                             className={cn(
-                              "pl-6 h-7 text-xs font-semibold",
-                              !tierAdjustments[tier] ? "text-muted-foreground" : "text-foreground"
+                              "h-7 pl-6 text-xs font-semibold",
+                              !tierAdjustments[tier]
+                                ? "text-muted-foreground"
+                                : "text-foreground",
                             )}
                           />
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-2">
                       {tierGroomers.map((s) => {
                         const assigned = assignedStylistIds.includes(s.id);
@@ -1403,7 +1449,7 @@ export function ServiceDialog({
                             key={s.id}
                             onClick={() => toggleStylist(s.id)}
                             className={cn(
-                              "flex items-center gap-2.5 rounded-lg border px-3 py-2 cursor-pointer transition-colors",
+                              "flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 transition-colors",
                               assigned
                                 ? "border-pink-300 bg-pink-50 dark:border-pink-700 dark:bg-pink-950/20"
                                 : "hover:bg-muted/40",
@@ -1431,28 +1477,34 @@ export function ServiceDialog({
 
           {/* ── Products Used ── */}
           <section>
-            <Collapsible open={productsEnabled} onOpenChange={setProductsEnabled}>
+            <Collapsible
+              open={productsEnabled}
+              onOpenChange={setProductsEnabled}
+            >
               <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between rounded-lg border px-4 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
+                <div className="hover:bg-muted/30 flex cursor-pointer items-center justify-between rounded-lg border px-4 py-2.5 transition-colors">
                   <div className="flex items-center gap-2.5">
-                    <FlaskConical className="size-4 text-muted-foreground" />
+                    <FlaskConical className="text-muted-foreground size-4" />
                     <div>
                       <p className="text-xs font-medium">
                         Products & Materials Used{" "}
                         {productUsage.length > 0 && (
-                          <Badge variant="secondary" className="ml-1 text-[10px]">
+                          <Badge
+                            variant="secondary"
+                            className="ml-1 text-[10px]"
+                          >
                             {productUsage.length}
                           </Badge>
                         )}
                       </p>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-muted-foreground text-[10px]">
                         Auto-deducted from inventory when this service completes
                       </p>
                     </div>
                   </div>
                   <ChevronDown
                     className={cn(
-                      "size-4 text-muted-foreground transition-transform",
+                      "text-muted-foreground size-4 transition-transform",
                       productsEnabled && "rotate-180",
                     )}
                   />
@@ -1463,47 +1515,67 @@ export function ServiceDialog({
                 <div className="mt-3 space-y-3">
                   {/* Current product list */}
                   {productUsage.length > 0 && (
-                    <div className="rounded-xl border overflow-hidden">
-                      <div className="bg-muted/40 px-4 py-2 border-b">
-                        <p className="text-xs font-semibold">Materials per service</p>
+                    <div className="overflow-hidden rounded-xl border">
+                      <div className="bg-muted/40 border-b px-4 py-2">
+                        <p className="text-xs font-semibold">
+                          Materials per service
+                        </p>
                       </div>
                       <div className="divide-y">
                         {productUsage.map((usage) => {
-                          const product = groomingProducts.find((p) => p.id === usage.productId);
+                          const product = groomingProducts.find(
+                            (p) => p.id === usage.productId,
+                          );
                           return (
-                            <div key={usage.productId} className="flex items-center gap-3 px-4 py-2.5">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium truncate">{usage.productName}</p>
+                            <div
+                              key={usage.productId}
+                              className="flex items-center gap-3 px-4 py-2.5"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-xs font-medium">
+                                  {usage.productName}
+                                </p>
                                 {product && (
-                                  <p className="text-[10px] text-muted-foreground">
+                                  <p className="text-muted-foreground text-[10px]">
                                     {product.brand} · {product.measurementUnit}
                                   </p>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 shrink-0">
+                              <div className="flex shrink-0 items-center gap-2">
                                 <Input
                                   type="number"
                                   min={0.1}
                                   step={0.1}
                                   value={usage.quantity}
-                                  onChange={(e) => updateProductQty(usage.productId, e.target.value)}
-                                  className="h-7 w-20 text-xs text-right"
+                                  onChange={(e) =>
+                                    updateProductQty(
+                                      usage.productId,
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="h-7 w-20 text-right text-xs"
                                 />
-                                <span className="text-xs text-muted-foreground w-8">
+                                <span className="text-muted-foreground w-8 text-xs">
                                   {usage.unit}
                                 </span>
                                 <div
-                                  className="flex items-center gap-1 cursor-pointer"
-                                  onClick={() => toggleProductOptional(usage.productId)}
+                                  className="flex cursor-pointer items-center gap-1"
+                                  onClick={() =>
+                                    toggleProductOptional(usage.productId)
+                                  }
                                 >
                                   <Checkbox
                                     checked={usage.isOptional ?? false}
                                     className="pointer-events-none size-3"
                                   />
-                                  <span className="text-[10px] text-muted-foreground">optional</span>
+                                  <span className="text-muted-foreground text-[10px]">
+                                    optional
+                                  </span>
                                 </div>
                                 <button
-                                  onClick={() => removeProductUsage(usage.productId)}
+                                  onClick={() =>
+                                    removeProductUsage(usage.productId)
+                                  }
                                   className="text-destructive hover:text-destructive/80 transition-colors"
                                 >
                                   <Trash2 className="size-3.5" />
@@ -1517,22 +1589,29 @@ export function ServiceDialog({
                   )}
 
                   {/* Add product row */}
-                  <div className="flex gap-2 rounded-xl border bg-muted/20 p-3">
+                  <div className="bg-muted/20 flex gap-2 rounded-xl border p-3">
                     <Select
                       value={selectedProductId}
                       onValueChange={setSelectedProductId}
                     >
-                      <SelectTrigger className="h-8 text-xs flex-1">
+                      <SelectTrigger className="h-8 flex-1 text-xs">
                         <SelectValue placeholder="Choose product…" />
                       </SelectTrigger>
                       <SelectContent>
                         {groomingProducts
-                          .filter((p) => p.itemType === "consumable" && p.isActive)
+                          .filter(
+                            (p) => p.itemType === "consumable" && p.isActive,
+                          )
                           .map((p) => (
-                            <SelectItem key={p.id} value={p.id} className="text-xs">
+                            <SelectItem
+                              key={p.id}
+                              value={p.id}
+                              className="text-xs"
+                            >
                               <span className="font-medium">{p.name}</span>
                               <span className="text-muted-foreground ml-1">
-                                ({p.currentStock.toLocaleString()} {p.measurementUnit} in stock)
+                                ({p.currentStock.toLocaleString()}{" "}
+                                {p.measurementUnit} in stock)
                               </span>
                             </SelectItem>
                           ))}
@@ -1548,14 +1627,16 @@ export function ServiceDialog({
                       className="h-8 w-20 text-xs"
                     />
                     {selectedProductId && (
-                      <span className="self-center text-xs text-muted-foreground w-8 shrink-0">
-                        {groomingProducts.find((p) => p.id === selectedProductId)?.measurementUnit ?? ""}
+                      <span className="text-muted-foreground w-8 shrink-0 self-center text-xs">
+                        {groomingProducts.find(
+                          (p) => p.id === selectedProductId,
+                        )?.measurementUnit ?? ""}
                       </span>
                     )}
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 px-3 shrink-0"
+                      className="h-8 shrink-0 px-3"
                       onClick={addProductUsage}
                     >
                       <Plus className="size-3" />
@@ -1563,9 +1644,10 @@ export function ServiceDialog({
                   </div>
 
                   {productUsage.length > 0 && (
-                    <p className="text-[11px] text-muted-foreground">
-                      When a groomer marks this service complete, the system deducts the above quantities automatically.
-                      Mark a product as <em>optional</em> to deduct it only when actually used.
+                    <p className="text-muted-foreground text-[11px]">
+                      When a groomer marks this service complete, the system
+                      deducts the above quantities automatically. Mark a product
+                      as <em>optional</em> to deduct it only when actually used.
                     </p>
                   )}
                 </div>
@@ -1584,13 +1666,13 @@ export function ServiceDialog({
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50"
+                  className="bg-muted/30 hover:bg-muted/50 flex w-full items-center justify-between rounded-lg border px-4 py-3 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <Wand2 className="size-4 text-violet-500" />
                     <div className="text-left">
                       <p className="text-xs font-semibold">Default Add-Ons</p>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-muted-foreground text-[10px]">
                         Auto-attach add-ons when this service is booked — with
                         optional conditions per add-on
                       </p>
@@ -1605,7 +1687,7 @@ export function ServiceDialog({
                     )}
                     <ChevronDown
                       className={cn(
-                        "size-4 text-muted-foreground transition-transform",
+                        "text-muted-foreground size-4 transition-transform",
                         defaultAddOnsEnabled && "rotate-180",
                       )}
                     />
@@ -1615,7 +1697,7 @@ export function ServiceDialog({
               <CollapsibleContent className="pt-3">
                 <div className="space-y-2.5">
                   {defaultAddOnRules.length === 0 && (
-                    <p className="rounded-md border border-dashed bg-muted/10 px-3 py-3 text-center text-[11px] text-muted-foreground">
+                    <p className="bg-muted/10 text-muted-foreground rounded-md border border-dashed px-3 py-3 text-center text-[11px]">
                       No default add-ons yet. Add one below — leave it
                       unconditional to always attach, or add conditions to
                       restrict it to matching pets (e.g. weight ≥ 30 lbs).
@@ -1641,7 +1723,7 @@ export function ServiceDialog({
                   })}
 
                   {/* Add rule row */}
-                  <div className="flex gap-2 rounded-xl border bg-muted/20 p-3">
+                  <div className="bg-muted/20 flex gap-2 rounded-xl border p-3">
                     <Select
                       value={newRuleAddOnId}
                       onValueChange={setNewRuleAddOnId}
@@ -1654,9 +1736,13 @@ export function ServiceDialog({
                           (a) =>
                             !defaultAddOnRules.some((r) => r.addOnId === a.id),
                         ).map((a) => (
-                          <SelectItem key={a.id} value={a.id} className="text-xs">
+                          <SelectItem
+                            key={a.id}
+                            value={a.id}
+                            className="text-xs"
+                          >
                             <span className="font-medium">{a.name}</span>
-                            <span className="ml-1 text-muted-foreground">
+                            <span className="text-muted-foreground ml-1">
                               · +${a.price}
                             </span>
                           </SelectItem>
@@ -1674,7 +1760,7 @@ export function ServiceDialog({
                     </Button>
                   </div>
 
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-muted-foreground text-[11px]">
                     When a groomer creates a booking with this service, the
                     matching add-ons auto-attach. Groomers can still uncheck
                     them if the client declines.
@@ -1695,15 +1781,13 @@ export function ServiceDialog({
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50"
+                  className="bg-muted/30 hover:bg-muted/50 flex w-full items-center justify-between rounded-lg border px-4 py-3 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <CalendarDays className="size-4 text-emerald-500" />
                     <div className="text-left">
-                      <p className="text-xs font-semibold">
-                        Age-Group Pricing
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-xs font-semibold">Age-Group Pricing</p>
+                      <p className="text-muted-foreground text-[10px]">
                         Different prices for puppies and seniors — applied on
                         top of size pricing
                       </p>
@@ -1718,7 +1802,7 @@ export function ServiceDialog({
                     )}
                     <ChevronDown
                       className={cn(
-                        "size-4 text-muted-foreground transition-transform",
+                        "text-muted-foreground size-4 transition-transform",
                         ageGroupEnabled && "rotate-180",
                       )}
                     />
@@ -1728,10 +1812,10 @@ export function ServiceDialog({
               <CollapsibleContent className="pt-3">
                 <div className="space-y-2.5">
                   {ageGroupRules.length === 0 && (
-                    <p className="rounded-md border border-dashed bg-muted/10 px-3 py-3 text-center text-[11px] text-muted-foreground">
+                    <p className="bg-muted/10 text-muted-foreground rounded-md border border-dashed px-3 py-3 text-center text-[11px]">
                       No age-group rules yet. Add one below — Puppy (under 12
-                      months) typically gets a discount, Senior (96+ months /
-                      8+ years) typically gets a premium.
+                      months) typically gets a discount, Senior (96+ months / 8+
+                      years) typically gets a premium.
                     </p>
                   )}
 
@@ -1755,7 +1839,7 @@ export function ServiceDialog({
                     Add age group
                   </Button>
 
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-muted-foreground text-[11px]">
                     Rules apply to the size-default tier. Pet-specific and
                     stylist-specific overrides bypass age adjustments. Order
                     matters — the first matching range wins.
@@ -1769,7 +1853,7 @@ export function ServiceDialog({
           <div className="flex items-center justify-between rounded-lg border px-4 py-3">
             <div>
               <p className="text-sm font-medium">Service is active</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Inactive services are hidden from booking
               </p>
             </div>
@@ -1819,7 +1903,7 @@ export function ServiceDialog({
               </p>
 
               {/* Diff summary */}
-              <div className="space-y-1 rounded-md border bg-muted/30 px-3 py-2 text-xs">
+              <div className="bg-muted/30 space-y-1 rounded-md border px-3 py-2 text-xs">
                 {propagationPrompt.summary.basePriceChanged && (
                   <p>
                     <span className="font-medium">Base price:</span>{" "}
@@ -1834,8 +1918,8 @@ export function ServiceDialog({
                 )}
                 {propagationPrompt.summary.sizePricingChanged && (
                   <p>
-                    <span className="font-medium">Size pricing:</span>{" "}
-                    one or more size brackets changed
+                    <span className="font-medium">Size pricing:</span> one or
+                    more size brackets changed
                   </p>
                 )}
                 {propagationPrompt.summary.durationChanged && (
@@ -1856,7 +1940,7 @@ export function ServiceDialog({
                   modal. Pet-custom and stylist-specific overrides are
                   preserved by the propagator. */}
               {propagationPrompt.affected.length > 0 && (
-                <details className="rounded-md border bg-card px-3 py-2 text-xs">
+                <details className="bg-card rounded-md border px-3 py-2 text-xs">
                   <summary className="cursor-pointer font-medium">
                     Show affected appointments (
                     {propagationPrompt.affected.length})
@@ -1874,19 +1958,19 @@ export function ServiceDialog({
                           key={a.id}
                           className="flex items-center justify-between gap-2"
                         >
-                          <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                          <span className="text-muted-foreground font-mono text-[11px] tabular-nums">
                             {a.date} {a.startTime}
                           </span>
                           <span className="min-w-0 flex-1 truncate">
                             {a.petName}
                           </span>
-                          <span className="shrink-0 text-muted-foreground">
+                          <span className="text-muted-foreground shrink-0">
                             {a.stylistName}
                           </span>
                         </li>
                       ))}
                     {propagationPrompt.affected.length > 50 && (
-                      <li className="text-[10px] text-muted-foreground italic">
+                      <li className="text-muted-foreground text-[10px] italic">
                         + {propagationPrompt.affected.length - 50} more
                       </li>
                     )}
@@ -1894,12 +1978,12 @@ export function ServiceDialog({
                 </details>
               )}
 
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-muted-foreground text-[11px]">
                 Only <strong>scheduled</strong> appointments dated today or
                 later are affected. Checked-in, completed, cancelled, and
                 no-show bookings are left untouched. Pet-specific and
-                stylist-specific price overrides survive — only the size /
-                age / coat tier is re-derived from the new service config.
+                stylist-specific price overrides survive — only the size / age /
+                coat tier is re-derived from the new service config.
               </p>
             </div>
           )}

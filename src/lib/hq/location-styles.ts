@@ -59,7 +59,8 @@ const PALETTE: Record<LocationColorKey, LocationColorClasses> = {
     stroke: "stroke-violet-500",
     gradFrom: "from-violet-500/20",
     gradTo: "to-violet-500/0",
-    badge: "bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300",
+    badge:
+      "bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300",
   },
   emerald: {
     key: "emerald",
@@ -78,7 +79,8 @@ const PALETTE: Record<LocationColorKey, LocationColorClasses> = {
     stroke: "stroke-emerald-500",
     gradFrom: "from-emerald-500/20",
     gradTo: "to-emerald-500/0",
-    badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
+    badge:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
   },
   amber: {
     key: "amber",
@@ -97,7 +99,8 @@ const PALETTE: Record<LocationColorKey, LocationColorClasses> = {
     stroke: "stroke-amber-500",
     gradFrom: "from-amber-500/20",
     gradTo: "to-amber-500/0",
-    badge: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
+    badge:
+      "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
   },
   rose: {
     key: "rose",
@@ -134,7 +137,10 @@ const SHORTCODE_FALLBACK: Record<string, LocationColorKey> = {
   LVL: "emerald",
 };
 
-export function colorKeyFromLocation(loc: { color?: string; shortCode?: string }): LocationColorKey {
+export function colorKeyFromLocation(loc: {
+  color?: string;
+  shortCode?: string;
+}): LocationColorKey {
   if (loc.color) {
     const key = HEX_TO_KEY[loc.color.toLowerCase()];
     if (key) return key;
@@ -145,7 +151,10 @@ export function colorKeyFromLocation(loc: { color?: string; shortCode?: string }
   return "sky";
 }
 
-export function locationStyles(loc: { color?: string; shortCode?: string }): LocationColorClasses {
+export function locationStyles(loc: {
+  color?: string;
+  shortCode?: string;
+}): LocationColorClasses {
   return PALETTE[colorKeyFromLocation(loc)];
 }
 
@@ -159,10 +168,16 @@ export function utilizationKey(rate: number): LocationColorKey {
   return "rose";
 }
 
-export function deltaKey(value: number, higherIsBetter: boolean = true): LocationColorKey {
+export function deltaKey(
+  value: number,
+  higherIsBetter: boolean = true,
+): LocationColorKey {
   if (value === 0) return "sky";
   const positive = higherIsBetter ? value > 0 : value < 0;
   return positive ? "emerald" : "rose";
 }
 
-export type SimpleLocation = Pick<Location, "id" | "name" | "shortCode" | "color" | "city">;
+export type SimpleLocation = Pick<
+  Location,
+  "id" | "name" | "shortCode" | "color" | "city"
+>;

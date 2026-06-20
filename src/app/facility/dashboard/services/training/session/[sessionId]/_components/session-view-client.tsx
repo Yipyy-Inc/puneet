@@ -110,7 +110,8 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
   function removePhoto(id: string) {
     setSessionPhotos((curr) => {
       const target = curr.find((p) => p.id === id);
-      if (target && target.url.startsWith("blob:")) URL.revokeObjectURL(target.url);
+      if (target && target.url.startsWith("blob:"))
+        URL.revokeObjectURL(target.url);
       return curr.filter((p) => p.id !== id);
     });
   }
@@ -119,9 +120,7 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
   const { data: classes = [] } = useQuery(trainingQueries.classes());
   const { data: enrollments = [] } = useQuery(trainingQueries.enrollments());
   const { data: trainerNotes = [] } = useQuery(trainingQueries.trainerNotes());
-  const { data: attendances = [] } = useQuery(
-    trainingQueries.allAttendances(),
-  );
+  const { data: attendances = [] } = useQuery(trainingQueries.allAttendances());
   const { data: homework = [] } = useQuery(trainingQueries.allHomework());
   const { data: dropInBookings = [] } = useQuery(
     trainingQueries.dropInBookings(),
@@ -158,10 +157,7 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
     return m;
   }, []);
 
-  const todayISO = useMemo(
-    () => new Date().toISOString().split("T")[0]!,
-    [],
-  );
+  const todayISO = useMemo(() => new Date().toISOString().split("T")[0]!, []);
 
   // Drop-in bookings whose host session matches the one being run today.
   // Date + start time match keeps the bridge tight without a hard schema
@@ -195,7 +191,7 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
     // `drop-` so the attendance handlers can tell them apart.
     const dropInRows = dropInsForSession.map((booking) => {
       const pet = pets.find((p) => p.id === booking.petId);
-      const row: typeof enrollmentRows[number] = {
+      const row: (typeof enrollmentRows)[number] = {
         enrollmentId: `drop-${booking.id}`,
         petId: booking.petId,
         petName: booking.petName,
@@ -258,7 +254,7 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
         </p>
         <Link
           href="/facility/dashboard/services/training"
-          className="text-indigo-600 text-sm font-medium hover:underline"
+          className="text-sm font-medium text-indigo-600 hover:underline"
         >
           Back to calendar
         </Link>
@@ -560,7 +556,7 @@ function SectionStep({
       className={cn(
         "group inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
         "data-[active=true]:bg-indigo-600 data-[active=true]:text-white",
-        "data-[done=true]:text-emerald-700 data-[done=true]:bg-emerald-50",
+        "data-[done=true]:bg-emerald-50 data-[done=true]:text-emerald-700",
         "data-[active=false]:data-[done=false]:text-muted-foreground data-[active=false]:data-[done=false]:hover:bg-slate-100",
       )}
     >

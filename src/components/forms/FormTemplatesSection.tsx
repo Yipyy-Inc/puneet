@@ -128,150 +128,138 @@ export function FormTemplatesSection({
   const body = (
     <div className="space-y-6">
       <div>
-              <h3 className="mb-3 text-sm font-semibold">Starter templates</h3>
-              {starters.length === 0 ? (
-                <p className="text-muted-foreground py-4 text-sm">
-                  No starter templates available.
-                </p>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {starters.map((t) => {
-                    const meta = TEMPLATE_META[t.id];
-                    return (
-                      <div
-                        key={t.id}
-                        className="bg-card flex flex-col overflow-hidden rounded-xl border transition-shadow hover:shadow-md"
-                      >
+        <h3 className="mb-3 text-sm font-semibold">Starter templates</h3>
+        {starters.length === 0 ? (
+          <p className="text-muted-foreground py-4 text-sm">
+            No starter templates available.
+          </p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {starters.map((t) => {
+              const meta = TEMPLATE_META[t.id];
+              return (
+                <div
+                  key={t.id}
+                  className="bg-card flex flex-col overflow-hidden rounded-xl border transition-shadow hover:shadow-md"
+                >
+                  <div
+                    className={`flex items-center gap-3 px-4 py-3 ${meta?.bg ?? `bg-muted/30`} `}
+                  >
+                    <div className={meta?.color ?? "text-muted-foreground"}>
+                      {meta?.icon ?? <FileText className="size-5" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-semibold">{t.name}</h4>
+                      <Badge variant="secondary" className="mt-0.5 text-[10px]">
+                        {TYPE_BADGES[t.formType] ?? t.formType}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex-1 px-4 py-3">
+                    <p className="text-muted-foreground text-xs/relaxed">
+                      {meta?.description ??
+                        `${t.questions.length} questions ready to customize.`}
+                    </p>
+                    <div className="mt-3 space-y-1">
+                      {t.questions.slice(0, 4).map((q) => (
                         <div
-                          className={`flex items-center gap-3 px-4 py-3 ${meta?.bg ?? `bg-muted/30`} `}
+                          key={q.id}
+                          className="flex items-center gap-2 text-[11px]"
                         >
-                          <div
-                            className={meta?.color ?? "text-muted-foreground"}
-                          >
-                            {meta?.icon ?? <FileText className="size-5" />}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h4 className="text-sm font-semibold">{t.name}</h4>
-                            <Badge
-                              variant="secondary"
-                              className="mt-0.5 text-[10px]"
-                            >
-                              {TYPE_BADGES[t.formType] ?? t.formType}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="flex-1 px-4 py-3">
-                          <p className="text-muted-foreground text-xs/relaxed">
-                            {meta?.description ??
-                              `${t.questions.length} questions ready to customize.`}
-                          </p>
-                          <div className="mt-3 space-y-1">
-                            {t.questions.slice(0, 4).map((q) => (
-                              <div
-                                key={q.id}
-                                className="flex items-center gap-2 text-[11px]"
-                              >
-                                <span className="text-muted-foreground shrink-0">
-                                  {questionTypeLabel(q.type)}
-                                </span>
-                                <span className="text-foreground truncate">
-                                  {q.label}
-                                </span>
-                                {q.required && (
-                                  <span className="shrink-0 text-rose-400">
-                                    *
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                            {t.questions.length > 4 && (
-                              <p className="text-muted-foreground text-[11px]">
-                                + {t.questions.length - 4} more
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="bg-muted/20 flex items-center justify-between border-t px-4 py-3">
-                          <span className="text-muted-foreground text-xs">
-                            {t.questions.length} questions
+                          <span className="text-muted-foreground shrink-0">
+                            {questionTypeLabel(q.type)}
                           </span>
-                          <Button size="sm" onClick={() => handleUseTemplate(t)}>
-                            <Copy className="mr-2 size-3.5" />
-                            Use template
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {facilityTemplates.length > 0 && (
-              <div>
-                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                  <FileText className="text-muted-foreground size-4" />
-                  Your templates
-                </h3>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {facilityTemplates.map((t) => (
-                    <div
-                      key={t.id}
-                      className="bg-card flex flex-col overflow-hidden rounded-xl border transition-shadow hover:shadow-md"
-                    >
-                      <div className="bg-muted/30 flex items-center gap-3 px-4 py-3">
-                        <FileText className="text-muted-foreground size-5" />
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-sm font-semibold">{t.name}</h4>
-                          <Badge
-                            variant="secondary"
-                            className="mt-0.5 text-[10px]"
-                          >
-                            {TYPE_BADGES[t.formType] ?? t.formType}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="flex-1 px-4 py-3">
-                        <div className="space-y-1">
-                          {t.questions.slice(0, 4).map((q) => (
-                            <div
-                              key={q.id}
-                              className="flex items-center gap-2 text-[11px]"
-                            >
-                              <span className="text-muted-foreground shrink-0">
-                                {questionTypeLabel(q.type)}
-                              </span>
-                              <span className="text-foreground truncate">
-                                {q.label}
-                              </span>
-                              {q.required && (
-                                <span className="shrink-0 text-rose-400">
-                                  *
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                          {t.questions.length > 4 && (
-                            <p className="text-muted-foreground text-[11px]">
-                              + {t.questions.length - 4} more
-                            </p>
+                          <span className="text-foreground truncate">
+                            {q.label}
+                          </span>
+                          {q.required && (
+                            <span className="shrink-0 text-rose-400">*</span>
                           )}
                         </div>
-                      </div>
-                      <div className="bg-muted/20 flex items-center justify-between border-t px-4 py-3">
-                        <span className="text-muted-foreground text-xs">
-                          {t.questions.length} questions
-                        </span>
-                        <Button size="sm" onClick={() => handleUseTemplate(t)}>
-                          <Copy className="mr-2 size-3.5" />
-                          Use template
-                        </Button>
-                      </div>
+                      ))}
+                      {t.questions.length > 4 && (
+                        <p className="text-muted-foreground text-[11px]">
+                          + {t.questions.length - 4} more
+                        </p>
+                      )}
                     </div>
-                  ))}
+                  </div>
+                  <div className="bg-muted/20 flex items-center justify-between border-t px-4 py-3">
+                    <span className="text-muted-foreground text-xs">
+                      {t.questions.length} questions
+                    </span>
+                    <Button size="sm" onClick={() => handleUseTemplate(t)}>
+                      <Copy className="mr-2 size-3.5" />
+                      Use template
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {facilityTemplates.length > 0 && (
+        <div>
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+            <FileText className="text-muted-foreground size-4" />
+            Your templates
+          </h3>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {facilityTemplates.map((t) => (
+              <div
+                key={t.id}
+                className="bg-card flex flex-col overflow-hidden rounded-xl border transition-shadow hover:shadow-md"
+              >
+                <div className="bg-muted/30 flex items-center gap-3 px-4 py-3">
+                  <FileText className="text-muted-foreground size-5" />
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-sm font-semibold">{t.name}</h4>
+                    <Badge variant="secondary" className="mt-0.5 text-[10px]">
+                      {TYPE_BADGES[t.formType] ?? t.formType}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex-1 px-4 py-3">
+                  <div className="space-y-1">
+                    {t.questions.slice(0, 4).map((q) => (
+                      <div
+                        key={q.id}
+                        className="flex items-center gap-2 text-[11px]"
+                      >
+                        <span className="text-muted-foreground shrink-0">
+                          {questionTypeLabel(q.type)}
+                        </span>
+                        <span className="text-foreground truncate">
+                          {q.label}
+                        </span>
+                        {q.required && (
+                          <span className="shrink-0 text-rose-400">*</span>
+                        )}
+                      </div>
+                    ))}
+                    {t.questions.length > 4 && (
+                      <p className="text-muted-foreground text-[11px]">
+                        + {t.questions.length - 4} more
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="bg-muted/20 flex items-center justify-between border-t px-4 py-3">
+                  <span className="text-muted-foreground text-xs">
+                    {t.questions.length} questions
+                  </span>
+                  <Button size="sm" onClick={() => handleUseTemplate(t)}>
+                    <Copy className="mr-2 size-3.5" />
+                    Use template
+                  </Button>
                 </div>
               </div>
-            )}
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 

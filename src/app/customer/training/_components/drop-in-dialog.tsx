@@ -164,7 +164,7 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
   const countsBySession = buildDropInCountsBySessionId(dropInBookings);
   const selectedSession = upcomingSessions.find((s) => s.id === sessionDate);
   const selectedSeatsTaken = selectedSession
-    ? countsBySession.get(selectedSession.id) ?? 0
+    ? (countsBySession.get(selectedSession.id) ?? 0)
     : 0;
   const selectedSeatsLeft = Math.max(0, dropInMax - selectedSeatsTaken);
   const selectedFull = !!selectedSession && selectedSeatsLeft === 0;
@@ -302,10 +302,11 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
                     return (
                       <SelectItem key={s.id} value={s.id} disabled={full}>
                         <span className="flex items-center gap-2">
-                          <span className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+                          <span className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
                             S{s.sessionNumber}
                           </span>
-                          {formatLongDate(s.date)} · {formatTime(series.startTime)}
+                          {formatLongDate(s.date)} ·{" "}
+                          {formatTime(series.startTime)}
                           <span
                             className={cn(
                               "ml-auto text-[10px]",
@@ -368,14 +369,14 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
               <div className="text-[12.5px] text-slate-700">
                 Drop-in fee — one session
               </div>
-              <span className="text-lg font-bold tabular-nums text-slate-900">
+              <span className="text-lg font-bold text-slate-900 tabular-nums">
                 ${pricePerSession}
               </span>
             </div>
             <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
               <Info className="size-3" />
-              Drop-ins don&apos;t carry over to the rest of the series — you
-              can book additional sessions individually.
+              Drop-ins don&apos;t carry over to the rest of the series — you can
+              book additional sessions individually.
             </p>
           </div>
         </div>

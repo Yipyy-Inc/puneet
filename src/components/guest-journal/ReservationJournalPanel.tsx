@@ -128,7 +128,7 @@ function GuestJournalContent({ guest }: { guest: BoardingGuest }) {
               onClick={() => setActiveDay(d)}
               data-active={isActive}
               data-today={isToday}
-              className="rounded-md border px-2.5 py-1 text-xs font-medium transition-all data-[active=true]:border-primary data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[today=true]:border-amber-400"
+              className="data-[active=true]:border-primary data-[active=true]:bg-primary data-[active=true]:text-primary-foreground rounded-md border px-2.5 py-1 text-xs font-medium transition-all data-[today=true]:border-amber-400"
             >
               <span className="mr-1 text-[9px] opacity-70">D{i + 1}</span>
               {label}
@@ -185,7 +185,9 @@ export function ReservationJournalPanel({ bookingId, petIds }: Props) {
           <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
             <AlertTriangle className="size-4 shrink-0" />
             <div>
-              <p className="font-medium">Journal not yet built for this reservation.</p>
+              <p className="font-medium">
+                Journal not yet built for this reservation.
+              </p>
               <p className="mt-0.5">
                 The Guest Journal is auto-generated from the feeding plan,
                 medications, and add-ons entered when the booking was confirmed.
@@ -210,8 +212,7 @@ export function ReservationJournalPanel({ bookingId, petIds }: Props) {
               Guest Journal · {guest.petName}
             </CardTitle>
             <Badge variant="secondary" className="text-[10px]">
-              {guest.totalNights}{" "}
-              {guest.totalNights === 1 ? "night" : "nights"}
+              {guest.totalNights} {guest.totalNights === 1 ? "night" : "nights"}
             </Badge>
           </div>
         </CardHeader>

@@ -44,7 +44,6 @@ import {
 } from "@/types/facility-warnings";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-CA", { dateStyle: "medium" });
 }
@@ -60,12 +59,17 @@ export default function StaffWarningsPage() {
   const isManager = can("manage_staff");
 
   const [warnings, setWarnings] = useState<IssuedWarning[]>(initialWarnings);
-  const [templates, setTemplates] = useState<WarningTemplate[]>(initialTemplates);
+  const [templates, setTemplates] =
+    useState<WarningTemplate[]>(initialTemplates);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<WarningType | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<IssuedWarning["status"] | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    IssuedWarning["status"] | "all"
+  >("all");
   const [builderOpen, setBuilderOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<WarningTemplate | undefined>();
+  const [editingTemplate, setEditingTemplate] = useState<
+    WarningTemplate | undefined
+  >();
   const [expandedEmployee, setExpandedEmployee] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -74,7 +78,10 @@ export default function StaffWarningsPage() {
       if (statusFilter !== "all" && w.status !== statusFilter) return false;
       if (search) {
         const q = search.toLowerCase();
-        if (!w.employeeName.toLowerCase().includes(q) && !w.reason.toLowerCase().includes(q))
+        if (
+          !w.employeeName.toLowerCase().includes(q) &&
+          !w.reason.toLowerCase().includes(q)
+        )
           return false;
       }
       return true;
@@ -85,18 +92,31 @@ export default function StaffWarningsPage() {
     const map = new Map<string, EmployeeGroup>();
     for (const w of filtered) {
       if (!map.has(w.employeeId)) {
-        map.set(w.employeeId, { id: w.employeeId, name: w.employeeName, warnings: [] });
+        map.set(w.employeeId, {
+          id: w.employeeId,
+          name: w.employeeName,
+          warnings: [],
+        });
       }
       map.get(w.employeeId)!.warnings.push(w);
     }
-    return Array.from(map.values()).sort((a, b) => b.warnings.length - a.warnings.length);
+    return Array.from(map.values()).sort(
+      (a, b) => b.warnings.length - a.warnings.length,
+    );
   }, [filtered]);
 
   const stats = useMemo(() => {
     const total = warnings.length;
-    const pending = warnings.filter((w) => w.status === "pending_signature").length;
+    const pending = warnings.filter(
+      (w) => w.status === "pending_signature",
+    ).length;
     const affected = new Set(warnings.map((w) => w.employeeId)).size;
-    const severe = warnings.filter((w) => w.type === "final" || w.type === "suspension" || w.type === "termination").length;
+    const severe = warnings.filter(
+      (w) =>
+        w.type === "final" ||
+        w.type === "suspension" ||
+        w.type === "termination",
+    ).length;
     return { total, pending, affected, severe };
   }, [warnings]);
 
@@ -130,8 +150,9 @@ export default function StaffWarningsPage() {
               Your disciplinary record
             </p>
             <p className="mt-0.5 text-xs text-sky-600/80 dark:text-sky-400/70">
-              Signing a warning acknowledges receipt — not necessarily agreement. Contact
-              your manager if you believe a record is inaccurate.
+              Signing a warning acknowledges receipt — not necessarily
+              agreement. Contact your manager if you believe a record is
+              inaccurate.
             </p>
           </div>
         </div>
@@ -149,15 +170,23 @@ export default function StaffWarningsPage() {
         ) : (
           <div className="space-y-3">
             {myWarnings.map((w) => (
-              <WarningRow key={w.id} warning={w} onAcknowledge={(id) => {
-                setWarnings((prev) =>
-                  prev.map((x) =>
-                    x.id === id
-                      ? { ...x, status: "signed", signedAt: new Date().toISOString() }
-                      : x,
-                  ),
-                );
-              }} />
+              <WarningRow
+                key={w.id}
+                warning={w}
+                onAcknowledge={(id) => {
+                  setWarnings((prev) =>
+                    prev.map((x) =>
+                      x.id === id
+                        ? {
+                            ...x,
+                            status: "signed",
+                            signedAt: new Date().toISOString(),
+                          }
+                        : x,
+                    ),
+                  );
+                }}
+              />
             ))}
           </div>
         )}
@@ -169,10 +198,30 @@ export default function StaffWarningsPage() {
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon={ShieldAlert} label="Total warnings" value={stats.total} tone="text-orange-600 bg-orange-500/10" />
-        <StatCard icon={User} label="Employees on record" value={stats.affected} tone="text-primary bg-primary/10" />
-        <StatCard icon={Clock} label="Pending signature" value={stats.pending} tone="text-amber-600 bg-amber-500/10" />
-        <StatCard icon={AlertTriangle} label="Severe (final/suspension)" value={stats.severe} tone="text-red-600 bg-red-500/10" />
+        <StatCard
+          icon={ShieldAlert}
+          label="Total warnings"
+          value={stats.total}
+          tone="text-orange-600 bg-orange-500/10"
+        />
+        <StatCard
+          icon={User}
+          label="Employees on record"
+          value={stats.affected}
+          tone="text-primary bg-primary/10"
+        />
+        <StatCard
+          icon={Clock}
+          label="Pending signature"
+          value={stats.pending}
+          tone="text-amber-600 bg-amber-500/10"
+        />
+        <StatCard
+          icon={AlertTriangle}
+          label="Severe (final/suspension)"
+          value={stats.severe}
+          tone="text-red-600 bg-red-500/10"
+        />
       </div>
 
       <Tabs defaultValue="tracker">
@@ -199,24 +248,36 @@ export default function StaffWarningsPage() {
                 className="h-9 pl-9"
               />
             </div>
-            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as WarningType | "all")}>
+            <Select
+              value={typeFilter}
+              onValueChange={(v) => setTypeFilter(v as WarningType | "all")}
+            >
               <SelectTrigger className="h-9 w-44">
                 <SelectValue placeholder="All types" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All types</SelectItem>
                 {Object.entries(WARNING_TYPE_META).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                  <SelectItem key={k} value={k}>
+                    {v.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as IssuedWarning["status"] | "all")}>
+            <Select
+              value={statusFilter}
+              onValueChange={(v) =>
+                setStatusFilter(v as IssuedWarning["status"] | "all")
+              }
+            >
               <SelectTrigger className="h-9 w-44">
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="pending_signature">Pending signature</SelectItem>
+                <SelectItem value="pending_signature">
+                  Pending signature
+                </SelectItem>
                 <SelectItem value="signed">Signed</SelectItem>
                 <SelectItem value="appealed">Appealed</SelectItem>
                 <SelectItem value="resolved">Resolved</SelectItem>
@@ -231,25 +292,38 @@ export default function StaffWarningsPage() {
               {groupedByEmployee.map((group) => {
                 const isExpanded = expandedEmployee === group.id;
                 const highestType = getHighestType(group.warnings);
-                const hasPending = group.warnings.some((w) => w.status === "pending_signature");
+                const hasPending = group.warnings.some(
+                  (w) => w.status === "pending_signature",
+                );
                 return (
                   <Card key={group.id} className="overflow-hidden">
                     <button
-                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/30"
-                      onClick={() => setExpandedEmployee(isExpanded ? null : group.id)}
+                      className="hover:bg-muted/30 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors"
+                      onClick={() =>
+                        setExpandedEmployee(isExpanded ? null : group.id)
+                      }
                     >
                       <Avatar className="size-7 shrink-0">
                         <AvatarImage
-                          src={facilityStaff.find((s) => s.id === group.id)?.avatarUrl}
+                          src={
+                            facilityStaff.find((s) => s.id === group.id)
+                              ?.avatarUrl
+                          }
                           alt={group.name}
                         />
                         <AvatarFallback className="bg-slate-100 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                          {group.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                          {group.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-sm font-semibold">{group.name}</span>
+                          <span className="text-sm font-semibold">
+                            {group.name}
+                          </span>
                           {highestType && (
                             <Badge
                               className={cn(
@@ -263,12 +337,14 @@ export default function StaffWarningsPage() {
                           )}
                           {hasPending && (
                             <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-700 dark:text-amber-400">
-                              <Clock className="mr-0.5 size-2.5" /> Pending signature
+                              <Clock className="mr-0.5 size-2.5" /> Pending
+                              signature
                             </Badge>
                           )}
                         </div>
                         <p className="text-muted-foreground text-[11px]">
-                          {group.warnings.length} warning{group.warnings.length !== 1 ? "s" : ""} on record
+                          {group.warnings.length} warning
+                          {group.warnings.length !== 1 ? "s" : ""} on record
                           {group.warnings.length >= 3 && (
                             <span className="ml-1.5 font-medium text-red-600 dark:text-red-400">
                               — review for termination protocol
@@ -276,22 +352,32 @@ export default function StaffWarningsPage() {
                           )}
                         </p>
                       </div>
-                      <span className="text-muted-foreground text-[10px]">{isExpanded ? "▲" : "▼"}</span>
+                      <span className="text-muted-foreground text-[10px]">
+                        {isExpanded ? "▲" : "▼"}
+                      </span>
                     </button>
 
                     {isExpanded && (
-                      <CardContent className="border-t px-3 pb-3 pt-2.5">
+                      <CardContent className="border-t px-3 pt-2.5 pb-3">
                         <div className="space-y-3">
                           {group.warnings.map((w) => (
-                            <WarningRow key={w.id} warning={w} onAcknowledge={(id) => {
-                              setWarnings((prev) =>
-                                prev.map((x) =>
-                                  x.id === id
-                                    ? { ...x, status: "signed", signedAt: new Date().toISOString() }
-                                    : x,
-                                ),
-                              );
-                            }} />
+                            <WarningRow
+                              key={w.id}
+                              warning={w}
+                              onAcknowledge={(id) => {
+                                setWarnings((prev) =>
+                                  prev.map((x) =>
+                                    x.id === id
+                                      ? {
+                                          ...x,
+                                          status: "signed",
+                                          signedAt: new Date().toISOString(),
+                                        }
+                                      : x,
+                                  ),
+                                );
+                              }}
+                            />
                           ))}
                         </div>
                       </CardContent>
@@ -309,7 +395,8 @@ export default function StaffWarningsPage() {
             <div>
               <p className="text-sm font-semibold">Warning Templates</p>
               <p className="text-muted-foreground text-xs">
-                Build custom warning documents. When issuing a warning from a staff profile, managers select one of these templates.
+                Build custom warning documents. When issuing a warning from a
+                staff profile, managers select one of these templates.
               </p>
             </div>
             <Button size="sm" onClick={() => openBuilder()}>
@@ -330,17 +417,30 @@ export default function StaffWarningsPage() {
                       <FileText className={cn("size-4", meta.text)} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{t.title}</p>
-                      <Badge className={cn("mt-1 border-0 text-[10px]", meta.bg, meta.text)}>
+                      <p className="truncate text-sm font-semibold">
+                        {t.title}
+                      </p>
+                      <Badge
+                        className={cn(
+                          "mt-1 border-0 text-[10px]",
+                          meta.bg,
+                          meta.text,
+                        )}
+                      >
                         {meta.label}
                       </Badge>
                     </div>
                   </div>
                   {t.description && (
-                    <p className="text-muted-foreground line-clamp-2 text-xs">{t.description}</p>
+                    <p className="text-muted-foreground line-clamp-2 text-xs">
+                      {t.description}
+                    </p>
                   )}
                   <div className="text-muted-foreground mt-auto flex items-center justify-between text-[11px]">
-                    <span>{t.fields.length} custom field{t.fields.length !== 1 ? "s" : ""}</span>
+                    <span>
+                      {t.fields.length} custom field
+                      {t.fields.length !== 1 ? "s" : ""}
+                    </span>
                     {t.requiresSignature && (
                       <span className="flex items-center gap-1">
                         <PenLine className="size-2.5" /> Requires signature
@@ -399,7 +499,9 @@ function WarningRow({
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-sm font-medium">{w.templateTitle}</span>
-          <Badge className={cn("border-0 text-[10px]", meta.bg, meta.text)}>{meta.label}</Badge>
+          <Badge className={cn("border-0 text-[10px]", meta.bg, meta.text)}>
+            {meta.label}
+          </Badge>
           <StatusBadge status={w.status} />
         </div>
         <p className="text-muted-foreground text-xs">{w.reason}</p>
@@ -426,13 +528,22 @@ function WarningRow({
         )}
         {w.signedAt && (
           <p className="text-muted-foreground text-[11px]">
-            Signed {new Date(w.signedAt).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}
+            Signed{" "}
+            {new Date(w.signedAt).toLocaleString("en-CA", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
             {w.ipAddress && ` · ${w.ipAddress}`}
           </p>
         )}
       </div>
       {w.status === "pending_signature" && (
-        <Button variant="outline" size="sm" onClick={() => onAcknowledge(w.id)} className="shrink-0">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onAcknowledge(w.id)}
+          className="shrink-0"
+        >
           <CheckCircle2 className="mr-1 size-3.5" /> Mark signed
         </Button>
       )}
@@ -497,7 +608,8 @@ function EmptyLog() {
       <ShieldAlert className="text-muted-foreground mb-3 size-10 opacity-30" />
       <p className="font-semibold">No disciplinary records</p>
       <p className="text-muted-foreground mt-1 max-w-xs text-sm">
-        Warnings issued from staff profiles will appear here for facility-wide tracking.
+        Warnings issued from staff profiles will appear here for facility-wide
+        tracking.
       </p>
     </div>
   );
@@ -505,7 +617,14 @@ function EmptyLog() {
 
 /** Returns the most severe warning type in a list. */
 function getHighestType(warnings: IssuedWarning[]): WarningType | null {
-  const order: WarningType[] = ["termination", "suspension", "final", "written", "verbal", "custom"];
+  const order: WarningType[] = [
+    "termination",
+    "suspension",
+    "final",
+    "written",
+    "verbal",
+    "custom",
+  ];
   for (const t of order) {
     if (warnings.some((w) => w.type === t)) return t;
   }

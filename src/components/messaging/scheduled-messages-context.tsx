@@ -14,16 +14,23 @@ interface ScheduledMessagesContextValue {
   count: number;
 }
 
-const ScheduledMessagesContext = createContext<ScheduledMessagesContextValue | null>(null);
+const ScheduledMessagesContext =
+  createContext<ScheduledMessagesContextValue | null>(null);
 
-export function ScheduledMessagesProvider({ children }: { children: React.ReactNode }) {
-  const [scheduled, setScheduled] = useState<ScheduledMessage[]>(defaultScheduled);
+export function ScheduledMessagesProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [scheduled, setScheduled] =
+    useState<ScheduledMessage[]>(defaultScheduled);
 
   const schedule = useCallback((message: ScheduledMessage) => {
     setScheduled((prev) =>
       [message, ...prev].sort(
         (a, b) =>
-          new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime(),
+          new Date(a.scheduledFor).getTime() -
+          new Date(b.scheduledFor).getTime(),
       ),
     );
   }, []);
@@ -46,7 +53,13 @@ export function ScheduledMessagesProvider({ children }: { children: React.ReactN
 
   return (
     <ScheduledMessagesContext.Provider
-      value={{ scheduled, schedule, cancel, reschedule, count: scheduled.length }}
+      value={{
+        scheduled,
+        schedule,
+        cancel,
+        reschedule,
+        count: scheduled.length,
+      }}
     >
       {children}
     </ScheduledMessagesContext.Provider>

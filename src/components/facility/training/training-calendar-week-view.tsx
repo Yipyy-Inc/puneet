@@ -1,10 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type {
-  TrainingClass,
-  TrainingSession,
-} from "@/types/training";
+import type { TrainingClass, TrainingSession } from "@/types/training";
 import {
   DAY_ABBR,
   STATUS_META,
@@ -62,8 +59,7 @@ export function TrainingCalendarWeekView({
           const daySessions = sessions
             .filter((s) => s.date === ds && s.status !== "cancelled")
             .sort(
-              (a, b) =>
-                timeToMinutes(a.startTime) - timeToMinutes(b.startTime),
+              (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime),
             );
           const isToday = ds === today;
           const isSelected = ds === selectedDate;
@@ -102,14 +98,12 @@ export function TrainingCalendarWeekView({
                   return (
                     <span
                       className={cn(
-                        "inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
+                        "inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase",
                         tier.cls,
                       )}
                       title={`${daySessions.length} session${daySessions.length === 1 ? "" : "s"} — ${tier.label.toLowerCase()} day`}
                     >
-                      <span className="tabular-nums">
-                        {daySessions.length}
-                      </span>
+                      <span className="tabular-nums">{daySessions.length}</span>
                       {tier.label}
                     </span>
                   );

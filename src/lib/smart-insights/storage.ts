@@ -70,10 +70,7 @@ export function recordDismissal(
   write(keys.dismissals(facilityId), all);
 }
 
-export function removeDismissal(
-  facilityId: number,
-  insightId: string,
-): void {
+export function removeDismissal(facilityId: number, insightId: string): void {
   const all = getDismissals(facilityId).filter(
     (d) => d.insightId !== insightId,
   );

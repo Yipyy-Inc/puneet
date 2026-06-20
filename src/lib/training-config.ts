@@ -244,7 +244,11 @@ export const defaultTrainingCourseTypes: TrainingCourseType[] = [
       {
         sessionNumber: 1,
         title: "Distance & duration",
-        exerciseIds: ["ex-obed-stay-distance", "ex-obed-stay", "ex-obed-settle"],
+        exerciseIds: [
+          "ex-obed-stay-distance",
+          "ex-obed-stay",
+          "ex-obed-settle",
+        ],
       },
       {
         sessionNumber: 2,
@@ -258,7 +262,11 @@ export const defaultTrainingCourseTypes: TrainingCourseType[] = [
       {
         sessionNumber: 3,
         title: "Leash precision",
-        exerciseIds: ["ex-obed-llw", "ex-obed-direction-changes", "ex-obed-heel"],
+        exerciseIds: [
+          "ex-obed-llw",
+          "ex-obed-direction-changes",
+          "ex-obed-heel",
+        ],
       },
       {
         sessionNumber: 4,

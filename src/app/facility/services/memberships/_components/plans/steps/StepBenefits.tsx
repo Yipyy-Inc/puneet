@@ -246,9 +246,9 @@ export function StepBenefits({ data, update }: Props) {
               </h4>
               <p className="text-muted-foreground mt-0.5 text-sm">
                 Subscribers&apos; bookings for the selected services bypass the
-                booking-requests queue and are auto-confirmed. Customers
-                receive the confirmation email/SMS immediately, without waiting
-                for staff approval.
+                booking-requests queue and are auto-confirmed. Customers receive
+                the confirmation email/SMS immediately, without waiting for
+                staff approval.
               </p>
             </div>
           </div>

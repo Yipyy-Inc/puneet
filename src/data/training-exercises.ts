@@ -610,7 +610,10 @@ function findDisciplineIdByName(
 export function getDisciplineIdForClassName(
   className: string,
   packages: TrainingPackage[] = trainingPackages,
-  courseTypes: { name: string; disciplineId?: string }[] = defaultTrainingCourseTypes,
+  courseTypes: {
+    name: string;
+    disciplineId?: string;
+  }[] = defaultTrainingCourseTypes,
 ): string | undefined {
   return (
     findDisciplineIdByName(className, courseTypes) ??
@@ -735,7 +738,8 @@ export function compareExerciseProgression(
   a: TrainingExerciseDef,
   b: TrainingExerciseDef,
 ): number {
-  const tierDiff = difficultyRank(a.difficultyLevel) - difficultyRank(b.difficultyLevel);
+  const tierDiff =
+    difficultyRank(a.difficultyLevel) - difficultyRank(b.difficultyLevel);
   if (tierDiff !== 0) return tierDiff;
   if (a.order !== b.order) return a.order - b.order;
   return a.name.localeCompare(b.name);
@@ -779,7 +783,8 @@ export function groupExercisesByDisciplineAndDifficulty(
   for (const byTier of Object.values(out)) {
     for (const level of DIFFICULTY_LEVELS) {
       const list = byTier[level];
-      if (list) list.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+      if (list)
+        list.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
     }
   }
   return out;

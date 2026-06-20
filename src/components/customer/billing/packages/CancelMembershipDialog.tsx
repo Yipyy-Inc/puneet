@@ -54,9 +54,7 @@ export function CancelMembershipDialog({
         : membership.billingCycle === "quarterly"
           ? 90
           : 30;
-    const refund = Math.round(
-      (membership.monthlyPrice * daysLeft) / cycleDays,
-    );
+    const refund = Math.round((membership.monthlyPrice * daysLeft) / cycleDays);
     refundLine = `Estimated prorated refund: ${formatCurrency(refund)} to your original payment method.`;
   } else if (policy.refundRule === "remaining_credits_as_store_credit") {
     const remaining =

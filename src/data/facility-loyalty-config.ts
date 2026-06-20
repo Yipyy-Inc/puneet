@@ -884,7 +884,9 @@ export function buildDefaultTiers(facilityId: number): Tier[] {
  * referralProgram defaults: $25 referrer credit, 10% off for the referee, reward
  * on first booking, codes valid 90 days.
  */
-export function buildDefaultReferralProgram(facilityId: number): ReferralProgram {
+export function buildDefaultReferralProgram(
+  facilityId: number,
+): ReferralProgram {
   return {
     facilityId,
     enabled: false,

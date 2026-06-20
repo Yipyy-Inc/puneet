@@ -48,7 +48,9 @@ export function computeCallMetrics(
   const voicemail = logs.filter((c) => c.status === "voicemail").length;
 
   // Average queue wait — inbound calls that recorded a wait time.
-  const queueSamples = logs.filter((c) => typeof c.queueWaitSeconds === "number");
+  const queueSamples = logs.filter(
+    (c) => typeof c.queueWaitSeconds === "number",
+  );
   const avgQueueWait = queueSamples.length
     ? Math.round(
         queueSamples.reduce((s, c) => s + (c.queueWaitSeconds ?? 0), 0) /
@@ -58,7 +60,9 @@ export function computeCallMetrics(
 
   // Average call duration — genuinely answered (completed) calls only, so a
   // voicemail's recording length doesn't skew the talk-time average.
-  const answered = logs.filter((c) => c.status === "completed" && c.duration > 0);
+  const answered = logs.filter(
+    (c) => c.status === "completed" && c.duration > 0,
+  );
   const avgDuration = answered.length
     ? Math.round(answered.reduce((s, c) => s + c.duration, 0) / answered.length)
     : 0;
@@ -67,7 +71,9 @@ export function computeCallMetrics(
   const followUpResolved = missedLogs.filter(isResolved).length;
 
   // Average AI sentiment over calls in range that have a summary.
-  const sentimentById = new Map(summaries.map((s) => [s.callId, s.sentimentScore]));
+  const sentimentById = new Map(
+    summaries.map((s) => [s.callId, s.sentimentScore]),
+  );
   const sentiments = logs
     .map((c) => sentimentById.get(c.id))
     .filter((v): v is number => typeof v === "number");
@@ -87,7 +93,9 @@ export function computeCallMetrics(
     .sort((a, b) => b.count - a.count);
 
   // Calls by hour of day — 7×24 grid keyed by local weekday + hour.
-  const heatmap: number[][] = HEATMAP_DAYS.map(() => HEATMAP_HOURS.map(() => 0));
+  const heatmap: number[][] = HEATMAP_DAYS.map(() =>
+    HEATMAP_HOURS.map(() => 0),
+  );
   let heatmapMax = 0;
   for (const c of logs) {
     const d = new Date(c.timestamp);
@@ -271,7 +279,9 @@ export function computeStaffPerformance(
   logs: CallLog[],
   summaries: AICallSummary[],
 ): StaffPerfRow[] {
-  const sentimentById = new Map(summaries.map((s) => [s.callId, s.sentimentScore]));
+  const sentimentById = new Map(
+    summaries.map((s) => [s.callId, s.sentimentScore]),
+  );
   const acc = new Map<
     string,
     {
@@ -286,20 +296,29 @@ export function computeStaffPerformance(
 
   for (const c of logs) {
     if (!c.handledBy) continue;
-    const a =
-      acc.get(c.handledBy) ??
-      { calls: 0, sentiments: [], qas: [], fuResolved: 0, fuTotal: 0, durations: [] };
+    const a = acc.get(c.handledBy) ?? {
+      calls: 0,
+      sentiments: [],
+      qas: [],
+      fuResolved: 0,
+      fuTotal: 0,
+      durations: [],
+    };
     a.calls += 1;
     const sentiment = sentimentById.get(c.id);
     if (typeof sentiment === "number") a.sentiments.push(sentiment);
     if (typeof c.qaScore === "number") a.qas.push(c.qaScore);
     if (c.followUpStatus != null) {
       a.fuTotal += 1;
-      if (c.followUpStatus === "completed" || c.followUpStatus === "no_action") {
+      if (
+        c.followUpStatus === "completed" ||
+        c.followUpStatus === "no_action"
+      ) {
         a.fuResolved += 1;
       }
     }
-    if (c.status === "completed" && c.duration > 0) a.durations.push(c.duration);
+    if (c.status === "completed" && c.duration > 0)
+      a.durations.push(c.duration);
     acc.set(c.handledBy, a);
   }
 

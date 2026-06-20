@@ -8,7 +8,13 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
-import { CalendarDays, X, Calendar as CalendarIcon, Clock, ArrowRight } from "lucide-react";
+import {
+  CalendarDays,
+  X,
+  Calendar as CalendarIcon,
+  Clock,
+  ArrowRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -134,7 +140,7 @@ export function BookingDateRangeFilter({
       >
         <div className="flex">
           {/* Presets Sidebar */}
-          <div className="w-[140px] border-r p-2 space-y-1 bg-slate-50/50 hidden sm:block">
+          <div className="hidden w-[140px] space-y-1 border-r bg-slate-50/50 p-2 sm:block">
             <p className="text-muted-foreground px-2 py-1.5 text-[10px] font-bold tracking-wider uppercase">
               Quick Select
             </p>
@@ -144,14 +150,14 @@ export function BookingDateRangeFilter({
                 <Button
                   key={preset.label}
                   variant="ghost"
-                  className="w-full justify-start gap-2 h-8 px-2 text-xs font-normal"
+                  className="h-8 w-full justify-start gap-2 px-2 text-xs font-normal"
                   onClick={() => {
                     const { start, end } = preset.getValue();
                     onChange(start, end);
                     setOpen(false);
                   }}
                 >
-                  <Icon className="size-3.5 text-muted-foreground" />
+                  <Icon className="text-muted-foreground size-3.5" />
                   {preset.label}
                 </Button>
               );
@@ -174,25 +180,25 @@ export function BookingDateRangeFilter({
                 >
                   Clear
                 </button>
-            )}
-          </div>
+              )}
+            </div>
 
-          <DateSelectionCalendar
-            mode="range"
-            rangeStart={rangeStart}
-            rangeEnd={rangeEnd}
-            onRangeChange={(start, end) => {
-              onChange(start, end);
-              // Auto-close once a full range (or single day re-click) is committed
-              if (start && end) {
-                setTimeout(() => setOpen(false), 180);
-              }
-            }}
-            showTimeSelection={false}
-          />
+            <DateSelectionCalendar
+              mode="range"
+              rangeStart={rangeStart}
+              rangeEnd={rangeEnd}
+              onRangeChange={(start, end) => {
+                onChange(start, end);
+                // Auto-close once a full range (or single day re-click) is committed
+                if (start && end) {
+                  setTimeout(() => setOpen(false), 180);
+                }
+              }}
+              showTimeSelection={false}
+            />
 
-          {hasFilter && (
-              <div className="flex items-center justify-between border-t pt-2 mt-2">
+            {hasFilter && (
+              <div className="mt-2 flex items-center justify-between border-t pt-2">
                 <p className="text-muted-foreground text-[11px]">
                   {rangeEnd && !isSingleDay
                     ? `${Math.round((rangeEnd.getTime() - rangeStart!.getTime()) / 86_400_000) + 1} days selected`

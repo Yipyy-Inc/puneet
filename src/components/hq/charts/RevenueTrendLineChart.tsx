@@ -18,13 +18,14 @@ interface Props {
   height?: number;
 }
 
-export function RevenueTrendLineChart({ data, locations, height = 280 }: Props) {
+export function RevenueTrendLineChart({
+  data,
+  locations,
+  height = 280,
+}: Props) {
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart
-        data={data}
-        margin={{ top: 8, right: 16, left: 8, bottom: 0 }}
-      >
+      <LineChart data={data} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
         <XAxis
           dataKey="month"

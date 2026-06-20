@@ -194,7 +194,7 @@ export function OpenInvoicesSection({
                   </p>
                 </Link>
                 <div className="text-right">
-                  <p className="text-sm font-semibold font-[tabular-nums]">
+                  <p className="font-[tabular-nums] text-sm font-semibold">
                     ${inv.remainingDue.toFixed(2)}
                   </p>
                   <p className="text-muted-foreground text-[10px]">due</p>
@@ -212,7 +212,7 @@ export function OpenInvoicesSection({
               </p>
               <p className="text-[11px] text-amber-800/70">
                 Total to collect:{" "}
-                <span className="font-semibold font-[tabular-nums]">
+                <span className="font-[tabular-nums] font-semibold">
                   ${selectedTotal.toFixed(2)}
                 </span>
               </p>
@@ -241,7 +241,7 @@ export function OpenInvoicesSection({
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div className="rounded-lg border bg-muted/30 px-3 py-2.5">
+            <div className="bg-muted/30 rounded-lg border px-3 py-2.5">
               <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
                 Including
               </p>
@@ -284,7 +284,7 @@ export function OpenInvoicesSection({
                     className={cn(
                       "flex flex-col items-center gap-1 rounded-lg border px-2 py-2 text-[11px] font-medium transition-all",
                       method === value
-                        ? "border-primary ring-1 ring-primary text-primary"
+                        ? "border-primary ring-primary text-primary ring-1"
                         : "text-muted-foreground hover:bg-muted",
                     )}
                   >
@@ -295,7 +295,7 @@ export function OpenInvoicesSection({
               </div>
             </div>
 
-            <label className="flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer hover:bg-muted/40">
+            <label className="hover:bg-muted/40 flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2">
               <Checkbox
                 checked={sendReceipt}
                 onCheckedChange={(v) => setSendReceipt(v === true)}

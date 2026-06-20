@@ -147,7 +147,6 @@ const isUpcoming = (dateString: string): boolean => {
   return date > today;
 };
 
-
 export default function FacilityBookingsPage() {
   const router = useRouter();
   const facilityId = 11;
@@ -237,7 +236,7 @@ export default function FacilityBookingsPage() {
   const upcomingBookings = locationBookings.filter(
     (b) => isUpcoming(b.startDate) && b.status !== "cancelled",
   );
-const pendingBookings = locationBookings.filter(
+  const pendingBookings = locationBookings.filter(
     (b) => b.status === "pending",
   );
 
@@ -295,7 +294,8 @@ const pendingBookings = locationBookings.filter(
             defaultVisible: true,
             render: (booking: (typeof bookings)[number]) => {
               const loc = getLocationById(deriveLocationId(booking.id));
-              if (!loc) return <span className="text-muted-foreground text-xs">—</span>;
+              if (!loc)
+                return <span className="text-muted-foreground text-xs">—</span>;
               return (
                 <div className="flex items-center gap-1.5">
                   <div
@@ -790,7 +790,7 @@ const pendingBookings = locationBookings.filter(
       {/* Table View */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex items-center gap-3 overflow-x-auto pb-1">
-          <TabsList className="h-9 shrink-0 gap-0.5 bg-muted/60 p-1">
+          <TabsList className="bg-muted/60 h-9 shrink-0 gap-0.5 p-1">
             {(
               [
                 { value: "all", label: "All", count: allBookings.length },
@@ -803,7 +803,7 @@ const pendingBookings = locationBookings.filter(
                 className="h-7 gap-1.5 px-3 text-xs font-medium"
               >
                 {label}
-                <span className="inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-background/70 px-1 text-[10px] font-semibold tabular-nums text-muted-foreground shadow-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                <span className="bg-background/70 text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums shadow-sm">
                   {count}
                 </span>
               </TabsTrigger>
@@ -822,10 +822,12 @@ const pendingBookings = locationBookings.filter(
           {getDataForTab().length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-20">
-                <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-muted/60">
-                  <CalendarX className="size-8 text-muted-foreground/50" />
+                <div className="bg-muted/60 mb-4 flex size-16 items-center justify-center rounded-2xl">
+                  <CalendarX className="text-muted-foreground/50 size-8" />
                 </div>
-                <h3 className="mb-1.5 text-base font-semibold">No bookings found</h3>
+                <h3 className="mb-1.5 text-base font-semibold">
+                  No bookings found
+                </h3>
                 <p className="text-muted-foreground max-w-xs text-center text-sm">
                   There are no bookings in this category yet.
                 </p>

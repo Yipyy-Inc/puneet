@@ -43,44 +43,188 @@ const ROLE_ACTIONS: Record<
   }[]
 > = {
   owner: [
-    { title: "My Schedule", description: "Personal schedule view", href: "/employee/schedule", icon: Calendar, accent: "text-amber-600" },
-    { title: "Bookings", description: "All facility bookings", href: "/employee/bookings", icon: ClipboardList, accent: "text-amber-600" },
-    { title: "Clients", description: "Client directory", href: "/employee/clients", icon: Users, accent: "text-amber-600" },
+    {
+      title: "My Schedule",
+      description: "Personal schedule view",
+      href: "/employee/schedule",
+      icon: Calendar,
+      accent: "text-amber-600",
+    },
+    {
+      title: "Bookings",
+      description: "All facility bookings",
+      href: "/employee/bookings",
+      icon: ClipboardList,
+      accent: "text-amber-600",
+    },
+    {
+      title: "Clients",
+      description: "Client directory",
+      href: "/employee/clients",
+      icon: Users,
+      accent: "text-amber-600",
+    },
   ],
   manager: [
-    { title: "My Schedule", description: "Personal schedule", href: "/employee/schedule", icon: Calendar, accent: "text-violet-600" },
-    { title: "Bookings", description: "Today's appointments", href: "/employee/bookings", icon: ClipboardList, accent: "text-violet-600" },
-    { title: "Clients", description: "Client directory", href: "/employee/clients", icon: Users, accent: "text-violet-600" },
+    {
+      title: "My Schedule",
+      description: "Personal schedule",
+      href: "/employee/schedule",
+      icon: Calendar,
+      accent: "text-violet-600",
+    },
+    {
+      title: "Bookings",
+      description: "Today's appointments",
+      href: "/employee/bookings",
+      icon: ClipboardList,
+      accent: "text-violet-600",
+    },
+    {
+      title: "Clients",
+      description: "Client directory",
+      href: "/employee/clients",
+      icon: Users,
+      accent: "text-violet-600",
+    },
   ],
   reception: [
-    { title: "Bookings", description: "Check-in/out and appointments", href: "/employee/bookings", icon: CheckSquare, accent: "text-sky-600" },
-    { title: "Clients", description: "Find a client", href: "/employee/clients", icon: Users, accent: "text-sky-600" },
-    { title: "Retail POS", description: "Process a sale", href: "/employee/retail", icon: ShoppingBag, accent: "text-sky-600" },
-    { title: "My Schedule", description: "Your shifts", href: "/employee/schedule", icon: Clock, accent: "text-sky-600" },
+    {
+      title: "Bookings",
+      description: "Check-in/out and appointments",
+      href: "/employee/bookings",
+      icon: CheckSquare,
+      accent: "text-sky-600",
+    },
+    {
+      title: "Clients",
+      description: "Find a client",
+      href: "/employee/clients",
+      icon: Users,
+      accent: "text-sky-600",
+    },
+    {
+      title: "Retail POS",
+      description: "Process a sale",
+      href: "/employee/retail",
+      icon: ShoppingBag,
+      accent: "text-sky-600",
+    },
+    {
+      title: "My Schedule",
+      description: "Your shifts",
+      href: "/employee/schedule",
+      icon: Clock,
+      accent: "text-sky-600",
+    },
   ],
   groomer: [
-    { title: "Today's Queue", description: "Your grooming appointments", href: "/employee/grooming", icon: Scissors, accent: "text-rose-600" },
-    { title: "My Schedule", description: "Your grooming shifts", href: "/employee/schedule", icon: Calendar, accent: "text-rose-600" },
-    { title: "My Clients", description: "Assigned pets", href: "/employee/clients", icon: Dog, accent: "text-rose-600" },
+    {
+      title: "Today's Queue",
+      description: "Your grooming appointments",
+      href: "/employee/grooming",
+      icon: Scissors,
+      accent: "text-rose-600",
+    },
+    {
+      title: "My Schedule",
+      description: "Your grooming shifts",
+      href: "/employee/schedule",
+      icon: Calendar,
+      accent: "text-rose-600",
+    },
+    {
+      title: "My Clients",
+      description: "Assigned pets",
+      href: "/employee/clients",
+      icon: Dog,
+      accent: "text-rose-600",
+    },
   ],
   trainer: [
-    { title: "Training Sessions", description: "Today's sessions", href: "/employee/training", icon: Dumbbell, accent: "text-emerald-600" },
-    { title: "My Schedule", description: "Your training shifts", href: "/employee/schedule", icon: Calendar, accent: "text-emerald-600" },
-    { title: "My Clients", description: "Enrolled pets", href: "/employee/clients", icon: Dog, accent: "text-emerald-600" },
+    {
+      title: "Training Sessions",
+      description: "Today's sessions",
+      href: "/employee/training",
+      icon: Dumbbell,
+      accent: "text-emerald-600",
+    },
+    {
+      title: "My Schedule",
+      description: "Your training shifts",
+      href: "/employee/schedule",
+      icon: Calendar,
+      accent: "text-emerald-600",
+    },
+    {
+      title: "My Clients",
+      description: "Enrolled pets",
+      href: "/employee/clients",
+      icon: Dog,
+      accent: "text-emerald-600",
+    },
   ],
   daycare_attendant: [
-    { title: "Daycare Board", description: "Check-in and care logs", href: "/employee/daycare", icon: Sun, accent: "text-orange-500" },
-    { title: "Kennel View", description: "Pet statuses and rooms", href: "/employee/kennel", icon: Dog, accent: "text-orange-500" },
-    { title: "My Schedule", description: "Your daycare shifts", href: "/employee/schedule", icon: Calendar, accent: "text-orange-500" },
+    {
+      title: "Daycare Board",
+      description: "Check-in and care logs",
+      href: "/employee/daycare",
+      icon: Sun,
+      accent: "text-orange-500",
+    },
+    {
+      title: "Kennel View",
+      description: "Pet statuses and rooms",
+      href: "/employee/kennel",
+      icon: Dog,
+      accent: "text-orange-500",
+    },
+    {
+      title: "My Schedule",
+      description: "Your daycare shifts",
+      href: "/employee/schedule",
+      icon: Calendar,
+      accent: "text-orange-500",
+    },
   ],
   boarding_attendant: [
-    { title: "Boarding Guests", description: "Overnight pets in care", href: "/employee/boarding", icon: Moon, accent: "text-indigo-600" },
-    { title: "Kennel View", description: "Room assignments", href: "/employee/kennel", icon: Dog, accent: "text-indigo-600" },
-    { title: "My Schedule", description: "Your boarding shifts", href: "/employee/schedule", icon: Calendar, accent: "text-indigo-600" },
+    {
+      title: "Boarding Guests",
+      description: "Overnight pets in care",
+      href: "/employee/boarding",
+      icon: Moon,
+      accent: "text-indigo-600",
+    },
+    {
+      title: "Kennel View",
+      description: "Room assignments",
+      href: "/employee/kennel",
+      icon: Dog,
+      accent: "text-indigo-600",
+    },
+    {
+      title: "My Schedule",
+      description: "Your boarding shifts",
+      href: "/employee/schedule",
+      icon: Calendar,
+      accent: "text-indigo-600",
+    },
   ],
   sanitation: [
-    { title: "My Tasks", description: "Cleaning & sanitation logs", href: "/employee/tasks", icon: Sparkles, accent: "text-teal-600" },
-    { title: "My Schedule", description: "Your shifts", href: "/employee/schedule", icon: Calendar, accent: "text-teal-600" },
+    {
+      title: "My Tasks",
+      description: "Cleaning & sanitation logs",
+      href: "/employee/tasks",
+      icon: Sparkles,
+      accent: "text-teal-600",
+    },
+    {
+      title: "My Schedule",
+      description: "Your shifts",
+      href: "/employee/schedule",
+      icon: Calendar,
+      accent: "text-teal-600",
+    },
   ],
 };
 
@@ -96,7 +240,8 @@ const ROLE_LABEL: Record<FacilityStaffRole, string> = {
 };
 
 const ROLE_DESCRIPTION: Record<FacilityStaffRole, string> = {
-  owner: "Full facility access — configuration, financials, and team management.",
+  owner:
+    "Full facility access — configuration, financials, and team management.",
   manager: "Operational oversight — bookings, staff, and reports.",
   reception: "Client-facing operations — check-in/out, bookings, payments.",
   groomer: "Grooming appointments and notes for your assigned pets.",
@@ -144,19 +289,20 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
         className={`relative overflow-hidden rounded-2xl bg-linear-to-r ${ROLE_GRADIENT[role]} p-6 text-white shadow-md`}
       >
         <div className="flex items-center gap-4">
-          <Avatar className="size-16 ring-2 ring-white/30 shadow-lg">
+          <Avatar className="size-16 shadow-lg ring-2 ring-white/30">
             <AvatarImage src={staff.avatarUrl} />
             <AvatarFallback
               className="text-xl font-bold"
-              style={{ backgroundColor: "rgba(255,255,255,0.2)", color: "white" }}
+              style={{
+                backgroundColor: "rgba(255,255,255,0.2)",
+                color: "white",
+              }}
             >
               {getInitials(staff.firstName, staff.lastName)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <p className="text-white/80 text-sm font-medium">
-              Welcome back,
-            </p>
+            <p className="text-sm font-medium text-white/80">Welcome back,</p>
             <h1 className="text-2xl font-bold tracking-tight">
               {staff.firstName} {staff.lastName}
             </h1>
@@ -172,14 +318,14 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
                 <Badge
                   key={r}
                   variant="secondary"
-                  className="border-white/10 bg-white/10 text-white/80 text-xs"
+                  className="border-white/10 bg-white/10 text-xs text-white/80"
                 >
                   +{r.replace(/_/g, " ")}
                 </Badge>
               ))}
             </div>
           </div>
-          <div className="hidden sm:block text-right text-white/70 text-sm">
+          <div className="hidden text-right text-sm text-white/70 sm:block">
             <p>{staff.email}</p>
             <p className="mt-0.5">
               {staff.assignedLocations.length === 1
@@ -188,12 +334,12 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
             </p>
           </div>
         </div>
-        <p className="mt-3 text-white/80 text-sm max-w-xl">
+        <p className="mt-3 max-w-xl text-sm text-white/80">
           {ROLE_DESCRIPTION[role]}
         </p>
         {/* decorative */}
-        <div className="pointer-events-none absolute -right-8 -top-8 size-40 rounded-full bg-white/5" />
-        <div className="pointer-events-none absolute -bottom-10 right-20 size-32 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -top-8 -right-8 size-40 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute right-20 -bottom-10 size-32 rounded-full bg-white/5" />
       </div>
 
       {/* Stats row */}
@@ -201,7 +347,9 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
         <Card>
           <CardContent className="p-4">
             <p className="text-muted-foreground text-xs">Upcoming</p>
-            <p className="mt-1 text-2xl font-bold">{staff.upcomingAppointments}</p>
+            <p className="mt-1 text-2xl font-bold">
+              {staff.upcomingAppointments}
+            </p>
             <p className="text-muted-foreground text-xs">appointments</p>
           </CardContent>
         </Card>
@@ -243,17 +391,21 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
           {actions.map((action) => {
             const Icon = action.icon;
             return (
-              <Link key={action.href + action.title} href={action.href} className="group block">
-                <Card className="h-full cursor-pointer transition-all hover:shadow-md hover:ring-2 hover:ring-primary/20">
-                  <CardHeader className="pb-2 pt-4">
+              <Link
+                key={action.href + action.title}
+                href={action.href}
+                className="group block"
+              >
+                <Card className="hover:ring-primary/20 h-full cursor-pointer transition-all hover:shadow-md hover:ring-2">
+                  <CardHeader className="pt-4 pb-2">
                     <div className="flex items-start justify-between">
-                      <div className="flex size-9 items-center justify-center rounded-lg bg-muted">
+                      <div className="bg-muted flex size-9 items-center justify-center rounded-lg">
                         <Icon className={`size-5 ${action.accent}`} />
                       </div>
                       <ArrowRight className="text-muted-foreground size-4 opacity-0 transition-opacity group-hover:opacity-100" />
                     </div>
                   </CardHeader>
-                  <CardContent className="pb-4 pt-0">
+                  <CardContent className="pt-0 pb-4">
                     <CardTitle className="text-base">{action.title}</CardTitle>
                     <CardDescription className="mt-0.5 text-xs">
                       {action.description}
@@ -275,7 +427,12 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
               Switch to another employee account to explore their view.
             </p>
           </div>
-          <Button variant="outline" size="sm" className="shrink-0 gap-2" asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 gap-2"
+            asChild
+          >
             <Link href="/employee/select">
               <RefreshCw className="size-3.5" />
               Switch Employee

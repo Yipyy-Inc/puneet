@@ -96,13 +96,15 @@ function priceForEnrollment(
 ): number {
   // Series may carry a `programId` pointing at the catalog; if not, fall
   // back to matching by the courseTypeName which mock data uses widely.
-  const programId = series ? (series as { programId?: string }).programId : undefined;
+  const programId = series
+    ? (series as { programId?: string }).programId
+    : undefined;
   if (programId) {
     const pkg = packages.find((p) => p.id === programId);
     if (pkg) return pkg.price;
   }
-  const byName = packages.find((p) =>
-    p.name.toLowerCase() === enrollment.courseTypeName.toLowerCase(),
+  const byName = packages.find(
+    (p) => p.name.toLowerCase() === enrollment.courseTypeName.toLowerCase(),
   );
   if (byName) return byName.price;
   // Last resort — use the series' full-payment amount if available.
@@ -204,14 +206,12 @@ export function aggregateHqTrainingOverview(
     const series = enrollment ? seriesById.get(enrollment.seriesId) : undefined;
     const instructorId = series?.instructorId;
     if (!instructorId) continue;
-    const stats =
-      instructorTally.get(instructorId) ??
-      {
-        ratingSum: 0,
-        ratingCount: 0,
-        sessionCount: 0,
-        students: new Set<number>(),
-      };
+    const stats = instructorTally.get(instructorId) ?? {
+      ratingSum: 0,
+      ratingCount: 0,
+      sessionCount: 0,
+      students: new Set<number>(),
+    };
     stats.sessionCount += 1;
     stats.students.add(attendance.petId);
     for (const exercise of attendance.exercises ?? []) {

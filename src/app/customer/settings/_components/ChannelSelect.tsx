@@ -40,7 +40,7 @@ export function ChannelSelect({
     return (
       <div
         className={cn(
-          "flex h-9 items-center gap-1.5 rounded-md border border-dashed bg-muted/30 px-2.5 text-xs",
+          "bg-muted/30 flex h-9 items-center gap-1.5 rounded-md border border-dashed px-2.5 text-xs",
           disabled && "opacity-50",
         )}
       >
@@ -60,8 +60,8 @@ export function ChannelSelect({
           disabled={disabled}
           data-state={open ? "open" : "closed"}
           className={cn(
-            "group flex h-9 w-full items-center gap-1 rounded-md border border-input bg-background px-2 text-left text-sm shadow-xs transition-colors outline-none",
-            "hover:bg-muted/30 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+            "group border-input bg-background flex h-9 w-full items-center gap-1 rounded-md border px-2 text-left text-sm shadow-xs transition-colors outline-none",
+            "hover:bg-muted/30 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
             "disabled:cursor-not-allowed disabled:opacity-50",
           )}
         >

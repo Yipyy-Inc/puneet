@@ -51,7 +51,8 @@ export function ChangeMembershipDialog({
         : currentPlan.downgradePlanIds;
     if (explicitIds && explicitIds.length > 0) {
       return allPlans.filter(
-        (p) => explicitIds.includes(p.id) && p.isActive && p.id !== currentPlan.id,
+        (p) =>
+          explicitIds.includes(p.id) && p.isActive && p.id !== currentPlan.id,
       );
     }
     // Otherwise, filter by price above/below the current plan
@@ -83,7 +84,8 @@ export function ChangeMembershipDialog({
     return Math.round((diff * daysLeft) / cycleDays);
   }, [selected, currentPlan, direction, membership, nowMs]);
 
-  const title = direction === "upgrade" ? "Upgrade your plan" : "Downgrade your plan";
+  const title =
+    direction === "upgrade" ? "Upgrade your plan" : "Downgrade your plan";
   const actionLabel =
     direction === "upgrade" ? "Confirm upgrade" : "Schedule downgrade";
   const icon =

@@ -13,12 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,7 +209,7 @@ export function ClientServicePreferences({ clientId }: Props) {
           className={
             optedOut
               ? "flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-3"
-              : "flex items-center justify-between rounded-lg border bg-muted/20 p-3"
+              : "bg-muted/20 flex items-center justify-between rounded-lg border p-3"
           }
         >
           <div className="flex items-center gap-2.5">
@@ -222,7 +217,7 @@ export function ClientServicePreferences({ clientId }: Props) {
               className={
                 optedOut
                   ? "size-4 text-amber-600"
-                  : "size-4 text-muted-foreground"
+                  : "text-muted-foreground size-4"
               }
             />
             <div>
@@ -234,7 +229,7 @@ export function ClientServicePreferences({ clientId }: Props) {
               <p
                 className={
                   optedOut
-                    ? "text-amber-700/80 text-xs"
+                    ? "text-xs text-amber-700/80"
                     : "text-muted-foreground text-xs"
                 }
               >
@@ -244,7 +239,10 @@ export function ClientServicePreferences({ clientId }: Props) {
               </p>
             </div>
           </div>
-          <Switch checked={!optedOut} onCheckedChange={(v) => toggleOptOut(!v)} />
+          <Switch
+            checked={!optedOut}
+            onCheckedChange={(v) => toggleOptOut(!v)}
+          />
         </div>
         {rows.map((row) => {
           const isEditing = editingService === row.service;
@@ -255,7 +253,7 @@ export function ClientServicePreferences({ clientId }: Props) {
               className={
                 optedOut
                   ? "rounded-lg border border-dashed p-3 opacity-60 transition-colors"
-                  : "rounded-lg border p-3 transition-colors hover:bg-muted/30"
+                  : "hover:bg-muted/30 rounded-lg border p-3 transition-colors"
               }
             >
               {isEditing ? (
@@ -265,7 +263,9 @@ export function ClientServicePreferences({ clientId }: Props) {
                       {getServiceLabel(row.service)}
                     </span>
                     <Badge variant="secondary" className="text-[10px]">
-                      {row.source === "override" ? "Editing override" : "New override"}
+                      {row.source === "override"
+                        ? "Editing override"
+                        : "New override"}
                     </Badge>
                   </div>
                   <div className="grid grid-cols-2 gap-2">

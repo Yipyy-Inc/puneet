@@ -5,7 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DataTable, type ColumnDef, type FilterDef } from "@/components/ui/DataTable";
+import {
+  DataTable,
+  type ColumnDef,
+  type FilterDef,
+} from "@/components/ui/DataTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   AlertTriangle,
@@ -31,7 +35,11 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { OpsInventoryItem, OpsSupplier, StockAdjustType } from "@/types/ops-inventory";
+import type {
+  OpsInventoryItem,
+  OpsSupplier,
+  StockAdjustType,
+} from "@/types/ops-inventory";
 import { OPS_CATEGORIES } from "@/types/ops-inventory";
 import { ItemModal } from "./ItemModal";
 import { useLocationContext } from "@/hooks/use-location-context";
@@ -53,7 +61,9 @@ type Props = {
   facilityName: string;
 };
 
-function deriveStatus(item: OpsInventoryItem): "in_stock" | "low_stock" | "out_of_stock" {
+function deriveStatus(
+  item: OpsInventoryItem,
+): "in_stock" | "low_stock" | "out_of_stock" {
   if (item.quantity === 0) return "out_of_stock";
   if (item.quantity <= item.reorderPoint) return "low_stock";
   return "in_stock";
@@ -68,7 +78,10 @@ export function InventoryClient({
   const [items, setItems] = useState<OpsInventoryItem[]>(initialItems);
   const [suppliers, setSuppliers] = useState<OpsSupplier[]>(initialSuppliers);
 
-  const [itemModal, setItemModal] = useState<{ open: boolean; item: OpsInventoryItem | null }>({
+  const [itemModal, setItemModal] = useState<{
+    open: boolean;
+    item: OpsInventoryItem | null;
+  }>({
     open: false,
     item: null,
   });
@@ -91,7 +104,10 @@ export function InventoryClient({
     () =>
       items.map((item) => ({
         ...item,
-        daysRemaining: item.dailyUsage > 0 ? Math.floor(item.quantity / item.dailyUsage) : null,
+        daysRemaining:
+          item.dailyUsage > 0
+            ? Math.floor(item.quantity / item.dailyUsage)
+            : null,
         status: deriveStatus(item),
         supplierName: getSupplier(item.supplierId)?.name ?? "—",
       })),
@@ -124,15 +140,21 @@ export function InventoryClient({
     setItems((prev) =>
       prev.map((i) => {
         if (i.id !== id) return i;
-        const newQty = type === "add" ? i.quantity + qty : Math.max(0, i.quantity - qty);
+        const newQty =
+          type === "add" ? i.quantity + qty : Math.max(0, i.quantity - qty);
         return {
           ...i,
           quantity: newQty,
-          lastRestocked: type === "add" ? new Date().toISOString().split("T")[0] : i.lastRestocked,
+          lastRestocked:
+            type === "add"
+              ? new Date().toISOString().split("T")[0]
+              : i.lastRestocked,
         };
       }),
     );
-    toast.success(type === "add" ? `Added ${qty} to stock` : `Removed ${qty} from stock`);
+    toast.success(
+      type === "add" ? `Added ${qty} to stock` : `Removed ${qty} from stock`,
+    );
     setAdjustModal({ open: false, item: null });
   };
 
@@ -146,7 +168,9 @@ export function InventoryClient({
   const handleSaveSupplier = (data: Omit<OpsSupplier, "id">) => {
     if (supplierModal.supplier) {
       setSuppliers((prev) =>
-        prev.map((s) => (s.id === supplierModal.supplier!.id ? { ...s, ...data } : s)),
+        prev.map((s) =>
+          s.id === supplierModal.supplier!.id ? { ...s, ...data } : s,
+        ),
       );
       toast.success("Supplier updated");
     } else {
@@ -159,8 +183,7 @@ export function InventoryClient({
 
   // Location scope (multi-location facilities filter by current location;
   // HQ view shows everything across all locations)
-  const { currentLocationId, isHQView, isMultiLocation } =
-    useLocationContext();
+  const { currentLocationId, isHQView, isMultiLocation } = useLocationContext();
 
   // Stats — filtered by both facility AND current location scope
   const allFacilityItems = enrichedItems.filter(
@@ -173,9 +196,14 @@ export function InventoryClient({
         )
       : allFacilityItems;
   const lowStockItems = facilityItems.filter((i) => i.status === "low_stock");
-  const outOfStockItems = facilityItems.filter((i) => i.status === "out_of_stock");
+  const outOfStockItems = facilityItems.filter(
+    (i) => i.status === "out_of_stock",
+  );
   const runningLow = facilityItems.filter(
-    (i) => i.daysRemaining !== null && i.daysRemaining < 7 && i.status !== "out_of_stock",
+    (i) =>
+      i.daysRemaining !== null &&
+      i.daysRemaining < 7 &&
+      i.status !== "out_of_stock",
   );
 
   // Item table columns
@@ -189,7 +217,9 @@ export function InventoryClient({
         <div>
           <p className="font-medium">{item.name}</p>
           {item.notes && (
-            <p className="text-muted-foreground max-w-52 truncate text-xs">{item.notes}</p>
+            <p className="text-muted-foreground max-w-52 truncate text-xs">
+              {item.notes}
+            </p>
           )}
         </div>
       ),
@@ -226,7 +256,8 @@ export function InventoryClient({
       icon: Package,
       defaultVisible: true,
       render: (item) => {
-        if (item.daysRemaining === null) return <span className="text-muted-foreground">—</span>;
+        if (item.daysRemaining === null)
+          return <span className="text-muted-foreground">—</span>;
         return (
           <span
             className={cn(
@@ -326,7 +357,8 @@ export function InventoryClient({
       label: "Contact",
       icon: Package,
       defaultVisible: true,
-      render: (s) => s.contactPerson ?? <span className="text-muted-foreground">—</span>,
+      render: (s) =>
+        s.contactPerson ?? <span className="text-muted-foreground">—</span>,
     },
     {
       key: "phone",
@@ -415,11 +447,18 @@ export function InventoryClient({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Operational Inventory</h2>
-          <p className="text-muted-foreground">{facilityName} — supplies & consumables</p>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Operational Inventory
+          </h2>
+          <p className="text-muted-foreground">
+            {facilityName} — supplies & consumables
+          </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setSupplierModal({ open: true, supplier: null })}>
+          <Button
+            variant="outline"
+            onClick={() => setSupplierModal({ open: true, supplier: null })}
+          >
             <Truck className="mr-2 size-4" />
             Add Supplier
           </Button>
@@ -439,7 +478,9 @@ export function InventoryClient({
               {outOfStockItems.length > 0
                 ? `${outOfStockItems.length} item${outOfStockItems.length > 1 ? "s" : ""} out of stock`
                 : ""}
-              {outOfStockItems.length > 0 && lowStockItems.length > 0 ? " · " : ""}
+              {outOfStockItems.length > 0 && lowStockItems.length > 0
+                ? " · "
+                : ""}
               {lowStockItems.length > 0
                 ? `${lowStockItems.length} item${lowStockItems.length > 1 ? "s" : ""} running low`
                 : ""}
@@ -450,7 +491,10 @@ export function InventoryClient({
               {[...outOfStockItems, ...lowStockItems].map((item) => {
                 const supplier = getSupplier(item.supplierId);
                 return (
-                  <div key={item.id} className="bg-warning/10 rounded-lg px-3 py-1.5 text-xs">
+                  <div
+                    key={item.id}
+                    className="bg-warning/10 rounded-lg px-3 py-1.5 text-xs"
+                  >
                     <span className="font-medium">{item.name}</span>
                     <span className="text-muted-foreground ml-1">
                       ({item.quantity} {item.unit} left
@@ -482,17 +526,23 @@ export function InventoryClient({
             <AlertTriangle className="text-warning size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-warning text-2xl font-bold">{lowStockItems.length}</div>
+            <div className="text-warning text-2xl font-bold">
+              {lowStockItems.length}
+            </div>
             <p className="text-muted-foreground text-xs">Need reordering</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Running Out Soon</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Running Out Soon
+            </CardTitle>
             <AlertTriangle className="text-destructive size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-destructive text-2xl font-bold">{runningLow.length}</div>
+            <div className="text-destructive text-2xl font-bold">
+              {runningLow.length}
+            </div>
             <p className="text-muted-foreground text-xs">Less than 7 days</p>
           </CardContent>
         </Card>
@@ -517,7 +567,10 @@ export function InventoryClient({
             <TabsTrigger value="items">
               Inventory Items
               {(lowStockItems.length > 0 || outOfStockItems.length > 0) && (
-                <Badge variant="destructive" className="ml-1.5 size-5 rounded-full p-0 text-[10px]">
+                <Badge
+                  variant="destructive"
+                  className="ml-1.5 size-5 rounded-full p-0 text-[10px]"
+                >
                   {lowStockItems.length + outOfStockItems.length}
                 </Badge>
               )}
@@ -646,12 +699,15 @@ export function InventoryClient({
             <DialogTitle>Remove Item</DialogTitle>
             <DialogDescription>
               Are you sure you want to remove{" "}
-              <span className="font-semibold">{deleteModal.item?.name}</span> from inventory? This
-              cannot be undone.
+              <span className="font-semibold">{deleteModal.item?.name}</span>{" "}
+              from inventory? This cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteModal({ open: false, item: null })}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteModal({ open: false, item: null })}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteItem}>

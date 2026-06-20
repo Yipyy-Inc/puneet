@@ -177,8 +177,7 @@ export function SeriesEditDialog({
   }, [open, editing, presetCourseTypeId, defaultDropInMax, defaultDropInPrice]);
 
   const selectedCourseType = useMemo(
-    () =>
-      defaultTrainingCourseTypes.find((ct) => ct.id === form.courseTypeId),
+    () => defaultTrainingCourseTypes.find((ct) => ct.id === form.courseTypeId),
     [form.courseTypeId],
   );
 
@@ -240,7 +239,10 @@ export function SeriesEditDialog({
       return;
     }
 
-    const base: Omit<TrainingSeries, "sessions" | "id" | "createdAt" | "updatedAt"> = {
+    const base: Omit<
+      TrainingSeries,
+      "sessions" | "id" | "createdAt" | "updatedAt"
+    > = {
       courseTypeId: form.courseTypeId,
       courseTypeName: courseType.name,
       seriesName: form.seriesName,
@@ -409,8 +411,7 @@ export function SeriesEditDialog({
               </div>
               <div className="space-y-2">
                 <Label>
-                  Duration (minutes){" "}
-                  <span className="text-destructive">*</span>
+                  Duration (minutes) <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   type="number"
@@ -434,8 +435,7 @@ export function SeriesEditDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>
-                  Number of Weeks{" "}
-                  <span className="text-destructive">*</span>
+                  Number of Weeks <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   type="number"
@@ -642,7 +642,7 @@ export function SeriesEditDialog({
                 {form.allowDropIns && (
                   <div className="grid grid-cols-2 gap-3 border-t pt-3">
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      <Label className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
                         Drop-in max per session
                       </Label>
                       <Input
@@ -664,12 +664,12 @@ export function SeriesEditDialog({
                         }
                       />
                       <p className="text-muted-foreground text-[11px]">
-                        Default from Settings: {defaultDropInMax}. Capped at
-                        the series max capacity ({form.maxCapacity}).
+                        Default from Settings: {defaultDropInMax}. Capped at the
+                        series max capacity ({form.maxCapacity}).
                       </p>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      <Label className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
                         Per-session price ($)
                       </Label>
                       <Input
@@ -680,14 +680,16 @@ export function SeriesEditDialog({
                         onChange={(e) =>
                           setForm({
                             ...form,
-                            dropInPrice: Math.max(0, Number(e.target.value) || 0),
+                            dropInPrice: Math.max(
+                              0,
+                              Number(e.target.value) || 0,
+                            ),
                           })
                         }
                       />
                       <p className="text-muted-foreground text-[11px]">
-                        Default from Settings: ${defaultDropInPrice}.
-                        Tracked separately on the invoice from the series
-                        package.
+                        Default from Settings: ${defaultDropInPrice}. Tracked
+                        separately on the invoice from the series package.
                       </p>
                     </div>
                   </div>

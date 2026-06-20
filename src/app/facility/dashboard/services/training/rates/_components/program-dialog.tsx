@@ -123,11 +123,7 @@ export function ProgramDialog({ open, onOpenChange, editing, onSave }: Props) {
       // Check what a graph rooted at `p` would look like — if walking its
       // prereq chain ever reaches `editing.id`, picking `p` here creates a
       // cycle.
-      const cycle = detectCircularPrerequisite(
-        editing.id,
-        [p.id],
-        allPackages,
-      );
+      const cycle = detectCircularPrerequisite(editing.id, [p.id], allPackages);
       return cycle === null;
     });
   }, [allPackages, editing, form.prerequisitePackageIds]);
@@ -178,7 +174,9 @@ export function ProgramDialog({ open, onOpenChange, editing, onSave }: Props) {
   }
 
   const isPrivate = form.classType === "private";
-  const selectedDiscipline = disciplines.find((d) => d.id === form.disciplineId);
+  const selectedDiscipline = disciplines.find(
+    (d) => d.id === form.disciplineId,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -379,7 +377,9 @@ export function ProgramDialog({ open, onOpenChange, editing, onSave }: Props) {
             <Label>What&apos;s included (one per line)</Label>
             <Textarea
               rows={4}
-              placeholder={"6 group sessions\nPuppy socialization\nTraining manual"}
+              placeholder={
+                "6 group sessions\nPuppy socialization\nTraining manual"
+              }
               value={form.includes}
               onChange={(e) => setForm({ ...form, includes: e.target.value })}
             />

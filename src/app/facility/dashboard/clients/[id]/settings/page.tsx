@@ -78,9 +78,7 @@ function ToggleRow({
   return (
     <div
       className={`flex items-center justify-between rounded-lg border p-4 transition-colors ${
-        highlight
-          ? "border-amber-200 bg-amber-50/40"
-          : "hover:bg-muted/30"
+        highlight ? "border-amber-200 bg-amber-50/40" : "hover:bg-muted/30"
       }`}
     >
       <div className="space-y-0.5 pr-4">
@@ -133,7 +131,9 @@ export default function FacilityClientSettingsPage({
   );
 
   const [settings, setSettings] = useState<CustomerSettings>(initialSettings);
-  const [isBlocked, setIsBlocked] = useState<boolean>(client?.isBlocked ?? false);
+  const [isBlocked, setIsBlocked] = useState<boolean>(
+    client?.isBlocked ?? false,
+  );
   const [blockedReason, setBlockedReason] = useState<string>(
     client?.blockedReason ?? "",
   );
@@ -236,9 +236,7 @@ export default function FacilityClientSettingsPage({
       {/* Account Status — Block this client */}
       <Card
         className={
-          isBlocked
-            ? "border-red-300 bg-red-50/40"
-            : "border-amber-200/70"
+          isBlocked ? "border-red-300 bg-red-50/40" : "border-amber-200/70"
         }
       >
         <CardHeader>
@@ -274,9 +272,7 @@ export default function FacilityClientSettingsPage({
                   </Badge>
                 )}
               </div>
-              <p className="text-muted-foreground text-sm">
-                When enabled:
-              </p>
+              <p className="text-muted-foreground text-sm">When enabled:</p>
               <ul className="text-muted-foreground ml-4 list-disc space-y-0.5 text-sm">
                 <li>The client can no longer send messages to the facility</li>
                 <li>
@@ -284,8 +280,8 @@ export default function FacilityClientSettingsPage({
                   automated emails / SMS
                 </li>
                 <li>
-                  Call forwarding from this client and their additional
-                  contacts is disabled
+                  Call forwarding from this client and their additional contacts
+                  is disabled
                 </li>
                 <li>
                   Booking history, pets, and invoices are preserved for the
@@ -409,8 +405,8 @@ export default function FacilityClientSettingsPage({
             Payment Preferences
           </CardTitle>
           <CardDescription>
-            Auto-apply a tip when processing this customer&apos;s payments. Works
-            seamlessly when a card is saved on file. The customer can also
+            Auto-apply a tip when processing this customer&apos;s payments.
+            Works seamlessly when a card is saved on file. The customer can also
             manage this from their account.
           </CardDescription>
         </CardHeader>
@@ -472,7 +468,7 @@ export default function FacilityClientSettingsPage({
                   }
                   disabled={!settings.autoTip.enabled}
                   className={cn(
-                    settings.autoTip.type === "fixed" ? "pl-9 pr-9" : "pr-9",
+                    settings.autoTip.type === "fixed" ? "pr-9 pl-9" : "pr-9",
                   )}
                 />
                 <span className="text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2 text-sm">
@@ -498,8 +494,8 @@ export default function FacilityClientSettingsPage({
           <CardDescription>
             When enabled, this customer&apos;s online bookings skip the booking
             requests queue and are auto-confirmed (room/section assigned
-            automatically). The customer immediately receives the same email
-            and SMS confirmation they would have received after staff approval.
+            automatically). The customer immediately receives the same email and
+            SMS confirmation they would have received after staff approval.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -515,7 +511,7 @@ export default function FacilityClientSettingsPage({
                     <Badge
                       key={s}
                       variant="outline"
-                      className="border-amber-300 bg-white text-[10px] capitalize text-amber-800"
+                      className="border-amber-300 bg-white text-[10px] text-amber-800 capitalize"
                     >
                       {s}
                     </Badge>

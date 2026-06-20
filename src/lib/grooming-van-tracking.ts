@@ -82,7 +82,10 @@ export function deriveVanLiveStatus(args: {
   }
 
   const latest = dayPings[dayPings.length - 1];
-  const minutesSinceLatest = timeBetweenMin(now.toISOString(), latest.recordedAt);
+  const minutesSinceLatest = timeBetweenMin(
+    now.toISOString(),
+    latest.recordedAt,
+  );
 
   if (minutesSinceLatest > STALE_THRESHOLD_MIN) {
     return {
@@ -142,8 +145,7 @@ export function deriveVanLiveStatus(args: {
       (a) => a.id === latest.currentAppointmentId,
     );
     if (apt) {
-      const scheduledMin =
-        timeToMin(apt.endTime) - timeToMin(apt.startTime);
+      const scheduledMin = timeToMin(apt.endTime) - timeToMin(apt.startTime);
       const overMin = stoppedForMin - scheduledMin;
       if (overMin >= DELAY_FLAG_GRACE_MIN) {
         delay = {

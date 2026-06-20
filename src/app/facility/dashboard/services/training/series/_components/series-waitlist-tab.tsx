@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Image from "next/image";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -121,10 +128,7 @@ function relativeDays(iso: string, todayISO: string): string {
 
 export function SeriesWaitlistTab({ series }: Props) {
   const queryClient = useQueryClient();
-  const todayISO = useMemo(
-    () => new Date().toISOString().split("T")[0]!,
-    [],
-  );
+  const todayISO = useMemo(() => new Date().toISOString().split("T")[0]!, []);
 
   const { data: enrollments = [] } = useQuery(
     trainingQueries.seriesEnrollments(series.id),
@@ -179,15 +183,12 @@ export function SeriesWaitlistTab({ series }: Props) {
       }));
     });
     const moved = reordered[newIndex]!;
-    toast(
-      `${moved.petName} is now #${newIndex + 1} on the waitlist.`,
-      {
-        description:
-          newIndex < oldIndex
-            ? "They'll be offered the next available spot before the others below."
-            : "They'll be offered a spot after the people above them.",
-      },
-    );
+    toast(`${moved.petName} is now #${newIndex + 1} on the waitlist.`, {
+      description:
+        newIndex < oldIndex
+          ? "They'll be offered the next available spot before the others below."
+          : "They'll be offered a spot after the people above them.",
+    });
   }
 
   // Resolve each pet's photo from the clients mock so the row renders with
@@ -244,27 +245,22 @@ export function SeriesWaitlistTab({ series }: Props) {
       });
     // The per-series detail also reads `seriesEnrollments(seriesId)` which
     // lives under ["training","series", seriesId, "enrollments"].
-    cache
-      .findAll({ queryKey: ["training", "series"] })
-      .forEach((query) => {
-        const key = query.queryKey;
-        if (key[3] !== "enrollments") return;
-        queryClient.setQueryData<TrainingEnrollment[]>(
-          key,
-          (prev = []) => {
-            const idx = prev.findIndex((e) => e.id === enrollmentId);
-            if (idx === -1) return prev;
-            const next = prev.slice();
-            const updated = update(prev[idx]!);
-            if (updated === null) {
-              next.splice(idx, 1);
-            } else {
-              next[idx] = updated;
-            }
-            return next;
-          },
-        );
+    cache.findAll({ queryKey: ["training", "series"] }).forEach((query) => {
+      const key = query.queryKey;
+      if (key[3] !== "enrollments") return;
+      queryClient.setQueryData<TrainingEnrollment[]>(key, (prev = []) => {
+        const idx = prev.findIndex((e) => e.id === enrollmentId);
+        if (idx === -1) return prev;
+        const next = prev.slice();
+        const updated = update(prev[idx]!);
+        if (updated === null) {
+          next.splice(idx, 1);
+        } else {
+          next[idx] = updated;
+        }
+        return next;
       });
+    });
   }
 
   function buildOffer(): WaitlistOffer {
@@ -385,10 +381,7 @@ export function SeriesWaitlistTab({ series }: Props) {
       }
 
       // Reminder check — fires once when wall clock crosses sentAt + reminderHours.
-      if (
-        !offer.reminderSentAtISO &&
-        nowMs >= sentMs + reminderWindowMs
-      ) {
+      if (!offer.reminderSentAtISO && nowMs >= sentMs + reminderWindowMs) {
         const dedupeKey = `remind:${entry.id}:${offer.sentAtISO}`;
         if (processedRef.current.has(dedupeKey)) continue;
         processedRef.current.add(dedupeKey);
@@ -414,8 +407,8 @@ export function SeriesWaitlistTab({ series }: Props) {
         <Inbox className="text-muted-foreground/30 mx-auto mb-2 size-8" />
         <p className="font-medium text-slate-700">No one on the waitlist.</p>
         <p className="text-muted-foreground mt-1">
-          When the series fills up, clients who try to enroll can be added
-          here so you can offer them a spot if room opens up.
+          When the series fills up, clients who try to enroll can be added here
+          so you can offer them a spot if room opens up.
         </p>
       </div>
     );
@@ -424,18 +417,18 @@ export function SeriesWaitlistTab({ series }: Props) {
   return (
     <div className="space-y-3">
       {/* Header strip — spots-left vs waitlist length context. */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 text-sm">
+      <div className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm">
         <div className="flex items-center gap-3 text-slate-700">
-          <Hourglass className="text-amber-500 size-4" />
+          <Hourglass className="size-4 text-amber-500" />
           <span>
-            <span className="font-semibold tabular-nums text-slate-900">
+            <span className="font-semibold text-slate-900 tabular-nums">
               {waitlist.length}
             </span>{" "}
             on the waitlist
             <span className="text-muted-foreground">
               {" "}
               · series capacity{" "}
-              <span className="font-semibold tabular-nums text-slate-700">
+              <span className="font-semibold text-slate-700 tabular-nums">
                 {enrolledCount}
               </span>
               /{series.maxCapacity}
@@ -487,97 +480,97 @@ export function SeriesWaitlistTab({ series }: Props) {
                           #{position}
                         </span>
                       </div>
-                  {petImage ? (
-                    <div className="size-10 overflow-hidden rounded-xl ring-2 ring-white shadow-sm">
-                      <Image
-                        src={petImage}
-                        alt={entry.petName}
-                        width={40}
-                        height={40}
-                        className="size-full object-cover"
-                        unoptimized
-                      />
+                      {petImage ? (
+                        <div className="size-10 overflow-hidden rounded-xl shadow-sm ring-2 ring-white">
+                          <Image
+                            src={petImage}
+                            alt={entry.petName}
+                            width={40}
+                            height={40}
+                            className="size-full object-cover"
+                            unoptimized
+                          />
+                        </div>
+                      ) : (
+                        <div className="bg-muted text-muted-foreground flex size-10 items-center justify-center rounded-xl text-[10px] font-semibold shadow-sm ring-2 ring-white">
+                          {entry.petName.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="bg-muted text-muted-foreground flex size-10 items-center justify-center rounded-xl ring-2 ring-white shadow-sm text-[10px] font-semibold">
-                      {entry.petName.slice(0, 2).toUpperCase()}
-                    </div>
-                  )}
-                </div>
 
-                {/* Identity + contact */}
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                    <p className="text-sm font-semibold text-slate-800">
-                      {entry.petName}
-                    </p>
-                    <span className="text-muted-foreground text-[11.5px]">
-                      {entry.petBreed}
-                    </span>
-                    <span className="text-muted-foreground text-[11px]">
-                      ·
-                    </span>
-                    <span className="text-[12px] text-slate-700">
-                      {entry.ownerName}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px]">
-                    {entry.ownerPhone && (
-                      <a
-                        href={`tel:${entry.ownerPhone}`}
-                        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                      >
-                        <Phone className="size-3" />
-                        {entry.ownerPhone}
-                      </a>
-                    )}
-                    {entry.ownerEmail && (
-                      <a
-                        href={`mailto:${entry.ownerEmail}`}
-                        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 truncate"
-                      >
-                        <Mail className="size-3" />
-                        {entry.ownerEmail}
-                      </a>
-                    )}
-                    <span
-                      className="text-muted-foreground inline-flex items-center gap-1"
-                      title={`Joined ${relativeDays(entry.enrollmentDate, todayISO)}`}
-                    >
-                      <CalendarClock className="size-3" />
-                      Joined {formatDateLong(entry.enrollmentDate)}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <PreferredTimeBadge
-                      preference={entry.preferredTimeOfDay}
+                    {/* Identity + contact */}
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                        <p className="text-sm font-semibold text-slate-800">
+                          {entry.petName}
+                        </p>
+                        <span className="text-muted-foreground text-[11.5px]">
+                          {entry.petBreed}
+                        </span>
+                        <span className="text-muted-foreground text-[11px]">
+                          ·
+                        </span>
+                        <span className="text-[12px] text-slate-700">
+                          {entry.ownerName}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px]">
+                        {entry.ownerPhone && (
+                          <a
+                            href={`tel:${entry.ownerPhone}`}
+                            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                          >
+                            <Phone className="size-3" />
+                            {entry.ownerPhone}
+                          </a>
+                        )}
+                        {entry.ownerEmail && (
+                          <a
+                            href={`mailto:${entry.ownerEmail}`}
+                            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 truncate"
+                          >
+                            <Mail className="size-3" />
+                            {entry.ownerEmail}
+                          </a>
+                        )}
+                        <span
+                          className="text-muted-foreground inline-flex items-center gap-1"
+                          title={`Joined ${relativeDays(entry.enrollmentDate, todayISO)}`}
+                        >
+                          <CalendarClock className="size-3" />
+                          Joined {formatDateLong(entry.enrollmentDate)}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <PreferredTimeBadge
+                          preference={entry.preferredTimeOfDay}
+                        />
+                        <OfferStateBadge offer={entry.offer} nowMs={nowMs} />
+                      </div>
+                      {entry.notes && (
+                        <div className="text-muted-foreground inline-flex items-start gap-1 rounded-md bg-slate-50 px-2 py-1 text-[11.5px] leading-snug dark:bg-slate-900/40">
+                          <StickyNote className="mt-0.5 size-3 shrink-0" />
+                          <span className="font-medium text-slate-700">
+                            {entry.notes}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <RowActions
+                      entry={entry}
+                      spotsLeft={spotsLeft}
+                      seriesEnded={seriesEnded}
+                      holdHours={holdHours}
+                      onOffer={() => setOfferTarget(entry)}
+                      onCancel={() => setCancelTarget(entry)}
+                      onRemove={() => setRemoveTarget(entry)}
                     />
-                    <OfferStateBadge offer={entry.offer} nowMs={nowMs} />
                   </div>
-                  {entry.notes && (
-                    <div className="text-muted-foreground inline-flex items-start gap-1 rounded-md bg-slate-50 px-2 py-1 text-[11.5px] leading-snug dark:bg-slate-900/40">
-                      <StickyNote className="size-3 mt-0.5 shrink-0" />
-                      <span className="font-medium text-slate-700">
-                        {entry.notes}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <RowActions
-                  entry={entry}
-                  spotsLeft={spotsLeft}
-                  seriesEnded={seriesEnded}
-                  holdHours={holdHours}
-                  onOffer={() => setOfferTarget(entry)}
-                  onCancel={() => setCancelTarget(entry)}
-                  onRemove={() => setRemoveTarget(entry)}
-                />
-              </div>
-            </SortableWaitlistRow>
-          );
-        })}
+                </SortableWaitlistRow>
+              );
+            })}
           </ul>
         </SortableContext>
       </DndContext>
@@ -601,9 +594,8 @@ export function SeriesWaitlistTab({ series }: Props) {
             </DialogTitle>
             <DialogDescription className="text-sm leading-relaxed">
               We&apos;ll text and email {offerTarget?.ownerName} a confirmation
-              link for{" "}
-              <span className="font-medium">{series.seriesName}</span> (starts{" "}
-              {formatDateLong(series.startDate)}) and hold the spot for{" "}
+              link for <span className="font-medium">{series.seriesName}</span>{" "}
+              (starts {formatDateLong(series.startDate)}) and hold the spot for{" "}
               <span className="font-semibold tabular-nums">{holdHours}h</span>.
               A reminder fires at {reminderHours}h. If they don&apos;t confirm
               in time, the spot auto-moves to the next person on the list.
@@ -711,8 +703,14 @@ function SortableWaitlistRow({
   id: string;
   children: React.ReactNode;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
 
   // We expose the drag-handle's listeners through React context so the
   // dedicated grip button inside the row can attach them. Stuffing the

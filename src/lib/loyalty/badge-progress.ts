@@ -85,11 +85,6 @@ export function badgeProgress(
       );
     }
     case "consecutive_months":
-      return build(
-        0,
-        threshold,
-        `Book ${threshold} consecutive months`,
-        false,
-      );
+      return build(0, threshold, `Book ${threshold} consecutive months`, false);
   }
 }

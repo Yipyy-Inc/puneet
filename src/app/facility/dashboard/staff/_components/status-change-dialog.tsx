@@ -101,7 +101,9 @@ export function StatusChangeDialog({
   onConfirm,
 }: StatusChangeDialogProps) {
   const currentStatus =
-    profile?.status === "invited" ? "active" : (profile?.status as StaffStatus | undefined);
+    profile?.status === "invited"
+      ? "active"
+      : (profile?.status as StaffStatus | undefined);
 
   const [newStatus, setNewStatus] = useState<StaffStatus>("inactive");
   const [reason, setReason] = useState<StatusReason | "">("");
@@ -157,7 +159,13 @@ export function StatusChangeDialog({
             <span className="text-muted-foreground text-xs font-medium">
               Current
             </span>
-            <StatusBadge status={(profile.status === "invited" ? "active" : profile.status) as StaffStatus} />
+            <StatusBadge
+              status={
+                (profile.status === "invited"
+                  ? "active"
+                  : profile.status) as StaffStatus
+              }
+            />
             {profile.statusReason && (
               <span className="text-muted-foreground ml-auto text-xs">
                 {REASONS_BY_STATUS[currentStatus ?? "active"].find(
@@ -205,7 +213,9 @@ export function StatusChangeDialog({
           <div className="space-y-1.5">
             <Label>
               Reason{" "}
-              <span className="text-muted-foreground font-normal">(required)</span>
+              <span className="text-muted-foreground font-normal">
+                (required)
+              </span>
             </Label>
             <Select
               value={reason}

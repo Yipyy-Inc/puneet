@@ -114,7 +114,12 @@ export const messageTemplates: MessageTemplate[] = [
     emailSubject: "Reminder: Your Appointment Tomorrow",
     emailBody:
       "Hi {ClientName},\n\nJust a friendly reminder that {PetName} has an appointment tomorrow at {NextAppointment}.\n\nNeed to reschedule? Click here: {BookingLink}\n\nSee you tomorrow!",
-    variables: ["{ClientName}", "{PetName}", "{NextAppointment}", "{BookingLink}"],
+    variables: [
+      "{ClientName}",
+      "{PetName}",
+      "{NextAppointment}",
+      "{BookingLink}",
+    ],
     charCount: 106,
   },
   {
@@ -126,7 +131,12 @@ export const messageTemplates: MessageTemplate[] = [
     emailSubject: "Your Booking Has Been Cancelled",
     emailBody:
       "Hi {ClientName},\n\nWe've cancelled your booking for {PetName} on {NextAppointment} as requested.\n\nWe'd love to see {PetName} again soon. Book online at {BookingLink}.",
-    variables: ["{ClientName}", "{PetName}", "{NextAppointment}", "{BookingLink}"],
+    variables: [
+      "{ClientName}",
+      "{PetName}",
+      "{NextAppointment}",
+      "{BookingLink}",
+    ],
     charCount: 132,
   },
   // Boarding
@@ -300,7 +310,8 @@ export const campaigns: Campaign[] = [
     status: "scheduled",
     audience: "inactive_6m",
     recipientCount: 112,
-    message: "We miss you and your pup! Come back and enjoy a special returning client offer...",
+    message:
+      "We miss you and your pup! Come back and enjoy a special returning client offer...",
     subject: "We Miss You! 🐾 A Special Offer Inside",
     scheduledAt: "2026-04-28T10:00:00Z",
     createdAt: "2026-04-24T09:00:00Z",
@@ -383,7 +394,8 @@ export const automations: Automation[] = [
     trigger: "vaccine_expiring_7d",
     channel: "sms",
     templateId: "tpl-008",
-    message: "⚠️ {PetName}'s vaccines expire in 7 days! Please update ASAP to avoid booking suspension.",
+    message:
+      "⚠️ {PetName}'s vaccines expire in 7 days! Please update ASAP to avoid booking suspension.",
     delayMinutes: 0,
     enabled: true,
     sentCount: 87,
@@ -432,7 +444,8 @@ export const automations: Automation[] = [
     trigger: "birthday",
     channel: "sms",
     templateId: "tpl-010",
-    message: "🎂 Happy Birthday {PetName}! Wishing them lots of treats and belly rubs today!",
+    message:
+      "🎂 Happy Birthday {PetName}! Wishing them lots of treats and belly rubs today!",
     delayMinutes: 0,
     enabled: true,
     sentCount: 94,
@@ -513,9 +526,33 @@ export const messagingAnalytics: MessagingAnalytics = {
     { status: "archived", count: 156 },
   ],
   staffPerformance: [
-    { name: "Sarah M.", replied: 312, avgResponseMin: 11, resolved: 298, csat: 4.8 },
-    { name: "James K.", replied: 241, avgResponseMin: 17, resolved: 218, csat: 4.4 },
-    { name: "Priya N.", replied: 287, avgResponseMin: 13, resolved: 271, csat: 4.7 },
-    { name: "Tom B.", replied: 168, avgResponseMin: 22, resolved: 145, csat: 4.1 },
+    {
+      name: "Sarah M.",
+      replied: 312,
+      avgResponseMin: 11,
+      resolved: 298,
+      csat: 4.8,
+    },
+    {
+      name: "James K.",
+      replied: 241,
+      avgResponseMin: 17,
+      resolved: 218,
+      csat: 4.4,
+    },
+    {
+      name: "Priya N.",
+      replied: 287,
+      avgResponseMin: 13,
+      resolved: 271,
+      csat: 4.7,
+    },
+    {
+      name: "Tom B.",
+      replied: 168,
+      avgResponseMin: 22,
+      resolved: 145,
+      csat: 4.1,
+    },
   ],
 };

@@ -34,19 +34,53 @@ const TRIGGER_LABELS: Record<string, string> = {
   inactive_90d: "Inactive 90+ Days",
 };
 
-const TRIGGER_CATEGORIES: Record<string, { category: string; color: string }> = {
-  booking_confirmed: { category: "Booking", color: "bg-blue-50 text-blue-700 border-blue-200" },
-  boarding_check_in: { category: "Boarding", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  boarding_check_out: { category: "Boarding", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  vaccine_expiring_30d: { category: "Health", color: "bg-amber-50 text-amber-700 border-amber-200" },
-  vaccine_expiring_7d: { category: "Health", color: "bg-red-50 text-red-700 border-red-200" },
-  missed_call: { category: "Communication", color: "bg-violet-50 text-violet-700 border-violet-200" },
-  abandoned_booking: { category: "Booking", color: "bg-orange-50 text-orange-700 border-orange-200" },
-  payment_overdue: { category: "Billing", color: "bg-red-50 text-red-700 border-red-200" },
-  birthday: { category: "Engagement", color: "bg-pink-50 text-pink-700 border-pink-200" },
-  post_visit_24h: { category: "Feedback", color: "bg-teal-50 text-teal-700 border-teal-200" },
-  inactive_90d: { category: "Engagement", color: "bg-slate-100 text-slate-600 border-slate-200" },
-};
+const TRIGGER_CATEGORIES: Record<string, { category: string; color: string }> =
+  {
+    booking_confirmed: {
+      category: "Booking",
+      color: "bg-blue-50 text-blue-700 border-blue-200",
+    },
+    boarding_check_in: {
+      category: "Boarding",
+      color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    },
+    boarding_check_out: {
+      category: "Boarding",
+      color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    },
+    vaccine_expiring_30d: {
+      category: "Health",
+      color: "bg-amber-50 text-amber-700 border-amber-200",
+    },
+    vaccine_expiring_7d: {
+      category: "Health",
+      color: "bg-red-50 text-red-700 border-red-200",
+    },
+    missed_call: {
+      category: "Communication",
+      color: "bg-violet-50 text-violet-700 border-violet-200",
+    },
+    abandoned_booking: {
+      category: "Booking",
+      color: "bg-orange-50 text-orange-700 border-orange-200",
+    },
+    payment_overdue: {
+      category: "Billing",
+      color: "bg-red-50 text-red-700 border-red-200",
+    },
+    birthday: {
+      category: "Engagement",
+      color: "bg-pink-50 text-pink-700 border-pink-200",
+    },
+    post_visit_24h: {
+      category: "Feedback",
+      color: "bg-teal-50 text-teal-700 border-teal-200",
+    },
+    inactive_90d: {
+      category: "Engagement",
+      color: "bg-slate-100 text-slate-600 border-slate-200",
+    },
+  };
 
 function relTime(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -54,7 +88,10 @@ function relTime(iso: string) {
   if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function delayLabel(minutes: number): string {
@@ -67,7 +104,8 @@ function delayLabel(minutes: number): string {
 }
 
 export function AutomationsView() {
-  const [automations, setAutomations] = useState<Automation[]>(defaultAutomations);
+  const [automations, setAutomations] =
+    useState<Automation[]>(defaultAutomations);
 
   const enabledCount = automations.filter((a) => a.enabled).length;
   const totalSent = automations.reduce((s, a) => s + a.sentCount, 0);
@@ -78,7 +116,9 @@ export function AutomationsView() {
         if (a.id !== id) return a;
         const next = { ...a, enabled: !a.enabled };
         toast.success(
-          next.enabled ? `"${a.name}" automation enabled` : `"${a.name}" automation paused`,
+          next.enabled
+            ? `"${a.name}" automation enabled`
+            : `"${a.name}" automation paused`,
         );
         return next;
       }),
@@ -111,7 +151,9 @@ export function AutomationsView() {
             </div>
             <p className="mt-1 text-3xl font-bold text-slate-800">
               {enabledCount}
-              <span className="text-lg text-slate-400">/{automations.length}</span>
+              <span className="text-lg text-slate-400">
+                /{automations.length}
+              </span>
             </p>
           </CardContent>
         </Card>
@@ -144,11 +186,15 @@ export function AutomationsView() {
         <div className="flex items-start gap-3">
           <Zap className="mt-0.5 size-5 shrink-0 text-amber-500" />
           <div>
-            <p className="text-sm font-semibold text-slate-700">How Automations Work</p>
+            <p className="text-sm font-semibold text-slate-700">
+              How Automations Work
+            </p>
             <p className="mt-0.5 text-xs text-slate-500">
-              Each automation follows: <strong>Trigger → Delay → Channel → Template</strong>. When a
-              trigger fires (e.g. boarding check-in), the message is sent automatically after the
-              configured delay. Toggle any automation on/off without deleting it.
+              Each automation follows:{" "}
+              <strong>Trigger → Delay → Channel → Template</strong>. When a
+              trigger fires (e.g. boarding check-in), the message is sent
+              automatically after the configured delay. Toggle any automation
+              on/off without deleting it.
             </p>
           </div>
         </div>
@@ -163,10 +209,7 @@ export function AutomationsView() {
           return (
             <Card
               key={auto.id}
-              className={cn(
-                "transition-all",
-                !auto.enabled && "opacity-60",
-              )}
+              className={cn("transition-all", !auto.enabled && "opacity-60")}
             >
               <CardContent className="pt-5">
                 <div className="flex items-start gap-4">
@@ -181,11 +224,18 @@ export function AutomationsView() {
                   <div
                     className={cn(
                       "flex size-10 shrink-0 items-center justify-center rounded-xl border",
-                      auto.channel === "sms" ? "bg-blue-50 border-blue-200" : "bg-violet-50 border-violet-200",
+                      auto.channel === "sms"
+                        ? "border-blue-200 bg-blue-50"
+                        : "border-violet-200 bg-violet-50",
                     )}
                   >
                     <ChannelIcon
-                      className={cn("size-5", auto.channel === "sms" ? "text-blue-600" : "text-violet-600")}
+                      className={cn(
+                        "size-5",
+                        auto.channel === "sms"
+                          ? "text-blue-600"
+                          : "text-violet-600",
+                      )}
                     />
                   </div>
 
@@ -193,12 +243,15 @@ export function AutomationsView() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h3 className="font-semibold text-slate-800">{auto.name}</h3>
+                        <h3 className="font-semibold text-slate-800">
+                          {auto.name}
+                        </h3>
                         <div className="mt-1 flex flex-wrap items-center gap-2">
                           <span
                             className={cn(
                               "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
-                              triggerMeta?.color ?? "bg-slate-100 text-slate-600 border-slate-200",
+                              triggerMeta?.color ??
+                                "border-slate-200 bg-slate-100 text-slate-600",
                             )}
                           >
                             <Zap className="size-2.5" />
@@ -225,7 +278,9 @@ export function AutomationsView() {
                     </div>
 
                     {/* Message preview */}
-                    <p className="mt-2 truncate text-sm text-slate-400">{auto.message}</p>
+                    <p className="mt-2 truncate text-sm text-slate-400">
+                      {auto.message}
+                    </p>
 
                     {/* Stats */}
                     <div className="mt-2 flex items-center gap-4 text-xs text-slate-400">
@@ -239,7 +294,9 @@ export function AutomationsView() {
                       {auto.lastTriggered && (
                         <>
                           <span>·</span>
-                          <span>Last triggered {relTime(auto.lastTriggered)}</span>
+                          <span>
+                            Last triggered {relTime(auto.lastTriggered)}
+                          </span>
                         </>
                       )}
                       {!auto.enabled && (

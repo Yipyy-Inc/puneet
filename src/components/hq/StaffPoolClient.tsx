@@ -63,7 +63,13 @@ interface Props {
   locations: Location[];
 }
 
-const ROLES = ["Manager", "Groomer", "Trainer", "Kennel Tech", "Front Desk"] as const;
+const ROLES = [
+  "Manager",
+  "Groomer",
+  "Trainer",
+  "Kennel Tech",
+  "Front Desk",
+] as const;
 
 const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
@@ -109,7 +115,8 @@ export function StaffPoolClient({ staff, locations }: Props) {
 
   const sharedCount = staff.filter(isShared).length;
   const avgUtilization = Math.round(
-    staff.reduce((sum, m) => sum + m.utilizationRate, 0) / Math.max(staff.length, 1),
+    staff.reduce((sum, m) => sum + m.utilizationRate, 0) /
+      Math.max(staff.length, 1),
   );
 
   // Coverage matrix: roles x locations
@@ -120,7 +127,8 @@ export function StaffPoolClient({ staff, locations }: Props) {
       locations.forEach((l) => (matrix[role][l.id] = 0));
     });
     staff.forEach((m) => {
-      const role = ROLES.find((r) => r.toLowerCase() === m.role.toLowerCase()) ?? m.role;
+      const role =
+        ROLES.find((r) => r.toLowerCase() === m.role.toLowerCase()) ?? m.role;
       m.assignedLocations.forEach((locId) => {
         if (!matrix[role]) matrix[role] = {};
         matrix[role][locId] = (matrix[role][locId] ?? 0) + 1;
@@ -131,7 +139,8 @@ export function StaffPoolClient({ staff, locations }: Props) {
 
   // Find coverage gaps (zero coverage where service is offered)
   const gaps = useMemo(() => {
-    const out: { role: string; locationId: string; locationName: string }[] = [];
+    const out: { role: string; locationId: string; locationName: string }[] =
+      [];
     locations.forEach((loc) => {
       ROLES.forEach((role) => {
         const count = coverage[role]?.[loc.id] ?? 0;
@@ -158,15 +167,21 @@ export function StaffPoolClient({ staff, locations }: Props) {
           </Link>
           <div>
             <div className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium">
-              <Link href="/facility/hq/overview" className="hover:text-foreground transition-colors">
+              <Link
+                href="/facility/hq/overview"
+                className="hover:text-foreground transition-colors"
+              >
                 HQ
               </Link>
               <ChevronRight className="size-3" />
               <span>Staff Pool</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">Shared Staff Pool</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Shared Staff Pool
+            </h1>
             <p className="text-muted-foreground text-sm">
-              Cross-location scheduling · {staff.length} active members · Conflict detection on
+              Cross-location scheduling · {staff.length} active members ·
+              Conflict detection on
             </p>
           </div>
         </div>
@@ -202,7 +217,9 @@ export function StaffPoolClient({ staff, locations }: Props) {
                   Total Pool
                 </p>
                 <p className="mt-1 text-2xl font-bold">{staff.length}</p>
-                <p className="text-muted-foreground text-[11px]">across {locations.length} locations</p>
+                <p className="text-muted-foreground text-[11px]">
+                  across {locations.length} locations
+                </p>
               </div>
               <div className="flex size-9 items-center justify-center rounded-xl bg-sky-500/15">
                 <Users className="size-4.5 text-sky-500" />
@@ -248,7 +265,9 @@ export function StaffPoolClient({ staff, locations }: Props) {
                 <p className="mt-1 text-2xl font-bold">{avgUtilization}%</p>
                 <MetricBar
                   percent={avgUtilization}
-                  fillClassName={styleFromKey(utilizationKey(avgUtilization)).bg}
+                  fillClassName={
+                    styleFromKey(utilizationKey(avgUtilization)).bg
+                  }
                   size="xs"
                   className="mt-1.5"
                 />
@@ -259,7 +278,12 @@ export function StaffPoolClient({ staff, locations }: Props) {
                   styleFromKey(utilizationKey(avgUtilization)).bgSoft,
                 )}
               >
-                <Clock className={cn("size-4.5", styleFromKey(utilizationKey(avgUtilization)).text)} />
+                <Clock
+                  className={cn(
+                    "size-4.5",
+                    styleFromKey(utilizationKey(avgUtilization)).text,
+                  )}
+                />
               </div>
             </div>
           </CardContent>
@@ -311,11 +335,13 @@ export function StaffPoolClient({ staff, locations }: Props) {
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b p-3">
           <div className="bg-muted/60 flex items-center gap-1 rounded-xl border p-1">
-            {([
-              { v: "cards", label: "Members", icon: Users },
-              { v: "schedule", label: "Schedule", icon: CalendarDays },
-              { v: "coverage", label: "Coverage", icon: Sparkles },
-            ] as const).map((opt) => (
+            {(
+              [
+                { v: "cards", label: "Members", icon: Users },
+                { v: "schedule", label: "Schedule", icon: CalendarDays },
+                { v: "coverage", label: "Coverage", icon: Sparkles },
+              ] as const
+            ).map((opt) => (
               <button
                 key={opt.v}
                 onClick={() => setView(opt.v)}
@@ -394,15 +420,20 @@ export function StaffPoolClient({ staff, locations }: Props) {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {filtered.map((member) => {
                 const primaryLoc = getLocation(member.primaryLocation);
-                const primaryS = primaryLoc ? locationStyles(primaryLoc) : styleFromKey("sky");
-                const utilS = styleFromKey(utilizationKey(member.utilizationRate));
+                const primaryS = primaryLoc
+                  ? locationStyles(primaryLoc)
+                  : styleFromKey("sky");
+                const utilS = styleFromKey(
+                  utilizationKey(member.utilizationRate),
+                );
                 const shared = isShared(member);
                 return (
                   <Card
                     key={member.staffId}
                     className={cn(
                       "overflow-hidden transition-all duration-200 hover:shadow-md",
-                      shared && "ring-1 ring-violet-300/50 dark:ring-violet-900/40",
+                      shared &&
+                        "ring-1 ring-violet-300/50 dark:ring-violet-900/40",
                     )}
                   >
                     <CardHeader className="pb-2">
@@ -417,10 +448,12 @@ export function StaffPoolClient({ staff, locations }: Props) {
                             {initialsOf(member.name)}
                           </div>
                           <div className="min-w-0">
-                            <CardTitle className="text-sm font-semibold truncate">
+                            <CardTitle className="truncate text-sm font-semibold">
                               {member.name}
                             </CardTitle>
-                            <p className="text-muted-foreground text-[11px]">{member.role}</p>
+                            <p className="text-muted-foreground text-[11px]">
+                              {member.role}
+                            </p>
                           </div>
                         </div>
                         {shared ? (
@@ -429,7 +462,10 @@ export function StaffPoolClient({ staff, locations }: Props) {
                             {member.assignedLocations.length} locations
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className={cn("text-[10px]", primaryS.text)}>
+                          <Badge
+                            variant="outline"
+                            className={cn("text-[10px]", primaryS.text)}
+                          >
                             {primaryLoc?.shortCode ?? "—"}
                           </Badge>
                         )}
@@ -448,12 +484,16 @@ export function StaffPoolClient({ staff, locations }: Props) {
                               key={locId}
                               className={cn(
                                 "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium",
-                                isPrimary ? cn(s.bg, "text-white") : cn(s.badge),
+                                isPrimary
+                                  ? cn(s.bg, "text-white")
+                                  : cn(s.badge),
                               )}
                             >
                               <MapPin className="size-2.5" />
                               {loc.shortCode}
-                              {isPrimary && <CheckCircle2 className="size-2.5 opacity-90" />}
+                              {isPrimary && (
+                                <CheckCircle2 className="size-2.5 opacity-90" />
+                              )}
                             </span>
                           );
                         })}
@@ -481,7 +521,9 @@ export function StaffPoolClient({ staff, locations }: Props) {
                           Upcoming shifts
                         </p>
                         {member.upcomingShifts.length === 0 ? (
-                          <p className="text-muted-foreground text-[11px]">No upcoming shifts</p>
+                          <p className="text-muted-foreground text-[11px]">
+                            No upcoming shifts
+                          </p>
                         ) : (
                           (() => {
                             const allShifts: CrossLocationShift[] =
@@ -495,57 +537,63 @@ export function StaffPoolClient({ staff, locations }: Props) {
                               }));
                             return (
                               <div className="space-y-1">
-                                {member.upcomingShifts.slice(0, 3).map((shift, i) => {
-                                  const shiftLoc = getLocation(shift.locationId);
-                                  const sS = shiftLoc
-                                    ? locationStyles(shiftLoc)
-                                    : styleFromKey("sky");
-                                  const conflicts = findShiftConflicts(
-                                    allShifts[i],
-                                    allShifts,
-                                  );
-                                  const hasConflict = conflicts.length > 0;
-                                  return (
-                                    <div
-                                      key={i}
-                                      className={cn(
-                                        "flex items-center gap-2 rounded-md border-l-2 px-2 py-1.5",
-                                        hasConflict
-                                          ? "border-red-500 bg-red-50 dark:bg-red-950/20"
-                                          : `${sS.borderSoft} ${sS.bgSofter}`,
-                                      )}
-                                      title={
-                                        hasConflict
-                                          ? `Conflict ${formatConflictWindow(conflicts[0])} with ${getLocation(conflicts[0].conflictingShift.locationId)?.shortCode ?? "?"}`
-                                          : undefined
-                                      }
-                                    >
+                                {member.upcomingShifts
+                                  .slice(0, 3)
+                                  .map((shift, i) => {
+                                    const shiftLoc = getLocation(
+                                      shift.locationId,
+                                    );
+                                    const sS = shiftLoc
+                                      ? locationStyles(shiftLoc)
+                                      : styleFromKey("sky");
+                                    const conflicts = findShiftConflicts(
+                                      allShifts[i],
+                                      allShifts,
+                                    );
+                                    const hasConflict = conflicts.length > 0;
+                                    return (
                                       <div
+                                        key={i}
                                         className={cn(
-                                          "size-1.5 shrink-0 rounded-full",
-                                          sS.bg,
+                                          "flex items-center gap-2 rounded-md border-l-2 px-2 py-1.5",
+                                          hasConflict
+                                            ? "border-red-500 bg-red-50 dark:bg-red-950/20"
+                                            : `${sS.borderSoft} ${sS.bgSofter}`,
                                         )}
-                                      />
-                                      <span className="text-[11px] font-medium">
-                                        {shift.date}
-                                      </span>
-                                      <span className="text-muted-foreground text-[11px]">
-                                        {shift.start}–{shift.end}
-                                      </span>
-                                      {hasConflict && (
-                                        <AlertTriangle className="size-3 shrink-0 text-red-600" />
-                                      )}
-                                      <span
-                                        className={cn(
-                                          "ml-auto text-[10px] font-semibold",
-                                          hasConflict ? "text-red-700" : sS.text,
-                                        )}
+                                        title={
+                                          hasConflict
+                                            ? `Conflict ${formatConflictWindow(conflicts[0])} with ${getLocation(conflicts[0].conflictingShift.locationId)?.shortCode ?? "?"}`
+                                            : undefined
+                                        }
                                       >
-                                        {shiftLoc?.shortCode}
-                                      </span>
-                                    </div>
-                                  );
-                                })}
+                                        <div
+                                          className={cn(
+                                            "size-1.5 shrink-0 rounded-full",
+                                            sS.bg,
+                                          )}
+                                        />
+                                        <span className="text-[11px] font-medium">
+                                          {shift.date}
+                                        </span>
+                                        <span className="text-muted-foreground text-[11px]">
+                                          {shift.start}–{shift.end}
+                                        </span>
+                                        {hasConflict && (
+                                          <AlertTriangle className="size-3 shrink-0 text-red-600" />
+                                        )}
+                                        <span
+                                          className={cn(
+                                            "ml-auto text-[10px] font-semibold",
+                                            hasConflict
+                                              ? "text-red-700"
+                                              : sS.text,
+                                          )}
+                                        >
+                                          {shiftLoc?.shortCode}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
                               </div>
                             );
                           })()
@@ -555,7 +603,8 @@ export function StaffPoolClient({ staff, locations }: Props) {
                       {shared && (
                         <div className="flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-[10px] text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-400">
                           <CheckCircle2 className="size-3 shrink-0" />
-                          Conflict detection active across {member.assignedLocations.length} locations
+                          Conflict detection active across{" "}
+                          {member.assignedLocations.length} locations
                         </div>
                       )}
 
@@ -563,7 +612,9 @@ export function StaffPoolClient({ staff, locations }: Props) {
                         variant="outline"
                         size="sm"
                         className="h-7 w-full gap-1.5 text-xs"
-                        onClick={() => toast.info(`Managing ${member.name}'s locations`)}
+                        onClick={() =>
+                          toast.info(`Managing ${member.name}'s locations`)
+                        }
                       >
                         Manage Locations
                       </Button>
@@ -574,7 +625,9 @@ export function StaffPoolClient({ staff, locations }: Props) {
               {filtered.length === 0 && (
                 <div className="col-span-full py-12 text-center">
                   <Users className="text-muted-foreground/40 mx-auto mb-3 size-10" />
-                  <p className="text-muted-foreground text-sm">No staff match your filters</p>
+                  <p className="text-muted-foreground text-sm">
+                    No staff match your filters
+                  </p>
                 </div>
               )}
             </div>
@@ -586,7 +639,7 @@ export function StaffPoolClient({ staff, locations }: Props) {
           <CardContent className="p-4">
             <div className="overflow-x-auto">
               <div className="min-w-[780px]">
-                <div className="grid grid-cols-[200px_repeat(7,minmax(0,1fr))] gap-px overflow-hidden rounded-lg border bg-border">
+                <div className="bg-border grid grid-cols-[200px_repeat(7,minmax(0,1fr))] gap-px overflow-hidden rounded-lg border">
                   <div className="bg-muted/40 px-3 py-2 text-[10px] font-semibold tracking-wider uppercase">
                     Staff member
                   </div>
@@ -601,7 +654,9 @@ export function StaffPoolClient({ staff, locations }: Props) {
 
                   {filtered.map((member) => {
                     const primaryLoc = getLocation(member.primaryLocation);
-                    const primaryS = primaryLoc ? locationStyles(primaryLoc) : styleFromKey("sky");
+                    const primaryS = primaryLoc
+                      ? locationStyles(primaryLoc)
+                      : styleFromKey("sky");
                     return (
                       <Row
                         key={member.staffId}
@@ -615,7 +670,9 @@ export function StaffPoolClient({ staff, locations }: Props) {
                   {filtered.length === 0 && (
                     <div className="bg-background col-span-8 px-4 py-12 text-center">
                       <Users className="text-muted-foreground/40 mx-auto mb-3 size-10" />
-                      <p className="text-muted-foreground text-sm">No staff match your filters</p>
+                      <p className="text-muted-foreground text-sm">
+                        No staff match your filters
+                      </p>
                     </div>
                   )}
                 </div>
@@ -625,9 +682,13 @@ export function StaffPoolClient({ staff, locations }: Props) {
                   {locations.map((loc) => {
                     const s = locationStyles(loc);
                     return (
-                      <span key={loc.id} className="inline-flex items-center gap-1.5">
+                      <span
+                        key={loc.id}
+                        className="inline-flex items-center gap-1.5"
+                      >
                         <span className={cn("size-2.5 rounded-sm", s.bg)} />
-                        {loc.shortCode} · {loc.name.split("–")[1]?.trim() ?? loc.name}
+                        {loc.shortCode} ·{" "}
+                        {loc.name.split("–")[1]?.trim() ?? loc.name}
                       </span>
                     );
                   })}
@@ -683,12 +744,16 @@ export function StaffPoolClient({ staff, locations }: Props) {
                     );
                     return (
                       <tr key={role}>
-                        <td className="border px-3 py-2.5 text-xs font-semibold">{role}</td>
+                        <td className="border px-3 py-2.5 text-xs font-semibold">
+                          {role}
+                        </td>
                         {locations.map((loc) => {
                           const count = coverage[role]?.[loc.id] ?? 0;
                           const offered =
-                            (role === "Groomer" && !loc.services.includes("grooming")) ||
-                            (role === "Trainer" && !loc.services.includes("training"))
+                            (role === "Groomer" &&
+                              !loc.services.includes("grooming")) ||
+                            (role === "Trainer" &&
+                              !loc.services.includes("training"))
                               ? false
                               : true;
                           return (
@@ -698,12 +763,15 @@ export function StaffPoolClient({ staff, locations }: Props) {
                                 "border px-3 py-2.5 text-center text-sm font-bold tabular-nums",
                                 !offered &&
                                   "text-muted-foreground/60 bg-muted/20",
-                                offered && count === 0 &&
+                                offered &&
+                                  count === 0 &&
                                   "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400",
                                 offered && count > 0 && "text-foreground",
                               )}
                             >
-                              {!offered ? "—" : count === 0 ? (
+                              {!offered ? (
+                                "—"
+                              ) : count === 0 ? (
                                 <AlertTriangle className="mx-auto size-3.5 text-amber-500" />
                               ) : (
                                 count
@@ -729,7 +797,8 @@ export function StaffPoolClient({ staff, locations }: Props) {
                     Coverage gaps detected
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    These role/location pairs offer the service but currently have no assigned staff.
+                    These role/location pairs offer the service but currently
+                    have no assigned staff.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -740,17 +809,23 @@ export function StaffPoolClient({ staff, locations }: Props) {
                       return (
                         <li
                           key={i}
-                          className="flex items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 text-xs"
+                          className="bg-background flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs"
                         >
                           <span className={cn("size-2 rounded-full", s.bg)} />
                           <span className="font-semibold">{g.role}</span>
                           <span className="text-muted-foreground">at</span>
-                          <span className={cn("font-semibold", s.text)}>{g.locationName}</span>
+                          <span className={cn("font-semibold", s.text)}>
+                            {g.locationName}
+                          </span>
                           <Button
                             variant="ghost"
                             size="sm"
                             className="ml-auto h-6 gap-1 text-[11px]"
-                            onClick={() => toast.info(`Assigning a ${g.role} to ${g.locationName}`)}
+                            onClick={() =>
+                              toast.info(
+                                `Assigning a ${g.role} to ${g.locationName}`,
+                              )
+                            }
                           >
                             Assign staff <ChevronRight className="size-3" />
                           </Button>
@@ -767,7 +842,8 @@ export function StaffPoolClient({ staff, locations }: Props) {
                   <div>
                     <p className="text-sm font-semibold">All roles covered</p>
                     <p className="text-muted-foreground text-xs">
-                      Every active service has at least one assigned staff member.
+                      Every active service has at least one assigned staff
+                      member.
                     </p>
                   </div>
                 </CardContent>
@@ -781,10 +857,12 @@ export function StaffPoolClient({ staff, locations }: Props) {
         <CardContent className="flex items-start gap-3 pt-4 pb-4">
           <Filter className="mt-0.5 size-4 shrink-0 text-amber-500" />
           <div>
-            <p className="text-sm font-medium">Cross-Location Conflict Detection</p>
+            <p className="text-sm font-medium">
+              Cross-Location Conflict Detection
+            </p>
             <p className="text-muted-foreground mt-0.5 text-xs">
-              Staff assigned to multiple locations are automatically checked for overlapping shifts.
-              Configure detection sensitivity in{" "}
+              Staff assigned to multiple locations are automatically checked for
+              overlapping shifts. Configure detection sensitivity in{" "}
               <Link href="/facility/hq/settings" className="underline">
                 HQ Settings
               </Link>
@@ -808,9 +886,14 @@ function Row({
 }) {
   const cells: React.ReactNode[] = [];
   for (let day = 0; day < 7; day++) {
-    const shifts = member.upcomingShifts.filter((s) => getDayIndex(s.date) === day);
+    const shifts = member.upcomingShifts.filter(
+      (s) => getDayIndex(s.date) === day,
+    );
     cells.push(
-      <div key={day} className="bg-background min-h-[58px] space-y-1 px-1.5 py-1.5">
+      <div
+        key={day}
+        className="bg-background min-h-[58px] space-y-1 px-1.5 py-1.5"
+      >
         {shifts.length === 0 ? (
           <div className="bg-muted/20 h-full rounded-md" />
         ) : (
@@ -849,7 +932,7 @@ function Row({
           {initialsOf(member.name)}
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-semibold truncate">{member.name}</p>
+          <p className="truncate text-xs font-semibold">{member.name}</p>
           <p className="text-muted-foreground text-[10px]">{member.role}</p>
         </div>
       </div>

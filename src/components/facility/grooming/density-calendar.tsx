@@ -118,7 +118,7 @@ export function DensityCalendar({
   }
 
   return (
-    <div className="rounded-lg border bg-card p-3">
+    <div className="bg-card rounded-lg border p-3">
       {/* Header */}
       <div className="mb-2 flex items-center justify-between">
         <Button
@@ -147,7 +147,7 @@ export function DensityCalendar({
       </div>
 
       {/* Weekday labels */}
-      <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="text-muted-foreground mb-1 grid grid-cols-7 gap-1 text-center text-[10px] font-semibold tracking-wider uppercase">
         {WEEKDAY_LABELS.map((d, i) => (
           <div key={`${d}-${i}`}>{d}</div>
         ))}
@@ -176,13 +176,13 @@ export function DensityCalendar({
               className={cn(
                 "relative aspect-square rounded-md text-xs font-medium transition-colors",
                 "flex flex-col items-center justify-center gap-0.5",
-                isDisabled && "opacity-30 cursor-not-allowed",
+                isDisabled && "cursor-not-allowed opacity-30",
                 !isDisabled && "hover:bg-muted",
                 isSelected &&
                   "bg-pink-100 text-pink-900 ring-2 ring-pink-300 dark:bg-pink-950/40 dark:text-pink-100 dark:ring-pink-700",
                 !isSelected &&
                   isToday &&
-                  "text-pink-700 dark:text-pink-300 font-semibold",
+                  "font-semibold text-pink-700 dark:text-pink-300",
                 !isSelected &&
                   isFullyBooked &&
                   "text-red-600 dark:text-red-300",
@@ -200,12 +200,7 @@ export function DensityCalendar({
             >
               <span>{cell.date.getDate()}</span>
               {dotClass && (
-                <span
-                  className={cn(
-                    "size-1.5 rounded-full",
-                    dotClass,
-                  )}
-                />
+                <span className={cn("size-1.5 rounded-full", dotClass)} />
               )}
             </button>
           );
@@ -213,7 +208,7 @@ export function DensityCalendar({
       </div>
 
       {/* Legend */}
-      <div className="mt-3 flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
+      <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-3 text-[10px]">
         <span className="inline-flex items-center gap-1">
           <span className="size-1.5 rounded-full bg-emerald-500" />
           Plenty

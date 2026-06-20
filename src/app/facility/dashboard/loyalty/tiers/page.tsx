@@ -12,7 +12,9 @@ import type { Tier, LoyaltyTierConfig } from "@/types/loyalty";
 export default function TiersPage() {
   const { config, updateConfig, facilityId } = useLoyaltyProgram();
 
-  const [tiers, setTiers] = useState<Tier[]>(() => config.tierDefinitions ?? []);
+  const [tiers, setTiers] = useState<Tier[]>(
+    () => config.tierDefinitions ?? [],
+  );
   const [legacyTiers, setLegacyTiers] = useState<LoyaltyTierConfig[]>(
     () => config.tiers,
   );
@@ -64,8 +66,8 @@ export default function TiersPage() {
         {showLegacy && (
           <div className="border-t p-4">
             <p className="text-muted-foreground mb-4 text-sm">
-              This points-only tier list is consumed by the engine
-              (<code>getCustomerTier</code>). The customisable tiers above are
+              This points-only tier list is consumed by the engine (
+              <code>getCustomerTier</code>). The customisable tiers above are
               the newer model; the engine will be migrated to consume them.
             </p>
             <TiersEditor value={legacyTiers} onChange={setLegacyTiers} />

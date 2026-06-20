@@ -9,7 +9,10 @@ import {
   Megaphone,
   type LucideIcon,
 } from "lucide-react";
-import { KpiTile, type KpiTone } from "@/components/facility/dashboard/kpi-tile";
+import {
+  KpiTile,
+  type KpiTone,
+} from "@/components/facility/dashboard/kpi-tile";
 import type { InsightCategory } from "@/types/smart-insights";
 
 export type CategoryFilter = "all" | InsightCategory;
@@ -21,12 +24,48 @@ const TABS: {
   tone: KpiTone;
   hint: string;
 }[] = [
-  { value: "all", label: "All Insights", icon: Sparkles, tone: "slate", hint: "Across all categories" },
-  { value: "revenue", label: "Revenue", icon: TrendingUp, tone: "emerald", hint: "Pricing & growth" },
-  { value: "operations", label: "Operations", icon: Settings2, tone: "indigo", hint: "Schedule & capacity" },
-  { value: "customers", label: "Customers", icon: Users, tone: "violet", hint: "Retention & churn" },
-  { value: "staff", label: "Staff", icon: UserCog, tone: "amber", hint: "Team & scheduling" },
-  { value: "marketing", label: "Marketing", icon: Megaphone, tone: "rose", hint: "Campaigns & outreach" },
+  {
+    value: "all",
+    label: "All Insights",
+    icon: Sparkles,
+    tone: "slate",
+    hint: "Across all categories",
+  },
+  {
+    value: "revenue",
+    label: "Revenue",
+    icon: TrendingUp,
+    tone: "emerald",
+    hint: "Pricing & growth",
+  },
+  {
+    value: "operations",
+    label: "Operations",
+    icon: Settings2,
+    tone: "indigo",
+    hint: "Schedule & capacity",
+  },
+  {
+    value: "customers",
+    label: "Customers",
+    icon: Users,
+    tone: "violet",
+    hint: "Retention & churn",
+  },
+  {
+    value: "staff",
+    label: "Staff",
+    icon: UserCog,
+    tone: "amber",
+    hint: "Team & scheduling",
+  },
+  {
+    value: "marketing",
+    label: "Marketing",
+    icon: Megaphone,
+    tone: "rose",
+    hint: "Campaigns & outreach",
+  },
 ];
 
 interface Props {

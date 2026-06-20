@@ -187,8 +187,7 @@ export const smartInsightTemplates: Insight[] = [
     priority: "high",
     trend: "up",
     title: "Missed Calls Up 47% This Week",
-    description:
-      "Missed call rate jumped from 8% to 18% over the past 7 days.",
+    description: "Missed call rate jumped from 8% to 18% over the past 7 days.",
     impactText:
       "$2,800 in estimated lost bookings. 80% of misses occur between 11 AM and 1 PM (lunch coverage gap).",
     recommendationText:
@@ -533,8 +532,7 @@ export const smartInsightTemplates: Insight[] = [
     priority: "high",
     trend: "stable",
     title: "Unfilled Shift: Tomorrow 7:30 AM Front Desk",
-    description:
-      "Tomorrow morning's front desk shift has no assignee.",
+    description: "Tomorrow morning's front desk shift has no assignee.",
     impactText:
       "Check-in flow will stall. Approximately 20 morning drop-offs are scheduled.",
     recommendationText:
@@ -589,8 +587,7 @@ export const smartInsightTemplates: Insight[] = [
       "Amélie has 3 onboarding tasks remaining; no progress in the past 9 days.",
     impactText:
       "Onboarding completion gates access to certain modules — her productivity is blocked.",
-    recommendationText:
-      "Send a reminder, or check in to remove any blocker.",
+    recommendationText: "Send a reminder, or check in to remove any blocker.",
     metrics: [
       { label: "Days stalled", value: 9 },
       { label: "Tasks remaining", value: 3 },
@@ -719,8 +716,7 @@ export const smartInsightTemplates: Insight[] = [
     title: "SMS Open Rate 2.4× Higher Than Email",
     description:
       "Over the past 90 days, SMS campaigns averaged 94% open vs. 22% for email. Booking conversion is also 1.8× higher.",
-    impactText:
-      "You're underweighting your highest-performing channel.",
+    impactText: "You're underweighting your highest-performing channel.",
     recommendationText:
       "Shift more campaigns to SMS — review the full breakdown.",
     metrics: [
@@ -749,8 +745,7 @@ export const smartInsightTemplates: Insight[] = [
       "8 unlistened voicemails. The oldest has been waiting 61 hours.",
     impactText:
       "Each missed voicemail is roughly a missed booking. Estimated lost: $480.",
-    recommendationText:
-      "Work through the voicemail backlog now.",
+    recommendationText: "Work through the voicemail backlog now.",
     metrics: [
       { label: "Unlistened", value: 8 },
       { label: "Oldest", value: "61 hours" },
@@ -803,8 +798,7 @@ export const smartInsightTemplates: Insight[] = [
       "Shampoo, conditioner, gauze, and ear-cleaning solution are all below minimum stock.",
     impactText:
       "At current usage, shampoo runs out in 3 days — grooming pipeline impact imminent.",
-    recommendationText:
-      "Place reorders with the suppliers shown.",
+    recommendationText: "Place reorders with the suppliers shown.",
     metrics: [
       { label: "Items low", value: 4 },
       { label: "Days to stockout", value: "3 (worst)" },
@@ -825,8 +819,7 @@ export const smartInsightTemplates: Insight[] = [
     priority: "low",
     trend: "up",
     title: "Ear Cleaning Solution: Usage Up 52% This Week",
-    description:
-      "Weekly usage jumped 52% above the 60-day average.",
+    description: "Weekly usage jumped 52% above the 60-day average.",
     impactText:
       "Either a new service is using it more heavily, or tracking is correct and the reorder threshold needs raising.",
     recommendationText:

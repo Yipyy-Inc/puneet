@@ -97,7 +97,7 @@ export function ScheduleSendPopover({
       >
         <div className="mb-3 flex items-center gap-2">
           <CalendarIcon className="size-3.5 text-blue-600" />
-          <span className="text-xs font-bold tracking-wider uppercase text-slate-500">
+          <span className="text-xs font-bold tracking-wider text-slate-500 uppercase">
             Schedule send
           </span>
         </div>
@@ -119,7 +119,7 @@ export function ScheduleSendPopover({
         <div className="my-3 h-px bg-slate-100" />
 
         <div className="space-y-2">
-          <Label className="text-[10px] font-semibold tracking-wider uppercase text-slate-500">
+          <Label className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
             Pick a date & time
           </Label>
           <div className="flex gap-2">

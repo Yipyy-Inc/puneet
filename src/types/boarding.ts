@@ -56,9 +56,19 @@ export type { PetSize } from "@/types/base";
 
 export const medFrequencyRuleSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("daily") }),
-  z.object({ type: z.literal("every_other_day"), startDayOfStay: z.number().optional() }),
-  z.object({ type: z.literal("every_n_days"), n: z.number(), startDayOfStay: z.number().optional() }),
-  z.object({ type: z.literal("specific_days"), daysOfWeek: z.array(z.number()) }),
+  z.object({
+    type: z.literal("every_other_day"),
+    startDayOfStay: z.number().optional(),
+  }),
+  z.object({
+    type: z.literal("every_n_days"),
+    n: z.number(),
+    startDayOfStay: z.number().optional(),
+  }),
+  z.object({
+    type: z.literal("specific_days"),
+    daysOfWeek: z.array(z.number()),
+  }),
   z.object({ type: z.literal("first_n_days"), days: z.number() }),
   z.object({ type: z.literal("last_n_days"), days: z.number() }),
   z.object({ type: z.literal("as_needed") }),

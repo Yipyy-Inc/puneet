@@ -71,23 +71,19 @@ function fanOutOffer(
         query.queryKey,
         (prev = []) =>
           prev.map((e) =>
-            e.id === enrollmentId
-              ? { ...e, offer, updatedAt: nowISO }
-              : e,
+            e.id === enrollmentId ? { ...e, offer, updatedAt: nowISO } : e,
           ),
       );
     });
-  cache
-    .findAll({ queryKey: ["training", "series"] })
-    .forEach((query) => {
-      const key = query.queryKey;
-      if (key[3] !== "enrollments") return;
-      queryClient.setQueryData<TrainingEnrollment[]>(key, (prev = []) =>
-        prev.map((e) =>
-          e.id === enrollmentId ? { ...e, offer, updatedAt: nowISO } : e,
-        ),
-      );
-    });
+  cache.findAll({ queryKey: ["training", "series"] }).forEach((query) => {
+    const key = query.queryKey;
+    if (key[3] !== "enrollments") return;
+    queryClient.setQueryData<TrainingEnrollment[]>(key, (prev = []) =>
+      prev.map((e) =>
+        e.id === enrollmentId ? { ...e, offer, updatedAt: nowISO } : e,
+      ),
+    );
+  });
 }
 
 /** Pick the next eligible candidate and write an offer onto them. Returns

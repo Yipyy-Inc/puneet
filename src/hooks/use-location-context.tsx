@@ -9,7 +9,11 @@ import {
   type ReactNode,
 } from "react";
 import type { Location, HQSettings } from "@/types/location";
-import { getLocationsByFacility, getPrimaryLocation, hqSettings } from "@/data/locations";
+import {
+  getLocationsByFacility,
+  getPrimaryLocation,
+  hqSettings,
+} from "@/data/locations";
 
 const STORAGE_KEY = "yipyy-location-ctx";
 const HQ_SENTINEL = "__hq__";
@@ -63,9 +67,10 @@ export function LocationContextProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const isHQView = locationId === HQ_SENTINEL;
-  const currentLocation = mounted && !isHQView
-    ? locs.find((l) => l.id === locationId) ?? null
-    : null;
+  const currentLocation =
+    mounted && !isHQView
+      ? (locs.find((l) => l.id === locationId) ?? null)
+      : null;
 
   return (
     <LocationContext.Provider
@@ -103,6 +108,9 @@ export function useLocationContext(): LocationContextValue {
 
 export function useLocationContextStrict(): LocationContextValue {
   const ctx = useContext(LocationContext);
-  if (!ctx) throw new Error("useLocationContext must be used inside LocationContextProvider");
+  if (!ctx)
+    throw new Error(
+      "useLocationContext must be used inside LocationContextProvider",
+    );
   return ctx;
 }

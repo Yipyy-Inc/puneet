@@ -93,7 +93,7 @@ export function CashMovementDialog({
         <div className="space-y-4">
           {/* Direction first — segmented control */}
           <div>
-            <Label className="text-xs text-muted-foreground mb-1.5 block">
+            <Label className="text-muted-foreground mb-1.5 block text-xs">
               Direction
             </Label>
             <div className="grid grid-cols-2 gap-2">
@@ -131,7 +131,7 @@ export function CashMovementDialog({
               Amount
             </Label>
             <div className="relative mt-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+              <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
                 {symbol}
               </span>
               <Input
@@ -180,9 +180,12 @@ export function CashMovementDialog({
             />
           </div>
 
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Recorded by <span className="font-medium">{staffName}</span> at{" "}
-            {new Date().toLocaleTimeString("en-CA", { hour: "2-digit", minute: "2-digit" })}
+            {new Date().toLocaleTimeString("en-CA", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
           </p>
         </div>
 

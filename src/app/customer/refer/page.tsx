@@ -323,9 +323,7 @@ export default function CustomerReferPage() {
   // Earned reward notifications
   const earnedRewardNotifications = useMemo(() => {
     return referralTracking
-      .filter(
-        (r) => r.rewardEarned && !dismissedRewardNotifications.has(r.id),
-      )
+      .filter((r) => r.rewardEarned && !dismissedRewardNotifications.has(r.id))
       .map((r) => ({
         id: r.id,
         friendName: r.friendName,

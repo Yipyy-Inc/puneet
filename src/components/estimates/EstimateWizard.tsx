@@ -109,7 +109,9 @@ export function EstimateWizard({
 
   const selectedClient = facilityClients.find((c) => c.id === selectedClientId);
 
-  const guestPetSummary = guestPetNames.map((name) => name.trim()).filter(Boolean);
+  const guestPetSummary = guestPetNames
+    .map((name) => name.trim())
+    .filter(Boolean);
 
   const resolvedGuestPetNames = guestPetNames.length > 0 ? guestPetNames : [""];
 

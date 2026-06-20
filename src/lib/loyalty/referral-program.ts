@@ -49,7 +49,8 @@ export const REFERRAL_TRIGGER_LABELS: Record<ReferralRewardTrigger, string> = {
 
 export const REFERRAL_TRIGGER_HINTS: Record<ReferralRewardTrigger, string> = {
   on_signup: "Reward fires as soon as the friend creates an account.",
-  on_first_booking: "Reward fires when the friend completes their first booking.",
+  on_first_booking:
+    "Reward fires when the friend completes their first booking.",
   on_first_paid_booking:
     "Reward fires only after the friend's first paid (non-refunded) booking.",
 };
@@ -121,7 +122,9 @@ export function renderReferralTemplate(
 }
 
 /** Sample tokens for the wizard's live message preview. */
-export function previewTokens(program: ReferralProgram): Record<string, string> {
+export function previewTokens(
+  program: ReferralProgram,
+): Record<string, string> {
   return {
     code: "BUDDY-7K2M",
     referrerName: "Alex",

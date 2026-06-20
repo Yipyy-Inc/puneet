@@ -25,9 +25,7 @@ export const additionalContactSchema = z.object({
   name: z.string(),
   relationship: z.string().default(""),
   phone: z.string(),
-  email: z
-    .union([z.string().email(), z.literal("")])
-    .optional(),
+  email: z.union([z.string().email(), z.literal("")]).optional(),
   tags: z.array(additionalContactTagSchema).default([]),
 });
 

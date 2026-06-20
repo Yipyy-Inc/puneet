@@ -339,15 +339,13 @@ export default function MarketingPage() {
       header: "Status",
       cell: ({ row }) => {
         const statusStyles: Record<typeof row.original.status, string> = {
-          draft:
-            "bg-muted text-muted-foreground",
+          draft: "bg-muted text-muted-foreground",
           scheduled:
             "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
           sending:
             "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
           sent: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-          paused:
-            "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+          paused: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
         };
         return (
           <span
@@ -550,15 +548,12 @@ export default function MarketingPage() {
   ).length;
   const draftCampaigns = campaigns.filter((c) => c.status === "draft").length;
   const activeCampaigns =
-    scheduledCampaigns +
-    campaigns.filter((c) => c.status === "sending").length;
+    scheduledCampaigns + campaigns.filter((c) => c.status === "sending").length;
   const filteredCampaigns =
     campaignFilter === "all"
       ? campaigns
       : campaigns.filter((c) => c.status === campaignFilter);
-  const handleTileClick = (
-    target: "all" | "sent" | "scheduled" | "draft",
-  ) => {
+  const handleTileClick = (target: "all" | "sent" | "scheduled" | "draft") => {
     setCampaignFilter((prev) => (prev === target ? "all" : target));
   };
 
@@ -712,10 +707,7 @@ export default function MarketingPage() {
                     <Send className="text-primary size-5" />
                     Email & SMS Campaigns
                     {campaignFilter !== "all" && (
-                      <Badge
-                        variant="secondary"
-                        className="gap-1 capitalize"
-                      >
+                      <Badge variant="secondary" className="gap-1 capitalize">
                         <Filter className="size-3" />
                         {campaignFilter}
                       </Badge>
@@ -987,169 +979,170 @@ export default function MarketingPage() {
               <TabsTrigger value="members">Members</TabsTrigger>
             </TabsList>
             <TabsContent value="overview" className="space-y-4">
-          <LoyaltyPerformanceBanner />
-          {/* Loyalty Overview */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiTile
-              label="Points Rate"
-              value={`${loyaltySettings.pointsPerDollar} / $1`}
-              hint={`100 pts = $${loyaltySettings.pointsValue}`}
-              icon={Coins}
-              tone="amber"
-            />
-            <KpiTile
-              label="Active Tiers"
-              value={loyaltySettings.tiers.length}
-              hint="Loyalty tiers"
-              icon={Crown}
-              tone="violet"
-            />
-            <KpiTile
-              label="Total Members"
-              value={customerLoyaltyData.length}
-              hint="Enrolled customers"
-              icon={UserCheck}
-              tone="indigo"
-            />
-            <KpiTile
-              label="Points Issued"
-              value={customerLoyaltyData
-                .reduce((sum, c) => sum + c.lifetimePoints, 0)
-                .toLocaleString()}
-              hint="Lifetime points"
-              icon={Sparkles}
-              tone="emerald"
-            />
-          </div>
+              <LoyaltyPerformanceBanner />
+              {/* Loyalty Overview */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <KpiTile
+                  label="Points Rate"
+                  value={`${loyaltySettings.pointsPerDollar} / $1`}
+                  hint={`100 pts = $${loyaltySettings.pointsValue}`}
+                  icon={Coins}
+                  tone="amber"
+                />
+                <KpiTile
+                  label="Active Tiers"
+                  value={loyaltySettings.tiers.length}
+                  hint="Loyalty tiers"
+                  icon={Crown}
+                  tone="violet"
+                />
+                <KpiTile
+                  label="Total Members"
+                  value={customerLoyaltyData.length}
+                  hint="Enrolled customers"
+                  icon={UserCheck}
+                  tone="indigo"
+                />
+                <KpiTile
+                  label="Points Issued"
+                  value={customerLoyaltyData
+                    .reduce((sum, c) => sum + c.lifetimePoints, 0)
+                    .toLocaleString()}
+                  hint="Lifetime points"
+                  icon={Sparkles}
+                  tone="emerald"
+                />
+              </div>
 
-          {/* Loyalty Tiers */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
+              {/* Loyalty Tiers */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Crown className="size-5 text-violet-500" />
+                        Loyalty Tiers
+                      </CardTitle>
+                      <p className="text-muted-foreground mt-1 text-sm">
+                        Tier benefits and requirements
+                      </p>
+                    </div>
+                    <Button asChild>
+                      <Link href="/facility/dashboard/loyalty/setup">
+                        <Settings className="mr-2 size-4" />
+                        Manage Settings
+                      </Link>
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {loyaltySettings.tiers.map((tier) => (
+                      <div
+                        key={tier.id}
+                        className="group relative flex items-center justify-between overflow-hidden rounded-xl border-2 p-4 transition-all hover:shadow-md"
+                        style={{
+                          borderColor: `${tier.color}40`,
+                          background: `linear-gradient(135deg, ${tier.color}10 0%, transparent 60%)`,
+                        }}
+                      >
+                        <div
+                          className="absolute top-0 left-0 h-full w-1.5"
+                          style={{ backgroundColor: tier.color }}
+                        />
+                        <div className="flex-1 pl-3">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="flex size-9 items-center justify-center rounded-lg shadow-sm transition-transform group-hover:scale-110"
+                              style={{ backgroundColor: tier.color }}
+                            >
+                              <Crown className="size-4.5 text-white" />
+                            </div>
+                            <div>
+                              <div className="text-lg font-semibold">
+                                {tier.name}
+                              </div>
+                              <div className="text-muted-foreground text-sm">
+                                {tier.minPoints.toLocaleString()}+ points
+                                required
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-1.5">
+                            {tier.benefits.map((benefit, idx) => (
+                              <Badge
+                                key={idx}
+                                variant="secondary"
+                                className="bg-background/60 backdrop-blur-sm"
+                              >
+                                {benefit}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div
+                            className="text-3xl font-bold"
+                            style={{ color: tier.color }}
+                          >
+                            {tier.discountPercentage}%
+                          </div>
+                          <div className="text-muted-foreground text-xs tracking-wide uppercase">
+                            Discount
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Badges */}
+              <Card>
+                <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Crown className="size-5 text-violet-500" />
-                    Loyalty Tiers
+                    <Award className="size-5 text-amber-500" />
+                    Achievement Badges
                   </CardTitle>
                   <p className="text-muted-foreground mt-1 text-sm">
-                    Tier benefits and requirements
+                    Customer milestones and rewards
                   </p>
-                </div>
-                <Button asChild>
-                  <Link href="/facility/dashboard/loyalty/setup">
-                    <Settings className="mr-2 size-4" />
-                    Manage Settings
-                  </Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {loyaltySettings.tiers.map((tier) => (
-                  <div
-                    key={tier.id}
-                    className="group relative flex items-center justify-between overflow-hidden rounded-xl border-2 p-4 transition-all hover:shadow-md"
-                    style={{
-                      borderColor: `${tier.color}40`,
-                      background: `linear-gradient(135deg, ${tier.color}10 0%, transparent 60%)`,
-                    }}
-                  >
-                    <div
-                      className="absolute top-0 left-0 h-full w-1.5"
-                      style={{ backgroundColor: tier.color }}
-                    />
-                    <div className="flex-1 pl-3">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="flex size-9 items-center justify-center rounded-lg shadow-sm transition-transform group-hover:scale-110"
-                          style={{ backgroundColor: tier.color }}
-                        >
-                          <Crown className="size-4.5 text-white" />
-                        </div>
-                        <div>
-                          <div className="text-lg font-semibold">
-                            {tier.name}
-                          </div>
-                          <div className="text-muted-foreground text-sm">
-                            {tier.minPoints.toLocaleString()}+ points required
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {tier.benefits.map((benefit, idx) => (
-                          <Badge
-                            key={idx}
-                            variant="secondary"
-                            className="bg-background/60 backdrop-blur-sm"
-                          >
-                            {benefit}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="text-right">
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {badges.map((badge) => (
                       <div
-                        className="text-3xl font-bold"
-                        style={{ color: tier.color }}
+                        key={badge.id}
+                        className="group from-muted/40 hover:border-primary/30 relative flex items-start gap-4 overflow-hidden rounded-xl border bg-gradient-to-br to-transparent p-4 transition-all hover:shadow-md"
                       >
-                        {tier.discountPercentage}%
+                        <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-100 to-amber-200 text-3xl shadow-sm transition-transform group-hover:scale-110 dark:from-amber-900/40 dark:to-amber-800/40">
+                          {badge.icon}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold">{badge.name}</div>
+                          <div className="text-muted-foreground mt-1 text-sm">
+                            {badge.description}
+                          </div>
+                          {badge.reward && (
+                            <Badge
+                              variant="secondary"
+                              className="mt-2 gap-1 border-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+                            >
+                              <Sparkles className="size-3" />
+                              {badge.reward.type === "discount" &&
+                                `${badge.reward.value}% off`}
+                              {badge.reward.type === "points" &&
+                                `${badge.reward.value} points`}
+                              {badge.reward.type === "freebie" &&
+                                badge.reward.value}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-muted-foreground text-xs uppercase tracking-wide">
-                        Discount
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Badges */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="size-5 text-amber-500" />
-                Achievement Badges
-              </CardTitle>
-              <p className="text-muted-foreground mt-1 text-sm">
-                Customer milestones and rewards
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {badges.map((badge) => (
-                  <div
-                    key={badge.id}
-                    className="group from-muted/40 hover:border-primary/30 relative flex items-start gap-4 overflow-hidden rounded-xl border bg-gradient-to-br to-transparent p-4 transition-all hover:shadow-md"
-                  >
-                    <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-100 to-amber-200 text-3xl shadow-sm transition-transform group-hover:scale-110 dark:from-amber-900/40 dark:to-amber-800/40">
-                      {badge.icon}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold">{badge.name}</div>
-                      <div className="text-muted-foreground mt-1 text-sm">
-                        {badge.description}
-                      </div>
-                      {badge.reward && (
-                        <Badge
-                          variant="secondary"
-                          className="mt-2 gap-1 border-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
-                        >
-                          <Sparkles className="size-3" />
-                          {badge.reward.type === "discount" &&
-                            `${badge.reward.value}% off`}
-                          {badge.reward.type === "points" &&
-                            `${badge.reward.value} points`}
-                          {badge.reward.type === "freebie" &&
-                            badge.reward.value}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
             </TabsContent>
             <TabsContent value="members" className="space-y-4">
               <LoyaltyMembersTable />
@@ -1267,9 +1260,7 @@ export default function MarketingPage() {
             />
             <KpiTile
               label="% Discount Codes"
-              value={
-                promoCodes.filter((p) => p.type === "percentage").length
-              }
+              value={promoCodes.filter((p) => p.type === "percentage").length}
               hint="vs. fixed-amount codes"
               icon={Percent}
               tone="violet"

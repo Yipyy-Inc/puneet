@@ -27,10 +27,7 @@ import {
 import { buildTodayTasks } from "@/lib/today-tasks";
 import { getTemplatesForModule } from "@/data/task-templates";
 import type { TrainingSession } from "@/types/training";
-import {
-  DAY_INITIALS,
-  formatISODate,
-} from "./training-calendar-utils";
+import { DAY_INITIALS, formatISODate } from "./training-calendar-utils";
 
 export function TrainingCalendarSidebar({
   selectedDate,
@@ -50,7 +47,8 @@ export function TrainingCalendarSidebar({
     [selectedDate],
   );
   const [displayMonth, setDisplayMonth] = useState(
-    () => new Date(selectedDateObj.getFullYear(), selectedDateObj.getMonth(), 1),
+    () =>
+      new Date(selectedDateObj.getFullYear(), selectedDateObj.getMonth(), 1),
   );
 
   const calendarDays = useMemo(() => {
@@ -216,7 +214,8 @@ export function TrainingCalendarSidebar({
       bg: homeworkPendingReview > 0 ? "bg-amber-50" : "bg-slate-50",
       ring: homeworkPendingReview > 0 ? "ring-amber-100" : "ring-slate-100",
       text: homeworkPendingReview > 0 ? "text-amber-600" : "text-slate-600",
-      iconColor: homeworkPendingReview > 0 ? "text-amber-500" : "text-slate-400",
+      iconColor:
+        homeworkPendingReview > 0 ? "text-amber-500" : "text-slate-400",
     },
     {
       label: "Pending Tasks",
@@ -392,14 +391,10 @@ export function TrainingCalendarSidebar({
             return (
               <div
                 key={t.label}
-                className={cn(
-                  "rounded-xl px-3 py-2.5 ring-1",
-                  t.bg,
-                  t.ring,
-                )}
+                className={cn("rounded-xl px-3 py-2.5 ring-1", t.bg, t.ring)}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                  <span className="text-[9px] font-bold tracking-wider text-slate-500 uppercase">
                     {t.label}
                   </span>
                   <Icon className={cn("size-3.5", t.iconColor)} />

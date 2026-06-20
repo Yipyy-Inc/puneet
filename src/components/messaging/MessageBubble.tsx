@@ -29,17 +29,8 @@ function StatusIcon({ status }: { status: Message["status"] }) {
   return null;
 }
 
-function ChannelIcon({
-  type,
-  outbound,
-}: {
-  type: string;
-  outbound?: boolean;
-}) {
-  const cls = cn(
-    "size-2.5",
-    outbound ? "text-white/60" : "text-slate-400",
-  );
+function ChannelIcon({ type, outbound }: { type: string; outbound?: boolean }) {
+  const cls = cn("size-2.5", outbound ? "text-white/60" : "text-slate-400");
   if (type === "email") return <Mail className={cls} />;
   if (type === "sms") return <Smartphone className={cls} />;
   return <MessageSquare className={cls} />;
@@ -152,7 +143,7 @@ export function MessageBubble({
           >
             <span
               className={cn(
-                "inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide",
+                "inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[9px] font-semibold tracking-wide uppercase",
                 out
                   ? "bg-white/15 text-white/80"
                   : "bg-slate-100 text-slate-500",
@@ -238,7 +229,7 @@ function EmailCard({
   const color =
     AVATAR_COLORS[(clientName?.charCodeAt(0) ?? 0) % AVATAR_COLORS.length];
 
-  const senderName = out ? "You" : clientName ?? message.from;
+  const senderName = out ? "You" : (clientName ?? message.from);
   const senderAddress = out ? message.from : message.from;
 
   return (
@@ -304,7 +295,7 @@ function EmailCard({
               <div className="text-[11px] text-slate-500">
                 to{" "}
                 <span className="text-slate-600">
-                  {out ? clientName ?? message.to : "you"}
+                  {out ? (clientName ?? message.to) : "you"}
                 </span>
                 {message.to && out ? (
                   <span className="ml-1 text-slate-400">

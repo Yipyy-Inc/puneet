@@ -100,7 +100,7 @@ export function ExercisePicker({
           if (nonEmptyTiers.length === 0) return null;
           return (
             <SelectGroup key={discId}>
-              <SelectLabel className="text-[10px] uppercase tracking-wider">
+              <SelectLabel className="text-[10px] tracking-wider uppercase">
                 {disciplineLabel(discId)}
                 {discId === preferredDisciplineId && (
                   <span className="ml-1.5 rounded-full bg-indigo-100 px-1 py-0.5 text-[9px] font-bold text-indigo-700">
@@ -110,7 +110,7 @@ export function ExercisePicker({
               </SelectLabel>
               {nonEmptyTiers.map((level) => (
                 <Fragment key={level}>
-                  <div className="text-muted-foreground/80 px-2 pb-0.5 pt-1.5 text-[9px] font-bold uppercase tracking-wider">
+                  <div className="text-muted-foreground/80 px-2 pt-1.5 pb-0.5 text-[9px] font-bold tracking-wider uppercase">
                     {DIFFICULTY_LABELS[level]}
                   </div>
                   {tiers[level]!.map((e) => (

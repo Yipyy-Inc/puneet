@@ -2,8 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { petCams, type PetCam, mobileAppSettings } from "@/data/additional-features";
-import { cameraIntegrationConfig, petCamAccessConfigs } from "@/data/camera-integration";
+import {
+  petCams,
+  type PetCam,
+  mobileAppSettings,
+} from "@/data/additional-features";
+import {
+  cameraIntegrationConfig,
+  petCamAccessConfigs,
+} from "@/data/camera-integration";
 import { bookings } from "@/data/bookings";
 import { memberships } from "@/data/services-pricing";
 import { customerPackagePurchases } from "@/data/services-pricing";
@@ -31,7 +38,10 @@ import {
   X,
 } from "lucide-react";
 import { facilityConfig } from "@/data/facility-config";
-import type { CameraRuleSet, CameraServiceType } from "@/types/camera-integration";
+import type {
+  CameraRuleSet,
+  CameraServiceType,
+} from "@/types/camera-integration";
 
 const MOCK_CUSTOMER_ID = 15;
 
@@ -56,14 +66,17 @@ function evaluateRuleSet(
     return { passes: false, reasons: [] };
   }
 
-  const results: { passes: boolean; reason: AccessReason | null }[] = ruleSet.rules.map(
-    (rule) => {
+  const results: { passes: boolean; reason: AccessReason | null }[] =
+    ruleSet.rules.map((rule) => {
       if (rule.type === "active_stay") {
         const matchedService = rule.services.find((s) =>
           context.activeStayServices.includes(s),
         );
         return matchedService
-          ? { passes: true, reason: { type: "active_stay", service: matchedService } }
+          ? {
+              passes: true,
+              reason: { type: "active_stay", service: matchedService },
+            }
           : { passes: false, reason: null };
       }
       if (rule.type === "operation_hours") {
@@ -76,7 +89,10 @@ function evaluateRuleSet(
           context.membershipPlanIds.includes(id),
         );
         return matchedPlan
-          ? { passes: true, reason: { type: "membership", planName: matchedPlan } }
+          ? {
+              passes: true,
+              reason: { type: "membership", planName: matchedPlan },
+            }
           : { passes: false, reason: null };
       }
       if (rule.type === "package") {
@@ -84,7 +100,10 @@ function evaluateRuleSet(
           context.purchasedPackageIds.includes(id),
         );
         return matchedPkg
-          ? { passes: true, reason: { type: "package", packageName: matchedPkg } }
+          ? {
+              passes: true,
+              reason: { type: "package", packageName: matchedPkg },
+            }
           : { passes: false, reason: null };
       }
       if (rule.type === "service_customer") {
@@ -92,17 +111,23 @@ function evaluateRuleSet(
           context.customerServiceTypes.includes(s),
         );
         return matchedService
-          ? { passes: true, reason: { type: "service_customer", service: matchedService } }
+          ? {
+              passes: true,
+              reason: { type: "service_customer", service: matchedService },
+            }
           : { passes: false, reason: null };
       }
       return { passes: false, reason: null };
-    },
-  );
+    });
 
   const passedResults = results.filter((r) => r.passes);
   const passes =
-    ruleSet.logic === "any" ? passedResults.length > 0 : passedResults.length === results.length;
-  const reasons = passedResults.map((r) => r.reason).filter(Boolean) as AccessReason[];
+    ruleSet.logic === "any"
+      ? passedResults.length > 0
+      : passedResults.length === results.length;
+  const reasons = passedResults
+    .map((r) => r.reason)
+    .filter(Boolean) as AccessReason[];
 
   return { passes, reasons };
 }
@@ -110,15 +135,16 @@ function evaluateRuleSet(
 function AccessReasonBadge({ reason }: { reason: AccessReason }) {
   if (reason.type === "active_stay") {
     return (
-      <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs gap-1">
+      <Badge className="gap-1 bg-emerald-500/10 text-xs text-emerald-700 dark:text-emerald-400">
         <CalendarCheck className="size-3" />
-        Active {reason.service.charAt(0).toUpperCase() + reason.service.slice(1)} Stay
+        Active{" "}
+        {reason.service.charAt(0).toUpperCase() + reason.service.slice(1)} Stay
       </Badge>
     );
   }
   if (reason.type === "membership") {
     return (
-      <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs gap-1">
+      <Badge className="gap-1 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-400">
         <Crown className="size-3" />
         Member
       </Badge>
@@ -126,7 +152,7 @@ function AccessReasonBadge({ reason }: { reason: AccessReason }) {
   }
   if (reason.type === "package") {
     return (
-      <Badge className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-xs gap-1">
+      <Badge className="gap-1 bg-indigo-500/10 text-xs text-indigo-700 dark:text-indigo-400">
         <Package className="size-3" />
         Package
       </Badge>
@@ -134,15 +160,16 @@ function AccessReasonBadge({ reason }: { reason: AccessReason }) {
   }
   if (reason.type === "service_customer") {
     return (
-      <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs gap-1">
+      <Badge className="gap-1 bg-blue-500/10 text-xs text-blue-700 dark:text-blue-400">
         <Eye className="size-3" />
-        {reason.service.charAt(0).toUpperCase() + reason.service.slice(1)} Customer
+        {reason.service.charAt(0).toUpperCase() + reason.service.slice(1)}{" "}
+        Customer
       </Badge>
     );
   }
   if (reason.type === "operation_hours") {
     return (
-      <Badge className="bg-slate-500/10 text-slate-700 dark:text-slate-400 text-xs gap-1">
+      <Badge className="gap-1 bg-slate-500/10 text-xs text-slate-700 dark:text-slate-400">
         <Clock className="size-3" />
         Open Hours
       </Badge>
@@ -186,8 +213,7 @@ export default function CustomerCamerasPage() {
     return memberships
       .filter(
         (m) =>
-          m.customerId === String(MOCK_CUSTOMER_ID) &&
-          m.status === "active",
+          m.customerId === String(MOCK_CUSTOMER_ID) && m.status === "active",
       )
       .map((m) => m.planId);
   }, []);
@@ -235,7 +261,9 @@ export default function CustomerCamerasPage() {
       "thursday",
       "friday",
       "saturday",
-    ][now.getDay()] as keyof typeof facilityConfig.checkInOutTimes.operatingHours;
+    ][
+      now.getDay()
+    ] as keyof typeof facilityConfig.checkInOutTimes.operatingHours;
     const hours = facilityConfig.checkInOutTimes.operatingHours[dayKey];
     if (!hours) return false;
     const currentTime = now.toTimeString().slice(0, 5);
@@ -252,7 +280,11 @@ export default function CustomerCamerasPage() {
 
   // ─── Filter Accessible Cameras ────────────────────────────────
   const accessibleCameras = useMemo(() => {
-    if (!cameraIntegrationConfig.isEnabled || !mobileAppSettings.enableLiveCamera) return [];
+    if (
+      !cameraIntegrationConfig.isEnabled ||
+      !mobileAppSettings.enableLiveCamera
+    )
+      return [];
 
     return petCams
       .filter((cam) => {
@@ -278,14 +310,19 @@ export default function CustomerCamerasPage() {
   }, [ruleContext]);
 
   // ─── Feature disabled guard ────────────────────────────────────
-  if (!cameraIntegrationConfig.isEnabled || !mobileAppSettings.enableLiveCamera) {
+  if (
+    !cameraIntegrationConfig.isEnabled ||
+    !mobileAppSettings.enableLiveCamera
+  ) {
     return (
       <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
         <div className="mx-auto max-w-4xl">
           <Card>
             <CardContent className="py-12 text-center">
               <Camera className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-30" />
-              <h2 className="mb-2 text-2xl font-bold">Live Cameras Not Available</h2>
+              <h2 className="mb-2 text-2xl font-bold">
+                Live Cameras Not Available
+              </h2>
               <p className="text-muted-foreground">
                 Live camera access is not currently enabled at this facility.
               </p>
@@ -304,16 +341,17 @@ export default function CustomerCamerasPage() {
           <div className="space-y-1">
             <h1 className="text-3xl font-bold">Live Cameras</h1>
             <p className="text-muted-foreground">
-              Watch your pet in real-time at {selectedFacility?.name ?? "the facility"}
+              Watch your pet in real-time at{" "}
+              {selectedFacility?.name ?? "the facility"}
             </p>
           </div>
           <Card>
             <CardContent className="py-12 text-center">
               <Clock className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-30" />
               <h2 className="mb-2 text-2xl font-bold">No Cameras Available</h2>
-              <p className="text-muted-foreground max-w-sm mx-auto">
-                Camera access requires an active stay, qualifying membership, or service package
-                at this facility.
+              <p className="text-muted-foreground mx-auto max-w-sm">
+                Camera access requires an active stay, qualifying membership, or
+                service package at this facility.
               </p>
             </CardContent>
           </Card>
@@ -334,20 +372,23 @@ export default function CustomerCamerasPage() {
               {selectedFacility?.name ?? "the facility"}
             </p>
           </div>
-          <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 gap-1.5">
+          <Badge className="gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
             <CircleDot className="size-2.5 animate-pulse" />
-            {accessibleCameras.length} Camera{accessibleCameras.length > 1 ? "s" : ""} Available
+            {accessibleCameras.length} Camera
+            {accessibleCameras.length > 1 ? "s" : ""} Available
           </Badge>
         </div>
 
         <Alert>
-          <AlertDescription className="text-sm text-muted-foreground space-y-1">
+          <AlertDescription className="text-muted-foreground space-y-1 text-sm">
             <p>
-              Cameras are provided for your peace of mind while your pet is with us. Live
-              streams are only visible to you and authorized staff — never recorded for public use.
+              Cameras are provided for your peace of mind while your pet is with
+              us. Live streams are only visible to you and authorized staff —
+              never recorded for public use.
             </p>
             <p>
-              Video quality adjusts automatically based on your connection speed.
+              Video quality adjusts automatically based on your connection
+              speed.
             </p>
           </AlertDescription>
         </Alert>
@@ -356,7 +397,7 @@ export default function CustomerCamerasPage() {
           {accessibleCameras.map(({ cam, reasons }) => (
             <Card
               key={cam.id}
-              className="cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5"
+              className="cursor-pointer overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-lg"
               onClick={() => setSelectedCamera({ cam, reasons })}
             >
               <CardHeader className="pb-3">
@@ -391,24 +432,24 @@ export default function CustomerCamerasPage() {
                 {/* Feature Badges */}
                 <div className="flex flex-wrap gap-1.5">
                   {cam.hasAudio && (
-                    <Badge variant="outline" className="text-xs gap-1">
+                    <Badge variant="outline" className="gap-1 text-xs">
                       <Volume2 className="size-3" />
                       Audio
                     </Badge>
                   )}
                   {cam.hasPanTilt && (
-                    <Badge variant="outline" className="text-xs gap-1">
+                    <Badge variant="outline" className="gap-1 text-xs">
                       <Move className="size-3" />
                       Pan/Tilt
                     </Badge>
                   )}
                   {cam.hasNightVision && (
-                    <Badge variant="outline" className="text-xs gap-1">
+                    <Badge variant="outline" className="gap-1 text-xs">
                       <Moon className="size-3" />
                       Night Vision
                     </Badge>
                   )}
-                  <Badge variant="outline" className="text-xs gap-1">
+                  <Badge variant="outline" className="gap-1 text-xs">
                     <Eye className="size-3" />
                     {cam.resolution}
                   </Badge>
@@ -417,7 +458,9 @@ export default function CustomerCamerasPage() {
                 {/* Access Reason */}
                 {reasons.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 border-t pt-2">
-                    <span className="text-muted-foreground text-xs self-center">Access via:</span>
+                    <span className="text-muted-foreground self-center text-xs">
+                      Access via:
+                    </span>
                     {reasons.slice(0, 2).map((r, i) => (
                       <AccessReasonBadge key={i} reason={r} />
                     ))}
@@ -435,14 +478,18 @@ export default function CustomerCamerasPage() {
             onClick={() => setSelectedCamera(null)}
           >
             <div
-              className="relative w-full max-w-5xl rounded-2xl bg-slate-900 overflow-hidden"
+              className="relative w-full max-w-5xl overflow-hidden rounded-2xl bg-slate-900"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+              <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
                 <div>
-                  <h3 className="text-white font-semibold">{selectedCamera.cam.name}</h3>
-                  <p className="text-slate-400 text-xs">{selectedCamera.cam.location}</p>
+                  <h3 className="font-semibold text-white">
+                    {selectedCamera.cam.name}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {selectedCamera.cam.location}
+                  </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5 text-xs text-emerald-400">
@@ -459,7 +506,7 @@ export default function CustomerCamerasPage() {
               </div>
 
               {/* Video area */}
-              <div className="relative aspect-video flex items-center justify-center">
+              <div className="relative flex aspect-video items-center justify-center">
                 <Video className="size-24 text-slate-700" />
                 <div className="absolute bottom-4 left-4 flex flex-wrap gap-1.5">
                   {selectedCamera.reasons.map((r, i) => (
@@ -469,17 +516,25 @@ export default function CustomerCamerasPage() {
               </div>
 
               {/* Feature row */}
-              <div className="flex flex-wrap items-center gap-4 px-5 py-3 border-t border-white/10 text-xs text-slate-400">
+              <div className="flex flex-wrap items-center gap-4 border-t border-white/10 px-5 py-3 text-xs text-slate-400">
                 {selectedCamera.cam.hasAudio && (
-                  <span className="flex items-center gap-1"><Volume2 className="size-3" /> Audio</span>
+                  <span className="flex items-center gap-1">
+                    <Volume2 className="size-3" /> Audio
+                  </span>
                 )}
                 {selectedCamera.cam.hasPanTilt && (
-                  <span className="flex items-center gap-1"><Move className="size-3" /> Pan/Tilt</span>
+                  <span className="flex items-center gap-1">
+                    <Move className="size-3" /> Pan/Tilt
+                  </span>
                 )}
                 {selectedCamera.cam.hasNightVision && (
-                  <span className="flex items-center gap-1"><Moon className="size-3" /> Night Vision</span>
+                  <span className="flex items-center gap-1">
+                    <Moon className="size-3" /> Night Vision
+                  </span>
                 )}
-                <span className="flex items-center gap-1"><Eye className="size-3" /> {selectedCamera.cam.resolution}</span>
+                <span className="flex items-center gap-1">
+                  <Eye className="size-3" /> {selectedCamera.cam.resolution}
+                </span>
               </div>
             </div>
           </div>

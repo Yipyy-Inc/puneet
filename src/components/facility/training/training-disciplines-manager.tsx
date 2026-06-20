@@ -28,7 +28,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Edit, Eye, EyeOff, Layers, Plus, Sparkles, Trash2 } from "lucide-react";
+import {
+  Edit,
+  Eye,
+  EyeOff,
+  Layers,
+  Plus,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hexToRgba } from "@/lib/color-utils";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
@@ -59,9 +67,7 @@ function nextDisciplineId(): string {
 
 export function TrainingDisciplinesManager() {
   const queryClient = useQueryClient();
-  const { data: disciplines = [] } = useQuery(
-    trainingQueries.allDisciplines(),
-  );
+  const { data: disciplines = [] } = useQuery(trainingQueries.allDisciplines());
 
   // Edit dialog state.
   const [editingDiscipline, setEditingDiscipline] =
@@ -223,7 +229,7 @@ export function TrainingDisciplinesManager() {
                 <li
                   key={d.id}
                   className={cn(
-                    "group flex items-start gap-3 rounded-xl border bg-card p-3 shadow-sm transition-all",
+                    "group bg-card flex items-start gap-3 rounded-xl border p-3 shadow-sm transition-all",
                     !d.isActive && "opacity-70",
                   )}
                 >
@@ -389,9 +395,9 @@ export function TrainingDisciplinesManager() {
               Delete &quot;{deletingDiscipline?.name}&quot;?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Programs and exercises currently tagged with this discipline
-              will lose their tag — they won&apos;t be deleted. Consider
-              hiding instead if you might want it back later.
+              Programs and exercises currently tagged with this discipline will
+              lose their tag — they won&apos;t be deleted. Consider hiding
+              instead if you might want it back later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

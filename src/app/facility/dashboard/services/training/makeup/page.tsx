@@ -36,12 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
   Ban,
@@ -66,14 +61,14 @@ import {
   type MakeupCandidate,
 } from "@/lib/training-makeup-candidates";
 import type { MakeupSession } from "@/lib/training-makeup";
-import type { TrainingSeries, TrainingSeriesSession } from "@/lib/training-series";
+import type {
+  TrainingSeries,
+  TrainingSeriesSession,
+} from "@/lib/training-series";
 
 export default function FacilityMakeupSessionsPage() {
   const queryClient = useQueryClient();
-  const todayISO = useMemo(
-    () => new Date().toISOString().slice(0, 10),
-    [],
-  );
+  const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const { data: allEnrollments = [] } = useQuery(
     trainingQueries.allSeriesEnrollments(),
@@ -223,8 +218,9 @@ export default function FacilityMakeupSessionsPage() {
   const filteredIneligible = ineligible.filter(matchesQuery);
 
   // Dialog state ────────────────────────────────────────────────────
-  const [offerCandidate, setOfferCandidate] =
-    useState<MakeupCandidate | null>(null);
+  const [offerCandidate, setOfferCandidate] = useState<MakeupCandidate | null>(
+    null,
+  );
   const [ineligibleCandidate, setIneligibleCandidate] =
     useState<MakeupCandidate | null>(null);
 
@@ -309,13 +305,13 @@ export default function FacilityMakeupSessionsPage() {
             Make-up Sessions
           </h2>
           <p className="text-muted-foreground mt-1 text-sm">
-            Every student across every active series who has an Absent mark
-            and is inside the make-up eligibility window. Offer a host slot
-            or mark the absence ineligible.
+            Every student across every active series who has an Absent mark and
+            is inside the make-up eligibility window. Offer a host slot or mark
+            the absence ineligible.
           </p>
         </div>
         <div className="relative w-72">
-          <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2" />
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -382,9 +378,7 @@ export default function FacilityMakeupSessionsPage() {
           <CandidateList
             rows={filteredOffered}
             emptyMessage="No offers in flight — issue one from the Needs action tab."
-            renderActions={(c) => (
-              <ResolvedRowMeta candidate={c} />
-            )}
+            renderActions={(c) => <ResolvedRowMeta candidate={c} />}
           />
         </TabsContent>
 
@@ -392,9 +386,7 @@ export default function FacilityMakeupSessionsPage() {
           <CandidateList
             rows={filteredIneligible}
             emptyMessage="Nothing marked ineligible yet."
-            renderActions={(c) => (
-              <ResolvedRowMeta candidate={c} />
-            )}
+            renderActions={(c) => <ResolvedRowMeta candidate={c} />}
           />
         </TabsContent>
       </Tabs>
@@ -419,7 +411,7 @@ export default function FacilityMakeupSessionsPage() {
 
 function CountPill({ count }: { count: number }) {
   return (
-    <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-200 px-1 text-[10px] font-bold tabular-nums text-slate-700">
+    <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-200 px-1 text-[10px] font-bold text-slate-700 tabular-nums">
       {count}
     </span>
   );
@@ -450,7 +442,7 @@ function CandidateList({
           className="bg-card flex flex-col gap-3 rounded-xl border p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex min-w-0 flex-1 items-start gap-3">
-            <div className="bg-rose-100 text-rose-700 flex size-10 shrink-0 items-center justify-center rounded-xl">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-700">
               <CalendarRange className="size-5" />
             </div>
             <div className="min-w-0 flex-1">
@@ -555,10 +547,10 @@ function ResolvedRowMeta({ candidate }: { candidate: MakeupCandidate }) {
   if (!makeup) return null;
   if (makeup.status === "ineligible") {
     return (
-      <div className="text-rose-700 max-w-xs text-right text-[11.5px]">
-        <p className="font-semibold uppercase tracking-wider">Ineligible</p>
+      <div className="max-w-xs text-right text-[11.5px] text-rose-700">
+        <p className="font-semibold tracking-wider uppercase">Ineligible</p>
         {makeup.ineligibleReason && (
-          <p className="text-muted-foreground mt-0.5 normal-case tracking-normal italic">
+          <p className="text-muted-foreground mt-0.5 tracking-normal normal-case italic">
             {makeup.ineligibleReason}
           </p>
         )}
@@ -567,14 +559,14 @@ function ResolvedRowMeta({ candidate }: { candidate: MakeupCandidate }) {
   }
   return (
     <div className="text-right text-[11.5px] text-emerald-700">
-      <p className="font-semibold uppercase tracking-wider">
+      <p className="font-semibold tracking-wider uppercase">
         {makeup.status === "scheduled"
           ? "Scheduled"
           : makeup.status === "offered"
             ? "Offer sent"
             : "Pending request"}
       </p>
-      <p className="text-muted-foreground mt-0.5 normal-case tracking-normal">
+      <p className="text-muted-foreground mt-0.5 tracking-normal normal-case">
         {makeup.targetSeriesName && `${makeup.targetSeriesName}`}
         {makeup.scheduledDate && ` · ${makeup.scheduledDate}`}
         {makeup.scheduledTime && ` ${makeup.scheduledTime}`}
@@ -628,16 +620,21 @@ function OfferMakeupDialog({
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Send className="text-emerald-600 size-5" />
+            <Send className="size-5 text-emerald-600" />
             Offer make-up slot
           </DialogTitle>
           {candidate && (
             <DialogDescription>
               Pick an available host session for{" "}
-              <span className="font-medium">{candidate.attendance.petName}</span>{" "}
-              — only sessions in <span className="font-medium">{candidate.series.courseTypeName}</span>{" "}
-              with at least one open seat show up. The customer gets a
-              booking link and confirms from their portal.
+              <span className="font-medium">
+                {candidate.attendance.petName}
+              </span>{" "}
+              — only sessions in{" "}
+              <span className="font-medium">
+                {candidate.series.courseTypeName}
+              </span>{" "}
+              with at least one open seat show up. The customer gets a booking
+              link and confirms from their portal.
             </DialogDescription>
           )}
         </DialogHeader>
@@ -649,7 +646,8 @@ function OfferMakeupDialog({
                 <CardTitle className="text-sm">Missed session</CardTitle>
                 <CardDescription className="text-xs">
                   Session {candidate.attendance.sessionNumber} of{" "}
-                  {candidate.series.seriesName} · {formatLongDate(candidate.attendance.sessionDate)}
+                  {candidate.series.seriesName} ·{" "}
+                  {formatLongDate(candidate.attendance.sessionDate)}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -658,12 +656,12 @@ function OfferMakeupDialog({
               <div className="text-muted-foreground rounded-xl border border-dashed py-12 text-center text-sm">
                 <Inbox className="text-muted-foreground/30 mx-auto mb-2 size-8" />
                 No future {candidate.series.courseTypeName} sessions have an
-                open seat right now. Either wait for the next cohort or
-                schedule a private make-up.
+                open seat right now. Either wait for the next cohort or schedule
+                a private make-up.
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-wider">
+                <p className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
                   Available host sessions ({options.length})
                 </p>
                 <ul className="space-y-2">
@@ -755,24 +753,24 @@ function IneligibleDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Ban className="text-rose-600 size-5" />
+            <Ban className="size-5 text-rose-600" />
             Mark absence ineligible
           </DialogTitle>
           {candidate && (
             <DialogDescription>
-              {candidate.attendance.petName}&apos;s missed session won&apos;t
-              be offered a make-up. Add a short reason so the audit trail
-              explains the call.
+              {candidate.attendance.petName}&apos;s missed session won&apos;t be
+              offered a make-up. Add a short reason so the audit trail explains
+              the call.
             </DialogDescription>
           )}
         </DialogHeader>
         {candidate && (
           <div className="space-y-3 py-1">
             <div className="rounded-lg border border-rose-200 bg-rose-50/60 px-3 py-2">
-              <p className="text-rose-900 text-[11px] font-bold uppercase tracking-wider">
+              <p className="text-[11px] font-bold tracking-wider text-rose-900 uppercase">
                 {candidate.attendance.petName}
               </p>
-              <p className="text-rose-900 mt-0.5 text-[12.5px]">
+              <p className="mt-0.5 text-[12.5px] text-rose-900">
                 Session {candidate.attendance.sessionNumber} of{" "}
                 {candidate.series.seriesName} ·{" "}
                 {formatLongDate(candidate.attendance.sessionDate)}
@@ -797,7 +795,9 @@ function IneligibleDialog({
             onClick={() => {
               if (!candidate) return;
               if (!reason.trim()) {
-                toast.error("Add a reason so the audit trail explains the call.");
+                toast.error(
+                  "Add a reason so the audit trail explains the call.",
+                );
                 return;
               }
               onConfirm(candidate, reason.trim());

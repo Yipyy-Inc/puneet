@@ -90,7 +90,7 @@ export function EnrollmentConfirmationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader className="items-center text-center">
-          <div className="bg-emerald-100 text-emerald-700 mb-2 flex size-14 items-center justify-center rounded-full shadow-sm">
+          <div className="mb-2 flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 shadow-sm">
             <CheckCircle2 className="size-7" />
           </div>
           <DialogTitle className="text-xl">You&apos;re enrolled!</DialogTitle>
@@ -137,11 +137,11 @@ export function EnrollmentConfirmationDialog({
 
           {/* Schedule ──────────────────────────────────────────────────── */}
           <section className="space-y-1.5">
-            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
               <CalendarDays className="size-3" />
               Schedule ({sessionDates.length} sessions)
             </p>
-            <div className="rounded-lg border bg-card px-3 py-2">
+            <div className="bg-card rounded-lg border px-3 py-2">
               <p className="text-sm font-medium text-slate-800">
                 {getDayName(series.dayOfWeek)}s · {formatTime(series.startTime)}{" "}
                 – {formatTime(series.endTime)}
@@ -149,10 +149,7 @@ export function EnrollmentConfirmationDialog({
               <p className="text-muted-foreground text-[11.5px]">
                 {series.numberOfWeeks} weeks total
               </p>
-              <Collapsible
-                open={scheduleOpen}
-                onOpenChange={setScheduleOpen}
-              >
+              <Collapsible open={scheduleOpen} onOpenChange={setScheduleOpen}>
                 <CollapsibleTrigger asChild>
                   <button
                     type="button"
@@ -191,11 +188,11 @@ export function EnrollmentConfirmationDialog({
 
           {/* Location ──────────────────────────────────────────────────── */}
           <section className="space-y-1.5">
-            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
               <MapPin className="size-3" />
               Location
             </p>
-            <p className="rounded-lg border bg-card px-3 py-2 text-sm text-slate-800">
+            <p className="bg-card rounded-lg border px-3 py-2 text-sm text-slate-800">
               {series.location}
             </p>
           </section>
@@ -204,17 +201,17 @@ export function EnrollmentConfirmationDialog({
           {courseType?.whatYouWillLearn &&
             courseType.whatYouWillLearn.length > 0 && (
               <section className="space-y-1.5">
-                <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+                <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                   <Sparkles className="size-3" />
                   What you will learn
                 </p>
-                <ul className="space-y-1 rounded-lg border bg-card px-3 py-2">
+                <ul className="bg-card space-y-1 rounded-lg border px-3 py-2">
                   {courseType.whatYouWillLearn.map((item, idx) => (
                     <li
                       key={`learn-${idx}`}
                       className="flex items-start gap-2 text-[12.5px]/relaxed text-slate-700"
                     >
-                      <CheckCircle2 className="text-emerald-500 mt-0.5 size-3 shrink-0" />
+                      <CheckCircle2 className="mt-0.5 size-3 shrink-0 text-emerald-500" />
                       <span>{item}</span>
                     </li>
                   ))}
@@ -225,17 +222,17 @@ export function EnrollmentConfirmationDialog({
           {/* What to bring ─────────────────────────────────────────────── */}
           {courseType?.whatToBring && courseType.whatToBring.length > 0 && (
             <section className="space-y-1.5">
-              <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+              <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                 <Luggage className="size-3" />
                 What to bring
               </p>
-              <ul className="space-y-1 rounded-lg border bg-card px-3 py-2">
+              <ul className="bg-card space-y-1 rounded-lg border px-3 py-2">
                 {courseType.whatToBring.map((item, idx) => (
                   <li
                     key={`bring-${idx}`}
                     className="flex items-start gap-2 text-[12.5px]/relaxed text-slate-700"
                   >
-                    <CheckCircle2 className="text-emerald-500 mt-0.5 size-3 shrink-0" />
+                    <CheckCircle2 className="mt-0.5 size-3 shrink-0 text-emerald-500" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -246,8 +243,8 @@ export function EnrollmentConfirmationDialog({
           <Separator />
 
           <p className="text-muted-foreground inline-flex items-center gap-1 text-[11.5px]">
-            <Sparkles className="size-3" />
-            A confirmation email is on its way with all the details above.
+            <Sparkles className="size-3" />A confirmation email is on its way
+            with all the details above.
           </p>
         </div>
 

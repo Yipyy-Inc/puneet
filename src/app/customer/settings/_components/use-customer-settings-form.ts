@@ -96,8 +96,7 @@ export function useCustomerSettingsForm() {
   const instabookSummary = useMemo(() => {
     const cs = customer?.customerSettings;
     const activeMembership = allMemberships.find(
-      (m) =>
-        m.customerId === String(MOCK_CUSTOMER_ID) && m.status === "active",
+      (m) => m.customerId === String(MOCK_CUSTOMER_ID) && m.status === "active",
     );
     const activePlan = activeMembership
       ? membershipPlans.find((p) => p.id === activeMembership.planId)

@@ -45,7 +45,12 @@ export function useActiveLoyaltyDiscount(params: {
   const discount = useMemo<ActiveLoyaltyDiscount | null>(() => {
     if (!config.enabled || customerId == null || subtotal <= 0) return null;
     const candidates = getActiveDiscountRedemptions(facilityId, customerId);
-    const best = selectBestDiscount(candidates, subtotal, serviceType, strategy);
+    const best = selectBestDiscount(
+      candidates,
+      subtotal,
+      serviceType,
+      strategy,
+    );
     if (!best) return null;
     return {
       redemptionId: best.redemption.id,

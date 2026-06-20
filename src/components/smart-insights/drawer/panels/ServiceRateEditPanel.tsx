@@ -45,7 +45,7 @@ export function ServiceRateEditPanel({
         <div className="rounded-lg border bg-slate-50 p-3">
           <Link
             href={insightLinks.rates("daycare")}
-            className="text-muted-foreground hover:text-primary mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide hover:underline"
+            className="text-muted-foreground hover:text-primary mb-1 flex items-center gap-1.5 text-xs tracking-wide uppercase hover:underline"
           >
             <DollarSign className="size-3.5" />
             {SERVICE.module} · Rates
@@ -65,7 +65,7 @@ export function ServiceRateEditPanel({
           <div className="space-y-2">
             <Label htmlFor="new-price">New price</Label>
             <div className="relative">
-              <span className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 text-sm">
+              <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
                 $
               </span>
               <Input

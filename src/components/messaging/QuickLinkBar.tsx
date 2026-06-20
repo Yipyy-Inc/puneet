@@ -84,7 +84,7 @@ export function QuickLinkBar({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1 border-t border-slate-100 bg-slate-50/40 px-4 py-2">
-      <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+      <span className="mr-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
         Insert:
       </span>
       {QUICK_LINK_ACTIONS.map((action) => {

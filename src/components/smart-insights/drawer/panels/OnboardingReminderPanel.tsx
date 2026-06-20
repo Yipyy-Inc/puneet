@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ClipboardList, FileSignature, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  ClipboardList,
+  FileSignature,
+  ExternalLink,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,9 +37,27 @@ interface OnboardingTask {
 }
 
 const TASKS: OnboardingTask[] = [
-  { id: "ob-1", label: "Complete W-4 / tax forms", type: "signature", status: "overdue", dueDate: "May 13" },
-  { id: "ob-2", label: "Read & sign Employee Handbook", type: "signature", status: "overdue", dueDate: "May 13" },
-  { id: "ob-3", label: "Watch grooming safety training video", type: "task", status: "pending", dueDate: "May 22" },
+  {
+    id: "ob-1",
+    label: "Complete W-4 / tax forms",
+    type: "signature",
+    status: "overdue",
+    dueDate: "May 13",
+  },
+  {
+    id: "ob-2",
+    label: "Read & sign Employee Handbook",
+    type: "signature",
+    status: "overdue",
+    dueDate: "May 13",
+  },
+  {
+    id: "ob-3",
+    label: "Watch grooming safety training video",
+    type: "task",
+    status: "pending",
+    dueDate: "May 22",
+  },
 ];
 
 const DEFAULT_MESSAGE = `Hi Amélie,\n\nWelcome aboard again! I noticed your onboarding has a few items still open — including ${TASKS.filter((t) => t.status === "overdue").length} that are now overdue. Could you take 15 minutes today to wrap them up? Let me know if anything is blocking you.\n\nThanks!`;
@@ -52,7 +75,7 @@ export function OnboardingReminderPanel({
         <div className="rounded-lg border bg-slate-50 p-3 text-sm">
           <Link
             href={insightLinks.onboarding(STAFF.id)}
-            className="inline-flex items-center gap-1 font-semibold hover:text-primary hover:underline"
+            className="hover:text-primary inline-flex items-center gap-1 font-semibold hover:underline"
           >
             {STAFF.name}
             <ExternalLink className="size-3" />
@@ -158,7 +181,7 @@ function BackHeader({ onBack, label }: { onBack: () => void; label: string }) {
     <button
       type="button"
       onClick={onBack}
-      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs uppercase tracking-wide transition-colors"
+      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs tracking-wide uppercase transition-colors"
     >
       <ArrowLeft className="size-3.5" />
       {label}

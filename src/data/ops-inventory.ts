@@ -43,7 +43,8 @@ export const opsSuppliers: OpsSupplier[] = [
     address: "5800 Boulevard des Galeries, Montréal, QC H4T 1V6",
     paymentTerms: "Net 15",
     status: "active",
-    notes: "Pro Xtra account active. 10% discount on bulk tool/maintenance orders.",
+    notes:
+      "Pro Xtra account active. 10% discount on bulk tool/maintenance orders.",
     categories: ["Maintenance", "Safety & PPE", "Cleaning Supplies"],
   },
   {
@@ -56,8 +57,14 @@ export const opsSuppliers: OpsSupplier[] = [
     address: "155 Rue Beaubien, Montréal, QC H2V 1H1",
     paymentTerms: "COD",
     status: "active",
-    notes: "Best pricing on bulk consumables. Pick up or delivery available. Membership #CC-7741.",
-    categories: ["Cleaning Supplies", "Kitchen / Break Room", "Waste Management", "Laundry"],
+    notes:
+      "Best pricing on bulk consumables. Pick up or delivery available. Membership #CC-7741.",
+    categories: [
+      "Cleaning Supplies",
+      "Kitchen / Break Room",
+      "Waste Management",
+      "Laundry",
+    ],
   },
   {
     id: "sup-5",
@@ -72,7 +79,8 @@ export const opsSuppliers: OpsSupplier[] = [
     orderingPortalPassword: "PE#Fac2024!",
     paymentTerms: "Net 30",
     status: "active",
-    notes: "Specialized pet facility supplier. MOQ applies on gloves and wipes. Net 30.",
+    notes:
+      "Specialized pet facility supplier. MOQ applies on gloves and wipes. Net 30.",
     categories: ["Pet Care Supplies", "Safety & PPE", "Waste Management"],
   },
 ];

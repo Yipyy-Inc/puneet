@@ -37,7 +37,12 @@ const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 type StatusFilter = "pending" | "approved" | "denied" | "all";
-type DayDiffKind = "unchanged-on" | "unchanged-off" | "added" | "removed" | "time";
+type DayDiffKind =
+  | "unchanged-on"
+  | "unchanged-off"
+  | "added"
+  | "removed"
+  | "time";
 
 function formatTime(t?: string) {
   if (!t) return "";
@@ -57,32 +62,21 @@ function classifyDay(
   if (!curOn && !propOn) return "unchanged-off";
   if (curOn && !propOn) return "removed";
   if (!curOn && propOn) return "added";
-  if (
-    cur?.startTime !== prop.startTime ||
-    cur?.endTime !== prop.endTime
-  )
+  if (cur?.startTime !== prop.startTime || cur?.endTime !== prop.endTime)
     return "time";
   return "unchanged-on";
 }
 
-function DayPill({
-  letter,
-  kind,
-}: {
-  letter: string;
-  kind: DayDiffKind;
-}) {
+function DayPill({ letter, kind }: { letter: string; kind: DayDiffKind }) {
   const styles: Record<DayDiffKind, string> = {
     "unchanged-on":
       "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
-    "unchanged-off":
-      "bg-muted text-muted-foreground/60",
+    "unchanged-off": "bg-muted text-muted-foreground/60",
     added:
       "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-400/50 dark:bg-emerald-500/20 dark:text-emerald-300 dark:ring-emerald-500/40",
     removed:
       "bg-rose-100 text-rose-600 line-through opacity-70 dark:bg-rose-500/20 dark:text-rose-300",
-    time:
-      "bg-indigo-100 text-indigo-700 ring-1 ring-indigo-400/50 dark:bg-indigo-500/20 dark:text-indigo-300 dark:ring-indigo-500/40",
+    time: "bg-indigo-100 text-indigo-700 ring-1 ring-indigo-400/50 dark:bg-indigo-500/20 dark:text-indigo-300 dark:ring-indigo-500/40",
   };
   return (
     <span
@@ -102,8 +96,11 @@ function DayPills({ req }: { req: AvailabilityChangeRequest }) {
       {DAY_LETTERS.map((letter, i) => {
         const cur = req.currentAvailability.find((d) => d.dayOfWeek === i);
         const prop = req.proposedAvailability.find((d) => d.dayOfWeek === i);
-        if (!prop) return <DayPill key={i} letter={letter} kind="unchanged-off" />;
-        return <DayPill key={i} letter={letter} kind={classifyDay(cur, prop)} />;
+        if (!prop)
+          return <DayPill key={i} letter={letter} kind="unchanged-off" />;
+        return (
+          <DayPill key={i} letter={letter} kind={classifyDay(cur, prop)} />
+        );
       })}
     </div>
   );
@@ -115,8 +112,7 @@ function StatusBadge({ status }: { status: string }) {
       "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
     approved:
       "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
-    denied:
-      "bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300",
+    denied: "bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300",
     cancelled: "bg-muted text-muted-foreground",
   };
   const labels: Record<string, string> = {
@@ -174,9 +170,9 @@ function DiffDetail({ req }: { req: AvailabilityChangeRequest }) {
         return (
           <div
             key={c.day}
-            className="flex items-center gap-2 rounded-md bg-muted/40 px-2.5 py-1.5 text-xs"
+            className="bg-muted/40 flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs"
           >
-            <span className="text-muted-foreground w-10 shrink-0 font-semibold uppercase tracking-wide">
+            <span className="text-muted-foreground w-10 shrink-0 font-semibold tracking-wide uppercase">
               {DAY_LABELS[c.day]}
             </span>
             <span
@@ -225,12 +221,12 @@ function RequestRow({
     <>
       <tr
         className={cn(
-          "border-t transition-colors hover:bg-muted/30",
+          "hover:bg-muted/30 border-t transition-colors",
           expanded && "bg-muted/20",
         )}
       >
         {/* Name */}
-        <td className="py-3 pl-5 pr-3">
+        <td className="py-3 pr-3 pl-5">
           <div className="flex items-center gap-3">
             <Avatar className="size-9 shrink-0">
               <AvatarImage src={emp?.avatar} alt={emp?.name} />
@@ -283,7 +279,7 @@ function RequestRow({
         </td>
 
         {/* Actions */}
-        <td className="py-3 pl-3 pr-5">
+        <td className="py-3 pr-5 pl-3">
           <div className="flex items-center justify-end gap-1">
             {isPending ? (
               <>
@@ -369,7 +365,7 @@ function RequestRow({
             <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
               <div className="space-y-3">
                 <div>
-                  <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
                     Reason
                   </p>
                   <p className="text-foreground mt-1 text-sm italic">
@@ -377,7 +373,7 @@ function RequestRow({
                   </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
                     Changes
                   </p>
                   <div className="mt-1.5">
@@ -389,7 +385,7 @@ function RequestRow({
                 {isPending ? (
                   <>
                     <div>
-                      <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                      <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
                         Review note
                       </p>
                       <Textarea
@@ -482,11 +478,7 @@ export default function AvailabilityChangesPage() {
     );
   }, [requests, tab, query]);
 
-  const decide = (
-    id: string,
-    status: "approved" | "denied",
-    notes: string,
-  ) => {
+  const decide = (id: string, status: "approved" | "denied", notes: string) => {
     setRequests((prev) =>
       prev.map((r) =>
         r.id === id
@@ -591,18 +583,18 @@ export default function AvailabilityChangesPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="bg-card overflow-hidden rounded-xl border">
         {filtered.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px]">
               <thead className="bg-muted/30">
-                <tr className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
-                  <th className="py-3 pl-5 pr-3 text-left">Name</th>
+                <tr className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                  <th className="py-3 pr-3 pl-5 text-left">Name</th>
                   <th className="px-3 py-3 text-left">Department</th>
                   <th className="px-3 py-3 text-left">Proposed Days</th>
                   <th className="px-3 py-3 text-left">Effective</th>
                   <th className="px-3 py-3 text-left">Status</th>
-                  <th className="py-3 pl-3 pr-5 text-right"></th>
+                  <th className="py-3 pr-5 pl-3 text-right"></th>
                 </tr>
               </thead>
               <tbody>

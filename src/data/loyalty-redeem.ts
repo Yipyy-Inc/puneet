@@ -48,7 +48,10 @@ export function redeemPointsForCredit(input: {
 
   const creditAdded = Math.round((points / rate) * 100) / 100;
   if (creditAdded <= 0) {
-    return { ok: false, error: `Redeem at least ${rate} points for $1 credit.` };
+    return {
+      ok: false,
+      error: `Redeem at least ${rate} points for $1 credit.`,
+    };
   }
 
   const now = new Date().toISOString();

@@ -52,7 +52,7 @@ export function InventoryItemEditPanel({
         <div className="rounded-lg border bg-slate-50 p-3 text-sm">
           <Link
             href={insightLinks.inventory(ITEM.id)}
-            className="text-muted-foreground hover:text-primary mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide hover:underline"
+            className="text-muted-foreground hover:text-primary mb-1 flex items-center gap-1.5 text-xs tracking-wide uppercase hover:underline"
           >
             <Package className="size-3.5" />
             Inventory · Grooming
@@ -65,7 +65,7 @@ export function InventoryItemEditPanel({
         </div>
 
         <div className="rounded-lg border bg-amber-50/60 p-3 text-sm">
-          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-900">
+          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-amber-900 uppercase">
             <TrendingUp className="size-3.5" />
             Usage spike
           </div>
@@ -73,7 +73,9 @@ export function InventoryItemEditPanel({
             {HISTORY.map((h) => (
               <li key={h.week} className="flex justify-between">
                 <span>{h.week}</span>
-                <span className="font-semibold">{h.used} {ITEM.unit}</span>
+                <span className="font-semibold">
+                  {h.used} {ITEM.unit}
+                </span>
               </li>
             ))}
           </ul>
@@ -142,18 +144,22 @@ export function InventoryItemEditPanel({
         changes={[
           { field: "Item", to: ITEM.name },
           ...(thresholdChanged
-            ? [{
-                field: "Threshold",
-                from: `${ITEM.currentThreshold} ${ITEM.unit}`,
-                to: `${threshold} ${ITEM.unit}`,
-              }]
+            ? [
+                {
+                  field: "Threshold",
+                  from: `${ITEM.currentThreshold} ${ITEM.unit}`,
+                  to: `${threshold} ${ITEM.unit}`,
+                },
+              ]
             : []),
           ...(qtyChanged
-            ? [{
-                field: "Default qty",
-                from: `${ITEM.currentDefaultQty} ${ITEM.unit}`,
-                to: `${defaultQty} ${ITEM.unit}`,
-              }]
+            ? [
+                {
+                  field: "Default qty",
+                  from: `${ITEM.currentDefaultQty} ${ITEM.unit}`,
+                  to: `${defaultQty} ${ITEM.unit}`,
+                },
+              ]
             : []),
         ]}
         note="Future low-stock insights will use the updated threshold. Existing reorders are unaffected."

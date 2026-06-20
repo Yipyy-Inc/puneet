@@ -108,7 +108,7 @@ export function VideoLinksTextarea({
       )}
       {warning && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/40 dark:bg-amber-950/30">
-          <p className="text-amber-800 dark:text-amber-200 inline-flex items-start gap-1.5 text-[12px] font-medium">
+          <p className="inline-flex items-start gap-1.5 text-[12px] font-medium text-amber-800 dark:text-amber-200">
             <Video className="mt-0.5 size-3.5 shrink-0" />
             {warning}
           </p>

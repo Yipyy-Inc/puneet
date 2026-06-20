@@ -521,7 +521,11 @@ function EditablePermissions({
                     </Badge>
                   )}
                   <Select
-                    value={p.override ? p.resolved.scope : `auto:${p.resolved.scope}:${p.resolved.granted ? "y" : "n"}`}
+                    value={
+                      p.override
+                        ? p.resolved.scope
+                        : `auto:${p.resolved.scope}:${p.resolved.granted ? "y" : "n"}`
+                    }
                     onValueChange={(v) => {
                       if (v.startsWith("auto:")) {
                         applyScope(p.key, "reset");

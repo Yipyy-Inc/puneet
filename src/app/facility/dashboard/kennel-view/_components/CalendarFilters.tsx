@@ -115,7 +115,7 @@ function MultiToggleList<T extends string>({
             )}
           >
             <span>{labelMap?.[opt] ?? opt}</span>
-            {checked && <span className="size-2 rounded-full bg-primary" />}
+            {checked && <span className="bg-primary size-2 rounded-full" />}
           </button>
         );
       })}

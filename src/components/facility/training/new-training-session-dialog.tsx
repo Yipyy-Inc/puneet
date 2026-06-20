@@ -157,12 +157,10 @@ export function NewTrainingSessionDialog({
 
         {/* Mode toggle ─────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
-          {(
-            [
-              { id: "group" as const, label: "Group class", Icon: Users },
-              { id: "private" as const, label: "Private 1-on-1", Icon: User2 },
-            ]
-          ).map(({ id, label, Icon }) => (
+          {[
+            { id: "group" as const, label: "Group class", Icon: Users },
+            { id: "private" as const, label: "Private 1-on-1", Icon: User2 },
+          ].map(({ id, label, Icon }) => (
             <button
               key={id}
               type="button"
@@ -201,7 +199,8 @@ export function NewTrainingSessionDialog({
               <SelectContent>
                 {availableClasses.length === 0 ? (
                   <div className="text-muted-foreground px-3 py-2 text-xs">
-                    No {mode === "group" ? "group classes" : "private offerings"}{" "}
+                    No{" "}
+                    {mode === "group" ? "group classes" : "private offerings"}{" "}
                     available.
                   </div>
                 ) : (
@@ -261,9 +260,7 @@ export function NewTrainingSessionDialog({
             <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600">
               <span className="font-semibold">{selectedClass.trainerName}</span>{" "}
               · {selectedClass.duration} min · {selectedClass.location}
-              {mode === "group" && (
-                <> · capacity {selectedClass.capacity}</>
-              )}
+              {mode === "group" && <> · capacity {selectedClass.capacity}</>}
             </div>
           )}
 

@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, PhoneMissed, MessageSquare, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  PhoneMissed,
+  MessageSquare,
+  ExternalLink,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,17 +32,73 @@ interface MissedCall {
 }
 
 const MISSED_CALLS: MissedCall[] = [
-  { id: "MC-1", phone: "+1 514-555-0144", matchedClient: "Pierre Lavoie", matchedClientId: "c-1201", time: "8:42 AM", voicemail: false },
+  {
+    id: "MC-1",
+    phone: "+1 514-555-0144",
+    matchedClient: "Pierre Lavoie",
+    matchedClientId: "c-1201",
+    time: "8:42 AM",
+    voicemail: false,
+  },
   { id: "MC-2", phone: "+1 514-555-0289", time: "9:11 AM", voicemail: false },
-  { id: "MC-3", phone: "+1 514-555-0211", matchedClient: "Hannah Patel", matchedClientId: "c-1202", time: "11:03 AM", voicemail: true },
-  { id: "MC-4", phone: "+1 514-555-0426", matchedClient: "Yuki Tanaka", matchedClientId: "c-1205", time: "11:18 AM", voicemail: false },
-  { id: "MC-5", phone: "+1 514-555-0512", matchedClient: "Marie Tremblay", matchedClientId: "c-1301", time: "11:32 AM", voicemail: false },
+  {
+    id: "MC-3",
+    phone: "+1 514-555-0211",
+    matchedClient: "Hannah Patel",
+    matchedClientId: "c-1202",
+    time: "11:03 AM",
+    voicemail: true,
+  },
+  {
+    id: "MC-4",
+    phone: "+1 514-555-0426",
+    matchedClient: "Yuki Tanaka",
+    matchedClientId: "c-1205",
+    time: "11:18 AM",
+    voicemail: false,
+  },
+  {
+    id: "MC-5",
+    phone: "+1 514-555-0512",
+    matchedClient: "Marie Tremblay",
+    matchedClientId: "c-1301",
+    time: "11:32 AM",
+    voicemail: false,
+  },
   { id: "MC-6", phone: "+1 438-555-0199", time: "11:47 AM", voicemail: false },
-  { id: "MC-7", phone: "+1 514-555-0703", matchedClient: "Owen Park", matchedClientId: "c-811", time: "12:08 PM", voicemail: true },
-  { id: "MC-8", phone: "+1 514-555-0844", matchedClient: "Sofia Diaz", matchedClientId: "c-1302", time: "12:22 PM", voicemail: false },
+  {
+    id: "MC-7",
+    phone: "+1 514-555-0703",
+    matchedClient: "Owen Park",
+    matchedClientId: "c-811",
+    time: "12:08 PM",
+    voicemail: true,
+  },
+  {
+    id: "MC-8",
+    phone: "+1 514-555-0844",
+    matchedClient: "Sofia Diaz",
+    matchedClientId: "c-1302",
+    time: "12:22 PM",
+    voicemail: false,
+  },
   { id: "MC-9", phone: "+1 438-555-0317", time: "12:36 PM", voicemail: false },
-  { id: "MC-10", phone: "+1 514-555-0976", matchedClient: "Iris Khoury", matchedClientId: "c-1013", time: "12:51 PM", voicemail: false },
-  { id: "MC-11", phone: "+1 514-555-1023", matchedClient: "Henry Kim", matchedClientId: "c-1113", time: "1:09 PM", voicemail: false },
+  {
+    id: "MC-10",
+    phone: "+1 514-555-0976",
+    matchedClient: "Iris Khoury",
+    matchedClientId: "c-1013",
+    time: "12:51 PM",
+    voicemail: false,
+  },
+  {
+    id: "MC-11",
+    phone: "+1 514-555-1023",
+    matchedClient: "Henry Kim",
+    matchedClientId: "c-1113",
+    time: "1:09 PM",
+    voicemail: false,
+  },
 ];
 
 const NO_VOICEMAIL = MISSED_CALLS.filter((c) => !c.voicemail);
@@ -53,7 +114,7 @@ export function MissedCallsPanel({ onComplete, onCancel }: InsightPanelProps) {
     return (
       <div className="flex h-full flex-col gap-5 px-1">
         <div className="rounded-lg border bg-red-50 p-3 text-sm">
-          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-red-900">
+          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-red-900 uppercase">
             <PhoneMissed className="size-3.5" />
             {MISSED_CALLS.length} missed today
           </div>
@@ -87,11 +148,17 @@ export function MissedCallsPanel({ onComplete, onCancel }: InsightPanelProps) {
                 </p>
               </div>
               {c.voicemail ? (
-                <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-800">
+                <Badge
+                  variant="outline"
+                  className="border-blue-300 bg-blue-50 text-blue-800"
+                >
                   Voicemail
                 </Badge>
               ) : (
-                <Badge variant="outline" className="border-red-300 bg-red-50 text-red-800">
+                <Badge
+                  variant="outline"
+                  className="border-red-300 bg-red-50 text-red-800"
+                >
                   No VM
                 </Badge>
               )}
@@ -118,8 +185,8 @@ export function MissedCallsPanel({ onComplete, onCancel }: InsightPanelProps) {
           <span className="flex-1">
             <span className="block font-semibold">Send callback SMS</span>
             <span className="text-muted-foreground mt-0.5 block text-xs">
-              &quot;We missed your call, how can we help?&quot; to {NO_VOICEMAIL.length}{" "}
-              callers without a voicemail
+              &quot;We missed your call, how can we help?&quot; to{" "}
+              {NO_VOICEMAIL.length} callers without a voicemail
             </span>
           </span>
         </button>
@@ -136,11 +203,20 @@ export function MissedCallsPanel({ onComplete, onCancel }: InsightPanelProps) {
   }
 
   return (
-    <CallbackFlow onBack={() => setMode("log")} onComplete={() => onComplete()} />
+    <CallbackFlow
+      onBack={() => setMode("log")}
+      onComplete={() => onComplete()}
+    />
   );
 }
 
-function CallbackFlow({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+function CallbackFlow({
+  onBack,
+  onComplete,
+}: {
+  onBack: () => void;
+  onComplete: () => void;
+}) {
   const [step, setStep] = useState<"compose" | "preview">("compose");
   const [body, setBody] = useState(DEFAULT_SMS);
 
@@ -204,7 +280,7 @@ function BackHeader({ onBack, label }: { onBack: () => void; label: string }) {
     <button
       type="button"
       onClick={onBack}
-      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs uppercase tracking-wide transition-colors"
+      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs tracking-wide uppercase transition-colors"
     >
       <ArrowLeft className="size-3.5" />
       {label}

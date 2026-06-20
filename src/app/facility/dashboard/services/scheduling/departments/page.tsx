@@ -361,7 +361,9 @@ export default function DepartmentsPage() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => removeEmployeeFromDept(dept.id, emp.id)}
+                          onClick={() =>
+                            removeEmployeeFromDept(dept.id, emp.id)
+                          }
                           className="hover:bg-destructive/15 hover:text-destructive text-muted-foreground flex size-4 items-center justify-center rounded-full opacity-0 transition-opacity group-hover/chip:opacity-100"
                           aria-label={`Remove ${emp.name}`}
                         >

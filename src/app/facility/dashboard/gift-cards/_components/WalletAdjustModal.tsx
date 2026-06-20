@@ -105,7 +105,10 @@ export function WalletAdjustModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => (v ? onOpenChange(true) : close())}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => (v ? onOpenChange(true) : close())}
+    >
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Adjust Wallet Balance</DialogTitle>
@@ -160,7 +163,7 @@ export function WalletAdjustModal({
           <div className="space-y-1.5">
             <Label htmlFor="wallet-amount">Amount</Label>
             <div className="relative">
-              <span className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 text-sm">
+              <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
                 $
               </span>
               <Input

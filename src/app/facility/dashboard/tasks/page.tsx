@@ -47,7 +47,9 @@ function OverviewStats() {
   const today = new Date().toISOString().slice(0, 10);
 
   const activeShiftGroups = shiftTaskGroups.filter((g) => g.isActive).length;
-  const activePositionGroups = positionTaskGroups.filter((g) => g.isActive).length;
+  const activePositionGroups = positionTaskGroups.filter(
+    (g) => g.isActive,
+  ).length;
 
   const pendingStandalone = standaloneTasks.filter(
     (t) => t.status === "pending" || t.status === "in_progress",
@@ -86,7 +88,10 @@ function OverviewStats() {
     {
       label: "Standalone Pending",
       value: pendingStandalone,
-      sub: dueTodayStandalone > 0 ? `${dueTodayStandalone} due today` : "No tasks due today",
+      sub:
+        dueTodayStandalone > 0
+          ? `${dueTodayStandalone} due today`
+          : "No tasks due today",
       icon: UserCheck,
       color: "text-emerald-600",
       bg: "bg-emerald-50 border-emerald-200",
@@ -107,7 +112,13 @@ function OverviewStats() {
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
       {stats.map(({ label, value, sub, icon: Icon, color, bg }) => (
-        <div key={label} className={cn("flex items-start gap-3 rounded-xl border px-4 py-4", bg)}>
+        <div
+          key={label}
+          className={cn(
+            "flex items-start gap-3 rounded-xl border px-4 py-4",
+            bg,
+          )}
+        >
           <div className={cn("mt-0.5 shrink-0", color)}>
             <Icon className="size-5" />
           </div>
@@ -162,7 +173,11 @@ export default function TaskManagementPage() {
             Shift tasks, position tasks, and one-off staff assignments
           </p>
         </div>
-        <Button onClick={() => setWizardOpen(true)} size="default" className="gap-2 shrink-0">
+        <Button
+          onClick={() => setWizardOpen(true)}
+          size="default"
+          className="shrink-0 gap-2"
+        >
           <Plus className="size-4" />
           Create Task
         </Button>
@@ -184,7 +199,10 @@ export default function TaskManagementPage() {
             Position Tasks
             <TabCount n={positionTaskGroups.filter((g) => g.isActive).length} />
           </TabsTrigger>
-          <TabsTrigger value="standalone" className="gap-1.5 text-xs sm:text-sm">
+          <TabsTrigger
+            value="standalone"
+            className="gap-1.5 text-xs sm:text-sm"
+          >
             <UserCheck className="size-4" />
             Standalone
             {overdueCount > 0 ? (

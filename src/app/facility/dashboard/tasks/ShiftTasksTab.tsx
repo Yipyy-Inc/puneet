@@ -57,9 +57,15 @@ function dayPattern(group: ShiftTaskGroup) {
   if (group.daysOfWeek.length === 7) return "Every day";
   const weekdays = [1, 2, 3, 4, 5];
   const weekend = [0, 6];
-  if (weekdays.every((d) => group.daysOfWeek.includes(d)) && group.daysOfWeek.length === 5)
+  if (
+    weekdays.every((d) => group.daysOfWeek.includes(d)) &&
+    group.daysOfWeek.length === 5
+  )
     return "Weekdays";
-  if (weekend.every((d) => group.daysOfWeek.includes(d)) && group.daysOfWeek.length === 2)
+  if (
+    weekend.every((d) => group.daysOfWeek.includes(d)) &&
+    group.daysOfWeek.length === 2
+  )
     return "Weekends";
   return group.daysOfWeek.map((d) => DAYS_SHORT[d]).join(", ");
 }
@@ -79,14 +85,17 @@ function ShiftGroupCard({ group }: { group: ShiftTaskGroup }) {
   const totalMinutes = tasks.reduce((s, t) => s + t.estimatedMinutes, 0);
 
   return (
-    <Card className={cn("overflow-hidden transition-all", !active && "opacity-60")}>
-      <CardHeader className="px-5 pb-0 pt-4">
+    <Card
+      className={cn("overflow-hidden transition-all", !active && "opacity-60")}
+    >
+      <CardHeader className="px-5 pt-4 pb-0">
         <div className="flex items-start gap-4">
           {/* Shift badge */}
           <div
             className={cn(
               "flex size-10 shrink-0 items-center justify-center rounded-lg border",
-              SHIFT_COLORS[group.shiftId] ?? "bg-slate-50 text-slate-600 border-slate-200",
+              SHIFT_COLORS[group.shiftId] ??
+                "border-slate-200 bg-slate-50 text-slate-600",
             )}
           >
             <ShiftIcon className="size-5" />
@@ -94,7 +103,7 @@ function ShiftGroupCard({ group }: { group: ShiftTaskGroup }) {
 
           {/* Title + meta */}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-wrap items-center gap-2">
               <p className="font-semibold">{group.name}</p>
               {!active && (
                 <Badge variant="secondary" className="text-[10px]">
@@ -103,7 +112,9 @@ function ShiftGroupCard({ group }: { group: ShiftTaskGroup }) {
               )}
             </div>
             {group.description && (
-              <p className="text-muted-foreground mt-0.5 text-xs">{group.description}</p>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                {group.description}
+              </p>
             )}
             <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-slate-600">
               <span
@@ -113,7 +124,8 @@ function ShiftGroupCard({ group }: { group: ShiftTaskGroup }) {
                 )}
               >
                 <ShiftIcon className="size-3" />
-                {shift?.name ?? group.shiftId} · {shift?.startTime}–{shift?.endTime}
+                {shift?.name ?? group.shiftId} · {shift?.startTime}–
+                {shift?.endTime}
               </span>
               <span className="flex items-center gap-1">
                 {group.isRecurring ? (
@@ -140,7 +152,11 @@ function ShiftGroupCard({ group }: { group: ShiftTaskGroup }) {
             <Button variant="ghost" size="icon" className="size-8">
               <PenLine className="size-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="text-destructive/70 hover:text-destructive size-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive/70 hover:text-destructive size-8"
+            >
               <Trash2 className="size-4" />
             </Button>
             <button
@@ -261,7 +277,8 @@ export function ShiftTasksTab() {
               <div>
                 <p className="text-sm font-semibold">{shift.name}</p>
                 <p className="text-[11px] opacity-80">
-                  {groups.length} group{groups.length !== 1 ? "s" : ""} · {taskCount} task
+                  {groups.length} group{groups.length !== 1 ? "s" : ""} ·{" "}
+                  {taskCount} task
                   {taskCount !== 1 ? "s" : ""}
                 </p>
               </div>
@@ -316,7 +333,11 @@ export function ShiftTasksTab() {
         );
       })}
 
-      <TaskWizard open={wizardOpen} onClose={() => setWizardOpen(false)} defaultType="shift" />
+      <TaskWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        defaultType="shift"
+      />
     </div>
   );
 }

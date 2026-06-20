@@ -103,7 +103,10 @@ export function ShiftPill({
             )}
           </div>
         </TooltipTrigger>
-        <TooltipContent side="top" className="bg-popover text-popover-foreground border shadow-md text-xs">
+        <TooltipContent
+          side="top"
+          className="bg-popover text-popover-foreground border text-xs shadow-md"
+        >
           <p className="font-medium">{position?.name ?? "Unknown"}</p>
           <p className="text-muted-foreground">
             {shift.startTime} – {shift.endTime}
@@ -137,7 +140,7 @@ export function ShiftPill({
       <TooltipTrigger asChild>
         <div
           className={cn(
-            "group/pill relative flex cursor-grab items-center gap-1.5 overflow-hidden rounded-xl border pl-2.5 pr-1.5 py-1.5 transition-all hover:-translate-y-px hover:shadow-md active:cursor-grabbing",
+            "group/pill relative flex cursor-grab items-center gap-1.5 overflow-hidden rounded-xl border py-1.5 pr-1.5 pl-2.5 transition-all hover:-translate-y-px hover:shadow-md active:cursor-grabbing",
             isDraft && "border-dashed",
             isDragging && "scale-95 opacity-40",
           )}
@@ -162,7 +165,9 @@ export function ShiftPill({
           {/* Left color accent rail */}
           <div
             className="absolute top-0 bottom-0 left-0 w-[3px]"
-            style={{ backgroundColor: isDraft ? color : "rgba(255,255,255,0.9)" }}
+            style={{
+              backgroundColor: isDraft ? color : "rgba(255,255,255,0.9)",
+            }}
           />
           <div className="min-w-0 flex-1 pl-1">
             <p
@@ -184,7 +189,7 @@ export function ShiftPill({
           {/* Status chip — Draft (amber) vs Live/Published (white-on-solid) */}
           <span
             className={cn(
-              "shrink-0 flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[8.5px] font-bold tracking-wider uppercase",
+              "flex shrink-0 items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[8.5px] font-bold tracking-wider uppercase",
               isOpen
                 ? "border-amber-300/80 bg-amber-50 text-amber-700 dark:border-amber-600/50 dark:bg-amber-950/40 dark:text-amber-300"
                 : isDraft
@@ -206,7 +211,10 @@ export function ShiftPill({
           </span>
         </div>
       </TooltipTrigger>
-      <TooltipContent side="top" className="bg-popover text-popover-foreground border shadow-md text-xs">
+      <TooltipContent
+        side="top"
+        className="bg-popover text-popover-foreground border text-xs shadow-md"
+      >
         <p className="font-medium">{position?.name}</p>
         <p>
           {shift.startTime} – {shift.endTime}
@@ -334,7 +342,10 @@ export function TimeOffCell({
             </span>
           </div>
         </TooltipTrigger>
-        <TooltipContent side="top" className="bg-popover text-popover-foreground border shadow-md text-xs">
+        <TooltipContent
+          side="top"
+          className="bg-popover text-popover-foreground border text-xs shadow-md"
+        >
           <p className="font-medium">{label}</p>
           <Badge
             variant={isPending ? "outline" : "secondary"}

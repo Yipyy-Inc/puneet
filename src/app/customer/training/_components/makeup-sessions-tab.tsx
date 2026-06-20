@@ -360,7 +360,9 @@ export function MakeupSessionsTab() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="bg-muted/50 space-y-3 rounded-lg p-4">
-                    <p className="text-sm font-medium">Missed Session Details</p>
+                    <p className="text-sm font-medium">
+                      Missed Session Details
+                    </p>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div className="text-muted-foreground flex items-center gap-2">
                         <Calendar className="size-4" />
@@ -509,11 +511,11 @@ export function MakeupSessionsTab() {
                   </p>
                   <p className="text-destructive/80 text-sm">
                     By skipping, you will forfeit Week{" "}
-                    {selectedMissedSession.attendance.sessionNumber} and continue
-                    directly to Week{" "}
+                    {selectedMissedSession.attendance.sessionNumber} and
+                    continue directly to Week{" "}
                     {selectedMissedSession.enrollment.currentSessionNumber}. You
-                    can still schedule a makeup session later if needed, but this
-                    session will be marked as forfeited.
+                    can still schedule a makeup session later if needed, but
+                    this session will be marked as forfeited.
                   </p>
                 </div>
               )}

@@ -105,12 +105,18 @@ export function UnfilledShiftPanel({
 
   if (mode === "swap") {
     return (
-      <SwapFlow onBack={() => setMode("menu")} onComplete={() => onComplete()} />
+      <SwapFlow
+        onBack={() => setMode("menu")}
+        onComplete={() => onComplete()}
+      />
     );
   }
 
   return (
-    <ContactFlow onBack={() => setMode("menu")} onComplete={() => onComplete()} />
+    <ContactFlow
+      onBack={() => setMode("menu")}
+      onComplete={() => onComplete()}
+    />
   );
 }
 
@@ -149,7 +155,7 @@ function ShiftCard() {
     <div className="rounded-lg border bg-slate-50 p-3">
       <Link
         href={insightLinks.schedule(SHIFT.dateIso)}
-        className="text-muted-foreground hover:text-primary mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide hover:underline"
+        className="text-muted-foreground hover:text-primary mb-1 flex items-center gap-1.5 text-xs tracking-wide uppercase hover:underline"
       >
         <Calendar className="size-3.5" />
         Unfilled shift
@@ -174,7 +180,9 @@ function AssignFlow({
   const [staffId, setStaffId] = useState<string>("");
   const [step, setStep] = useState<"pick" | "confirm">("pick");
 
-  const candidates = staffMembers.filter((s) => AVAILABLE_STAFF_IDS.includes(s.id));
+  const candidates = staffMembers.filter((s) =>
+    AVAILABLE_STAFF_IDS.includes(s.id),
+  );
   const selected = candidates.find((s) => s.id === staffId);
 
   if (step === "pick") {
@@ -276,7 +284,10 @@ function SwapFlow({
           { field: "Action", to: "Post shift to swap board" },
           { field: "Date", to: SHIFT.dateLabel },
           { field: "Role", to: `${SHIFT.role} · ${SHIFT.start}–${SHIFT.end}` },
-          { field: "Audience", to: `${AVAILABLE_STAFF_IDS.length} eligible staff` },
+          {
+            field: "Audience",
+            to: `${AVAILABLE_STAFF_IDS.length} eligible staff`,
+          },
         ]}
         note="Staff who accept the shift will be added to the schedule automatically. You'll be notified when someone claims it."
       />
@@ -366,7 +377,7 @@ function BackHeader({ onBack, label }: { onBack: () => void; label: string }) {
     <button
       type="button"
       onClick={onBack}
-      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs uppercase tracking-wide transition-colors"
+      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs tracking-wide uppercase transition-colors"
     >
       <ArrowLeft className="size-3.5" />
       {label}

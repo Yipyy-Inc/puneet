@@ -175,7 +175,7 @@ function AuditLog({ req }: { req: ReputationRequest }) {
     <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
       <div className="space-y-3">
         <div className="bg-background rounded-lg border p-3">
-          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
             Trail
           </p>
           <div className="mt-2 space-y-2 text-xs">
@@ -235,7 +235,7 @@ function AuditLog({ req }: { req: ReputationRequest }) {
 
         {req.clientComment && (
           <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 dark:border-emerald-900 dark:bg-emerald-950/30">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+            <p className="text-[10px] font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-400">
               Client comment
             </p>
             <p className="text-foreground mt-1 text-xs italic">
@@ -245,7 +245,7 @@ function AuditLog({ req }: { req: ReputationRequest }) {
         )}
         {req.feedbackText && (
           <div className="rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 dark:border-rose-900 dark:bg-rose-950/30">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-400">
+            <p className="text-[10px] font-semibold tracking-wide text-rose-700 uppercase dark:text-rose-400">
               <AlertCircle className="mr-1 inline size-3" />
               Internal feedback
             </p>
@@ -255,14 +255,14 @@ function AuditLog({ req }: { req: ReputationRequest }) {
       </div>
 
       <div>
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
           Audit log
         </p>
         <div className="border-muted relative mt-2 space-y-2.5 border-l-2 pl-4">
           {req.auditLog.map((entry) => (
             <div key={entry.id} className="relative">
-              <div className="bg-primary absolute -left-[1.1rem] top-1 h-2 w-2 rounded-full" />
-              <p className="text-xs font-medium leading-none">{entry.action}</p>
+              <div className="bg-primary absolute top-1 -left-[1.1rem] h-2 w-2 rounded-full" />
+              <p className="text-xs leading-none font-medium">{entry.action}</p>
               <p className="text-muted-foreground mt-0.5 text-[11px]">
                 {new Date(entry.timestamp).toLocaleString("en-CA", {
                   dateStyle: "medium",
@@ -294,14 +294,14 @@ function RequestRow({
     <>
       <tr
         className={cn(
-          "cursor-pointer border-t transition-colors hover:bg-muted/30",
+          "hover:bg-muted/30 cursor-pointer border-t transition-colors",
           expanded && "bg-muted/20",
           isNeg && !expanded && "bg-rose-50/40 dark:bg-rose-950/10",
         )}
         onClick={onToggle}
       >
         {/* Client / pet */}
-        <td className="py-3 pl-5 pr-3">
+        <td className="py-3 pr-3 pl-5">
           <div className="flex items-center gap-2.5">
             <div
               className={cn(
@@ -316,7 +316,7 @@ function RequestRow({
               {req.clientName.charAt(0)}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium leading-none">
+              <p className="truncate text-sm leading-none font-medium">
                 {req.clientName}
               </p>
               <p className="text-muted-foreground mt-0.5 truncate text-[11px]">
@@ -397,7 +397,7 @@ function RequestRow({
         </td>
 
         {/* Staff */}
-        <td className="py-3 pl-3 pr-5">
+        <td className="py-3 pr-5 pl-3">
           <span className="text-muted-foreground text-xs">
             {req.staffName ?? "—"}
           </span>
@@ -574,13 +574,13 @@ export function ReputationRequestsTab() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="bg-card overflow-hidden rounded-xl border">
         {filtered.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px]">
               <thead className="bg-muted/30">
-                <tr className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
-                  <th className="py-3 pl-5 pr-3 text-left">Client / Pet</th>
+                <tr className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                  <th className="py-3 pr-3 pl-5 text-left">Client / Pet</th>
                   <th className="px-3 py-3 text-left">Service</th>
                   <th className="px-3 py-3 text-left">Channel</th>
                   <th className="px-3 py-3 text-left">Status</th>
@@ -590,7 +590,11 @@ export function ReputationRequestsTab() {
                   >
                     <span className="inline-flex items-center gap-1">
                       Rating{" "}
-                      <SortIcon field="rating" sortField={sortField} sortDir={sortDir} />
+                      <SortIcon
+                        field="rating"
+                        sortField={sortField}
+                        sortDir={sortDir}
+                      />
                     </span>
                   </th>
                   <th
@@ -599,10 +603,14 @@ export function ReputationRequestsTab() {
                   >
                     <span className="inline-flex items-center gap-1">
                       Sent{" "}
-                      <SortIcon field="sentAt" sortField={sortField} sortDir={sortDir} />
+                      <SortIcon
+                        field="sentAt"
+                        sortField={sortField}
+                        sortDir={sortDir}
+                      />
                     </span>
                   </th>
-                  <th className="py-3 pl-3 pr-5 text-left">Staff</th>
+                  <th className="py-3 pr-5 pl-3 text-left">Staff</th>
                 </tr>
               </thead>
               <tbody>

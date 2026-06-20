@@ -3,13 +3,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import {
-  Ban,
-  GraduationCap,
-  Plus,
-  User2,
-  Users,
-} from "lucide-react";
+import { Ban, GraduationCap, Plus, User2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
   SkillLevel,
@@ -181,7 +175,7 @@ export function TrainingCalendarDayView({
 
   if (activeTrainers.length === 0) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border bg-card text-center">
+      <div className="bg-card flex h-64 flex-col items-center justify-center gap-3 rounded-xl border text-center">
         <div className="bg-muted flex size-12 items-center justify-center rounded-xl">
           <GraduationCap className="text-muted-foreground size-5" />
         </div>
@@ -239,7 +233,7 @@ export function TrainingCalendarDayView({
                       {badge && (
                         <span
                           className={cn(
-                            "inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
+                            "inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase",
                             badge.cls,
                           )}
                           title={`Teaching ${badge.label.toLowerCase()} today`}
@@ -261,7 +255,7 @@ export function TrainingCalendarDayView({
                         }
                       >
                         <span className="tabular-nums">{sessionCount}</span>
-                        <span className="uppercase tracking-wide">
+                        <span className="tracking-wide uppercase">
                           {sessionCount === 1 ? "session" : "sessions"}
                         </span>
                       </span>
@@ -312,9 +306,7 @@ export function TrainingCalendarDayView({
               return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
             };
 
-            const handleColumnClick = (
-              e: React.MouseEvent<HTMLDivElement>,
-            ) => {
+            const handleColumnClick = (e: React.MouseEvent<HTMLDivElement>) => {
               const time = slotTimeFromY(
                 e.currentTarget.getBoundingClientRect(),
                 e.clientY,
@@ -346,9 +338,7 @@ export function TrainingCalendarDayView({
             // Touch long-press: 500ms timer. Cancels on move/end so a
             // regular tap still falls through to onClick.
             let touchTimer: ReturnType<typeof setTimeout> | null = null;
-            const handleTouchStart = (
-              e: React.TouchEvent<HTMLDivElement>,
-            ) => {
+            const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
               const touch = e.touches[0];
               if (!touch) return;
               const rect = e.currentTarget.getBoundingClientRect();
@@ -426,7 +416,7 @@ export function TrainingCalendarDayView({
                       }}
                       onContextMenu={(e) => e.stopPropagation()}
                       className={cn(
-                        "group absolute left-1 right-1 z-5 flex flex-col items-start gap-0.5 overflow-hidden rounded-md border border-slate-300 px-2 py-1 text-left text-[10px] text-slate-600 shadow-sm transition-colors hover:border-rose-300 hover:bg-rose-50/40",
+                        "group absolute right-1 left-1 z-5 flex flex-col items-start gap-0.5 overflow-hidden rounded-md border border-slate-300 px-2 py-1 text-left text-[10px] text-slate-600 shadow-sm transition-colors hover:border-rose-300 hover:bg-rose-50/40",
                       )}
                       style={{
                         top: `${top}px`,
@@ -436,11 +426,11 @@ export function TrainingCalendarDayView({
                       }}
                       title={`Blocked · ${label}${block.reasonNote ? ` — ${block.reasonNote}` : ""} · click to remove`}
                     >
-                      <span className="inline-flex items-center gap-1 font-semibold uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1 font-semibold tracking-wider uppercase">
                         <Ban className="size-2.5" />
                         Blocked
                       </span>
-                      <span className="truncate font-medium leading-tight">
+                      <span className="truncate leading-tight font-medium">
                         {label}
                       </span>
                       {block.reasonNote && (
@@ -496,7 +486,7 @@ export function TrainingCalendarDayView({
             }}
           >
             <div className="border-b bg-slate-50 px-3 py-1.5">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <p className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
                 {contextMenu.time} · {contextMenu.trainerName}
               </p>
             </div>

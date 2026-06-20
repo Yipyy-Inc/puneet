@@ -149,7 +149,8 @@ export function ConversationRow({
 }) {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const failed = !thread.isPlaceholder && thread.lastMessage.status === "failed";
+  const failed =
+    !thread.isPlaceholder && thread.lastMessage.status === "failed";
   const visibleTags = (thread.meta?.tags ?? [])
     .filter((t) => t !== "high_priority" && t !== "needs_follow_up")
     .slice(0, 2);
@@ -336,7 +337,9 @@ export function ConversationRow({
                       : "text-slate-400",
                   )}
                 >
-                  {thread.isPlaceholder ? "new" : relTime(thread.lastMessage.timestamp)}
+                  {thread.isPlaceholder
+                    ? "new"
+                    : relTime(thread.lastMessage.timestamp)}
                 </span>
               </div>
             </div>
@@ -351,11 +354,15 @@ export function ConversationRow({
                 <span
                   className={cn(
                     "truncate text-xs",
-                    thread.unreadCount > 0 ? "text-slate-600" : "text-slate-400",
+                    thread.unreadCount > 0
+                      ? "text-slate-600"
+                      : "text-slate-400",
                   )}
                 >
                   {thread.lastMessage.direction === "outbound" && "You: "}
-                  {thread.isPlaceholder ? "No messages yet" : thread.lastMessage.body}
+                  {thread.isPlaceholder
+                    ? "No messages yet"
+                    : thread.lastMessage.body}
                 </span>
               )}
               {thread.unreadCount > 0 && (
@@ -408,7 +415,8 @@ export function ConversationRow({
                     key={tag}
                     className={cn(
                       "rounded-full border px-1.5 py-0.5 text-[9px] font-semibold",
-                      TAG_STYLES[tag] ?? "border-slate-200 bg-slate-100 text-slate-600",
+                      TAG_STYLES[tag] ??
+                        "border-slate-200 bg-slate-100 text-slate-600",
                     )}
                   >
                     {TAG_LABELS[tag] ?? tag}

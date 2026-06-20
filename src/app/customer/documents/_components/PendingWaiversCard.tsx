@@ -39,7 +39,10 @@ export function PendingWaiversCard({
   facilityServices,
 }: PendingWaiversCardProps) {
   const grouped = useMemo(() => {
-    const categories = resolveCategories(facilityServices, customWaiverCategories);
+    const categories = resolveCategories(
+      facilityServices,
+      customWaiverCategories,
+    );
     return bucketByCategory(pendingWaivers, categories).filter(
       (group) => group.items.length > 0,
     );
@@ -119,7 +122,9 @@ export function PendingWaiversCard({
                     className="self-start sm:self-center"
                   >
                     <Pen className="mr-1.5 size-3.5" />
-                    {waiver.requireDigitalSignature ? "Sign Now" : "Review & Agree"}
+                    {waiver.requireDigitalSignature
+                      ? "Sign Now"
+                      : "Review & Agree"}
                   </Button>
                 </div>
               ))}

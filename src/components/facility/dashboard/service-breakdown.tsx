@@ -30,10 +30,10 @@ export function ServiceBreakdown() {
             <CalendarDays className="size-4" />
           </div>
           <div>
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+            <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
               Today&apos;s Check-Ins
             </p>
-            <p className="text-lg font-semibold tabular-nums leading-tight">
+            <p className="text-lg leading-tight font-semibold tabular-nums">
               {total}
               <span className="text-muted-foreground ml-1.5 text-xs font-normal">
                 across {services.length} services
@@ -94,7 +94,7 @@ function ServicePill({
       data-active={active ? "true" : undefined}
       data-color={color}
       className={cn(
-        "group inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs font-medium transition-all",
+        "group bg-background inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all",
         "hover:-translate-y-px hover:shadow-sm",
         "data-[active=true]:border-transparent data-[active=true]:text-white data-[active=true]:shadow-md",
       )}

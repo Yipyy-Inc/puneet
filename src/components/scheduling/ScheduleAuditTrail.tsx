@@ -266,7 +266,7 @@ function AuditRow({ entry }: { entry: ScheduleAuditEntry }) {
                 ? `${entry.count ?? 0} shifts published`
                 : entry.action === "draft_discarded"
                   ? `${entry.count ?? 0} drafts discarded`
-                  : entry.shiftDate ?? "Schedule change"}
+                  : (entry.shiftDate ?? "Schedule change")}
           </p>
           <p className="text-muted-foreground mt-0.5 text-xs">
             {getDescription(entry)}
@@ -318,9 +318,7 @@ function AuditRow({ entry }: { entry: ScheduleAuditEntry }) {
 
           {/* Shift detail */}
           {entry.shiftId &&
-            (entry.shiftDate ||
-              entry.shiftTimeRange ||
-              entry.employeeName) && (
+            (entry.shiftDate || entry.shiftTimeRange || entry.employeeName) && (
               <div className="text-muted-foreground space-y-1 text-xs">
                 {entry.shiftId && (
                   <p>
@@ -379,7 +377,9 @@ function AuditRow({ entry }: { entry: ScheduleAuditEntry }) {
                 </span>
               </p>
               {entry.metadata &&
-                Boolean((entry.metadata as Record<string, unknown>).weekStart) && (
+                Boolean(
+                  (entry.metadata as Record<string, unknown>).weekStart,
+                ) && (
                   <p>
                     Week starting:{" "}
                     <span className="text-foreground font-medium">
@@ -591,9 +591,7 @@ export function ScheduleAuditTrail({
         <Card>
           <CardContent className="py-12 text-center">
             <Clock className="text-muted-foreground mx-auto mb-3 size-8" />
-            <p className="text-muted-foreground font-medium">
-              No audit events
-            </p>
+            <p className="text-muted-foreground font-medium">No audit events</p>
             <p className="text-muted-foreground mt-1 text-xs">
               {actionFilter !== "all" || deptFilter !== "all"
                 ? "Try adjusting your filters"

@@ -71,7 +71,7 @@ export function ProgramCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow",
+        "group bg-card relative flex flex-col overflow-hidden rounded-xl border shadow-sm transition-shadow",
         "hover:shadow-md",
         isDragging && "z-30 shadow-lg ring-2 ring-indigo-300",
         !program.isActive && "opacity-75",
@@ -102,8 +102,8 @@ export function ProgramCard({
           {...attributes}
           {...listeners}
           className={cn(
-            "absolute left-2 top-2 flex size-7 items-center justify-center rounded-md bg-white/85 text-slate-500 shadow-sm backdrop-blur-sm transition-colors",
-            "hover:bg-white hover:text-slate-800 cursor-grab active:cursor-grabbing",
+            "absolute top-2 left-2 flex size-7 items-center justify-center rounded-md bg-white/85 text-slate-500 shadow-sm backdrop-blur-sm transition-colors",
+            "cursor-grab hover:bg-white hover:text-slate-800 active:cursor-grabbing",
             isDragging && "cursor-grabbing",
           )}
           aria-label={`Drag to reorder ${program.name}`}
@@ -113,7 +113,7 @@ export function ProgramCard({
         </button>
 
         {/* Top-right badges — popular + active state */}
-        <div className="absolute right-2 top-2 flex flex-wrap items-center gap-1.5">
+        <div className="absolute top-2 right-2 flex flex-wrap items-center gap-1.5">
           {program.popular && (
             <Badge className="border-0 bg-amber-500 text-[10px] text-white shadow-sm">
               <Star className="mr-1 size-2.5" />
@@ -137,7 +137,7 @@ export function ProgramCard({
           <p className="text-sm/snug font-bold text-slate-900">
             {program.name}
           </p>
-          <p className="shrink-0 text-sm font-bold tabular-nums text-slate-900">
+          <p className="shrink-0 text-sm font-bold text-slate-900 tabular-nums">
             ${program.price}
           </p>
         </div>
@@ -195,8 +195,7 @@ export function ProgramCard({
 
         <div className="text-muted-foreground mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
           <span>
-            {program.sessions}{" "}
-            {program.sessions === 1 ? "session" : "sessions"}
+            {program.sessions} {program.sessions === 1 ? "session" : "sessions"}
           </span>
           {program.classType === "group" && program.maxGroupSize && (
             <span>Max {program.maxGroupSize} dogs</span>
@@ -205,7 +204,7 @@ export function ProgramCard({
         </div>
 
         {/* Footer — series run count + actions */}
-        <div className="-mx-3.5 -mb-3.5 mt-2 flex items-center justify-between gap-2 border-t bg-slate-50/60 px-3.5 py-2">
+        <div className="-mx-3.5 mt-2 -mb-3.5 flex items-center justify-between gap-2 border-t bg-slate-50/60 px-3.5 py-2">
           <span
             className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 tabular-nums"
             title="Series that have been scheduled as this program"

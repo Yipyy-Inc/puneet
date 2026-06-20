@@ -72,32 +72,132 @@ type Metric = {
 };
 
 const METRICS: Metric[] = [
-  { key: "revenue",                   label: "Revenue",               group: "financial",   format: (v) => `$${v.toLocaleString()}`,    higherIsBetter: true,  growth: "revenueGrowth" },
-  { key: "bookings",                  label: "Total Bookings",        group: "financial",   format: (v) => v.toLocaleString(),          higherIsBetter: true,  growth: "bookingsGrowth" },
-  { key: "avgBookingValue",           label: "Avg Booking Value",     group: "financial",   format: (v) => `$${v.toFixed(2)}`,          higherIsBetter: true },
-  { key: "cancellationRate",          label: "Cancellation Rate",     group: "financial",   format: (v) => `${v}%`,                     higherIsBetter: false },
-  { key: "occupancyRate",             label: "Occupancy Rate",        group: "operational", format: (v) => `${v}%`,                     higherIsBetter: true },
-  { key: "daycareAttendance",         label: "Daycare Attendance",    group: "operational", format: (v) => v.toLocaleString(),          higherIsBetter: true },
-  { key: "groomingVolume",            label: "Grooming Appointments", group: "operational", format: (v) => v.toLocaleString(),          higherIsBetter: true },
-  { key: "boardingNights",            label: "Boarding Nights",       group: "operational", format: (v) => v.toLocaleString(),          higherIsBetter: true },
-  { key: "trainingSessionsCompleted", label: "Training Sessions",     group: "operational", format: (v) => v.toLocaleString(),          higherIsBetter: true },
-  { key: "newCustomers",              label: "New Clients",           group: "customer",    format: (v) => v.toLocaleString(),          higherIsBetter: true },
-  { key: "returningCustomers",        label: "Returning Clients",     group: "customer",    format: (v) => v.toLocaleString(),          higherIsBetter: true },
-  { key: "nps",                       label: "NPS Score",             group: "customer",    format: (v) => String(v),                   higherIsBetter: true },
-  { key: "staffCount",                label: "Staff Headcount",       group: "staff",       format: (v) => v.toLocaleString(),          higherIsBetter: true },
-  { key: "staffUtilization",          label: "Staff Utilization",     group: "staff",       format: (v) => `${v}%`,                     higherIsBetter: true },
-  { key: "activeServices",            label: "Active Services",       group: "staff",       format: (v) => v.toLocaleString(),          higherIsBetter: true },
+  {
+    key: "revenue",
+    label: "Revenue",
+    group: "financial",
+    format: (v) => `$${v.toLocaleString()}`,
+    higherIsBetter: true,
+    growth: "revenueGrowth",
+  },
+  {
+    key: "bookings",
+    label: "Total Bookings",
+    group: "financial",
+    format: (v) => v.toLocaleString(),
+    higherIsBetter: true,
+    growth: "bookingsGrowth",
+  },
+  {
+    key: "avgBookingValue",
+    label: "Avg Booking Value",
+    group: "financial",
+    format: (v) => `$${v.toFixed(2)}`,
+    higherIsBetter: true,
+  },
+  {
+    key: "cancellationRate",
+    label: "Cancellation Rate",
+    group: "financial",
+    format: (v) => `${v}%`,
+    higherIsBetter: false,
+  },
+  {
+    key: "occupancyRate",
+    label: "Occupancy Rate",
+    group: "operational",
+    format: (v) => `${v}%`,
+    higherIsBetter: true,
+  },
+  {
+    key: "daycareAttendance",
+    label: "Daycare Attendance",
+    group: "operational",
+    format: (v) => v.toLocaleString(),
+    higherIsBetter: true,
+  },
+  {
+    key: "groomingVolume",
+    label: "Grooming Appointments",
+    group: "operational",
+    format: (v) => v.toLocaleString(),
+    higherIsBetter: true,
+  },
+  {
+    key: "boardingNights",
+    label: "Boarding Nights",
+    group: "operational",
+    format: (v) => v.toLocaleString(),
+    higherIsBetter: true,
+  },
+  {
+    key: "trainingSessionsCompleted",
+    label: "Training Sessions",
+    group: "operational",
+    format: (v) => v.toLocaleString(),
+    higherIsBetter: true,
+  },
+  {
+    key: "newCustomers",
+    label: "New Clients",
+    group: "customer",
+    format: (v) => v.toLocaleString(),
+    higherIsBetter: true,
+  },
+  {
+    key: "returningCustomers",
+    label: "Returning Clients",
+    group: "customer",
+    format: (v) => v.toLocaleString(),
+    higherIsBetter: true,
+  },
+  {
+    key: "nps",
+    label: "NPS Score",
+    group: "customer",
+    format: (v) => String(v),
+    higherIsBetter: true,
+  },
+  {
+    key: "staffCount",
+    label: "Staff Headcount",
+    group: "staff",
+    format: (v) => v.toLocaleString(),
+    higherIsBetter: true,
+  },
+  {
+    key: "staffUtilization",
+    label: "Staff Utilization",
+    group: "staff",
+    format: (v) => `${v}%`,
+    higherIsBetter: true,
+  },
+  {
+    key: "activeServices",
+    label: "Active Services",
+    group: "staff",
+    format: (v) => v.toLocaleString(),
+    higherIsBetter: true,
+  },
 ];
 
-const GROUPS: { key: MetricGroup; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: "all",         label: "All metrics",   icon: Sparkles },
-  { key: "financial",   label: "Financial",     icon: DollarSign },
-  { key: "operational", label: "Operations",    icon: Activity },
-  { key: "customer",    label: "Customer",      icon: Heart },
-  { key: "staff",       label: "Staff",         icon: Users },
+const GROUPS: {
+  key: MetricGroup;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  { key: "all", label: "All metrics", icon: Sparkles },
+  { key: "financial", label: "Financial", icon: DollarSign },
+  { key: "operational", label: "Operations", icon: Activity },
+  { key: "customer", label: "Customer", icon: Heart },
+  { key: "staff", label: "Staff", icon: Users },
 ];
 
-function getBestIndex(data: CompRow[], key: keyof CompRow, higherIsBetter: boolean): number {
+function getBestIndex(
+  data: CompRow[],
+  key: keyof CompRow,
+  higherIsBetter: boolean,
+): number {
   let best = -1;
   let bestVal = higherIsBetter ? -Infinity : Infinity;
   data.forEach((row, i) => {
@@ -127,9 +227,17 @@ function rankByScore(data: CompRow[]) {
     .sort((a, b) => b.score - a.score);
 }
 
-function ChangeChip({ value, higherIsBetter = true }: { value: number; higherIsBetter?: boolean }) {
+function ChangeChip({
+  value,
+  higherIsBetter = true,
+}: {
+  value: number;
+  higherIsBetter?: boolean;
+}) {
   if (value === 0) {
-    return <span className="text-muted-foreground text-[11px] tabular-nums">—</span>;
+    return (
+      <span className="text-muted-foreground text-[11px] tabular-nums">—</span>
+    );
   }
   const positive = higherIsBetter ? value >= 0 : value <= 0;
   return (
@@ -141,7 +249,11 @@ function ChangeChip({ value, higherIsBetter = true }: { value: number; higherIsB
           : "bg-rose-500/10 text-rose-600 dark:text-rose-400",
       )}
     >
-      {positive ? <TrendingUp className="size-2.5" /> : <TrendingDown className="size-2.5" />}
+      {positive ? (
+        <TrendingUp className="size-2.5" />
+      ) : (
+        <TrendingDown className="size-2.5" />
+      )}
       {value >= 0 ? "+" : ""}
       {value.toFixed(1)}%
     </span>
@@ -158,8 +270,18 @@ function PodiumCard({
   s: LocationColorClasses;
 }) {
   const Icon = rank === 1 ? Crown : rank === 2 ? Trophy : Medal;
-  const heightClass = rank === 1 ? "min-h-[180px]" : rank === 2 ? "min-h-[160px]" : "min-h-[140px]";
-  const labelClass = rank === 1 ? "from-amber-400 to-amber-600" : rank === 2 ? "from-slate-300 to-slate-500" : "from-orange-400 to-orange-600";
+  const heightClass =
+    rank === 1
+      ? "min-h-[180px]"
+      : rank === 2
+        ? "min-h-[160px]"
+        : "min-h-[140px]";
+  const labelClass =
+    rank === 1
+      ? "from-amber-400 to-amber-600"
+      : rank === 2
+        ? "from-slate-300 to-slate-500"
+        : "from-orange-400 to-orange-600";
   return (
     <div className="flex flex-col items-center">
       <Card
@@ -167,14 +289,20 @@ function PodiumCard({
           "relative w-full overflow-hidden border-2 transition-all duration-300",
           s.borderSoft,
           heightClass,
-          rank === 1 && "ring-1 ring-amber-300/50 shadow-lg",
+          rank === 1 && "shadow-lg ring-1 ring-amber-300/50",
         )}
       >
-        <div className={cn("absolute inset-0 bg-linear-to-b opacity-40", s.gradFrom, s.gradTo)} />
+        <div
+          className={cn(
+            "absolute inset-0 bg-linear-to-b opacity-40",
+            s.gradFrom,
+            s.gradTo,
+          )}
+        />
         <CardContent className="relative flex h-full flex-col items-center justify-center gap-2 px-4 py-4">
           <div
             className={cn(
-              "absolute -top-3 left-1/2 -translate-x-1/2 flex size-7 items-center justify-center rounded-full bg-linear-to-br text-white shadow-md",
+              "absolute -top-3 left-1/2 flex size-7 -translate-x-1/2 items-center justify-center rounded-full bg-linear-to-br text-white shadow-md",
               labelClass,
             )}
           >
@@ -190,21 +318,39 @@ function PodiumCard({
             {row.shortCode}
           </div>
           <div className="text-center">
-            <p className={cn("font-semibold leading-tight", rank === 1 ? "text-base" : "text-sm")}>
+            <p
+              className={cn(
+                "leading-tight font-semibold",
+                rank === 1 ? "text-base" : "text-sm",
+              )}
+            >
               {row.name}
             </p>
-            <p className="text-muted-foreground text-[11px]">Top: {row.topService}</p>
+            <p className="text-muted-foreground text-[11px]">
+              Top: {row.topService}
+            </p>
           </div>
           <div className="mt-1 flex items-center gap-2">
             <div className="text-center">
-              <p className={cn("font-bold tabular-nums", rank === 1 ? "text-lg" : "text-base", s.text)}>
+              <p
+                className={cn(
+                  "font-bold tabular-nums",
+                  rank === 1 ? "text-lg" : "text-base",
+                  s.text,
+                )}
+              >
                 ${(row.revenue / 1000).toFixed(1)}k
               </p>
               <p className="text-muted-foreground text-[10px]">revenue</p>
             </div>
             <div className="bg-border h-8 w-px" />
             <div className="text-center">
-              <p className={cn("font-bold tabular-nums", rank === 1 ? "text-lg" : "text-base")}>
+              <p
+                className={cn(
+                  "font-bold tabular-nums",
+                  rank === 1 ? "text-lg" : "text-base",
+                )}
+              >
                 {row.occupancyRate}%
               </p>
               <p className="text-muted-foreground text-[10px]">occupancy</p>
@@ -216,8 +362,8 @@ function PodiumCard({
               rank === 1
                 ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                 : rank === 2
-                ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                : "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
+                  ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  : "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
             )}
           >
             #{rank} this period
@@ -244,9 +390,20 @@ function HighlightCard({
   return (
     <Card className="group overflow-hidden">
       <CardContent className="relative pt-4 pb-4">
-        <div className={cn("absolute inset-0 opacity-50 bg-linear-to-br", s.gradFrom, s.gradTo)} />
+        <div
+          className={cn(
+            "absolute inset-0 bg-linear-to-br opacity-50",
+            s.gradFrom,
+            s.gradTo,
+          )}
+        />
         <div className="relative flex items-start gap-3">
-          <div className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", s.bgSoft)}>
+          <div
+            className={cn(
+              "flex size-9 shrink-0 items-center justify-center rounded-xl",
+              s.bgSoft,
+            )}
+          >
             <Icon className={cn("size-4.5", s.text)} />
           </div>
           <div className="min-w-0 flex-1">
@@ -254,7 +411,9 @@ function HighlightCard({
               {label}
             </p>
             <p className="mt-0.5 truncate text-base font-bold">{value}</p>
-            <p className="text-muted-foreground truncate text-[11px]">{caption}</p>
+            <p className="text-muted-foreground truncate text-[11px]">
+              {caption}
+            </p>
           </div>
         </div>
       </CardContent>
@@ -266,7 +425,8 @@ export function LocationComparisonClient({ data }: Props) {
   const [group, setGroup] = useState<MetricGroup>("all");
 
   const filteredMetrics = useMemo(
-    () => (group === "all" ? METRICS : METRICS.filter((m) => m.group === group)),
+    () =>
+      group === "all" ? METRICS : METRICS.filter((m) => m.group === group),
     [group],
   );
 
@@ -292,15 +452,21 @@ export function LocationComparisonClient({ data }: Props) {
           </Link>
           <div>
             <div className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium">
-              <Link href="/facility/hq/overview" className="hover:text-foreground transition-colors">
+              <Link
+                href="/facility/hq/overview"
+                className="hover:text-foreground transition-colors"
+              >
                 HQ
               </Link>
               <ChevronRight className="size-3" />
               <span>Comparison</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">Location Comparison</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Location Comparison
+            </h1>
             <p className="text-muted-foreground text-sm">
-              Side-by-side performance across {cardsCount} locations · April 2026
+              Side-by-side performance across {cardsCount} locations · April
+              2026
             </p>
           </div>
         </div>
@@ -346,7 +512,9 @@ export function LocationComparisonClient({ data }: Props) {
             return order.map(({ rank, idx }) => {
               const row = data[idx];
               const s = locationStyles(row);
-              return <PodiumCard key={row.locationId} row={row} rank={rank} s={s} />;
+              return (
+                <PodiumCard key={row.locationId} row={row} rank={rank} s={s} />
+              );
             });
           })()}
         </div>
@@ -434,7 +602,9 @@ export function LocationComparisonClient({ data }: Props) {
                     >
                       {loc.shortCode}
                     </span>
-                    <span className={cn("text-[11px]", s.text)}>{loc.name.split("–")[1]?.trim() ?? loc.name}</span>
+                    <span className={cn("text-[11px]", s.text)}>
+                      {loc.name.split("–")[1]?.trim() ?? loc.name}
+                    </span>
                   </div>
                 );
               })}
@@ -445,19 +615,27 @@ export function LocationComparisonClient({ data }: Props) {
         {/* Metric rows */}
         <div className="divide-y">
           {filteredMetrics.map((metric) => {
-            const bestIdx = getBestIndex(data, metric.key, metric.higherIsBetter);
-            const numericValues = data.map((row) => Number(row[metric.key]) || 0);
+            const bestIdx = getBestIndex(
+              data,
+              metric.key,
+              metric.higherIsBetter,
+            );
+            const numericValues = data.map(
+              (row) => Number(row[metric.key]) || 0,
+            );
             const peak = Math.max(...numericValues, 1);
 
             return (
               <div
                 key={metric.key as string}
-                className="hover:bg-muted/20 group grid grid-cols-[200px_1fr] sm:grid-cols-[240px_1fr] transition-colors"
+                className="hover:bg-muted/20 group grid grid-cols-[200px_1fr] transition-colors sm:grid-cols-[240px_1fr]"
               >
                 <div className="flex flex-col justify-center px-4 py-3">
                   <p className="text-xs font-semibold">{metric.label}</p>
                   <p className="text-muted-foreground text-[10px]">
-                    {metric.higherIsBetter ? "Higher is better" : "Lower is better"}
+                    {metric.higherIsBetter
+                      ? "Higher is better"
+                      : "Lower is better"}
                   </p>
                 </div>
                 <div
@@ -474,12 +652,17 @@ export function LocationComparisonClient({ data }: Props) {
                     const s = locationStyles(row);
                     const isBest = i === bestIdx && v !== 0;
                     const pct = peak === 0 ? 0 : (v / peak) * 100;
-                    const growthVal = metric.growth ? Number(row[metric.growth]) : undefined;
+                    const growthVal = metric.growth
+                      ? Number(row[metric.growth])
+                      : undefined;
 
                     return (
                       <div
                         key={row.locationId}
-                        className={cn("flex flex-col justify-center gap-1.5 px-3 py-3", isBest && s.bgSofter)}
+                        className={cn(
+                          "flex flex-col justify-center gap-1.5 px-3 py-3",
+                          isBest && s.bgSofter,
+                        )}
                       >
                         <div className="flex items-baseline justify-between gap-2">
                           <span
@@ -490,13 +673,20 @@ export function LocationComparisonClient({ data }: Props) {
                             )}
                           >
                             {v === 0 && metric.higherIsBetter ? (
-                              <span className="text-muted-foreground text-xs">N/A</span>
+                              <span className="text-muted-foreground text-xs">
+                                N/A
+                              </span>
                             ) : (
                               metric.format(v)
                             )}
                           </span>
                           {isBest && (
-                            <span className={cn("inline-flex items-center gap-0.5 text-[10px] font-bold", s.text)}>
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-0.5 text-[10px] font-bold",
+                                s.text,
+                              )}
+                            >
                               <Trophy className="size-2.5 fill-current" />
                               best
                             </span>
@@ -509,7 +699,10 @@ export function LocationComparisonClient({ data }: Props) {
                           size="xs"
                         />
                         {growthVal !== undefined && (
-                          <ChangeChip value={growthVal} higherIsBetter={metric.higherIsBetter} />
+                          <ChangeChip
+                            value={growthVal}
+                            higherIsBetter={metric.higherIsBetter}
+                          />
                         )}
                       </div>
                     );
@@ -523,9 +716,13 @@ export function LocationComparisonClient({ data }: Props) {
 
       <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 text-[11px]">
         <p>
-          Trophy marks the best-performing location per metric · N/A = service not offered at this location
+          Trophy marks the best-performing location per metric · N/A = service
+          not offered at this location
         </p>
-        <p>Composite score considers revenue, occupancy, NPS, utilization & cancellations.</p>
+        <p>
+          Composite score considers revenue, occupancy, NPS, utilization &
+          cancellations.
+        </p>
       </div>
     </div>
   );

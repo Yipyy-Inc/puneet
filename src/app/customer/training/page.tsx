@@ -142,9 +142,8 @@ export default function CustomerTrainingPage() {
   // Program-level waitlist dialog — opens from a catalog card when every
   // matching upcoming series is at capacity.
   const [isProgramWaitlistOpen, setIsProgramWaitlistOpen] = useState(false);
-  const [waitlistProgram, setWaitlistProgram] = useState<TrainingPackage | null>(
-    null,
-  );
+  const [waitlistProgram, setWaitlistProgram] =
+    useState<TrainingPackage | null>(null);
   // Two-step catalog → series flow. `null` shows the Course Catalog;
   // setting a `TrainingPackage` switches to the filtered series view.
   const [selectedCourse, setSelectedCourse] = useState<TrainingPackage | null>(
@@ -500,592 +499,606 @@ export default function CustomerTrainingPage() {
         </TabsContent>
 
         <TabsContent value="classes" className="space-y-6 pt-2">
-      {selectedCourse === null ? (
-        /* Step 1 — Course Catalog */
-        <CustomerTrainingCatalog
-          series={series}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          pets={customer?.pets ?? []}
-          onSelectCourse={(course) => {
-            setSelectedCourse(course);
-            // Reset the search when drilling in so the second step starts
-            // fresh; the catalog query and the series query are different
-            // mental models.
-            setSearchQuery("");
-          }}
-          onEnrollInCourse={(course) => {
-            // Deep-link straight to the booking flow with this program
-            // pre-selected. The /customer/bookings/new page reads `service`
-            // + `program` from the query string and forwards them into the
-            // BookingModal so the customer lands at Step 3 (Select Series).
-            router.push(
-              `/customer/bookings/new?service=training&program=${encodeURIComponent(course.id)}`,
-            );
-          }}
-          onJoinProgramWaitlist={(course) => {
-            setWaitlistProgram(course);
-            setIsProgramWaitlistOpen(true);
-          }}
-        />
-      ) : (
-        <>
-        {/* Step 2 — Available Classes header */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="-ml-2 mb-1 h-7 gap-1 text-[12px]"
-              onClick={() => {
-                setSelectedCourse(null);
+          {selectedCourse === null ? (
+            /* Step 1 — Course Catalog */
+            <CustomerTrainingCatalog
+              series={series}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              pets={customer?.pets ?? []}
+              onSelectCourse={(course) => {
+                setSelectedCourse(course);
+                // Reset the search when drilling in so the second step starts
+                // fresh; the catalog query and the series query are different
+                // mental models.
                 setSearchQuery("");
               }}
-            >
-              ← Back to all courses
-            </Button>
-            <h3 className="text-xl font-semibold tracking-tight">
-              {selectedCourse.name}
-            </h3>
-            <p className="text-muted-foreground text-sm">
-              Available classes for this course
-            </p>
-          </div>
-        </div>
+              onEnrollInCourse={(course) => {
+                // Deep-link straight to the booking flow with this program
+                // pre-selected. The /customer/bookings/new page reads `service`
+                // + `program` from the query string and forwards them into the
+                // BookingModal so the customer lands at Step 3 (Select Series).
+                router.push(
+                  `/customer/bookings/new?service=training&program=${encodeURIComponent(course.id)}`,
+                );
+              }}
+              onJoinProgramWaitlist={(course) => {
+                setWaitlistProgram(course);
+                setIsProgramWaitlistOpen(true);
+              }}
+            />
+          ) : (
+            <>
+              {/* Step 2 — Available Classes header */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="mb-1 -ml-2 h-7 gap-1 text-[12px]"
+                    onClick={() => {
+                      setSelectedCourse(null);
+                      setSearchQuery("");
+                    }}
+                  >
+                    ← Back to all courses
+                  </Button>
+                  <h3 className="text-xl font-semibold tracking-tight">
+                    {selectedCourse.name}
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    Available classes for this course
+                  </p>
+                </div>
+              </div>
 
-      {/* Search (scoped to the selected course's series) */}
-      <div className="flex gap-4">
-        <div className="flex-1">
-          <Input
-            placeholder="Search by instructor or series name…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
+              {/* Search (scoped to the selected course's series) */}
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search by instructor or series name…"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
 
-      {/* Series Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {availableSeries.length === 0 ? (
-          <div className="text-muted-foreground col-span-full rounded-xl border border-dashed py-12 text-center text-sm">
-            No upcoming classes for {selectedCourse.name} right now — check
-            back soon or join the waitlist on a related course.
-          </div>
-        ) : (
-          availableSeries.map((seriesItem) => {
-            const spotsLeft = getSpotsLeft(seriesItem);
-            const enrolledPetNames = enrollments
-              .filter((e) => e.seriesId === seriesItem.id)
-              .map((e) => e.petName);
-            const dropInsEnabled =
-              FACILITY_ALLOWS_DROPINS &&
-              seriesItem.enrollmentRules.allowDropIns;
-            return (
-              <CustomerTrainingSeriesCard
-                key={seriesItem.id}
-                series={seriesItem}
-                enrolledPetNames={enrolledPetNames}
-                spotsLeft={spotsLeft}
-                isMounted={isMounted}
-                dropInsEnabled={dropInsEnabled}
-                onEnroll={() => handleEnrollClick(seriesItem)}
-                onWaitlist={() => handleWaitlistClick(seriesItem)}
-                onDetails={() => handleCourseDetailsClick(seriesItem)}
-                onBookDropIn={() => setDropInSeries(seriesItem)}
-              />
-            );
-          })
-        )}
-      </div>
-        </>
-      )}
+              {/* Series Cards */}
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {availableSeries.length === 0 ? (
+                  <div className="text-muted-foreground col-span-full rounded-xl border border-dashed py-12 text-center text-sm">
+                    No upcoming classes for {selectedCourse.name} right now —
+                    check back soon or join the waitlist on a related course.
+                  </div>
+                ) : (
+                  availableSeries.map((seriesItem) => {
+                    const spotsLeft = getSpotsLeft(seriesItem);
+                    const enrolledPetNames = enrollments
+                      .filter((e) => e.seriesId === seriesItem.id)
+                      .map((e) => e.petName);
+                    const dropInsEnabled =
+                      FACILITY_ALLOWS_DROPINS &&
+                      seriesItem.enrollmentRules.allowDropIns;
+                    return (
+                      <CustomerTrainingSeriesCard
+                        key={seriesItem.id}
+                        series={seriesItem}
+                        enrolledPetNames={enrolledPetNames}
+                        spotsLeft={spotsLeft}
+                        isMounted={isMounted}
+                        dropInsEnabled={dropInsEnabled}
+                        onEnroll={() => handleEnrollClick(seriesItem)}
+                        onWaitlist={() => handleWaitlistClick(seriesItem)}
+                        onDetails={() => handleCourseDetailsClick(seriesItem)}
+                        onBookDropIn={() => setDropInSeries(seriesItem)}
+                      />
+                    );
+                  })
+                )}
+              </div>
+            </>
+          )}
 
-      {/* Enrollment Modal */}
-      <Dialog
-        open={isEnrollmentModalOpen}
-        onOpenChange={setIsEnrollmentModalOpen}
-      >
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Enroll in Training Series</DialogTitle>
-            <DialogDescription>{selectedSeries?.seriesName}</DialogDescription>
-          </DialogHeader>
+          {/* Enrollment Modal */}
+          <Dialog
+            open={isEnrollmentModalOpen}
+            onOpenChange={setIsEnrollmentModalOpen}
+          >
+            <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Enroll in Training Series</DialogTitle>
+                <DialogDescription>
+                  {selectedSeries?.seriesName}
+                </DialogDescription>
+              </DialogHeader>
 
-          <div className="space-y-6 py-4">
-            {/* Pet Selection */}
-            <div className="space-y-2">
-              <Label>
-                Select Pet <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={selectedPetId?.toString() || ""}
-                onValueChange={(value) => setSelectedPetId(parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose which pet to enroll..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {customer?.pets
-                    .filter((p) => p.type === "Dog") // Only dogs for training
-                    .map((pet) => (
-                      <SelectItem key={pet.id} value={pet.id.toString()}>
-                        {pet.name} - {pet.breed}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Prerequisites Check */}
-            {selectedPet && selectedCourseType && prerequisiteValidation && (
-              <div className="space-y-2">
-                <Label>Prerequisites Check</Label>
-                <div className="space-y-2 rounded-lg border p-4">
-                  {prerequisiteValidation.eligible ? (
-                    <div className="flex items-center gap-2 text-green-600">
-                      <CheckCircle2 className="size-5" />
-                      <span className="font-medium">
-                        All prerequisites met!
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="text-destructive flex items-center gap-2">
-                        <XCircle className="size-5" />
-                        <span className="font-medium">
-                          Prerequisites not met
-                        </span>
-                      </div>
-                      <ul className="text-muted-foreground ml-7 list-inside list-disc space-y-1 text-sm">
-                        {prerequisiteValidation.issues.map((issue, index) => (
-                          <li key={index}>{issue.message}</li>
+              <div className="space-y-6 py-4">
+                {/* Pet Selection */}
+                <div className="space-y-2">
+                  <Label>
+                    Select Pet <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={selectedPetId?.toString() || ""}
+                    onValueChange={(value) => setSelectedPetId(parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose which pet to enroll..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customer?.pets
+                        .filter((p) => p.type === "Dog") // Only dogs for training
+                        .map((pet) => (
+                          <SelectItem key={pet.id} value={pet.id.toString()}>
+                            {pet.name} - {pet.breed}
+                          </SelectItem>
                         ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Prerequisites Check */}
+                {selectedPet &&
+                  selectedCourseType &&
+                  prerequisiteValidation && (
+                    <div className="space-y-2">
+                      <Label>Prerequisites Check</Label>
+                      <div className="space-y-2 rounded-lg border p-4">
+                        {prerequisiteValidation.eligible ? (
+                          <div className="flex items-center gap-2 text-green-600">
+                            <CheckCircle2 className="size-5" />
+                            <span className="font-medium">
+                              All prerequisites met!
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="text-destructive flex items-center gap-2">
+                              <XCircle className="size-5" />
+                              <span className="font-medium">
+                                Prerequisites not met
+                              </span>
+                            </div>
+                            <ul className="text-muted-foreground ml-7 list-inside list-disc space-y-1 text-sm">
+                              {prerequisiteValidation.issues.map(
+                                (issue, index) => (
+                                  <li key={index}>{issue.message}</li>
+                                ),
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                {/* Series Commitment */}
+                {selectedSeries && (
+                  <div className="space-y-2">
+                    <Label>Series Commitment</Label>
+                    <div className="space-y-2 rounded-lg border p-4">
+                      <p className="text-muted-foreground text-sm">
+                        By enrolling, you commit to attending all{" "}
+                        {selectedSeries.numberOfWeeks} sessions:
+                      </p>
+                      <ul className="ml-4 list-inside list-disc space-y-1 text-sm">
+                        {isMounted &&
+                          calculateSessionDates(
+                            selectedSeries.startDate,
+                            selectedSeries.dayOfWeek,
+                            selectedSeries.numberOfWeeks,
+                          ).map((date, index) => (
+                            <li key={date}>
+                              Session {index + 1}:{" "}
+                              {new Date(date).toLocaleDateString("en-US", {
+                                weekday: "long",
+                                month: "long",
+                                day: "numeric",
+                                year: "numeric",
+                              })}{" "}
+                              at {selectedSeries.startTime}
+                            </li>
+                          ))}
                       </ul>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="commitment"
+                        checked={agreedToCommitment}
+                        onCheckedChange={(checked) =>
+                          setAgreedToCommitment(checked === true)
+                        }
+                      />
+                      <Label
+                        htmlFor="commitment"
+                        className="cursor-pointer text-sm font-normal"
+                      >
+                        I agree to the series commitment (all{" "}
+                        {selectedSeries.numberOfWeeks} weeks)
+                      </Label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Waivers — required acknowledgements */}
+                {selectedSeries && (
+                  <TrainingWaiversSection
+                    agreed={agreedWaivers}
+                    onChange={setAgreedWaivers}
+                  />
+                )}
+
+                {/* Payment Options */}
+                {selectedSeries && (
+                  <div className="space-y-2">
+                    <Label>
+                      Payment Option <span className="text-destructive">*</span>
+                    </Label>
+                    <RadioGroup
+                      value={paymentOption}
+                      onValueChange={(value) =>
+                        setPaymentOption(value as "deposit" | "full")
+                      }
+                    >
+                      <div className="flex items-center space-x-2 rounded-lg border p-4">
+                        <RadioGroupItem value="deposit" id="deposit" />
+                        <Label
+                          htmlFor="deposit"
+                          className="flex-1 cursor-pointer"
+                        >
+                          <div>
+                            <div className="font-medium">Deposit</div>
+                            <div className="text-muted-foreground text-sm">
+                              ${selectedSeries.enrollmentRules.depositRequired}{" "}
+                              now, remainder due before first session
+                            </div>
+                          </div>
+                        </Label>
+                        <div className="font-semibold">
+                          ${selectedSeries.enrollmentRules.depositRequired}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 rounded-lg border p-4">
+                        <RadioGroupItem value="full" id="full" />
+                        <Label htmlFor="full" className="flex-1 cursor-pointer">
+                          <div>
+                            <div className="font-medium">Full Payment</div>
+                            <div className="text-muted-foreground text-sm">
+                              Pay entire series amount upfront
+                            </div>
+                          </div>
+                        </Label>
+                        <div className="font-semibold">
+                          ${selectedSeries.enrollmentRules.fullPaymentAmount}
+                        </div>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEnrollmentModalOpen(false);
+                    setSelectedSeries(null);
+                    setSelectedPetId(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleEnroll}
+                  disabled={
+                    !selectedPetId ||
+                    !agreedToCommitment ||
+                    !allRequiredWaiversSigned(agreedWaivers) ||
+                    !prerequisiteValidation?.eligible ||
+                    isEnrolling
+                  }
+                >
+                  {isEnrolling ? "Enrolling..." : "Enroll & Pay"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Course Details Modal */}
+          <Dialog
+            open={isCourseDetailsModalOpen}
+            onOpenChange={setIsCourseDetailsModalOpen}
+          >
+            <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Course Details</DialogTitle>
+                <DialogDescription>
+                  {selectedCourseDetails?.courseTypeName}
+                </DialogDescription>
+              </DialogHeader>
+
+              {selectedCourseDetails && (
+                <div className="space-y-6 py-4">
+                  {/* Description */}
+                  <div className="space-y-2">
+                    <h3 className="font-semibold">Description</h3>
+                    <p className="text-muted-foreground text-sm">
+                      {selectedCourseType?.description ||
+                        "No description available."}
+                    </p>
+                  </div>
+
+                  <Separator />
+
+                  {/* What You Will Learn */}
+                  {selectedCourseType?.whatYouWillLearn &&
+                    selectedCourseType.whatYouWillLearn.length > 0 && (
+                      <>
+                        <div className="space-y-2">
+                          <h3 className="font-semibold">What You Will Learn</h3>
+                          <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
+                            {selectedCourseType.whatYouWillLearn.map(
+                              (item, index) => (
+                                <li key={index}>{item}</li>
+                              ),
+                            )}
+                          </ul>
+                        </div>
+                        <Separator />
+                      </>
+                    )}
+
+                  {/* What to Bring */}
+                  {selectedCourseType?.whatToBring &&
+                    selectedCourseType.whatToBring.length > 0 && (
+                      <>
+                        <div className="space-y-2">
+                          <h3 className="font-semibold">What to Bring</h3>
+                          <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
+                            {selectedCourseType.whatToBring.map(
+                              (item, index) => (
+                                <li key={index}>{item}</li>
+                              ),
+                            )}
+                          </ul>
+                        </div>
+                        <Separator />
+                      </>
+                    )}
+
+                  {/* Prerequisites */}
+                  <div className="space-y-2">
+                    <h3 className="font-semibold">Prerequisites</h3>
+                    <div className="space-y-2">
+                      {selectedCourseType?.requiredVaccines &&
+                        selectedCourseType.requiredVaccines.length > 0 && (
+                          <div>
+                            <p className="mb-1 text-sm font-medium">
+                              Required Vaccinations:
+                            </p>
+                            <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
+                              {selectedCourseType.requiredVaccines.map(
+                                (vaccine, index) => (
+                                  <li key={index}>{vaccine}</li>
+                                ),
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                      {selectedCourseType?.prerequisites &&
+                        selectedCourseType.prerequisites.length > 0 && (
+                          <div>
+                            <p className="mb-1 text-sm font-medium">
+                              Required Courses:
+                            </p>
+                            <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
+                              {selectedCourseType.prerequisites.map(
+                                (prereqId, index) => {
+                                  const prereqCourse =
+                                    defaultTrainingCourseTypes.find(
+                                      (ct) => ct.id === prereqId,
+                                    );
+                                  return (
+                                    <li key={index}>
+                                      {prereqCourse?.name || prereqId}
+                                    </li>
+                                  );
+                                },
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                      {(!selectedCourseType?.requiredVaccines ||
+                        selectedCourseType.requiredVaccines.length === 0) &&
+                        (!selectedCourseType?.prerequisites ||
+                          selectedCourseType.prerequisites.length === 0) && (
+                          <p className="text-muted-foreground text-sm">
+                            No prerequisites required.
+                          </p>
+                        )}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Cancellation Policy */}
+                  {selectedCourseType?.cancellationPolicy && (
+                    <>
+                      <div className="space-y-2">
+                        <h3 className="font-semibold">Cancellation Policy</h3>
+                        <p className="text-muted-foreground text-sm">
+                          {selectedCourseType.cancellationPolicy}
+                        </p>
+                      </div>
+                      <Separator />
+                    </>
+                  )}
+
+                  {/* Refund Policy */}
+                  {selectedCourseType?.refundPolicy && (
+                    <div className="space-y-2">
+                      <h3 className="font-semibold">Refund Policy</h3>
+                      <p className="text-muted-foreground text-sm">
+                        {selectedCourseType.refundPolicy}
+                      </p>
                     </div>
                   )}
                 </div>
-              </div>
-            )}
-
-            {/* Series Commitment */}
-            {selectedSeries && (
-              <div className="space-y-2">
-                <Label>Series Commitment</Label>
-                <div className="space-y-2 rounded-lg border p-4">
-                  <p className="text-muted-foreground text-sm">
-                    By enrolling, you commit to attending all{" "}
-                    {selectedSeries.numberOfWeeks} sessions:
-                  </p>
-                  <ul className="ml-4 list-inside list-disc space-y-1 text-sm">
-                    {isMounted &&
-                      calculateSessionDates(
-                        selectedSeries.startDate,
-                        selectedSeries.dayOfWeek,
-                        selectedSeries.numberOfWeeks,
-                      ).map((date, index) => (
-                        <li key={date}>
-                          Session {index + 1}:{" "}
-                          {new Date(date).toLocaleDateString("en-US", {
-                            weekday: "long",
-                            month: "long",
-                            day: "numeric",
-                            year: "numeric",
-                          })}{" "}
-                          at {selectedSeries.startTime}
-                        </li>
-                      ))}
-                  </ul>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="commitment"
-                    checked={agreedToCommitment}
-                    onCheckedChange={(checked) =>
-                      setAgreedToCommitment(checked === true)
-                    }
-                  />
-                  <Label
-                    htmlFor="commitment"
-                    className="cursor-pointer text-sm font-normal"
-                  >
-                    I agree to the series commitment (all{" "}
-                    {selectedSeries.numberOfWeeks} weeks)
-                  </Label>
-                </div>
-              </div>
-            )}
-
-            {/* Waivers — required acknowledgements */}
-            {selectedSeries && (
-              <TrainingWaiversSection
-                agreed={agreedWaivers}
-                onChange={setAgreedWaivers}
-              />
-            )}
-
-            {/* Payment Options */}
-            {selectedSeries && (
-              <div className="space-y-2">
-                <Label>
-                  Payment Option <span className="text-destructive">*</span>
-                </Label>
-                <RadioGroup
-                  value={paymentOption}
-                  onValueChange={(value) =>
-                    setPaymentOption(value as "deposit" | "full")
-                  }
-                >
-                  <div className="flex items-center space-x-2 rounded-lg border p-4">
-                    <RadioGroupItem value="deposit" id="deposit" />
-                    <Label htmlFor="deposit" className="flex-1 cursor-pointer">
-                      <div>
-                        <div className="font-medium">Deposit</div>
-                        <div className="text-muted-foreground text-sm">
-                          ${selectedSeries.enrollmentRules.depositRequired} now,
-                          remainder due before first session
-                        </div>
-                      </div>
-                    </Label>
-                    <div className="font-semibold">
-                      ${selectedSeries.enrollmentRules.depositRequired}
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2 rounded-lg border p-4">
-                    <RadioGroupItem value="full" id="full" />
-                    <Label htmlFor="full" className="flex-1 cursor-pointer">
-                      <div>
-                        <div className="font-medium">Full Payment</div>
-                        <div className="text-muted-foreground text-sm">
-                          Pay entire series amount upfront
-                        </div>
-                      </div>
-                    </Label>
-                    <div className="font-semibold">
-                      ${selectedSeries.enrollmentRules.fullPaymentAmount}
-                    </div>
-                  </div>
-                </RadioGroup>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsEnrollmentModalOpen(false);
-                setSelectedSeries(null);
-                setSelectedPetId(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleEnroll}
-              disabled={
-                !selectedPetId ||
-                !agreedToCommitment ||
-                !allRequiredWaiversSigned(agreedWaivers) ||
-                !prerequisiteValidation?.eligible ||
-                isEnrolling
-              }
-            >
-              {isEnrolling ? "Enrolling..." : "Enroll & Pay"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Course Details Modal */}
-      <Dialog
-        open={isCourseDetailsModalOpen}
-        onOpenChange={setIsCourseDetailsModalOpen}
-      >
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Course Details</DialogTitle>
-            <DialogDescription>
-              {selectedCourseDetails?.courseTypeName}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedCourseDetails && (
-            <div className="space-y-6 py-4">
-              {/* Description */}
-              <div className="space-y-2">
-                <h3 className="font-semibold">Description</h3>
-                <p className="text-muted-foreground text-sm">
-                  {selectedCourseType?.description ||
-                    "No description available."}
-                </p>
-              </div>
-
-              <Separator />
-
-              {/* What You Will Learn */}
-              {selectedCourseType?.whatYouWillLearn &&
-                selectedCourseType.whatYouWillLearn.length > 0 && (
-                  <>
-                    <div className="space-y-2">
-                      <h3 className="font-semibold">What You Will Learn</h3>
-                      <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
-                        {selectedCourseType.whatYouWillLearn.map(
-                          (item, index) => (
-                            <li key={index}>{item}</li>
-                          ),
-                        )}
-                      </ul>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-              {/* What to Bring */}
-              {selectedCourseType?.whatToBring &&
-                selectedCourseType.whatToBring.length > 0 && (
-                  <>
-                    <div className="space-y-2">
-                      <h3 className="font-semibold">What to Bring</h3>
-                      <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
-                        {selectedCourseType.whatToBring.map((item, index) => (
-                          <li key={index}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-              {/* Prerequisites */}
-              <div className="space-y-2">
-                <h3 className="font-semibold">Prerequisites</h3>
-                <div className="space-y-2">
-                  {selectedCourseType?.requiredVaccines &&
-                    selectedCourseType.requiredVaccines.length > 0 && (
-                      <div>
-                        <p className="mb-1 text-sm font-medium">
-                          Required Vaccinations:
-                        </p>
-                        <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
-                          {selectedCourseType.requiredVaccines.map(
-                            (vaccine, index) => (
-                              <li key={index}>{vaccine}</li>
-                            ),
-                          )}
-                        </ul>
-                      </div>
-                    )}
-                  {selectedCourseType?.prerequisites &&
-                    selectedCourseType.prerequisites.length > 0 && (
-                      <div>
-                        <p className="mb-1 text-sm font-medium">
-                          Required Courses:
-                        </p>
-                        <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
-                          {selectedCourseType.prerequisites.map(
-                            (prereqId, index) => {
-                              const prereqCourse =
-                                defaultTrainingCourseTypes.find(
-                                  (ct) => ct.id === prereqId,
-                                );
-                              return (
-                                <li key={index}>
-                                  {prereqCourse?.name || prereqId}
-                                </li>
-                              );
-                            },
-                          )}
-                        </ul>
-                      </div>
-                    )}
-                  {(!selectedCourseType?.requiredVaccines ||
-                    selectedCourseType.requiredVaccines.length === 0) &&
-                    (!selectedCourseType?.prerequisites ||
-                      selectedCourseType.prerequisites.length === 0) && (
-                      <p className="text-muted-foreground text-sm">
-                        No prerequisites required.
-                      </p>
-                    )}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Cancellation Policy */}
-              {selectedCourseType?.cancellationPolicy && (
-                <>
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">Cancellation Policy</h3>
-                    <p className="text-muted-foreground text-sm">
-                      {selectedCourseType.cancellationPolicy}
-                    </p>
-                  </div>
-                  <Separator />
-                </>
               )}
 
-              {/* Refund Policy */}
-              {selectedCourseType?.refundPolicy && (
-                <div className="space-y-2">
-                  <h3 className="font-semibold">Refund Policy</h3>
-                  <p className="text-muted-foreground text-sm">
-                    {selectedCourseType.refundPolicy}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsCourseDetailsModalOpen(false);
-                setSelectedCourseDetails(null);
-              }}
-            >
-              Close
-            </Button>
-            {selectedCourseDetails &&
-              getSpotsLeft(selectedCourseDetails) > 0 && (
+              <DialogFooter>
                 <Button
+                  variant="outline"
                   onClick={() => {
                     setIsCourseDetailsModalOpen(false);
-                    handleEnrollClick(selectedCourseDetails);
+                    setSelectedCourseDetails(null);
                   }}
                 >
-                  Enroll Now
+                  Close
                 </Button>
-              )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                {selectedCourseDetails &&
+                  getSpotsLeft(selectedCourseDetails) > 0 && (
+                    <Button
+                      onClick={() => {
+                        setIsCourseDetailsModalOpen(false);
+                        handleEnrollClick(selectedCourseDetails);
+                      }}
+                    >
+                      Enroll Now
+                    </Button>
+                  )}
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
-      {/* Program-level waitlist signup — fired from the catalog card when
+          {/* Program-level waitlist signup — fired from the catalog card when
           every matching upcoming series is at capacity. */}
-      {customer && (
-        <ProgramWaitlistDialog
-          open={isProgramWaitlistOpen}
-          onOpenChange={(o) => {
-            setIsProgramWaitlistOpen(o);
-            if (!o) setWaitlistProgram(null);
-          }}
-          program={waitlistProgram}
-          customer={customer}
-          matchingSeries={
-            waitlistProgram
-              ? matchSeriesForCourse(waitlistProgram, series)
-              : []
-          }
-        />
-      )}
-
-      {/* Waitlist Modal */}
-      <Dialog open={isWaitlistModalOpen} onOpenChange={setIsWaitlistModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Join Waitlist</DialogTitle>
-            <DialogDescription>
-              This series is full. Join the waitlist to be notified when a spot
-              opens.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>
-                Select Pet <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={selectedPetId?.toString() || ""}
-                onValueChange={(value) => setSelectedPetId(parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose which pet..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {customer?.pets
-                    .filter((p) => p.type === "Dog")
-                    .map((pet) => (
-                      <SelectItem key={pet.id} value={pet.id.toString()}>
-                        {pet.name} - {pet.breed}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {waitlistPosition && (
-              <div className="bg-muted rounded-lg p-4">
-                <p className="text-sm">
-                  If you join now, your position will be{" "}
-                  <strong>#{waitlistPosition}</strong>. You&apos;ll receive an
-                  SMS notification when a spot opens, with a 24-hour window to
-                  claim it.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsWaitlistModalOpen(false);
-                setSelectedSeries(null);
-                setSelectedPetId(null);
+          {customer && (
+            <ProgramWaitlistDialog
+              open={isProgramWaitlistOpen}
+              onOpenChange={(o) => {
+                setIsProgramWaitlistOpen(o);
+                if (!o) setWaitlistProgram(null);
               }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleJoinWaitlist} disabled={!selectedPetId}>
-              Join Waitlist
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              program={waitlistProgram}
+              customer={customer}
+              matchingSeries={
+                waitlistProgram
+                  ? matchSeriesForCourse(waitlistProgram, series)
+                  : []
+              }
+            />
+          )}
 
-      {/* Drop-In Dialog — single-session purchase */}
-      <DropInDialog
-        open={!!dropInSeries}
-        onOpenChange={(o) => {
-          if (!o) setDropInSeries(null);
-        }}
-        series={dropInSeries}
-        pets={customer?.pets ?? []}
-      />
+          {/* Waitlist Modal */}
+          <Dialog
+            open={isWaitlistModalOpen}
+            onOpenChange={setIsWaitlistModalOpen}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Join Waitlist</DialogTitle>
+                <DialogDescription>
+                  This series is full. Join the waitlist to be notified when a
+                  spot opens.
+                </DialogDescription>
+              </DialogHeader>
 
-      {/* Enrollment Confirmation — full schedule + what to bring */}
-      <EnrollmentConfirmationDialog
-        open={!!confirmation}
-        onOpenChange={(o) => {
-          if (!o) setConfirmation(null);
-        }}
-        series={confirmation?.series ?? null}
-        petName={confirmation?.petName ?? null}
-        courseType={confirmation?.courseType ?? null}
-        paymentLabel={confirmation?.paymentLabel ?? ""}
-        onAddToCalendar={() => {
-          if (!confirmation) return;
-          const sessionDates = calculateSessionDates(
-            confirmation.series.startDate,
-            confirmation.series.dayOfWeek,
-            confirmation.series.numberOfWeeks,
-          );
-          const icsContent = generateICSForSessions(
-            confirmation.series,
-            sessionDates,
-            confirmation.petName,
-            selectedFacility?.name || "Facility",
-          );
-          downloadICSFile(
-            icsContent,
-            `${confirmation.series.seriesName.replace(/\s+/g, "-")}-sessions.ics`,
-          );
-          toast.success("Calendar file downloaded");
-        }}
-      />
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>
+                    Select Pet <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={selectedPetId?.toString() || ""}
+                    onValueChange={(value) => setSelectedPetId(parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose which pet..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customer?.pets
+                        .filter((p) => p.type === "Dog")
+                        .map((pet) => (
+                          <SelectItem key={pet.id} value={pet.id.toString()}>
+                            {pet.name} - {pet.breed}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {waitlistPosition && (
+                  <div className="bg-muted rounded-lg p-4">
+                    <p className="text-sm">
+                      If you join now, your position will be{" "}
+                      <strong>#{waitlistPosition}</strong>. You&apos;ll receive
+                      an SMS notification when a spot opens, with a 24-hour
+                      window to claim it.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsWaitlistModalOpen(false);
+                    setSelectedSeries(null);
+                    setSelectedPetId(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleJoinWaitlist} disabled={!selectedPetId}>
+                  Join Waitlist
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Drop-In Dialog — single-session purchase */}
+          <DropInDialog
+            open={!!dropInSeries}
+            onOpenChange={(o) => {
+              if (!o) setDropInSeries(null);
+            }}
+            series={dropInSeries}
+            pets={customer?.pets ?? []}
+          />
+
+          {/* Enrollment Confirmation — full schedule + what to bring */}
+          <EnrollmentConfirmationDialog
+            open={!!confirmation}
+            onOpenChange={(o) => {
+              if (!o) setConfirmation(null);
+            }}
+            series={confirmation?.series ?? null}
+            petName={confirmation?.petName ?? null}
+            courseType={confirmation?.courseType ?? null}
+            paymentLabel={confirmation?.paymentLabel ?? ""}
+            onAddToCalendar={() => {
+              if (!confirmation) return;
+              const sessionDates = calculateSessionDates(
+                confirmation.series.startDate,
+                confirmation.series.dayOfWeek,
+                confirmation.series.numberOfWeeks,
+              );
+              const icsContent = generateICSForSessions(
+                confirmation.series,
+                sessionDates,
+                confirmation.petName,
+                selectedFacility?.name || "Facility",
+              );
+              downloadICSFile(
+                icsContent,
+                `${confirmation.series.seriesName.replace(/\s+/g, "-")}-sessions.ics`,
+              );
+              toast.success("Calendar file downloaded");
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="homework" className="space-y-4 pt-2">

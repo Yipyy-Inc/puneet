@@ -537,110 +537,110 @@ export function DayColumns({
         className="grid gap-2 sm:grid-cols-2 lg:grid-cols-7"
         style={{ minWidth: days.length >= 7 ? "630px" : undefined }}
       >
-      {days.map((day) => {
-        const dayEvents = getEventsForDay(events, day);
-        const visibleEvents = dayEvents.slice(0, visibleLimit);
-        const overflowCount = Math.max(
-          0,
-          dayEvents.length - visibleEvents.length,
-        );
-        const isToday = isSameDay(day, today);
-        const inCurrentMonth =
-          !showMonthMask || !anchorDate || isCurrentMonthDay(day, anchorDate);
+        {days.map((day) => {
+          const dayEvents = getEventsForDay(events, day);
+          const visibleEvents = dayEvents.slice(0, visibleLimit);
+          const overflowCount = Math.max(
+            0,
+            dayEvents.length - visibleEvents.length,
+          );
+          const isToday = isSameDay(day, today);
+          const inCurrentMonth =
+            !showMonthMask || !anchorDate || isCurrentMonthDay(day, anchorDate);
 
-        return (
-          <div
-            key={formatDateKey(day)}
-            className={cn(
-              "group relative flex flex-col overflow-hidden rounded-2xl border transition-all duration-200",
-              "hover:-translate-y-0.5 hover:shadow-lg",
-              inCurrentMonth
-                ? "border-slate-200/60 bg-white shadow-sm"
-                : "border-slate-100/80 bg-slate-50/60",
-              isToday &&
-                "border-sky-200/60 shadow-md ring-2 shadow-sky-100/60 ring-sky-400/40",
-            )}
-          >
-            {/* Day header */}
+          return (
             <div
+              key={formatDateKey(day)}
               className={cn(
-                "flex cursor-pointer items-center justify-between border-b px-3 py-2",
-                isToday
-                  ? "border-sky-700/30 bg-sky-600"
-                  : inCurrentMonth
-                    ? "border-slate-100 bg-slate-50"
-                    : "border-slate-100/60 bg-slate-50/60",
+                "group relative flex flex-col overflow-hidden rounded-2xl border transition-all duration-200",
+                "hover:-translate-y-0.5 hover:shadow-lg",
+                inCurrentMonth
+                  ? "border-slate-200/60 bg-white shadow-sm"
+                  : "border-slate-100/80 bg-slate-50/60",
+                isToday &&
+                  "border-sky-200/60 shadow-md ring-2 shadow-sky-100/60 ring-sky-400/40",
               )}
-              onClick={() => {
-                const slot = new Date(day);
-                slot.setHours(9, 0, 0, 0);
-                onSlotCreate?.(slot);
-              }}
             >
-              <span
+              {/* Day header */}
+              <div
                 className={cn(
-                  "text-[11px] font-bold tracking-tight",
+                  "flex cursor-pointer items-center justify-between border-b px-3 py-2",
                   isToday
-                    ? "text-white"
+                    ? "border-sky-700/30 bg-sky-600"
                     : inCurrentMonth
-                      ? "text-slate-700"
-                      : "text-slate-400",
+                      ? "border-slate-100 bg-slate-50"
+                      : "border-slate-100/60 bg-slate-50/60",
                 )}
+                onClick={() => {
+                  const slot = new Date(day);
+                  slot.setHours(9, 0, 0, 0);
+                  onSlotCreate?.(slot);
+                }}
               >
-                {day.toLocaleDateString("en-US", {
-                  weekday: days.length >= 14 ? "short" : "long",
-                  month: "short",
-                  day: "numeric",
-                })}
-              </span>
-              {dayEvents.length > 0 && (
                 <span
                   className={cn(
-                    "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold",
+                    "text-[11px] font-bold tracking-tight",
                     isToday
-                      ? "bg-white/20 text-white"
-                      : "bg-indigo-100 text-indigo-600",
+                      ? "text-white"
+                      : inCurrentMonth
+                        ? "text-slate-700"
+                        : "text-slate-400",
                   )}
                 >
-                  {dayEvents.length}
+                  {day.toLocaleDateString("en-US", {
+                    weekday: days.length >= 14 ? "short" : "long",
+                    month: "short",
+                    day: "numeric",
+                  })}
                 </span>
-              )}
-            </div>
+                {dayEvents.length > 0 && (
+                  <span
+                    className={cn(
+                      "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold",
+                      isToday
+                        ? "bg-white/20 text-white"
+                        : "bg-indigo-100 text-indigo-600",
+                    )}
+                  >
+                    {dayEvents.length}
+                  </span>
+                )}
+              </div>
 
-            {/* Events area */}
-            <div
-              className="flex flex-1 flex-col gap-1.5 p-2"
-              onClick={(e) => {
-                const target = e.target as HTMLElement;
-                if (target.closest("[data-calendar-event-chip]")) return;
-                const slot = new Date(day);
-                slot.setHours(9, 0, 0, 0);
-                onSlotCreate?.(slot);
-              }}
-            >
-              {visibleEvents.map((ev) => (
-                <EventChip
-                  key={ev.id}
-                  event={ev}
-                  renderSettings={renderSettings}
-                  onEventClick={onEventClick}
-                  onMarkEventComplete={onMarkEventComplete}
-                />
-              ))}
-              {overflowCount > 0 && (
-                <p className="pt-0.5 pl-2 text-[10px] font-semibold text-indigo-400">
-                  +{overflowCount} more
-                </p>
-              )}
-              {dayEvents.length === 0 && (
-                <p className="py-3 text-center text-[10px] text-slate-300 select-none">
-                  No events
-                </p>
-              )}
+              {/* Events area */}
+              <div
+                className="flex flex-1 flex-col gap-1.5 p-2"
+                onClick={(e) => {
+                  const target = e.target as HTMLElement;
+                  if (target.closest("[data-calendar-event-chip]")) return;
+                  const slot = new Date(day);
+                  slot.setHours(9, 0, 0, 0);
+                  onSlotCreate?.(slot);
+                }}
+              >
+                {visibleEvents.map((ev) => (
+                  <EventChip
+                    key={ev.id}
+                    event={ev}
+                    renderSettings={renderSettings}
+                    onEventClick={onEventClick}
+                    onMarkEventComplete={onMarkEventComplete}
+                  />
+                ))}
+                {overflowCount > 0 && (
+                  <p className="pt-0.5 pl-2 text-[10px] font-semibold text-indigo-400">
+                    +{overflowCount} more
+                  </p>
+                )}
+                {dayEvents.length === 0 && (
+                  <p className="py-3 text-center text-[10px] text-slate-300 select-none">
+                    No events
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
       </div>
     </div>
   );

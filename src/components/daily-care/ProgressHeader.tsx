@@ -20,7 +20,8 @@ export function ProgressHeader({
   guestCount,
   date,
 }: Props) {
-  const pct = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+  const pct =
+    totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
   const dateLabel = new Date(date + "T00:00:00").toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -34,8 +35,8 @@ export function ProgressHeader({
           <div>
             <h1 className="text-xl font-bold tracking-tight">Daily Care</h1>
             <p className="text-muted-foreground mt-0.5 text-sm">
-              {dateLabel} · {guestCount}{" "}
-              {guestCount === 1 ? "pet" : "pets"} in facility
+              {dateLabel} · {guestCount} {guestCount === 1 ? "pet" : "pets"} in
+              facility
             </p>
           </div>
 
@@ -45,7 +46,7 @@ export function ProgressHeader({
               {completedTasks} done
             </Badge>
             <Badge variant="outline" className="gap-1">
-              <Clock className="size-3 text-muted-foreground" />
+              <Clock className="text-muted-foreground size-3" />
               {totalTasks - completedTasks} remaining
             </Badge>
             {overdueTasks > 0 && (

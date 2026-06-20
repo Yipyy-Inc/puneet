@@ -121,11 +121,14 @@ export function ReputationChannelFlowBuilder({
   return (
     <div className="space-y-4">
       {/* Display weighting toggle */}
-      <label className="flex items-start justify-between gap-3 rounded-xl border bg-card p-3">
+      <label className="bg-card flex items-start justify-between gap-3 rounded-xl border p-3">
         <span>
-          <span className="block text-sm font-medium">Distribute by weight</span>
+          <span className="block text-sm font-medium">
+            Distribute by weight
+          </span>
           <span className="text-muted-foreground block text-xs">
-            Send reviewers to channels by % share (e.g. Google 60% / Yelp 40%) instead of fixed order.
+            Send reviewers to channels by % share (e.g. Google 60% / Yelp 40%)
+            instead of fixed order.
           </span>
         </span>
         <Switch
@@ -136,15 +139,17 @@ export function ReputationChannelFlowBuilder({
       </label>
 
       {/* Live flow preview */}
-      <div className="rounded-xl border bg-muted/30 p-3">
-        <p className="text-muted-foreground mb-2 text-[11px] font-semibold uppercase tracking-wide">
-          {weighting ? "Reviewers are split across" : "Happy reviewers are routed to"}
+      <div className="bg-muted/30 rounded-xl border p-3">
+        <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-wide uppercase">
+          {weighting
+            ? "Reviewers are split across"
+            : "Happy reviewers are routed to"}
         </p>
         {enabledFlow.length > 0 ? (
           <div className="flex flex-wrap items-center gap-1.5">
             {enabledFlow.map((p, i) => (
               <span key={p} className="flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs font-medium">
+                <span className="bg-background inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium">
                   <span
                     className={cn(
                       "flex size-4 items-center justify-center rounded-full text-[10px] font-bold",
@@ -168,7 +173,8 @@ export function ReputationChannelFlowBuilder({
           </div>
         ) : (
           <p className="text-muted-foreground text-xs">
-            No public channels enabled — happy reviews stay internal until you turn one on.
+            No public channels enabled — happy reviews stay internal until you
+            turn one on.
           </p>
         )}
       </div>
@@ -189,7 +195,7 @@ export function ReputationChannelFlowBuilder({
               }}
               onDrop={() => handleDrop(platform)}
               className={cn(
-                "rounded-xl border bg-card transition-all",
+                "bg-card rounded-xl border transition-all",
                 isDragOver && "border-amber-400 ring-1 ring-amber-300",
                 !cfg.enabled && "opacity-60",
               )}
@@ -260,7 +266,7 @@ export function ReputationChannelFlowBuilder({
               </div>
 
               {cfg.enabled && (
-                <div className="space-y-2 border-t px-3 pb-3 pt-2">
+                <div className="space-y-2 border-t px-3 pt-2 pb-3">
                   <Label className="text-muted-foreground block text-xs">
                     Direct review page URL
                   </Label>
@@ -275,7 +281,8 @@ export function ReputationChannelFlowBuilder({
                   {platform === "google" && (
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-muted-foreground text-[11px]">
-                        Paste a Google Maps link and optimize it to land clients on the review box.
+                        Paste a Google Maps link and optimize it to land clients
+                        on the review box.
                       </p>
                       <Button
                         type="button"
@@ -291,7 +298,9 @@ export function ReputationChannelFlowBuilder({
                   )}
                   {weighting && (
                     <div className="flex items-center gap-2">
-                      <Label className="text-muted-foreground text-xs">Weight</Label>
+                      <Label className="text-muted-foreground text-xs">
+                        Weight
+                      </Label>
                       <div className="relative w-24">
                         <Input
                           type="number"
@@ -304,7 +313,7 @@ export function ReputationChannelFlowBuilder({
                           }
                           className="h-8 pr-9 text-sm"
                         />
-                        <span className="text-muted-foreground pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs">
+                        <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-xs">
                           pts
                         </span>
                       </div>
@@ -342,7 +351,7 @@ export function ReputationChannelFlowBuilder({
                   key={p}
                   type="button"
                   onClick={() => addPlatform(p)}
-                  className="hover:border-amber-400 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 flex items-center gap-2 rounded-lg border p-2.5 text-left transition-colors"
+                  className="flex items-center gap-2 rounded-lg border p-2.5 text-left transition-colors hover:border-amber-400 hover:bg-amber-50/50 dark:hover:bg-amber-950/20"
                 >
                   <span
                     className={cn(

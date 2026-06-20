@@ -26,7 +26,10 @@ interface Props {
   ownerName: string;
 }
 
-const SEVERITY_CONFIG: Record<string, { label: string; dot: string; row: string }> = {
+const SEVERITY_CONFIG: Record<
+  string,
+  { label: string; dot: string; row: string }
+> = {
   critical: {
     label: "text-red-700 dark:text-red-400",
     dot: "bg-red-500",
@@ -49,7 +52,10 @@ const SEVERITY_CONFIG: Record<string, { label: string; dot: string; row: string 
   },
 };
 
-const STATUS_CONFIG: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
+const STATUS_CONFIG: Record<
+  string,
+  { icon: React.ReactNode; label: string; color: string }
+> = {
   open: {
     icon: <AlertCircle className="size-3" />,
     label: "Open",
@@ -101,26 +107,26 @@ export function ReservationIncidentPanel({
     <>
       <div
         data-alert={hasOpen}
-        className="overflow-hidden rounded-xl border transition-colors data-[alert=true]:border-red-200 data-[alert=false]:border-border dark:data-[alert=true]:border-red-800"
+        className="data-[alert=false]:border-border overflow-hidden rounded-xl border transition-colors data-[alert=true]:border-red-200 dark:data-[alert=true]:border-red-800"
       >
         {/* Header */}
         <div
           data-alert={hasOpen}
-          className="flex items-center justify-between px-4 py-3 data-[alert=true]:bg-red-50/60 data-[alert=false]:bg-muted/30 dark:data-[alert=true]:bg-red-900/10 dark:data-[alert=false]:bg-muted/10"
+          className="data-[alert=false]:bg-muted/30 dark:data-[alert=false]:bg-muted/10 flex items-center justify-between px-4 py-3 data-[alert=true]:bg-red-50/60 dark:data-[alert=true]:bg-red-900/10"
         >
           <div className="flex items-center gap-2.5">
             <div
               data-alert={hasOpen}
-              className="flex size-7 items-center justify-center rounded-lg data-[alert=true]:bg-red-100 data-[alert=false]:bg-muted dark:data-[alert=true]:bg-red-900/30"
+              className="data-[alert=false]:bg-muted flex size-7 items-center justify-center rounded-lg data-[alert=true]:bg-red-100 dark:data-[alert=true]:bg-red-900/30"
             >
               {hasOpen ? (
                 <Siren className="size-3.5 text-red-600 dark:text-red-400" />
               ) : (
-                <ShieldCheck className="size-3.5 text-muted-foreground" />
+                <ShieldCheck className="text-muted-foreground size-3.5" />
               )}
             </div>
             <div>
-              <p className="text-sm font-semibold leading-none">
+              <p className="text-sm leading-none font-semibold">
                 Incident Reports
               </p>
               {hasOpen ? (
@@ -152,8 +158,10 @@ export function ReservationIncidentPanel({
         {linkedIncidents.length > 0 && (
           <div className="divide-y">
             {linkedIncidents.map((incident) => {
-              const sev = SEVERITY_CONFIG[incident.severity] ?? SEVERITY_CONFIG.low;
-              const status = STATUS_CONFIG[incident.status] ?? STATUS_CONFIG.closed;
+              const sev =
+                SEVERITY_CONFIG[incident.severity] ?? SEVERITY_CONFIG.low;
+              const status =
+                STATUS_CONFIG[incident.status] ?? STATUS_CONFIG.closed;
               return (
                 <button
                   key={incident.id}
@@ -161,25 +169,31 @@ export function ReservationIncidentPanel({
                   className={`group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${sev.row}`}
                 >
                   {/* Severity dot */}
-                  <span className={`mt-0.5 size-2 shrink-0 rounded-full ${sev.dot}`} />
+                  <span
+                    className={`mt-0.5 size-2 shrink-0 rounded-full ${sev.dot}`}
+                  />
 
                   {/* Content */}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                      <span className="text-sm font-semibold leading-snug">
+                      <span className="text-sm leading-snug font-semibold">
                         {incident.title}
                       </span>
-                      <span className="font-mono text-[10px] text-muted-foreground">
+                      <span className="text-muted-foreground font-mono text-[10px]">
                         {incident.id}
                       </span>
                     </div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                      <span className={`flex items-center gap-1 text-xs font-medium ${status.color}`}>
+                      <span
+                        className={`flex items-center gap-1 text-xs font-medium ${status.color}`}
+                      >
                         {status.icon}
                         {status.label}
                       </span>
                       <span className="text-muted-foreground text-xs">·</span>
-                      <span className={`text-xs font-medium capitalize ${sev.label}`}>
+                      <span
+                        className={`text-xs font-medium capitalize ${sev.label}`}
+                      >
                         {incident.severity}
                       </span>
                       <span className="text-muted-foreground text-xs">·</span>
@@ -190,7 +204,7 @@ export function ReservationIncidentPanel({
                   </div>
 
                   {/* Arrow */}
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground opacity-40 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
+                  <ChevronRight className="text-muted-foreground size-4 shrink-0 opacity-40 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
                 </button>
               );
             })}
@@ -213,7 +227,9 @@ export function ReservationIncidentPanel({
       {/* View incident modal */}
       <Dialog
         open={!!selected}
-        onOpenChange={(open) => { if (!open) setSelected(null); }}
+        onOpenChange={(open) => {
+          if (!open) setSelected(null);
+        }}
       >
         <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           {selected && (

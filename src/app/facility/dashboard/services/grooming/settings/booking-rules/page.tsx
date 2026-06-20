@@ -292,9 +292,7 @@ export default function GroomingBookingRulesPage() {
         <CardContent className="space-y-5">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
-              <p className="text-sm font-medium">
-                Enable Smart Scheduling
-              </p>
+              <p className="text-sm font-medium">Enable Smart Scheduling</p>
               <p className="text-muted-foreground text-xs">
                 Highlights buffer-clean slots and dims the rest. Off = every
                 non-conflicting slot is treated equally.
@@ -328,7 +326,7 @@ export default function GroomingBookingRulesPage() {
                   <SelectItem value="60">60 minutes</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-muted-foreground text-[10px]">
                 Drives how often a new start-time block appears on the slot
                 grid. 30 min is the industry default.
               </p>
@@ -344,14 +342,12 @@ export default function GroomingBookingRulesPage() {
                 onChange={(e) => {
                   const n = Number(e.target.value);
                   updateScheduling({
-                    defaultBufferMin: Number.isFinite(n)
-                      ? Math.max(0, n)
-                      : 0,
+                    defaultBufferMin: Number.isFinite(n) ? Math.max(0, n) : 0,
                   });
                 }}
                 disabled={!smartSchedulingEnabled}
               />
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-muted-foreground text-[10px]">
                 Used by Smart Scheduling when a groomer doesn&apos;t have a
                 per-groomer buffer configured below.
               </p>

@@ -1,5 +1,8 @@
 function normalize(name) {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 function findDisciplineIdByName(className, items) {
   const normalized = normalize(className);
@@ -13,8 +16,14 @@ function findDisciplineIdByName(className, items) {
 }
 
 const courseTypes = [
-  { name: "Basic Obedience / Beginner Manners", disciplineId: "discipline-obedience" },
-  { name: "Intermediate / Level 2 Obedience", disciplineId: "discipline-obedience" },
+  {
+    name: "Basic Obedience / Beginner Manners",
+    disciplineId: "discipline-obedience",
+  },
+  {
+    name: "Intermediate / Level 2 Obedience",
+    disciplineId: "discipline-obedience",
+  },
   { name: "Advanced Obedience", disciplineId: "discipline-obedience" },
   { name: "Reactive Rover Recovery", disciplineId: "discipline-behavior" },
   { name: "Puppy Preschool", disciplineId: "discipline-puppy" },

@@ -110,10 +110,7 @@ export function HomeworkBoard() {
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  const todayISO = useMemo(
-    () => new Date().toISOString().split("T")[0]!,
-    [],
-  );
+  const todayISO = useMemo(() => new Date().toISOString().split("T")[0]!, []);
 
   const { data: homeworkRecords = [] } = useQuery(
     trainingQueries.allHomework(),
@@ -236,9 +233,7 @@ export function HomeworkBoard() {
       ...row.homework,
       nextDueDate: nextDue,
     });
-    toast.success(
-      `${row.petName}: next practice ${formatDate(nextDue)}.`,
-    );
+    toast.success(`${row.petName}: next practice ${formatDate(nextDue)}.`);
   }
 
   function toggleComplete(row: HomeworkBoardRow) {
@@ -273,7 +268,7 @@ export function HomeworkBoard() {
       render: (row) => (
         <div className="flex items-center gap-2">
           {row.petImageUrl ? (
-            <div className="size-9 overflow-hidden rounded-xl ring-2 ring-white shadow-sm">
+            <div className="size-9 overflow-hidden rounded-xl shadow-sm ring-2 ring-white">
               <Image
                 src={row.petImageUrl}
                 alt={row.petName}
@@ -283,7 +278,7 @@ export function HomeworkBoard() {
               />
             </div>
           ) : (
-            <div className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-xl ring-2 ring-white shadow-sm">
+            <div className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-xl shadow-sm ring-2 ring-white">
               <PawPrint className="size-4" />
             </div>
           )}
@@ -341,11 +336,12 @@ export function HomeworkBoard() {
       key: "assigned",
       label: "Assigned",
       sortable: true,
-      sortValue: (row) =>
-        row.homework.unlockedDate ?? row.homework.sessionDate,
+      sortValue: (row) => row.homework.unlockedDate ?? row.homework.sessionDate,
       render: (row) => (
         <div className="text-xs text-slate-600">
-          <p>{formatDate(row.homework.unlockedDate ?? row.homework.sessionDate)}</p>
+          <p>
+            {formatDate(row.homework.unlockedDate ?? row.homework.sessionDate)}
+          </p>
           <p className="text-muted-foreground text-[10px]">
             {relativeLabel(
               row.homework.unlockedDate ?? row.homework.sessionDate,
@@ -416,7 +412,7 @@ export function HomeworkBoard() {
                 Practiced today
               </Badge>
               {streak >= 2 && (
-                <span className="text-orange-600 inline-flex items-center gap-1 text-[10px] font-medium">
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-orange-600">
                   <Flame className="size-3" />
                   {streak}-day streak
                 </span>
@@ -728,8 +724,8 @@ export function HomeworkBoard() {
               Delete &quot;{deleting?.homework.title}&quot;?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the homework from {deleting?.petName}&apos;s
-              record. Any progress on it won&apos;t be recoverable.
+              This removes the homework from {deleting?.petName}&apos;s record.
+              Any progress on it won&apos;t be recoverable.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

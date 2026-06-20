@@ -21,26 +21,24 @@ interface ConversationStateContextValue {
   getAssignee: (threadId: string) => MessagingStaff | undefined;
 }
 
-const ConversationStateContext = createContext<ConversationStateContextValue | null>(null);
+const ConversationStateContext =
+  createContext<ConversationStateContextValue | null>(null);
 
 export function ConversationStateProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [assignments, setAssignments] = useState<AssignmentMap>(
-    () => ({ ...defaultAssignments }),
-  );
+  const [assignments, setAssignments] = useState<AssignmentMap>(() => ({
+    ...defaultAssignments,
+  }));
   const [closed, setClosedState] = useState<ClosedSet>(
     () => new Set(defaultClosed),
   );
 
-  const assignTo = useCallback(
-    (threadId: string, staffId: string | null) => {
-      setAssignments((prev) => ({ ...prev, [threadId]: staffId ?? undefined }));
-    },
-    [],
-  );
+  const assignTo = useCallback((threadId: string, staffId: string | null) => {
+    setAssignments((prev) => ({ ...prev, [threadId]: staffId ?? undefined }));
+  }, []);
 
   const setClosed = useCallback((threadId: string, isClosed: boolean) => {
     setClosedState((prev) => {

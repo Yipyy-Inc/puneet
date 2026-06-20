@@ -67,7 +67,8 @@ export function resolveService(
   override: LocationServiceOverride | null,
 ): ResolvedService {
   const isUsingOverride = Boolean(
-    override && (override.priceOverride !== null || override.isActive === false),
+    override &&
+    (override.priceOverride !== null || override.isActive === false),
   );
   return {
     service,

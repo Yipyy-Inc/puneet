@@ -159,10 +159,7 @@ interface Props {
 
 export function TrainingProfileNotes({ petId, petName }: Props) {
   const queryClient = useQueryClient();
-  const todayISO = useMemo(
-    () => new Date().toISOString().split("T")[0],
-    [],
-  );
+  const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   const notesQuery = trainingQueries.trainerNotes();
   const { data: allNotes = [] } = useQuery(notesQuery);
@@ -182,10 +179,7 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
     const q = search.trim().toLowerCase();
     return petNotes
       .filter((n) => {
-        if (
-          categoryFilter !== ANY_CATEGORY &&
-          n.category !== categoryFilter
-        ) {
+        if (categoryFilter !== ANY_CATEGORY && n.category !== categoryFilter) {
           return false;
         }
         if (privacyFilter === "private" && !n.isPrivate) return false;
@@ -245,10 +239,13 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
   }
 
   function persistNote(next: TrainerNote, isEdit: boolean) {
-    queryClient.setQueryData<TrainerNote[]>(notesQuery.queryKey, (prev = []) => {
-      if (isEdit) return prev.map((n) => (n.id === next.id ? next : n));
-      return [next, ...prev];
-    });
+    queryClient.setQueryData<TrainerNote[]>(
+      notesQuery.queryKey,
+      (prev = []) => {
+        if (isEdit) return prev.map((n) => (n.id === next.id ? next : n));
+        return [next, ...prev];
+      },
+    );
   }
 
   function togglePin(target: TrainerNote) {
@@ -397,10 +394,13 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
       category: "general",
       isPrivate: true,
     };
-    queryClient.setQueryData<TrainerNote[]>(notesQuery.queryKey, (prev = []) => [
-      followUp,
-      ...prev.map((n) => (n.id === updated.id ? updated : n)),
-    ]);
+    queryClient.setQueryData<TrainerNote[]>(
+      notesQuery.queryKey,
+      (prev = []) => [
+        followUp,
+        ...prev.map((n) => (n.id === updated.id ? updated : n)),
+      ],
+    );
     toast.success("Alert deactivated.");
     setDeactivatingNote(null);
     setDeactivationReason("");
@@ -440,8 +440,8 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
 
       {/* Toolbar: search + filters + add ──────────────────────────── */}
       <div className="flex flex-wrap items-end gap-2">
-        <div className="relative flex-1 min-w-[180px]">
-          <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2" />
+        <div className="relative min-w-[180px] flex-1">
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -450,7 +450,7 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
           />
         </div>
         <div className="space-y-0.5">
-          <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          <Label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
             Category
           </Label>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -468,7 +468,7 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
           </Select>
         </div>
         <div className="space-y-0.5">
-          <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          <Label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
             Visibility
           </Label>
           <Select
@@ -539,10 +539,7 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
                 className="bg-card group relative flex items-stretch overflow-hidden rounded-xl border shadow-sm"
               >
                 {/* Category color stripe on the left edge */}
-                <span
-                  className={cn("w-1 shrink-0", meta.stripe)}
-                  aria-hidden
-                />
+                <span className={cn("w-1 shrink-0", meta.stripe)} aria-hidden />
                 <div className="min-w-0 flex-1 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2">
@@ -560,7 +557,8 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
                           )}
                         </p>
                         <p className="text-muted-foreground text-[10px] tabular-nums">
-                          {formatDate(n.date)} · {relativeDays(n.date, todayISO)}
+                          {formatDate(n.date)} ·{" "}
+                          {relativeDays(n.date, todayISO)}
                         </p>
                       </div>
                     </div>
@@ -709,8 +707,8 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
               {editingNote ? "Edit note" : `New note for ${petName}`}
             </DialogTitle>
             <DialogDescription>
-              Log a behavioral observation, training strategy note, or
-              reminder. Private notes stay between staff.
+              Log a behavioral observation, training strategy note, or reminder.
+              Private notes stay between staff.
             </DialogDescription>
           </DialogHeader>
 
@@ -783,9 +781,9 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
                   Mark as Active Alert
                 </p>
                 <p className="text-muted-foreground text-[11px]">
-                  Surfaces this note at the top of the profile, on the
-                  calendar appointment card, and in the pre-session briefing.
-                  Stays active until a trainer or manager deactivates it.
+                  Surfaces this note at the top of the profile, on the calendar
+                  appointment card, and in the pre-session briefing. Stays
+                  active until a trainer or manager deactivates it.
                 </p>
               </div>
               <Switch
@@ -832,22 +830,21 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <BellOff className="text-rose-600 size-4" />
+              <BellOff className="size-4 text-rose-600" />
               Deactivate alert?
             </DialogTitle>
             <DialogDescription>
-              The alert stops showing on the profile banner, calendar cards,
-              and briefing. Add a short reason so the audit trail explains
-              the lift.
+              The alert stops showing on the profile banner, calendar cards, and
+              briefing. Add a short reason so the audit trail explains the lift.
             </DialogDescription>
           </DialogHeader>
           {deactivatingNote && (
             <div className="space-y-3 py-1">
               <div className="rounded-lg border border-rose-200 bg-rose-50/60 px-3 py-2">
-                <p className="text-rose-900 text-[11px] font-bold uppercase tracking-wider">
+                <p className="text-[11px] font-bold tracking-wider text-rose-900 uppercase">
                   Current alert
                 </p>
-                <p className="text-rose-900 mt-0.5 text-[13px]/relaxed">
+                <p className="mt-0.5 text-[13px]/relaxed text-rose-900">
                   {deactivatingNote.note}
                 </p>
               </div>

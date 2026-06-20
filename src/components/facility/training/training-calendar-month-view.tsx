@@ -1,10 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type {
-  TrainingClass,
-  TrainingSession,
-} from "@/types/training";
+import type { TrainingClass, TrainingSession } from "@/types/training";
 import {
   DAY_ABBR,
   formatISODate,
@@ -51,7 +48,7 @@ export function TrainingCalendarMonthView({
             return (
               <div
                 key={idx}
-                className="min-h-[110px] border-b border-r bg-slate-50/40"
+                className="min-h-[110px] border-r border-b bg-slate-50/40"
               />
             );
           }
@@ -62,8 +59,7 @@ export function TrainingCalendarMonthView({
           const daySessions = sessions
             .filter((s) => s.date === ds && s.status !== "cancelled")
             .sort(
-              (a, b) =>
-                timeToMinutes(a.startTime) - timeToMinutes(b.startTime),
+              (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime),
             );
           const groupCount = daySessions.filter(
             (s) => classesById[s.classId]?.classType !== "private",
@@ -78,7 +74,7 @@ export function TrainingCalendarMonthView({
               type="button"
               onClick={() => onDayClick(ds)}
               className={cn(
-                "hover:bg-muted/40 flex min-h-[110px] flex-col gap-1 border-b border-r p-2 text-left transition-colors",
+                "hover:bg-muted/40 flex min-h-[110px] flex-col gap-1 border-r border-b p-2 text-left transition-colors",
                 !inMonth && "text-muted-foreground/50",
                 isSelected && "bg-indigo-50/60 dark:bg-indigo-950/20",
               )}

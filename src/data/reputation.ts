@@ -11,12 +11,42 @@ import type {
 export const reputationSettings: ReputationSettings = {
   enabled: true,
   triggers: [
-    { event: "boarding_checkout", label: "Boarding Checkout", enabled: true, serviceType: "core" },
-    { event: "daycare_checkout", label: "Daycare Checkout", enabled: true, serviceType: "core" },
-    { event: "grooming_completed", label: "Grooming Completed", enabled: true, serviceType: "core" },
-    { event: "training_session_completed", label: "Training Session Completed", enabled: true, serviceType: "core" },
-    { event: "invoice_paid", label: "Invoice Paid", enabled: false, serviceType: "core" },
-    { event: "retail_purchase", label: "Retail Purchase", enabled: false, serviceType: "core" },
+    {
+      event: "boarding_checkout",
+      label: "Boarding Checkout",
+      enabled: true,
+      serviceType: "core",
+    },
+    {
+      event: "daycare_checkout",
+      label: "Daycare Checkout",
+      enabled: true,
+      serviceType: "core",
+    },
+    {
+      event: "grooming_completed",
+      label: "Grooming Completed",
+      enabled: true,
+      serviceType: "core",
+    },
+    {
+      event: "training_session_completed",
+      label: "Training Session Completed",
+      enabled: true,
+      serviceType: "core",
+    },
+    {
+      event: "invoice_paid",
+      label: "Invoice Paid",
+      enabled: false,
+      serviceType: "core",
+    },
+    {
+      event: "retail_purchase",
+      label: "Retail Purchase",
+      enabled: false,
+      serviceType: "core",
+    },
   ],
   delay: "1hour",
   customDelayMinutes: undefined,
@@ -74,7 +104,8 @@ export const reputationSettings: ReputationSettings = {
         fr: {
           smsBody:
             "Bonjour {{client.first_name}} ! Merci d'avoir confié {{pet.names}} pour un {{service.name}} aujourd'hui 🐾 Comment avons-nous fait ? {{survey.link}}",
-          emailSubject: "Comment s'est passée la visite {{service.name}} de {{pet.names}} ?",
+          emailSubject:
+            "Comment s'est passée la visite {{service.name}} de {{pet.names}} ?",
           emailBody:
             "Bonjour {{client.first_name}},\n\nMerci de nous avoir confié {{pet.names}} pour un {{service.name}} ! {{staff.first_name}} et l'équipe aimeraient savoir comment cela s'est passé — quelques secondes suffisent.\n\n{{survey.link}}\n\nÀ bientôt,\n{{staff.first_name}} et l'équipe",
         },
@@ -94,10 +125,26 @@ export const reputationSettings: ReputationSettings = {
   ],
   localization: { enabled: false, locales: ["en", "fr"] },
   escalationRoutes: [
-    { service: "grooming", staffIds: ["staff-003"], staffNames: ["David Wilson"] },
-    { service: "training", staffIds: ["staff-004"], staffNames: ["Lisa Rodriguez"] },
-    { service: "daycare", staffIds: ["staff-005"], staffNames: ["Tom Anderson"] },
-    { service: "default", staffIds: ["staff-006"], staffNames: ["Manager One"] },
+    {
+      service: "grooming",
+      staffIds: ["staff-003"],
+      staffNames: ["David Wilson"],
+    },
+    {
+      service: "training",
+      staffIds: ["staff-004"],
+      staffNames: ["Lisa Rodriguez"],
+    },
+    {
+      service: "daycare",
+      staffIds: ["staff-005"],
+      staffNames: ["Tom Anderson"],
+    },
+    {
+      service: "default",
+      staffIds: ["staff-006"],
+      staffNames: ["Manager One"],
+    },
   ],
   protectionRules: {
     blockOnCancelled: true,
@@ -147,16 +194,33 @@ export const reputationRequests: ReputationRequest[] = [
     publicLinkClickedAt: "2026-04-28T11:37:00Z",
     publicPlatform: "google",
     remindersCount: 0,
-    clientComment: "Max absolutely loved his stay! Emma was incredible with him. Will definitely be back!",
+    clientComment:
+      "Max absolutely loved his stay! Emma was incredible with him. Will definitely be back!",
     escalatedToManager: false,
     taskCreated: false,
     isApprovedForPublicDisplay: true,
     isPubliclyDisplayed: true,
     auditLog: [
-      { id: "al-001a", timestamp: "2026-04-28T10:00:00Z", action: "Request sent via SMS" },
-      { id: "al-001b", timestamp: "2026-04-28T11:34:00Z", action: "Rating received: 5 stars" },
-      { id: "al-001c", timestamp: "2026-04-28T11:35:00Z", action: "Public push sent — Google, Facebook" },
-      { id: "al-001d", timestamp: "2026-04-28T11:37:00Z", action: "Client clicked Google review link" },
+      {
+        id: "al-001a",
+        timestamp: "2026-04-28T10:00:00Z",
+        action: "Request sent via SMS",
+      },
+      {
+        id: "al-001b",
+        timestamp: "2026-04-28T11:34:00Z",
+        action: "Rating received: 5 stars",
+      },
+      {
+        id: "al-001c",
+        timestamp: "2026-04-28T11:35:00Z",
+        action: "Public push sent — Google, Facebook",
+      },
+      {
+        id: "al-001d",
+        timestamp: "2026-04-28T11:37:00Z",
+        action: "Client clicked Google review link",
+      },
     ],
   },
   {
@@ -182,9 +246,21 @@ export const reputationRequests: ReputationRequest[] = [
     isApprovedForPublicDisplay: true,
     isPubliclyDisplayed: false,
     auditLog: [
-      { id: "al-002a", timestamp: "2026-04-28T14:00:00Z", action: "Request sent via Email" },
-      { id: "al-002b", timestamp: "2026-04-28T16:22:00Z", action: "Rating received: 5 stars" },
-      { id: "al-002c", timestamp: "2026-04-28T16:23:00Z", action: "Public push sent — Google, Facebook" },
+      {
+        id: "al-002a",
+        timestamp: "2026-04-28T14:00:00Z",
+        action: "Request sent via Email",
+      },
+      {
+        id: "al-002b",
+        timestamp: "2026-04-28T16:22:00Z",
+        action: "Rating received: 5 stars",
+      },
+      {
+        id: "al-002c",
+        timestamp: "2026-04-28T16:23:00Z",
+        action: "Public push sent — Google, Facebook",
+      },
     ],
   },
   {
@@ -207,7 +283,11 @@ export const reputationRequests: ReputationRequest[] = [
     isApprovedForPublicDisplay: false,
     isPubliclyDisplayed: false,
     auditLog: [
-      { id: "al-003a", timestamp: "2026-04-29T09:00:00Z", action: "Request sent via SMS" },
+      {
+        id: "al-003a",
+        timestamp: "2026-04-29T09:00:00Z",
+        action: "Request sent via SMS",
+      },
     ],
   },
   {
@@ -227,18 +307,43 @@ export const reputationRequests: ReputationRequest[] = [
     ratedAt: "2026-04-27T15:45:00Z",
     publicLinkClicked: false,
     remindersCount: 0,
-    feedbackText: "The session felt rushed and Daisy didn't get enough attention. Expected more one-on-one time.",
+    feedbackText:
+      "The session felt rushed and Daisy didn't get enough attention. Expected more one-on-one time.",
     escalatedToManager: true,
     taskCreated: true,
     isApprovedForPublicDisplay: false,
     isPubliclyDisplayed: false,
     auditLog: [
-      { id: "al-004a", timestamp: "2026-04-27T13:00:00Z", action: "Request sent via Email" },
-      { id: "al-004b", timestamp: "2026-04-27T15:45:00Z", action: "Rating received: 2 stars — negative" },
-      { id: "al-004c", timestamp: "2026-04-27T15:45:00Z", action: "Manager notified immediately" },
-      { id: "al-004d", timestamp: "2026-04-27T15:46:00Z", action: "Follow-up task created for manager" },
-      { id: "al-004e", timestamp: "2026-04-27T15:46:00Z", action: "Public review push blocked — negative rating" },
-      { id: "al-004f", timestamp: "2026-04-27T15:46:00Z", action: "Client paused from future requests for 14 days" },
+      {
+        id: "al-004a",
+        timestamp: "2026-04-27T13:00:00Z",
+        action: "Request sent via Email",
+      },
+      {
+        id: "al-004b",
+        timestamp: "2026-04-27T15:45:00Z",
+        action: "Rating received: 2 stars — negative",
+      },
+      {
+        id: "al-004c",
+        timestamp: "2026-04-27T15:45:00Z",
+        action: "Manager notified immediately",
+      },
+      {
+        id: "al-004d",
+        timestamp: "2026-04-27T15:46:00Z",
+        action: "Follow-up task created for manager",
+      },
+      {
+        id: "al-004e",
+        timestamp: "2026-04-27T15:46:00Z",
+        action: "Public review push blocked — negative rating",
+      },
+      {
+        id: "al-004f",
+        timestamp: "2026-04-27T15:46:00Z",
+        action: "Client paused from future requests for 14 days",
+      },
     ],
   },
   {
@@ -262,8 +367,16 @@ export const reputationRequests: ReputationRequest[] = [
     isApprovedForPublicDisplay: false,
     isPubliclyDisplayed: false,
     auditLog: [
-      { id: "al-005a", timestamp: "2026-04-26T10:00:00Z", action: "Request sent via SMS" },
-      { id: "al-005b", timestamp: "2026-04-27T10:00:00Z", action: "Reminder 1 sent — no response after 24h" },
+      {
+        id: "al-005a",
+        timestamp: "2026-04-26T10:00:00Z",
+        action: "Request sent via SMS",
+      },
+      {
+        id: "al-005b",
+        timestamp: "2026-04-27T10:00:00Z",
+        action: "Reminder 1 sent — no response after 24h",
+      },
     ],
   },
   {
@@ -285,16 +398,33 @@ export const reputationRequests: ReputationRequest[] = [
     publicLinkClickedAt: "2026-04-25T13:22:00Z",
     publicPlatform: "facebook",
     remindersCount: 0,
-    clientComment: "Great grooming session. Milo looks wonderful and the staff was very professional.",
+    clientComment:
+      "Great grooming session. Milo looks wonderful and the staff was very professional.",
     escalatedToManager: false,
     taskCreated: false,
     isApprovedForPublicDisplay: true,
     isPubliclyDisplayed: true,
     auditLog: [
-      { id: "al-006a", timestamp: "2026-04-25T11:00:00Z", action: "Request sent via Email" },
-      { id: "al-006b", timestamp: "2026-04-25T13:15:00Z", action: "Rating received: 4 stars" },
-      { id: "al-006c", timestamp: "2026-04-25T13:16:00Z", action: "Public push sent — Google, Facebook" },
-      { id: "al-006d", timestamp: "2026-04-25T13:22:00Z", action: "Client clicked Facebook review link" },
+      {
+        id: "al-006a",
+        timestamp: "2026-04-25T11:00:00Z",
+        action: "Request sent via Email",
+      },
+      {
+        id: "al-006b",
+        timestamp: "2026-04-25T13:15:00Z",
+        action: "Rating received: 4 stars",
+      },
+      {
+        id: "al-006c",
+        timestamp: "2026-04-25T13:16:00Z",
+        action: "Public push sent — Google, Facebook",
+      },
+      {
+        id: "al-006d",
+        timestamp: "2026-04-25T13:22:00Z",
+        action: "Client clicked Facebook review link",
+      },
     ],
   },
   {
@@ -314,15 +444,28 @@ export const reputationRequests: ReputationRequest[] = [
     ratedAt: "2026-04-24T14:00:00Z",
     publicLinkClicked: false,
     remindersCount: 0,
-    feedbackText: "Luna seemed fine but I noticed she was a bit stressed when I picked her up. Not sure what happened.",
+    feedbackText:
+      "Luna seemed fine but I noticed she was a bit stressed when I picked her up. Not sure what happened.",
     escalatedToManager: false,
     taskCreated: false,
     isApprovedForPublicDisplay: false,
     isPubliclyDisplayed: false,
     auditLog: [
-      { id: "al-007a", timestamp: "2026-04-24T09:30:00Z", action: "Request sent via SMS" },
-      { id: "al-007b", timestamp: "2026-04-24T14:00:00Z", action: "Rating received: 3 stars — neutral" },
-      { id: "al-007c", timestamp: "2026-04-24T14:00:00Z", action: "Internal feedback form shown — no public push" },
+      {
+        id: "al-007a",
+        timestamp: "2026-04-24T09:30:00Z",
+        action: "Request sent via SMS",
+      },
+      {
+        id: "al-007b",
+        timestamp: "2026-04-24T14:00:00Z",
+        action: "Rating received: 3 stars — neutral",
+      },
+      {
+        id: "al-007c",
+        timestamp: "2026-04-24T14:00:00Z",
+        action: "Internal feedback form shown — no public push",
+      },
     ],
   },
   {
@@ -344,16 +487,33 @@ export const reputationRequests: ReputationRequest[] = [
     publicLinkClickedAt: "2026-04-23T17:45:00Z",
     publicPlatform: "google",
     remindersCount: 0,
-    clientComment: "Noah is an exceptional trainer. Rocky has made tremendous progress. Highly recommend!",
+    clientComment:
+      "Noah is an exceptional trainer. Rocky has made tremendous progress. Highly recommend!",
     escalatedToManager: false,
     taskCreated: false,
     isApprovedForPublicDisplay: true,
     isPubliclyDisplayed: true,
     auditLog: [
-      { id: "al-008a", timestamp: "2026-04-23T15:00:00Z", action: "Request sent via Email" },
-      { id: "al-008b", timestamp: "2026-04-23T17:30:00Z", action: "Rating received: 5 stars" },
-      { id: "al-008c", timestamp: "2026-04-23T17:31:00Z", action: "Public push sent — Google, Facebook" },
-      { id: "al-008d", timestamp: "2026-04-23T17:45:00Z", action: "Client clicked Google review link" },
+      {
+        id: "al-008a",
+        timestamp: "2026-04-23T15:00:00Z",
+        action: "Request sent via Email",
+      },
+      {
+        id: "al-008b",
+        timestamp: "2026-04-23T17:30:00Z",
+        action: "Rating received: 5 stars",
+      },
+      {
+        id: "al-008c",
+        timestamp: "2026-04-23T17:31:00Z",
+        action: "Public push sent — Google, Facebook",
+      },
+      {
+        id: "al-008d",
+        timestamp: "2026-04-23T17:45:00Z",
+        action: "Client clicked Google review link",
+      },
     ],
   },
   {
@@ -377,10 +537,26 @@ export const reputationRequests: ReputationRequest[] = [
     isApprovedForPublicDisplay: false,
     isPubliclyDisplayed: false,
     auditLog: [
-      { id: "al-009a", timestamp: "2026-04-20T10:00:00Z", action: "Request sent via SMS" },
-      { id: "al-009b", timestamp: "2026-04-21T10:00:00Z", action: "Reminder 1 sent — no response after 24h" },
-      { id: "al-009c", timestamp: "2026-04-22T10:00:00Z", action: "Reminder 2 sent — no response after 48h" },
-      { id: "al-009d", timestamp: "2026-04-23T10:00:00Z", action: "Max reminders reached — booking closed" },
+      {
+        id: "al-009a",
+        timestamp: "2026-04-20T10:00:00Z",
+        action: "Request sent via SMS",
+      },
+      {
+        id: "al-009b",
+        timestamp: "2026-04-21T10:00:00Z",
+        action: "Reminder 1 sent — no response after 24h",
+      },
+      {
+        id: "al-009c",
+        timestamp: "2026-04-22T10:00:00Z",
+        action: "Reminder 2 sent — no response after 48h",
+      },
+      {
+        id: "al-009d",
+        timestamp: "2026-04-23T10:00:00Z",
+        action: "Max reminders reached — booking closed",
+      },
     ],
   },
   {
@@ -400,15 +576,28 @@ export const reputationRequests: ReputationRequest[] = [
     ratedAt: "2026-04-29T10:14:00Z",
     publicLinkClicked: false,
     remindersCount: 0,
-    clientComment: "Perfect boarding experience. Buddy was so happy and well taken care of!",
+    clientComment:
+      "Perfect boarding experience. Buddy was so happy and well taken care of!",
     escalatedToManager: false,
     taskCreated: false,
     isApprovedForPublicDisplay: true,
     isPubliclyDisplayed: false,
     auditLog: [
-      { id: "al-010a", timestamp: "2026-04-29T08:00:00Z", action: "Request sent via Email" },
-      { id: "al-010b", timestamp: "2026-04-29T10:14:00Z", action: "Rating received: 5 stars" },
-      { id: "al-010c", timestamp: "2026-04-29T10:15:00Z", action: "Public push sent — Google, Facebook" },
+      {
+        id: "al-010a",
+        timestamp: "2026-04-29T08:00:00Z",
+        action: "Request sent via Email",
+      },
+      {
+        id: "al-010b",
+        timestamp: "2026-04-29T10:14:00Z",
+        action: "Rating received: 5 stars",
+      },
+      {
+        id: "al-010c",
+        timestamp: "2026-04-29T10:15:00Z",
+        action: "Public push sent — Google, Facebook",
+      },
     ],
   },
   {
@@ -428,17 +617,38 @@ export const reputationRequests: ReputationRequest[] = [
     ratedAt: "2026-04-29T12:30:00Z",
     publicLinkClicked: false,
     remindersCount: 0,
-    feedbackText: "Nala had a cut on her leg when I picked her up and staff didn't mention it. Very unhappy.",
+    feedbackText:
+      "Nala had a cut on her leg when I picked her up and staff didn't mention it. Very unhappy.",
     escalatedToManager: true,
     taskCreated: true,
     isApprovedForPublicDisplay: false,
     isPubliclyDisplayed: false,
     auditLog: [
-      { id: "al-011a", timestamp: "2026-04-29T11:00:00Z", action: "Request sent via SMS" },
-      { id: "al-011b", timestamp: "2026-04-29T12:30:00Z", action: "Rating received: 1 star — negative" },
-      { id: "al-011c", timestamp: "2026-04-29T12:30:00Z", action: "Manager notified immediately — urgent alert" },
-      { id: "al-011d", timestamp: "2026-04-29T12:31:00Z", action: "Follow-up task created for manager" },
-      { id: "al-011e", timestamp: "2026-04-29T12:31:00Z", action: "Public review push blocked — negative rating" },
+      {
+        id: "al-011a",
+        timestamp: "2026-04-29T11:00:00Z",
+        action: "Request sent via SMS",
+      },
+      {
+        id: "al-011b",
+        timestamp: "2026-04-29T12:30:00Z",
+        action: "Rating received: 1 star — negative",
+      },
+      {
+        id: "al-011c",
+        timestamp: "2026-04-29T12:30:00Z",
+        action: "Manager notified immediately — urgent alert",
+      },
+      {
+        id: "al-011d",
+        timestamp: "2026-04-29T12:31:00Z",
+        action: "Follow-up task created for manager",
+      },
+      {
+        id: "al-011e",
+        timestamp: "2026-04-29T12:31:00Z",
+        action: "Public review push blocked — negative rating",
+      },
     ],
   },
   {
@@ -460,16 +670,33 @@ export const reputationRequests: ReputationRequest[] = [
     publicLinkClickedAt: "2026-04-28T18:50:00Z",
     publicPlatform: "google",
     remindersCount: 0,
-    clientComment: "Archie smells amazing and looks so handsome. Sophie is very skilled.",
+    clientComment:
+      "Archie smells amazing and looks so handsome. Sophie is very skilled.",
     escalatedToManager: false,
     taskCreated: false,
     isApprovedForPublicDisplay: true,
     isPubliclyDisplayed: false,
     auditLog: [
-      { id: "al-012a", timestamp: "2026-04-28T16:00:00Z", action: "Request sent via Email" },
-      { id: "al-012b", timestamp: "2026-04-28T18:45:00Z", action: "Rating received: 4 stars" },
-      { id: "al-012c", timestamp: "2026-04-28T18:46:00Z", action: "Public push sent — Google, Facebook" },
-      { id: "al-012d", timestamp: "2026-04-28T18:50:00Z", action: "Client clicked Google review link" },
+      {
+        id: "al-012a",
+        timestamp: "2026-04-28T16:00:00Z",
+        action: "Request sent via Email",
+      },
+      {
+        id: "al-012b",
+        timestamp: "2026-04-28T18:45:00Z",
+        action: "Rating received: 4 stars",
+      },
+      {
+        id: "al-012c",
+        timestamp: "2026-04-28T18:46:00Z",
+        action: "Public push sent — Google, Facebook",
+      },
+      {
+        id: "al-012d",
+        timestamp: "2026-04-28T18:50:00Z",
+        action: "Client clicked Google review link",
+      },
     ],
   },
 ];

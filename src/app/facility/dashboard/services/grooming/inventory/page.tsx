@@ -96,10 +96,25 @@ const orderStatusColors: Record<InventoryOrder["status"], string> = {
   cancelled: "bg-red-100 text-red-700",
 };
 
-const conditionConfig: Record<ToolCondition, { label: string; color: string; icon: React.ElementType }> = {
-  good: { label: "Good", color: "bg-green-100 text-green-700", icon: CheckCircle2 },
-  "needs-service": { label: "Needs Service", color: "bg-yellow-100 text-yellow-700", icon: Wrench },
-  retired: { label: "Retired", color: "bg-red-100 text-red-700", icon: AlertCircle },
+const conditionConfig: Record<
+  ToolCondition,
+  { label: string; color: string; icon: React.ElementType }
+> = {
+  good: {
+    label: "Good",
+    color: "bg-green-100 text-green-700",
+    icon: CheckCircle2,
+  },
+  "needs-service": {
+    label: "Needs Service",
+    color: "bg-yellow-100 text-yellow-700",
+    icon: Wrench,
+  },
+  retired: {
+    label: "Retired",
+    color: "bg-red-100 text-red-700",
+    icon: AlertCircle,
+  },
 };
 
 const measurementUnitLabels: Record<MeasurementUnit, string> = {
@@ -113,7 +128,16 @@ const measurementUnitLabels: Record<MeasurementUnit, string> = {
   pair: "pairs",
 };
 
-const MEASUREMENT_UNITS: MeasurementUnit[] = ["ml", "oz", "g", "liter", "gallon", "count", "pack", "pair"];
+const MEASUREMENT_UNITS: MeasurementUnit[] = [
+  "ml",
+  "oz",
+  "g",
+  "liter",
+  "gallon",
+  "count",
+  "pack",
+  "pair",
+];
 const ITEM_TYPES: { value: ItemType; label: string }[] = [
   { value: "consumable", label: "Consumable (used up during grooming)" },
   { value: "tool", label: "Tool (reusable equipment)" },
@@ -143,7 +167,9 @@ function getUsedInServices(productId: string): string[] {
     .map((pkg) => pkg.name);
 }
 
-function getStockLevel(product: GroomingProduct): "critical" | "low" | "medium" | "good" {
+function getStockLevel(
+  product: GroomingProduct,
+): "critical" | "low" | "medium" | "good" {
   if (product.currentStock <= product.minStock) return "critical";
   const pct = (product.currentStock / product.maxStock) * 100;
   if (pct <= 30) return "low";
@@ -229,13 +255,18 @@ function StockCell({ product }: { product: GroomingProduct }) {
   return (
     <div className="min-w-36 space-y-1">
       <div className="flex items-center justify-between text-sm">
-        <span className="font-medium tabular-nums">{formatStockRange(product)}</span>
-        {level === "critical" && <AlertTriangle className="ml-1 size-4 text-red-500 shrink-0" />}
+        <span className="font-medium tabular-nums">
+          {formatStockRange(product)}
+        </span>
+        {level === "critical" && (
+          <AlertTriangle className="ml-1 size-4 shrink-0 text-red-500" />
+        )}
       </div>
       <Progress value={pct} className="h-1.5" />
       {product.currentStock <= product.minStock && (
         <p className="text-[11px] text-red-600">
-          Below min ({product.minStock.toLocaleString()} {measurementUnitLabels[product.measurementUnit]})
+          Below min ({product.minStock.toLocaleString()}{" "}
+          {measurementUnitLabels[product.measurementUnit]})
         </p>
       )}
     </div>
@@ -248,9 +279,7 @@ function UsageCell({ productId }: { productId: string }) {
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    return (
-      <span className="text-muted-foreground text-xs">—</span>
-    );
+    return <span className="text-muted-foreground text-xs">—</span>;
   }
 
   const now = new Date();
@@ -281,7 +310,7 @@ function UsedInCell({ productId }: { productId: string }) {
   return (
     <div className="flex flex-wrap gap-1">
       {services.map((s) => (
-        <Badge key={s} variant="outline" className="text-[10px] h-4 px-1.5">
+        <Badge key={s} variant="outline" className="h-4 px-1.5 text-[10px]">
           {s}
         </Badge>
       ))}
@@ -317,11 +346,15 @@ const emptyForm = {
 
 export default function InventoryPage() {
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<GroomingProduct | null>(null);
+  const [editingProduct, setEditingProduct] = useState<GroomingProduct | null>(
+    null,
+  );
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deletingProduct, setDeletingProduct] = useState<GroomingProduct | null>(null);
+  const [deletingProduct, setDeletingProduct] =
+    useState<GroomingProduct | null>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
-  const [orderingProduct, setOrderingProduct] = useState<GroomingProduct | null>(null);
+  const [orderingProduct, setOrderingProduct] =
+    useState<GroomingProduct | null>(null);
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
   const [newOrderProductId, setNewOrderProductId] = useState("");
   const [newOrderData, setNewOrderData] = useState({ quantity: 0, notes: "" });
@@ -389,7 +422,10 @@ export default function InventoryPage() {
 
   function handleOrderClick(product: GroomingProduct) {
     setOrderingProduct(product);
-    setOrderData({ quantity: product.maxStock - product.currentStock, notes: "" });
+    setOrderData({
+      quantity: product.maxStock - product.currentStock,
+      notes: "",
+    });
     setIsOrderModalOpen(true);
   }
 
@@ -412,7 +448,10 @@ export default function InventoryPage() {
     [newOrderProductId],
   );
 
-  function updateForm<K extends keyof typeof emptyForm>(key: K, value: (typeof emptyForm)[K]) {
+  function updateForm<K extends keyof typeof emptyForm>(
+    key: K,
+    value: (typeof emptyForm)[K],
+  ) {
     setFormData((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -446,7 +485,7 @@ export default function InventoryPage() {
       label: "Unit",
       defaultVisible: true,
       render: (p) => (
-        <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium">
+        <span className="bg-muted rounded-md px-2 py-0.5 text-xs font-medium">
           {measurementUnitLabels[p.measurementUnit]}
         </span>
       ),
@@ -504,15 +543,20 @@ export default function InventoryPage() {
       label: "Expires",
       defaultVisible: false,
       render: (p) =>
-        p.expiryDate
-          ? new Date(p.expiryDate).toLocaleDateString()
-          : "—",
+        p.expiryDate ? new Date(p.expiryDate).toLocaleDateString() : "—",
     },
     {
       key: "actions",
       label: "Actions",
       defaultVisible: true,
-      render: (p) => <ActionsMenu product={p} onEdit={handleEdit} onOrder={handleOrderClick} onDelete={handleDeleteClick} />,
+      render: (p) => (
+        <ActionsMenu
+          product={p}
+          onEdit={handleEdit}
+          onOrder={handleOrderClick}
+          onDelete={handleDeleteClick}
+        />
+      ),
     },
   ];
 
@@ -549,7 +593,9 @@ export default function InventoryPage() {
             {p.currentStock} / {p.maxStock}
           </span>
           {p.currentStock <= p.minStock && (
-            <p className="text-[11px] text-yellow-600">Low — min {p.minStock}</p>
+            <p className="text-[11px] text-yellow-600">
+              Low — min {p.minStock}
+            </p>
           )}
         </div>
       ),
@@ -575,9 +621,7 @@ export default function InventoryPage() {
       label: "Last Serviced",
       defaultVisible: true,
       render: (p) =>
-        p.lastServiced
-          ? new Date(p.lastServiced).toLocaleDateString()
-          : "—",
+        p.lastServiced ? new Date(p.lastServiced).toLocaleDateString() : "—",
     },
     {
       key: "supplier",
@@ -588,7 +632,14 @@ export default function InventoryPage() {
       key: "actions",
       label: "Actions",
       defaultVisible: true,
-      render: (p) => <ActionsMenu product={p} onEdit={handleEdit} onOrder={handleOrderClick} onDelete={handleDeleteClick} />,
+      render: (p) => (
+        <ActionsMenu
+          product={p}
+          onEdit={handleEdit}
+          onOrder={handleOrderClick}
+          onDelete={handleDeleteClick}
+        />
+      ),
     },
   ];
 
@@ -598,7 +649,10 @@ export default function InventoryPage() {
       label: "Category",
       options: [
         { value: "all", label: "All Categories" },
-        ...Object.entries(categoryLabels).map(([v, l]) => ({ value: v, label: l })),
+        ...Object.entries(categoryLabels).map(([v, l]) => ({
+          value: v,
+          label: l,
+        })),
       ],
     },
   ];
@@ -620,7 +674,6 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6">
-
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -639,7 +692,9 @@ export default function InventoryPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tools & Equipment</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Tools & Equipment
+            </CardTitle>
             <Scissors className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
@@ -653,7 +708,9 @@ export default function InventoryPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock Alerts</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Low Stock Alerts
+            </CardTitle>
             <AlertTriangle className="size-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
@@ -667,7 +724,9 @@ export default function InventoryPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Pending Orders
+            </CardTitle>
             <ShoppingCart className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
@@ -683,7 +742,8 @@ export default function InventoryPage() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium text-yellow-800 dark:text-yellow-200">
               <AlertTriangle className="size-4" />
-              Low Stock Alert — {lowStockProducts.length} item{lowStockProducts.length > 1 ? "s" : ""} need reordering
+              Low Stock Alert — {lowStockProducts.length} item
+              {lowStockProducts.length > 1 ? "s" : ""} need reordering
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -695,7 +755,8 @@ export default function InventoryPage() {
                   className="cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-900/30"
                   onClick={() => handleOrderClick(p)}
                 >
-                  {p.name} ({formatStock(p)} / min {p.minStock.toLocaleString()} {measurementUnitLabels[p.measurementUnit]})
+                  {p.name} ({formatStock(p)} / min {p.minStock.toLocaleString()}{" "}
+                  {measurementUnitLabels[p.measurementUnit]})
                 </Badge>
               ))}
             </div>
@@ -709,12 +770,16 @@ export default function InventoryPage() {
           <TabsTrigger value="consumables" className="gap-1.5">
             <BoxesIcon className="size-3.5" />
             Consumables
-            <Badge variant="secondary" className="ml-1 text-[10px]">{consumables.length}</Badge>
+            <Badge variant="secondary" className="ml-1 text-[10px]">
+              {consumables.length}
+            </Badge>
           </TabsTrigger>
           <TabsTrigger value="tools" className="gap-1.5">
             <Scissors className="size-3.5" />
             Tools & Equipment
-            <Badge variant="secondary" className="ml-1 text-[10px]">{tools.length}</Badge>
+            <Badge variant="secondary" className="ml-1 text-[10px]">
+              {tools.length}
+            </Badge>
           </TabsTrigger>
           <TabsTrigger value="orders" className="gap-1.5">
             <ShoppingCart className="size-3.5" />
@@ -729,7 +794,8 @@ export default function InventoryPage() {
               <div>
                 <CardTitle>Consumable Products</CardTitle>
                 <p className="text-muted-foreground mt-1 text-sm">
-                  Products used during grooming services. Stock is automatically deducted when a service completes.
+                  Products used during grooming services. Stock is automatically
+                  deducted when a service completes.
                 </p>
               </div>
               <Button onClick={() => handleAddNew("consumable")}>
@@ -756,7 +822,8 @@ export default function InventoryPage() {
               <div>
                 <CardTitle>Tools & Equipment</CardTitle>
                 <p className="text-muted-foreground mt-1 text-sm">
-                  Reusable grooming equipment. Track counts, condition, and maintenance schedules.
+                  Reusable grooming equipment. Track counts, condition, and
+                  maintenance schedules.
                 </p>
               </div>
               <Button onClick={() => handleAddNew("tool")}>
@@ -809,13 +876,18 @@ export default function InventoryPage() {
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className="font-medium">${order.totalPrice.toFixed(2)}</p>
+                        <p className="font-medium">
+                          ${order.totalPrice.toFixed(2)}
+                        </p>
                         <p className="text-muted-foreground text-xs">
                           {new Date(order.orderedAt).toLocaleDateString()}
                         </p>
                         {order.expectedDelivery && (
                           <p className="text-muted-foreground text-xs">
-                            ETA: {new Date(order.expectedDelivery).toLocaleDateString()}
+                            ETA:{" "}
+                            {new Date(
+                              order.expectedDelivery,
+                            ).toLocaleDateString()}
                           </p>
                         )}
                       </div>
@@ -864,8 +936,14 @@ export default function InventoryPage() {
                           : "hover:bg-muted/40"
                       }`}
                     >
-                      <p className="font-medium capitalize">{value === "consumable" ? "Consumable" : "Tool / Equipment"}</p>
-                      <p className="text-muted-foreground mt-0.5 text-[11px]">{label.split("(")[1]?.replace(")", "") ?? ""}</p>
+                      <p className="font-medium capitalize">
+                        {value === "consumable"
+                          ? "Consumable"
+                          : "Tool / Equipment"}
+                      </p>
+                      <p className="text-muted-foreground mt-0.5 text-[11px]">
+                        {label.split("(")[1]?.replace(")", "") ?? ""}
+                      </p>
                     </button>
                   ))}
                 </div>
@@ -875,7 +953,9 @@ export default function InventoryPage() {
             {/* Identifiers */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="name">Name <span className="text-destructive">*</span></Label>
+                <Label htmlFor="name">
+                  Name <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -897,14 +977,18 @@ export default function InventoryPage() {
                 <Label htmlFor="category">Category</Label>
                 <Select
                   value={formData.category}
-                  onValueChange={(v) => updateForm("category", v as ProductCategory)}
+                  onValueChange={(v) =>
+                    updateForm("category", v as ProductCategory)
+                  }
                 >
                   <SelectTrigger id="category">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {Object.entries(categoryLabels).map(([v, l]) => (
-                      <SelectItem key={v} value={v}>{l}</SelectItem>
+                      <SelectItem key={v} value={v}>
+                        {l}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -936,7 +1020,9 @@ export default function InventoryPage() {
                   <Label htmlFor="measurementUnit">Measurement Unit</Label>
                   <Select
                     value={formData.measurementUnit}
-                    onValueChange={(v) => updateForm("measurementUnit", v as MeasurementUnit)}
+                    onValueChange={(v) =>
+                      updateForm("measurementUnit", v as MeasurementUnit)
+                    }
                   >
                     <SelectTrigger id="measurementUnit">
                       <SelectValue />
@@ -944,52 +1030,82 @@ export default function InventoryPage() {
                     <SelectContent>
                       {MEASUREMENT_UNITS.map((u) => (
                         <SelectItem key={u} value={u}>
-                          {u} — {u === "ml" ? "millilitres" : u === "oz" ? "ounces" : u === "g" ? "grams" : u === "liter" ? "litres" : u === "gallon" ? "gallons" : u === "count" ? "individual units" : u === "pack" ? "packs/boxes" : "pairs"}
+                          {u} —{" "}
+                          {u === "ml"
+                            ? "millilitres"
+                            : u === "oz"
+                              ? "ounces"
+                              : u === "g"
+                                ? "grams"
+                                : u === "liter"
+                                  ? "litres"
+                                  : u === "gallon"
+                                    ? "gallons"
+                                    : u === "count"
+                                      ? "individual units"
+                                      : u === "pack"
+                                        ? "packs/boxes"
+                                        : "pairs"}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   <p className="text-muted-foreground text-[11px]">
-                    All stock quantities below are in this unit (e.g., if ml, enter 500 for 500 ml).
+                    All stock quantities below are in this unit (e.g., if ml,
+                    enter 500 for 500 ml).
                   </p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="currentStock">
-                      Current Stock ({measurementUnitLabels[formData.measurementUnit]})
+                      Current Stock (
+                      {measurementUnitLabels[formData.measurementUnit]})
                     </Label>
                     <Input
                       id="currentStock"
                       type="number"
                       min={0}
                       value={formData.currentStock || ""}
-                      onChange={(e) => updateForm("currentStock", parseFloat(e.target.value) || 0)}
+                      onChange={(e) =>
+                        updateForm(
+                          "currentStock",
+                          parseFloat(e.target.value) || 0,
+                        )
+                      }
                     />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="minStock">
-                      Min Threshold ({measurementUnitLabels[formData.measurementUnit]})
+                      Min Threshold (
+                      {measurementUnitLabels[formData.measurementUnit]})
                     </Label>
                     <Input
                       id="minStock"
                       type="number"
                       min={0}
                       value={formData.minStock || ""}
-                      onChange={(e) => updateForm("minStock", parseFloat(e.target.value) || 0)}
+                      onChange={(e) =>
+                        updateForm("minStock", parseFloat(e.target.value) || 0)
+                      }
                     />
-                    <p className="text-muted-foreground text-[11px]">Alert when below this</p>
+                    <p className="text-muted-foreground text-[11px]">
+                      Alert when below this
+                    </p>
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="maxStock">
-                      Max Stock ({measurementUnitLabels[formData.measurementUnit]})
+                      Max Stock (
+                      {measurementUnitLabels[formData.measurementUnit]})
                     </Label>
                     <Input
                       id="maxStock"
                       type="number"
                       min={0}
                       value={formData.maxStock || ""}
-                      onChange={(e) => updateForm("maxStock", parseFloat(e.target.value) || 0)}
+                      onChange={(e) =>
+                        updateForm("maxStock", parseFloat(e.target.value) || 0)
+                      }
                     />
                   </div>
                 </div>
@@ -1021,7 +1137,12 @@ export default function InventoryPage() {
                       type="number"
                       min={0}
                       value={formData.currentStock || ""}
-                      onChange={(e) => updateForm("currentStock", parseInt(e.target.value) || 0)}
+                      onChange={(e) =>
+                        updateForm(
+                          "currentStock",
+                          parseInt(e.target.value) || 0,
+                        )
+                      }
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1031,7 +1152,9 @@ export default function InventoryPage() {
                       type="number"
                       min={0}
                       value={formData.minStock || ""}
-                      onChange={(e) => updateForm("minStock", parseInt(e.target.value) || 0)}
+                      onChange={(e) =>
+                        updateForm("minStock", parseInt(e.target.value) || 0)
+                      }
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1041,7 +1164,9 @@ export default function InventoryPage() {
                       type="number"
                       min={0}
                       value={formData.maxStock || ""}
-                      onChange={(e) => updateForm("maxStock", parseInt(e.target.value) || 0)}
+                      onChange={(e) =>
+                        updateForm("maxStock", parseInt(e.target.value) || 0)
+                      }
                     />
                   </div>
                 </div>
@@ -1051,14 +1176,18 @@ export default function InventoryPage() {
                     <Label htmlFor="condition">Condition</Label>
                     <Select
                       value={formData.condition}
-                      onValueChange={(v) => updateForm("condition", v as ToolCondition)}
+                      onValueChange={(v) =>
+                        updateForm("condition", v as ToolCondition)
+                      }
                     >
                       <SelectTrigger id="condition">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {TOOL_CONDITIONS.map(({ value, label }) => (
-                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -1091,7 +1220,9 @@ export default function InventoryPage() {
                   step="0.01"
                   min={0}
                   value={formData.costPrice || ""}
-                  onChange={(e) => updateForm("costPrice", parseFloat(e.target.value) || 0)}
+                  onChange={(e) =>
+                    updateForm("costPrice", parseFloat(e.target.value) || 0)
+                  }
                 />
               </div>
               <div className="space-y-1.5">
@@ -1102,7 +1233,9 @@ export default function InventoryPage() {
                   step="0.01"
                   min={0}
                   value={formData.unitPrice || ""}
-                  onChange={(e) => updateForm("unitPrice", parseFloat(e.target.value) || 0)}
+                  onChange={(e) =>
+                    updateForm("unitPrice", parseFloat(e.target.value) || 0)
+                  }
                 />
               </div>
               <div className="space-y-1.5">
@@ -1166,11 +1299,16 @@ export default function InventoryPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddEditModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddEditModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleSave}>
-              {editingProduct ? "Save Changes" : `Add ${formData.itemType === "tool" ? "Tool" : "Product"}`}
+              {editingProduct
+                ? "Save Changes"
+                : `Add ${formData.itemType === "tool" ? "Tool" : "Product"}`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1181,7 +1319,9 @@ export default function InventoryPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {orderingProduct?.itemType === "tool" ? "Order Replacement" : "Reorder Product"}
+              {orderingProduct?.itemType === "tool"
+                ? "Order Replacement"
+                : "Reorder Product"}
             </DialogTitle>
             <DialogDescription>
               Place a restock order for {orderingProduct?.name}
@@ -1204,18 +1344,22 @@ export default function InventoryPage() {
                 <div className="mt-3 grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Current</p>
-                    <p className="font-medium">{formatStock(orderingProduct)}</p>
+                    <p className="font-medium">
+                      {formatStock(orderingProduct)}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Min</p>
                     <p className="font-medium">
-                      {orderingProduct.minStock.toLocaleString()} {measurementUnitLabels[orderingProduct.measurementUnit]}
+                      {orderingProduct.minStock.toLocaleString()}{" "}
+                      {measurementUnitLabels[orderingProduct.measurementUnit]}
                     </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Max</p>
                     <p className="font-medium">
-                      {orderingProduct.maxStock.toLocaleString()} {measurementUnitLabels[orderingProduct.measurementUnit]}
+                      {orderingProduct.maxStock.toLocaleString()}{" "}
+                      {measurementUnitLabels[orderingProduct.measurementUnit]}
                     </p>
                   </div>
                 </div>
@@ -1223,16 +1367,27 @@ export default function InventoryPage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="orderQuantity">
-                  Order Quantity ({measurementUnitLabels[orderingProduct.measurementUnit]})
+                  Order Quantity (
+                  {measurementUnitLabels[orderingProduct.measurementUnit]})
                 </Label>
                 <Input
                   id="orderQuantity"
                   type="number"
                   value={orderData.quantity}
-                  onChange={(e) => setOrderData({ ...orderData, quantity: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setOrderData({
+                      ...orderData,
+                      quantity: parseFloat(e.target.value) || 0,
+                    })
+                  }
                 />
                 <p className="text-muted-foreground text-xs">
-                  Suggested: {(orderingProduct.maxStock - orderingProduct.currentStock).toLocaleString()} {measurementUnitLabels[orderingProduct.measurementUnit]} to reach max
+                  Suggested:{" "}
+                  {(
+                    orderingProduct.maxStock - orderingProduct.currentStock
+                  ).toLocaleString()}{" "}
+                  {measurementUnitLabels[orderingProduct.measurementUnit]} to
+                  reach max
                 </p>
               </div>
 
@@ -1242,7 +1397,9 @@ export default function InventoryPage() {
                   id="orderNotes"
                   placeholder="Any special instructions..."
                   value={orderData.notes}
-                  onChange={(e) => setOrderData({ ...orderData, notes: e.target.value })}
+                  onChange={(e) =>
+                    setOrderData({ ...orderData, notes: e.target.value })
+                  }
                   rows={2}
                 />
               </div>
@@ -1250,23 +1407,33 @@ export default function InventoryPage() {
               <div className="bg-muted rounded-lg p-4 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Supplier</span>
-                  <span className="font-medium">{orderingProduct.supplier}</span>
+                  <span className="font-medium">
+                    {orderingProduct.supplier}
+                  </span>
                 </div>
                 <div className="mt-2 flex justify-between">
                   <span className="text-muted-foreground">Cost per unit</span>
-                  <span className="font-medium">${orderingProduct.costPrice.toFixed(2)}</span>
+                  <span className="font-medium">
+                    ${orderingProduct.costPrice.toFixed(2)}
+                  </span>
                 </div>
                 <div className="mt-2 flex justify-between border-t pt-2">
                   <span className="font-medium">Estimated Total</span>
                   <span className="font-bold">
-                    ${(orderData.quantity * orderingProduct.costPrice).toFixed(2)}
+                    $
+                    {(orderData.quantity * orderingProduct.costPrice).toFixed(
+                      2,
+                    )}
                   </span>
                 </div>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsOrderModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsOrderModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handlePlaceOrder}>
@@ -1289,7 +1456,10 @@ export default function InventoryPage() {
           <div className="space-y-4 py-4">
             <div className="space-y-1.5">
               <Label htmlFor="newOrderProduct">Product / Tool</Label>
-              <Select value={newOrderProductId} onValueChange={setNewOrderProductId}>
+              <Select
+                value={newOrderProductId}
+                onValueChange={setNewOrderProductId}
+              >
                 <SelectTrigger id="newOrderProduct">
                   <SelectValue placeholder="Select an item to order…" />
                 </SelectTrigger>
@@ -1300,7 +1470,8 @@ export default function InventoryPage() {
                       <SelectItem key={p.id} value={p.id}>
                         <span className="font-medium">{p.name}</span>
                         <span className="text-muted-foreground ml-1.5 text-xs">
-                          ({p.currentStock.toLocaleString()} {measurementUnitLabels[p.measurementUnit]} in stock)
+                          ({p.currentStock.toLocaleString()}{" "}
+                          {measurementUnitLabels[p.measurementUnit]} in stock)
                         </span>
                       </SelectItem>
                     ))}
@@ -1314,7 +1485,9 @@ export default function InventoryPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">{newOrderProduct.name}</p>
-                      <p className="text-muted-foreground text-xs">{newOrderProduct.brand} · {newOrderProduct.sku}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {newOrderProduct.brand} · {newOrderProduct.sku}
+                      </p>
                     </div>
                     <Badge className={categoryColors[newOrderProduct.category]}>
                       {categoryLabels[newOrderProduct.category]}
@@ -1323,24 +1496,32 @@ export default function InventoryPage() {
                   <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
                     <div>
                       <p className="text-muted-foreground">Current</p>
-                      <p className="font-medium">{formatStock(newOrderProduct)}</p>
+                      <p className="font-medium">
+                        {formatStock(newOrderProduct)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Min threshold</p>
-                      <p className={`font-medium ${newOrderProduct.currentStock <= newOrderProduct.minStock ? "text-red-600" : ""}`}>
-                        {newOrderProduct.minStock.toLocaleString()} {measurementUnitLabels[newOrderProduct.measurementUnit]}
+                      <p
+                        className={`font-medium ${newOrderProduct.currentStock <= newOrderProduct.minStock ? "text-red-600" : ""}`}
+                      >
+                        {newOrderProduct.minStock.toLocaleString()}{" "}
+                        {measurementUnitLabels[newOrderProduct.measurementUnit]}
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Supplier</p>
-                      <p className="font-medium truncate">{newOrderProduct.supplier}</p>
+                      <p className="truncate font-medium">
+                        {newOrderProduct.supplier}
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <Label htmlFor="newOrderQty">
-                    Order Quantity ({measurementUnitLabels[newOrderProduct.measurementUnit]})
+                    Order Quantity (
+                    {measurementUnitLabels[newOrderProduct.measurementUnit]})
                   </Label>
                   <Input
                     id="newOrderQty"
@@ -1348,13 +1529,20 @@ export default function InventoryPage() {
                     min={1}
                     value={newOrderData.quantity || ""}
                     onChange={(e) =>
-                      setNewOrderData((d) => ({ ...d, quantity: parseFloat(e.target.value) || 0 }))
+                      setNewOrderData((d) => ({
+                        ...d,
+                        quantity: parseFloat(e.target.value) || 0,
+                      }))
                     }
                   />
                   <p className="text-muted-foreground text-xs">
                     Suggested:{" "}
-                    {Math.max(0, newOrderProduct.maxStock - newOrderProduct.currentStock).toLocaleString()}{" "}
-                    {measurementUnitLabels[newOrderProduct.measurementUnit]} to reach max stock
+                    {Math.max(
+                      0,
+                      newOrderProduct.maxStock - newOrderProduct.currentStock,
+                    ).toLocaleString()}{" "}
+                    {measurementUnitLabels[newOrderProduct.measurementUnit]} to
+                    reach max stock
                   </p>
                 </div>
 
@@ -1374,16 +1562,23 @@ export default function InventoryPage() {
                 <div className="bg-muted rounded-lg p-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Supplier</span>
-                    <span className="font-medium">{newOrderProduct.supplier}</span>
+                    <span className="font-medium">
+                      {newOrderProduct.supplier}
+                    </span>
                   </div>
                   <div className="mt-1.5 flex justify-between">
                     <span className="text-muted-foreground">Cost per unit</span>
-                    <span className="font-medium">${newOrderProduct.costPrice.toFixed(2)}</span>
+                    <span className="font-medium">
+                      ${newOrderProduct.costPrice.toFixed(2)}
+                    </span>
                   </div>
                   <div className="mt-1.5 flex justify-between border-t pt-1.5">
                     <span className="font-medium">Estimated Total</span>
                     <span className="font-bold">
-                      ${(newOrderData.quantity * newOrderProduct.costPrice).toFixed(2)}
+                      $
+                      {(
+                        newOrderData.quantity * newOrderProduct.costPrice
+                      ).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -1391,10 +1586,16 @@ export default function InventoryPage() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNewOrderModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsNewOrderModalOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handlePlaceNewOrder} disabled={!newOrderProductId || newOrderData.quantity <= 0}>
+            <Button
+              onClick={handlePlaceNewOrder}
+              disabled={!newOrderProductId || newOrderData.quantity <= 0}
+            >
               <ShoppingCart className="mr-2 size-4" />
               Place Order
             </Button>
@@ -1408,16 +1609,22 @@ export default function InventoryPage() {
           <DialogHeader>
             <DialogTitle>Remove from Inventory</DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove &quot;{deletingProduct?.name}&quot;? This cannot be undone.
+              Are you sure you want to remove &quot;{deletingProduct?.name}
+              &quot;? This cannot be undone.
               {getUsedInServices(deletingProduct?.id ?? "").length > 0 && (
                 <span className="mt-2 block text-yellow-700 dark:text-yellow-400">
-                  ⚠ This product is used in {getUsedInServices(deletingProduct?.id ?? "").join(", ")}. Removing it will affect those services.
+                  ⚠ This product is used in{" "}
+                  {getUsedInServices(deletingProduct?.id ?? "").join(", ")}.
+                  Removing it will affect those services.
                 </span>
               )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteConfirm}>
@@ -1475,7 +1682,10 @@ function ActionsMenu({
             ? "Order Replacement"
             : "Create internal order"}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onDelete(product)} className="text-red-600">
+        <DropdownMenuItem
+          onClick={() => onDelete(product)}
+          className="text-red-600"
+        >
           <Trash2 className="mr-2 size-4" />
           Remove
         </DropdownMenuItem>

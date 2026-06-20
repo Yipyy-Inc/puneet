@@ -1,7 +1,12 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { AlertOctagon, CalendarRange, GraduationCap, User2 } from "lucide-react";
+import {
+  AlertOctagon,
+  CalendarRange,
+  GraduationCap,
+  User2,
+} from "lucide-react";
 import type { TrainingClass, TrainingSession } from "@/types/training";
 import {
   HOUR_HEIGHT,
@@ -136,11 +141,11 @@ export function TrainingSessionBlock({
         onClick(session);
       }}
       className={cn(
-        "group absolute left-1 right-1 rounded-lg border border-black/5 backdrop-blur-sm",
-        "text-left transition-all overflow-hidden cursor-pointer shadow-sm",
-        "hover:shadow-md hover:scale-[1.01] active:scale-[0.99]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        "px-2 py-1.5 z-10",
+        "group absolute right-1 left-1 rounded-lg border border-black/5 backdrop-blur-sm",
+        "cursor-pointer overflow-hidden text-left shadow-sm transition-all",
+        "hover:scale-[1.01] hover:shadow-md active:scale-[0.99]",
+        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
+        "z-10 px-2 py-1.5",
         s.bg,
         s.text,
         // Capacity halo — amber when full, rose when waitlisted (group only).
@@ -171,7 +176,7 @@ export function TrainingSessionBlock({
       )}
 
       {/* Row 1: title + capacity pill + status pill. Always rendered. */}
-      <div className="relative z-10 flex items-center gap-1.5 min-w-0">
+      <div className="relative z-10 flex min-w-0 items-center gap-1.5">
         {isPrivate ? (
           <User2 className="size-3 shrink-0 opacity-70" aria-hidden />
         ) : (
@@ -188,7 +193,7 @@ export function TrainingSessionBlock({
         )}
         {makeupCount > 0 && (
           <span
-            className="inline-flex items-center gap-0.5 rounded-full bg-sky-600 px-1.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm ring-2 ring-white"
+            className="inline-flex items-center gap-0.5 rounded-full bg-sky-600 px-1.5 text-[9px] font-bold tracking-wide text-white uppercase shadow-sm ring-2 ring-white"
             title={`${makeupCount} guest dog${makeupCount === 1 ? "" : "s"} joining as make-up from a different cohort.`}
             aria-label={`${makeupCount} make-up dog${makeupCount === 1 ? "" : "s"} joining`}
           >
@@ -196,15 +201,13 @@ export function TrainingSessionBlock({
             Make-up{makeupCount > 1 ? ` ${makeupCount}` : ""}
           </span>
         )}
-        <span className="text-[11px] font-semibold truncate leading-tight">
+        <span className="truncate text-[11px] leading-tight font-semibold">
           {title}
         </span>
         <span
           className={cn(
-            "ml-auto inline-flex shrink-0 items-center rounded-full px-1.5 text-[9px] font-bold uppercase tracking-wide shadow-sm tabular-nums",
-            isPrivate
-              ? "bg-orange-500 text-white"
-              : CAPACITY_PILL_STYLES[cap],
+            "ml-auto inline-flex shrink-0 items-center rounded-full px-1.5 text-[9px] font-bold tracking-wide uppercase tabular-nums shadow-sm",
+            isPrivate ? "bg-orange-500 text-white" : CAPACITY_PILL_STYLES[cap],
           )}
           title={capacityTooltip}
         >
@@ -212,7 +215,7 @@ export function TrainingSessionBlock({
         </span>
         <span
           className={cn(
-            "inline-flex shrink-0 items-center rounded-full px-1.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm",
+            "inline-flex shrink-0 items-center rounded-full px-1.5 text-[9px] font-bold tracking-wide text-white uppercase shadow-sm",
             s.pill,
           )}
           title={`Status: ${s.label}`}
@@ -226,7 +229,7 @@ export function TrainingSessionBlock({
         <div className="relative z-10 mt-1 flex items-center gap-1.5 text-[10px]">
           <span
             className={cn(
-              "inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide shadow-sm",
+              "inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase shadow-sm",
               isPrivate
                 ? "bg-orange-500 text-white"
                 : "bg-indigo-500 text-white",

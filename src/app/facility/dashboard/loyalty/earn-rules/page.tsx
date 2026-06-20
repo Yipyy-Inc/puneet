@@ -97,8 +97,8 @@ export default function EarnRulesPage() {
         {showLegacy && (
           <div className="border-t p-4">
             <p className="text-muted-foreground mb-4 text-sm">
-              This single rule is consumed by the points-calculation engine
-              (<code>calculatePointsEarned</code>). The trigger-based earn rules
+              This single rule is consumed by the points-calculation engine (
+              <code>calculatePointsEarned</code>). The trigger-based earn rules
               above are the newer model; the engine will be migrated to consume
               them.
             </p>

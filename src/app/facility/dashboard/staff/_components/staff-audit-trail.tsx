@@ -142,9 +142,7 @@ function dayKey(iso: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function groupByDay(
-  entries: StaffAuditEntry[],
-): [string, StaffAuditEntry[]][] {
+function groupByDay(entries: StaffAuditEntry[]): [string, StaffAuditEntry[]][] {
   const map = new Map<string, StaffAuditEntry[]>();
   for (const e of entries) {
     const key = dayKey(e.timestamp);
@@ -156,13 +154,7 @@ function groupByDay(
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function ActorBadge({
-  name,
-  role,
-}: {
-  name: string;
-  role: string;
-}) {
+function ActorBadge({ name, role }: { name: string; role: string }) {
   const roleTone =
     role === "owner"
       ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
@@ -173,7 +165,7 @@ function ActorBadge({
 
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className="font-medium text-foreground">{name}</span>
+      <span className="text-foreground font-medium">{name}</span>
       <span
         className={cn(
           "rounded px-1.5 py-0.5 text-[10px] font-medium capitalize",
@@ -242,7 +234,8 @@ function FieldChanges({ entry }: { entry: StaffAuditEntry }) {
         ) : (
           <ChevronRight className="size-3" />
         )}
-        {entry.changes.length} field{entry.changes.length !== 1 ? "s" : ""} changed
+        {entry.changes.length} field{entry.changes.length !== 1 ? "s" : ""}{" "}
+        changed
       </button>
 
       {expanded && (
@@ -256,7 +249,7 @@ function FieldChanges({ entry }: { entry: StaffAuditEntry }) {
               )}
             >
               <div className="min-w-0">
-                <div className="text-muted-foreground mb-0.5 text-[10px] font-medium uppercase tracking-wide">
+                <div className="text-muted-foreground mb-0.5 text-[10px] font-medium tracking-wide uppercase">
                   {c.field}
                 </div>
                 <div className="truncate font-medium line-through opacity-50">
@@ -265,7 +258,7 @@ function FieldChanges({ entry }: { entry: StaffAuditEntry }) {
               </div>
               <div className="text-muted-foreground mt-4 text-[10px]">→</div>
               <div className="min-w-0">
-                <div className="text-muted-foreground mb-0.5 text-[10px] font-medium uppercase tracking-wide opacity-0">
+                <div className="text-muted-foreground mb-0.5 text-[10px] font-medium tracking-wide uppercase opacity-0">
                   {c.field}
                 </div>
                 <div className="truncate font-semibold">{c.newValue}</div>
@@ -301,7 +294,9 @@ function AuditEntryCard({ entry }: { entry: StaffAuditEntry }) {
             <span className="text-sm font-semibold">{meta.label}</span>
             {entry.action === "staff_created" && entry.metadata?.role && (
               <span className="text-muted-foreground ml-1.5 text-xs">
-                — {ROLE_META[entry.metadata.role as keyof typeof ROLE_META]?.label ?? String(entry.metadata.role)}
+                —{" "}
+                {ROLE_META[entry.metadata.role as keyof typeof ROLE_META]
+                  ?.label ?? String(entry.metadata.role)}
               </span>
             )}
           </div>
@@ -311,7 +306,7 @@ function AuditEntryCard({ entry }: { entry: StaffAuditEntry }) {
         </div>
 
         {/* Actor */}
-        <div className="mt-1 text-xs text-muted-foreground">
+        <div className="text-muted-foreground mt-1 text-xs">
           by <ActorBadge name={entry.actorName} role={entry.actorRole} />
         </div>
 
@@ -326,7 +321,7 @@ function AuditEntryCard({ entry }: { entry: StaffAuditEntry }) {
 
         {/* Note */}
         {entry.note && (
-          <p className="border-border/40 bg-muted/40 mt-2.5 rounded-md border px-3 py-2 text-xs/relaxed text-muted-foreground italic">
+          <p className="border-border/40 bg-muted/40 text-muted-foreground mt-2.5 rounded-md border px-3 py-2 text-xs/relaxed italic">
             &ldquo;{entry.note}&rdquo;
           </p>
         )}
@@ -393,8 +388,8 @@ export function StaffAuditTrail({ staffId }: StaffAuditTrailProps) {
   if (!canView) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-10 text-center">
-        <div className="rounded-full bg-muted p-3">
-          <ShieldAlert className="size-5 text-muted-foreground" />
+        <div className="bg-muted rounded-full p-3">
+          <ShieldAlert className="text-muted-foreground size-5" />
         </div>
         <div className="text-sm font-semibold">Access restricted</div>
         <p className="text-muted-foreground max-w-xs text-xs">
@@ -433,8 +428,8 @@ export function StaffAuditTrail({ staffId }: StaffAuditTrailProps) {
       {/* Timeline */}
       {grouped.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-10 text-center">
-          <div className="rounded-full bg-muted p-3">
-            <ShieldCheck className="size-5 text-muted-foreground" />
+          <div className="bg-muted rounded-full p-3">
+            <ShieldCheck className="text-muted-foreground size-5" />
           </div>
           <div className="text-sm font-semibold">No activity recorded</div>
           <p className="text-muted-foreground max-w-xs text-xs">

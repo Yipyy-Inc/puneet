@@ -142,8 +142,8 @@ export function GroomingWaitlistDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="bg-pink-100 flex size-8 items-center justify-center rounded-lg">
-              <Sparkles className="text-pink-600 size-4" />
+            <div className="flex size-8 items-center justify-center rounded-lg bg-pink-100">
+              <Sparkles className="size-4 text-pink-600" />
             </div>
             <div>
               <DialogTitle>Join the Waitlist</DialogTitle>
@@ -159,13 +159,11 @@ export function GroomingWaitlistDialog({
           <div>
             <Label className="text-xs font-semibold">Preferred date</Label>
             <div className="mt-1.5 grid grid-cols-3 gap-1.5">
-              {(
-                [
-                  { kind: "asap" as const, label: "ASAP" },
-                  { kind: "specific-date" as const, label: "Specific date" },
-                  { kind: "day-of-week" as const, label: "Day of week" },
-                ]
-              ).map((opt) => (
+              {[
+                { kind: "asap" as const, label: "ASAP" },
+                { kind: "specific-date" as const, label: "Specific date" },
+                { kind: "day-of-week" as const, label: "Day of week" },
+              ].map((opt) => (
                 <button
                   key={opt.kind}
                   type="button"
@@ -214,14 +212,12 @@ export function GroomingWaitlistDialog({
           <div>
             <Label className="text-xs font-semibold">Time of day</Label>
             <div className="mt-1.5 grid grid-cols-4 gap-1.5">
-              {(
-                [
-                  { v: "morning" as const, label: "Morning" },
-                  { v: "afternoon" as const, label: "Afternoon" },
-                  { v: "evening" as const, label: "Evening" },
-                  { v: "anytime" as const, label: "Anytime" },
-                ]
-              ).map((opt) => (
+              {[
+                { v: "morning" as const, label: "Morning" },
+                { v: "afternoon" as const, label: "Afternoon" },
+                { v: "evening" as const, label: "Evening" },
+                { v: "anytime" as const, label: "Anytime" },
+              ].map((opt) => (
                 <button
                   key={opt.v}
                   type="button"

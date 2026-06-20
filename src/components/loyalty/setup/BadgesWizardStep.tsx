@@ -22,7 +22,18 @@ import type {
 } from "@/types/loyalty";
 import { badgeConditionText } from "@/lib/loyalty/badge-summary";
 
-const ICON_PRESETS = ["⭐", "🏆", "💎", "🎖️", "🥇", "🔥", "❤️", "🐾", "🎉", "👑"];
+const ICON_PRESETS = [
+  "⭐",
+  "🏆",
+  "💎",
+  "🎖️",
+  "🥇",
+  "🔥",
+  "❤️",
+  "🐾",
+  "🎉",
+  "👑",
+];
 
 const CONDITION_OPTIONS: { key: BadgeCriteriaType; label: string }[] = [
   { key: "bookings_count", label: "Completed N bookings" },
@@ -135,10 +146,7 @@ export function BadgesWizardStep({
       reward: { type: "points", value: 100 },
       enabled: true,
     };
-    onChange([
-      ...value,
-      { ...fresh, description: badgeConditionText(fresh) },
-    ]);
+    onChange([...value, { ...fresh, description: badgeConditionText(fresh) }]);
   };
 
   return (
@@ -185,7 +193,10 @@ function BadgeCard({
   onRemove: () => void;
 }) {
   const sortedTiers = [...tiers].sort((a, b) => a.sortOrder - b.sortOrder);
-  const reward = badge.reward ?? { type: "points" as BadgeRewardType, value: 0 };
+  const reward = badge.reward ?? {
+    type: "points" as BadgeRewardType,
+    value: 0,
+  };
   const rKey = rewardKey(reward.type);
   const rewardIsText = rKey === "free_service";
 

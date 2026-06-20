@@ -1,10 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { DataTable, type ColumnDef, type FilterDef } from "@/components/ui/DataTable";
+import {
+  DataTable,
+  type ColumnDef,
+  type FilterDef,
+} from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, ExternalLink, Receipt, User, Wallet } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  ExternalLink,
+  Receipt,
+  User,
+  Wallet,
+} from "lucide-react";
 import { clients } from "@/data/clients";
 import { SOURCE_LABELS } from "@/lib/cash-register";
 import type { CapturedCashTxn } from "@/data/cash-drawer";
@@ -27,7 +38,7 @@ export function CashLedgerTable({ txns, currencySymbol }: Props) {
       sortValue: (t) => t.capturedAt,
       render: (t) => (
         <div className="text-xs">
-          <div className="inline-flex items-center gap-1 text-muted-foreground">
+          <div className="text-muted-foreground inline-flex items-center gap-1">
             <Calendar className="size-3" />
             {new Date(t.capturedAt).toLocaleDateString("en-CA", {
               month: "short",
@@ -51,7 +62,9 @@ export function CashLedgerTable({ txns, currencySymbol }: Props) {
       render: (t) => {
         const client = clients.find((c) => c.id === t.clientId);
         return (
-          <span className="text-sm">{client?.name ?? `Client #${t.clientId}`}</span>
+          <span className="text-sm">
+            {client?.name ?? `Client #${t.clientId}`}
+          </span>
         );
       },
     },
@@ -82,7 +95,12 @@ export function CashLedgerTable({ txns, currencySymbol }: Props) {
       render: (t) => {
         if (t.bookingId) {
           return (
-            <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+            >
               <Link href={`/facility/dashboard/bookings/${t.bookingId}`}>
                 <ExternalLink className="mr-1 size-3" />
                 Booking #{t.bookingId}
@@ -92,13 +110,13 @@ export function CashLedgerTable({ txns, currencySymbol }: Props) {
         }
         if (t.invoiceId) {
           return (
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
               <Receipt className="size-3" />
               {t.invoiceId}
             </span>
           );
         }
-        return <span className="text-xs text-muted-foreground">—</span>;
+        return <span className="text-muted-foreground text-xs">—</span>;
       },
     },
     {
@@ -116,7 +134,7 @@ export function CashLedgerTable({ txns, currencySymbol }: Props) {
       sortable: true,
       sortValue: (t) => t.amount,
       render: (t) => (
-        <span className="font-semibold tabular-nums text-emerald-700">
+        <span className="font-semibold text-emerald-700 tabular-nums">
           +{currencySymbol}
           {t.amount.toFixed(2)}
         </span>
@@ -145,7 +163,7 @@ export function CashLedgerTable({ txns, currencySymbol }: Props) {
           {txns.length} cash transaction{txns.length === 1 ? "" : "s"} this
           session
         </span>
-        <span className="font-semibold tabular-nums text-emerald-700">
+        <span className="font-semibold text-emerald-700 tabular-nums">
           {currencySymbol}
           {total.toFixed(2)} captured
         </span>

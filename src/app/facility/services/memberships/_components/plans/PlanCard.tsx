@@ -113,15 +113,16 @@ export function PlanCard({
                     Popular
                   </Badge>
                 )}
-                {plan.instabookServices && plan.instabookServices.length > 0 && (
-                  <Badge
-                    variant="outline"
-                    className="gap-0.5 border-amber-300 bg-amber-50 text-xs text-amber-800"
-                  >
-                    <Zap className="size-3" />
-                    Instant booking
-                  </Badge>
-                )}
+                {plan.instabookServices &&
+                  plan.instabookServices.length > 0 && (
+                    <Badge
+                      variant="outline"
+                      className="gap-0.5 border-amber-300 bg-amber-50 text-xs text-amber-800"
+                    >
+                      <Zap className="size-3" />
+                      Instant booking
+                    </Badge>
+                  )}
               </div>
               <div className="text-muted-foreground mt-0.5 text-xs">
                 <span className="tracking-wide uppercase">

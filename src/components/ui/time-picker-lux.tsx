@@ -126,11 +126,7 @@ export function TimePickerLux({
   );
 
   const hourDisabled = (h: number) =>
-    !minutes.some(
-      (m) =>
-        inRange(h, m, "AM") ||
-        inRange(h, m, "PM"),
-    );
+    !minutes.some((m) => inRange(h, m, "AM") || inRange(h, m, "PM"));
 
   const minuteDisabled = (m: number) => {
     const effectivePeriod: "AM" | "PM" = currentPeriod;
@@ -208,7 +204,7 @@ export function TimePickerLux({
         <p className="text-[11px] font-semibold tracking-wider text-sky-700 uppercase">
           Select Time
         </p>
-        <p className="mt-0.5 text-sm font-semibold tabular-nums text-slate-800">
+        <p className="mt-0.5 text-sm font-semibold text-slate-800 tabular-nums">
           {display || "--:-- --"}
         </p>
       </div>
@@ -302,7 +298,9 @@ export function TimePickerLux({
   if (displayMode === "dialog") {
     return (
       <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
-        <DialogPrimitive.Trigger asChild>{triggerButton}</DialogPrimitive.Trigger>
+        <DialogPrimitive.Trigger asChild>
+          {triggerButton}
+        </DialogPrimitive.Trigger>
 
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay
@@ -360,7 +358,12 @@ interface TimeColumnProps {
   onSelect: (value: number) => void;
 }
 
-function TimeColumn({ label, items, selectedValue, onSelect }: TimeColumnProps) {
+function TimeColumn({
+  label,
+  items,
+  selectedValue,
+  onSelect,
+}: TimeColumnProps) {
   const listRef = React.useRef<HTMLDivElement>(null);
   const activeRef = React.useRef<HTMLButtonElement>(null);
 

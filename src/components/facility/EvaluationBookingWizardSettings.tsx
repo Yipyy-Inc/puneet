@@ -177,11 +177,7 @@ export function EvaluationBookingWizardSettings() {
   const removeWindow = (id: string) =>
     setTimeWindows((prev) => prev.filter((w) => w.id !== id));
 
-  const patchWindow = (
-    id: string,
-    field: keyof TimeWindow,
-    val: string,
-  ) =>
+  const patchWindow = (id: string, field: keyof TimeWindow, val: string) =>
     setTimeWindows((prev) =>
       prev.map((w) => (w.id === id ? { ...w, [field]: val } : w)),
     );
@@ -211,9 +207,7 @@ export function EvaluationBookingWizardSettings() {
             start >= timeToMinutes(w.startTime) &&
             end <= timeToMinutes(w.endTime),
         );
-        return withinWindow
-          ? [{ startTime, endTime: minutesToTime(end) }]
-          : [];
+        return withinWindow ? [{ startTime, endTime: minutesToTime(end) }] : [];
       });
     }
     const generated: { startTime: string; endTime: string }[] = [];
@@ -343,7 +337,7 @@ export function EvaluationBookingWizardSettings() {
 
           {/* Presets */}
           <div>
-            <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wide uppercase">
               Presets
             </p>
             <div className="flex flex-wrap gap-2">
@@ -372,7 +366,7 @@ export function EvaluationBookingWizardSettings() {
 
           {/* Custom durations */}
           <div>
-            <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wide uppercase">
               Custom lengths
             </p>
 
@@ -382,13 +376,13 @@ export function EvaluationBookingWizardSettings() {
                 {customDurations.map((m) => (
                   <span
                     key={m}
-                    className="flex items-center gap-1.5 rounded-lg border-2 border-violet-500 bg-violet-50 pl-3 pr-1.5 py-1 text-sm font-medium text-violet-700"
+                    className="flex items-center gap-1.5 rounded-lg border-2 border-violet-500 bg-violet-50 py-1 pr-1.5 pl-3 text-sm font-medium text-violet-700"
                   >
                     {durLabel(m)}
                     <button
                       type="button"
                       onClick={() => toggleDuration(m)}
-                      className="flex size-4 items-center justify-center rounded-full text-violet-400 hover:bg-violet-200 hover:text-violet-700 transition-colors"
+                      className="flex size-4 items-center justify-center rounded-full text-violet-400 transition-colors hover:bg-violet-200 hover:text-violet-700"
                       aria-label={`Remove ${durLabel(m)}`}
                     >
                       <Trash2 className="size-2.5" />
@@ -408,7 +402,9 @@ export function EvaluationBookingWizardSettings() {
                   max={23}
                   value={customHours}
                   onChange={(e) =>
-                    setCustomHours(Math.max(0, parseInt(e.target.value, 10) || 0))
+                    setCustomHours(
+                      Math.max(0, parseInt(e.target.value, 10) || 0),
+                    )
                   }
                   className="mt-1 h-9 w-20 text-sm"
                   placeholder="0"
@@ -424,13 +420,11 @@ export function EvaluationBookingWizardSettings() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(
-                      (m) => (
-                        <SelectItem key={m} value={String(m)}>
-                          {String(m).padStart(2, "0")} min
-                        </SelectItem>
-                      ),
-                    )}
+                    {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
+                      <SelectItem key={m} value={String(m)}>
+                        {String(m).padStart(2, "0")} min
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -524,9 +518,7 @@ export function EvaluationBookingWizardSettings() {
                 <Input
                   type="time"
                   value={w.endTime}
-                  onChange={(e) =>
-                    patchWindow(w.id, "endTime", e.target.value)
-                  }
+                  onChange={(e) => patchWindow(w.id, "endTime", e.target.value)}
                   className="h-8 w-28 text-sm"
                 />
                 <Button
@@ -709,7 +701,7 @@ export function EvaluationBookingWizardSettings() {
 
           {/* Days strip */}
           <div>
-            <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wide uppercase">
               Available days
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -722,7 +714,7 @@ export function EvaluationBookingWizardSettings() {
                       "rounded-lg border px-3 py-1 text-xs font-medium",
                       active
                         ? "border-violet-200 bg-violet-50 text-violet-700"
-                        : "border-border text-muted-foreground opacity-35 line-through",
+                        : "border-border text-muted-foreground line-through opacity-35",
                     )}
                   >
                     {short}
@@ -736,7 +728,7 @@ export function EvaluationBookingWizardSettings() {
 
           {/* Slot grid */}
           <div>
-            <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wide uppercase">
               Time slots &mdash; {durLabel(defaultDuration)} session
             </p>
             {previewSlots.length === 0 ? (
@@ -753,7 +745,7 @@ export function EvaluationBookingWizardSettings() {
                     key={i}
                     className="flex flex-col items-center rounded-xl border-2 border-violet-100 bg-violet-50 px-2 py-2.5"
                   >
-                    <span className="text-xs font-semibold tabular-nums text-violet-700">
+                    <span className="text-xs font-semibold text-violet-700 tabular-nums">
                       {fmtTime(slot.startTime)}
                     </span>
                     <span className="text-[10px] text-violet-400">
@@ -770,7 +762,7 @@ export function EvaluationBookingWizardSettings() {
             <>
               <Separator />
               <div>
-                <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+                <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wide uppercase">
                   Duration options shown to client
                 </p>
                 <div className="flex flex-wrap gap-1.5">

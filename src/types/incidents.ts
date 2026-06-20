@@ -51,12 +51,12 @@ export const contactMethodEnum = z.enum([
 export type ContactMethod = z.infer<typeof contactMethodEnum>;
 
 export const assigneeRoleEnum = z.enum([
-  "reporter",      // staff member who filed the report
-  "manager",       // facility manager / on-duty supervisor
+  "reporter", // staff member who filed the report
+  "manager", // facility manager / on-duty supervisor
   "owner_contact", // primary contact for facility (owner/admin)
-  "shift_lead",    // person on shift the day the task is due
-  "specific",      // a specific named staff member
-  "any_staff",     // any available staff member
+  "shift_lead", // person on shift the day the task is due
+  "specific", // a specific named staff member
+  "any_staff", // any available staff member
 ]);
 export type AssigneeRole = z.infer<typeof assigneeRoleEnum>;
 

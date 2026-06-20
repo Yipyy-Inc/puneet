@@ -26,9 +26,7 @@ import { facilities } from "@/data/facilities";
 import { buildResumePreselection } from "@/lib/resume-booking";
 import type { Client } from "@/types/client";
 import type { NewBooking } from "@/types/booking";
-import type {
-  UnfinishedBooking,
-} from "@/types/unfinished-booking";
+import type { UnfinishedBooking } from "@/types/unfinished-booking";
 import type { BookingRequestService } from "@/types/booking";
 import { UnfinishedBookingsTable } from "@/components/bookings/UnfinishedBookingsTable";
 import { BookingRequestCard } from "@/components/facility/BookingRequestCard";
@@ -207,8 +205,7 @@ export default function OnlineBookingPage() {
     [facilityId],
   );
   const facilityClients = React.useMemo<Client[]>(
-    () =>
-      (allClients as Client[]).filter((c) => c.facility === facility?.name),
+    () => (allClients as Client[]).filter((c) => c.facility === facility?.name),
     [facility],
   );
 
@@ -269,9 +266,7 @@ export default function OnlineBookingPage() {
 
     const handleCreateBooking = (booking: NewBooking) => {
       setRequests((prev) =>
-        prev.map((r) =>
-          r.id === req.id ? { ...r, status: "scheduled" } : r,
-        ),
+        prev.map((r) => (r.id === req.id ? { ...r, status: "scheduled" } : r)),
       );
 
       const notifyBits: string[] = [];
@@ -439,59 +434,59 @@ export default function OnlineBookingPage() {
         onValueChange={(v) => setActiveTab(v as typeof activeTab)}
       >
         <TabsList className="flex w-full gap-2 px-0">
-            {(
-              [
-                {
-                  value: "requests",
-                  label: "Booking requests",
-                  count: pending.length,
-                },
-                {
-                  value: "waitlist",
-                  label: "Waiting list",
-                  count: waitlisted.length,
-                },
-                {
-                  value: "unfinished",
-                  label: "Unfinished",
-                  count: abandonedCount,
-                },
-                { value: "settings", label: "Settings", count: 0 },
-              ] as const
-            ).map((t) => {
-              const active = activeTab === t.value;
-              return (
-                <TabsTrigger
-                  key={t.value}
-                  value={t.value}
-                  className="group hover:-translate-y-px hover:text-foreground hover:bg-muted/50 active:translate-y-0 data-[state=active]:hover:bg-background relative transition-all duration-200 ease-out"
-                >
-                  <span className="transition-transform duration-200 group-data-[state=active]:scale-[1.01]">
-                    {t.label}
-                  </span>
-                  {t.count > 0 && (
-                    <span
-                      className={cn(
-                        "ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-medium tabular-nums transition-all duration-300 ease-out",
-                        active
-                          ? "bg-primary/15 text-primary scale-105 shadow-[0_0_0_1px_var(--primary)]/0"
-                          : "bg-muted text-muted-foreground group-hover:bg-muted-foreground/15",
-                      )}
-                    >
-                      {t.count}
-                    </span>
-                  )}
+          {(
+            [
+              {
+                value: "requests",
+                label: "Booking requests",
+                count: pending.length,
+              },
+              {
+                value: "waitlist",
+                label: "Waiting list",
+                count: waitlisted.length,
+              },
+              {
+                value: "unfinished",
+                label: "Unfinished",
+                count: abandonedCount,
+              },
+              { value: "settings", label: "Settings", count: 0 },
+            ] as const
+          ).map((t) => {
+            const active = activeTab === t.value;
+            return (
+              <TabsTrigger
+                key={t.value}
+                value={t.value}
+                className="group hover:text-foreground hover:bg-muted/50 data-[state=active]:hover:bg-background relative transition-all duration-200 ease-out hover:-translate-y-px active:translate-y-0"
+              >
+                <span className="transition-transform duration-200 group-data-[state=active]:scale-[1.01]">
+                  {t.label}
+                </span>
+                {t.count > 0 && (
                   <span
                     className={cn(
-                      "bg-primary pointer-events-none absolute inset-x-3 -bottom-px h-0.5 origin-center rounded-full transition-transform duration-300 ease-out",
-                      active ? "scale-x-100" : "scale-x-0",
+                      "ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-medium tabular-nums transition-all duration-300 ease-out",
+                      active
+                        ? "bg-primary/15 text-primary scale-105 shadow-[0_0_0_1px_var(--primary)]/0"
+                        : "bg-muted text-muted-foreground group-hover:bg-muted-foreground/15",
                     )}
-                    aria-hidden
-                  />
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
+                  >
+                    {t.count}
+                  </span>
+                )}
+                <span
+                  className={cn(
+                    "bg-primary pointer-events-none absolute inset-x-3 -bottom-px h-0.5 origin-center rounded-full transition-transform duration-300 ease-out",
+                    active ? "scale-x-100" : "scale-x-0",
+                  )}
+                  aria-hidden
+                />
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
 
         <TabsContent value="requests" className="mt-4 space-y-4">
           <FilterBar
@@ -683,7 +678,7 @@ export default function OnlineBookingPage() {
                 key={opt.v}
                 htmlFor={`post-notify-online-${opt.v}`}
                 className={cn(
-                  "border-border hover:border-primary/50 flex cursor-pointer items-center gap-2 rounded-xl border bg-card p-3 text-sm transition-colors",
+                  "border-border hover:border-primary/50 bg-card flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-sm transition-colors",
                   notifyMode === opt.v &&
                     "border-primary bg-primary/5 ring-primary/30 ring-2",
                 )}

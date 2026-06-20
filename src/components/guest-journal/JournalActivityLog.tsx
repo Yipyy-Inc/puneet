@@ -50,10 +50,9 @@ export function JournalActivityLog({ executions }: Props) {
                 exec.taskType,
                 String(exec.outcome),
               );
-              const dateLabel = new Date(exec.date + "T00:00:00").toLocaleDateString(
-                "en-US",
-                { month: "short", day: "numeric" },
-              );
+              const dateLabel = new Date(
+                exec.date + "T00:00:00",
+              ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
               return (
                 <li
                   key={exec.id}

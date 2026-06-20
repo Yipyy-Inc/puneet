@@ -31,10 +31,21 @@ type Props = {
   item: OpsInventoryItem | null;
   supplierName: string;
   onClose: () => void;
-  onSave: (type: StockAdjustType, quantity: number, reason: string, notes: string) => void;
+  onSave: (
+    type: StockAdjustType,
+    quantity: number,
+    reason: string,
+    notes: string,
+  ) => void;
 };
 
-export function StockAdjustModal({ open, item, supplierName, onClose, onSave }: Props) {
+export function StockAdjustModal({
+  open,
+  item,
+  supplierName,
+  onClose,
+  onSave,
+}: Props) {
   const [adjustType, setAdjustType] = useState<StockAdjustType>("add");
   const [quantity, setQuantity] = useState(1);
   const [reason, setReason] = useState("");
@@ -148,7 +159,7 @@ export function StockAdjustModal({ open, item, supplierName, onClose, onSave }: 
               className={cn(
                 "flex items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors",
                 adjustType === "remove"
-                  ? "border-destructive bg-red-50 text-destructive"
+                  ? "border-destructive text-destructive bg-red-50"
                   : "border-border text-muted-foreground hover:bg-muted",
               )}
             >

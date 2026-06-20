@@ -47,7 +47,10 @@ export function DismissReminderDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : handleCancel())}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => (o ? onOpenChange(o) : handleCancel())}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -56,8 +59,8 @@ export function DismissReminderDialog({
           </DialogTitle>
           <DialogDescription>
             This reminder for {petName} won&apos;t be sent. The cycle restarts
-            the next time {clientName} completes a booking. Logged on the
-            client profile.
+            the next time {clientName} completes a booking. Logged on the client
+            profile.
           </DialogDescription>
         </DialogHeader>
 

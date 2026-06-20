@@ -3,12 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -125,7 +120,7 @@ function RouteMap({
           const cy = 30 + Math.abs((hash >> 4) % 40);
           const color = area.color || "#3b82f6";
           const points = `${cx - 20},${cy - 20} ${cx + 25},${cy - 15} ${cx + 20},${cy + 25} ${cx - 25},${cy + 20}`;
-          
+
           return (
             <polygon
               key={area.id}
@@ -189,7 +184,9 @@ function RouteMap({
               stroke="#b45309"
               strokeWidth={0.6}
             />
-            <title>{c.name} — {c.address}</title>
+            <title>
+              {c.name} — {c.address}
+            </title>
           </g>
         ))}
 
@@ -270,11 +267,11 @@ function TimeChangeConfirm({
               shift. Clients will receive an updated confirmation when you
               approve.
             </p>
-            <ul className="max-h-64 space-y-2 overflow-y-auto rounded-lg border bg-muted/30 p-2">
+            <ul className="bg-muted/30 max-h-64 space-y-2 overflow-y-auto rounded-lg border p-2">
               {flagged.map((c) => (
                 <li
                   key={c.payload.apt.id}
-                  className="flex items-center justify-between gap-2 rounded-md border bg-card px-2.5 py-1.5 text-xs"
+                  className="bg-card flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-xs"
                 >
                   <span className="min-w-0 truncate font-medium">
                     {c.payload.apt.petName}
@@ -283,7 +280,7 @@ function TimeChangeConfirm({
                       · {c.payload.apt.ownerName}
                     </span>
                   </span>
-                  <span className="flex items-center gap-1 shrink-0 tabular-nums">
+                  <span className="flex shrink-0 items-center gap-1 tabular-nums">
                     <span className="text-muted-foreground line-through">
                       {formatTime(c.payload.originalStart)}
                     </span>
@@ -414,10 +411,9 @@ export function RoutePlannerPage() {
       ...prev,
       [vanId]: chain.map((c) => c.payload.apt.id),
     }));
-    const newTimes: Record<
-      string,
-      { startTime: string; endTime: string }
-    > = { ...timeOverrides };
+    const newTimes: Record<string, { startTime: string; endTime: string }> = {
+      ...timeOverrides,
+    };
     let notifiedCount = 0;
     for (const c of chain) {
       newTimes[c.payload.apt.id] = {
@@ -486,7 +482,7 @@ export function RoutePlannerPage() {
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="h-9 rounded-md border bg-card px-3 text-sm"
+            className="bg-card h-9 rounded-md border px-3 text-sm"
           />
         </div>
       </div>
@@ -496,7 +492,7 @@ export function RoutePlannerPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm">
-              <MapIcon className="size-4 text-muted-foreground" />
+              <MapIcon className="text-muted-foreground size-4" />
               Service Areas Active This Day
             </CardTitle>
           </CardHeader>
@@ -636,7 +632,7 @@ export function RoutePlannerPage() {
                   <CardHeader className="flex flex-col gap-2 pb-3 md:flex-row md:items-center md:justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2 text-base">
-                        <Truck className="size-4 text-muted-foreground" />
+                        <Truck className="text-muted-foreground size-4" />
                         {v.name}
                         <Badge variant="outline" className="ml-1 text-[10px]">
                           {chain.length} stop{chain.length === 1 ? "" : "s"}
@@ -651,7 +647,7 @@ export function RoutePlannerPage() {
                           <Users className="size-3" />
                           {primaryName ? (
                             <span>
-                              <span className="font-medium text-foreground">
+                              <span className="text-foreground font-medium">
                                 {primaryName}
                               </span>
                               <span className="text-muted-foreground">
@@ -666,7 +662,7 @@ export function RoutePlannerPage() {
                             <>
                               <span>·</span>
                               <span>
-                                <span className="font-medium text-foreground">
+                                <span className="text-foreground font-medium">
                                   {secondName}
                                 </span>
                                 <span className="text-muted-foreground">
@@ -680,8 +676,8 @@ export function RoutePlannerPage() {
                       )}
                       {chain.length > 0 && (
                         <p className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
-                          <Clock className="size-3" />
-                          ~{totalDriveMin} min total drive time
+                          <Clock className="size-3" />~{totalDriveMin} min total
+                          drive time
                         </p>
                       )}
                     </div>
@@ -701,8 +697,9 @@ export function RoutePlannerPage() {
                       <div>
                         {chain.length === 0 ? (
                           <div className="py-8 text-center">
-                            <p className="text-sm text-muted-foreground mb-3">
-                              No mobile bookings today — view the calendar to check or add bookings.
+                            <p className="text-muted-foreground mb-3 text-sm">
+                              No mobile bookings today — view the calendar to
+                              check or add bookings.
                             </p>
                             <Button variant="outline" size="sm" asChild>
                               <Link href="/facility/calendar">
@@ -713,7 +710,7 @@ export function RoutePlannerPage() {
                           </div>
                         ) : (
                           <ol className="space-y-2">
-                            <li className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-xs">
+                            <li className="bg-muted/40 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs">
                               <Home className="text-muted-foreground size-3.5" />
                               <span className="font-medium">
                                 Depart home base
@@ -728,9 +725,7 @@ export function RoutePlannerPage() {
                               // (or home for the first one). Mirrors the chain
                               // input the helper used to compute drive time.
                               const prevCoord =
-                                i === 0
-                                  ? HOME_COORD
-                                  : chain[i - 1].coord;
+                                i === 0 ? HOME_COORD : chain[i - 1].coord;
                               const km = driveKilometres(prevCoord, c.coord);
                               const window =
                                 arrivalWindowMinutes > 0
@@ -740,75 +735,78 @@ export function RoutePlannerPage() {
                                     )
                                   : null;
                               return (
-                              <li key={c.payload.apt.id} className="space-y-1">
-                                {/* Drive segment from previous stop — time + km */}
-                                <div className="text-muted-foreground ml-3 flex items-center gap-1.5 border-l-2 border-dashed pl-3 text-[11px]">
-                                  <ArrowRight className="size-3" />
-                                  <span className="font-medium">
-                                    {c.driveMinutesIn} min drive
-                                  </span>
-                                  <span>·</span>
-                                  <span>{km.toFixed(1)} km</span>
-                                </div>
-                                <div
-                                  className="flex items-start gap-3 rounded-lg border p-3"
-                                  style={{
-                                    borderLeftWidth: 4,
-                                    borderLeftColor: vanColor,
-                                  }}
+                                <li
+                                  key={c.payload.apt.id}
+                                  className="space-y-1"
                                 >
+                                  {/* Drive segment from previous stop — time + km */}
+                                  <div className="text-muted-foreground ml-3 flex items-center gap-1.5 border-l-2 border-dashed pl-3 text-[11px]">
+                                    <ArrowRight className="size-3" />
+                                    <span className="font-medium">
+                                      {c.driveMinutesIn} min drive
+                                    </span>
+                                    <span>·</span>
+                                    <span>{km.toFixed(1)} km</span>
+                                  </div>
                                   <div
-                                    className="flex size-8 shrink-0 items-center justify-center rounded-full font-bold text-white shadow-sm"
-                                    style={{ backgroundColor: vanColor }}
+                                    className="flex items-start gap-3 rounded-lg border p-3"
+                                    style={{
+                                      borderLeftWidth: 4,
+                                      borderLeftColor: vanColor,
+                                    }}
                                   >
-                                    {i + 1}
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <p className="truncate text-sm font-semibold">
-                                        {c.payload.apt.petName}
-                                        <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-                                          · {c.payload.apt.packageName}
-                                        </span>
-                                      </p>
-                                      <span
-                                        className={cn(
-                                          "shrink-0 text-xs font-semibold tabular-nums",
-                                          c.changed
-                                            ? "text-emerald-700"
-                                            : "text-foreground",
-                                        )}
-                                      >
-                                        {formatTime(c.newStart)} –{" "}
-                                        {formatTime(c.newEnd)}
-                                      </span>
+                                    <div
+                                      className="flex size-8 shrink-0 items-center justify-center rounded-full font-bold text-white shadow-sm"
+                                      style={{ backgroundColor: vanColor }}
+                                    >
+                                      {i + 1}
                                     </div>
-                                    <p className="text-muted-foreground flex items-center gap-1 text-xs">
-                                      <MapPin className="size-3" />
-                                      {c.payload.apt.ownerName} ·{" "}
-                                      {c.payload.apt.ownerPhone}
-                                    </p>
-                                    {c.changed && (
-                                      <p className="mt-0.5 text-[10px] text-emerald-700">
-                                        Updated from{" "}
-                                        {formatTime(c.payload.originalStart)}
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <p className="truncate text-sm font-semibold">
+                                          {c.payload.apt.petName}
+                                          <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+                                            · {c.payload.apt.packageName}
+                                          </span>
+                                        </p>
+                                        <span
+                                          className={cn(
+                                            "shrink-0 text-xs font-semibold tabular-nums",
+                                            c.changed
+                                              ? "text-emerald-700"
+                                              : "text-foreground",
+                                          )}
+                                        >
+                                          {formatTime(c.newStart)} –{" "}
+                                          {formatTime(c.newEnd)}
+                                        </span>
+                                      </div>
+                                      <p className="text-muted-foreground flex items-center gap-1 text-xs">
+                                        <MapPin className="size-3" />
+                                        {c.payload.apt.ownerName} ·{" "}
+                                        {c.payload.apt.ownerPhone}
                                       </p>
-                                    )}
-                                    {window && (
-                                      <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700 dark:bg-sky-950/30 dark:text-sky-300">
-                                        <Clock className="size-2.5" />
-                                        Client sees:{" "}
-                                        {formatTime(window.start)} –{" "}
-                                        {formatTime(window.end)}
-                                      </p>
-                                    )}
+                                      {c.changed && (
+                                        <p className="mt-0.5 text-[10px] text-emerald-700">
+                                          Updated from{" "}
+                                          {formatTime(c.payload.originalStart)}
+                                        </p>
+                                      )}
+                                      {window && (
+                                        <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700 dark:bg-sky-950/30 dark:text-sky-300">
+                                          <Clock className="size-2.5" />
+                                          Client sees:{" "}
+                                          {formatTime(window.start)} –{" "}
+                                          {formatTime(window.end)}
+                                        </p>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              </li>
+                                </li>
                               );
                             })}
 
-                            <li className="text-muted-foreground flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-xs">
+                            <li className="text-muted-foreground bg-muted/40 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs">
                               <Home className="size-3.5" />
                               <span className="font-medium">
                                 Return to home base
@@ -843,9 +841,7 @@ export function RoutePlannerPage() {
                             label: i + 1,
                             petName: c.payload.apt.petName,
                           }))}
-                          nearbyClients={
-                            showNearbyClients ? nearby : undefined
-                          }
+                          nearbyClients={showNearbyClients ? nearby : undefined}
                           onNearbyClick={(id) => {
                             // Real wiring goes to a client profile route; toast
                             // the intent so the gesture is visible in mock.
@@ -856,8 +852,7 @@ export function RoutePlannerPage() {
                             toast.message(
                               `Nearby client: ${cl?.name ?? "Client"}`,
                               {
-                                description:
-                                  `${addr} — call to suggest a same-day booking.`,
+                                description: `${addr} — call to suggest a same-day booking.`,
                               },
                             );
                           }}
@@ -872,43 +867,58 @@ export function RoutePlannerPage() {
 
                         {/* Nearby clients list */}
                         {showNearbyClients && nearby.length > 0 && (
-                          <div className="mt-3 rounded-xl border overflow-hidden">
-                            <div className="bg-amber-50 dark:bg-amber-950/20 px-3 py-2 border-b flex items-center gap-2">
+                          <div className="mt-3 overflow-hidden rounded-xl border">
+                            <div className="flex items-center gap-2 border-b bg-amber-50 px-3 py-2 dark:bg-amber-950/20">
                               <Users className="size-3.5 text-amber-600" />
                               <p className="text-xs font-semibold text-amber-900 dark:text-amber-300">
-                                {nearby.length} client{nearby.length > 1 ? "s" : ""} within 2 km — potential same-day adds
+                                {nearby.length} client
+                                {nearby.length > 1 ? "s" : ""} within 2 km —
+                                potential same-day adds
                               </p>
                             </div>
-                            <ul className="divide-y max-h-48 overflow-y-auto">
+                            <ul className="max-h-48 divide-y overflow-y-auto">
                               {nearby.map((cl) => (
                                 <li
                                   key={cl.id}
-                                  className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/40 cursor-pointer transition-colors"
+                                  className="hover:bg-muted/40 flex cursor-pointer items-center gap-2.5 px-3 py-2 transition-colors"
                                   onClick={() => {
-                                    const full = clients.find((c) => c.id === cl.id);
-                                    const addr = `${full?.address?.street ?? ""} ${full?.address?.city ?? ""}`.trim() || "No address on file";
+                                    const full = clients.find(
+                                      (c) => c.id === cl.id,
+                                    );
+                                    const addr =
+                                      `${full?.address?.street ?? ""} ${full?.address?.city ?? ""}`.trim() ||
+                                      "No address on file";
                                     toast.message(`Call ${cl.name}`, {
                                       description: `${addr} — suggest a same-day mobile booking to fill the route.`,
                                     });
                                   }}
                                 >
-                                  <div className="size-2 rounded-full bg-amber-400 shrink-0" />
+                                  <div className="size-2 shrink-0 rounded-full bg-amber-400" />
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-medium truncate">{cl.name}</p>
-                                    <p className="text-[10px] text-muted-foreground truncate">{cl.address}</p>
+                                    <p className="truncate text-xs font-medium">
+                                      {cl.name}
+                                    </p>
+                                    <p className="text-muted-foreground truncate text-[10px]">
+                                      {cl.address}
+                                    </p>
                                   </div>
-                                  <span className="text-[10px] text-amber-600 font-medium shrink-0">Call</span>
+                                  <span className="shrink-0 text-[10px] font-medium text-amber-600">
+                                    Call
+                                  </span>
                                 </li>
                               ))}
                             </ul>
                           </div>
                         )}
 
-                        {showNearbyClients && nearby.length === 0 && chain.length > 0 && (
-                          <p className="text-muted-foreground mt-3 text-center text-[11px] italic">
-                            No unbooked clients found within 2 km of today&apos;s route.
-                          </p>
-                        )}
+                        {showNearbyClients &&
+                          nearby.length === 0 &&
+                          chain.length > 0 && (
+                            <p className="text-muted-foreground mt-3 text-center text-[11px] italic">
+                              No unbooked clients found within 2 km of
+                              today&apos;s route.
+                            </p>
+                          )}
                       </div>
                     </div>
                   </CardContent>

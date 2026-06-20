@@ -66,9 +66,7 @@ import { CourseCurriculumEditor } from "./_components/course-curriculum-editor";
 import { trainingQueries } from "@/lib/api/training";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  trainingClasses as initialTrainingClasses,
-} from "@/data/training";
+import { trainingClasses as initialTrainingClasses } from "@/data/training";
 import type { TrainingClass } from "@/types/training";
 import {
   ApplyToUpcomingPrompt,
@@ -89,7 +87,9 @@ export default function TrainingCourseCatalogPage() {
   const [templatesForCourse, setTemplatesForCourse] =
     useState<TrainingCourseType | null>(null);
 
-  const [classes, setClasses] = useState<TrainingClass[]>(initialTrainingClasses);
+  const [classes, setClasses] = useState<TrainingClass[]>(
+    initialTrainingClasses,
+  );
   const [propagationPrompt, setPropagationPrompt] = useState<{
     previous: TrainingCourseType;
     next: TrainingCourseType;
@@ -224,7 +224,8 @@ export default function TrainingCourseCatalogPage() {
       description: formData.description.trim(),
       whatYouWillLearn:
         learningOutcomes.length > 0 ? learningOutcomes : undefined,
-      sessionCurriculum: curriculumWeeks.length > 0 ? curriculumWeeks : undefined,
+      sessionCurriculum:
+        curriculumWeeks.length > 0 ? curriculumWeeks : undefined,
       curriculumStyle: formData.curriculumStyle,
       disciplineId: formData.disciplineId || undefined,
       classFormat: formData.classFormat,
@@ -316,9 +317,7 @@ export default function TrainingCourseCatalogPage() {
     const affectedIds = new Set(affected.map((a) => a.id));
     setClasses((prev) =>
       prev.map((c) =>
-        affectedIds.has(c.id)
-          ? { ...c, totalSessions: next.defaultWeeks }
-          : c,
+        affectedIds.has(c.id) ? { ...c, totalSessions: next.defaultWeeks } : c,
       ),
     );
     toast.success(
@@ -819,8 +818,8 @@ export default function TrainingCourseCatalogPage() {
               <div className="space-y-2">
                 <Label>Session Plan</Label>
                 <p className="text-muted-foreground text-xs">
-                  Define which exercises are covered in each session. Clients see
-                  session goals in their portal before each class.
+                  Define which exercises are covered in each session. Clients
+                  see session goals in their portal before each class.
                 </p>
                 <CourseCurriculumEditor
                   weeks={formData.defaultWeeks}
@@ -835,10 +834,10 @@ export default function TrainingCourseCatalogPage() {
               <div className="text-muted-foreground flex items-start gap-2.5 rounded-lg border border-dashed bg-slate-50/60 p-3 text-xs dark:bg-slate-900/40">
                 <Sparkles className="mt-0.5 size-4 shrink-0 text-amber-500" />
                 <p>
-                  Adaptive course — no fixed session plan. The trainer opens each
-                  session with an empty exercise list and builds it from scratch,
-                  working on whatever each dog needs that day. They can still
-                  pre-plan a single session as a one-off from the upcoming
+                  Adaptive course — no fixed session plan. The trainer opens
+                  each session with an empty exercise list and builds it from
+                  scratch, working on whatever each dog needs that day. They can
+                  still pre-plan a single session as a one-off from the upcoming
                   session card.
                 </p>
               </div>

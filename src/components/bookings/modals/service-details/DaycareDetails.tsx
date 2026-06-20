@@ -55,12 +55,18 @@ interface DaycareDetailsProps {
 
 function getAddonPriceLabel(addon: ServiceAddOn): string {
   switch (addon.pricingType) {
-    case "flat": return `$${addon.price}`;
-    case "per_day": return `$${addon.price}/day`;
-    case "per_session": return `$${addon.price}/${addon.unitLabel || "session"}`;
-    case "per_hour": return `$${addon.price}/${addon.unitLabel || "hr"}`;
-    case "per_item": return `$${addon.price}/${addon.unitLabel || "item"}`;
-    case "percentage_of_booking": return `${addon.price}% of booking`;
+    case "flat":
+      return `$${addon.price}`;
+    case "per_day":
+      return `$${addon.price}/day`;
+    case "per_session":
+      return `$${addon.price}/${addon.unitLabel || "session"}`;
+    case "per_hour":
+      return `$${addon.price}/${addon.unitLabel || "hr"}`;
+    case "per_item":
+      return `$${addon.price}/${addon.unitLabel || "item"}`;
+    case "percentage_of_booking":
+      return `${addon.price}% of booking`;
   }
 }
 
@@ -356,7 +362,11 @@ function DaycareSectionAssignmentStep({
   setRoomAssignments: (a: Array<{ petId: number; roomId: string }>) => void;
   daycareSelectedDates: Date[];
   skipEligibility?: boolean;
-  daycareDateTimes: Array<{ date: string; checkInTime: string; checkOutTime: string }>;
+  daycareDateTimes: Array<{
+    date: string;
+    checkInTime: string;
+    checkOutTime: string;
+  }>;
 }) {
   // Derive which sections the selected rate allows (empty = all sections allowed)
   const allowedSectionIds = React.useMemo<string[]>(() => {
@@ -366,7 +376,9 @@ function DaycareSectionAssignmentStep({
     const [outH, outM] = firstDt.checkOutTime.split(":").map(Number);
     const durationHrs = (outH * 60 + outM - (inH * 60 + inM)) / 60;
     const rateType = durationHrs <= 5 ? "half-day" : "full-day";
-    const matchingRate = daycareRates.find((r) => r.type === rateType && r.isActive);
+    const matchingRate = daycareRates.find(
+      (r) => r.type === rateType && r.isActive,
+    );
     return matchingRate?.allowedSectionIds ?? [];
   }, [daycareDateTimes]);
 
@@ -486,7 +498,9 @@ function DaycareSectionAssignmentStep({
         <div className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5">
           <Sun className="mt-0.5 size-3.5 shrink-0 text-blue-600" />
           <p className="text-xs text-blue-800">
-            <span className="font-semibold">Rate restriction:</span> The selected rate is configured for specific rooms. Rooms outside the rate are dimmed — you can still assign them manually.
+            <span className="font-semibold">Rate restriction:</span> The
+            selected rate is configured for specific rooms. Rooms outside the
+            rate are dimmed — you can still assign them manually.
           </p>
         </div>
       )}
@@ -494,7 +508,7 @@ function DaycareSectionAssignmentStep({
       {/* Unassigned pets */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+          <Label className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
             Unassigned Pets
           </Label>
           <span className="text-muted-foreground text-[11px] tabular-nums">
@@ -506,7 +520,7 @@ function DaycareSectionAssignmentStep({
             of {selectedPets.length}
           </span>
         </div>
-        <div className="from-muted/40 to-muted/10 flex min-h-16 flex-wrap items-center gap-2 rounded-2xl bg-gradient-to-br p-3 ring-1 ring-inset ring-border/40">
+        <div className="from-muted/40 to-muted/10 ring-border/40 flex min-h-16 flex-wrap items-center gap-2 rounded-2xl bg-gradient-to-br p-3 ring-1 ring-inset">
           {selectedPets
             .filter((pet) => !roomAssignments.find((a) => a.petId === pet.id))
             .map((pet) => (
@@ -525,7 +539,7 @@ function DaycareSectionAssignmentStep({
                   "bg-card flex cursor-grab items-center gap-2 rounded-full px-3 py-1.5 shadow-xs ring-1 transition-all select-none active:cursor-grabbing",
                   selectedPet?.id === pet.id
                     ? "bg-primary text-primary-foreground ring-primary shadow-md"
-                    : "ring-border/60 hover:-translate-y-0.5 hover:shadow-md hover:ring-primary/40",
+                    : "ring-border/60 hover:ring-primary/40 hover:-translate-y-0.5 hover:shadow-md",
                 )}
               >
                 <div
@@ -663,13 +677,14 @@ function DaycareSectionAssignmentStep({
                           className={cn(
                             "group bg-card relative overflow-hidden rounded-2xl ring-1 transition-all duration-300 select-none",
                             isDisabled
-                              ? "cursor-not-allowed opacity-60 ring-border/50"
-                              : "ring-border/60 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:ring-border",
-                            isOutsideRate && !isDisabled && "opacity-50 grayscale-[40%]",
+                              ? "ring-border/50 cursor-not-allowed opacity-60"
+                              : "ring-border/60 hover:ring-border cursor-pointer hover:-translate-y-1 hover:shadow-xl",
+                            isOutsideRate &&
+                              !isDisabled &&
+                              "opacity-50 grayscale-[40%]",
                             isDragOver &&
-                              "ring-2 ring-primary shadow-2xl scale-[1.02]",
-                            hasAssigned &&
-                              "ring-2 ring-primary/70 shadow-lg",
+                              "ring-primary scale-[1.02] shadow-2xl ring-2",
+                            hasAssigned && "ring-primary/70 shadow-lg ring-2",
                             showInvite && "ring-primary/40 ring-dashed",
                           )}
                         >
@@ -736,14 +751,14 @@ function DaycareSectionAssignmentStep({
 
                             {/* Rate restriction badge */}
                             {isOutsideRate && (
-                              <p className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-600 ring-1 ring-inset ring-slate-200">
+                              <p className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-600 ring-1 ring-slate-200 ring-inset">
                                 Not in selected rate&#39;s rooms
                               </p>
                             )}
 
                             {/* Rules chips */}
                             {avail?.eligibilityMessage && !eligible ? (
-                              <p className="rounded-md bg-amber-50 px-2 py-1 text-[10px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200/60">
+                              <p className="rounded-md bg-amber-50 px-2 py-1 text-[10px] font-medium text-amber-700 ring-1 ring-amber-200/60 ring-inset">
                                 {avail.eligibilityMessage}
                               </p>
                             ) : (
@@ -823,11 +838,11 @@ function DaycareSectionAssignmentStep({
 
                             {/* Assigned pets */}
                             {hasAssigned && (
-                              <div className="flex flex-wrap gap-1 border-t border-border/50 pt-2.5">
+                              <div className="border-border/50 flex flex-wrap gap-1 border-t pt-2.5">
                                 {assignedPets.map((pet) => (
                                   <span
                                     key={pet.id}
-                                    className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full py-0.5 pr-2 pl-1 text-[11px] font-medium ring-1 ring-inset ring-primary/20"
+                                    className="bg-primary/10 text-primary ring-primary/20 inline-flex items-center gap-1 rounded-full py-0.5 pr-2 pl-1 text-[11px] font-medium ring-1 ring-inset"
                                   >
                                     <span className="bg-primary/20 flex size-4 items-center justify-center rounded-full text-[9px] font-bold">
                                       {pet.name[0]}
@@ -888,12 +903,21 @@ function DaycareAddOnsSubStep({
     services: Array<{ serviceId: string; quantity: number; petId: number }>,
   ) => void;
   selectedPets: Pet[];
-  daycareDateTimes: Array<{ date: string; checkInTime: string; checkOutTime: string }>;
+  daycareDateTimes: Array<{
+    date: string;
+    checkInTime: string;
+    checkOutTime: string;
+  }>;
 }) {
   // Derive rate type from session duration to find included free add-ons
   const injectedRef = useRef(false);
   useEffect(() => {
-    if (injectedRef.current || !isStepAccessible(2) || selectedPets.length === 0) return;
+    if (
+      injectedRef.current ||
+      !isStepAccessible(2) ||
+      selectedPets.length === 0
+    )
+      return;
     injectedRef.current = true;
 
     // Determine duration from first date-time entry
@@ -905,19 +929,25 @@ function DaycareAddOnsSubStep({
     const rateType = durationHrs <= 5 ? "half-day" : "full-day";
 
     // Find the matching rate and its included add-on IDs
-    const matchingRate = daycareRates.find((r) => r.type === rateType && r.isActive);
+    const matchingRate = daycareRates.find(
+      (r) => r.type === rateType && r.isActive,
+    );
     const includedIds: string[] = matchingRate?.includedAddOnIds ?? [];
     if (includedIds.length === 0) return;
 
     // Inject one entry per pet per included add-on (quantity = 0 signals "free/included")
     const toInject = selectedPets.flatMap((pet) =>
-      includedIds.map((id) => ({ serviceId: id, quantity: 0, petId: pet.id }))
+      includedIds.map((id) => ({ serviceId: id, quantity: 0, petId: pet.id })),
     );
     // Only add entries that don't already exist
-    const existing = new Set(extraServices.map((es) => `${es.serviceId}:${es.petId}`));
-    const novel = toInject.filter((e) => !existing.has(`${e.serviceId}:${e.petId}`));
+    const existing = new Set(
+      extraServices.map((es) => `${es.serviceId}:${es.petId}`),
+    );
+    const novel = toInject.filter(
+      (e) => !existing.has(`${e.serviceId}:${e.petId}`),
+    );
     if (novel.length > 0) setExtraServices([...extraServices, ...novel]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isStepAccessible, selectedPets.length]);
 
   const daycareAddOns = getStoredAddOns().filter((a) => {
@@ -963,7 +993,7 @@ function DaycareAddOnsSubStep({
           }, 0);
           return (
             subtotal > 0 && (
-              <div className="flex items-center justify-between rounded-xl border bg-muted/40 px-4 py-2.5">
+              <div className="bg-muted/40 flex items-center justify-between rounded-xl border px-4 py-2.5">
                 <span className="text-sm font-medium">Add-ons subtotal</span>
                 <span className="text-base font-bold tabular-nums">
                   ${subtotal.toFixed(2)}
@@ -996,7 +1026,7 @@ function DaycareAddOnsSubStep({
                   isIncludedFree
                     ? "border-emerald-400 bg-emerald-50/60 shadow-md"
                     : isAdded
-                      ? "border-transparent bg-primary/5 shadow-md"
+                      ? "bg-primary/5 border-transparent shadow-md"
                       : "border-border hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-lg",
                 )}
               >
@@ -1032,11 +1062,13 @@ function DaycareAddOnsSubStep({
                         Required
                       </div>
                     )}
-                    {service.isDefault && !service.isRequired && !isIncludedFree && (
-                      <div className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-bold text-white">
-                        Default
-                      </div>
-                    )}
+                    {service.isDefault &&
+                      !service.isRequired &&
+                      !isIncludedFree && (
+                        <div className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-bold text-white">
+                          Default
+                        </div>
+                      )}
                     {service.duration && (
                       <div className="rounded-lg bg-white/90 px-2 py-1 text-xs font-medium text-slate-700 backdrop-blur-sm">
                         {service.duration}min
@@ -1077,77 +1109,122 @@ function DaycareAddOnsSubStep({
                         </span>
                       </div>
                     ) : (
-                    selectedPets.map((pet) => {
-                      const petService = extraServices.find(
-                        (es) =>
-                          es.serviceId === service.id && es.petId === pet.id && es.quantity > 0,
-                      );
-                      const quantity = petService?.quantity || 0;
+                      selectedPets.map((pet) => {
+                        const petService = extraServices.find(
+                          (es) =>
+                            es.serviceId === service.id &&
+                            es.petId === pet.id &&
+                            es.quantity > 0,
+                        );
+                        const quantity = petService?.quantity || 0;
 
-                      return (
-                        <div
-                          key={pet.id}
-                          className="flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <span className="bg-primary/10 text-primary flex size-4 items-center justify-center rounded-full text-[9px] font-bold">
-                              {pet.name[0]}
-                            </span>
-                            <span className="text-xs font-medium">
-                              {pet.name}
-                            </span>
-                          </div>
-
-                          {hasUnits ? (
+                        return (
+                          <div
+                            key={pet.id}
+                            className="flex items-center justify-between"
+                          >
                             <div className="flex items-center gap-1.5">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  if (service.isRequired && quantity <= 1) return;
-                                  if (quantity > 0) {
-                                    const updated = extraServices
-                                      .map((es) =>
+                              <span className="bg-primary/10 text-primary flex size-4 items-center justify-center rounded-full text-[9px] font-bold">
+                                {pet.name[0]}
+                              </span>
+                              <span className="text-xs font-medium">
+                                {pet.name}
+                              </span>
+                            </div>
+
+                            {hasUnits ? (
+                              <div className="flex items-center gap-1.5">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (service.isRequired && quantity <= 1)
+                                      return;
+                                    if (quantity > 0) {
+                                      const updated = extraServices
+                                        .map((es) =>
+                                          es.serviceId === service.id &&
+                                          es.petId === pet.id
+                                            ? {
+                                                ...es,
+                                                quantity: es.quantity - 1,
+                                              }
+                                            : es,
+                                        )
+                                        .filter((es) => es.quantity > 0);
+                                      setExtraServices(updated);
+                                    }
+                                  }}
+                                  disabled={
+                                    quantity === 0 ||
+                                    (service.isRequired === true &&
+                                      quantity <= 1)
+                                  }
+                                  className="size-6 p-0 text-xs"
+                                >
+                                  -
+                                </Button>
+                                <span className="min-w-[2ch] text-center font-[tabular-nums] text-xs font-semibold">
+                                  {quantity}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (petService) {
+                                      const updated = extraServices.map((es) =>
                                         es.serviceId === service.id &&
                                         es.petId === pet.id
                                           ? {
                                               ...es,
-                                              quantity: es.quantity - 1,
+                                              quantity: es.quantity + 1,
                                             }
                                           : es,
-                                      )
-                                      .filter((es) => es.quantity > 0);
-                                    setExtraServices(updated);
+                                      );
+                                      setExtraServices(updated);
+                                    } else {
+                                      setExtraServices([
+                                        ...extraServices,
+                                        {
+                                          serviceId: service.id,
+                                          quantity: 1,
+                                          petId: pet.id,
+                                        },
+                                      ]);
+                                    }
+                                  }}
+                                  disabled={
+                                    service.maxQuantity !== undefined &&
+                                    quantity >= service.maxQuantity
                                   }
-                                }}
-                                disabled={
-                                  quantity === 0 ||
-                                  (service.isRequired === true && quantity <= 1)
-                                }
-                                className="size-6 p-0 text-xs"
-                              >
-                                -
-                              </Button>
-                              <span className="min-w-[2ch] text-center font-[tabular-nums] text-xs font-semibold">
-                                {quantity}
+                                  className="size-6 p-0 text-xs"
+                                >
+                                  +
+                                </Button>
+                              </div>
+                            ) : service.isRequired ? (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-800">
+                                <Lock className="size-3" />
+                                Included
                               </span>
+                            ) : (
                               <Button
                                 type="button"
-                                variant="outline"
+                                variant={quantity > 0 ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => {
-                                  if (petService) {
-                                    const updated = extraServices.map((es) =>
-                                      es.serviceId === service.id &&
-                                      es.petId === pet.id
-                                        ? {
-                                            ...es,
-                                            quantity: es.quantity + 1,
-                                          }
-                                        : es,
+                                  if (quantity > 0) {
+                                    setExtraServices(
+                                      extraServices.filter(
+                                        (es) =>
+                                          !(
+                                            es.serviceId === service.id &&
+                                            es.petId === pet.id
+                                          ),
+                                      ),
                                     );
-                                    setExtraServices(updated);
                                   } else {
                                     setExtraServices([
                                       ...extraServices,
@@ -1159,62 +1236,21 @@ function DaycareAddOnsSubStep({
                                     ]);
                                   }
                                 }}
-                                disabled={
-                                  service.maxQuantity !== undefined &&
-                                  quantity >= service.maxQuantity
-                                }
-                                className="size-6 p-0 text-xs"
+                                className="h-6 gap-1 px-2.5 text-[11px]"
                               >
-                                +
+                                {quantity > 0 ? (
+                                  <>
+                                    <Check className="size-3" />
+                                    Added
+                                  </>
+                                ) : (
+                                  "Add"
+                                )}
                               </Button>
-                            </div>
-                          ) : service.isRequired ? (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-800">
-                              <Lock className="size-3" />
-                              Included
-                            </span>
-                          ) : (
-                            <Button
-                              type="button"
-                              variant={quantity > 0 ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => {
-                                if (quantity > 0) {
-                                  setExtraServices(
-                                    extraServices.filter(
-                                      (es) =>
-                                        !(
-                                          es.serviceId === service.id &&
-                                          es.petId === pet.id
-                                        ),
-                                    ),
-                                  );
-                                } else {
-                                  setExtraServices([
-                                    ...extraServices,
-                                    {
-                                      serviceId: service.id,
-                                      quantity: 1,
-                                      petId: pet.id,
-                                    },
-                                  ]);
-                                }
-                              }}
-                              className="h-6 gap-1 px-2.5 text-[11px]"
-                            >
-                              {quantity > 0 ? (
-                                <>
-                                  <Check className="size-3" />
-                                  Added
-                                </>
-                              ) : (
-                                "Add"
-                              )}
-                            </Button>
-                          )}
-                        </div>
-                      );
-                    })
+                            )}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 </div>

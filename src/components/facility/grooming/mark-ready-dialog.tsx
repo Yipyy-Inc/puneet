@@ -145,7 +145,7 @@ export function MarkReadyDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Sparkles className="size-4 text-emerald-600" />
@@ -183,7 +183,7 @@ export function MarkReadyDialog({
                 return (
                   <div
                     key={i}
-                    className="relative aspect-square overflow-hidden rounded-lg border bg-muted"
+                    className="bg-muted relative aspect-square overflow-hidden rounded-lg border"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -195,7 +195,7 @@ export function MarkReadyDialog({
                       type="button"
                       onClick={() => handlePhotoRemove(i)}
                       title="Remove this photo"
-                      className="absolute right-1 top-1 flex size-5 items-center justify-center rounded-full bg-black/60 text-white shadow-sm hover:bg-black/80"
+                      className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-black/60 text-white shadow-sm hover:bg-black/80"
                     >
                       <X className="size-3" />
                     </button>
@@ -207,17 +207,17 @@ export function MarkReadyDialog({
                   key={i}
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed bg-muted/30 text-muted-foreground hover:bg-muted/60"
+                  className="bg-muted/30 text-muted-foreground hover:bg-muted/60 flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed"
                 >
                   <Camera className="size-5" />
-                  <span className="text-[10px] font-medium uppercase tracking-wide">
+                  <span className="text-[10px] font-medium tracking-wide uppercase">
                     {afterPhotos.length === 0 ? "Take photo" : "Add"}
                   </span>
                 </button>
               );
             })}
           </div>
-          <p className="mt-2 text-[10px] text-muted-foreground">
+          <p className="text-muted-foreground mt-2 text-[10px]">
             {afterPhotos.length}/{MAX_AFTER_PHOTOS} photos · at least one
             required before notifying the owner.
           </p>
@@ -239,7 +239,7 @@ export function MarkReadyDialog({
             rows={4}
             className="text-sm"
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="text-muted-foreground mt-1 text-[10px]">
             These notes attach to the Report Card and the pet&rsquo;s profile.
           </p>
         </Section>
@@ -258,7 +258,7 @@ export function MarkReadyDialog({
               {finalCharges.map((c) => (
                 <li
                   key={c.id}
-                  className="flex items-center justify-between gap-2 rounded-md border bg-card px-3 py-1.5 text-sm"
+                  className="bg-card flex items-center justify-between gap-2 rounded-md border px-3 py-1.5 text-sm"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{c.label}</p>
@@ -280,7 +280,7 @@ export function MarkReadyDialog({
           )}
           <div className="grid grid-cols-12 items-end gap-2">
             <div className="col-span-7">
-              <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              <Label className="text-muted-foreground text-[10px] tracking-wide uppercase">
                 Reason
               </Label>
               <Input
@@ -294,7 +294,7 @@ export function MarkReadyDialog({
               />
             </div>
             <div className="col-span-3">
-              <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              <Label className="text-muted-foreground text-[10px] tracking-wide uppercase">
                 Amount
               </Label>
               <Input
@@ -339,15 +339,10 @@ export function MarkReadyDialog({
           title="Confirm the total"
           subtitle="What the owner will see in the pickup SMS."
         >
-          <div className="space-y-1 rounded-lg border bg-muted/30 px-3 py-2.5 text-sm">
+          <div className="bg-muted/30 space-y-1 rounded-lg border px-3 py-2.5 text-sm">
             <Row label={apt.packageName} value={baseService} />
             {apt.priceAdjustments.map((a) => (
-              <Row
-                key={a.id}
-                label={a.description}
-                value={a.amount}
-                muted
-              />
+              <Row key={a.id} label={a.description} value={a.amount} muted />
             ))}
             {finalCharges.map((c) => (
               <Row

@@ -142,9 +142,8 @@ export function TipWizardContent({
     /* -m-6 escapes the p-6 wrapper so the gradient fills the full content panel */
     <div className="from-primary/20 via-primary/8 to-primary/3 flex h-full bg-gradient-to-br">
       <div className="bg-background flex h-full w-full flex-col sm:flex-row">
-
         {/* ── Left panel: emotional context ── */}
-        <div className="from-primary/25 to-primary/10 flex flex-col items-center justify-center gap-6 border-b bg-gradient-to-b px-8 py-10 text-center sm:w-[42%] sm:h-full sm:border-r sm:border-b-0">
+        <div className="from-primary/25 to-primary/10 flex flex-col items-center justify-center gap-6 border-b bg-gradient-to-b px-8 py-10 text-center sm:h-full sm:w-[42%] sm:border-r sm:border-b-0">
           {/* Icon */}
           <div className="bg-primary/20 ring-primary/25 relative flex size-18 items-center justify-center rounded-full ring-4">
             <Heart className="text-primary size-9 fill-current" />
@@ -153,7 +152,7 @@ export function TipWizardContent({
 
           {/* Title + subtitle */}
           <div className="space-y-2">
-            <h3 className="text-[17px] font-bold leading-tight tracking-tight">
+            <h3 className="text-[17px] leading-tight font-bold tracking-tight">
               {contextTitle ??
                 (petName
                   ? `${petName} will be in great hands! 🐾`
@@ -168,7 +167,7 @@ export function TipWizardContent({
           </div>
 
           {/* Staff strip */}
-          <div className="bg-background/60 w-full flex items-center gap-3 rounded-xl border border-primary/15 p-3 backdrop-blur-sm">
+          <div className="bg-background/60 border-primary/15 flex w-full items-center gap-3 rounded-xl border p-3 backdrop-blur-sm">
             <div className="flex -space-x-2">
               {staffList.slice(0, 4).map((s, i) => (
                 <div
@@ -218,7 +217,7 @@ export function TipWizardContent({
 
         {/* ── Right panel: tip selection ── */}
         <div className="flex flex-1 flex-col justify-center gap-4 px-8 py-10">
-          <p className="text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
+          <p className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
             Choose an amount
           </p>
 
@@ -227,7 +226,8 @@ export function TipWizardContent({
             {([0, 1, 2] as const).map((idx) => {
               const amount = calcTip(idx);
               const opt = tier.options[idx];
-              const isSelected = !showCustom && Math.abs(localTip - amount) < 0.01;
+              const isSelected =
+                !showCustom && Math.abs(localTip - amount) < 0.01;
               const isPreferred = tier.preferredIndex === idx;
 
               return (
@@ -239,12 +239,14 @@ export function TipWizardContent({
                     "relative flex flex-col items-center gap-0.5 rounded-xl border-2 px-3 py-3.5 text-center transition-all",
                     isSelected
                       ? "border-primary bg-primary/15 text-primary shadow-sm"
-                      : "border-transparent bg-background/50 hover:border-primary/40 hover:bg-background/80",
-                    isPreferred && !isSelected && "border-primary/30 bg-primary/8",
+                      : "bg-background/50 hover:border-primary/40 hover:bg-background/80 border-transparent",
+                    isPreferred &&
+                      !isSelected &&
+                      "border-primary/30 bg-primary/8",
                   )}
                 >
                   {isPreferred && (
-                    <span className="bg-primary text-primary-foreground absolute -top-2 left-1/2 flex -translate-x-1/2 items-center gap-0.5 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide uppercase whitespace-nowrap shadow-sm">
+                    <span className="bg-primary text-primary-foreground absolute -top-2 left-1/2 flex -translate-x-1/2 items-center gap-0.5 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide whitespace-nowrap uppercase shadow-sm">
                       <Sparkles className="size-2.5" /> Most popular
                     </span>
                   )}
@@ -281,7 +283,7 @@ export function TipWizardContent({
                 "flex flex-col items-center justify-center rounded-xl border-2 px-3 py-3.5 text-center transition-all",
                 showCustom
                   ? "border-primary bg-primary/15 text-primary"
-                  : "border-transparent bg-background/50 hover:border-primary/40 hover:bg-background/80",
+                  : "bg-background/50 hover:border-primary/40 hover:bg-background/80 border-transparent",
               )}
             >
               <span className="text-sm font-bold">Custom</span>
@@ -304,7 +306,7 @@ export function TipWizardContent({
                   step={0.5}
                   placeholder="0.00"
                   value={customValue}
-                  className="h-10 bg-background/70 pl-7"
+                  className="bg-background/70 h-10 pl-7"
                   onChange={(e) => setCustomValue(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleCustomApply()}
                   autoFocus
@@ -342,12 +344,14 @@ export function TipWizardContent({
 
           {/* Impact line */}
           {localTip > 0 && (
-            <div className="bg-background/50 flex items-center gap-2 rounded-xl border border-primary/15 p-3 text-[12px]">
+            <div className="bg-background/50 border-primary/15 flex items-center gap-2 rounded-xl border p-3 text-[12px]">
               <Users className="text-primary size-4 shrink-0" />
               <p>
                 <span className="font-semibold">${localTip.toFixed(2)}</span>{" "}
                 goes to the team — about{" "}
-                <span className="font-semibold">${perStaffShare.toFixed(2)}</span>{" "}
+                <span className="font-semibold">
+                  ${perStaffShare.toFixed(2)}
+                </span>{" "}
                 per caregiver.
               </p>
             </div>

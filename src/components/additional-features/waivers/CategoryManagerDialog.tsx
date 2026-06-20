@@ -67,12 +67,12 @@ export function CategoryManagerDialog({
         <ScrollArea className="flex-1">
           <div className="space-y-5 px-6 py-5">
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
                 Service categories
               </p>
               <p className="text-muted-foreground text-xs">
-                Built in for every service the facility offers — these can&apos;t
-                be edited.
+                Built in for every service the facility offers — these
+                can&apos;t be edited.
               </p>
               <div className="flex flex-wrap gap-2">
                 {serviceCategories.map((cat) => (
@@ -88,7 +88,7 @@ export function CategoryManagerDialog({
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
                 Custom categories
               </p>
               <p className="text-muted-foreground text-xs">

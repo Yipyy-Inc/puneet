@@ -100,7 +100,9 @@ function TaskFormDialog({
   initial?: WorkTaskDefinition;
 }) {
   const isEdit = !!initial;
-  const [form, setForm] = useState<Omit<WorkTaskDefinition, "id" | "createdAt">>(
+  const [form, setForm] = useState<
+    Omit<WorkTaskDefinition, "id" | "createdAt">
+  >(
     initial
       ? {
           title: initial.title,
@@ -201,7 +203,9 @@ function TaskFormDialog({
               type="number"
               min={1}
               value={form.estimatedMinutes}
-              onChange={(e) => p("estimatedMinutes", parseInt(e.target.value) || 15)}
+              onChange={(e) =>
+                p("estimatedMinutes", parseInt(e.target.value) || 15)
+              }
             />
           </div>
 
@@ -278,11 +282,18 @@ export function TaskLibraryTab() {
       defaultVisible: true,
       render: (t) => (
         <div className="space-y-0.5">
-          <span className={cn("font-medium", !t.isActive && "text-muted-foreground line-through")}>
+          <span
+            className={cn(
+              "font-medium",
+              !t.isActive && "text-muted-foreground line-through",
+            )}
+          >
             {t.title as string}
           </span>
           {t.description && (
-            <p className="text-muted-foreground line-clamp-1 text-xs">{t.description as string}</p>
+            <p className="text-muted-foreground line-clamp-1 text-xs">
+              {t.description as string}
+            </p>
           )}
         </div>
       ),
@@ -293,7 +304,10 @@ export function TaskLibraryTab() {
       defaultVisible: true,
       render: (t) => (
         <Badge
-          className={cn("px-1.5 py-0 text-[10px]", CATEGORY_COLORS[t.category as WorkTaskCategory])}
+          className={cn(
+            "px-1.5 py-0 text-[10px]",
+            CATEGORY_COLORS[t.category as WorkTaskCategory],
+          )}
           variant="secondary"
         >
           {(t.category as string).replace("-", " ")}
@@ -306,7 +320,10 @@ export function TaskLibraryTab() {
       defaultVisible: true,
       render: (t) => (
         <Badge
-          className={cn("px-1.5 py-0 text-[10px]", PRIORITY_COLORS[t.priority as WorkTaskPriority])}
+          className={cn(
+            "px-1.5 py-0 text-[10px]",
+            PRIORITY_COLORS[t.priority as WorkTaskPriority],
+          )}
           variant="secondary"
         >
           {t.priority as string}
@@ -332,7 +349,9 @@ export function TaskLibraryTab() {
       defaultVisible: true,
       render: (t) =>
         t.requiresPhoto ? (
-          <span title="Photo required"><Camera className="text-muted-foreground size-4" /></span>
+          <span title="Photo required">
+            <Camera className="text-muted-foreground size-4" />
+          </span>
         ) : (
           <span className="text-muted-foreground text-sm">—</span>
         ),
@@ -344,7 +363,9 @@ export function TaskLibraryTab() {
       defaultVisible: true,
       render: (t) =>
         t.requiresSignoff ? (
-          <span title="Sign-off required"><PenLine className="text-muted-foreground size-4" /></span>
+          <span title="Sign-off required">
+            <PenLine className="text-muted-foreground size-4" />
+          </span>
         ) : (
           <span className="text-muted-foreground text-sm">—</span>
         ),
@@ -358,7 +379,9 @@ export function TaskLibraryTab() {
           variant="secondary"
           className={cn(
             "px-1.5 py-0 text-[10px]",
-            t.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600",
+            t.isActive
+              ? "bg-emerald-100 text-emerald-700"
+              : "bg-slate-100 text-slate-600",
           )}
         >
           {t.isActive ? "Active" : "Inactive"}
@@ -411,8 +434,8 @@ export function TaskLibraryTab() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <p className="text-muted-foreground text-sm">
-          Reusable task definitions. Add them to shift groups, position groups, or standalone
-          assignments via the wizard.
+          Reusable task definitions. Add them to shift groups, position groups,
+          or standalone assignments via the wizard.
         </p>
         <Button onClick={openNew} className="gap-2">
           <Plus className="size-4" />
@@ -425,19 +448,28 @@ export function TaskLibraryTab() {
         <div className="bg-card flex flex-col gap-1 rounded-xl border px-4 py-3">
           <span className="text-muted-foreground text-[11px]">Total tasks</span>
           <span className="text-2xl font-bold">{workTaskLibrary.length}</span>
-          <span className="text-muted-foreground text-[11px]">{activeCount} active</span>
-        </div>
-        <div className="bg-card flex flex-col gap-1 rounded-xl border px-4 py-3">
-          <span className="text-muted-foreground text-[11px]">Require photo</span>
-          <span className="text-2xl font-bold">{photoCount}</span>
           <span className="text-muted-foreground text-[11px]">
-            {Math.round((photoCount / workTaskLibrary.length) * 100)}% of library
+            {activeCount} active
           </span>
         </div>
         <div className="bg-card flex flex-col gap-1 rounded-xl border px-4 py-3">
-          <span className="text-muted-foreground text-[11px]">Need sign-off</span>
+          <span className="text-muted-foreground text-[11px]">
+            Require photo
+          </span>
+          <span className="text-2xl font-bold">{photoCount}</span>
+          <span className="text-muted-foreground text-[11px]">
+            {Math.round((photoCount / workTaskLibrary.length) * 100)}% of
+            library
+          </span>
+        </div>
+        <div className="bg-card flex flex-col gap-1 rounded-xl border px-4 py-3">
+          <span className="text-muted-foreground text-[11px]">
+            Need sign-off
+          </span>
           <span className="text-2xl font-bold">{signoffCount}</span>
-          <span className="text-muted-foreground text-[11px]">Manager approval</span>
+          <span className="text-muted-foreground text-[11px]">
+            Manager approval
+          </span>
         </div>
       </div>
 

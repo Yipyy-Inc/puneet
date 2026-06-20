@@ -236,15 +236,25 @@ export const holidayCalendar: { date: string; name: string }[] = [
 export const aiCallSummaries: AICallSummary[] = [
   {
     callId: "call-001",
-    callReason: "Client called to inquire about availability for boarding over the Easter long weekend.",
-    appointmentRequest: "Requested boarding for Biscuit (Golden Retriever) from April 18–22, 2026.",
-    vaccinationDiscussion: "Client confirmed Biscuit is up to date. Bordetella expires in July.",
-    specialCareNotes: "Biscuit requires twice-daily medication (Apoquel 16mg). Client will bring supply.",
-    behaviorAlerts: "Biscuit is reactive on-leash but great in play groups with other large dogs.",
-    upsellOpportunities: ["Premium suite upgrade ($15/night)", "Daily grooming brush-out ($12)", "Webcam access add-on ($5/stay)"],
+    callReason:
+      "Client called to inquire about availability for boarding over the Easter long weekend.",
+    appointmentRequest:
+      "Requested boarding for Biscuit (Golden Retriever) from April 18–22, 2026.",
+    vaccinationDiscussion:
+      "Client confirmed Biscuit is up to date. Bordetella expires in July.",
+    specialCareNotes:
+      "Biscuit requires twice-daily medication (Apoquel 16mg). Client will bring supply.",
+    behaviorAlerts:
+      "Biscuit is reactive on-leash but great in play groups with other large dogs.",
+    upsellOpportunities: [
+      "Premium suite upgrade ($15/night)",
+      "Daily grooming brush-out ($12)",
+      "Webcam access add-on ($5/stay)",
+    ],
     sentimentScore: 8.5,
     riskFlag: "none",
-    followUpTask: "Confirm Easter boarding reservation by email and send vaccine reminder.",
+    followUpTask:
+      "Confirm Easter boarding reservation by email and send vaccine reminder.",
     assignedTo: "Sarah M.",
     generatedAt: "2026-04-20T10:32:00Z",
     savedToProfile: true,
@@ -259,7 +269,8 @@ export const aiCallSummaries: AICallSummary[] = [
     upsellOpportunities: [],
     sentimentScore: 3.2,
     riskFlag: "angry_client",
-    followUpTask: "Manager to review charge and call back within 24 hours with resolution.",
+    followUpTask:
+      "Manager to review charge and call back within 24 hours with resolution.",
     assignedTo: "Manager – Sophie R.",
     generatedAt: "2026-04-19T14:10:00Z",
     savedToProfile: true,
@@ -269,10 +280,14 @@ export const aiCallSummaries: AICallSummary[] = [
     callReason:
       "General daycare inquiry — caller asked about openings next Tuesday/Thursday and daily rates for a friendly 2-year-old labradoodle.",
     appointmentRequest: "Possible daycare for Coco on Tue & Thu next week.",
-    upsellOpportunities: ["Daycare 10-day package", "New-client behaviour evaluation"],
+    upsellOpportunities: [
+      "Daycare 10-day package",
+      "New-client behaviour evaluation",
+    ],
     sentimentScore: 7.5,
     riskFlag: "none",
-    followUpTask: "Call back with daycare availability and rates; offer an intro evaluation.",
+    followUpTask:
+      "Call back with daycare availability and rates; offer an intro evaluation.",
     generatedAt: "2026-05-31T14:53:00Z",
     savedToProfile: false,
   },
@@ -293,7 +308,8 @@ export const aiCallSummaries: AICallSummary[] = [
     upsellOpportunities: [],
     sentimentScore: 3.5,
     riskFlag: "refund_risk",
-    followUpTask: "Manager to review quoted vs charged price and call Amanda back.",
+    followUpTask:
+      "Manager to review quoted vs charged price and call Amanda back.",
     assignedTo: "Priya N.",
     generatedAt: "2026-05-24T14:25:00Z",
     savedToProfile: true,
@@ -313,7 +329,10 @@ export const aiCallSummaries: AICallSummary[] = [
     callReason:
       "New client asked about puppy training packages and whether group sessions are offered.",
     appointmentRequest: "Free training assessment call booked.",
-    upsellOpportunities: ["Basic obedience 6-week course", "Group session add-on"],
+    upsellOpportunities: [
+      "Basic obedience 6-week course",
+      "Group session add-on",
+    ],
     sentimentScore: 8.2,
     riskFlag: "none",
     generatedAt: "2026-05-06T14:35:00Z",
@@ -327,7 +346,8 @@ export const aiCallSummaries: AICallSummary[] = [
     upsellOpportunities: [],
     sentimentScore: 4.0,
     riskFlag: "churn_risk",
-    followUpTask: "Call back the moment we open to confirm emergency boarding and medication handling.",
+    followUpTask:
+      "Call back the moment we open to confirm emergency boarding and medication handling.",
     generatedAt: "2026-04-20T18:03:00Z",
     savedToProfile: false,
   },
@@ -408,10 +428,34 @@ export const callAnalytics: CallAnalytics = {
     { hour: 23, calls: 0 },
   ],
   staffPerformance: [
-    { name: "Sarah M.", callsHandled: 98, avgResponseTime: 9, missedCalls: 4, conversionRate: 38 },
-    { name: "James K.", callsHandled: 87, avgResponseTime: 14, missedCalls: 8, conversionRate: 29 },
-    { name: "Priya N.", callsHandled: 104, avgResponseTime: 11, missedCalls: 5, conversionRate: 41 },
-    { name: "Tom B.", callsHandled: 58, avgResponseTime: 18, missedCalls: 11, conversionRate: 24 },
+    {
+      name: "Sarah M.",
+      callsHandled: 98,
+      avgResponseTime: 9,
+      missedCalls: 4,
+      conversionRate: 38,
+    },
+    {
+      name: "James K.",
+      callsHandled: 87,
+      avgResponseTime: 14,
+      missedCalls: 8,
+      conversionRate: 29,
+    },
+    {
+      name: "Priya N.",
+      callsHandled: 104,
+      avgResponseTime: 11,
+      missedCalls: 5,
+      conversionRate: 41,
+    },
+    {
+      name: "Tom B.",
+      callsHandled: 58,
+      avgResponseTime: 18,
+      missedCalls: 11,
+      conversionRate: 24,
+    },
   ],
   topCallReasons: [
     { reason: "Boarding inquiry", count: 92 },
@@ -476,14 +520,39 @@ export const missedCallTasks: MissedCallTask[] = [
 // ============================================================
 
 export const callTags: CallTag[] = [
-  { id: "tag-billing", name: "Billing question", color: "orange", description: "Invoice, payment, or charge inquiry" },
-  { id: "tag-complaint", name: "Complaint", color: "red", description: "Service issue needing follow-up" },
-  { id: "tag-booking", name: "Booking inquiry", color: "green", description: "New or changed reservation" },
+  {
+    id: "tag-billing",
+    name: "Billing question",
+    color: "orange",
+    description: "Invoice, payment, or charge inquiry",
+  },
+  {
+    id: "tag-complaint",
+    name: "Complaint",
+    color: "red",
+    description: "Service issue needing follow-up",
+  },
+  {
+    id: "tag-booking",
+    name: "Booking inquiry",
+    color: "green",
+    description: "New or changed reservation",
+  },
   { id: "tag-grooming", name: "Grooming question", color: "purple" },
   { id: "tag-boarding", name: "Boarding inquiry", color: "teal" },
-  { id: "tag-cancellation", name: "Cancellation", color: "amber", description: "Cancelled an appointment or stay" },
+  {
+    id: "tag-cancellation",
+    name: "Cancellation",
+    color: "amber",
+    description: "Cancelled an appointment or stay",
+  },
   { id: "tag-vaccination", name: "Vaccination / records", color: "blue" },
-  { id: "tag-general", name: "General info", color: "gray", description: "Hours, location, pricing" },
+  {
+    id: "tag-general",
+    name: "General info",
+    color: "gray",
+    description: "Hours, location, pricing",
+  },
 ];
 
 // ============================================================

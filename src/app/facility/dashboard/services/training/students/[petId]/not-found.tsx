@@ -11,8 +11,7 @@ export default function StudentNotFound() {
       <div>
         <h2 className="text-xl font-bold tracking-tight">Student not found</h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          That pet doesn&apos;t have any training records, or the ID is
-          invalid.
+          That pet doesn&apos;t have any training records, or the ID is invalid.
         </p>
       </div>
       <Button asChild variant="outline">

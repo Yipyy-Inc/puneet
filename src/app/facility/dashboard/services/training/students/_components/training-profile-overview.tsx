@@ -289,7 +289,7 @@ export function TrainingProfileOverview({
               <Pin className="size-4" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-amber-900 text-[10px] font-bold uppercase tracking-wider">
+              <p className="text-[10px] font-bold tracking-wider text-amber-900 uppercase">
                 Pinned trainer note
               </p>
               <p className="mt-1 text-[13px]/relaxed text-slate-800">
@@ -313,244 +313,198 @@ export function TrainingProfileOverview({
         todayISO={todayISO}
       />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      {/* Active enrollment ────────────────────────────────────────────── */}
-      <Panel title="Active enrollment" icon={GraduationCap}>
-        {!primaryEnrollment || !activeSeries ? (
-          <p className="text-muted-foreground text-sm">
-            No active enrollment. This pet has no current training series.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-base font-semibold text-slate-800">
-                  {activeSeries.seriesName}
-                </p>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  {activeSeries.courseTypeName}
-                </p>
-              </div>
-              <Button asChild size="sm" variant="outline">
-                <Link
-                  href={`/facility/dashboard/services/training/series/${activeSeries.id}`}
-                >
-                  Open series
-                </Link>
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <GraduationCap className="text-muted-foreground size-3.5" />
-                {activeSeries.instructorName}
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="text-muted-foreground size-3.5" />
-                <span className="truncate">{activeSeries.location}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CalendarDays className="text-muted-foreground size-3.5" />
-                Starts {formatShortDate(activeSeries.startDate)}
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="text-muted-foreground size-3.5" />
-                {activeSeries.numberOfWeeks} week
-                {activeSeries.numberOfWeeks === 1 ? "" : "s"} ·{" "}
-                {activeSeries.duration}m
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              {primaryEnrollment.paymentStatus && (
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "gap-1 border",
-                    PAYMENT_META[primaryEnrollment.paymentStatus].cls,
-                  )}
-                >
-                  <CircleDollarSign className="size-3" />
-                  {PAYMENT_META[primaryEnrollment.paymentStatus].label}
-                </Badge>
-              )}
-              {primaryEnrollment.handlerName && (
-                <Badge
-                  variant="outline"
-                  className="border-slate-200 bg-slate-50 text-[10px] text-slate-600"
-                >
-                  Handler: {primaryEnrollment.handlerName}
-                </Badge>
-              )}
-              {primaryEnrollment.status === "waitlisted" && (
-                <Badge
-                  variant="outline"
-                  className="gap-1 border-amber-200 bg-amber-50 text-amber-700"
-                >
-                  <Lock className="size-3" />
-                  Waitlisted
-                </Badge>
-              )}
-            </div>
-            {primaryEnrollment.notes && (
-              <p className="bg-muted/40 rounded-md px-3 py-2 text-xs text-slate-600">
-                <StickyNote className="mr-1.5 inline size-3 align-text-bottom" />
-                {primaryEnrollment.notes}
-              </p>
-            )}
-          </div>
-        )}
-      </Panel>
-
-      {/* Payment status ───────────────────────────────────────────────── */}
-      <Panel title="Payment status" icon={CircleDollarSign}>
-        <PaymentStatusBody
-          enrollment={primaryEnrollment}
-          activeSeries={activeSeries}
-        />
-      </Panel>
-
-      {/* Package progress ────────────────────────────────────────────── */}
-      <Panel title="Package progress" icon={BookOpen}>
-        {!primaryEnrollment || primaryEnrollment.totalSessions === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            No package in progress right now.
-          </p>
-        ) : (
-          (() => {
-            const pct = Math.round(
-              (primaryEnrollment.sessionsAttended /
-                primaryEnrollment.totalSessions) *
-                100,
-            );
-            return (
-              <div className="space-y-3">
-                <div className="flex items-end justify-between">
-                  <span className="text-2xl font-bold tabular-nums text-slate-900">
-                    {primaryEnrollment.sessionsAttended}
-                    <span className="text-muted-foreground text-base font-normal">
-                      {" "}
-                      / {primaryEnrollment.totalSessions} sessions
-                    </span>
-                  </span>
-                  <span className="text-sm font-semibold tabular-nums text-emerald-700">
-                    {pct}%
-                  </span>
+        {/* Active enrollment ────────────────────────────────────────────── */}
+        <Panel title="Active enrollment" icon={GraduationCap}>
+          {!primaryEnrollment || !activeSeries ? (
+            <p className="text-muted-foreground text-sm">
+              No active enrollment. This pet has no current training series.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-base font-semibold text-slate-800">
+                    {activeSeries.seriesName}
+                  </p>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    {activeSeries.courseTypeName}
+                  </p>
                 </div>
-                <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
-                  <div
-                    className={cn(
-                      "h-full transition-all duration-500",
-                      pct >= 80
-                        ? "bg-emerald-500"
-                        : pct >= 40
-                          ? "bg-sky-500"
-                          : "bg-amber-500",
-                    )}
-                    style={{ width: `${pct}%` }}
-                  />
+                <Button asChild size="sm" variant="outline">
+                  <Link
+                    href={`/facility/dashboard/services/training/series/${activeSeries.id}`}
+                  >
+                    Open series
+                  </Link>
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="text-muted-foreground size-3.5" />
+                  {activeSeries.instructorName}
                 </div>
-                <div className="text-muted-foreground grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider">
-                      Next session
-                    </p>
-                    <p className="mt-0.5 text-sm font-semibold text-slate-700">
-                      {nextSessionDate
-                        ? formatShortDate(nextSessionDate)
-                        : "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider">
-                      Currently on
-                    </p>
-                    <p className="mt-0.5 text-sm font-semibold text-slate-700">
-                      Session{" "}
-                      {Math.min(
-                        primaryEnrollment.currentSessionNumber,
-                        primaryEnrollment.totalSessions,
-                      )}{" "}
-                      of {primaryEnrollment.totalSessions}
-                    </p>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="text-muted-foreground size-3.5" />
+                  <span className="truncate">{activeSeries.location}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="text-muted-foreground size-3.5" />
+                  Starts {formatShortDate(activeSeries.startDate)}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="text-muted-foreground size-3.5" />
+                  {activeSeries.numberOfWeeks} week
+                  {activeSeries.numberOfWeeks === 1 ? "" : "s"} ·{" "}
+                  {activeSeries.duration}m
                 </div>
               </div>
-            );
-          })()
-        )}
-      </Panel>
-
-      {/* Upcoming sessions ───────────────────────────────────────────── */}
-      <Panel
-        title="Upcoming sessions"
-        icon={Clock}
-        action={
-          upcomingSessions.length > 0 ? (
-            <span className="text-muted-foreground text-[11px] tabular-nums">
-              {upcomingSessions.length}
-            </span>
-          ) : null
-        }
-      >
-        {upcomingSessions.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            Nothing scheduled. Enroll this pet in a series to add sessions.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {upcomingSessions.map(({ session, series }) => {
-              const meta = SESSION_STATUS_META[session.status];
-              const StatusIcon = meta.Icon;
-              return (
-                <li
-                  key={session.id}
-                  className="flex items-center gap-3 rounded-lg border border-slate-100 px-3 py-2"
-                >
-                  <div className="bg-indigo-100 flex size-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-indigo-700">
-                    {session.sessionNumber}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-800">
-                      {formatDate(session.date)}
-                    </p>
-                    <p className="text-muted-foreground truncate text-xs">
-                      {formatTimeLabel(session.startTime)} ·{" "}
-                      {series.instructorName} · {series.location}
-                    </p>
-                  </div>
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                {primaryEnrollment.paymentStatus && (
                   <Badge
                     variant="outline"
-                    className={cn("gap-1 border text-[10px]", meta.cls)}
+                    className={cn(
+                      "gap-1 border",
+                      PAYMENT_META[primaryEnrollment.paymentStatus].cls,
+                    )}
                   >
-                    <StatusIcon className="size-3" />
-                    {meta.label}
+                    <CircleDollarSign className="size-3" />
+                    {PAYMENT_META[primaryEnrollment.paymentStatus].label}
                   </Badge>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Panel>
+                )}
+                {primaryEnrollment.handlerName && (
+                  <Badge
+                    variant="outline"
+                    className="border-slate-200 bg-slate-50 text-[10px] text-slate-600"
+                  >
+                    Handler: {primaryEnrollment.handlerName}
+                  </Badge>
+                )}
+                {primaryEnrollment.status === "waitlisted" && (
+                  <Badge
+                    variant="outline"
+                    className="gap-1 border-amber-200 bg-amber-50 text-amber-700"
+                  >
+                    <Lock className="size-3" />
+                    Waitlisted
+                  </Badge>
+                )}
+              </div>
+              {primaryEnrollment.notes && (
+                <p className="bg-muted/40 rounded-md px-3 py-2 text-xs text-slate-600">
+                  <StickyNote className="mr-1.5 inline size-3 align-text-bottom" />
+                  {primaryEnrollment.notes}
+                </p>
+              )}
+            </div>
+          )}
+        </Panel>
 
-      {/* Last three sessions ─────────────────────────────────────────── */}
-      <Panel title="Last three sessions" icon={CheckCircle2}>
-        {recentSessions.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            No past sessions yet — this pet hasn&apos;t attended training.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {recentSessions.map(({ session, series }) => {
-              const meta = SESSION_STATUS_META[session.status];
-              const StatusIcon = meta.Icon;
+        {/* Payment status ───────────────────────────────────────────────── */}
+        <Panel title="Payment status" icon={CircleDollarSign}>
+          <PaymentStatusBody
+            enrollment={primaryEnrollment}
+            activeSeries={activeSeries}
+          />
+        </Panel>
+
+        {/* Package progress ────────────────────────────────────────────── */}
+        <Panel title="Package progress" icon={BookOpen}>
+          {!primaryEnrollment || primaryEnrollment.totalSessions === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No package in progress right now.
+            </p>
+          ) : (
+            (() => {
+              const pct = Math.round(
+                (primaryEnrollment.sessionsAttended /
+                  primaryEnrollment.totalSessions) *
+                  100,
+              );
               return (
-                <li
-                  key={session.id}
-                  className={cn(
-                    "rounded-lg border border-slate-100 px-3 py-2",
-                    session.status === "cancelled" && "opacity-70",
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="bg-slate-100 flex size-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-slate-700">
+                <div className="space-y-3">
+                  <div className="flex items-end justify-between">
+                    <span className="text-2xl font-bold text-slate-900 tabular-nums">
+                      {primaryEnrollment.sessionsAttended}
+                      <span className="text-muted-foreground text-base font-normal">
+                        {" "}
+                        / {primaryEnrollment.totalSessions} sessions
+                      </span>
+                    </span>
+                    <span className="text-sm font-semibold text-emerald-700 tabular-nums">
+                      {pct}%
+                    </span>
+                  </div>
+                  <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
+                    <div
+                      className={cn(
+                        "h-full transition-all duration-500",
+                        pct >= 80
+                          ? "bg-emerald-500"
+                          : pct >= 40
+                            ? "bg-sky-500"
+                            : "bg-amber-500",
+                      )}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <div className="text-muted-foreground grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <p className="text-[10px] font-bold tracking-wider uppercase">
+                        Next session
+                      </p>
+                      <p className="mt-0.5 text-sm font-semibold text-slate-700">
+                        {nextSessionDate
+                          ? formatShortDate(nextSessionDate)
+                          : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold tracking-wider uppercase">
+                        Currently on
+                      </p>
+                      <p className="mt-0.5 text-sm font-semibold text-slate-700">
+                        Session{" "}
+                        {Math.min(
+                          primaryEnrollment.currentSessionNumber,
+                          primaryEnrollment.totalSessions,
+                        )}{" "}
+                        of {primaryEnrollment.totalSessions}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()
+          )}
+        </Panel>
+
+        {/* Upcoming sessions ───────────────────────────────────────────── */}
+        <Panel
+          title="Upcoming sessions"
+          icon={Clock}
+          action={
+            upcomingSessions.length > 0 ? (
+              <span className="text-muted-foreground text-[11px] tabular-nums">
+                {upcomingSessions.length}
+              </span>
+            ) : null
+          }
+        >
+          {upcomingSessions.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              Nothing scheduled. Enroll this pet in a series to add sessions.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {upcomingSessions.map(({ session, series }) => {
+                const meta = SESSION_STATUS_META[session.status];
+                const StatusIcon = meta.Icon;
+                return (
+                  <li
+                    key={session.id}
+                    className="flex items-center gap-3 rounded-lg border border-slate-100 px-3 py-2"
+                  >
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-xs font-bold text-indigo-700">
                       {session.sessionNumber}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -558,7 +512,8 @@ export function TrainingProfileOverview({
                         {formatDate(session.date)}
                       </p>
                       <p className="text-muted-foreground truncate text-xs">
-                        {series.seriesName} · {series.instructorName}
+                        {formatTimeLabel(session.startTime)} ·{" "}
+                        {series.instructorName} · {series.location}
                       </p>
                     </div>
                     <Badge
@@ -568,91 +523,136 @@ export function TrainingProfileOverview({
                       <StatusIcon className="size-3" />
                       {meta.label}
                     </Badge>
-                  </div>
-                  {session.notes && (
-                    <p className="bg-muted/40 mt-2 rounded-md px-2.5 py-1.5 text-[11px]/relaxed text-slate-600">
-                      <StickyNote className="mr-1 inline size-3 align-text-bottom" />
-                      {session.notes}
-                    </p>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Panel>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
 
-      {/* Instructor notes feed ───────────────────────────────────────── */}
-      <Panel
-        title="Instructor notes"
-        icon={StickyNote}
-        action={
-          trainerNotes.length > 0 ? (
-            <span className="text-muted-foreground text-[11px] tabular-nums">
-              {trainerNotes.length}
-            </span>
-          ) : null
-        }
-      >
-        {trainerNotes.length === 0 ? (
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <ShieldAlert className="size-4 text-slate-300" />
-            No trainer notes have been logged yet.
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {trainerNotes.slice(0, 6).map((n) => {
-              const meta = NOTE_META[n.category];
-              const NoteIcon = meta.Icon;
-              return (
-                <li
-                  key={n.id}
-                  className="rounded-lg border border-slate-100 px-3 py-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+        {/* Last three sessions ─────────────────────────────────────────── */}
+        <Panel title="Last three sessions" icon={CheckCircle2}>
+          {recentSessions.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No past sessions yet — this pet hasn&apos;t attended training.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {recentSessions.map(({ session, series }) => {
+                const meta = SESSION_STATUS_META[session.status];
+                const StatusIcon = meta.Icon;
+                return (
+                  <li
+                    key={session.id}
+                    className={cn(
+                      "rounded-lg border border-slate-100 px-3 py-2",
+                      session.status === "cancelled" && "opacity-70",
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-700">
+                        {session.sessionNumber}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-800">
+                          {formatDate(session.date)}
+                        </p>
+                        <p className="text-muted-foreground truncate text-xs">
+                          {series.seriesName} · {series.instructorName}
+                        </p>
+                      </div>
                       <Badge
                         variant="outline"
                         className={cn("gap-1 border text-[10px]", meta.cls)}
                       >
-                        <NoteIcon className="size-3" />
+                        <StatusIcon className="size-3" />
                         {meta.label}
                       </Badge>
-                      {n.isPrivate && (
+                    </div>
+                    {session.notes && (
+                      <p className="bg-muted/40 mt-2 rounded-md px-2.5 py-1.5 text-[11px]/relaxed text-slate-600">
+                        <StickyNote className="mr-1 inline size-3 align-text-bottom" />
+                        {session.notes}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
+
+        {/* Instructor notes feed ───────────────────────────────────────── */}
+        <Panel
+          title="Instructor notes"
+          icon={StickyNote}
+          action={
+            trainerNotes.length > 0 ? (
+              <span className="text-muted-foreground text-[11px] tabular-nums">
+                {trainerNotes.length}
+              </span>
+            ) : null
+          }
+        >
+          {trainerNotes.length === 0 ? (
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <ShieldAlert className="size-4 text-slate-300" />
+              No trainer notes have been logged yet.
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {trainerNotes.slice(0, 6).map((n) => {
+                const meta = NOTE_META[n.category];
+                const NoteIcon = meta.Icon;
+                return (
+                  <li
+                    key={n.id}
+                    className="rounded-lg border border-slate-100 px-3 py-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
                         <Badge
                           variant="outline"
-                          className="gap-1 border-slate-200 bg-slate-50 text-[10px] text-slate-600"
-                          title="Private — not visible to clients"
+                          className={cn("gap-1 border text-[10px]", meta.cls)}
                         >
-                          <Lock className="size-2.5" />
-                          Private
+                          <NoteIcon className="size-3" />
+                          {meta.label}
                         </Badge>
-                      )}
+                        {n.isPrivate && (
+                          <Badge
+                            variant="outline"
+                            className="gap-1 border-slate-200 bg-slate-50 text-[10px] text-slate-600"
+                            title="Private — not visible to clients"
+                          >
+                            <Lock className="size-2.5" />
+                            Private
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-muted-foreground text-[11px] tabular-nums">
+                        {formatShortDate(n.date)}
+                      </span>
                     </div>
-                    <span className="text-muted-foreground text-[11px] tabular-nums">
-                      {formatShortDate(n.date)}
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-[12px]/relaxed text-slate-700">
-                    {n.note}
-                  </p>
-                  <p className="text-muted-foreground mt-1 text-[10px]">
-                    — {n.trainerName}
-                    {n.className ? ` · ${n.className}` : ""}
-                  </p>
+                    <p className="mt-1.5 text-[12px]/relaxed text-slate-700">
+                      {n.note}
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-[10px]">
+                      — {n.trainerName}
+                      {n.className ? ` · ${n.className}` : ""}
+                    </p>
+                  </li>
+                );
+              })}
+              {trainerNotes.length > 6 && (
+                <li className="text-muted-foreground text-center text-xs">
+                  +{trainerNotes.length - 6} older note
+                  {trainerNotes.length - 6 === 1 ? "" : "s"} — see the Notes tab
+                  when it ships.
                 </li>
-              );
-            })}
-            {trainerNotes.length > 6 && (
-              <li className="text-muted-foreground text-center text-xs">
-                +{trainerNotes.length - 6} older note
-                {trainerNotes.length - 6 === 1 ? "" : "s"} — see the Notes tab
-                when it ships.
-              </li>
-            )}
-          </ul>
-        )}
-      </Panel>
+              )}
+            </ul>
+          )}
+        </Panel>
       </div>
 
       {/* Milestones ────────────────────────────────────────────────────── */}
@@ -660,8 +660,8 @@ export function TrainingProfileOverview({
         {milestones.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             No milestones unlocked yet — they auto-generate as {petName} hits
-            achievements like first session, first exercise mastered, or a
-            7-day homework streak.
+            achievements like first session, first exercise mastered, or a 7-day
+            homework streak.
           </p>
         ) : (
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -748,7 +748,7 @@ function PaymentStatusBody({
             ${depositAmount.toLocaleString()}
           </span>
           <span className="text-muted-foreground">Balance due</span>
-          <span className="text-right font-semibold tabular-nums text-amber-900">
+          <span className="text-right font-semibold text-amber-900 tabular-nums">
             ${balanceDue.toLocaleString()}
           </span>
           {firstSessionISO && (

@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, MessageSquare, Play, Video } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  MessageSquare,
+  Play,
+  Video,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -58,12 +64,12 @@ export function HomeworkSubmissionsSection({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider hover:text-foreground"
+        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase"
       >
         <Video className="size-3" />
         Owner submissions · {submissions.length}
         {hasUnreviewed && (
-          <span className="ml-1 inline-flex h-4 items-center rounded-full bg-amber-100 px-1.5 text-[9px] font-bold uppercase text-amber-700">
+          <span className="ml-1 inline-flex h-4 items-center rounded-full bg-amber-100 px-1.5 text-[9px] font-bold text-amber-700 uppercase">
             New
           </span>
         )}
@@ -135,7 +141,7 @@ function SubmissionRow({
             <button
               type="button"
               onClick={() => setExpanded(true)}
-              className="absolute inset-0 flex items-center justify-center bg-black/30 text-white transition-colors hover:bg-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="absolute inset-0 flex items-center justify-center bg-black/30 text-white transition-colors hover:bg-black/40 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
               aria-label="Play submitted video"
             >
               <span className="flex size-10 items-center justify-center rounded-full bg-white/95 text-slate-900 shadow-lg">
@@ -147,19 +153,22 @@ function SubmissionRow({
 
         {/* Meta + response editor */}
         <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+          <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
             <span className="font-semibold text-slate-700 dark:text-slate-200">
               {formatPracticeDate(entry.date)}
             </span>
-            <span>· submitted {relativeWhen(entry.videoAttachedAt ?? entry.markedAt, todayISO)}</span>
+            <span>
+              · submitted{" "}
+              {relativeWhen(entry.videoAttachedAt ?? entry.markedAt, todayISO)}
+            </span>
           </div>
 
           <label className="block space-y-1">
-            <span className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+            <span className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
               <MessageSquare className="size-3" />
               Trainer Response{" "}
               {hasResponse && (
-                <span className="text-emerald-600 ml-1 normal-case tracking-normal">
+                <span className="ml-1 tracking-normal text-emerald-600 normal-case">
                   · client will see this
                 </span>
               )}

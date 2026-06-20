@@ -34,7 +34,11 @@ import {
 } from "lucide-react";
 import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { cn } from "@/lib/utils";
-import type { CallingSettings, CallForwardingMode, DispatchMode } from "@/types/calling";
+import type {
+  CallingSettings,
+  CallForwardingMode,
+  DispatchMode,
+} from "@/types/calling";
 import { NumberPortingWizard } from "@/components/calling/NumberPortingWizard";
 import { CallAvailabilitySettings } from "@/components/calling/CallAvailabilitySettings";
 import { CallTagsSettings } from "@/components/calling/CallTagsSettings";
@@ -45,34 +49,86 @@ const dispatchOptions: {
   description: string;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
-  { value: "ring_all", label: "Ring All Devices", description: "All connected devices ring simultaneously", icon: Radio },
-  { value: "desktop_first", label: "Desktop First", description: "Ring desktop for 5s, then mobile", icon: Monitor },
-  { value: "mobile_first", label: "Mobile First", description: "Mobile rings first, desktop as fallback", icon: Smartphone },
-  { value: "reception_only", label: "Reception Only", description: "Only the reception station receives calls", icon: Phone },
-  { value: "specific_group", label: "Specific Staff Group", description: "Route to a defined group of staff", icon: Users },
-  { value: "location_based", label: "Location-Based", description: "Route by caller's area code or location", icon: MapPin },
-  { value: "round_robin", label: "Round-Robin", description: "Distribute evenly across available staff", icon: Shuffle },
+  {
+    value: "ring_all",
+    label: "Ring All Devices",
+    description: "All connected devices ring simultaneously",
+    icon: Radio,
+  },
+  {
+    value: "desktop_first",
+    label: "Desktop First",
+    description: "Ring desktop for 5s, then mobile",
+    icon: Monitor,
+  },
+  {
+    value: "mobile_first",
+    label: "Mobile First",
+    description: "Mobile rings first, desktop as fallback",
+    icon: Smartphone,
+  },
+  {
+    value: "reception_only",
+    label: "Reception Only",
+    description: "Only the reception station receives calls",
+    icon: Phone,
+  },
+  {
+    value: "specific_group",
+    label: "Specific Staff Group",
+    description: "Route to a defined group of staff",
+    icon: Users,
+  },
+  {
+    value: "location_based",
+    label: "Location-Based",
+    description: "Route by caller's area code or location",
+    icon: MapPin,
+  },
+  {
+    value: "round_robin",
+    label: "Round-Robin",
+    description: "Distribute evenly across available staff",
+    icon: Shuffle,
+  },
 ];
 
-const DAYS = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"] as const;
-const DAY_LABELS: Record<typeof DAYS[number], string> = {
-  monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu",
-  friday: "Fri", saturday: "Sat", sunday: "Sun",
+const DAYS = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+] as const;
+const DAY_LABELS: Record<(typeof DAYS)[number], string> = {
+  monday: "Mon",
+  tuesday: "Tue",
+  wednesday: "Wed",
+  thursday: "Thu",
+  friday: "Fri",
+  saturday: "Sat",
+  sunday: "Sun",
 };
 
 interface CallingSettingsPanelProps {
   settings: CallingSettings;
 }
 
-export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanelProps) {
+export function CallingSettingsPanel({
+  settings: initial,
+}: CallingSettingsPanelProps) {
   const [settings, setSettings] = useState<CallingSettings>(initial);
   const [saved, setSaved] = useState(false);
 
-  const update = <K extends keyof CallingSettings>(key: K, value: CallingSettings[K]) =>
-    setSettings((s) => ({ ...s, [key]: value }));
+  const update = <K extends keyof CallingSettings>(
+    key: K,
+    value: CallingSettings[K],
+  ) => setSettings((s) => ({ ...s, [key]: value }));
 
   const updateHours = (
-    day: typeof DAYS[number],
+    day: (typeof DAYS)[number],
     field: "open" | "close" | "enabled",
     value: string | boolean,
   ) =>
@@ -111,7 +167,7 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
               Active
             </Badge>
           </div>
-          <p className="mt-1.5 text-xs text-muted-foreground">
+          <p className="text-muted-foreground mt-1.5 text-xs">
             Outbound calls will display this number to recipients.
           </p>
         </CardContent>
@@ -127,7 +183,9 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
             <Radio className="size-4 text-purple-600" />
             Call Dispatch Mode
           </CardTitle>
-          <p className="text-sm text-muted-foreground">How incoming calls are distributed to staff</p>
+          <p className="text-muted-foreground text-sm">
+            How incoming calls are distributed to staff
+          </p>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -145,15 +203,34 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
                       : "hover:border-muted-foreground/30 hover:bg-muted/40",
                   )}
                 >
-                  <div className={cn("mt-0.5 rounded-lg p-1.5", active ? "bg-primary/15" : "bg-muted")}>
-                    <Icon className={cn("size-4", active ? "text-primary" : "text-muted-foreground")} />
+                  <div
+                    className={cn(
+                      "mt-0.5 rounded-lg p-1.5",
+                      active ? "bg-primary/15" : "bg-muted",
+                    )}
+                  >
+                    <Icon
+                      className={cn(
+                        "size-4",
+                        active ? "text-primary" : "text-muted-foreground",
+                      )}
+                    />
                   </div>
                   <div>
-                    <p className={cn("text-sm font-semibold", active && "text-primary")}>{opt.label}</p>
-                    <p className="text-xs text-muted-foreground">{opt.description}</p>
+                    <p
+                      className={cn(
+                        "text-sm font-semibold",
+                        active && "text-primary",
+                      )}
+                    >
+                      {opt.label}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      {opt.description}
+                    </p>
                   </div>
                   {active && (
-                    <div className="ml-auto mt-0.5 size-4 rounded-full border-2 border-primary bg-primary" />
+                    <div className="border-primary bg-primary mt-0.5 ml-auto size-4 rounded-full border-2" />
                   )}
                 </button>
               );
@@ -175,29 +252,43 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
             <Users className="size-4 text-teal-600" />
             Multiple Simultaneous Calls
           </CardTitle>
-          <p className="text-sm text-muted-foreground">What happens when a second call arrives</p>
+          <p className="text-muted-foreground text-sm">
+            What happens when a second call arrives
+          </p>
         </CardHeader>
         <CardContent>
           <Select
             value={settings.simultaneousCallHandling}
             onValueChange={(v) =>
-              update("simultaneousCallHandling", v as CallingSettings["simultaneousCallHandling"])
+              update(
+                "simultaneousCallHandling",
+                v as CallingSettings["simultaneousCallHandling"],
+              )
             }
           >
             <SelectTrigger className="max-w-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="allow_waiting">Allow call waiting (staff sees second call)</SelectItem>
-              <SelectItem value="next_available">Send to next available staff member</SelectItem>
-              <SelectItem value="direct_voicemail">Send directly to voicemail</SelectItem>
-              <SelectItem value="queue_system">Queue system — caller hears their position</SelectItem>
+              <SelectItem value="allow_waiting">
+                Allow call waiting (staff sees second call)
+              </SelectItem>
+              <SelectItem value="next_available">
+                Send to next available staff member
+              </SelectItem>
+              <SelectItem value="direct_voicemail">
+                Send directly to voicemail
+              </SelectItem>
+              <SelectItem value="queue_system">
+                Queue system — caller hears their position
+              </SelectItem>
             </SelectContent>
           </Select>
           {settings.simultaneousCallHandling === "queue_system" && (
             <div className="mt-3 flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
               <Radio className="size-3.5 shrink-0" />
-              Callers will hear: <em>&quot;You are caller #2. Estimated wait: 2 minutes.&quot;</em>
+              Callers will hear:{" "}
+              <em>&quot;You are caller #2. Estimated wait: 2 minutes.&quot;</em>
             </div>
           )}
         </CardContent>
@@ -217,7 +308,9 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
               <Label className="mb-2 block text-sm">Ringtone</Label>
               <Select
                 value={settings.ringTone}
-                onValueChange={(v) => update("ringTone", v as CallingSettings["ringTone"])}
+                onValueChange={(v) =>
+                  update("ringTone", v as CallingSettings["ringTone"])
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -226,7 +319,9 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
                   <SelectItem value="classic">Classic Ring</SelectItem>
                   <SelectItem value="soft_chime">Soft Chime</SelectItem>
                   <SelectItem value="loud_alert">Loud Alert</SelectItem>
-                  <SelectItem value="repeating">Repeating Notification</SelectItem>
+                  <SelectItem value="repeating">
+                    Repeating Notification
+                  </SelectItem>
                   <SelectItem value="silent">Silent (visual only)</SelectItem>
                 </SelectContent>
               </Select>
@@ -236,7 +331,9 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
             <div className="flex items-center justify-between">
               <div>
                 <Label>Visual Flash Header</Label>
-                <p className="text-xs text-muted-foreground">Flashes the top bar for busy environments</p>
+                <p className="text-muted-foreground text-xs">
+                  Flashes the top bar for busy environments
+                </p>
               </div>
               <Switch
                 checked={settings.visualFlash}
@@ -246,7 +343,9 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
             <div className="flex items-center justify-between">
               <div>
                 <Label>Desktop + Mobile Sync</Label>
-                <p className="text-xs text-muted-foreground">Answer on one device — stops ringing everywhere</p>
+                <p className="text-muted-foreground text-xs">
+                  Answer on one device — stops ringing everywhere
+                </p>
               </div>
               <Switch
                 checked={settings.mobileSync}
@@ -264,37 +363,49 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
             <PhoneForwarded className="size-4 text-indigo-600" />
             Call Forwarding
           </CardTitle>
-          <p className="text-sm text-muted-foreground">Forward calls to an external number</p>
+          <p className="text-muted-foreground text-sm">
+            Forward calls to an external number
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
             <Label className="mb-2 block text-sm">Forwarding Mode</Label>
             <Select
               value={settings.callForwardingMode}
-              onValueChange={(v) => update("callForwardingMode", v as CallForwardingMode)}
+              onValueChange={(v) =>
+                update("callForwardingMode", v as CallForwardingMode)
+              }
             >
               <SelectTrigger className="max-w-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="disabled">Disabled — no forwarding</SelectItem>
+                <SelectItem value="disabled">
+                  Disabled — no forwarding
+                </SelectItem>
                 <SelectItem value="always">Always forward all calls</SelectItem>
-                <SelectItem value="on_no_answer">Forward on no answer</SelectItem>
+                <SelectItem value="on_no_answer">
+                  Forward on no answer
+                </SelectItem>
                 <SelectItem value="on_busy">Forward when busy</SelectItem>
-                <SelectItem value="on_no_answer_or_busy">Forward on no answer or busy</SelectItem>
+                <SelectItem value="on_no_answer_or_busy">
+                  Forward on no answer or busy
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
           {settings.callForwardingMode !== "disabled" && (
             <div>
-              <Label className="mb-2 block text-sm">Forwarding Phone Number</Label>
+              <Label className="mb-2 block text-sm">
+                Forwarding Phone Number
+              </Label>
               <Input
                 className="max-w-xs font-mono"
                 placeholder="+1 (323) 968-7848"
                 value={settings.callForwardingNumber}
                 onChange={(e) => update("callForwardingNumber", e.target.value)}
               />
-              <p className="mt-1.5 text-xs text-muted-foreground">
+              <p className="text-muted-foreground mt-1.5 text-xs">
                 Enter the full phone number including country code.
               </p>
             </div>
@@ -309,34 +420,37 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
             <Timer className="size-4 text-orange-500" />
             Ring Duration
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             How long to ring before routing to voicemail
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
-            <div className="flex-1 max-w-xs">
+            <div className="max-w-xs flex-1">
               <input
                 type="range"
                 min={5}
                 max={120}
                 step={5}
                 value={settings.ringDurationSeconds}
-                onChange={(e) => update("ringDurationSeconds", Number(e.target.value))}
-                className="w-full accent-primary"
+                onChange={(e) =>
+                  update("ringDurationSeconds", Number(e.target.value))
+                }
+                className="accent-primary w-full"
               />
-              <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+              <div className="text-muted-foreground mt-1 flex justify-between text-xs">
                 <span>5s</span>
                 <span>120s</span>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 rounded-lg border bg-muted/30 px-3 py-2 text-sm font-semibold tabular-nums">
-              <Timer className="size-3.5 text-muted-foreground" />
+            <div className="bg-muted/30 flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold tabular-nums">
+              <Timer className="text-muted-foreground size-3.5" />
               {settings.ringDurationSeconds}s
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            After <strong>{settings.ringDurationSeconds} seconds</strong> without an answer, the caller is sent to voicemail.
+          <p className="text-muted-foreground text-xs">
+            After <strong>{settings.ringDurationSeconds} seconds</strong>{" "}
+            without an answer, the caller is sent to voicemail.
           </p>
         </CardContent>
       </Card>
@@ -354,7 +468,9 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
             <div className="flex items-center justify-between">
               <div>
                 <Label>Auto-Record All Calls</Label>
-                <p className="text-xs text-muted-foreground">AES-256 encrypted recordings</p>
+                <p className="text-muted-foreground text-xs">
+                  AES-256 encrypted recordings
+                </p>
               </div>
               <Switch
                 checked={settings.autoRecord}
@@ -364,7 +480,9 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
             <div className="flex items-center justify-between">
               <div>
                 <Label>Auto-Transcription</Label>
-                <p className="text-xs text-muted-foreground">Transcribe every call to searchable text</p>
+                <p className="text-muted-foreground text-xs">
+                  Transcribe every call to searchable text
+                </p>
               </div>
               <Switch
                 checked={settings.autoTranscription}
@@ -374,7 +492,9 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
             <div className="flex items-center justify-between">
               <div>
                 <Label>Compliance Notice</Label>
-                <p className="text-xs text-muted-foreground">Play &quot;This call may be recorded&quot; greeting</p>
+                <p className="text-muted-foreground text-xs">
+                  Play &quot;This call may be recorded&quot; greeting
+                </p>
               </div>
               <Switch
                 checked={settings.complianceNotice}
@@ -382,10 +502,12 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
               />
             </div>
           </div>
-          <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2.5">
+          <div className="bg-muted/30 flex items-center justify-between rounded-lg border px-3 py-2.5">
             <div>
               <p className="text-sm font-medium">Recording Retention</p>
-              <p className="text-xs text-muted-foreground">Determined by your subscription plan</p>
+              <p className="text-muted-foreground text-xs">
+                Determined by your subscription plan
+              </p>
             </div>
             <Badge variant="secondary" className="shrink-0">
               {settings.recordingStorage === "30_days"
@@ -410,7 +532,9 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
           <div className="flex items-center justify-between">
             <div>
               <Label>Send Auto-SMS on Missed Call</Label>
-              <p className="text-xs text-muted-foreground">Instantly notify the caller you&apos;ll be in touch</p>
+              <p className="text-muted-foreground text-xs">
+                Instantly notify the caller you&apos;ll be in touch
+              </p>
             </div>
             <Switch
               checked={settings.missedCallAutoSMS}
@@ -424,10 +548,13 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
                 rows={3}
                 className="text-sm"
                 value={settings.missedCallSMSTemplate}
-                onChange={(e) => update("missedCallSMSTemplate", e.target.value)}
+                onChange={(e) =>
+                  update("missedCallSMSTemplate", e.target.value)
+                }
               />
-              <p className="mt-1 text-xs text-muted-foreground">
-                Use <code className="rounded bg-muted px-1">{"{{name}}"}</code> for client name.
+              <p className="text-muted-foreground mt-1 text-xs">
+                Use <code className="bg-muted rounded px-1">{"{{name}}"}</code>{" "}
+                for client name.
               </p>
             </div>
           )}
@@ -441,7 +568,7 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
             <Clock className="size-4 text-green-600" />
             Business Hours
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Calls outside these hours route to after-hours voicemail
           </p>
         </CardHeader>
@@ -455,7 +582,12 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
                     checked={h.enabled}
                     onCheckedChange={(v) => updateHours(day, "enabled", v)}
                   />
-                  <span className={cn("w-9 text-sm font-semibold", !h.enabled && "text-muted-foreground")}>
+                  <span
+                    className={cn(
+                      "w-9 text-sm font-semibold",
+                      !h.enabled && "text-muted-foreground",
+                    )}
+                  >
                     {DAY_LABELS[day]}
                   </span>
                   {h.enabled ? (
@@ -476,7 +608,9 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
                       />
                     </div>
                   ) : (
-                    <span className="text-sm text-muted-foreground">Closed</span>
+                    <span className="text-muted-foreground text-sm">
+                      Closed
+                    </span>
                   )}
                 </div>
               );
@@ -492,7 +626,7 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
             <Shield className="size-4 text-slate-600" />
             Staff Permissions
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Role-based access is managed in Settings → Team → Roles
           </p>
         </CardHeader>
@@ -508,9 +642,9 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
             ].map((perm) => (
               <div
                 key={perm}
-                className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-xs font-medium"
+                className="bg-muted/30 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium"
               >
-                <Shield className="size-3 text-muted-foreground" />
+                <Shield className="text-muted-foreground size-3" />
                 {perm}
               </div>
             ))}

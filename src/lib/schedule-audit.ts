@@ -317,7 +317,10 @@ export function logShiftAssigned(ctx: ShiftContext): ScheduleAuditEntry {
 }
 
 export function logShiftUnassigned(
-  ctx: ShiftContext & { previousEmployeeId?: string; previousEmployeeName?: string },
+  ctx: ShiftContext & {
+    previousEmployeeId?: string;
+    previousEmployeeName?: string;
+  },
 ): ScheduleAuditEntry {
   return log({
     action: "shift_unassigned",

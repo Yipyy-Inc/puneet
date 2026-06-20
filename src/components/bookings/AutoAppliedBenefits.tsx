@@ -1,14 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  Award,
-  Check,
-  Gift,
-  Sparkles,
-  Wallet,
-  X,
-} from "lucide-react";
+import { Award, Check, Gift, Sparkles, Wallet, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -88,7 +81,8 @@ export function AutoAppliedBenefits({
   if (invoice.status === "closed") return null;
   if (!client) return null;
 
-  const noBenefits = evaluation.applied.length === 0 && disabledKinds.size === 0;
+  const noBenefits =
+    evaluation.applied.length === 0 && disabledKinds.size === 0;
   if (noBenefits) {
     return (
       <div className="space-y-1.5">
@@ -144,11 +138,11 @@ export function AutoAppliedBenefits({
                 {evaluation.applied.length > 1 ? "s" : ""} applied automatically
               </p>
               <p className="text-[11px] text-emerald-800/80">
-                <span className="font-semibold font-[tabular-nums]">
+                <span className="font-[tabular-nums] font-semibold">
                   ${evaluation.totalSavings.toFixed(2)} saved
                 </span>{" "}
                 · adjusted total{" "}
-                <span className="font-semibold font-[tabular-nums]">
+                <span className="font-[tabular-nums] font-semibold">
                   ${evaluation.adjustedTotal.toFixed(2)}
                 </span>
               </p>
@@ -201,19 +195,14 @@ export function AutoAppliedBenefits({
                       {benefit.label}
                     </p>
                   </div>
-                  <p
-                    className={cn(
-                      "text-[10px] opacity-80",
-                      tone.fg,
-                    )}
-                  >
+                  <p className={cn("text-[10px] opacity-80", tone.fg)}>
                     {benefit.description}
                   </p>
                 </div>
                 <div className="text-right">
                   <p
                     className={cn(
-                      "text-xs font-semibold font-[tabular-nums]",
+                      "font-[tabular-nums] text-xs font-semibold",
                       tone.fg,
                     )}
                   >

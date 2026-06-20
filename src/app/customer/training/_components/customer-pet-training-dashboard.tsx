@@ -244,12 +244,17 @@ function CurrentProgramPanel({
   todayISO: string;
 }) {
   const { currentProgram, pet } = dashboard;
-  const { enrollment, series, startDate, endDate, upcomingSessions, isBetweenPrograms } =
-    currentProgram;
+  const {
+    enrollment,
+    series,
+    startDate,
+    endDate,
+    upcomingSessions,
+    isBetweenPrograms,
+  } = currentProgram;
   const progressPct = enrollment
     ? Math.round(
-        (enrollment.sessionsAttended /
-          Math.max(1, enrollment.totalSessions)) *
+        (enrollment.sessionsAttended / Math.max(1, enrollment.totalSessions)) *
           100,
       )
     : 0;
@@ -300,10 +305,10 @@ function CurrentProgramPanel({
 
           <div className="space-y-1">
             <div className="flex items-center justify-between text-[12px]">
-              <span className="text-muted-foreground inline-flex items-center gap-1 font-medium uppercase tracking-wider">
+              <span className="text-muted-foreground inline-flex items-center gap-1 font-medium tracking-wider uppercase">
                 Progress
               </span>
-              <span className="font-semibold tabular-nums text-slate-800">
+              <span className="font-semibold text-slate-800 tabular-nums">
                 {enrollment.sessionsAttended} of {enrollment.totalSessions} ·{" "}
                 {progressPct}%
               </span>
@@ -313,7 +318,7 @@ function CurrentProgramPanel({
 
           {upcomingSessions.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+              <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                 <CalendarDays className="size-3" />
                 Upcoming sessions
               </p>
@@ -347,14 +352,14 @@ function CurrentProgramPanel({
                             key={`${s.sessionNumber}-ex-${i}`}
                             className="flex items-center gap-2 text-[12px] text-slate-700"
                           >
-                            <Target className="text-indigo-500 size-3 shrink-0" />
+                            <Target className="size-3 shrink-0 text-indigo-500" />
                             <span className="truncate">{name}</span>
                           </li>
                         ))}
                       </ul>
                     )}
                     {s.hasPlan && (
-                      <p className="text-indigo-700 mt-1.5 inline-flex items-start gap-1 rounded-md bg-indigo-50/70 px-2 py-1 text-[11px]">
+                      <p className="mt-1.5 inline-flex items-start gap-1 rounded-md bg-indigo-50/70 px-2 py-1 text-[11px] text-indigo-700">
                         <BookOpen className="mt-0.5 size-3 shrink-0" />
                         Practice these at home before class to get the most out
                         of your session.
@@ -409,7 +414,7 @@ function SessionHistoryPanel({
           const a = entry.attendance;
           return (
             <li key={a.id} className="relative">
-              <span className="absolute -left-[1.41rem] top-1 size-3 rounded-full border-2 border-white bg-indigo-500 shadow-sm" />
+              <span className="absolute top-1 -left-[1.41rem] size-3 rounded-full border-2 border-white bg-indigo-500 shadow-sm" />
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="text-sm font-semibold text-slate-800">
                   {entry.sessionLabel}
@@ -423,8 +428,8 @@ function SessionHistoryPanel({
               {a.exercises && a.exercises.length > 0 && (
                 <p className="text-muted-foreground mt-0.5 text-[11px]">
                   Rating scale: 1 {EXERCISE_RATING_LABELS[1]} · 2{" "}
-                  {EXERCISE_RATING_LABELS[2]} · 3 {EXERCISE_RATING_LABELS[3]} · 4{" "}
-                  {EXERCISE_RATING_LABELS[4]} · 5 {EXERCISE_RATING_LABELS[5]}
+                  {EXERCISE_RATING_LABELS[2]} · 3 {EXERCISE_RATING_LABELS[3]} ·
+                  4 {EXERCISE_RATING_LABELS[4]} · 5 {EXERCISE_RATING_LABELS[5]}
                 </p>
               )}
               {a.trainerNotes && a.trainerNotes.trim() && (
@@ -451,8 +456,7 @@ function SessionHistoryPanel({
           );
         })}
       </ol>
-      {sessionHistory.totalAttended >
-        sessionHistory.recentSessions.length && (
+      {sessionHistory.totalAttended > sessionHistory.recentSessions.length && (
         <div className="mt-3 border-t pt-2">
           <Button
             asChild
@@ -482,8 +486,8 @@ function ProgressChartsPanel({
     return (
       <Panel icon={LineChart} title="Progress Charts" iconTone="emerald">
         <p className="text-muted-foreground text-[12.5px]/relaxed">
-          Once {pet.name} has been rated on the same exercise across two or
-          more sessions, you&apos;ll see their improvement chart here.
+          Once {pet.name} has been rated on the same exercise across two or more
+          sessions, you&apos;ll see their improvement chart here.
         </p>
       </Panel>
     );
@@ -669,14 +673,14 @@ function MiniProgressRow({ row }: { row: MiniExerciseRow }) {
   return (
     <li className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[13px] font-medium text-slate-800 truncate">
+        <p className="truncate text-[13px] font-medium text-slate-800">
           {row.name}
         </p>
         <div className="flex shrink-0 items-center gap-1.5">
           <span className="text-muted-foreground text-[10px]">
             Start{" "}
-            <span className="font-semibold text-slate-700">{row.start}</span>{" "}
-            → Now{" "}
+            <span className="font-semibold text-slate-700">{row.start}</span> →
+            Now{" "}
             <span className="font-semibold text-slate-700">{row.current}</span>
           </span>
           {improved && (
@@ -751,7 +755,7 @@ function Marker({
   return (
     <span
       className={cn(
-        "absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-white shadow-sm",
+        "absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-sm ring-2 ring-white",
         size,
       )}
       style={{ left: `${leftPct}%`, backgroundColor: color }}
@@ -773,8 +777,8 @@ function HomeworkPanel({
     <Panel icon={BookOpen} title="Homework" iconTone="violet">
       {homework.activeCount === 0 ? (
         <p className="text-muted-foreground text-[12.5px]/relaxed">
-          No active homework right now — {pet.name} is between assignments.
-          New exercises will appear here after the next session.
+          No active homework right now — {pet.name} is between assignments. New
+          exercises will appear here after the next session.
         </p>
       ) : (
         <div className="space-y-3">
@@ -859,14 +863,12 @@ function HomeworkRow({
     ? `Due ${relativeDays(item.nextDueDate, todayISO).toLowerCase()}`
     : null;
   const overdue =
-    !!item.nextDueDate &&
-    item.nextDueDate < todayISO &&
-    !practiced;
+    !!item.nextDueDate && item.nextDueDate < todayISO && !practiced;
 
   return (
     <li
       className={cn(
-        "rounded-lg border bg-card px-3 py-2.5",
+        "bg-card rounded-lg border px-3 py-2.5",
         overdue && "border-rose-200 bg-rose-50/40",
         practiced && "opacity-90",
       )}
@@ -969,7 +971,14 @@ function Panel({
 }: {
   icon: typeof BookOpen;
   title: string;
-  iconTone: "slate" | "indigo" | "amber" | "violet" | "rose" | "sky" | "emerald";
+  iconTone:
+    | "slate"
+    | "indigo"
+    | "amber"
+    | "violet"
+    | "rose"
+    | "sky"
+    | "emerald";
   children: React.ReactNode;
 }) {
   const toneCls = {
@@ -992,7 +1001,7 @@ function Panel({
         >
           <Icon className="size-4" />
         </div>
-        <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+        <h4 className="text-[10px] font-bold tracking-wider text-slate-600 uppercase">
           {title}
         </h4>
       </header>

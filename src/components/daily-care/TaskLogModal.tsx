@@ -99,7 +99,8 @@ export function TaskLogModal({
                 Log {meta.label.toLowerCase()}
               </DialogTitle>
               <DialogDescription className="mt-0.5 truncate">
-                {task.petName} · {task.kennelName} · {format12h(task.scheduledTime)}
+                {task.petName} · {task.kennelName} ·{" "}
+                {format12h(task.scheduledTime)}
               </DialogDescription>
             </div>
           </div>
@@ -107,7 +108,7 @@ export function TaskLogModal({
 
         <div className="space-y-4 py-2">
           {task.subDetails && task.subDetails.length > 0 && (
-            <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs">
+            <div className="bg-muted/40 rounded-md border px-3 py-2 text-xs">
               {task.subDetails.map((d, i) => (
                 <p key={i} className="leading-relaxed">
                   {d}
@@ -201,10 +202,7 @@ export function TaskLogModal({
         </div>
 
         <DialogFooter>
-          <Button
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-          >
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit}>

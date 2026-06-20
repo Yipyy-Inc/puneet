@@ -70,7 +70,7 @@ function ChartTooltip({
   if (!point) return null;
   return (
     <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-md">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+      <p className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
         Session {point.sessionNumber}
       </p>
       <p className="mt-0.5 text-xs font-semibold text-slate-800">
@@ -150,7 +150,10 @@ export function ExerciseProgressChart({
         />
         {/* Faint guide at "Good" (3) — anchors the eye on the midpoint */}
         <ReferenceLine y={3} stroke="rgb(203 213 225)" strokeDasharray="2 4" />
-        <Tooltip content={<ChartTooltip />} cursor={{ stroke: color, strokeOpacity: 0.2 }} />
+        <Tooltip
+          content={<ChartTooltip />}
+          cursor={{ stroke: color, strokeOpacity: 0.2 }}
+        />
         <Area
           type="monotone"
           dataKey="rating"

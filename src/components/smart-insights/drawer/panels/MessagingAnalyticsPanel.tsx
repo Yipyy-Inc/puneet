@@ -40,7 +40,7 @@ export function MessagingAnalyticsPanel({
   return (
     <div className="flex h-full flex-col gap-5 px-1">
       <div className="rounded-lg border bg-slate-50 p-3 text-sm">
-        <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+        <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs tracking-wide uppercase">
           <BarChart3 className="size-3.5" />
           Channel breakdown · last 90 days
         </div>
@@ -88,14 +88,14 @@ export function MessagingAnalyticsPanel({
         </Badge>
         <p className="text-emerald-900">
           Shift more of your scheduled campaigns to SMS for the next 90 days.
-          Keep email for newsletters and longer-form content where it still
-          adds value.
+          Keep email for newsletters and longer-form content where it still adds
+          value.
         </p>
       </div>
 
       <p className="text-muted-foreground text-xs">
-        This insight is quarterly — Smart Insights will re-evaluate the
-        channel mix in ~90 days.
+        This insight is quarterly — Smart Insights will re-evaluate the channel
+        mix in ~90 days.
       </p>
 
       <div className="mt-auto">

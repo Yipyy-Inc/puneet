@@ -30,10 +30,14 @@ function loadBoardingAddOns(): ServiceAddOn[] {
   if (typeof window === "undefined") return defaultServiceAddOns;
   try {
     const raw = localStorage.getItem("settings-service-addons");
-    const all = raw ? (JSON.parse(raw) as ServiceAddOn[]) : defaultServiceAddOns;
+    const all = raw
+      ? (JSON.parse(raw) as ServiceAddOn[])
+      : defaultServiceAddOns;
     return all.filter((a) => a.applicableServices.includes("boarding"));
   } catch {
-    return defaultServiceAddOns.filter((a) => a.applicableServices.includes("boarding"));
+    return defaultServiceAddOns.filter((a) =>
+      a.applicableServices.includes("boarding"),
+    );
   }
 }
 
@@ -87,7 +91,9 @@ export default function BoardingRatesPage() {
 
   const handleSaveRate = () => {
     if (editingRate) {
-      setRates(rates.map((r) => (r.id === editingRate.id ? { ...r, ...rateForm } : r)));
+      setRates(
+        rates.map((r) => (r.id === editingRate.id ? { ...r, ...rateForm } : r)),
+      );
     } else {
       setRates([...rates, { id: `rate-${Date.now()}`, ...rateForm }]);
     }
@@ -100,7 +106,11 @@ export default function BoardingRatesPage() {
   };
 
   const handleToggleRate = (rate: BoardingRate) => {
-    setRates(rates.map((r) => (r.id === rate.id ? { ...r, isActive: !r.isActive } : r)));
+    setRates(
+      rates.map((r) =>
+        r.id === rate.id ? { ...r, isActive: !r.isActive } : r,
+      ),
+    );
   };
 
   // ── Columns ────────────────────────────────────────────────────────────────
@@ -117,7 +127,9 @@ export default function BoardingRatesPage() {
           />
           <div>
             <p className="font-medium">{rate.name}</p>
-            <p className="text-muted-foreground max-w-[200px] truncate text-xs">{rate.description}</p>
+            <p className="text-muted-foreground max-w-[200px] truncate text-xs">
+              {rate.description}
+            </p>
           </div>
         </div>
       ),
@@ -127,7 +139,9 @@ export default function BoardingRatesPage() {
       label: "Base Price",
       icon: DollarSign,
       defaultVisible: true,
-      render: (rate) => <span className="font-medium">${rate.basePrice}/night</span>,
+      render: (rate) => (
+        <span className="font-medium">${rate.basePrice}/night</span>
+      ),
     },
     {
       key: "sizePricing",
@@ -135,10 +149,18 @@ export default function BoardingRatesPage() {
       defaultVisible: true,
       render: (rate) => (
         <div className="flex flex-wrap gap-1">
-          <Badge variant="outline" className="text-xs">S: ${rate.sizePricing.small}</Badge>
-          <Badge variant="outline" className="text-xs">M: ${rate.sizePricing.medium}</Badge>
-          <Badge variant="outline" className="text-xs">L: ${rate.sizePricing.large}</Badge>
-          <Badge variant="outline" className="text-xs">XL: ${rate.sizePricing.giant}</Badge>
+          <Badge variant="outline" className="text-xs">
+            S: ${rate.sizePricing.small}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            M: ${rate.sizePricing.medium}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            L: ${rate.sizePricing.large}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            XL: ${rate.sizePricing.giant}
+          </Badge>
         </div>
       ),
     },
@@ -149,7 +171,8 @@ export default function BoardingRatesPage() {
       defaultVisible: true,
       render: (rate) => {
         const ids = rate.includedAddOnIds ?? [];
-        if (ids.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
+        if (ids.length === 0)
+          return <span className="text-muted-foreground text-xs">—</span>;
         return (
           <Badge variant="secondary" className="gap-1 text-xs">
             <Gift className="size-2.5 text-emerald-600" />
@@ -163,7 +186,10 @@ export default function BoardingRatesPage() {
       label: "Status",
       defaultVisible: true,
       render: (rate) => (
-        <Switch checked={rate.isActive} onCheckedChange={() => handleToggleRate(rate)} />
+        <Switch
+          checked={rate.isActive}
+          onCheckedChange={() => handleToggleRate(rate)}
+        />
       ),
     },
   ];
@@ -178,7 +204,8 @@ export default function BoardingRatesPage() {
           Boarding Rates & Pricing
         </h2>
         <p className="text-muted-foreground mt-0.5 text-sm">
-          Manage nightly rates and add-ons. Discounts, surcharges, and fee rules are configured in Settings.
+          Manage nightly rates and add-ons. Discounts, surcharges, and fee rules
+          are configured in Settings.
         </p>
       </div>
 
@@ -188,9 +215,15 @@ export default function BoardingRatesPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">Active Rates</p>
-                <p className="mt-1.5 text-3xl font-bold tabular-nums">{rates.filter((r) => r.isActive).length}</p>
-                <p className="text-muted-foreground mt-1 text-xs">of {rates.length} total</p>
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+                  Active Rates
+                </p>
+                <p className="mt-1.5 text-3xl font-bold tabular-nums">
+                  {rates.filter((r) => r.isActive).length}
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  of {rates.length} total
+                </p>
               </div>
               <div className="flex size-12 items-center justify-center rounded-2xl bg-slate-100">
                 <DollarSign className="size-5 text-slate-600" />
@@ -202,11 +235,21 @@ export default function BoardingRatesPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">Avg. Nightly Rate</p>
-                <p className="mt-1.5 text-3xl font-bold tabular-nums">
-                  ${rates.length > 0 ? Math.round(rates.reduce((t, r) => t + r.basePrice, 0) / rates.length) : 0}
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+                  Avg. Nightly Rate
                 </p>
-                <p className="text-muted-foreground mt-1 text-xs">based on {rates.length} rates</p>
+                <p className="mt-1.5 text-3xl font-bold tabular-nums">
+                  $
+                  {rates.length > 0
+                    ? Math.round(
+                        rates.reduce((t, r) => t + r.basePrice, 0) /
+                          rates.length,
+                      )
+                    : 0}
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  based on {rates.length} rates
+                </p>
               </div>
               <div className="flex size-12 items-center justify-center rounded-2xl bg-blue-50">
                 <DollarSign className="size-5 text-blue-600" />
@@ -218,9 +261,15 @@ export default function BoardingRatesPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">Active Add-ons</p>
-                <p className="mt-1.5 text-3xl font-bold tabular-nums">{activeAddons}</p>
-                <p className="text-muted-foreground mt-1 text-xs">of {boardingAddOns.length} total</p>
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+                  Active Add-ons
+                </p>
+                <p className="mt-1.5 text-3xl font-bold tabular-nums">
+                  {activeAddons}
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  of {boardingAddOns.length} total
+                </p>
               </div>
               <div className="flex size-12 items-center justify-center rounded-2xl bg-violet-50">
                 <Sparkles className="size-5 text-violet-600" />
@@ -232,9 +281,13 @@ export default function BoardingRatesPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="services" className="space-y-4">
-        <TabsList className="bg-slate-100 border">
-          <TabsTrigger value="services">Nightly Rates ({rates.length})</TabsTrigger>
-          <TabsTrigger value="addons">Add-ons ({boardingAddOns.length})</TabsTrigger>
+        <TabsList className="border bg-slate-100">
+          <TabsTrigger value="services">
+            Nightly Rates ({rates.length})
+          </TabsTrigger>
+          <TabsTrigger value="addons">
+            Add-ons ({boardingAddOns.length})
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Services Tab ── */}
@@ -260,10 +313,19 @@ export default function BoardingRatesPage() {
                 searchPlaceholder="Search rates..."
                 actions={(rate) => (
                   <div className="flex items-center gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => handleEditRate(rate)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleEditRate(rate)}
+                    >
                       <Edit className="size-4" />
                     </Button>
-                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeletingRate(rate)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      onClick={() => setDeletingRate(rate)}
+                    >
                       <Trash2 className="size-4" />
                     </Button>
                   </div>
@@ -285,10 +347,14 @@ export default function BoardingRatesPage() {
           <div>
             <p className="text-sm font-semibold">Pricing Rules</p>
             <p className="text-muted-foreground text-xs">
-              Multi-pet discounts, multi-night discounts, peak surcharges, late fees, and custom fees are managed in Settings.
+              Multi-pet discounts, multi-night discounts, peak surcharges, late
+              fees, and custom fees are managed in Settings.
             </p>
           </div>
-          <a href="/facility/dashboard/settings?section=pricing-rules" className="text-primary text-sm font-medium hover:underline">
+          <a
+            href="/facility/dashboard/settings?section=pricing-rules"
+            className="text-primary text-sm font-medium hover:underline"
+          >
             Go to Pricing Rules →
           </a>
         </CardContent>
@@ -298,7 +364,9 @@ export default function BoardingRatesPage() {
       <Dialog open={isRateModalOpen} onOpenChange={setIsRateModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{editingRate ? "Edit Rate" : "Add New Rate"}</DialogTitle>
+            <DialogTitle>
+              {editingRate ? "Edit Rate" : "Add New Rate"}
+            </DialogTitle>
           </DialogHeader>
           <ScrollArea className="max-h-[70vh] pr-1">
             <div className="space-y-4 pb-2">
@@ -306,7 +374,9 @@ export default function BoardingRatesPage() {
                 <Label>Rate Name</Label>
                 <Input
                   value={rateForm.name}
-                  onChange={(e) => setRateForm({ ...rateForm, name: e.target.value })}
+                  onChange={(e) =>
+                    setRateForm({ ...rateForm, name: e.target.value })
+                  }
                   placeholder="e.g., Premium Suite"
                 />
               </div>
@@ -314,7 +384,9 @@ export default function BoardingRatesPage() {
                 <Label>Description</Label>
                 <Textarea
                   value={rateForm.description}
-                  onChange={(e) => setRateForm({ ...rateForm, description: e.target.value })}
+                  onChange={(e) =>
+                    setRateForm({ ...rateForm, description: e.target.value })
+                  }
                   placeholder="Describe what's included..."
                 />
               </div>
@@ -327,43 +399,66 @@ export default function BoardingRatesPage() {
                 <Input
                   type="number"
                   value={rateForm.basePrice}
-                  onChange={(e) => setRateForm({ ...rateForm, basePrice: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setRateForm({
+                      ...rateForm,
+                      basePrice: parseFloat(e.target.value) || 0,
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
                 <Label>Size-Based Pricing</Label>
                 <div className="grid grid-cols-2 gap-3">
-                  {(["small", "medium", "large", "giant"] as const).map((size) => (
-                    <div key={size}>
-                      <Label className="text-muted-foreground text-xs capitalize">{size}</Label>
-                      <Input
-                        type="number"
-                        value={rateForm.sizePricing[size]}
-                        onChange={(e) =>
-                          setRateForm({ ...rateForm, sizePricing: { ...rateForm.sizePricing, [size]: parseFloat(e.target.value) || 0 } })
-                        }
-                      />
-                    </div>
-                  ))}
+                  {(["small", "medium", "large", "giant"] as const).map(
+                    (size) => (
+                      <div key={size}>
+                        <Label className="text-muted-foreground text-xs capitalize">
+                          {size}
+                        </Label>
+                        <Input
+                          type="number"
+                          value={rateForm.sizePricing[size]}
+                          onChange={(e) =>
+                            setRateForm({
+                              ...rateForm,
+                              sizePricing: {
+                                ...rateForm.sizePricing,
+                                [size]: parseFloat(e.target.value) || 0,
+                              },
+                            })
+                          }
+                        />
+                      </div>
+                    ),
+                  )}
                 </div>
               </div>
               <IncludedAddOnsPicker
                 serviceFilter="boarding"
                 selectedIds={rateForm.includedAddOnIds}
-                onChange={(ids) => setRateForm({ ...rateForm, includedAddOnIds: ids })}
+                onChange={(ids) =>
+                  setRateForm({ ...rateForm, includedAddOnIds: ids })
+                }
               />
               <div className="flex items-center justify-between">
                 <Label>Active</Label>
                 <Switch
                   checked={rateForm.isActive}
-                  onCheckedChange={(checked) => setRateForm({ ...rateForm, isActive: checked })}
+                  onCheckedChange={(checked) =>
+                    setRateForm({ ...rateForm, isActive: checked })
+                  }
                 />
               </div>
             </div>
           </ScrollArea>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRateModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveRate} disabled={!rateForm.name}>Save Rate</Button>
+            <Button variant="outline" onClick={() => setIsRateModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveRate} disabled={!rateForm.name}>
+              Save Rate
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -371,17 +466,25 @@ export default function BoardingRatesPage() {
       {/* ── Rate Delete Modal ── */}
       <Dialog open={!!deletingRate} onOpenChange={() => setDeletingRate(null)}>
         <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader><DialogTitle className="text-destructive">Confirm Deletion</DialogTitle></DialogHeader>
-          <p className="text-muted-foreground text-sm">Are you sure you want to delete this rate? This action cannot be undone.</p>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">
+              Confirm Deletion
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground text-sm">
+            Are you sure you want to delete this rate? This action cannot be
+            undone.
+          </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeletingRate(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDeletingRate(null)}>
+              Cancel
+            </Button>
             <Button variant="destructive" onClick={handleDeleteRate}>
               <Trash2 className="mr-2 size-4" /> Delete
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

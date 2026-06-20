@@ -330,7 +330,9 @@ function buildProgressCharts(input: BuildInput): ProgressChartsSection {
   const tracks: ProgressChartTrack[] = [];
   for (const [exerciseName, rs] of byExercise) {
     if (rs.length < 2) continue;
-    const sorted = rs.slice().sort((a, b) => a.sessionDate.localeCompare(b.sessionDate));
+    const sorted = rs
+      .slice()
+      .sort((a, b) => a.sessionDate.localeCompare(b.sessionDate));
     const points = sorted.map<ExerciseProgressPoint>((r, idx) => ({
       sessionNumber: idx + 1,
       date: r.sessionDate,
@@ -348,7 +350,8 @@ function buildProgressCharts(input: BuildInput): ProgressChartsSection {
   tracks.sort((a, b) => {
     // Richer stories first (more points), then biggest positive delta, then
     // alphabetical so the order stays stable session-to-session.
-    if (a.ratingsCount !== b.ratingsCount) return b.ratingsCount - a.ratingsCount;
+    if (a.ratingsCount !== b.ratingsCount)
+      return b.ratingsCount - a.ratingsCount;
     if (a.delta !== b.delta) return b.delta - a.delta;
     return a.exerciseName.localeCompare(b.exerciseName);
   });
@@ -361,9 +364,7 @@ function buildProgressCharts(input: BuildInput): ProgressChartsSection {
 
 function buildHomework(input: BuildInput): HomeworkSection {
   const enrollmentIds = new Set(
-    input.enrollments
-      .filter((e) => e.petId === input.pet.id)
-      .map((e) => e.id),
+    input.enrollments.filter((e) => e.petId === input.pet.id).map((e) => e.id),
   );
   const petHomework = input.homework.filter((h) =>
     enrollmentIds.has(h.enrollmentId),
@@ -437,9 +438,7 @@ export function pickEligiblePets(
   clientId: number,
 ): Pet[] {
   const ownerEnrollmentPetIds = new Set(
-    enrollments
-      .filter((e) => e.ownerId === clientId)
-      .map((e) => e.petId),
+    enrollments.filter((e) => e.ownerId === clientId).map((e) => e.petId),
   );
   return pets.filter((p) => ownerEnrollmentPetIds.has(p.id));
 }

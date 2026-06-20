@@ -1,13 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  ArrowLeft,
-  CalendarRange,
-  Heart,
-  Newspaper,
-  Sun,
-} from "lucide-react";
+import { ArrowLeft, CalendarRange, Heart, Newspaper, Sun } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,7 +50,7 @@ const TEMPLATES: CampaignTemplate[] = [
   },
   {
     id: "checkin",
-    label: "\"Thinking of you\" check-in",
+    label: '"Thinking of you" check-in',
     description: "Gentle re-engagement for clients last seen 30–60 days ago",
     icon: <Heart className="size-5" />,
     defaultSubject: "Just checking in on {{petName}}",
@@ -70,7 +64,9 @@ export function NewCampaignSuggestionsPanel({
   onComplete,
   onCancel,
 }: InsightPanelProps) {
-  const [selectedId, setSelectedId] = useState<CampaignTemplate["id"] | null>(null);
+  const [selectedId, setSelectedId] = useState<CampaignTemplate["id"] | null>(
+    null,
+  );
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [step, setStep] = useState<"pick" | "compose" | "preview">("pick");
@@ -81,11 +77,13 @@ export function NewCampaignSuggestionsPanel({
     return (
       <div className="flex h-full flex-col gap-5 px-1">
         <div className="rounded-lg border bg-amber-50/60 p-3 text-sm text-amber-900">
-          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide">
+          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
             <CalendarRange className="size-3.5" />
             32 days since the last campaign
           </div>
-          <p>Pick a starting point — you can customize once you&#39;ve chosen.</p>
+          <p>
+            Pick a starting point — you can customize once you&#39;ve chosen.
+          </p>
         </div>
 
         <div className="grid gap-3">
@@ -167,7 +165,9 @@ export function NewCampaignSuggestionsPanel({
       <BackHeader onBack={() => setStep("compose")} label="Confirm send" />
       <PreviewBeforeSend
         channel="email"
-        recipients={[`${selected?.audience} · ${selected?.audienceCount} clients`]}
+        recipients={[
+          `${selected?.audience} · ${selected?.audienceCount} clients`,
+        ]}
         subject={subject
           .replaceAll("{{firstName}}", "[First name]")
           .replaceAll("{{petName}}", "[Pet name]")}
@@ -192,7 +192,7 @@ function BackHeader({ onBack, label }: { onBack: () => void; label: string }) {
     <button
       type="button"
       onClick={onBack}
-      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs uppercase tracking-wide transition-colors"
+      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs tracking-wide uppercase transition-colors"
     >
       <ArrowLeft className="size-3.5" />
       {label}

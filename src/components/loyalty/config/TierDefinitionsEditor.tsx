@@ -307,8 +307,8 @@ function TierCard({
         <div className="space-y-2 border-t pt-4">
           <Label>Welcome reward (one-time)</Label>
           <p className="text-muted-foreground text-xs">
-            Granted once, the first time a member reaches this tier — issued as a
-            redeemable voucher (separate from the ongoing benefits above).
+            Granted once, the first time a member reaches this tier — issued as
+            a redeemable voucher (separate from the ongoing benefits above).
           </p>
           <div className="flex items-end gap-2">
             <div className="flex-1">

@@ -38,7 +38,11 @@ import { hasCompletedPrerequisites } from "@/lib/training-program-prereqs";
 
 type PreferredTimeOfDay = "morning" | "afternoon" | "no-preference";
 
-const TIME_OPTIONS: { value: PreferredTimeOfDay; label: string; icon: LucideIcon }[] = [
+const TIME_OPTIONS: {
+  value: PreferredTimeOfDay;
+  label: string;
+  icon: LucideIcon;
+}[] = [
   { value: "morning", label: "Morning", icon: Sunrise },
   { value: "afternoon", label: "Afternoon", icon: Sunset },
   { value: "no-preference", label: "Any time", icon: Sun },
@@ -145,29 +149,26 @@ export function ProgramWaitlistDialog({
     cache
       .findAll({ queryKey: ["training", "series-enrollments"] })
       .forEach((q) => {
-        queryClient.setQueryData<TrainingEnrollment[]>(q.queryKey, (prev = []) => [
-          ...prev,
-          newEnrollment,
-        ]);
+        queryClient.setQueryData<TrainingEnrollment[]>(
+          q.queryKey,
+          (prev = []) => [...prev, newEnrollment],
+        );
       });
     cache.findAll({ queryKey: ["training", "series"] }).forEach((q) => {
       if (q.queryKey[3] !== "enrollments") return;
       // Only push into the matching series' cache so we don't pollute other
       // series' lists.
       if (q.queryKey[2] !== earliest.id) return;
-      queryClient.setQueryData<TrainingEnrollment[]>(q.queryKey, (prev = []) => [
-        ...prev,
-        newEnrollment,
-      ]);
+      queryClient.setQueryData<TrainingEnrollment[]>(
+        q.queryKey,
+        (prev = []) => [...prev, newEnrollment],
+      );
     });
-    toast.success(
-      `You're on the waitlist for ${programName}.`,
-      {
-        description:
-          "We'll text and email you the moment a spot opens. Sit tight!",
-        duration: 6_000,
-      },
-    );
+    toast.success(`You're on the waitlist for ${programName}.`, {
+      description:
+        "We'll text and email you the moment a spot opens. Sit tight!",
+      duration: 6_000,
+    });
     onOpenChange(false);
   }
 
@@ -222,7 +223,7 @@ export function ProgramWaitlistDialog({
               </SelectContent>
             </Select>
             {eligiblePets.length === 0 && (
-              <p className="text-rose-600 text-[11px]">
+              <p className="text-[11px] text-rose-600">
                 None of your dogs have completed the prerequisites for this
                 program yet.
               </p>
@@ -255,15 +256,18 @@ export function ProgramWaitlistDialog({
               })}
             </div>
             <p className="text-muted-foreground text-[11px]">
-              We&apos;ll prioritize you for series matching this preference
-              when possible.
+              We&apos;ll prioritize you for series matching this preference when
+              possible.
             </p>
           </div>
 
           {/* Notes */}
           <div className="space-y-1.5">
             <Label htmlFor="waitlist-notes">
-              Anything else? <span className="text-muted-foreground font-normal">(optional)</span>
+              Anything else?{" "}
+              <span className="text-muted-foreground font-normal">
+                (optional)
+              </span>
             </Label>
             <Textarea
               id="waitlist-notes"

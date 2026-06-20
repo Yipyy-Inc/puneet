@@ -141,11 +141,11 @@ export function PathwayJourney({ petId, petName, enrollments }: Props) {
   return (
     <section className="rounded-2xl border bg-linear-to-br from-indigo-50/50 via-white to-white p-3.5 shadow-sm">
       <header className="mb-3 flex items-start gap-2.5">
-        <div className="bg-indigo-100 text-indigo-700 flex size-9 shrink-0 items-center justify-center rounded-xl">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
           <Route className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <h4 className="text-[13px] font-bold uppercase tracking-wider text-indigo-700">
+          <h4 className="text-[13px] font-bold tracking-wider text-indigo-700 uppercase">
             Pathway Journey
           </h4>
           <p className="mt-0.5 text-base font-semibold text-slate-800">
@@ -207,16 +207,17 @@ function PathwayStepNode({
   const node = (
     <div
       className={cn(
-        "group relative flex min-w-0 flex-1 flex-col gap-1 rounded-xl border bg-card px-3 py-2.5 text-left shadow-sm transition-all",
+        "group bg-card relative flex min-w-0 flex-1 flex-col gap-1 rounded-xl border px-3 py-2.5 text-left shadow-sm transition-all",
         clickable && "cursor-pointer hover:border-indigo-300 hover:shadow-md",
-        step.status === "current" && "border-indigo-300 bg-indigo-50/60 ring-2 ring-indigo-200",
+        step.status === "current" &&
+          "border-indigo-300 bg-indigo-50/60 ring-2 ring-indigo-200",
         step.status === "completed" && "border-emerald-200 bg-emerald-50/40",
         !program && "opacity-60",
       )}
     >
       <div className="flex items-center gap-1.5">
         <StatusBadge status={step.status} index={index} />
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+        <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
           Step {index + 1}
         </span>
         {!step.required && (
@@ -261,13 +262,7 @@ function PathwayStepNode({
   );
 }
 
-function StatusBadge({
-  status,
-  index,
-}: {
-  status: StepStatus;
-  index: number;
-}) {
+function StatusBadge({ status, index }: { status: StepStatus; index: number }) {
   if (status === "completed") {
     return (
       <span className="inline-flex size-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
@@ -292,17 +287,17 @@ function StatusBadge({
 function StatusLine({ step }: { step: PathwayStepView }) {
   if (step.status === "completed") {
     return (
-      <p className="text-emerald-700 text-[10.5px] font-semibold uppercase tracking-wider">
+      <p className="text-[10.5px] font-semibold tracking-wider text-emerald-700 uppercase">
         Completed
       </p>
     );
   }
   if (step.status === "current") {
     return (
-      <p className="text-indigo-700 text-[10.5px] font-semibold uppercase tracking-wider">
+      <p className="text-[10.5px] font-semibold tracking-wider text-indigo-700 uppercase">
         Currently enrolled
         {typeof step.progressPct === "number" && (
-          <span className="text-muted-foreground ml-1 normal-case tracking-normal">
+          <span className="text-muted-foreground ml-1 tracking-normal normal-case">
             · {step.progressPct}%
           </span>
         )}
@@ -310,7 +305,7 @@ function StatusLine({ step }: { step: PathwayStepView }) {
     );
   }
   return (
-    <p className="text-muted-foreground text-[10.5px] font-semibold uppercase tracking-wider">
+    <p className="text-muted-foreground text-[10.5px] font-semibold tracking-wider uppercase">
       Upcoming
     </p>
   );
@@ -348,7 +343,7 @@ function UpcomingStepDetail({
   return (
     <div className="space-y-3 p-3">
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">
+        <p className="text-[10px] font-bold tracking-wider text-indigo-700 uppercase">
           Up next for {petName}
         </p>
         <p className="mt-0.5 text-sm font-semibold text-slate-800">
@@ -386,7 +381,7 @@ function UpcomingStepDetail({
       </div>
 
       <div className="space-y-1.5 border-t pt-2.5">
-        <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+        <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
           <CalendarClock className="size-3" />
           Available series
         </p>

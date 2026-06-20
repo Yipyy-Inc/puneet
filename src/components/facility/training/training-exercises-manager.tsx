@@ -110,9 +110,7 @@ const UNCATEGORIZED = "__uncategorized__";
 export function TrainingExercisesManager() {
   const queryClient = useQueryClient();
   const { data: exercises = [] } = useQuery(trainingQueries.allExercises());
-  const { data: disciplines = [] } = useQuery(
-    trainingQueries.allDisciplines(),
-  );
+  const { data: disciplines = [] } = useQuery(trainingQueries.allDisciplines());
 
   const activeDisciplines = useMemo(
     () => disciplines.filter((d) => d.isActive),
@@ -179,7 +177,8 @@ export function TrainingExercisesManager() {
         continue;
       }
       const key = ex.disciplineId || UNCATEGORIZED;
-      const tierMap = out.get(key) ?? new Map<DifficultyLevel, TrainingExerciseDef[]>();
+      const tierMap =
+        out.get(key) ?? new Map<DifficultyLevel, TrainingExerciseDef[]>();
       const tier = tierMap.get(ex.difficultyLevel) ?? [];
       tier.push(ex);
       tierMap.set(ex.difficultyLevel, tier);
@@ -263,11 +262,7 @@ export function TrainingExercisesManager() {
         description: form.description.trim() || undefined,
         disciplineId: form.disciplineId,
         difficultyLevel: form.difficultyLevel,
-        order: nextOrderFor(
-          exercises,
-          form.disciplineId,
-          form.difficultyLevel,
-        ),
+        order: nextOrderFor(exercises, form.disciplineId, form.difficultyLevel),
         isHidden: form.isHidden,
         isCustom: true,
       };
@@ -303,7 +298,10 @@ export function TrainingExercisesManager() {
     toId: string,
   ) {
     const sorted = exercises
-      .filter((ex) => ex.disciplineId === disciplineId && ex.difficultyLevel === level)
+      .filter(
+        (ex) =>
+          ex.disciplineId === disciplineId && ex.difficultyLevel === level,
+      )
       .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
     const oldIndex = sorted.findIndex((ex) => ex.id === fromId);
     const newIndex = sorted.findIndex((ex) => ex.id === toId);
@@ -329,12 +327,11 @@ export function TrainingExercisesManager() {
             Training Exercises
           </CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
-            The exercise library powers the Session Completion picker.
-            Exercises are grouped by difficulty so the picker mirrors how a
-            real training program progresses — Foundation first, then up to
-            Competition. Drag rows within a tier to reorder; predefined
-            exercises can be hidden but not deleted so historical session logs
-            keep their names.
+            The exercise library powers the Session Completion picker. Exercises
+            are grouped by difficulty so the picker mirrors how a real training
+            program progresses — Foundation first, then up to Competition. Drag
+            rows within a tier to reorder; predefined exercises can be hidden
+            but not deleted so historical session logs keep their names.
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <Badge
@@ -427,7 +424,7 @@ export function TrainingExercisesManager() {
               return (
                 <Collapsible key={sectionId} defaultOpen>
                   <div
-                    className="rounded-xl border bg-card shadow-sm"
+                    className="bg-card rounded-xl border shadow-sm"
                     style={{ borderColor: hexToRgba(color, 0.25) }}
                   >
                     <CollapsibleTrigger asChild>
@@ -631,9 +628,9 @@ export function TrainingExercisesManager() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               This exercise will be removed from the library. Any historical
-              session logs that reference it will keep the recorded name but
-              you won&apos;t be able to pick it again. Consider hiding instead
-              if you might want it back later.
+              session logs that reference it will keep the recorded name but you
+              won&apos;t be able to pick it again. Consider hiding instead if
+              you might want it back later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -704,10 +701,7 @@ function TierBlock({
       <div className="mb-1 flex items-center gap-2 px-1">
         <Badge
           variant="outline"
-          className={cn(
-            "gap-1 text-[10px]",
-            DIFFICULTY_BADGE_CLS[level],
-          )}
+          className={cn("gap-1 text-[10px]", DIFFICULTY_BADGE_CLS[level])}
         >
           <span className="size-1 rounded-full bg-current opacity-70" />
           {DIFFICULTY_LABELS[level]}
@@ -773,7 +767,7 @@ function SortableExerciseRow({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center gap-2 rounded-lg border bg-card px-2 py-1.5 transition-shadow",
+        "bg-card flex items-center gap-2 rounded-lg border px-2 py-1.5 transition-shadow",
         exercise.isHidden && "opacity-60",
         isDragging && "shadow-lg ring-2 ring-indigo-200",
       )}

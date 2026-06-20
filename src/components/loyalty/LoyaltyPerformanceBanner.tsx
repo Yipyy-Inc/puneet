@@ -106,7 +106,7 @@ export function LoyaltyPerformanceBanner() {
   ];
 
   return (
-    <div className="rounded-xl border bg-linear-to-br from-indigo-50/60 to-background p-4 dark:from-indigo-950/20">
+    <div className="to-background rounded-xl border bg-linear-to-br from-indigo-50/60 p-4 dark:from-indigo-950/20">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold">Program performance</h3>
         <span className="text-muted-foreground text-xs">This month</span>
@@ -135,7 +135,12 @@ export function LoyaltyPerformanceBanner() {
                   {s.label}
                 </span>
               </div>
-              <div className={cn("mt-2 text-2xl font-bold tabular-nums", tone.text)}>
+              <div
+                className={cn(
+                  "mt-2 text-2xl font-bold tabular-nums",
+                  tone.text,
+                )}
+              >
                 {s.value}
               </div>
               <p className="text-muted-foreground mt-0.5 text-xs">{s.hint}</p>

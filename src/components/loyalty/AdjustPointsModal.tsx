@@ -89,7 +89,10 @@ export function AdjustPointsModal({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="adj-amount">
-              Points <span className="text-muted-foreground">(use a minus sign to remove)</span>
+              Points{" "}
+              <span className="text-muted-foreground">
+                (use a minus sign to remove)
+              </span>
             </Label>
             <Input
               id="adj-amount"

@@ -42,7 +42,11 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useDailyCareConfig } from "@/hooks/use-daily-care-config";
-import type { FacilityDailyCareConfig, DailyCareStep, DailyCareTaskType } from "@/types/boarding";
+import type {
+  FacilityDailyCareConfig,
+  DailyCareStep,
+  DailyCareTaskType,
+} from "@/types/boarding";
 
 // ── Task type metadata ──────────────────────────────────────────────────────
 
@@ -143,8 +147,8 @@ function StepRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="font-medium leading-none">{step.name}</span>
-          <Badge variant="outline" className="text-xs px-1.5 py-0 h-5">
+          <span className="leading-none font-medium">{step.name}</span>
+          <Badge variant="outline" className="h-5 px-1.5 py-0 text-xs">
             {meta.label}
           </Badge>
         </div>
@@ -152,7 +156,9 @@ function StepRow({
           <Clock className="size-3" />
           {fmt12(step.time)}
           {step.description && (
-            <span className="hidden sm:inline truncate">· {step.description}</span>
+            <span className="hidden truncate sm:inline">
+              · {step.description}
+            </span>
           )}
         </div>
       </div>
@@ -188,7 +194,7 @@ function StepRow({
           <Button
             variant="ghost"
             size="icon"
-            className="size-7 text-destructive hover:text-destructive"
+            className="text-destructive hover:text-destructive size-7"
             onClick={onDelete}
             title="Delete step"
           >
@@ -217,7 +223,13 @@ function AddStepForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !time) return;
-    onAdd({ name: name.trim(), time, taskType, description: description.trim() || undefined, enabled: true });
+    onAdd({
+      name: name.trim(),
+      time,
+      taskType,
+      description: description.trim() || undefined,
+      enabled: true,
+    });
     setName("");
     setTime("");
     setTaskType("potty");
@@ -227,7 +239,7 @@ function AddStepForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-lg border border-dashed p-4 space-y-3"
+      className="space-y-3 rounded-lg border border-dashed p-4"
     >
       <p className="text-sm font-medium">New Step</p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -259,18 +271,20 @@ function AddStepForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {(Object.keys(TASK_TYPE_META) as DailyCareTaskType[]).map((type) => {
-                const m = TASK_TYPE_META[type];
-                const MIcon = m.Icon;
-                return (
-                  <SelectItem key={type} value={type}>
-                    <span className="flex items-center gap-2">
-                      <MIcon className={`size-3.5 ${m.color}`} />
-                      {m.label}
-                    </span>
-                  </SelectItem>
-                );
-              })}
+              {(Object.keys(TASK_TYPE_META) as DailyCareTaskType[]).map(
+                (type) => {
+                  const m = TASK_TYPE_META[type];
+                  const MIcon = m.Icon;
+                  return (
+                    <SelectItem key={type} value={type}>
+                      <span className="flex items-center gap-2">
+                        <MIcon className={`size-3.5 ${m.color}`} />
+                        {m.label}
+                      </span>
+                    </SelectItem>
+                  );
+                },
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -301,7 +315,11 @@ function AddStepForm({
 // ── DailyCareSettings ──────────────────────────────────────────────────────
 
 export function DailyCareSettings() {
-  const { config: savedConfig, setConfig: persistConfig, reset } = useDailyCareConfig();
+  const {
+    config: savedConfig,
+    setConfig: persistConfig,
+    reset,
+  } = useDailyCareConfig();
   const [draft, setDraft] = useState<FacilityDailyCareConfig>(savedConfig);
   const [isEditing, setIsEditing] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -310,12 +328,16 @@ export function DailyCareSettings() {
   const config = isEditing ? draft : savedConfig;
   const setConfig = setDraft;
 
-  const sortedSteps = [...config.steps].sort((a, b) => a.sortOrder - b.sortOrder);
+  const sortedSteps = [...config.steps].sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
 
   function toggleStep(id: string) {
     setConfig((prev) => ({
       ...prev,
-      steps: prev.steps.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s)),
+      steps: prev.steps.map((s) =>
+        s.id === id ? { ...s, enabled: !s.enabled } : s,
+      ),
     }));
   }
 
@@ -396,9 +418,10 @@ export function DailyCareSettings() {
           <div>
             <CardTitle>Daily Care Schedule</CardTitle>
             <CardDescription className="mt-1">
-              Configure the steps staff follow each day. Every section in the Daily Care List comes
-              from these settings — nothing is hard-coded. Add, reorder, or disable steps to match
-              how your facility actually runs.
+              Configure the steps staff follow each day. Every section in the
+              Daily Care List comes from these settings — nothing is hard-coded.
+              Add, reorder, or disable steps to match how your facility actually
+              runs.
             </CardDescription>
           </div>
           {!isEditing ? (
@@ -420,10 +443,12 @@ export function DailyCareSettings() {
           )}
         </div>
         <div className="flex items-center gap-3 pt-1">
-          <Badge variant="secondary">
-            {sortedSteps.length} steps
-          </Badge>
-          <Badge variant={enabledCount === sortedSteps.length ? "default" : "outline"}>
+          <Badge variant="secondary">{sortedSteps.length} steps</Badge>
+          <Badge
+            variant={
+              enabledCount === sortedSteps.length ? "default" : "outline"
+            }
+          >
             {enabledCount} enabled
           </Badge>
         </div>
@@ -448,7 +473,10 @@ export function DailyCareSettings() {
           <>
             <Separator className="my-3" />
             {showAddForm ? (
-              <AddStepForm onAdd={addStep} onCancel={() => setShowAddForm(false)} />
+              <AddStepForm
+                onAdd={addStep}
+                onCancel={() => setShowAddForm(false)}
+              />
             ) : (
               <Button
                 variant="outline"
@@ -468,9 +496,12 @@ export function DailyCareSettings() {
             <Separator className="my-3" />
             <div className="flex items-center justify-between">
               <div>
-                <Label className="text-sm font-medium">Overdue Alert Threshold</Label>
-                <p className="text-muted-foreground text-xs mt-0.5">
-                  Alert the manager if a step is not completed within this many minutes past its scheduled time.
+                <Label className="text-sm font-medium">
+                  Overdue Alert Threshold
+                </Label>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  Alert the manager if a step is not completed within this many
+                  minutes past its scheduled time.
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -482,12 +513,15 @@ export function DailyCareSettings() {
                   onChange={(e) =>
                     setConfig((prev) => ({
                       ...prev,
-                      alertOverdueAfterMinutes: parseInt(e.target.value, 10) || 30,
+                      alertOverdueAfterMinutes:
+                        parseInt(e.target.value, 10) || 30,
                     }))
                   }
                   className="w-20 text-right"
                 />
-                <span className="text-muted-foreground text-sm whitespace-nowrap">min</span>
+                <span className="text-muted-foreground text-sm whitespace-nowrap">
+                  min
+                </span>
               </div>
             </div>
           </>

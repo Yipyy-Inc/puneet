@@ -29,11 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -188,9 +184,7 @@ function OnboardingCard({
               <div className="text-sm font-semibold">
                 {info.total - info.completed}
               </div>
-              <div className="text-muted-foreground text-[10px]">
-                Remaining
-              </div>
+              <div className="text-muted-foreground text-[10px]">Remaining</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -305,7 +299,7 @@ function OnboardingDialog({
 
         {/* Task list */}
         <div className="flex-1 overflow-y-auto p-6">
-          <h3 className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wider">
+          <h3 className="text-muted-foreground mb-3 text-[10px] font-semibold tracking-wider uppercase">
             Onboarding tasks
           </h3>
           <div className="space-y-2.5">
@@ -332,10 +326,7 @@ function OnboardingDialog({
                 >
                   <div className="flex items-start gap-3">
                     <StatusIcon
-                      className={cn(
-                        "mt-0.5 size-5 shrink-0",
-                        statusInfo.color,
-                      )}
+                      className={cn("mt-0.5 size-5 shrink-0", statusInfo.color)}
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">

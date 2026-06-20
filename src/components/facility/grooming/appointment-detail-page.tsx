@@ -4,12 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -52,10 +47,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import {
-  groomingQueries,
-  getEffectiveAlertNotes,
-} from "@/lib/api/grooming";
+import { groomingQueries, getEffectiveAlertNotes } from "@/lib/api/grooming";
 import { applyCheckInResult } from "@/lib/grooming/check-in-actions";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
 import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
@@ -100,10 +92,7 @@ import {
   MarkReadyDialog,
   type MarkReadyConfirmation,
 } from "./mark-ready-dialog";
-import {
-  PaymentDialog,
-  type PaymentResult,
-} from "./payment-dialog";
+import { PaymentDialog, type PaymentResult } from "./payment-dialog";
 import {
   applyMarkReadyResult,
   applyPaymentResult,
@@ -197,12 +186,17 @@ function ProfileNoteRow({
       {isPinned ? (
         <Pin className="mt-0.5 size-3 shrink-0 text-amber-600 dark:text-amber-300" />
       ) : (
-        <span className="mt-1.5 size-1 shrink-0 rounded-full bg-muted-foreground/40" />
+        <span className="bg-muted-foreground/40 mt-1.5 size-1 shrink-0 rounded-full" />
       )}
       <div className="min-w-0 flex-1">
         <p className="leading-snug">{note.text}</p>
-        <p className="mt-0.5 text-[10px] text-muted-foreground">
-          {note.createdBy} · {new Date(note.createdAt).toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" })}
+        <p className="text-muted-foreground mt-0.5 text-[10px]">
+          {note.createdBy} ·{" "}
+          {new Date(note.createdAt).toLocaleDateString("en-CA", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })}
         </p>
       </div>
       <button
@@ -217,11 +211,7 @@ function ProfileNoteRow({
             : "text-muted-foreground hover:bg-muted",
         )}
       >
-        {isPinned ? (
-          <PinOff className="size-3" />
-        ) : (
-          <Pin className="size-3" />
-        )}
+        {isPinned ? <PinOff className="size-3" /> : <Pin className="size-3" />}
       </button>
     </li>
   );
@@ -258,7 +248,7 @@ function SectionCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Icon className="size-4 text-muted-foreground" />
+          <Icon className="text-muted-foreground size-4" />
           {title}
         </CardTitle>
         {action}
@@ -283,7 +273,7 @@ function InfoRow({
         <Icon className="text-muted-foreground mt-0.5 size-3.5 shrink-0" />
       )}
       <div className="min-w-0">
-        <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
+        <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
           {label}
         </p>
         <p className="text-sm">{value}</p>
@@ -307,8 +297,11 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     ...groomingQueries.clientNotes(apt?.ownerId ?? -1),
     enabled: !!apt,
   });
-  const { findMatchForSlot, offerSlot, addEntry: addWaitlistEntry } =
-    useGroomingWaitlist();
+  const {
+    findMatchForSlot,
+    offerSlot,
+    addEntry: addWaitlistEntry,
+  } = useGroomingWaitlist();
 
   function autoMatchAndOffer(reason: "cancellation" | "no-show") {
     if (!apt) return;
@@ -463,10 +456,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
 
   const currentStatus = status ?? apt.status;
   const sMeta = STATUS_META[currentStatus];
-  const priceAdjTotal = apt.priceAdjustments.reduce(
-    (s, a) => s + a.amount,
-    0,
-  );
+  const priceAdjTotal = apt.priceAdjustments.reduce((s, a) => s + a.amount, 0);
   // When the booking was cancelled or marked no-show, the invoice replaces
   // the full subtotal with the configured fee (or $0 when fees aren't applied).
   const replacedByFee =
@@ -592,11 +582,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     if (!apt) return;
     const before = STATUS_META[status ?? apt.status].label;
     setStatus("ready-for-pickup");
-    recordFieldChange(
-      "Status",
-      before,
-      STATUS_META["ready-for-pickup"].label,
-    );
+    recordFieldChange("Status", before, STATUS_META["ready-for-pickup"].label);
     const summary = applyMarkReadyResult(apt, result, {
       clients: initialClients,
       setStationStatus,
@@ -604,7 +590,9 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       facilityName: "Doggieville MTL",
     });
     if (result.afterPhotos.length > 0) {
-      recordHistory(`Post-groom photos · ${result.afterPhotos.length} captured`);
+      recordHistory(
+        `Post-groom photos · ${result.afterPhotos.length} captured`,
+      );
     }
     if (result.sessionNotes) {
       recordHistory(`Session notes saved`);
@@ -642,7 +630,10 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     if (result.tipAmount > 0) {
       recordHistory(`Tip · +$${result.tipAmount.toFixed(2)}`);
     }
-    if (result.appliedPackagePassId && summary.packagePassesLeft !== undefined) {
+    if (
+      result.appliedPackagePassId &&
+      summary.packagePassesLeft !== undefined
+    ) {
       recordHistory(
         `Package pass redeemed · ${summary.packagePassesLeft} remaining`,
       );
@@ -757,7 +748,8 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       validUntil: undefined,
       source: "moved-from-appointment",
       comment:
-        recentComment ?? `Moved from appointment ${apt.id} (${apt.date} ${apt.startTime}).`,
+        recentComment ??
+        `Moved from appointment ${apt.id} (${apt.date} ${apt.startTime}).`,
       addedAt: new Date().toISOString(),
       status: "waiting",
     });
@@ -794,7 +786,9 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     const target = alertNotes.find((n) => n.id === noteId);
     if (!target) return;
     setAlertNotes((prev) => prev.filter((n) => n.id !== noteId));
-    recordHistory(`Alert removed: "${target.text.slice(0, 60)}${target.text.length > 60 ? "…" : ""}"`);
+    recordHistory(
+      `Alert removed: "${target.text.slice(0, 60)}${target.text.length > 60 ? "…" : ""}"`,
+    );
   }
 
   function addComment() {
@@ -852,7 +846,12 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       {/* Back link */}
-      <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+      <Button
+        asChild
+        variant="ghost"
+        size="sm"
+        className="text-muted-foreground"
+      >
         <Link href="/facility/dashboard/services/grooming">
           <ArrowLeft className="mr-1.5 size-4" />
           Back to Calendar
@@ -866,15 +865,9 @@ export function AppointmentDetailPage({ id }: { id: string }) {
             <div>
               <p className="text-muted-foreground text-xs">Appointment</p>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-bold tabular-nums">
-                  #{apt.id}
-                </h1>
+                <h1 className="text-xl font-bold tabular-nums">#{apt.id}</h1>
                 <Badge
-                  className={cn(
-                    "capitalize border-0",
-                    sMeta.bg,
-                    sMeta.text,
-                  )}
+                  className={cn("border-0 capitalize", sMeta.bg, sMeta.text)}
                 >
                   {sMeta.label}
                 </Badge>
@@ -946,7 +939,9 @@ export function AppointmentDetailPage({ id }: { id: string }) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuItem onClick={() => toast.info("Edit appointment")}>
+                <DropdownMenuItem
+                  onClick={() => toast.info("Edit appointment")}
+                >
                   <Pencil className="mr-2 size-4" />
                   Edit
                 </DropdownMenuItem>
@@ -995,8 +990,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
                   className="text-destructive focus:text-destructive"
                   onClick={() => setNoShowOpen(true)}
                   disabled={
-                    currentStatus === "no-show" ||
-                    currentStatus === "completed"
+                    currentStatus === "no-show" || currentStatus === "completed"
                   }
                 >
                   <UserX className="mr-2 size-4" />
@@ -1012,7 +1006,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       <SectionCard icon={PawPrint} title="Pet">
         <div className="flex gap-4">
           {apt.petPhotoUrl ? (
-            <div className="size-20 overflow-hidden rounded-2xl ring-2 ring-background shrink-0">
+            <div className="ring-background size-20 shrink-0 overflow-hidden rounded-2xl ring-2">
               <Image
                 src={apt.petPhotoUrl}
                 alt={apt.petName}
@@ -1022,7 +1016,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
               />
             </div>
           ) : (
-            <div className="bg-muted text-muted-foreground flex size-20 shrink-0 items-center justify-center rounded-2xl ring-2 ring-background">
+            <div className="bg-muted text-muted-foreground ring-background flex size-20 shrink-0 items-center justify-center rounded-2xl ring-2">
               <PawPrint className="size-8" />
             </div>
           )}
@@ -1067,11 +1061,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       {/* Service Details */}
       <SectionCard icon={Scissors} title="Service Details">
         <div className="grid gap-3 sm:grid-cols-2">
-          <InfoRow
-            icon={Scissors}
-            label="Service"
-            value={apt.packageName}
-          />
+          <InfoRow icon={Scissors} label="Service" value={apt.packageName} />
           <InfoRow icon={User} label="Groomer" value={apt.stylistName} />
           <InfoRow
             icon={MapPin}
@@ -1104,9 +1094,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
         </div>
         {apt.addOns.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <span className="text-muted-foreground text-[11px]">
-              Add-ons:
-            </span>
+            <span className="text-muted-foreground text-[11px]">Add-ons:</span>
             {apt.addOns.map((ao) => (
               <Badge key={ao} variant="secondary" className="text-xs">
                 {ao}
@@ -1123,7 +1111,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
         action={
           <Badge
             className={cn(
-              "capitalize border-0",
+              "border-0 capitalize",
               paymentStatus === "paid"
                 ? "bg-emerald-100 text-emerald-800"
                 : paymentStatus === "voided"
@@ -1154,7 +1142,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
             </span>
             <span className="tabular-nums">${apt.basePrice}</span>
           </div>
-          <div className="flex justify-between text-muted-foreground text-xs">
+          <div className="text-muted-foreground flex justify-between text-xs">
             <span>Size adjustment ({apt.petSize})</span>
             <span className="tabular-nums">included</span>
           </div>
@@ -1192,7 +1180,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
             <span>Subtotal</span>
             <span className="tabular-nums">${subtotal}</span>
           </div>
-          <div className="flex justify-between text-muted-foreground text-xs">
+          <div className="text-muted-foreground flex justify-between text-xs">
             <span>Tax (15%)</span>
             <span className="tabular-nums">${tax.toFixed(2)}</span>
           </div>
@@ -1247,12 +1235,12 @@ export function AppointmentDetailPage({ id }: { id: string }) {
                       <p className="mt-0.5 text-[10px] text-red-700/80 dark:text-red-300/80">
                         {n.createdBy} · {formatDateTime(n.createdAt)}
                         {n.appliesToFuture && !isCarried && (
-                          <span className="ml-1.5 font-semibold uppercase tracking-wide">
+                          <span className="ml-1.5 font-semibold tracking-wide uppercase">
                             · carries forward
                           </span>
                         )}
                         {isCarried && (
-                          <span className="ml-1.5 font-semibold uppercase tracking-wide">
+                          <span className="ml-1.5 font-semibold tracking-wide uppercase">
                             · carried from prior visit
                           </span>
                         )}
@@ -1313,7 +1301,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
           {comments.map((c) => (
             <li
               key={c.id}
-              className="rounded-lg border bg-muted/30 px-3 py-2.5"
+              className="bg-muted/30 rounded-lg border px-3 py-2.5"
             >
               <div className="mb-1 flex items-center gap-2 text-xs">
                 <span className="font-semibold">{c.staff}</span>
@@ -1359,9 +1347,9 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       >
         <div className="grid gap-3 sm:grid-cols-2">
           {/* Client */}
-          <div className="flex flex-col gap-2 rounded-md border bg-muted/30 px-3 py-2.5">
+          <div className="bg-muted/30 flex flex-col gap-2 rounded-md border px-3 py-2.5">
             <div>
-              <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
+              <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
                 Client
               </p>
               <p className="text-sm font-semibold">{apt.ownerName}</p>
@@ -1389,9 +1377,9 @@ export function AppointmentDetailPage({ id }: { id: string }) {
           </div>
 
           {/* Pet */}
-          <div className="flex flex-col gap-2 rounded-md border bg-muted/30 px-3 py-2.5">
+          <div className="bg-muted/30 flex flex-col gap-2 rounded-md border px-3 py-2.5">
             <div>
-              <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
+              <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
                 Pet
               </p>
               <p className="text-sm font-semibold">
@@ -1439,7 +1427,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
               <li key={h.id} className="mb-3 last:mb-0">
                 <span
                   className={cn(
-                    "absolute -left-1.5 mt-1.5 size-3 rounded-full border-2 border-background",
+                    "border-background absolute -left-1.5 mt-1.5 size-3 rounded-full border-2",
                     h.fieldChange ? "bg-sky-500" : "bg-primary",
                   )}
                 />
@@ -1461,7 +1449,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
                         (empty)
                       </span>
                     )}
-                    <span className="mx-1.5 text-muted-foreground">→</span>
+                    <span className="text-muted-foreground mx-1.5">→</span>
                     {h.fieldChange.after !== null ? (
                       <span className="font-semibold text-sky-700 dark:text-sky-300">
                         {h.fieldChange.after}

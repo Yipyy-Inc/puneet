@@ -217,7 +217,11 @@ export function CheckInConfirmationDialog({
     if (!files || files.length === 0) return;
     setBeforePhotos((prev) => {
       const next = [...prev];
-      for (let i = 0; i < files.length && next.length < MAX_BEFORE_PHOTOS; i++) {
+      for (
+        let i = 0;
+        i < files.length && next.length < MAX_BEFORE_PHOTOS;
+        i++
+      ) {
         next.push(URL.createObjectURL(files[i]));
       }
       return next;
@@ -287,7 +291,7 @@ export function CheckInConfirmationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <LogIn className="size-4 text-emerald-600" />
@@ -316,10 +320,10 @@ export function CheckInConfirmationDialog({
               if (e.key === "Enter" || e.key === " ") setPetConfirmed(true);
             }}
             className={cn(
-              "flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors cursor-pointer select-none",
+              "flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors select-none",
               petConfirmed
                 ? "border-emerald-400 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/30"
-                : "border-dashed hover:bg-muted/40",
+                : "hover:bg-muted/40 border-dashed",
             )}
           >
             <div className="ring-background relative size-14 shrink-0 overflow-hidden rounded-full ring-2">
@@ -334,17 +338,17 @@ export function CheckInConfirmationDialog({
                 />
               ) : (
                 <div className="bg-muted flex size-full items-center justify-center">
-                  <PawPrint className="size-6 text-muted-foreground" />
+                  <PawPrint className="text-muted-foreground size-6" />
                 </div>
               )}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-base font-bold">{apt.petName}</p>
-              <p className="truncate text-xs text-muted-foreground">
+              <p className="text-muted-foreground truncate text-xs">
                 {apt.petBreed}
                 {apt.petSize ? ` · ${apt.petSize}` : ""}
               </p>
-              <p className="truncate text-xs text-muted-foreground">
+              <p className="text-muted-foreground truncate text-xs">
                 Owner: <span className="font-medium">{apt.ownerName}</span>
               </p>
             </div>
@@ -376,7 +380,7 @@ export function CheckInConfirmationDialog({
         >
           <div className="space-y-3">
             <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
                 Coat condition
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -403,7 +407,7 @@ export function CheckInConfirmationDialog({
               </div>
             </div>
             <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
                 Behavior today
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -430,7 +434,7 @@ export function CheckInConfirmationDialog({
               </div>
             </div>
             <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
                 Skin / health observations
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -494,7 +498,7 @@ export function CheckInConfirmationDialog({
                 return (
                   <div
                     key={i}
-                    className="relative aspect-square overflow-hidden rounded-lg border bg-muted"
+                    className="bg-muted relative aspect-square overflow-hidden rounded-lg border"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -506,7 +510,7 @@ export function CheckInConfirmationDialog({
                       type="button"
                       onClick={() => handlePhotoRemove(i)}
                       title="Remove this photo"
-                      className="absolute right-1 top-1 flex size-5 items-center justify-center rounded-full bg-black/60 text-white shadow-sm hover:bg-black/80"
+                      className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-black/60 text-white shadow-sm hover:bg-black/80"
                     >
                       <X className="size-3" />
                     </button>
@@ -518,17 +522,17 @@ export function CheckInConfirmationDialog({
                   key={i}
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed bg-muted/30 text-muted-foreground hover:bg-muted/60"
+                  className="bg-muted/30 text-muted-foreground hover:bg-muted/60 flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed"
                 >
                   <Camera className="size-5" />
-                  <span className="text-[10px] font-medium uppercase tracking-wide">
+                  <span className="text-[10px] font-medium tracking-wide uppercase">
                     {beforePhotos.length === 0 ? "Take photo" : "Add"}
                   </span>
                 </button>
               );
             })}
           </div>
-          <p className="mt-2 text-[10px] text-muted-foreground">
+          <p className="text-muted-foreground mt-2 text-[10px]">
             {beforePhotos.length}/{MAX_BEFORE_PHOTOS} photos · saved to this
             appointment and {apt.petName}&rsquo;s profile for the before/after
             comparison.
@@ -547,14 +551,14 @@ export function CheckInConfirmationDialog({
           title="Confirm add-ons"
           subtitle="Add anything the owner requested at drop-off. Owner gets an SMS for any add-on added now."
         >
-          <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
-            <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
+          <div className="bg-muted/30 rounded-md border px-3 py-2 text-sm">
+            <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
               Package
             </p>
             <p className="font-medium">{apt.packageName}</p>
           </div>
           <div className="mt-3 space-y-2">
-            <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
+            <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
               Add-ons
             </p>
             {selectedAddOns.length === 0 ? (
@@ -584,7 +588,7 @@ export function CheckInConfirmationDialog({
                     >
                       {name}
                       {isNew && (
-                        <span className="rounded bg-amber-500 px-1 text-[8px] font-bold uppercase tracking-wide text-white">
+                        <span className="rounded bg-amber-500 px-1 text-[8px] font-bold tracking-wide text-white uppercase">
                           New
                         </span>
                       )}
@@ -596,7 +600,7 @@ export function CheckInConfirmationDialog({
             )}
             {inactiveAddOns.length > 0 && (
               <div className="mt-2">
-                <p className="text-muted-foreground mb-1 text-[10px] uppercase tracking-wide">
+                <p className="text-muted-foreground mb-1 text-[10px] tracking-wide uppercase">
                   Add another
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -605,13 +609,11 @@ export function CheckInConfirmationDialog({
                       key={a.id}
                       type="button"
                       onClick={() => toggleAddOn(a.name, true)}
-                      className="flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs hover:bg-muted/60"
+                      className="bg-background hover:bg-muted/60 flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
                     >
                       <Plus className="size-3" />
                       {a.name}
-                      <span className="text-muted-foreground">
-                        +${a.price}
-                      </span>
+                      <span className="text-muted-foreground">+${a.price}</span>
                     </button>
                   ))}
                 </div>
@@ -638,10 +640,7 @@ export function CheckInConfirmationDialog({
             }, 0);
             const autoTotal = serviceMin + addOnMin;
             const adjustment = estimatedReadyTime
-              ? diffMin(
-                  estimatedReadyTime,
-                  addMin(checkInAnchor, autoTotal),
-                )
+              ? diffMin(estimatedReadyTime, addMin(checkInAnchor, autoTotal))
               : 0;
             return (
               <>
@@ -654,7 +653,7 @@ export function CheckInConfirmationDialog({
                         prev ? addMin(prev, -5) : prev,
                       );
                     }}
-                    className="flex size-7 items-center justify-center rounded-full border bg-background hover:bg-muted/60"
+                    className="bg-background hover:bg-muted/60 flex size-7 items-center justify-center rounded-full border"
                     aria-label="Decrease by 5 minutes"
                   >
                     <Minus className="size-3.5" />
@@ -666,7 +665,7 @@ export function CheckInConfirmationDialog({
                       setReadyTimeEdited(true);
                       setEstimatedReadyTime(e.target.value);
                     }}
-                    className="flex-1 rounded-md border bg-background px-3 py-1.5 text-center text-base font-bold tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+                    className="bg-background flex-1 rounded-md border px-3 py-1.5 text-center text-base font-bold tabular-nums focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:outline-none"
                   />
                   <button
                     type="button"
@@ -676,13 +675,13 @@ export function CheckInConfirmationDialog({
                         prev ? addMin(prev, 5) : prev,
                       );
                     }}
-                    className="flex size-7 items-center justify-center rounded-full border bg-background hover:bg-muted/60"
+                    className="bg-background hover:bg-muted/60 flex size-7 items-center justify-center rounded-full border"
                     aria-label="Increase by 5 minutes"
                   >
                     <Plus className="size-3.5" />
                   </button>
                 </div>
-                <p className="mt-1.5 text-[10px] text-muted-foreground">
+                <p className="text-muted-foreground mt-1.5 text-[10px]">
                   Checked in {checkInAnchor} · service {serviceMin} min
                   {addOnMin > 0 ? ` + add-ons ${addOnMin} min` : ""} = auto
                   total {autoTotal} min
@@ -714,7 +713,7 @@ export function CheckInConfirmationDialog({
                             addMin(checkInAnchor, autoTotal),
                           );
                         }}
-                        className="underline underline-offset-2 hover:text-foreground"
+                        className="hover:text-foreground underline underline-offset-2"
                       >
                         Reset to auto
                       </button>
@@ -818,9 +817,11 @@ export function CheckInConfirmationDialog({
             role="button"
             tabIndex={0}
             onClick={() => setMattedSurchargeEnabled((v) => !v)}
-            onKeyDown={(e) => e.key === "Enter" && setMattedSurchargeEnabled((v) => !v)}
+            onKeyDown={(e) =>
+              e.key === "Enter" && setMattedSurchargeEnabled((v) => !v)
+            }
             className={cn(
-              "flex items-center justify-between rounded-lg border px-3 py-2.5 cursor-pointer transition-colors select-none",
+              "flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2.5 transition-colors select-none",
               mattedSurchargeEnabled
                 ? "border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30"
                 : "hover:bg-muted/40",
@@ -828,9 +829,11 @@ export function CheckInConfirmationDialog({
           >
             <div className="min-w-0">
               <p className="text-sm font-medium">
-                {mattedSurchargeEnabled ? "Matting fee applied" : "Apply matting fee"}
+                {mattedSurchargeEnabled
+                  ? "Matting fee applied"
+                  : "Apply matting fee"}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
+              <p className="text-muted-foreground mt-0.5 text-[10px]">
                 {mattedSurchargeEnabled
                   ? "Owner will see this charge on the invoice and receive a notification."
                   : "Tap to add a matting surcharge to this appointment."}
@@ -854,7 +857,9 @@ export function CheckInConfirmationDialog({
           {mattedSurchargeEnabled && (
             <div className="mt-2.5 flex items-center gap-3">
               <div className="relative w-32">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                <span className="text-muted-foreground absolute top-1/2 left-2.5 -translate-y-1/2 text-xs">
+                  $
+                </span>
                 <Input
                   type="number"
                   min={0}
@@ -862,12 +867,14 @@ export function CheckInConfirmationDialog({
                   value={mattedSurchargeAmount || ""}
                   placeholder="0"
                   onChange={(e) =>
-                    setMattedSurchargeAmount(Math.max(0, Number(e.target.value)))
+                    setMattedSurchargeAmount(
+                      Math.max(0, Number(e.target.value)),
+                    )
                   }
-                  className="pl-6 h-8 text-sm"
+                  className="h-8 pl-6 text-sm"
                 />
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-muted-foreground text-[11px]">
                 {mattedSurchargeAmount > 0
                   ? `$${mattedSurchargeAmount} will appear as a "Matting Fee" line on the invoice.`
                   : "Enter the surcharge amount above."}

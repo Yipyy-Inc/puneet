@@ -157,7 +157,11 @@ export function GroomingSessionPanel({
       });
     }
     if (seeded.length > 0) setCareLog(seeded);
-  }, [careInstructions, isLongAppointment, appointment.intake?.careLog?.length]);
+  }, [
+    careInstructions,
+    isLongAppointment,
+    appointment.intake?.careLog?.length,
+  ]);
 
   // Keep parent + the underlying mock appointment in sync so other surfaces
   // (briefing, report card) see the latest values without prop drilling.
@@ -294,7 +298,7 @@ export function GroomingSessionPanel({
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between gap-2 text-base">
           <span className="flex items-center gap-2">
-            <Smile className="text-amber-600 dark:text-amber-300 size-4" />
+            <Smile className="size-4 text-amber-600 dark:text-amber-300" />
             Session Panel
             <Badge variant="outline" className="text-[10px]">
               In Progress
@@ -323,7 +327,7 @@ export function GroomingSessionPanel({
               <Camera className="text-muted-foreground size-4" />
               Before Photos
               {requireBeforePhotos && (
-                <span className="text-red-600 text-[10px] font-semibold">
+                <span className="text-[10px] font-semibold text-red-600">
                   Required
                 </span>
               )}
@@ -358,7 +362,7 @@ export function GroomingSessionPanel({
               {photos.map((url, i) => (
                 <div
                   key={`${url}-${i}`}
-                  className="group relative size-20 overflow-hidden rounded-md ring-1 ring-border"
+                  className="group ring-border relative size-20 overflow-hidden rounded-md ring-1"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -390,7 +394,7 @@ export function GroomingSessionPanel({
               <Camera className="text-muted-foreground size-4" />
               After Photos
               {requireAfterPhotos && (
-                <span className="text-red-600 text-[10px] font-semibold">
+                <span className="text-[10px] font-semibold text-red-600">
                   Required to Mark Ready
                 </span>
               )}
@@ -434,7 +438,7 @@ export function GroomingSessionPanel({
               {afterPhotos.map((p, i) => (
                 <div
                   key={p.id}
-                  className="group relative size-20 overflow-hidden rounded-md ring-1 ring-border"
+                  className="group ring-border relative size-20 overflow-hidden rounded-md ring-1"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -528,9 +532,9 @@ export function GroomingSessionPanel({
             )}
           </header>
           <p className="text-muted-foreground mb-2 text-[11px]">
-            Flagging an issue creates an incident record on this appointment
-            and notifies a manager. The manager decides whether to loop in
-            the owner.
+            Flagging an issue creates an incident record on this appointment and
+            notifies a manager. The manager decides whether to loop in the
+            owner.
           </p>
           {issues.length > 0 && (
             <ul className="mb-3 space-y-1.5">
@@ -581,7 +585,7 @@ export function GroomingSessionPanel({
               return (
                 <div
                   key={kind}
-                  className="rounded-md border bg-card px-2.5 py-2"
+                  className="bg-card rounded-md border px-2.5 py-2"
                 >
                   <div className="mb-1 flex items-center gap-1.5 text-xs font-medium">
                     <Icon
@@ -667,9 +671,7 @@ export function GroomingSessionPanel({
                             : "border-input bg-background hover:border-emerald-400",
                         )}
                       >
-                        {c.administered && (
-                          <CheckCircle2 className="size-3" />
-                        )}
+                        {c.administered && <CheckCircle2 className="size-3" />}
                       </button>
                       <Icon className="text-muted-foreground mt-0.5 size-3.5 shrink-0" />
                       <div className="min-w-0 flex-1">

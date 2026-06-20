@@ -326,8 +326,8 @@ export function FeesAndMessagingSection({
             <div>
               <CardTitle>Confirmation email</CardTitle>
               <CardDescription>
-                Sent to the customer after they submit the Express Check-in.
-                Use <code>{"{petName}"}</code> and <code>{"{date}"}</code> as
+                Sent to the customer after they submit the Express Check-in. Use{" "}
+                <code>{"{petName}"}</code> and <code>{"{date}"}</code> as
                 tokens.
               </CardDescription>
             </div>

@@ -210,7 +210,8 @@ export function SmartInsightsSettings() {
           <CardTitle>Categories</CardTitle>
           <p className="text-muted-foreground text-sm">
             Disable any category you don&#39;t want surfaced. Disabled insights
-            still generate in the background — they just don&#39;t appear in lists.
+            still generate in the background — they just don&#39;t appear in
+            lists.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -241,8 +242,8 @@ export function SmartInsightsSettings() {
             <div>
               <CardTitle>Threshold overrides</CardTitle>
               <p className="text-muted-foreground text-sm">
-                Tighten or loosen any of the values that decide when an
-                insight fires. Leave a field blank to use the system default.
+                Tighten or loosen any of the values that decide when an insight
+                fires. Leave a field blank to use the system default.
               </p>
             </div>
             <Button
@@ -250,9 +251,7 @@ export function SmartInsightsSettings() {
               variant="ghost"
               size="sm"
               onClick={resetThresholds}
-              disabled={
-                Object.keys(settings.thresholdOverrides).length === 0
-              }
+              disabled={Object.keys(settings.thresholdOverrides).length === 0}
             >
               Reset to defaults
             </Button>
@@ -264,19 +263,22 @@ export function SmartInsightsSettings() {
             return (
               <div key={f.key} className="grid grid-cols-3 items-start gap-3">
                 <div className="col-span-2">
-                  <Label htmlFor={`th-${f.key}`} className="text-sm font-semibold">
+                  <Label
+                    htmlFor={`th-${f.key}`}
+                    className="text-sm font-semibold"
+                  >
                     {f.label}
                   </Label>
                   <p className="text-muted-foreground text-xs">{f.helper}</p>
                 </div>
                 <div className="relative">
                   {f.unit && f.unit !== "$" && (
-                    <span className="text-muted-foreground absolute right-3 top-1/2 -translate-y-1/2 text-xs">
+                    <span className="text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2 text-xs">
                       {f.unit}
                     </span>
                   )}
                   {f.unit === "$" && (
-                    <span className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 text-xs">
+                    <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-xs">
                       $
                     </span>
                   )}

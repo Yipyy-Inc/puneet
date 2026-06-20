@@ -18,7 +18,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DollarSign, Clock, Edit, Trash2, Plus, Save, X, Sparkles, Gift, Check, Home } from "lucide-react";
+import {
+  DollarSign,
+  Clock,
+  Edit,
+  Trash2,
+  Plus,
+  Save,
+  X,
+  Sparkles,
+  Gift,
+  Check,
+  Home,
+} from "lucide-react";
 import { daycareRates, DaycareRate } from "@/data/daycare";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
 import type { ServiceAddOn } from "@/types/facility";
@@ -60,7 +72,9 @@ export default function DaycareRatesPage() {
   useEffect(() => {
     const sync = () => {
       setServiceAddOns(
-        loadServiceAddOns().filter((a) => a.applicableServices.includes("daycare")),
+        loadServiceAddOns().filter((a) =>
+          a.applicableServices.includes("daycare"),
+        ),
       );
     };
     sync();
@@ -104,7 +118,9 @@ export default function DaycareRatesPage() {
 
   const handleSaveRate = () => {
     if (editingRate) {
-      setRates(rates.map((r) => (r.id === editingRate.id ? { ...r, ...rateForm } : r)));
+      setRates(
+        rates.map((r) => (r.id === editingRate.id ? { ...r, ...rateForm } : r)),
+      );
     } else {
       setRates([...rates, { id: `rate-${Date.now()}`, ...rateForm }]);
     }
@@ -117,7 +133,9 @@ export default function DaycareRatesPage() {
   };
 
   const handleToggleRate = (rateId: string) => {
-    setRates(rates.map((r) => (r.id === rateId ? { ...r, isActive: !r.isActive } : r)));
+    setRates(
+      rates.map((r) => (r.id === rateId ? { ...r, isActive: !r.isActive } : r)),
+    );
   };
 
   // ── Columns ────────────────────────────────────────────────────────────────
@@ -144,7 +162,11 @@ export default function DaycareRatesPage() {
       render: (item) => (
         <Badge
           variant={
-            item.type === "full-day" ? "default" : item.type === "half-day" ? "secondary" : "outline"
+            item.type === "full-day"
+              ? "default"
+              : item.type === "half-day"
+                ? "secondary"
+                : "outline"
           }
         >
           {item.type.replace("-", " ")}
@@ -156,7 +178,9 @@ export default function DaycareRatesPage() {
       label: "Base Price",
       icon: DollarSign,
       defaultVisible: true,
-      render: (item) => <span className="font-semibold">${item.basePrice}</span>,
+      render: (item) => (
+        <span className="font-semibold">${item.basePrice}</span>
+      ),
     },
     {
       key: "durationHours",
@@ -164,7 +188,9 @@ export default function DaycareRatesPage() {
       icon: Clock,
       defaultVisible: true,
       render: (item) => (
-        <span>{item.durationHours} {item.durationHours === 1 ? "hour" : "hours"}</span>
+        <span>
+          {item.durationHours} {item.durationHours === 1 ? "hour" : "hours"}
+        </span>
       ),
     },
     {
@@ -173,10 +199,18 @@ export default function DaycareRatesPage() {
       defaultVisible: true,
       render: (item) => (
         <div className="flex flex-wrap gap-1">
-          <Badge variant="outline" className="text-xs">S: ${item.sizePricing.small}</Badge>
-          <Badge variant="outline" className="text-xs">M: ${item.sizePricing.medium}</Badge>
-          <Badge variant="outline" className="text-xs">L: ${item.sizePricing.large}</Badge>
-          <Badge variant="outline" className="text-xs">XL: ${item.sizePricing.giant}</Badge>
+          <Badge variant="outline" className="text-xs">
+            S: ${item.sizePricing.small}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            M: ${item.sizePricing.medium}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            L: ${item.sizePricing.large}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            XL: ${item.sizePricing.giant}
+          </Badge>
         </div>
       ),
     },
@@ -187,7 +221,8 @@ export default function DaycareRatesPage() {
       defaultVisible: true,
       render: (item) => {
         const ids = item.includedAddOnIds ?? [];
-        if (ids.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
+        if (ids.length === 0)
+          return <span className="text-muted-foreground text-xs">—</span>;
         return (
           <div className="flex flex-wrap gap-1">
             {ids.map((id: string) => {
@@ -211,7 +246,9 @@ export default function DaycareRatesPage() {
       render: (item) => {
         const ids = item.allowedSectionIds ?? [];
         if (ids.length === 0)
-          return <span className="text-muted-foreground text-xs">All rooms</span>;
+          return (
+            <span className="text-muted-foreground text-xs">All rooms</span>
+          );
         return (
           <div className="flex flex-wrap gap-1">
             {ids.map((id: string) => {
@@ -232,7 +269,10 @@ export default function DaycareRatesPage() {
       label: "Status",
       defaultVisible: true,
       render: (item) => (
-        <Switch checked={item.isActive} onCheckedChange={() => handleToggleRate(item.id)} />
+        <Switch
+          checked={item.isActive}
+          onCheckedChange={() => handleToggleRate(item.id)}
+        />
       ),
     },
   ];
@@ -248,7 +288,8 @@ export default function DaycareRatesPage() {
           Daycare Rates & Pricing
         </h2>
         <p className="text-muted-foreground mt-0.5 text-sm">
-          Manage daycare services and add-ons. Discounts, surcharges, and other pricing rules are configured in Settings.
+          Manage daycare services and add-ons. Discounts, surcharges, and other
+          pricing rules are configured in Settings.
         </p>
       </div>
 
@@ -261,7 +302,9 @@ export default function DaycareRatesPage() {
                 <DollarSign className="size-5 text-slate-600" />
               </div>
               <div>
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">Total Services</p>
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+                  Total Services
+                </p>
                 <p className="mt-0.5 text-2xl font-bold">{rates.length}</p>
               </div>
             </div>
@@ -274,7 +317,9 @@ export default function DaycareRatesPage() {
                 <Clock className="size-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">Active Services</p>
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+                  Active Services
+                </p>
                 <p className="mt-0.5 text-2xl font-bold">{activeRates}</p>
               </div>
             </div>
@@ -287,7 +332,9 @@ export default function DaycareRatesPage() {
                 <Sparkles className="size-5 text-violet-600" />
               </div>
               <div>
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">Active Add-ons</p>
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+                  Active Add-ons
+                </p>
                 <p className="mt-0.5 text-2xl font-bold">{activeAddons}</p>
               </div>
             </div>
@@ -297,84 +344,135 @@ export default function DaycareRatesPage() {
 
       {/* Rate Cards Preview */}
       <div className="grid gap-4 md:grid-cols-3">
-        {rates.filter((r) => r.isActive).map((rate) => (
-          <Card key={rate.id} className="relative overflow-hidden transition-shadow hover:shadow-md">
-            <div className="absolute top-0 right-0 left-0 h-1" style={{ backgroundColor: rate.color ?? "#0284c7" }} />
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{rate.name}</CardTitle>
-                <Badge variant={rate.type === "full-day" ? "default" : rate.type === "half-day" ? "secondary" : "outline"}>
-                  {rate.type.replace("-", " ")}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold">${rate.basePrice}</span>
-                  <span className="text-muted-foreground">/ {rate.durationHours}h</span>
+        {rates
+          .filter((r) => r.isActive)
+          .map((rate) => (
+            <Card
+              key={rate.id}
+              className="relative overflow-hidden transition-shadow hover:shadow-md"
+            >
+              <div
+                className="absolute top-0 right-0 left-0 h-1"
+                style={{ backgroundColor: rate.color ?? "#0284c7" }}
+              />
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{rate.name}</CardTitle>
+                  <Badge
+                    variant={
+                      rate.type === "full-day"
+                        ? "default"
+                        : rate.type === "half-day"
+                          ? "secondary"
+                          : "outline"
+                    }
+                  >
+                    {rate.type.replace("-", " ")}
+                  </Badge>
                 </div>
-                <p className="text-muted-foreground text-sm">{rate.description}</p>
-                <div className="border-t pt-2">
-                  <p className="text-muted-foreground mb-2 text-xs">Size-based pricing:</p>
-                  <div className="grid grid-cols-4 gap-2 text-center">
-                    {(["small", "medium", "large", "giant"] as const).map((size) => (
-                      <div key={size} className="bg-muted/50 rounded-sm p-2">
-                        <p className="text-muted-foreground text-xs capitalize">{size === "giant" ? "Giant" : size.charAt(0).toUpperCase() + size.slice(1)}</p>
-                        <p className="font-semibold">${rate.sizePricing[size]}</p>
-                      </div>
-                    ))}
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-bold">
+                      ${rate.basePrice}
+                    </span>
+                    <span className="text-muted-foreground">
+                      / {rate.durationHours}h
+                    </span>
                   </div>
-                </div>
-                {rate.includedAddOnIds && rate.includedAddOnIds.length > 0 && (
+                  <p className="text-muted-foreground text-sm">
+                    {rate.description}
+                  </p>
+                  <div className="border-t pt-2">
+                    <p className="text-muted-foreground mb-2 text-xs">
+                      Size-based pricing:
+                    </p>
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                      {(["small", "medium", "large", "giant"] as const).map(
+                        (size) => (
+                          <div
+                            key={size}
+                            className="bg-muted/50 rounded-sm p-2"
+                          >
+                            <p className="text-muted-foreground text-xs capitalize">
+                              {size === "giant"
+                                ? "Giant"
+                                : size.charAt(0).toUpperCase() + size.slice(1)}
+                            </p>
+                            <p className="font-semibold">
+                              ${rate.sizePricing[size]}
+                            </p>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                  {rate.includedAddOnIds &&
+                    rate.includedAddOnIds.length > 0 && (
+                      <div className="border-t pt-2">
+                        <p className="text-muted-foreground mb-1.5 flex items-center gap-1 text-xs">
+                          <Gift className="size-3" /> Included free:
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {rate.includedAddOnIds.map((id) => {
+                            const addon = serviceAddOns.find(
+                              (a) => a.id === id,
+                            );
+                            return addon ? (
+                              <Badge
+                                key={id}
+                                variant="secondary"
+                                className="gap-1 text-xs"
+                              >
+                                <Gift className="size-2.5 text-emerald-600" />
+                                {addon.name}
+                              </Badge>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    )}
                   <div className="border-t pt-2">
                     <p className="text-muted-foreground mb-1.5 flex items-center gap-1 text-xs">
-                      <Gift className="size-3" /> Included free:
+                      <Home className="size-3" /> Rooms:
                     </p>
-                    <div className="flex flex-wrap gap-1">
-                      {rate.includedAddOnIds.map((id) => {
-                        const addon = serviceAddOns.find((a) => a.id === id);
-                        return addon ? (
-                          <Badge key={id} variant="secondary" className="gap-1 text-xs">
-                            <Gift className="size-2.5 text-emerald-600" />
-                            {addon.name}
-                          </Badge>
-                        ) : null;
-                      })}
-                    </div>
+                    {!rate.allowedSectionIds ||
+                    rate.allowedSectionIds.length === 0 ? (
+                      <span className="text-muted-foreground text-xs">
+                        All rooms
+                      </span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {rate.allowedSectionIds.map((id) => {
+                          const sec = sections.find((s) => s.id === id);
+                          return sec ? (
+                            <Badge
+                              key={id}
+                              variant="outline"
+                              className="gap-1 text-xs"
+                            >
+                              <Home className="size-2.5" />
+                              {sec.name}
+                            </Badge>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
-                <div className="border-t pt-2">
-                  <p className="text-muted-foreground mb-1.5 flex items-center gap-1 text-xs">
-                    <Home className="size-3" /> Rooms:
-                  </p>
-                  {(!rate.allowedSectionIds || rate.allowedSectionIds.length === 0) ? (
-                    <span className="text-muted-foreground text-xs">All rooms</span>
-                  ) : (
-                    <div className="flex flex-wrap gap-1">
-                      {rate.allowedSectionIds.map((id) => {
-                        const sec = sections.find((s) => s.id === id);
-                        return sec ? (
-                          <Badge key={id} variant="outline" className="gap-1 text-xs">
-                            <Home className="size-2.5" />
-                            {sec.name}
-                          </Badge>
-                        ) : null;
-                      })}
-                    </div>
-                  )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))}
       </div>
 
       {/* Tabs */}
       <Tabs defaultValue="services" className="space-y-4">
-        <TabsList className="bg-slate-100 border">
+        <TabsList className="border bg-slate-100">
           <TabsTrigger value="services">Services ({rates.length})</TabsTrigger>
-          <TabsTrigger value="addons">Add-ons ({serviceAddOns.length})</TabsTrigger>
+          <TabsTrigger value="addons">
+            Add-ons ({serviceAddOns.length})
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Services Tab ── */}
@@ -397,10 +495,18 @@ export default function DaycareRatesPage() {
                 searchPlaceholder="Search services..."
                 actions={(item) => (
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleEditRate(item)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEditRate(item)}
+                    >
                       <Edit className="size-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeletingRate(item)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeletingRate(item)}
+                    >
                       <Trash2 className="text-destructive size-4" />
                     </Button>
                   </div>
@@ -422,10 +528,14 @@ export default function DaycareRatesPage() {
           <div>
             <p className="text-sm font-semibold">Pricing Rules</p>
             <p className="text-muted-foreground text-xs">
-              Multi-pet discounts, late fees, surcharges, and custom fees are now managed in Settings.
+              Multi-pet discounts, late fees, surcharges, and custom fees are
+              now managed in Settings.
             </p>
           </div>
-          <a href="/facility/dashboard/settings?section=pricing-rules" className="text-primary text-sm font-medium hover:underline">
+          <a
+            href="/facility/dashboard/settings?section=pricing-rules"
+            className="text-primary text-sm font-medium hover:underline"
+          >
             Go to Pricing Rules →
           </a>
         </CardContent>
@@ -435,7 +545,9 @@ export default function DaycareRatesPage() {
       <Dialog open={isRateModalOpen} onOpenChange={setIsRateModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingRate ? "Edit Service" : "Add New Service"}</DialogTitle>
+            <DialogTitle>
+              {editingRate ? "Edit Service" : "Add New Service"}
+            </DialogTitle>
           </DialogHeader>
           <ScrollArea className="max-h-[70vh] pr-1">
             <div className="space-y-4 pb-2">
@@ -444,7 +556,9 @@ export default function DaycareRatesPage() {
                   <Label>Service Name</Label>
                   <Input
                     value={rateForm.name}
-                    onChange={(e) => setRateForm({ ...rateForm, name: e.target.value })}
+                    onChange={(e) =>
+                      setRateForm({ ...rateForm, name: e.target.value })
+                    }
                     placeholder="e.g., Full Day Daycare"
                   />
                 </div>
@@ -453,7 +567,12 @@ export default function DaycareRatesPage() {
                   <select
                     className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
                     value={rateForm.type}
-                    onChange={(e) => setRateForm({ ...rateForm, type: e.target.value as typeof rateForm.type })}
+                    onChange={(e) =>
+                      setRateForm({
+                        ...rateForm,
+                        type: e.target.value as typeof rateForm.type,
+                      })
+                    }
                   >
                     <option value="hourly">Hourly</option>
                     <option value="half-day">Half-Day</option>
@@ -467,7 +586,12 @@ export default function DaycareRatesPage() {
                   <Input
                     type="number"
                     value={rateForm.basePrice}
-                    onChange={(e) => setRateForm({ ...rateForm, basePrice: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      setRateForm({
+                        ...rateForm,
+                        basePrice: parseFloat(e.target.value) || 0,
+                      })
+                    }
                     placeholder="0.00"
                   />
                 </div>
@@ -476,7 +600,12 @@ export default function DaycareRatesPage() {
                   <Input
                     type="number"
                     value={rateForm.durationHours}
-                    onChange={(e) => setRateForm({ ...rateForm, durationHours: parseInt(e.target.value) || 1 })}
+                    onChange={(e) =>
+                      setRateForm({
+                        ...rateForm,
+                        durationHours: parseInt(e.target.value) || 1,
+                      })
+                    }
                     placeholder="1"
                   />
                 </div>
@@ -485,7 +614,9 @@ export default function DaycareRatesPage() {
                 <Label>Description</Label>
                 <Textarea
                   value={rateForm.description}
-                  onChange={(e) => setRateForm({ ...rateForm, description: e.target.value })}
+                  onChange={(e) =>
+                    setRateForm({ ...rateForm, description: e.target.value })
+                  }
                   placeholder="Describe what's included..."
                   rows={2}
                 />
@@ -503,25 +634,35 @@ export default function DaycareRatesPage() {
                     Included Add-Ons (free)
                   </Label>
                   <p className="text-muted-foreground mt-0.5 text-xs">
-                    These add-ons are bundled into this rate at no extra charge, even if they have a price in your add-ons catalog.
+                    These add-ons are bundled into this rate at no extra charge,
+                    even if they have a price in your add-ons catalog.
                   </p>
                 </div>
                 {activeServiceAddOns.length === 0 ? (
                   <p className="text-muted-foreground rounded-lg border border-dashed p-3 text-center text-xs">
-                    No active daycare add-ons found. Create add-ons in the Add-ons tab on this page.
+                    No active daycare add-ons found. Create add-ons in the
+                    Add-ons tab on this page.
                   </p>
                 ) : (
                   <div className="rounded-lg border">
                     {activeServiceAddOns.map((addon, i) => {
-                      const selected = rateForm.includedAddOnIds.includes(addon.id);
+                      const selected = rateForm.includedAddOnIds.includes(
+                        addon.id,
+                      );
                       const priceLabel = (() => {
                         switch (addon.pricingType) {
-                          case "flat": return `$${addon.price}`;
-                          case "per_day": return `$${addon.price}/day`;
-                          case "per_session": return `$${addon.price}/${addon.unitLabel ?? "session"}`;
-                          case "per_hour": return `$${addon.price}/${addon.unitLabel ?? "hr"}`;
-                          case "per_item": return `$${addon.price}/${addon.unitLabel ?? "item"}`;
-                          case "percentage_of_booking": return `${addon.price}% of booking`;
+                          case "flat":
+                            return `$${addon.price}`;
+                          case "per_day":
+                            return `$${addon.price}/day`;
+                          case "per_session":
+                            return `$${addon.price}/${addon.unitLabel ?? "session"}`;
+                          case "per_hour":
+                            return `$${addon.price}/${addon.unitLabel ?? "hr"}`;
+                          case "per_item":
+                            return `$${addon.price}/${addon.unitLabel ?? "item"}`;
+                          case "percentage_of_booking":
+                            return `${addon.price}% of booking`;
                         }
                       })();
                       return (
@@ -530,23 +671,39 @@ export default function DaycareRatesPage() {
                           type="button"
                           onClick={() => {
                             const next = selected
-                              ? rateForm.includedAddOnIds.filter((id) => id !== addon.id)
+                              ? rateForm.includedAddOnIds.filter(
+                                  (id) => id !== addon.id,
+                                )
                               : [...rateForm.includedAddOnIds, addon.id];
-                            setRateForm({ ...rateForm, includedAddOnIds: next });
+                            setRateForm({
+                              ...rateForm,
+                              includedAddOnIds: next,
+                            });
                           }}
-                          className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/50 ${i > 0 ? "border-t" : ""} ${selected ? "bg-emerald-50/60" : ""}`}
+                          className={`hover:bg-muted/50 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors ${i > 0 ? "border-t" : ""} ${selected ? "bg-emerald-50/60" : ""}`}
                         >
-                          <div className={`flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${selected ? "border-emerald-600 bg-emerald-600" : "border-muted-foreground/30"}`}>
-                            {selected && <Check className="size-3 text-white" />}
+                          <div
+                            className={`flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${selected ? "border-emerald-600 bg-emerald-600" : "border-muted-foreground/30"}`}
+                          >
+                            {selected && (
+                              <Check className="size-3 text-white" />
+                            )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium leading-none">{addon.name}</p>
+                            <p className="text-sm leading-none font-medium">
+                              {addon.name}
+                            </p>
                             {addon.description && (
-                              <p className="text-muted-foreground mt-0.5 truncate text-xs">{addon.description}</p>
+                              <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                                {addon.description}
+                              </p>
                             )}
                           </div>
                           <div className="flex shrink-0 items-center gap-1.5">
-                            <Badge variant="outline" className="text-xs line-through opacity-60">
+                            <Badge
+                              variant="outline"
+                              className="text-xs line-through opacity-60"
+                            >
                               {priceLabel}
                             </Badge>
                             <Badge className="gap-1 bg-emerald-100 text-[10px] text-emerald-700 hover:bg-emerald-100">
@@ -560,7 +717,9 @@ export default function DaycareRatesPage() {
                 )}
                 {rateForm.includedAddOnIds.length > 0 && (
                   <p className="text-muted-foreground text-xs">
-                    {rateForm.includedAddOnIds.length} add-on{rateForm.includedAddOnIds.length > 1 ? "s" : ""} included free with this rate
+                    {rateForm.includedAddOnIds.length} add-on
+                    {rateForm.includedAddOnIds.length > 1 ? "s" : ""} included
+                    free with this rate
                   </p>
                 )}
               </div>
@@ -573,90 +732,146 @@ export default function DaycareRatesPage() {
                     Attached Rooms
                   </Label>
                   <p className="text-muted-foreground mt-0.5 text-xs">
-                    Select which play area rooms this rate applies to. Leave all unselected to make it available in every room.
+                    Select which play area rooms this rate applies to. Leave all
+                    unselected to make it available in every room.
                   </p>
                 </div>
                 {activeSections.length === 0 ? (
                   <p className="text-muted-foreground rounded-lg border border-dashed p-3 text-center text-xs">
                     No active rooms found.{" "}
-                    <a href="/facility/dashboard/services/daycare/rooms" className="text-primary underline underline-offset-2">
+                    <a
+                      href="/facility/dashboard/services/daycare/rooms"
+                      className="text-primary underline underline-offset-2"
+                    >
                       Create rooms first
                     </a>
                   </p>
                 ) : (
                   <div className="rounded-lg border">
-                    {areas.filter((a) => a.isActive).map((area, areaIdx) => {
-                      const areaSections = activeSections.filter((s) => s.playAreaId === area.id);
-                      if (areaSections.length === 0) return null;
-                      return (
-                        <div key={area.id} className={cn(areaIdx > 0 && "border-t")}>
-                          {/* Area header */}
-                          <div className="bg-muted/30 flex items-center justify-between px-3 py-2">
-                            <span className="text-xs font-semibold text-slate-700">{area.name}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const sectionIds = areaSections.map((s) => s.id);
-                                const allSelected = sectionIds.every((id) => rateForm.allowedSectionIds.includes(id));
-                                const next = allSelected
-                                  ? rateForm.allowedSectionIds.filter((id) => !sectionIds.includes(id))
-                                  : [...new Set([...rateForm.allowedSectionIds, ...sectionIds])];
-                                setRateForm({ ...rateForm, allowedSectionIds: next });
-                              }}
-                              className="text-primary text-[10px] underline underline-offset-2 hover:opacity-70"
-                            >
-                              {areaSections.every((s) => rateForm.allowedSectionIds.includes(s.id)) ? "Deselect all" : "Select all"}
-                            </button>
-                          </div>
-                          {/* Section rows */}
-                          {areaSections.map((sec, i) => {
-                            const selected = rateForm.allowedSectionIds.includes(sec.id);
-                            return (
+                    {areas
+                      .filter((a) => a.isActive)
+                      .map((area, areaIdx) => {
+                        const areaSections = activeSections.filter(
+                          (s) => s.playAreaId === area.id,
+                        );
+                        if (areaSections.length === 0) return null;
+                        return (
+                          <div
+                            key={area.id}
+                            className={cn(areaIdx > 0 && "border-t")}
+                          >
+                            {/* Area header */}
+                            <div className="bg-muted/30 flex items-center justify-between px-3 py-2">
+                              <span className="text-xs font-semibold text-slate-700">
+                                {area.name}
+                              </span>
                               <button
-                                key={sec.id}
                                 type="button"
                                 onClick={() => {
-                                  const next = selected
-                                    ? rateForm.allowedSectionIds.filter((id) => id !== sec.id)
-                                    : [...rateForm.allowedSectionIds, sec.id];
-                                  setRateForm({ ...rateForm, allowedSectionIds: next });
+                                  const sectionIds = areaSections.map(
+                                    (s) => s.id,
+                                  );
+                                  const allSelected = sectionIds.every((id) =>
+                                    rateForm.allowedSectionIds.includes(id),
+                                  );
+                                  const next = allSelected
+                                    ? rateForm.allowedSectionIds.filter(
+                                        (id) => !sectionIds.includes(id),
+                                      )
+                                    : [
+                                        ...new Set([
+                                          ...rateForm.allowedSectionIds,
+                                          ...sectionIds,
+                                        ]),
+                                      ];
+                                  setRateForm({
+                                    ...rateForm,
+                                    allowedSectionIds: next,
+                                  });
                                 }}
-                                className={cn(
-                                  "flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/40",
-                                  i > 0 && "border-t",
-                                  selected && "bg-blue-50/60",
-                                )}
+                                className="text-primary text-[10px] underline underline-offset-2 hover:opacity-70"
                               >
-                                <div className={cn(
-                                  "flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors",
-                                  selected ? "border-blue-600 bg-blue-600" : "border-muted-foreground/30",
-                                )}>
-                                  {selected && <Check className="size-3 text-white" />}
-                                </div>
-                                <div
-                                  className="size-2.5 shrink-0 rounded-full"
-                                  style={{ backgroundColor: sec.color ? `var(--color-${sec.color}-500, #64748b)` : "#64748b" }}
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium leading-none">{sec.name}</p>
-                                  {sec.description && (
-                                    <p className="text-muted-foreground mt-0.5 truncate text-xs">{sec.description}</p>
-                                  )}
-                                </div>
-                                <Badge variant="outline" className="shrink-0 text-xs">
-                                  Cap: {sec.capacity}
-                                </Badge>
+                                {areaSections.every((s) =>
+                                  rateForm.allowedSectionIds.includes(s.id),
+                                )
+                                  ? "Deselect all"
+                                  : "Select all"}
                               </button>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
+                            </div>
+                            {/* Section rows */}
+                            {areaSections.map((sec, i) => {
+                              const selected =
+                                rateForm.allowedSectionIds.includes(sec.id);
+                              return (
+                                <button
+                                  key={sec.id}
+                                  type="button"
+                                  onClick={() => {
+                                    const next = selected
+                                      ? rateForm.allowedSectionIds.filter(
+                                          (id) => id !== sec.id,
+                                        )
+                                      : [...rateForm.allowedSectionIds, sec.id];
+                                    setRateForm({
+                                      ...rateForm,
+                                      allowedSectionIds: next,
+                                    });
+                                  }}
+                                  className={cn(
+                                    "hover:bg-muted/40 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors",
+                                    i > 0 && "border-t",
+                                    selected && "bg-blue-50/60",
+                                  )}
+                                >
+                                  <div
+                                    className={cn(
+                                      "flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors",
+                                      selected
+                                        ? "border-blue-600 bg-blue-600"
+                                        : "border-muted-foreground/30",
+                                    )}
+                                  >
+                                    {selected && (
+                                      <Check className="size-3 text-white" />
+                                    )}
+                                  </div>
+                                  <div
+                                    className="size-2.5 shrink-0 rounded-full"
+                                    style={{
+                                      backgroundColor: sec.color
+                                        ? `var(--color-${sec.color}-500, #64748b)`
+                                        : "#64748b",
+                                    }}
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm leading-none font-medium">
+                                      {sec.name}
+                                    </p>
+                                    {sec.description && (
+                                      <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                                        {sec.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <Badge
+                                    variant="outline"
+                                    className="shrink-0 text-xs"
+                                  >
+                                    Cap: {sec.capacity}
+                                  </Badge>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
                   </div>
                 )}
                 {rateForm.allowedSectionIds.length > 0 && (
                   <p className="text-muted-foreground text-xs">
-                    {rateForm.allowedSectionIds.length} room{rateForm.allowedSectionIds.length > 1 ? "s" : ""} attached to this rate
+                    {rateForm.allowedSectionIds.length} room
+                    {rateForm.allowedSectionIds.length > 1 ? "s" : ""} attached
+                    to this rate
                   </p>
                 )}
               </div>
@@ -664,25 +879,37 @@ export default function DaycareRatesPage() {
               <div className="space-y-2">
                 <Label>Size-Based Pricing</Label>
                 <div className="grid grid-cols-4 gap-3">
-                  {(["small", "medium", "large", "giant"] as const).map((size) => (
-                    <div key={size} className="space-y-1">
-                      <Label className="text-muted-foreground text-xs capitalize">{size}</Label>
-                      <Input
-                        type="number"
-                        value={rateForm.sizePricing[size]}
-                        onChange={(e) =>
-                          setRateForm({ ...rateForm, sizePricing: { ...rateForm.sizePricing, [size]: parseFloat(e.target.value) || 0 } })
-                        }
-                        placeholder="0"
-                      />
-                    </div>
-                  ))}
+                  {(["small", "medium", "large", "giant"] as const).map(
+                    (size) => (
+                      <div key={size} className="space-y-1">
+                        <Label className="text-muted-foreground text-xs capitalize">
+                          {size}
+                        </Label>
+                        <Input
+                          type="number"
+                          value={rateForm.sizePricing[size]}
+                          onChange={(e) =>
+                            setRateForm({
+                              ...rateForm,
+                              sizePricing: {
+                                ...rateForm.sizePricing,
+                                [size]: parseFloat(e.target.value) || 0,
+                              },
+                            })
+                          }
+                          placeholder="0"
+                        />
+                      </div>
+                    ),
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
                   checked={rateForm.isActive}
-                  onCheckedChange={(checked) => setRateForm({ ...rateForm, isActive: checked })}
+                  onCheckedChange={(checked) =>
+                    setRateForm({ ...rateForm, isActive: checked })
+                  }
                 />
                 <Label>Active</Label>
               </div>
@@ -703,17 +930,24 @@ export default function DaycareRatesPage() {
       {/* ── Rate Delete Modal ── */}
       <Dialog open={!!deletingRate} onOpenChange={() => setDeletingRate(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Delete Service</DialogTitle></DialogHeader>
-          <p>Are you sure you want to delete <span className="font-semibold">{deletingRate?.name}</span>? This action cannot be undone.</p>
+          <DialogHeader>
+            <DialogTitle>Delete Service</DialogTitle>
+          </DialogHeader>
+          <p>
+            Are you sure you want to delete{" "}
+            <span className="font-semibold">{deletingRate?.name}</span>? This
+            action cannot be undone.
+          </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeletingRate(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDeletingRate(null)}>
+              Cancel
+            </Button>
             <Button variant="destructive" onClick={handleDeleteRate}>
               <Trash2 className="mr-2 size-4" /> Delete
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

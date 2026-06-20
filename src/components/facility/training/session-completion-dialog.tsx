@@ -247,9 +247,9 @@ export function SessionCompletionDialog({
   // the same since they have one student. The dialog fans the list out to
   // each present student on save so the per-pet Progress chart still gets
   // datapoints to plot.
-  const [sharedExercises, setSharedExercises] = useState<
-    SessionExerciseLog[]
-  >([]);
+  const [sharedExercises, setSharedExercises] = useState<SessionExerciseLog[]>(
+    [],
+  );
   const [individualNotes, setIndividualNotes] = useState<
     Record<string, string>
   >({});
@@ -270,8 +270,7 @@ export function SessionCompletionDialog({
     setEndTime(session.endTime);
     const next: Record<string, AttendanceChoice> = {};
     for (const r of rows) {
-      next[r.enrollmentId] =
-        initialAttendance[r.enrollmentId] ?? "present";
+      next[r.enrollmentId] = initialAttendance[r.enrollmentId] ?? "present";
     }
     setAttendance(next);
     setSharedExercises([]);
@@ -345,9 +344,7 @@ export function SessionCompletionDialog({
 
   function toggleWeather(value: WeatherCondition) {
     setWeather((prev) =>
-      prev.includes(value)
-        ? prev.filter((w) => w !== value)
-        : [...prev, value],
+      prev.includes(value) ? prev.filter((w) => w !== value) : [...prev, value],
     );
   }
 
@@ -369,9 +366,7 @@ export function SessionCompletionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            Complete session — {session.className}
-          </DialogTitle>
+          <DialogTitle>Complete session — {session.className}</DialogTitle>
           <DialogDescription>
             Confirm attendance and finalize this session&apos;s records.
           </DialogDescription>
@@ -418,7 +413,7 @@ export function SessionCompletionDialog({
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-[11px] font-bold uppercase tracking-wider">
+                  <span className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
                     Series
                   </span>
                   <span className="text-sm">
@@ -514,7 +509,7 @@ export function SessionCompletionDialog({
                       >
                         <div className="relative shrink-0">
                           {row.petPhotoUrl ? (
-                            <div className="size-9 overflow-hidden rounded-xl ring-2 ring-white shadow-sm">
+                            <div className="size-9 overflow-hidden rounded-xl shadow-sm ring-2 ring-white">
                               <Image
                                 src={row.petPhotoUrl}
                                 alt={row.petName}
@@ -524,7 +519,7 @@ export function SessionCompletionDialog({
                               />
                             </div>
                           ) : (
-                            <div className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-xl ring-2 ring-white shadow-sm">
+                            <div className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-xl shadow-sm ring-2 ring-white">
                               <PawPrint className="size-4" />
                             </div>
                           )}
@@ -569,9 +564,9 @@ export function SessionCompletionDialog({
               {summary.absent > 0 && (
                 <p className="bg-muted/40 text-muted-foreground flex items-start gap-1.5 rounded-md px-3 py-2 text-[11px]">
                   <Info className="mt-0.5 size-3 shrink-0" />
-                  Absent students still consume a session from their package
-                  — the class itself ran, so it doesn&apos;t roll back the
-                  series completion count.
+                  Absent students still consume a session from their package —
+                  the class itself ran, so it doesn&apos;t roll back the series
+                  completion count.
                 </p>
               )}
             </div>
@@ -582,9 +577,7 @@ export function SessionCompletionDialog({
         {step === 2 && (
           <div className="space-y-4 py-2">
             <div className="rounded-xl border bg-slate-50/40 px-4 py-3 text-sm">
-              <p className="font-semibold text-slate-800">
-                Step 1 confirmed
-              </p>
+              <p className="font-semibold text-slate-800">Step 1 confirmed</p>
               <p className="text-muted-foreground mt-0.5 text-xs">
                 {summary.present} present
                 {summary.late > 0 && ` · ${summary.late} late`}
@@ -636,7 +629,7 @@ export function SessionCompletionDialog({
                 </div>
                 <div className="space-y-4 px-4 py-3">
                   <div>
-                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <Label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
                       Weather (select all that apply)
                     </Label>
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -662,7 +655,7 @@ export function SessionCompletionDialog({
                     </div>
                   </div>
                   <div>
-                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <Label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
                       <Zap className="mr-1 inline size-3 align-text-bottom" />
                       Distraction level
                     </Label>
@@ -691,8 +684,8 @@ export function SessionCompletionDialog({
                       )}
                     </div>
                     <p className="text-muted-foreground mt-1.5 text-[11px]">
-                      How much the dog had to work through — other dogs,
-                      sounds, smells, environment.
+                      How much the dog had to work through — other dogs, sounds,
+                      smells, environment.
                     </p>
                   </div>
                 </div>

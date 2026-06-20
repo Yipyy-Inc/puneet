@@ -418,8 +418,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
                 "border-border/60 sticky bottom-0 z-30 flex h-[52px] items-center justify-center border-t-2 border-r bg-slate-50/95 backdrop-blur-md dark:bg-slate-900/80",
                 weekend &&
                   "bg-[repeating-linear-gradient(135deg,rgba(148,163,184,0.10)_0px,rgba(148,163,184,0.10)_6px,rgba(248,250,252,0.95)_6px,rgba(248,250,252,0.95)_12px)] dark:bg-[repeating-linear-gradient(135deg,rgba(148,163,184,0.10)_0px,rgba(148,163,184,0.10)_6px,rgba(15,23,42,0.8)_6px,rgba(15,23,42,0.8)_12px)]",
-                todayFlag &&
-                  "bg-indigo-50/80 dark:bg-indigo-950/30",
+                todayFlag && "bg-indigo-50/80 dark:bg-indigo-950/30",
               )}
             >
               <span
@@ -440,7 +439,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
         <div className="border-border/60 sticky right-0 bottom-0 z-30 flex h-[52px] items-center justify-center border-t-2 border-b border-l bg-indigo-50/80 px-2 backdrop-blur-md dark:bg-indigo-950/30">
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="cursor-default rounded-full bg-indigo-600 px-2.5 py-0.5 text-xs font-bold text-white shadow-sm tabular-nums dark:bg-indigo-500">
+              <span className="cursor-default rounded-full bg-indigo-600 px-2.5 py-0.5 text-xs font-bold text-white tabular-nums shadow-sm dark:bg-indigo-500">
                 {grandTotalHours.toFixed(1)}h
               </span>
             </TooltipTrigger>

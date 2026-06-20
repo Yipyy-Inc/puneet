@@ -276,7 +276,11 @@ export function ScheduleView() {
     ): { field: string; oldValue: string; newValue: string }[] => {
       const out: { field: string; oldValue: string; newValue: string }[] = [];
       if (after.date && after.date !== before.date) {
-        out.push({ field: "Date", oldValue: before.date, newValue: after.date });
+        out.push({
+          field: "Date",
+          oldValue: before.date,
+          newValue: after.date,
+        });
       }
       if (after.startTime && after.startTime !== before.startTime) {
         out.push({

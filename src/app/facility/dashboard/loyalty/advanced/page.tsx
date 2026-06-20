@@ -4,12 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useHydrated } from "@/hooks/use-hydrated";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Target,
   Layers,
@@ -102,7 +97,8 @@ export default function AdvancedPage() {
     JSON.stringify(stacking) !== JSON.stringify(config.discountStacking) ||
     JSON.stringify(settings) !== JSON.stringify(config.settings) ||
     tierDowngrade !== (config.tierDowngradeEnabled ?? false) ||
-    discountStrategy !== (config.discountSelectionStrategy ?? "highest_value") ||
+    discountStrategy !==
+      (config.discountSelectionStrategy ?? "highest_value") ||
     redemptionRate !== (config.redemptionRate ?? 100);
 
   const handleReset = () => {
@@ -159,7 +155,8 @@ export default function AdvancedPage() {
                   <span className="font-semibold tabular-nums">
                     {preview.wouldExpire}
                   </span>{" "}
-                  member{preview.wouldExpire === 1 ? "" : "s"} would expire today
+                  member{preview.wouldExpire === 1 ? "" : "s"} would expire
+                  today
                 </span>
               </div>
               <div className="flex items-center gap-2 rounded-lg border p-3 text-sm">
@@ -237,9 +234,10 @@ export default function AdvancedPage() {
               <Label htmlFor="tier-downgrade">Allow tier downgrades</Label>
               <p className="text-muted-foreground text-sm">
                 When off (default), members keep the highest tier they&apos;ve
-                earned even if their points, spend, or visits later fall below the
-                threshold — for example after you raise a tier&apos;s requirement.
-                Turn on to let a member&apos;s tier drop when their metric falls.
+                earned even if their points, spend, or visits later fall below
+                the threshold — for example after you raise a tier&apos;s
+                requirement. Turn on to let a member&apos;s tier drop when their
+                metric falls.
               </p>
             </div>
             <Switch
@@ -260,7 +258,9 @@ export default function AdvancedPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <Label>When a customer holds multiple active discount vouchers</Label>
+            <Label>
+              When a customer holds multiple active discount vouchers
+            </Label>
             <p className="text-muted-foreground text-sm">
               Only one loyalty discount is auto-applied per invoice at checkout.
               Choose which voucher wins.
@@ -298,8 +298,8 @@ export default function AdvancedPage() {
           <div className="space-y-2">
             <Label htmlFor="redemption-rate">Points per $1 of credit</Label>
             <p className="text-muted-foreground text-sm">
-              How many points a customer spends for $1 of account credit when they
-              self-redeem from the portal (e.g. 100 → 100 points = $1).
+              How many points a customer spends for $1 of account credit when
+              they self-redeem from the portal (e.g. 100 → 100 points = $1).
             </p>
             <Input
               id="redemption-rate"
@@ -308,7 +308,9 @@ export default function AdvancedPage() {
               step={1}
               value={redemptionRate}
               onChange={(e) =>
-                setRedemptionRate(Math.max(1, Math.floor(Number(e.target.value) || 0)))
+                setRedemptionRate(
+                  Math.max(1, Math.floor(Number(e.target.value) || 0)),
+                )
               }
               className="max-w-37 tabular-nums"
             />

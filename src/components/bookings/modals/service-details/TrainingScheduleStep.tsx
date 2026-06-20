@@ -147,7 +147,10 @@ function isBookable(series: TrainingSeries, todayISO: string): boolean {
 }
 
 const normalize = (s: string) =>
-  s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 
 export function TrainingScheduleStep({
   startDate,
@@ -315,9 +318,7 @@ export function TrainingScheduleStep({
   const courseAllFull =
     !!selectedCourseTypeId &&
     courseBookableSeries.length > 0 &&
-    courseBookableSeries.every(
-      (s) => (spotsLeftBySeries.get(s.id) ?? 0) === 0,
-    );
+    courseBookableSeries.every((s) => (spotsLeftBySeries.get(s.id) ?? 0) === 0);
 
   // Series with startDate >= selectedISO — "enroll from start" candidates.
   const enrollableForDate = useMemo(() => {
@@ -515,10 +516,10 @@ export function TrainingScheduleStep({
     cache.findAll({ queryKey: ["training", "series"] }).forEach((q) => {
       if (q.queryKey[3] !== "enrollments") return;
       if (q.queryKey[2] !== host.id) return;
-      queryClient.setQueryData<TrainingEnrollment[]>(q.queryKey, (prev = []) => [
-        ...prev,
-        ...newEntries,
-      ]);
+      queryClient.setQueryData<TrainingEnrollment[]>(
+        q.queryKey,
+        (prev = []) => [...prev, ...newEntries],
+      );
     });
 
     setWaitlistJoined(true);
@@ -526,10 +527,13 @@ export function TrainingScheduleStep({
       petsToList.length === 1
         ? petsToList[0].name
         : `${petsToList.length} dogs`;
-    toast.success(`${who} added to the waitlist for ${selectedCourseType.name}.`, {
-      description: "We'll text + email the moment a spot opens.",
-      duration: 6_000,
-    });
+    toast.success(
+      `${who} added to the waitlist for ${selectedCourseType.name}.`,
+      {
+        description: "We'll text + email the moment a spot opens.",
+        duration: 6_000,
+      },
+    );
   }
 
   // ── Phase 1: pick a course type from the Course Catalog ──────────────────
@@ -837,7 +841,7 @@ function CourseTypeCard({
     <button
       type="button"
       onClick={onSelect}
-      className="group hover:border-primary/50 flex h-full flex-col gap-2 rounded-2xl border bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
+      className="group hover:border-primary/50 bg-card flex h-full flex-col gap-2 rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -845,7 +849,7 @@ function CourseTypeCard({
             className="size-3 shrink-0 rounded-full ring-1 ring-black/10"
             style={{ backgroundColor: courseType.color ?? "#6366f1" }}
           />
-          <p className="font-semibold leading-tight">{courseType.name}</p>
+          <p className="leading-tight font-semibold">{courseType.name}</p>
         </div>
         <ChevronRight className="text-muted-foreground size-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
       </div>
@@ -898,7 +902,7 @@ function NoUpcomingSeriesForCourse({
 }) {
   return (
     <div className="space-y-3 rounded-xl border border-dashed border-amber-200 bg-amber-50/60 p-6 text-center dark:border-amber-900/40 dark:bg-amber-950/20">
-      <CalendarDays className="text-amber-500 mx-auto size-8" />
+      <CalendarDays className="mx-auto size-8 text-amber-500" />
       <div className="space-y-1">
         <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
           No upcoming series for {courseType.name}.
@@ -937,7 +941,7 @@ function AllSeriesFullForCourse({
     <div className="space-y-3">
       <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
         <div className="flex items-start gap-2">
-          <AlertTriangle className="text-amber-600 mt-0.5 size-4 shrink-0" />
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
           <div className="space-y-0.5">
             <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
               Every series for {courseType.name} is full.
@@ -956,7 +960,7 @@ function AllSeriesFullForCourse({
             disabled
             className="w-full gap-1.5"
           >
-            <CheckCircle2 className="text-emerald-600 size-4" />
+            <CheckCircle2 className="size-4 text-emerald-600" />
             Added to the waitlist
           </Button>
         ) : (
@@ -1035,7 +1039,7 @@ function NoSeriesNearDate({
 }) {
   return (
     <div className="space-y-3 rounded-lg border border-dashed border-amber-200 bg-amber-50/60 p-4 text-center dark:border-amber-900/40 dark:bg-amber-950/20">
-      <CalendarDays className="text-amber-500 mx-auto size-7" />
+      <CalendarDays className="mx-auto size-7 text-amber-500" />
       <div>
         <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
           No sessions available near {formatLongDate(selectedISO)}.
@@ -1043,7 +1047,7 @@ function NoSeriesNearDate({
         {nextSeries ? (
           <p className="text-muted-foreground mt-1 text-sm">
             The next available series starts on{" "}
-            <span className="font-semibold text-foreground">
+            <span className="text-foreground font-semibold">
               {formatLongDate(nextSeries.startDate)}
             </span>
             .
@@ -1076,9 +1080,10 @@ function BookingSeriesCard({
   series: TrainingSeries;
   spotsLeft: number;
   isSelected: boolean;
-  prereqIssue:
-    | { program: { id: string; name: string }; details: PrereqDetail[] }
-    | null;
+  prereqIssue: {
+    program: { id: string; name: string };
+    details: PrereqDetail[];
+  } | null;
   prereqAcknowledged: boolean;
   selectedPets: Pet[];
   onEnroll: () => void;
@@ -1106,9 +1111,7 @@ function BookingSeriesCard({
       <CardContent className="space-y-2.5 p-3.5">
         <div>
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <p className="text-base/tight font-semibold">
-              {series.seriesName}
-            </p>
+            <p className="text-base/tight font-semibold">{series.seriesName}</p>
             {hasPrereqBlocker && (
               <Badge
                 variant="outline"
@@ -1124,7 +1127,8 @@ function BookingSeriesCard({
             <li className="flex items-center gap-2">
               <Repeat className="text-muted-foreground size-3.5 shrink-0" />
               <span>
-                {getDayName(series.dayOfWeek)}s · {formatTime12(series.startTime)}
+                {getDayName(series.dayOfWeek)}s ·{" "}
+                {formatTime12(series.startTime)}
                 {series.numberOfWeeks > 0 && (
                   <span className="text-muted-foreground">
                     {" "}
@@ -1153,10 +1157,7 @@ function BookingSeriesCard({
           </ul>
         </div>
 
-        <Badge
-          variant="outline"
-          className={cn("gap-1 border w-fit", spotsCls)}
-        >
+        <Badge variant="outline" className={cn("w-fit gap-1 border", spotsCls)}>
           <Users className="size-3" />
           {isFull
             ? `Full — ${series.maxCapacity} of ${series.maxCapacity} enrolled`
@@ -1177,7 +1178,7 @@ function BookingSeriesCard({
           />
         )}
         {hasPrereqBlocker && prereqAcknowledged && (
-          <p className="text-amber-800 inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+          <p className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
             <AlertTriangle className="size-3" />
             Enrolling without prerequisite — override acknowledged.
           </p>
@@ -1189,7 +1190,7 @@ function BookingSeriesCard({
             variant="outline"
             onClick={onClear}
           >
-            <CheckCircle2 className="text-emerald-600 size-4" />
+            <CheckCircle2 className="size-4 text-emerald-600" />
             Enrolled — click to change
           </Button>
         ) : isFull ? (
@@ -1243,15 +1244,14 @@ function PrereqWarningBanner({
   const missingNames = issue.details
     .filter((d) => !d.satisfied)
     .map((d) => d.programName);
-  const petNamesList = selectedPets.map((p) => p.name).join(", ") || "Selected dog";
+  const petNamesList =
+    selectedPets.map((p) => p.name).join(", ") || "Selected dog";
   const prereqClause =
-    missingNames.length === 1
-      ? missingNames[0]
-      : missingNames.join(" and ");
+    missingNames.length === 1 ? missingNames[0] : missingNames.join(" and ");
   return (
     <div className="space-y-2 rounded-md border-2 border-amber-300 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-950/30">
       <div className="flex items-start gap-2">
-        <AlertTriangle className="text-amber-600 mt-0.5 size-4 shrink-0" />
+        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
         <div className="space-y-1 text-[12.5px] leading-relaxed text-amber-900 dark:text-amber-100">
           <p className="font-semibold">
             {petNamesList} has not completed {prereqClause}, which is required
@@ -1260,10 +1260,12 @@ function PrereqWarningBanner({
           {issue.details
             .filter((d) => !d.satisfied && d.inProgress)
             .map((d) => (
-              <p key={d.programId} className="text-amber-800 dark:text-amber-200">
-                Currently in <span className="font-medium">
-                  {d.inProgress!.seriesName}
-                </span>{" "}
+              <p
+                key={d.programId}
+                className="text-amber-800 dark:text-amber-200"
+              >
+                Currently in{" "}
+                <span className="font-medium">{d.inProgress!.seriesName}</span>{" "}
                 — {d.inProgress!.sessionsAttended} of{" "}
                 {d.inProgress!.totalSessions} sessions completed.
               </p>
@@ -1297,7 +1299,13 @@ function DropInSeriesCard({
   onClear,
 }: {
   series: TrainingSeries;
-  session: { id: string; sessionNumber: number; startTime: string; endTime: string; date: string };
+  session: {
+    id: string;
+    sessionNumber: number;
+    startTime: string;
+    endTime: string;
+    date: string;
+  };
   isSelected: boolean;
   onBook: () => void;
   onClear: () => void;
@@ -1314,10 +1322,8 @@ function DropInSeriesCard({
       <CardContent className="space-y-2.5 p-3.5">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-base/tight font-semibold">
-              {series.seriesName}
-            </p>
-            <p className="text-muted-foreground mt-0.5 text-[11px] font-bold uppercase tracking-wider">
+            <p className="text-base/tight font-semibold">{series.seriesName}</p>
+            <p className="text-muted-foreground mt-0.5 text-[11px] font-bold tracking-wider uppercase">
               Drop-in · Session {session.sessionNumber} of{" "}
               {series.numberOfWeeks}
             </p>
@@ -1334,7 +1340,8 @@ function DropInSeriesCard({
           <li className="flex items-center gap-2">
             <Clock className="text-muted-foreground size-3.5 shrink-0" />
             <span>
-              {formatTime12(session.startTime)} – {formatTime12(session.endTime)}
+              {formatTime12(session.startTime)} –{" "}
+              {formatTime12(session.endTime)}
             </span>
           </li>
           <li className="flex items-center gap-2">
@@ -1353,7 +1360,7 @@ function DropInSeriesCard({
             variant="outline"
             onClick={onClear}
           >
-            <CheckCircle2 className="text-emerald-600 size-4" />
+            <CheckCircle2 className="size-4 text-emerald-600" />
             Booked — click to change
           </Button>
         ) : (
@@ -1386,7 +1393,7 @@ function SelectionSummary({
   if (choice.kind === "enroll") {
     return (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/30">
-        <p className="text-emerald-900 dark:text-emerald-200 inline-flex items-center gap-1.5 font-semibold">
+        <p className="inline-flex items-center gap-1.5 font-semibold text-emerald-900 dark:text-emerald-200">
           <CheckCircle2 className="size-4" />
           Enrolling in {series.seriesName}
         </p>
@@ -1401,7 +1408,7 @@ function SelectionSummary({
   const session = series.sessions.find((s) => s.id === choice.sessionId);
   return (
     <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/30">
-      <p className="text-emerald-900 dark:text-emerald-200 inline-flex items-center gap-1.5 font-semibold">
+      <p className="inline-flex items-center gap-1.5 font-semibold text-emerald-900 dark:text-emerald-200">
         <CheckCircle2 className="size-4" />
         Drop-in: {series.seriesName}
       </p>

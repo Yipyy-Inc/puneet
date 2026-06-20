@@ -61,10 +61,7 @@ export function TrainingProfilePackageChips({
         }[tone];
         const Icon = row.exhausted || row.lowBalance ? AlertTriangle : Package;
         return (
-          <span
-            key={row.pkg.id}
-            className="inline-flex items-center gap-1"
-          >
+          <span key={row.pkg.id} className="inline-flex items-center gap-1">
             <Badge
               variant="outline"
               className={cn("gap-1", toneCls)}

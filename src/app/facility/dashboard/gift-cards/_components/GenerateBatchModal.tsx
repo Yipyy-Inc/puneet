@@ -123,19 +123,19 @@ export function GenerateBatchModal({
                 <div
                   data-active={active}
                   data-done={done}
-                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground data-[active=true]:text-foreground data-[done=true]:text-foreground"
+                  className="text-muted-foreground data-[active=true]:text-foreground data-[done=true]:text-foreground flex items-center gap-1.5 text-xs font-medium"
                 >
                   <span
                     data-active={active}
                     data-done={done}
-                    className="flex size-5 items-center justify-center rounded-full border text-[11px] data-[active=true]:border-primary data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[done=true]:border-emerald-600 data-[done=true]:bg-emerald-600 data-[done=true]:text-white"
+                    className="data-[active=true]:border-primary data-[active=true]:bg-primary data-[active=true]:text-primary-foreground flex size-5 items-center justify-center rounded-full border text-[11px] data-[done=true]:border-emerald-600 data-[done=true]:bg-emerald-600 data-[done=true]:text-white"
                   >
                     {done ? "✓" : i + 1}
                   </span>
                   {label}
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className="h-px flex-1 bg-border" />
+                  <div className="bg-border h-px flex-1" />
                 )}
               </div>
             );
@@ -178,9 +178,13 @@ export function GenerateBatchModal({
                 <label
                   htmlFor="denom-open"
                   data-active={mode === "open"}
-                  className="flex cursor-pointer items-start gap-3 rounded-md border p-3 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                  className="data-[active=true]:border-primary data-[active=true]:bg-primary/5 flex cursor-pointer items-start gap-3 rounded-md border p-3"
                 >
-                  <RadioGroupItem value="open" id="denom-open" className="mt-0.5" />
+                  <RadioGroupItem
+                    value="open"
+                    id="denom-open"
+                    className="mt-0.5"
+                  />
                   <div className="space-y-0.5">
                     <p className="text-sm font-medium">Open Value</p>
                     <p className="text-muted-foreground text-xs">
@@ -192,7 +196,7 @@ export function GenerateBatchModal({
                 <label
                   htmlFor="denom-fixed"
                   data-active={mode === "fixed"}
-                  className="flex cursor-pointer items-start gap-3 rounded-md border p-3 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                  className="data-[active=true]:border-primary data-[active=true]:bg-primary/5 flex cursor-pointer items-start gap-3 rounded-md border p-3"
                 >
                   <RadioGroupItem
                     value="fixed"
@@ -256,7 +260,7 @@ export function GenerateBatchModal({
               <label
                 htmlFor="src-system"
                 data-active={source === "system"}
-                className="flex cursor-pointer items-start gap-3 rounded-md border p-3 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                className="data-[active=true]:border-primary data-[active=true]:bg-primary/5 flex cursor-pointer items-start gap-3 rounded-md border p-3"
               >
                 <RadioGroupItem
                   value="system"
@@ -278,7 +282,7 @@ export function GenerateBatchModal({
               <label
                 htmlFor="src-import"
                 data-active={source === "import"}
-                className="flex cursor-pointer items-start gap-3 rounded-md border p-3 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                className="data-[active=true]:border-primary data-[active=true]:bg-primary/5 flex cursor-pointer items-start gap-3 rounded-md border p-3"
               >
                 <RadioGroupItem
                   value="import"
@@ -304,7 +308,7 @@ export function GenerateBatchModal({
         {/* Step 3 — Review & Create */}
         {step === 2 && !created && (
           <div className="space-y-3">
-            <div className="rounded-lg border bg-muted/30 p-4">
+            <div className="bg-muted/30 rounded-lg border p-4">
               <dl className="space-y-2.5 text-sm">
                 <div className="flex items-center justify-between">
                   <dt className="text-muted-foreground">Batch name</dt>
@@ -353,7 +357,7 @@ export function GenerateBatchModal({
               <p className="font-medium">Batch created</p>
               <p className="text-muted-foreground text-sm">
                 {created.totalCards.toLocaleString()} cards added to{" "}
-                <span className="font-medium text-foreground">
+                <span className="text-foreground font-medium">
                   {created.name}
                 </span>
                 .
@@ -378,7 +382,7 @@ export function GenerateBatchModal({
             )}
             <p className="text-muted-foreground text-xs">
               Now visible in the{" "}
-              <span className="font-medium text-foreground">Inventory</span>{" "}
+              <span className="text-foreground font-medium">Inventory</span>{" "}
               tab.
             </p>
           </div>

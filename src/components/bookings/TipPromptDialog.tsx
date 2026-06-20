@@ -246,14 +246,14 @@ export function TipPromptDialog({
                     "relative flex flex-col items-center gap-0.5 rounded-xl border-2 px-3 py-3 text-center transition-all",
                     isSelected
                       ? "border-primary bg-primary/10 text-primary shadow-sm"
-                      : "hover:border-primary/40 hover:bg-muted/50 border-transparent bg-muted/30",
+                      : "hover:border-primary/40 hover:bg-muted/50 bg-muted/30 border-transparent",
                     isPreferred &&
                       !isSelected &&
                       "border-primary/30 bg-primary/5",
                   )}
                 >
                   {isPreferred && (
-                    <span className="bg-primary text-primary-foreground absolute -top-2 left-1/2 flex -translate-x-1/2 items-center gap-0.5 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide uppercase whitespace-nowrap shadow-sm">
+                    <span className="bg-primary text-primary-foreground absolute -top-2 left-1/2 flex -translate-x-1/2 items-center gap-0.5 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide whitespace-nowrap uppercase shadow-sm">
                       <Sparkles className="size-2.5" /> Most popular
                     </span>
                   )}
@@ -290,7 +290,7 @@ export function TipPromptDialog({
                 "flex flex-col items-center justify-center rounded-xl border-2 px-3 py-3 text-center transition-all",
                 showCustom
                   ? "border-primary bg-primary/10 text-primary"
-                  : "border-transparent bg-muted/30 hover:border-primary/40 hover:bg-muted/50",
+                  : "bg-muted/30 hover:border-primary/40 hover:bg-muted/50 border-transparent",
               )}
             >
               <span className="text-sm font-bold">Custom</span>

@@ -26,7 +26,11 @@ interface DashboardFiltersContextValue {
 
 const Ctx = createContext<DashboardFiltersContextValue | null>(null);
 
-export function DashboardFiltersProvider({ children }: { children: ReactNode }) {
+export function DashboardFiltersProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [tab, setTabState] = useState<BoardTab>("scheduled");
   const [serviceFilter, setServiceFilterState] = useState<string>("all");
   const [query, setQuery] = useState("");

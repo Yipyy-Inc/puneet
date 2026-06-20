@@ -32,9 +32,9 @@ export function SavedRepliesMenu({
   onClose: () => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [categoryFilter, setCategoryFilter] = useState<SavedReplyCategory | "all">(
-    "all",
-  );
+  const [categoryFilter, setCategoryFilter] = useState<
+    SavedReplyCategory | "all"
+  >("all");
   const listRef = useRef<HTMLDivElement>(null);
 
   const trimmedQuery = query.trim().toLowerCase();
@@ -95,7 +95,7 @@ export function SavedRepliesMenu({
     <div className="absolute bottom-full left-0 z-30 mb-2 w-[420px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
       <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/80 px-4 py-2.5">
         <Bookmark className="size-3.5 text-emerald-600" />
-        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+        <span className="text-[11px] font-bold tracking-wider text-slate-500 uppercase">
           Saved Replies
         </span>
         {trimmedQuery && (
@@ -124,7 +124,7 @@ export function SavedRepliesMenu({
         </button>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto border-b border-slate-100 px-3 py-2 scrollbar-none">
+      <div className="scrollbar-none flex gap-1 overflow-x-auto border-b border-slate-100 px-3 py-2">
         <button
           type="button"
           onClick={() => setCategoryFilter("all")}
@@ -178,7 +178,7 @@ export function SavedRepliesMenu({
               <div className="flex items-center gap-2">
                 <span
                   className={cn(
-                    "rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
+                    "rounded-full border px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase",
                     SAVED_REPLY_CATEGORY_COLORS[reply.category],
                   )}
                 >

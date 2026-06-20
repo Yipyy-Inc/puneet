@@ -116,7 +116,10 @@ export function StaffPerformanceClient({ staff, locations }: Props) {
                     <strong>
                       {ratingDivergence.bestLocation?.shortCode}{" "}
                       {selected.locations
-                        .find((l) => l.locationId === ratingDivergence.bestLocation?.id)
+                        .find(
+                          (l) =>
+                            l.locationId === ratingDivergence.bestLocation?.id,
+                        )
                         ?.avgRating.toFixed(1)}
                       ★
                     </strong>{" "}
@@ -124,7 +127,10 @@ export function StaffPerformanceClient({ staff, locations }: Props) {
                     <strong>
                       {ratingDivergence.worstLocation?.shortCode}{" "}
                       {selected.locations
-                        .find((l) => l.locationId === ratingDivergence.worstLocation?.id)
+                        .find(
+                          (l) =>
+                            l.locationId === ratingDivergence.worstLocation?.id,
+                        )
                         ?.avgRating.toFixed(1)}
                       ★
                     </strong>{" "}
@@ -163,7 +169,10 @@ export function StaffPerformanceClient({ staff, locations }: Props) {
                       label="Avg rating"
                       value={`${loc.avgRating.toFixed(1)}★`}
                       icon={
-                        <Star className="size-4 text-amber-500" fill="currentColor" />
+                        <Star
+                          className="size-4 text-amber-500"
+                          fill="currentColor"
+                        />
                       }
                     />
                     <MetricRow
@@ -208,7 +217,7 @@ export function StaffPerformanceClient({ staff, locations }: Props) {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                    <tr className="text-muted-foreground border-b text-left text-[11px] tracking-wider uppercase">
                       <th className="px-4 py-2 font-semibold">Metric</th>
                       {selected.locations.map((loc) => {
                         const fullLoc = locations.find(
@@ -228,11 +237,31 @@ export function StaffPerformanceClient({ staff, locations }: Props) {
                   </thead>
                   <tbody className="divide-y">
                     {[
-                      { key: "bookings", label: "Bookings", format: (v: number) => v.toLocaleString() },
-                      { key: "avgRating", label: "Avg rating", format: (v: number) => `${v.toFixed(1)}★` },
-                      { key: "completionRate", label: "Completion rate", format: (v: number) => `${v}%` },
-                      { key: "revenueGenerated", label: "Revenue generated", format: (v: number) => `$${v.toLocaleString()}` },
-                      { key: "hoursWorked", label: "Hours worked", format: (v: number) => `${v}h` },
+                      {
+                        key: "bookings",
+                        label: "Bookings",
+                        format: (v: number) => v.toLocaleString(),
+                      },
+                      {
+                        key: "avgRating",
+                        label: "Avg rating",
+                        format: (v: number) => `${v.toFixed(1)}★`,
+                      },
+                      {
+                        key: "completionRate",
+                        label: "Completion rate",
+                        format: (v: number) => `${v}%`,
+                      },
+                      {
+                        key: "revenueGenerated",
+                        label: "Revenue generated",
+                        format: (v: number) => `$${v.toLocaleString()}`,
+                      },
+                      {
+                        key: "hoursWorked",
+                        label: "Hours worked",
+                        format: (v: number) => `${v}h`,
+                      },
                     ].map((row) => {
                       const values = selected.locations.map(
                         (l) => l[row.key as keyof typeof l] as number,
@@ -240,7 +269,7 @@ export function StaffPerformanceClient({ staff, locations }: Props) {
                       const max = Math.max(...values);
                       return (
                         <tr key={row.key}>
-                          <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                          <td className="text-muted-foreground px-4 py-2.5 text-xs">
                             {row.label}
                           </td>
                           {selected.locations.map((loc) => {

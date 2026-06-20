@@ -66,8 +66,7 @@ export function BookingDetailsSection({
           </div>
           <div className="bg-muted/40 rounded-lg border p-4">
             <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
-              <Calendar className="size-3" />{" "}
-              {isMultiDay ? "Dates" : "Date"}
+              <Calendar className="size-3" /> {isMultiDay ? "Dates" : "Date"}
             </div>
             <p className="text-lg font-semibold">
               {formatDate(booking.startDate)}

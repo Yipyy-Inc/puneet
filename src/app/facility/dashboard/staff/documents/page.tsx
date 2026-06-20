@@ -160,7 +160,7 @@ export default function StaffDocumentsPage() {
 
         {myDocs.length === 0 ? (
           <div className="border-border/60 flex flex-col items-center rounded-xl border border-dashed p-12 text-center">
-            <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-muted">
+            <div className="bg-muted mb-3 flex size-12 items-center justify-center rounded-full">
               <FolderOpen className="text-muted-foreground size-6 opacity-60" />
             </div>
             <p className="font-semibold">No documents shared yet</p>
@@ -180,16 +180,18 @@ export default function StaffDocumentsPage() {
   }
 
   // ── Manager view (compliance dashboard) ──────────────────────────────────
-  return <ComplianceDashboard
-    search={search}
-    setSearch={setSearch}
-    typeFilter={typeFilter}
-    setTypeFilter={setTypeFilter}
-    statusFilter={statusFilter}
-    setStatusFilter={setStatusFilter}
-    expandedEmployee={expandedEmployee}
-    setExpandedEmployee={setExpandedEmployee}
-  />;
+  return (
+    <ComplianceDashboard
+      search={search}
+      setSearch={setSearch}
+      typeFilter={typeFilter}
+      setTypeFilter={setTypeFilter}
+      statusFilter={statusFilter}
+      setStatusFilter={setStatusFilter}
+      expandedEmployee={expandedEmployee}
+      setExpandedEmployee={setExpandedEmployee}
+    />
+  );
 }
 
 // ── Compliance dashboard (manager only) ───────────────────────────────────────
@@ -227,7 +229,8 @@ function ComplianceDashboard({
     return allDocs.filter((d) => {
       if (typeFilter !== "all" && d.type !== typeFilter) return false;
       if (statusFilter === "expired" && !isExpired(d.expiresAt)) return false;
-      if (statusFilter === "expiring" && !isExpiringSoon(d.expiresAt)) return false;
+      if (statusFilter === "expiring" && !isExpiringSoon(d.expiresAt))
+        return false;
       if (statusFilter === "valid") {
         if (isExpired(d.expiresAt) || isExpiringSoon(d.expiresAt)) return false;
       }
@@ -412,16 +415,13 @@ function ComplianceDashboard({
                 return (
                   <Card key={group.id} className="overflow-hidden">
                     <button
-                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/30"
+                      className="hover:bg-muted/30 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors"
                       onClick={() =>
                         setExpandedEmployee(isExpanded ? null : group.id)
                       }
                     >
                       <Avatar className="size-8 shrink-0">
-                        <AvatarImage
-                          src={group.avatarUrl}
-                          alt={group.name}
-                        />
+                        <AvatarImage src={group.avatarUrl} alt={group.name} />
                         <AvatarFallback className="bg-slate-100 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                           {initials}
                         </AvatarFallback>
@@ -446,8 +446,7 @@ function ComplianceDashboard({
                           )}
                         </div>
                         <p className="text-muted-foreground text-[11px]">
-                          {group.roleLabel} ·{" "}
-                          {group.docs.length} document
+                          {group.roleLabel} · {group.docs.length} document
                           {group.docs.length !== 1 ? "s" : ""}
                         </p>
                       </div>
@@ -458,14 +457,10 @@ function ComplianceDashboard({
                     </button>
 
                     {isExpanded && (
-                      <CardContent className="border-t px-3 pb-3 pt-2.5">
+                      <CardContent className="border-t px-3 pt-2.5 pb-3">
                         <div className="space-y-2">
                           {group.docs.map((doc) => (
-                            <DocRow
-                              key={doc.id}
-                              doc={doc}
-                              isManager={true}
-                            />
+                            <DocRow key={doc.id} doc={doc} isManager={true} />
                           ))}
                         </div>
                       </CardContent>
@@ -511,10 +506,7 @@ function ComplianceDashboard({
                       <span className={cn("text-sm font-semibold", meta.text)}>
                         {meta.label}
                       </span>
-                      <Badge
-                        variant="secondary"
-                        className="ml-0.5 text-[10px]"
-                      >
+                      <Badge variant="secondary" className="ml-0.5 text-[10px]">
                         {docs.length}
                       </Badge>
                       {expiredInType > 0 && (

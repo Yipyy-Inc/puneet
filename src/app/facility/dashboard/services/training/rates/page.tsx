@@ -39,10 +39,14 @@ function loadTrainingAddOns(): ServiceAddOn[] {
   if (typeof window === "undefined") return defaultServiceAddOns;
   try {
     const raw = localStorage.getItem("settings-service-addons");
-    const all = raw ? (JSON.parse(raw) as ServiceAddOn[]) : defaultServiceAddOns;
+    const all = raw
+      ? (JSON.parse(raw) as ServiceAddOn[])
+      : defaultServiceAddOns;
     return all.filter((a) => a.applicableServices.includes("training"));
   } catch {
-    return defaultServiceAddOns.filter((a) => a.applicableServices.includes("training"));
+    return defaultServiceAddOns.filter((a) =>
+      a.applicableServices.includes("training"),
+    );
   }
 }
 
@@ -63,9 +67,8 @@ export default function TrainingRatesPage() {
   const [editingProgram, setEditingProgram] = useState<TrainingPackage | null>(
     null,
   );
-  const [deletingProgram, setDeletingProgram] = useState<TrainingPackage | null>(
-    null,
-  );
+  const [deletingProgram, setDeletingProgram] =
+    useState<TrainingPackage | null>(null);
 
   const activeCount = programs.filter((p) => p.isActive).length;
   const avgPrice = programs.length
@@ -117,7 +120,9 @@ export default function TrainingRatesPage() {
           : [...prev, next],
     );
 
-    toast.success(editing ? `"${next.name}" updated` : `"${next.name}" created`);
+    toast.success(
+      editing ? `"${next.name}" updated` : `"${next.name}" created`,
+    );
     setProgramDialogOpen(false);
     setEditingProgram(null);
   }
@@ -170,8 +175,8 @@ export default function TrainingRatesPage() {
               Course Catalog
             </Link>
             . Programs below are <span className="font-medium">optional</span>{" "}
-            multi-session packages &amp; pricing bundles built on top of a course
-            type — they don&apos;t create new bookable course types.
+            multi-session packages &amp; pricing bundles built on top of a
+            course type — they don&apos;t create new bookable course types.
           </p>
           <p className="text-[13px] text-blue-800/90">
             To add a new kind of training a client can book, create a{" "}
@@ -251,19 +256,21 @@ export default function TrainingRatesPage() {
       </div>
 
       <Tabs defaultValue="programs" className="space-y-4">
-        <TabsList className="bg-slate-100 border">
+        <TabsList className="border bg-slate-100">
           <TabsTrigger value="programs">
             Programs ({programs.length})
           </TabsTrigger>
-          <TabsTrigger value="addons">Add-ons ({trainingAddOns.length})</TabsTrigger>
+          <TabsTrigger value="addons">
+            Add-ons ({trainingAddOns.length})
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Programs Tab ── */}
         <TabsContent value="programs" className="mt-0 space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-muted-foreground text-sm">
-              Each program is an optional multi-session package built on a course
-              type — a pricing bundle, not a separate bookable course.
+              Each program is an optional multi-session package built on a
+              course type — a pricing bundle, not a separate bookable course.
             </p>
             <Button
               size="sm"
@@ -301,8 +308,8 @@ export default function TrainingRatesPage() {
             <>
               <p className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">
                 <MoveVertical className="size-3" />
-                Drag any card to reorder — this is the order programs appear
-                on the online booking page.
+                Drag any card to reorder — this is the order programs appear on
+                the online booking page.
               </p>
               <ProgramCardGrid
                 programs={programs}
@@ -372,7 +379,6 @@ export default function TrainingRatesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

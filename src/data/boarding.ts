@@ -40,9 +40,27 @@ export type {
 // Facility-level feeding schedule configuration
 export const facilityFeedingConfig: FacilityFeedingConfig = {
   slots: [
-    { id: "slot-breakfast", label: "Breakfast", time: "07:30", enabled: true, sortOrder: 0 },
-    { id: "slot-lunch", label: "Lunch", time: "12:00", enabled: false, sortOrder: 1 },
-    { id: "slot-dinner", label: "Dinner", time: "18:00", enabled: true, sortOrder: 2 },
+    {
+      id: "slot-breakfast",
+      label: "Breakfast",
+      time: "07:30",
+      enabled: true,
+      sortOrder: 0,
+    },
+    {
+      id: "slot-lunch",
+      label: "Lunch",
+      time: "12:00",
+      enabled: false,
+      sortOrder: 1,
+    },
+    {
+      id: "slot-dinner",
+      label: "Dinner",
+      time: "18:00",
+      enabled: true,
+      sortOrder: 2,
+    },
   ],
   showMedicationsInChecklist: true,
   matchWindowMinutes: 90,
@@ -95,12 +113,55 @@ export const boardingRates: BoardingRate[] = [
 ];
 
 export const boardingAddOns: BoardingAddOn[] = [
-  { id: "bo-ao-001", name: "Mid-Day Walk", description: "Extra 20-minute outdoor walk in the afternoon.", price: 12, duration: 20, isActive: true },
-  { id: "bo-ao-002", name: "Cuddle & Snuggle Session", description: "Staff one-on-one cuddle time for dogs that need extra comfort.", price: 15, duration: 20, isActive: true },
-  { id: "bo-ao-003", name: "Bathtime Add-on", description: "Full bath and blow-dry before checkout.", price: 30, duration: 45, isActive: true },
-  { id: "bo-ao-004", name: "Teeth Brushing", description: "Daily teeth brushing with enzymatic pet toothpaste.", price: 8, duration: 5, isActive: true },
-  { id: "bo-ao-005", name: "Webcam Check-in", description: "Owner receives a live webcam photo update once per day.", price: 5, duration: 5, isActive: true },
-  { id: "bo-ao-006", name: "Enrichment Toy Rotation", description: "A new enrichment toy brought to the kennel each morning.", price: 10, duration: 10, isActive: false },
+  {
+    id: "bo-ao-001",
+    name: "Mid-Day Walk",
+    description: "Extra 20-minute outdoor walk in the afternoon.",
+    price: 12,
+    duration: 20,
+    isActive: true,
+  },
+  {
+    id: "bo-ao-002",
+    name: "Cuddle & Snuggle Session",
+    description:
+      "Staff one-on-one cuddle time for dogs that need extra comfort.",
+    price: 15,
+    duration: 20,
+    isActive: true,
+  },
+  {
+    id: "bo-ao-003",
+    name: "Bathtime Add-on",
+    description: "Full bath and blow-dry before checkout.",
+    price: 30,
+    duration: 45,
+    isActive: true,
+  },
+  {
+    id: "bo-ao-004",
+    name: "Teeth Brushing",
+    description: "Daily teeth brushing with enzymatic pet toothpaste.",
+    price: 8,
+    duration: 5,
+    isActive: true,
+  },
+  {
+    id: "bo-ao-005",
+    name: "Webcam Check-in",
+    description: "Owner receives a live webcam photo update once per day.",
+    price: 5,
+    duration: 5,
+    isActive: true,
+  },
+  {
+    id: "bo-ao-006",
+    name: "Enrichment Toy Rotation",
+    description: "A new enrichment toy brought to the kennel each morning.",
+    price: 10,
+    duration: 10,
+    isActive: false,
+  },
 ];
 
 // Mock multi-night discounts
@@ -496,7 +557,8 @@ export const boardingGuests: BoardingGuest[] = [
         dosage: "50mg",
         frequency: "Every other day",
         times: ["20:00"],
-        instructions: "Give with food. For anxiety — monitor for excessive sedation.",
+        instructions:
+          "Give with food. For anxiety — monitor for excessive sedation.",
         requiresPhotoProof: false,
         frequencyRule: { type: "every_other_day" as const, startDayOfStay: 1 },
       },
@@ -587,7 +649,8 @@ export const boardingGuests: BoardingGuest[] = [
     postSurgery: {
       procedureType: "IVDD Spinal Decompression",
       surgeryDate: "2026-04-18",
-      vetInstructions: "Strict crate rest. No jumping or stairs. Monitor incision site for redness/swelling. Restrict activity for 6 weeks.",
+      vetInstructions:
+        "Strict crate rest. No jumping or stairs. Monitor incision site for redness/swelling. Restrict activity for 6 weeks.",
       monitoringIntervalHours: 3,
     },
     tags: ["No Jumping", "No Stairs", "Senior", "Medical Condition"],
@@ -668,7 +731,8 @@ export const boardingGuests: BoardingGuest[] = [
     heatCycle: {
       startDate: "2026-04-20",
       dayNumber: 4,
-      notes: "Moderate discharge. Behaviorally normal. Keep separated from intact males.",
+      notes:
+        "Moderate discharge. Behaviorally normal. Keep separated from intact males.",
     },
     tags: ["Escape Artist", "Barker", "High Energy"],
     notes: "Escape artist — double-check all latches. Loves howling at 6am.",
@@ -934,7 +998,8 @@ export const facilityDailyCareConfig: FacilityDailyCareConfig = {
       name: "Morning Potty Round",
       time: "06:00",
       taskType: "potty",
-      description: "Take all dogs outside for the first bathroom break of the day",
+      description:
+        "Take all dogs outside for the first bathroom break of the day",
       enabled: true,
       sortOrder: 0,
     },
@@ -943,7 +1008,8 @@ export const facilityDailyCareConfig: FacilityDailyCareConfig = {
       name: "Breakfast",
       time: "07:30",
       taskType: "feeding",
-      description: "Feed all guests their morning meal per their individual feeding plan",
+      description:
+        "Feed all guests their morning meal per their individual feeding plan",
       enabled: true,
       sortOrder: 1,
     },
@@ -952,7 +1018,8 @@ export const facilityDailyCareConfig: FacilityDailyCareConfig = {
       name: "Morning Medications",
       time: "08:00",
       taskType: "medication",
-      description: "Administer morning medications to guests who have morning doses",
+      description:
+        "Administer morning medications to guests who have morning doses",
       enabled: true,
       sortOrder: 2,
     },
@@ -961,7 +1028,8 @@ export const facilityDailyCareConfig: FacilityDailyCareConfig = {
       name: "Crate Cleaning",
       time: "09:00",
       taskType: "kennel_clean",
-      description: "Clean and sanitize all kennels after morning potty and feeding",
+      description:
+        "Clean and sanitize all kennels after morning potty and feeding",
       enabled: true,
       sortOrder: 3,
     },
@@ -1006,7 +1074,8 @@ export const facilityDailyCareConfig: FacilityDailyCareConfig = {
       name: "Afternoon Add-Ons",
       time: "15:30",
       taskType: "addon",
-      description: "Scheduled afternoon add-on services (play sessions, walks, grooming)",
+      description:
+        "Scheduled afternoon add-on services (play sessions, walks, grooming)",
       enabled: true,
       sortOrder: 8,
     },
@@ -1015,7 +1084,8 @@ export const facilityDailyCareConfig: FacilityDailyCareConfig = {
       name: "Dinner",
       time: "18:00",
       taskType: "feeding",
-      description: "Evening meal for all guests per their individual feeding plan",
+      description:
+        "Evening meal for all guests per their individual feeding plan",
       enabled: true,
       sortOrder: 9,
     },
@@ -1024,7 +1094,8 @@ export const facilityDailyCareConfig: FacilityDailyCareConfig = {
       name: "Evening Medications",
       time: "18:30",
       taskType: "medication",
-      description: "Administer evening medications to guests who have evening doses",
+      description:
+        "Administer evening medications to guests who have evening doses",
       enabled: true,
       sortOrder: 10,
     },

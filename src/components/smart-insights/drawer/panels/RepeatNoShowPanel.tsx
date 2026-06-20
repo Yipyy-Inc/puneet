@@ -40,11 +40,61 @@ interface FlaggedBooking {
 }
 
 const FLAGGED: FlaggedBooking[] = [
-  { bookingId: "BK-22481", clientId: "c-901", clientName: "Pierre Lavoie", petName: "Otis", phone: "+1 514-555-0144", date: "May 22, 9:30 AM", service: "Grooming – Full", noShowCount: 3, value: 135 },
-  { bookingId: "BK-22517", clientId: "c-902", clientName: "Hannah Patel", petName: "Layla", phone: "+1 514-555-0211", date: "May 23, 11:00 AM", service: "Daycare", noShowCount: 2, value: 45 },
-  { bookingId: "BK-22634", clientId: "c-903", clientName: "Etienne Roy", petName: "Biscuit", phone: "+1 514-555-0319", date: "May 28, 2:00 PM", service: "Boarding (2 nights)", noShowCount: 2, value: 220 },
-  { bookingId: "BK-22708", clientId: "c-904", clientName: "Yuki Tanaka", petName: "Kuma", phone: "+1 514-555-0426", date: "May 30, 10:00 AM", service: "Grooming – Bath & Brush", noShowCount: 2, value: 80 },
-  { bookingId: "BK-22791", clientId: "c-905", clientName: "Marcus Wright", petName: "Diesel", phone: "+1 514-555-0532", date: "Jun 02, 3:30 PM", service: "Training (1 session)", noShowCount: 4, value: 160 },
+  {
+    bookingId: "BK-22481",
+    clientId: "c-901",
+    clientName: "Pierre Lavoie",
+    petName: "Otis",
+    phone: "+1 514-555-0144",
+    date: "May 22, 9:30 AM",
+    service: "Grooming – Full",
+    noShowCount: 3,
+    value: 135,
+  },
+  {
+    bookingId: "BK-22517",
+    clientId: "c-902",
+    clientName: "Hannah Patel",
+    petName: "Layla",
+    phone: "+1 514-555-0211",
+    date: "May 23, 11:00 AM",
+    service: "Daycare",
+    noShowCount: 2,
+    value: 45,
+  },
+  {
+    bookingId: "BK-22634",
+    clientId: "c-903",
+    clientName: "Etienne Roy",
+    petName: "Biscuit",
+    phone: "+1 514-555-0319",
+    date: "May 28, 2:00 PM",
+    service: "Boarding (2 nights)",
+    noShowCount: 2,
+    value: 220,
+  },
+  {
+    bookingId: "BK-22708",
+    clientId: "c-904",
+    clientName: "Yuki Tanaka",
+    petName: "Kuma",
+    phone: "+1 514-555-0426",
+    date: "May 30, 10:00 AM",
+    service: "Grooming – Bath & Brush",
+    noShowCount: 2,
+    value: 80,
+  },
+  {
+    bookingId: "BK-22791",
+    clientId: "c-905",
+    clientName: "Marcus Wright",
+    petName: "Diesel",
+    phone: "+1 514-555-0532",
+    date: "Jun 02, 3:30 PM",
+    service: "Training (1 session)",
+    noShowCount: 4,
+    value: 160,
+  },
 ];
 
 const DEFAULT_SMS = `Hi {{firstName}}, this is Doggieville confirming {{petName}}'s appointment on {{date}}. Our cancellation policy: please give 24-hour notice or a no-show fee may apply. Reply YES to confirm, or call us at (514) 555-0100. Thanks!`;
@@ -68,9 +118,12 @@ export function RepeatNoShowPanel({ onComplete, onCancel }: InsightPanelProps) {
               <MessageSquare className="size-5" />
             </span>
             <span className="flex-1">
-              <span className="block font-semibold">Send appointment reminder</span>
+              <span className="block font-semibold">
+                Send appointment reminder
+              </span>
               <span className="text-muted-foreground mt-0.5 block text-xs">
-                Personalized SMS confirming the booking and citing your cancellation policy
+                Personalized SMS confirming the booking and citing your
+                cancellation policy
               </span>
             </span>
           </button>
@@ -84,7 +137,9 @@ export function RepeatNoShowPanel({ onComplete, onCancel }: InsightPanelProps) {
               <DollarSign className="size-5" />
             </span>
             <span className="flex-1">
-              <span className="block font-semibold">Require a deposit (one-time)</span>
+              <span className="block font-semibold">
+                Require a deposit (one-time)
+              </span>
               <span className="text-muted-foreground mt-0.5 block text-xs">
                 Adds a deposit requirement to each flagged booking
               </span>
@@ -99,7 +154,9 @@ export function RepeatNoShowPanel({ onComplete, onCancel }: InsightPanelProps) {
   }
 
   if (mode === "sms") {
-    return <SmsFlow onBack={() => setMode("menu")} onComplete={() => onComplete()} />;
+    return (
+      <SmsFlow onBack={() => setMode("menu")} onComplete={() => onComplete()} />
+    );
   }
 
   return (
@@ -113,7 +170,7 @@ export function RepeatNoShowPanel({ onComplete, onCancel }: InsightPanelProps) {
 function FlaggedList() {
   return (
     <div className="rounded-lg border bg-slate-50 p-3">
-      <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+      <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs tracking-wide uppercase">
         <AlertOctagon className="size-3.5" />
         {FLAGGED.length} flagged bookings
       </div>
@@ -145,7 +202,10 @@ function FlaggedList() {
                 · {b.service}
               </p>
             </div>
-            <Badge variant="outline" className="border-red-200 bg-red-50 text-red-800">
+            <Badge
+              variant="outline"
+              className="border-red-200 bg-red-50 text-red-800"
+            >
               {b.noShowCount} no-shows
             </Badge>
           </li>
@@ -244,7 +304,7 @@ function DepositFlow({
       <div className="flex h-full flex-col gap-5 px-1">
         <BackHeader onBack={onBack} label="Require deposit" />
         <div className="rounded-lg border bg-slate-50 p-3 text-sm">
-          <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+          <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs tracking-wide uppercase">
             Booking {idx + 1} of {FLAGGED.length}
           </div>
           <p className="font-semibold">
@@ -263,7 +323,7 @@ function DepositFlow({
         <div className="space-y-2">
           <Label htmlFor="deposit-amount">Deposit amount</Label>
           <div className="relative">
-            <span className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 text-sm">
+            <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
               $
             </span>
             <Input
@@ -298,7 +358,10 @@ function DepositFlow({
 
   return (
     <div className="flex h-full flex-col gap-5 px-1">
-      <BackHeader onBack={() => setStep("sequence")} label="Confirm deposit overrides" />
+      <BackHeader
+        onBack={() => setStep("sequence")}
+        label="Confirm deposit overrides"
+      />
       <ConfirmBeforeModify
         title="Apply deposit override to all flagged bookings"
         changes={FLAGGED.map((b) => ({
@@ -324,7 +387,7 @@ function BackHeader({ onBack, label }: { onBack: () => void; label: string }) {
     <button
       type="button"
       onClick={onBack}
-      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs uppercase tracking-wide transition-colors"
+      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs tracking-wide uppercase transition-colors"
     >
       <ArrowLeft className="size-3.5" />
       {label}

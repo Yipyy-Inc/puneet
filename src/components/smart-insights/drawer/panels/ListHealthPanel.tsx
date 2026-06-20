@@ -19,7 +19,7 @@ const NON_OPENERS_90D = 418;
 
 const SUBJECT_SUGGESTIONS = [
   "Lead with the value, not the brand name — open rates climb ~30% when the subject describes what the reader gets.",
-  "Use a number — \"3 things…\" or \"$15 off…\" outperforms generic openers.",
+  'Use a number — "3 things…" or "$15 off…" outperforms generic openers.',
   "Test personalization with pet name vs. owner name. Pet name often wins in pet-services email.",
   "Keep it under 50 characters — anything longer truncates on mobile preview.",
 ];
@@ -41,7 +41,7 @@ export function ListHealthPanel({ onComplete, onCancel }: InsightPanelProps) {
     return (
       <div className="flex h-full flex-col gap-5 px-1">
         <div className="rounded-lg border bg-red-50 p-3 text-sm">
-          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-red-900">
+          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-red-900 uppercase">
             <MailWarning className="size-3.5" />
             Last 3 campaigns averaged 11% open · benchmark 15%
           </div>
@@ -79,11 +79,17 @@ export function ListHealthPanel({ onComplete, onCancel }: InsightPanelProps) {
   if (mode === "suppress") {
     return (
       <div className="flex h-full flex-col gap-5 px-1">
-        <BackHeader onBack={() => setMode("menu")} label="Suppress non-openers" />
+        <BackHeader
+          onBack={() => setMode("menu")}
+          label="Suppress non-openers"
+        />
         <ConfirmBeforeModify
           title="Create suppression list"
           changes={[
-            { field: "List name", to: `Non-openers · 90 days · ${new Date().toLocaleDateString()}` },
+            {
+              field: "List name",
+              to: `Non-openers · 90 days · ${new Date().toLocaleDateString()}`,
+            },
             { field: "Members", to: `${NON_OPENERS_90D} clients` },
             { field: "Applied to", to: "Next campaign by default" },
           ]}
@@ -104,7 +110,10 @@ export function ListHealthPanel({ onComplete, onCancel }: InsightPanelProps) {
   if (mode === "subject") {
     return (
       <div className="flex h-full flex-col gap-5 px-1">
-        <BackHeader onBack={() => setMode("menu")} label="Subject-line best practices" />
+        <BackHeader
+          onBack={() => setMode("menu")}
+          label="Subject-line best practices"
+        />
         <div className="rounded-lg border bg-slate-50 p-3 text-sm">
           <p className="font-semibold">Suggestions</p>
           <ul className="text-muted-foreground mt-2 list-disc space-y-1.5 pl-5 text-xs">
@@ -131,7 +140,10 @@ export function ListHealthPanel({ onComplete, onCancel }: InsightPanelProps) {
 
   return (
     <div className="flex h-full flex-col gap-5 px-1">
-      <BackHeader onBack={() => setMode("menu")} label="Campaign frequency · 30 days" />
+      <BackHeader
+        onBack={() => setMode("menu")}
+        label="Campaign frequency · 30 days"
+      />
       <ul className="space-y-2">
         {FREQUENCY_LOG.map((c, idx) => (
           <li
@@ -142,16 +154,19 @@ export function ListHealthPanel({ onComplete, onCancel }: InsightPanelProps) {
               <p className="font-medium">{c.name}</p>
               <p className="text-muted-foreground text-xs">Sent {c.sentOn}</p>
             </div>
-            <Badge variant="outline" className="border-red-200 bg-red-50 text-red-800">
+            <Badge
+              variant="outline"
+              className="border-red-200 bg-red-50 text-red-800"
+            >
               {c.openRate}
             </Badge>
           </li>
         ))}
       </ul>
       <p className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
-        {FREQUENCY_LOG.length} campaigns in the past 30 days is on the high
-        end. Consider trimming to 2–3 monthly campaigns and giving each one a
-        clearer value proposition.
+        {FREQUENCY_LOG.length} campaigns in the past 30 days is on the high end.
+        Consider trimming to 2–3 monthly campaigns and giving each one a clearer
+        value proposition.
       </p>
       <div className="mt-auto">
         <DrawerFooter
@@ -187,7 +202,9 @@ function Option({
       </span>
       <span className="flex-1">
         <span className="block font-semibold">{label}</span>
-        <span className="text-muted-foreground mt-0.5 block text-xs">{description}</span>
+        <span className="text-muted-foreground mt-0.5 block text-xs">
+          {description}
+        </span>
       </span>
     </button>
   );
@@ -198,7 +215,7 @@ function BackHeader({ onBack, label }: { onBack: () => void; label: string }) {
     <button
       type="button"
       onClick={onBack}
-      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs uppercase tracking-wide transition-colors"
+      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs tracking-wide uppercase transition-colors"
     >
       <ArrowLeft className="size-3.5" />
       {label}

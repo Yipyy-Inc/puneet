@@ -59,8 +59,7 @@ export function useLocationScope() {
         ? currentLocationId
         : null;
 
-    const effectiveIsHqView =
-      isHQView && (isOwner || isGeneralManager);
+    const effectiveIsHqView = isHQView && (isOwner || isGeneralManager);
 
     const activeLocationIds: string[] = effectiveIsHqView
       ? accessibleLocationIds
@@ -72,7 +71,8 @@ export function useLocationScope() {
 
     const canViewHq = isOwner || isGeneralManager;
     const canManageHq = isOwner;
-    const canManageLocation = isOwner || isGeneralManager || isDepartmentManager;
+    const canManageLocation =
+      isOwner || isGeneralManager || isDepartmentManager;
 
     return {
       // Identity
@@ -112,7 +112,8 @@ export function useLocationScope() {
       ): T[] => {
         if (effectiveIsHqView) return items;
         return items.filter(
-          (item) => item.locationId && activeLocationIds.includes(item.locationId),
+          (item) =>
+            item.locationId && activeLocationIds.includes(item.locationId),
         );
       },
     };

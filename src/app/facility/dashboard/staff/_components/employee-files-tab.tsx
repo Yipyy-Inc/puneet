@@ -151,7 +151,7 @@ function DocumentCard({
   return (
     <div
       className={cn(
-        "rounded-xl border border-l-4 overflow-hidden border-border/50",
+        "border-border/50 overflow-hidden rounded-xl border border-l-4",
         TYPE_BORDER[doc.type],
       )}
     >
@@ -194,7 +194,9 @@ function DocumentCard({
                   className={cn(
                     "flex items-center gap-1",
                     expired && "text-red-500 dark:text-red-400",
-                    expiring && !expired && "text-amber-500 dark:text-amber-400",
+                    expiring &&
+                      !expired &&
+                      "text-amber-500 dark:text-amber-400",
                   )}
                 >
                   Expires {doc.expiresAt}
@@ -279,7 +281,7 @@ export function EmployeeFilesTab({ profile }: EmployeeFilesTabProps) {
   if (!isManager && !isOwnProfile) {
     return (
       <div className="flex flex-col items-center rounded-xl border border-dashed p-8 text-center">
-        <div className="mb-3 flex size-11 items-center justify-center rounded-full bg-muted">
+        <div className="bg-muted mb-3 flex size-11 items-center justify-center rounded-full">
           <LockKeyhole className="text-muted-foreground size-5" />
         </div>
         <p className="text-sm font-semibold">Employee files are private</p>
@@ -341,7 +343,7 @@ export function EmployeeFilesTab({ profile }: EmployeeFilesTabProps) {
           </div>
         )}
         <div className="border-border/60 flex flex-col items-center rounded-xl border border-dashed p-8 text-center">
-          <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-muted">
+          <div className="bg-muted mb-3 flex size-12 items-center justify-center rounded-full">
             <FolderOpen className="text-muted-foreground size-6 opacity-60" />
           </div>
           <p className="font-semibold">No documents on file</p>
@@ -383,7 +385,8 @@ export function EmployeeFilesTab({ profile }: EmployeeFilesTabProps) {
             <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
               {stats.expired > 0 && `${stats.expired} expired`}
               {stats.expired > 0 && stats.expiring > 0 && " · "}
-              {stats.expiring > 0 && `${stats.expiring} expiring within 90 days`}
+              {stats.expiring > 0 &&
+                `${stats.expiring} expiring within 90 days`}
             </p>
             <p className="mt-0.5 text-xs text-amber-600/80 dark:text-amber-400/70">
               Review and renew documents to keep this employee&apos;s file up to
@@ -402,8 +405,8 @@ export function EmployeeFilesTab({ profile }: EmployeeFilesTabProps) {
               Your employee files
             </p>
             <p className="mt-0.5 text-xs text-sky-600/80 dark:text-sky-400/70">
-              These are documents your employer has shared with you. Contact your
-              manager if you believe a document is missing or incorrect.
+              These are documents your employer has shared with you. Contact
+              your manager if you believe a document is missing or incorrect.
             </p>
           </div>
         </div>
@@ -417,12 +420,14 @@ export function EmployeeFilesTab({ profile }: EmployeeFilesTabProps) {
           </span>
           {stats.expired > 0 && (
             <Badge className="border-0 bg-red-500/10 text-[10px] text-red-600 dark:text-red-400">
-              <AlertTriangle className="mr-0.5 size-2.5" /> {stats.expired} expired
+              <AlertTriangle className="mr-0.5 size-2.5" /> {stats.expired}{" "}
+              expired
             </Badge>
           )}
           {stats.expiring > 0 && (
             <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400">
-              <Clock className="mr-0.5 size-2.5" /> {stats.expiring} expiring soon
+              <Clock className="mr-0.5 size-2.5" /> {stats.expiring} expiring
+              soon
             </Badge>
           )}
         </div>

@@ -64,7 +64,10 @@ const CURRENT_STAFF = "Sarah Johnson";
 
 const statusConfig: Record<
   string,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  }
 > = {
   active: { label: "Active", variant: "default" },
   redeemed: { label: "Fully Redeemed", variant: "secondary" },
@@ -214,7 +217,13 @@ export function GiftCardDetailSheet({
   const [cardEvents, setCardEvents] = useState<
     Record<
       string,
-      { id: string; timestamp: string; by: string; type: DrawerEventType; detail?: string }[]
+      {
+        id: string;
+        timestamp: string;
+        by: string;
+        type: DrawerEventType;
+        detail?: string;
+      }[]
     >
   >({});
 
@@ -228,7 +237,9 @@ export function GiftCardDetailSheet({
   const [extendDate, setExtendDate] = useState("");
   // Adjust Balance dialog.
   const [adjustOpen, setAdjustOpen] = useState(false);
-  const [adjustDirection, setAdjustDirection] = useState<"add" | "subtract">("add");
+  const [adjustDirection, setAdjustDirection] = useState<"add" | "subtract">(
+    "add",
+  );
   const [adjustAmount, setAdjustAmount] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
   // Local session overrides so Extend/Adjust update the drawer live (no backend).
@@ -452,7 +463,9 @@ export function GiftCardDetailSheet({
       (l) => l.giftCardId === card.id && l.timestamp === tx.timestamp,
     )?.performedBy;
     if (by) return by === "Online Purchase" ? "Online" : by;
-    return tx.type === "purchase" && card.type === "online" ? "Online" : "System";
+    return tx.type === "purchase" && card.type === "online"
+      ? "Online"
+      : "System";
   };
 
   // Transaction history merged with staff-action audit entries, newest first.
@@ -470,299 +483,308 @@ export function GiftCardDetailSheet({
       event: e,
     })),
   ].sort(
-    (a, b) =>
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
 
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
-        <SheetHeader className="border-b pb-4">
-          <SheetTitle className="flex items-center gap-2">
-            <Gift className="size-5" />
-            Gift Card Details
-          </SheetTitle>
-          <SheetDescription>
-            Full audit trail and balance information
-          </SheetDescription>
-        </SheetHeader>
+        <SheetContent className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
+          <SheetHeader className="border-b pb-4">
+            <SheetTitle className="flex items-center gap-2">
+              <Gift className="size-5" />
+              Gift Card Details
+            </SheetTitle>
+            <SheetDescription>
+              Full audit trail and balance information
+            </SheetDescription>
+          </SheetHeader>
 
-        <div className="flex-1 space-y-5 overflow-y-auto py-4">
-          {/* Balance card */}
-          <div className="rounded-xl bg-gradient-to-br from-violet-600 to-purple-700 p-5 text-white shadow-lg">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium opacity-80">Remaining Balance</p>
-                <p className="mt-1 text-4xl font-bold tracking-tight">
-                  ${balance.toFixed(2)}
-                </p>
-                <div className="mt-3 h-1.5 w-36 overflow-hidden rounded-full bg-white/20">
-                  <div
-                    className={cn(
-                      "h-full rounded-full transition-all",
-                      balanceBarColor,
-                    )}
-                    style={{ width: `${remainingPct}%` }}
-                  />
-                </div>
-                <p className="mt-1.5 text-xs opacity-70">
-                  ${usedAmount.toFixed(2)} used
-                </p>
-              </div>
-              <Badge
-                className={cn(
-                  "border-white/30 bg-white/20 text-white hover:bg-white/30",
-                  card.status === "active" && "bg-green-500/80",
-                  card.status === "expired" && "bg-red-500/80",
-                  card.status === "cancelled" && "bg-gray-500/80",
-                )}
-              >
-                {statusCfg.label}
-              </Badge>
-            </div>
-
-            <div className="mt-4 border-t border-white/20 pt-3">
-              <div className="flex items-center gap-2">
-                <p
-                  className={cn(
-                    "font-mono text-sm",
-                    revealed ? "opacity-90" : "opacity-60",
-                  )}
-                >
-                  {revealed ? card.code : maskCode(card.code)}
-                </p>
-                <button
-                  type="button"
-                  onClick={revealed ? () => setRevealedCardId(null) : handleReveal}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-md bg-white/15 px-1.5 py-0.5 text-[11px] font-medium text-white/90 transition-colors hover:bg-white/25"
-                  title={
-                    revealed
-                      ? "Hide card number"
-                      : "Reveal full card number (logged)"
-                  }
-                >
-                  {revealed ? (
-                    <EyeOff className="size-3" />
-                  ) : (
-                    <Eye className="size-3" />
-                  )}
-                  {revealed ? "Hide" : "Reveal"}
-                </button>
-              </div>
-              <p className="mt-0.5 text-xs opacity-50 capitalize">
-                {card.type} card ·{" "}
-                {neverExpires
-                  ? "Never expires"
-                  : expiryDate
-                    ? `Expires ${new Date(expiryDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
-                    : ""}
-              </p>
-            </div>
-          </div>
-
-          {/* Quick actions */}
-          {card.status === "active" && (
-            <div className="flex flex-wrap items-center gap-2">
-              <DrawerActionButton
-                icon={Mail}
-                label="Resend Email"
-                onClick={handleResend}
-                disabled={card.type !== "online"}
-                disabledTooltip="Not available for physical cards"
-              />
-              <DrawerActionButton
-                icon={CalendarPlus}
-                label="Extend Expiry"
-                onClick={openExtend}
-                disabled={!expiryEnabled}
-                disabledTooltip="Expiry is turned off in gift card Settings"
-              />
-              <DrawerActionButton
-                icon={SlidersHorizontal}
-                label="Adjust Balance"
-                onClick={openAdjust}
-              />
-              {onVoid && (
-                <DrawerActionButton
-                  icon={Ban}
-                  label="Void Card"
-                  destructive
-                  className="ml-auto"
-                  onClick={() => setVoidConfirmOpen(true)}
-                />
-              )}
-            </div>
-          )}
-
-          {/* Info grid */}
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            {card.purchasedBy && (
-              <div className="rounded-lg border p-3">
-                <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                  <User className="size-3" />
-                  Purchased By
-                </div>
-                <p className="mt-1 font-medium">
-                  {customerNameNode(card.purchasedByClientId, card.purchasedBy)}
-                </p>
-                {purchaser?.email && (
-                  <p className="text-muted-foreground text-xs">{purchaser.email}</p>
-                )}
-              </div>
-            )}
-
-            {card.recipientName && (
-              <div className="rounded-lg border p-3">
-                <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                  <User className="size-3" />
-                  Recipient
-                </div>
-                <p className="mt-1 font-medium">
-                  {customerNameNode(recipientClient?.id, card.recipientName)}
-                </p>
-                {card.recipientEmail && (
-                  <p className="text-muted-foreground flex items-center gap-1 text-xs">
-                    <Mail className="size-3" />
-                    {card.recipientEmail}
+          <div className="flex-1 space-y-5 overflow-y-auto py-4">
+            {/* Balance card */}
+            <div className="rounded-xl bg-gradient-to-br from-violet-600 to-purple-700 p-5 text-white shadow-lg">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium opacity-80">
+                    Remaining Balance
                   </p>
+                  <p className="mt-1 text-4xl font-bold tracking-tight">
+                    ${balance.toFixed(2)}
+                  </p>
+                  <div className="mt-3 h-1.5 w-36 overflow-hidden rounded-full bg-white/20">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all",
+                        balanceBarColor,
+                      )}
+                      style={{ width: `${remainingPct}%` }}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-xs opacity-70">
+                    ${usedAmount.toFixed(2)} used
+                  </p>
+                </div>
+                <Badge
+                  className={cn(
+                    "border-white/30 bg-white/20 text-white hover:bg-white/30",
+                    card.status === "active" && "bg-green-500/80",
+                    card.status === "expired" && "bg-red-500/80",
+                    card.status === "cancelled" && "bg-gray-500/80",
+                  )}
+                >
+                  {statusCfg.label}
+                </Badge>
+              </div>
+
+              <div className="mt-4 border-t border-white/20 pt-3">
+                <div className="flex items-center gap-2">
+                  <p
+                    className={cn(
+                      "font-mono text-sm",
+                      revealed ? "opacity-90" : "opacity-60",
+                    )}
+                  >
+                    {revealed ? card.code : maskCode(card.code)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={
+                      revealed ? () => setRevealedCardId(null) : handleReveal
+                    }
+                    className="inline-flex shrink-0 items-center gap-1 rounded-md bg-white/15 px-1.5 py-0.5 text-[11px] font-medium text-white/90 transition-colors hover:bg-white/25"
+                    title={
+                      revealed
+                        ? "Hide card number"
+                        : "Reveal full card number (logged)"
+                    }
+                  >
+                    {revealed ? (
+                      <EyeOff className="size-3" />
+                    ) : (
+                      <Eye className="size-3" />
+                    )}
+                    {revealed ? "Hide" : "Reveal"}
+                  </button>
+                </div>
+                <p className="mt-0.5 text-xs capitalize opacity-50">
+                  {card.type} card ·{" "}
+                  {neverExpires
+                    ? "Never expires"
+                    : expiryDate
+                      ? `Expires ${new Date(expiryDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                      : ""}
+                </p>
+              </div>
+            </div>
+
+            {/* Quick actions */}
+            {card.status === "active" && (
+              <div className="flex flex-wrap items-center gap-2">
+                <DrawerActionButton
+                  icon={Mail}
+                  label="Resend Email"
+                  onClick={handleResend}
+                  disabled={card.type !== "online"}
+                  disabledTooltip="Not available for physical cards"
+                />
+                <DrawerActionButton
+                  icon={CalendarPlus}
+                  label="Extend Expiry"
+                  onClick={openExtend}
+                  disabled={!expiryEnabled}
+                  disabledTooltip="Expiry is turned off in gift card Settings"
+                />
+                <DrawerActionButton
+                  icon={SlidersHorizontal}
+                  label="Adjust Balance"
+                  onClick={openAdjust}
+                />
+                {onVoid && (
+                  <DrawerActionButton
+                    icon={Ban}
+                    label="Void Card"
+                    destructive
+                    className="ml-auto"
+                    onClick={() => setVoidConfirmOpen(true)}
+                  />
                 )}
               </div>
             )}
 
-            <div className="rounded-lg border p-3">
-              <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                <Calendar className="size-3" />
-                Issued
-              </div>
-              <p className="mt-1 text-sm font-medium">
-                {new Date(card.purchaseDate).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </p>
-            </div>
+            {/* Info grid */}
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              {card.purchasedBy && (
+                <div className="rounded-lg border p-3">
+                  <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                    <User className="size-3" />
+                    Purchased By
+                  </div>
+                  <p className="mt-1 font-medium">
+                    {customerNameNode(
+                      card.purchasedByClientId,
+                      card.purchasedBy,
+                    )}
+                  </p>
+                  {purchaser?.email && (
+                    <p className="text-muted-foreground text-xs">
+                      {purchaser.email}
+                    </p>
+                  )}
+                </div>
+              )}
 
-            {card.lastUsedAt && (
+              {card.recipientName && (
+                <div className="rounded-lg border p-3">
+                  <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                    <User className="size-3" />
+                    Recipient
+                  </div>
+                  <p className="mt-1 font-medium">
+                    {customerNameNode(recipientClient?.id, card.recipientName)}
+                  </p>
+                  {card.recipientEmail && (
+                    <p className="text-muted-foreground flex items-center gap-1 text-xs">
+                      <Mail className="size-3" />
+                      {card.recipientEmail}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="rounded-lg border p-3">
                 <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                  <Clock className="size-3" />
-                  Last Used
+                  <Calendar className="size-3" />
+                  Issued
                 </div>
                 <p className="mt-1 text-sm font-medium">
-                  {new Date(card.lastUsedAt).toLocaleDateString("en-US", {
+                  {new Date(card.purchaseDate).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                     year: "numeric",
                   })}
                 </p>
               </div>
-            )}
-          </div>
 
-          {card.message && (
-            <div className="rounded-lg border p-3 text-sm">
-              <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs">
-                <MessageSquare className="size-3" />
-                Gift Message
-              </div>
-              <p className="italic">&quot;{card.message}&quot;</p>
+              {card.lastUsedAt && (
+                <div className="rounded-lg border p-3">
+                  <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                    <Clock className="size-3" />
+                    Last Used
+                  </div>
+                  <p className="mt-1 text-sm font-medium">
+                    {new Date(card.lastUsedAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
 
-          <Separator />
+            {card.message && (
+              <div className="rounded-lg border p-3 text-sm">
+                <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs">
+                  <MessageSquare className="size-3" />
+                  Gift Message
+                </div>
+                <p className="italic">&quot;{card.message}&quot;</p>
+              </div>
+            )}
 
-          {/* Transaction history */}
-          <div>
-            <h4 className="mb-3 font-semibold">Transaction History</h4>
-            {timeline.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No transactions yet</p>
-            ) : (
-              <div className="space-y-2">
-                {timeline.map((item) => {
-                  if (item.kind === "event") {
-                    const meta = eventMeta[item.event.type];
-                    const EventIcon = meta.icon;
+            <Separator />
+
+            {/* Transaction history */}
+            <div>
+              <h4 className="mb-3 font-semibold">Transaction History</h4>
+              {timeline.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  No transactions yet
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {timeline.map((item) => {
+                    if (item.kind === "event") {
+                      const meta = eventMeta[item.event.type];
+                      const EventIcon = meta.icon;
+                      return (
+                        <div
+                          key={item.key}
+                          className={cn(
+                            "flex items-start gap-3 rounded-lg p-3",
+                            meta.bg,
+                          )}
+                        >
+                          <div className="mt-0.5 flex size-7 items-center justify-center rounded-full bg-white dark:bg-black/20">
+                            <EventIcon className={cn("size-3.5", meta.color)} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-sm font-medium">
+                              {meta.label}
+                            </span>
+                            {item.event.detail && (
+                              <p className="text-muted-foreground mt-0.5 text-xs">
+                                {item.event.detail}
+                              </p>
+                            )}
+                            <p className="text-muted-foreground mt-0.5 text-xs">
+                              {formatDate(item.timestamp)} · by {item.event.by}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+                    const tx = item.tx;
+                    const cfg = txConfig[tx.type] ?? txConfig.purchase;
+                    const Icon = cfg.icon;
+                    const isDebit = tx.type !== "purchase";
                     return (
                       <div
                         key={item.key}
                         className={cn(
                           "flex items-start gap-3 rounded-lg p-3",
-                          meta.bg,
+                          cfg.bg,
                         )}
                       >
                         <div className="mt-0.5 flex size-7 items-center justify-center rounded-full bg-white dark:bg-black/20">
-                          <EventIcon className={cn("size-3.5", meta.color)} />
+                          <Icon className={cn("size-3.5", cfg.color)} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <span className="text-sm font-medium">
-                            {meta.label}
-                          </span>
-                          {item.event.detail && (
-                            <p className="text-muted-foreground mt-0.5 text-xs">
-                              {item.event.detail}
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="min-w-0 flex-1 text-sm">
+                              <span className="font-semibold">{cfg.label}</span>
+                              <span className="text-muted-foreground">
+                                {" · "}
+                                {txContext(tx)}
+                              </span>
                             </p>
-                          )}
-                          <p className="text-muted-foreground mt-0.5 text-xs">
-                            {formatDate(item.timestamp)} · by {item.event.by}
+                            <div className="shrink-0 text-right">
+                              <p
+                                className={cn(
+                                  "text-sm font-bold",
+                                  isDebit ? "text-red-600" : "text-green-600",
+                                )}
+                              >
+                                {isDebit ? "−" : "+"}${tx.amount.toFixed(2)}
+                              </p>
+                              <p className="text-muted-foreground text-xs">
+                                Bal: ${tx.balanceAfter.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            {formatDate(tx.timestamp)} · {txSource(tx)}
                           </p>
                         </div>
                       </div>
                     );
-                  }
-                  const tx = item.tx;
-                  const cfg = txConfig[tx.type] ?? txConfig.purchase;
-                  const Icon = cfg.icon;
-                  const isDebit = tx.type !== "purchase";
-                  return (
-                    <div
-                      key={item.key}
-                      className={cn(
-                        "flex items-start gap-3 rounded-lg p-3",
-                        cfg.bg,
-                      )}
-                    >
-                      <div className="mt-0.5 flex size-7 items-center justify-center rounded-full bg-white dark:bg-black/20">
-                        <Icon className={cn("size-3.5", cfg.color)} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="min-w-0 flex-1 text-sm">
-                            <span className="font-semibold">{cfg.label}</span>
-                            <span className="text-muted-foreground">
-                              {" · "}
-                              {txContext(tx)}
-                            </span>
-                          </p>
-                          <div className="shrink-0 text-right">
-                            <p
-                              className={cn(
-                                "text-sm font-bold",
-                                isDebit ? "text-red-600" : "text-green-600",
-                              )}
-                            >
-                              {isDebit ? "−" : "+"}${tx.amount.toFixed(2)}
-                            </p>
-                            <p className="text-muted-foreground text-xs">
-                              Bal: ${tx.balanceAfter.toFixed(2)}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-muted-foreground mt-1 text-xs">
-                          {formatDate(tx.timestamp)} · {txSource(tx)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-
-      </SheetContent>
-    </Sheet>
+        </SheetContent>
+      </Sheet>
 
       {/* Extend Expiry dialog */}
       <Dialog open={extendOpen} onOpenChange={setExtendOpen}>
@@ -853,7 +875,7 @@ export function GiftCardDetailSheet({
             <div className="space-y-1.5">
               <Label htmlFor="adjust-amount">Amount</Label>
               <div className="relative">
-                <span className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 text-sm">
+                <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
                   $
                 </span>
                 <Input

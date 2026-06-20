@@ -90,7 +90,9 @@ function OutcomeStrip({ insight }: { insight: Insight }) {
   const elapsedDays = Math.max(0, (Date.now() - takenAt) / dayMs);
   const daysRemaining = Math.max(0, Math.ceil(windowDays - elapsedDays));
   const pct =
-    target && target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
+    target && target > 0
+      ? Math.min(100, Math.round((current / target) * 100))
+      : 0;
   const isResolved = insight.status === "resolved";
 
   return (
@@ -102,7 +104,7 @@ function OutcomeStrip({ insight }: { insight: Insight }) {
       }`}
     >
       <div
-        className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-wide ${
+        className={`flex items-center gap-2 text-xs font-semibold tracking-wide uppercase ${
           isResolved ? "text-emerald-900" : "text-blue-900"
         }`}
       >
@@ -165,12 +167,15 @@ export function InsightCard({
     <Card
       data-priority={insight.priority}
       data-status={insight.status}
-      className="group space-y-2.5 rounded-xl border-2 border-border/80 bg-card p-3 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_-2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:-translate-y-0.5 hover:border-border hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.08),0_10px_20px_-4px_rgba(0,0,0,0.06)]"
+      className="group border-border/80 bg-card hover:border-border space-y-2.5 rounded-xl border-2 p-3 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_-2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.08),0_10px_20px_-4px_rgba(0,0,0,0.06)]"
     >
       {/* Top row: category badge (left) + priority + trend + status (right) */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant="outline" className={CATEGORY_CLASSES[insight.category]}>
+          <Badge
+            variant="outline"
+            className={CATEGORY_CLASSES[insight.category]}
+          >
             {INSIGHT_CATEGORY_LABELS[insight.category]}
           </Badge>
           {showLocation && <LocationTag locationName={insight.locationName} />}
@@ -193,7 +198,7 @@ export function InsightCard({
 
       {/* Title + description */}
       <div className="space-y-0.5">
-        <h3 className="text-sm font-bold leading-tight">{insight.title}</h3>
+        <h3 className="text-sm leading-tight font-bold">{insight.title}</h3>
         <p className="text-muted-foreground text-xs leading-snug">
           {insight.description}
         </p>
@@ -202,7 +207,7 @@ export function InsightCard({
       {/* Impact + Recommendation */}
       <div className="grid gap-2 md:grid-cols-2">
         <div className="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-900">
+          <p className="text-[10px] font-semibold tracking-wide text-blue-900 uppercase">
             💡 Impact
           </p>
           <p className="text-[12.5px] leading-snug text-blue-900">
@@ -210,7 +215,7 @@ export function InsightCard({
           </p>
         </div>
         <div className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-900">
+          <p className="text-[10px] font-semibold tracking-wide text-emerald-900 uppercase">
             ✨ Recommendation
           </p>
           <p className="text-[12.5px] leading-snug text-emerald-900">

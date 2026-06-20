@@ -190,9 +190,7 @@ export function AutomationRuleModal({
         {/* Location Scope */}
         <LocationScopeField
           value={formData.locationIds}
-          onChange={(next) =>
-            setFormData({ ...formData, locationIds: next })
-          }
+          onChange={(next) => setFormData({ ...formData, locationIds: next })}
         />
 
         {/* Message Type */}
@@ -395,8 +393,8 @@ function LocationScopeField({
     <div className="space-y-2">
       <Label>Location Scope</Label>
       <p className="text-muted-foreground text-xs">
-        Pick the locations this rule fires for. The message is stamped from
-        that location&apos;s name, phone, and branding.
+        Pick the locations this rule fires for. The message is stamped from that
+        location&apos;s name, phone, and branding.
       </p>
       <LocationScopePicker
         locations={locations}

@@ -22,19 +22,65 @@ const ROLE_CONFIG: Record<
   FacilityStaffRole,
   { label: string; icon: React.ElementType; color: string; bg: string }
 > = {
-  owner: { label: "Owner / Admin", icon: UserCog, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
-  manager: { label: "Manager", icon: Users, color: "text-violet-600", bg: "bg-violet-50 dark:bg-violet-950/30" },
-  reception: { label: "Reception / Front Desk", icon: MonitorSpeaker, color: "text-sky-600", bg: "bg-sky-50 dark:bg-sky-950/30" },
-  groomer: { label: "Groomer", icon: Scissors, color: "text-rose-600", bg: "bg-rose-50 dark:bg-rose-950/30" },
-  trainer: { label: "Trainer", icon: Dumbbell, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
-  daycare_attendant: { label: "Daycare Attendant", icon: Sun, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30" },
-  boarding_attendant: { label: "Boarding / Back of House", icon: Moon, color: "text-indigo-600", bg: "bg-indigo-50 dark:bg-indigo-950/30" },
-  sanitation: { label: "Sanitation", icon: Sparkles, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950/30" },
+  owner: {
+    label: "Owner / Admin",
+    icon: UserCog,
+    color: "text-amber-600",
+    bg: "bg-amber-50 dark:bg-amber-950/30",
+  },
+  manager: {
+    label: "Manager",
+    icon: Users,
+    color: "text-violet-600",
+    bg: "bg-violet-50 dark:bg-violet-950/30",
+  },
+  reception: {
+    label: "Reception / Front Desk",
+    icon: MonitorSpeaker,
+    color: "text-sky-600",
+    bg: "bg-sky-50 dark:bg-sky-950/30",
+  },
+  groomer: {
+    label: "Groomer",
+    icon: Scissors,
+    color: "text-rose-600",
+    bg: "bg-rose-50 dark:bg-rose-950/30",
+  },
+  trainer: {
+    label: "Trainer",
+    icon: Dumbbell,
+    color: "text-emerald-600",
+    bg: "bg-emerald-50 dark:bg-emerald-950/30",
+  },
+  daycare_attendant: {
+    label: "Daycare Attendant",
+    icon: Sun,
+    color: "text-orange-500",
+    bg: "bg-orange-50 dark:bg-orange-950/30",
+  },
+  boarding_attendant: {
+    label: "Boarding / Back of House",
+    icon: Moon,
+    color: "text-indigo-600",
+    bg: "bg-indigo-50 dark:bg-indigo-950/30",
+  },
+  sanitation: {
+    label: "Sanitation",
+    icon: Sparkles,
+    color: "text-teal-600",
+    bg: "bg-teal-50 dark:bg-teal-950/30",
+  },
 };
 
 const ROLE_ORDER: FacilityStaffRole[] = [
-  "owner", "manager", "reception", "groomer", "trainer",
-  "daycare_attendant", "boarding_attendant", "sanitation",
+  "owner",
+  "manager",
+  "reception",
+  "groomer",
+  "trainer",
+  "daycare_attendant",
+  "boarding_attendant",
+  "sanitation",
 ];
 
 function getInitials(firstName: string, lastName: string) {
@@ -56,7 +102,7 @@ export function EmployeeSelectClient() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-start bg-gradient-to-br from-background to-muted/30 p-6 pt-16">
+    <div className="from-background to-muted/30 flex min-h-screen flex-col items-center justify-start bg-gradient-to-br p-6 pt-16">
       <div className="w-full max-w-4xl">
         <div className="mb-8 text-center">
           <div className="bg-primary/10 mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl">
@@ -74,7 +120,9 @@ export function EmployeeSelectClient() {
             return (
               <div key={role}>
                 <div className="mb-3 flex items-center gap-2">
-                  <div className={`flex size-7 items-center justify-center rounded-lg ${config.bg}`}>
+                  <div
+                    className={`flex size-7 items-center justify-center rounded-lg ${config.bg}`}
+                  >
                     <Icon className={`size-4 ${config.color}`} />
                   </div>
                   <h2 className="font-semibold">{config.label}</h2>
@@ -86,7 +134,7 @@ export function EmployeeSelectClient() {
                   {members.map((staff) => (
                     <Card
                       key={staff.id}
-                      className="cursor-pointer transition-all hover:shadow-md hover:ring-2 hover:ring-primary/30"
+                      className="hover:ring-primary/30 cursor-pointer transition-all hover:shadow-md hover:ring-2"
                       onClick={() => handleSelect(staff.id)}
                     >
                       <CardContent className="flex items-center gap-3 p-4">
@@ -127,7 +175,11 @@ export function EmployeeSelectClient() {
         </div>
 
         <div className="mt-10 text-center">
-          <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.history.back()}
+          >
             ← Back
           </Button>
         </div>

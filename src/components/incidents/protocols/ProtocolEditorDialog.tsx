@@ -152,10 +152,7 @@ export function ProtocolEditorDialog({
     );
   };
 
-  const updateStep = (
-    id: string,
-    update: Partial<FollowUpProtocolStep>,
-  ) => {
+  const updateStep = (id: string, update: Partial<FollowUpProtocolStep>) => {
     setSteps((prev) =>
       prev.map((s) => (s.id === id ? { ...s, ...update } : s)),
     );
@@ -169,9 +166,7 @@ export function ProtocolEditorDialog({
 
   const removeStep = (id: string) => {
     setSteps((prev) =>
-      prev
-        .filter((s) => s.id !== id)
-        .map((s, i) => ({ ...s, order: i + 1 })),
+      prev.filter((s) => s.id !== id).map((s, i) => ({ ...s, order: i + 1 })),
     );
   };
 
@@ -229,9 +224,7 @@ export function ProtocolEditorDialog({
           <CardContent className="space-y-4 pt-6">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label className="text-sm font-semibold">
-                  Protocol Name *
-                </Label>
+                <Label className="text-sm font-semibold">Protocol Name *</Label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -240,17 +233,11 @@ export function ProtocolEditorDialog({
               </div>
               <div className="flex items-center justify-end gap-6">
                 <label className="flex items-center gap-2 text-sm">
-                  <Switch
-                    checked={isActive}
-                    onCheckedChange={setIsActive}
-                  />
+                  <Switch checked={isActive} onCheckedChange={setIsActive} />
                   Active
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  <Switch
-                    checked={isDefault}
-                    onCheckedChange={setIsDefault}
-                  />
+                  <Switch checked={isDefault} onCheckedChange={setIsDefault} />
                   Default for scope
                 </label>
               </div>
@@ -454,7 +441,8 @@ function StepEditor({
                 )}
               </p>
               <p className="text-muted-foreground truncate text-xs">
-                {formatScheduleHint(step)} · {step.contactMethod.replace("_", " ")}
+                {formatScheduleHint(step)} ·{" "}
+                {step.contactMethod.replace("_", " ")}
               </p>
             </div>
           </button>
@@ -575,9 +563,7 @@ function StepEditor({
                 </Label>
                 <Input
                   value={step.assigneeName ?? ""}
-                  onChange={(e) =>
-                    onUpdate({ assigneeName: e.target.value })
-                  }
+                  onChange={(e) => onUpdate({ assigneeName: e.target.value })}
                   placeholder="e.g. Emma Wilson"
                 />
               </div>
