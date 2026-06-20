@@ -18,7 +18,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { reputationQueries } from "@/lib/api/reputation";
-import type { ReputationStaffStat, ReputationServiceStat } from "@/types/reputation";
+import type {
+  ReputationStaffStat,
+  ReputationServiceStat,
+} from "@/types/reputation";
 
 type LeaderboardTab = "staff" | "services";
 
@@ -110,15 +113,15 @@ function StaffRow({
       <tr
         className={cn(
           "border-t transition-colors",
-          hasPraise && "cursor-pointer hover:bg-muted/30",
+          hasPraise && "hover:bg-muted/30 cursor-pointer",
           expanded && "bg-muted/20",
         )}
         onClick={hasPraise ? onToggle : undefined}
       >
-        <td className="py-3 pl-5 pr-3">
+        <td className="py-3 pr-3 pl-5">
           <div className="flex items-center gap-2.5">
             <RankChip rank={rank} />
-            <div className="bg-gradient-to-br from-primary/20 to-primary/40 text-primary flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold">
+            <div className="from-primary/20 to-primary/40 text-primary flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold">
               {stat.staffName.charAt(0)}
             </div>
             <div className="min-w-0">
@@ -157,7 +160,12 @@ function StaffRow({
         </td>
 
         <td className="px-3 py-3">
-          <div className={cn("inline-flex items-center gap-1 text-xs font-medium", deltaColor)}>
+          <div
+            className={cn(
+              "inline-flex items-center gap-1 text-xs font-medium",
+              deltaColor,
+            )}
+          >
             {stat.ratingDelta > 0 && <TrendingUp className="size-3.5" />}
             {stat.ratingDelta < 0 && <TrendingDown className="size-3.5" />}
             {stat.ratingDelta === 0 && <Minus className="size-3.5" />}
@@ -171,7 +179,7 @@ function StaffRow({
           </div>
         </td>
 
-        <td className="py-3 pl-3 pr-5 text-right">
+        <td className="py-3 pr-5 pl-3 text-right">
           {hasPraise ? (
             <span className="text-primary inline-flex items-center gap-1 text-[11px] font-medium">
               <Award className="size-3" />
@@ -186,7 +194,7 @@ function StaffRow({
       {expanded && hasPraise && (
         <tr className="bg-muted/10 border-t">
           <td colSpan={6} className="px-5 py-3">
-            <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wide uppercase">
               Praise comments
             </p>
             <div className="space-y-1.5">
@@ -215,7 +223,13 @@ const SERVICE_ICONS: Record<string, string> = {
   daycare: "☀️",
 };
 
-function ServiceRow({ stat, rank }: { stat: ReputationServiceStat; rank: number }) {
+function ServiceRow({
+  stat,
+  rank,
+}: {
+  stat: ReputationServiceStat;
+  rank: number;
+}) {
   const icon = SERVICE_ICONS[stat.service] ?? "🐾";
   const responseColor =
     stat.responseRate >= 80
@@ -225,8 +239,8 @@ function ServiceRow({ stat, rank }: { stat: ReputationServiceStat; rank: number 
         : "text-red-600";
 
   return (
-    <tr className="border-t hover:bg-muted/30 transition-colors">
-      <td className="py-3 pl-5 pr-3">
+    <tr className="hover:bg-muted/30 border-t transition-colors">
+      <td className="py-3 pr-3 pl-5">
         <div className="flex items-center gap-2.5">
           <RankChip rank={rank} />
           <div className="bg-muted flex size-7 shrink-0 items-center justify-center rounded-lg text-base">
@@ -241,11 +255,15 @@ function ServiceRow({ stat, rank }: { stat: ReputationServiceStat; rank: number 
       </td>
 
       <td className="px-3 py-3">
-        <span className="text-muted-foreground text-xs">{stat.totalRequests}</span>
+        <span className="text-muted-foreground text-xs">
+          {stat.totalRequests}
+        </span>
       </td>
 
       <td className="px-3 py-3">
-        <span className="text-muted-foreground text-xs">{stat.totalRatings}</span>
+        <span className="text-muted-foreground text-xs">
+          {stat.totalRatings}
+        </span>
       </td>
 
       <td className="px-3 py-3">
@@ -254,7 +272,7 @@ function ServiceRow({ stat, rank }: { stat: ReputationServiceStat; rank: number 
         </span>
       </td>
 
-      <td className="py-3 pl-3 pr-5 text-right">
+      <td className="py-3 pr-5 pl-3 text-right">
         {stat.negativeCount > 0 ? (
           <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600">
             <ThumbsDown className="size-3" />
@@ -270,20 +288,30 @@ function ServiceRow({ stat, rank }: { stat: ReputationServiceStat; rank: number 
 
 // ─── Performance tab ─────────────────────────────────────────────────────────
 
-const LEADERBOARD_TABS: { value: LeaderboardTab; label: string; icon: typeof Users }[] = [
+const LEADERBOARD_TABS: {
+  value: LeaderboardTab;
+  label: string;
+  icon: typeof Users;
+}[] = [
   { value: "staff", label: "Staff", icon: Users },
   { value: "services", label: "Services", icon: Award },
 ];
 
 export function ReputationPerformanceTab() {
   const { data: staffStats = [] } = useQuery(reputationQueries.staffStats());
-  const { data: serviceStats = [] } = useQuery(reputationQueries.serviceStats());
+  const { data: serviceStats = [] } = useQuery(
+    reputationQueries.serviceStats(),
+  );
 
   const [tab, setTab] = useState<LeaderboardTab>("staff");
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  const sortedStaff = [...staffStats].sort((a, b) => b.averageRating - a.averageRating);
-  const sortedServices = [...serviceStats].sort((a, b) => b.averageRating - a.averageRating);
+  const sortedStaff = [...staffStats].sort(
+    (a, b) => b.averageRating - a.averageRating,
+  );
+  const sortedServices = [...serviceStats].sort(
+    (a, b) => b.averageRating - a.averageRating,
+  );
 
   const topStaff = sortedStaff[0];
   const topService = sortedServices[0];
@@ -298,22 +326,24 @@ export function ReputationPerformanceTab() {
       {/* Hero spotlight */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {topStaff && (
-          <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800">
-            <CardContent className="px-3 py-2.5 flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-amber-400/20 flex items-center justify-center shrink-0">
+          <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 dark:border-amber-800 dark:from-amber-950/20 dark:to-orange-950/20">
+            <CardContent className="flex items-center gap-3 px-3 py-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-400/20">
                 <Trophy className="h-4 w-4 text-amber-600" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider leading-none">
+                <p className="text-[10px] leading-none font-semibold tracking-wider text-amber-700 uppercase dark:text-amber-400">
                   Top Rated Staff
                 </p>
-                <p className="text-sm font-semibold mt-1 truncate">{topStaff.staffName}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
+                <p className="mt-1 truncate text-sm font-semibold">
+                  {topStaff.staffName}
+                </p>
+                <div className="mt-0.5 flex items-center gap-1.5">
                   <Stars rating={topStaff.averageRating} />
                   <span className="text-xs font-semibold tabular-nums">
                     {topStaff.averageRating.toFixed(1)}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">
                     · {topStaff.totalReviews} reviews
                   </span>
                 </div>
@@ -322,22 +352,24 @@ export function ReputationPerformanceTab() {
           </Card>
         )}
         {topService && (
-          <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border-emerald-200 dark:border-emerald-800">
-            <CardContent className="px-3 py-2.5 flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-emerald-400/20 flex items-center justify-center shrink-0">
+          <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 dark:border-emerald-800 dark:from-emerald-950/20 dark:to-teal-950/20">
+            <CardContent className="flex items-center gap-3 px-3 py-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-400/20">
                 <Zap className="h-4 w-4 text-emerald-600" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider leading-none">
+                <p className="text-[10px] leading-none font-semibold tracking-wider text-emerald-700 uppercase dark:text-emerald-400">
                   Highest Rated Service
                 </p>
-                <p className="text-sm font-semibold mt-1 truncate">{topService.serviceLabel}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
+                <p className="mt-1 truncate text-sm font-semibold">
+                  {topService.serviceLabel}
+                </p>
+                <div className="mt-0.5 flex items-center gap-1.5">
                   <Stars rating={topService.averageRating} />
                   <span className="text-xs font-semibold tabular-nums">
                     {topService.averageRating.toFixed(1)}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">
                     · {topService.responseRate}% response rate
                   </span>
                 </div>
@@ -390,18 +422,18 @@ export function ReputationPerformanceTab() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="bg-card overflow-hidden rounded-xl border">
         <div className="overflow-x-auto">
           {tab === "staff" ? (
             <table className="w-full min-w-[800px]">
               <thead className="bg-muted/30">
-                <tr className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
-                  <th className="py-3 pl-5 pr-3 text-left">Staff</th>
+                <tr className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                  <th className="py-3 pr-3 pl-5 text-left">Staff</th>
                   <th className="px-3 py-3 text-left">Avg Rating</th>
                   <th className="px-3 py-3 text-left">Reviews</th>
                   <th className="px-3 py-3 text-left">Sentiment</th>
                   <th className="px-3 py-3 text-left">Trend</th>
-                  <th className="py-3 pl-3 pr-5 text-right">Praise</th>
+                  <th className="py-3 pr-5 pl-3 text-right">Praise</th>
                 </tr>
               </thead>
               <tbody>
@@ -423,13 +455,13 @@ export function ReputationPerformanceTab() {
           ) : (
             <table className="w-full min-w-[800px]">
               <thead className="bg-muted/30">
-                <tr className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
-                  <th className="py-3 pl-5 pr-3 text-left">Service</th>
+                <tr className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                  <th className="py-3 pr-3 pl-5 text-left">Service</th>
                   <th className="px-3 py-3 text-left">Avg Rating</th>
                   <th className="px-3 py-3 text-left">Sent</th>
                   <th className="px-3 py-3 text-left">Rated</th>
                   <th className="px-3 py-3 text-left">Response Rate</th>
-                  <th className="py-3 pl-3 pr-5 text-right">Negative</th>
+                  <th className="py-3 pr-5 pl-3 text-right">Negative</th>
                 </tr>
               </thead>
               <tbody>

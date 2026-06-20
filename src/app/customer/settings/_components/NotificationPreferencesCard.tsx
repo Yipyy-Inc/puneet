@@ -82,7 +82,7 @@ export function NotificationPreferencesCard({
             </p>
           </div>
 
-          <div className="divide-border/70 bg-card overflow-hidden rounded-xl border divide-y">
+          <div className="divide-border/70 bg-card divide-y overflow-hidden rounded-xl border">
             {NOTIFICATION_CATEGORIES.filter((c) => c.group === "service").map(
               (cat) => {
                 const state = notificationPreferences.categories[cat.key];
@@ -92,7 +92,7 @@ export function NotificationPreferencesCard({
                   <div
                     key={cat.key}
                     data-enabled={isOn}
-                    className="grid grid-cols-1 items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/20 sm:grid-cols-[1fr_minmax(0,18rem)] sm:gap-6"
+                    className="hover:bg-muted/20 grid grid-cols-1 items-center gap-3 px-4 py-3.5 transition-colors sm:grid-cols-[1fr_minmax(0,18rem)] sm:gap-6"
                   >
                     <label
                       htmlFor={`notif-${cat.key}`}
@@ -149,7 +149,7 @@ export function NotificationPreferencesCard({
 
                     <div
                       className={cn(
-                        "sm:justify-self-end sm:w-full pl-7 sm:pl-0",
+                        "pl-7 sm:w-full sm:justify-self-end sm:pl-0",
                         !isOn && "pointer-events-none opacity-40",
                       )}
                     >
@@ -178,7 +178,7 @@ export function NotificationPreferencesCard({
             </p>
           </div>
 
-          <div className="divide-border/70 bg-card overflow-hidden rounded-xl border divide-y">
+          <div className="divide-border/70 bg-card divide-y overflow-hidden rounded-xl border">
             {NOTIFICATION_CATEGORIES.filter((c) => c.group === "marketing").map(
               (cat) => {
                 const state = notificationPreferences.categories[cat.key];
@@ -187,7 +187,7 @@ export function NotificationPreferencesCard({
                 return (
                   <div
                     key={cat.key}
-                    className="grid grid-cols-1 items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/20 sm:grid-cols-[1fr_minmax(0,18rem)] sm:gap-6"
+                    className="hover:bg-muted/20 grid grid-cols-1 items-center gap-3 px-4 py-3.5 transition-colors sm:grid-cols-[1fr_minmax(0,18rem)] sm:gap-6"
                   >
                     <label
                       htmlFor={`notif-${cat.key}`}
@@ -240,7 +240,7 @@ export function NotificationPreferencesCard({
 
                     <div
                       className={cn(
-                        "sm:justify-self-end sm:w-full pl-7 sm:pl-0",
+                        "pl-7 sm:w-full sm:justify-self-end sm:pl-0",
                         !isOn && "pointer-events-none opacity-40",
                       )}
                     >
@@ -266,9 +266,7 @@ export function NotificationPreferencesCard({
           <>
             <div className="space-y-3">
               <div className="flex items-baseline justify-between">
-                <h3 className="text-base font-semibold">
-                  Report cards by pet
-                </h3>
+                <h3 className="text-base font-semibold">Report cards by pet</h3>
                 <p className="text-muted-foreground hidden text-xs sm:block">
                   Pick which pets should generate report cards.
                 </p>

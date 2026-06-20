@@ -27,20 +27,12 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import {
-  Avatar,
-  AvatarFallback,
-} from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -63,12 +55,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RebookTemplateEditorModal } from "@/components/communications/RebookTemplateEditorModal";
 import { DismissReminderDialog } from "@/components/communications/DismissReminderDialog";
 import { RebookAnalyticsRow } from "@/components/communications/RebookAnalyticsRow";
@@ -126,7 +113,8 @@ const channelIcon = (c: ReminderChannel, size = "size-3.5") => {
         <MessageSquare className={size} />
       </span>
     );
-  if (c === "email") return <Mail className={`text-muted-foreground ${size}`} />;
+  if (c === "email")
+    return <Mail className={`text-muted-foreground ${size}`} />;
   return <MessageSquare className={`text-muted-foreground ${size}`} />;
 };
 
@@ -195,10 +183,12 @@ export function RebookRemindersCard() {
   );
 
   const [queueRange, setQueueRange] = useState<QueueRange>(30);
-  const [queueServiceFilter, setQueueServiceFilter] =
-    useState<ServiceTypeKey | "all">("all");
-  const [lapsedServiceFilter, setLapsedServiceFilter] =
-    useState<ServiceTypeKey | "all">("all");
+  const [queueServiceFilter, setQueueServiceFilter] = useState<
+    ServiceTypeKey | "all"
+  >("all");
+  const [lapsedServiceFilter, setLapsedServiceFilter] = useState<
+    ServiceTypeKey | "all"
+  >("all");
 
   const today = useMemo(() => {
     const d = new Date();
@@ -315,10 +305,7 @@ export function RebookRemindersCard() {
     }
     return BUCKET_ORDER.filter((k) => groups[k]?.length).map((k) => ({
       key: k,
-      label: dayBucket(
-        groups[k][0].scheduledSendDate,
-        today,
-      ).label,
+      label: dayBucket(groups[k][0].scheduledSendDate, today).label,
       items: groups[k].sort(
         (a, b) =>
           new Date(a.scheduledSendDate).getTime() -
@@ -380,8 +367,8 @@ export function RebookRemindersCard() {
                 <p className="text-muted-foreground mt-1 text-sm">
                   Per-service frequency, lead time, channel, and follow-up
                   config. Up to two reminders per booking cycle. Skipped
-                  automatically when the client already has a future booking
-                  or any safety check fires.
+                  automatically when the client already has a future booking or
+                  any safety check fires.
                 </p>
               </div>
               <Badge
@@ -395,538 +382,653 @@ export function RebookRemindersCard() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="defaults" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="defaults">
-                <Settings className="mr-2 size-4" />
-                Defaults & Templates
-              </TabsTrigger>
-              <TabsTrigger value="queue">
-                <Clock className="mr-2 size-4" />
-                Queue ({queueScheduled.length})
-              </TabsTrigger>
-              <TabsTrigger value="lapsed">
-                <AlertTriangle className="mr-2 size-4" />
-                Lapsed ({lapsedClients.length})
-              </TabsTrigger>
-              <TabsTrigger value="history">
-                <CheckCircle2 className="mr-2 size-4" />
-                History
-              </TabsTrigger>
-            </TabsList>
+              <TabsList>
+                <TabsTrigger value="defaults">
+                  <Settings className="mr-2 size-4" />
+                  Defaults & Templates
+                </TabsTrigger>
+                <TabsTrigger value="queue">
+                  <Clock className="mr-2 size-4" />
+                  Queue ({queueScheduled.length})
+                </TabsTrigger>
+                <TabsTrigger value="lapsed">
+                  <AlertTriangle className="mr-2 size-4" />
+                  Lapsed ({lapsedClients.length})
+                </TabsTrigger>
+                <TabsTrigger value="history">
+                  <CheckCircle2 className="mr-2 size-4" />
+                  History
+                </TabsTrigger>
+              </TabsList>
 
-            {/* DEFAULTS */}
-            <TabsContent value="defaults" className="space-y-3">
-              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
-                <p className="font-medium">How reminder timing works</p>
-                <p className="mt-1">
-                  When a booking completes we add the client&apos;s frequency
-                  to compute the expected return date, then send the reminder
-                  the chosen number of days <em>before</em> that date. If a
-                  future booking already exists for the same service, the
-                  reminder is skipped automatically.
-                </p>
-              </div>
+              {/* DEFAULTS */}
+              <TabsContent value="defaults" className="space-y-3">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
+                  <p className="font-medium">How reminder timing works</p>
+                  <p className="mt-1">
+                    When a booking completes we add the client&apos;s frequency
+                    to compute the expected return date, then send the reminder
+                    the chosen number of days <em>before</em> that date. If a
+                    future booking already exists for the same service, the
+                    reminder is skipped automatically.
+                  </p>
+                </div>
 
-              <div className="space-y-2">
-                {defaults.map((def) => {
-                  const isEditing = editingService === def.service && draft;
-                  const d = isEditing ? draft! : def;
-                  return (
-                    <div
-                      key={def.service}
-                      className="rounded-lg border p-4 transition-colors hover:bg-muted/30"
-                    >
-                      {isEditing ? (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold">
-                              {getServiceLabel(d.service)}
-                            </span>
-                            <div className="flex items-center gap-2 text-xs">
-                              <Switch
-                                checked={d.remindersEnabled}
-                                onCheckedChange={(v) =>
-                                  setDraft({ ...d, remindersEnabled: v })
-                                }
-                              />
-                              <span className="text-muted-foreground">
-                                Reminders {d.remindersEnabled ? "on" : "off"}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Frequency */}
-                          <div>
-                            <label className="text-muted-foreground text-xs font-medium">
-                              Frequency
-                            </label>
-                            <div className="mt-1 flex items-center gap-2">
-                              <span className="text-muted-foreground text-sm">
-                                Every
-                              </span>
-                              <Input
-                                type="number"
-                                min={1}
-                                value={d.frequency.value}
-                                onChange={(e) =>
-                                  setDraft({
-                                    ...d,
-                                    frequency: {
-                                      ...d.frequency,
-                                      value: Math.max(
-                                        1,
-                                        parseInt(e.target.value, 10) || 1,
-                                      ),
-                                    },
-                                  })
-                                }
-                                className="h-8 w-20"
-                              />
-                              <Select
-                                value={d.frequency.unit}
-                                onValueChange={(v: FrequencyUnit) =>
-                                  setDraft({
-                                    ...d,
-                                    frequency: { ...d.frequency, unit: v },
-                                  })
-                                }
-                              >
-                                <SelectTrigger className="h-8 w-32">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="days">Days</SelectItem>
-                                  <SelectItem value="weeks">Weeks</SelectItem>
-                                  <SelectItem value="months">Months</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          {/* Lead time */}
-                          <div>
-                            <label className="text-muted-foreground text-xs font-medium">
-                              Send first reminder
-                            </label>
-                            <div className="mt-1 flex flex-wrap gap-1.5">
-                              {REMINDER_LEAD_PRESETS.map((p) => {
-                                const active = d.leadDays === p;
-                                return (
-                                  <button
-                                    key={p}
-                                    type="button"
-                                    onClick={() =>
-                                      setDraft({ ...d, leadDays: p })
-                                    }
-                                    className={
-                                      active
-                                        ? "border-primary bg-primary/10 text-primary rounded-full border-2 px-3 py-1 text-xs font-medium"
-                                        : "hover:bg-muted/50 rounded-full border px-3 py-1 text-xs"
-                                    }
-                                  >
-                                    {p === 0
-                                      ? "On expected date"
-                                      : `${p} days before`}
-                                  </button>
-                                );
-                              })}
-                              <div className="flex items-center gap-1.5 rounded-full border px-2 py-0.5">
-                                <span className="text-muted-foreground text-xs">
-                                  Custom:
-                                </span>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  value={d.leadDays}
-                                  onChange={(e) =>
-                                    setDraft({
-                                      ...d,
-                                      leadDays: Math.max(
-                                        0,
-                                        parseInt(e.target.value, 10) || 0,
-                                      ),
-                                    })
-                                  }
-                                  className="h-6 w-14 text-xs"
-                                />
-                                <span className="text-muted-foreground text-xs">
-                                  d
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Channel */}
-                          <div>
-                            <label className="text-muted-foreground text-xs font-medium">
-                              Channel
-                            </label>
-                            <div className="mt-1 flex gap-1.5">
-                              {(["email", "sms", "both"] as const).map((c) => (
-                                <button
-                                  key={c}
-                                  type="button"
-                                  onClick={() =>
-                                    setDraft({ ...d, channel: c })
-                                  }
-                                  className={
-                                    d.channel === c
-                                      ? "border-primary bg-primary/10 text-primary flex items-center gap-1.5 rounded-full border-2 px-3 py-1 text-xs font-medium"
-                                      : "hover:bg-muted/50 flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs capitalize"
-                                  }
-                                >
-                                  {c === "email" && <Mail className="size-3" />}
-                                  {c === "sms" && (
-                                    <MessageSquare className="size-3" />
-                                  )}
-                                  {c === "both" && (
-                                    <>
-                                      <Mail className="size-3" />
-                                      <MessageSquare className="size-3" />
-                                    </>
-                                  )}
-                                  {c === "both" ? "Email + SMS" : c}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Second reminder */}
-                          <div className="rounded-lg border bg-muted/20 p-3">
+                <div className="space-y-2">
+                  {defaults.map((def) => {
+                    const isEditing = editingService === def.service && draft;
+                    const d = isEditing ? draft! : def;
+                    return (
+                      <div
+                        key={def.service}
+                        className="hover:bg-muted/30 rounded-lg border p-4 transition-colors"
+                      >
+                        {isEditing ? (
+                          <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium">
-                                  Follow-up reminder
-                                </p>
-                                <p className="text-muted-foreground text-xs">
-                                  One automatic follow-up if there&apos;s no
-                                  booking. After the second reminder, the
-                                  system stops.
-                                </p>
+                              <span className="text-sm font-semibold">
+                                {getServiceLabel(d.service)}
+                              </span>
+                              <div className="flex items-center gap-2 text-xs">
+                                <Switch
+                                  checked={d.remindersEnabled}
+                                  onCheckedChange={(v) =>
+                                    setDraft({ ...d, remindersEnabled: v })
+                                  }
+                                />
+                                <span className="text-muted-foreground">
+                                  Reminders {d.remindersEnabled ? "on" : "off"}
+                                </span>
                               </div>
-                              <Switch
-                                checked={d.secondReminder.enabled}
-                                onCheckedChange={(v) =>
-                                  setDraft({
-                                    ...d,
-                                    secondReminder: {
-                                      ...d.secondReminder,
-                                      enabled: v,
-                                    },
-                                  })
-                                }
-                              />
                             </div>
-                            {d.secondReminder.enabled && (
-                              <div className="mt-2 flex items-center gap-2">
-                                <span className="text-muted-foreground text-xs">
-                                  Send
+
+                            {/* Frequency */}
+                            <div>
+                              <label className="text-muted-foreground text-xs font-medium">
+                                Frequency
+                              </label>
+                              <div className="mt-1 flex items-center gap-2">
+                                <span className="text-muted-foreground text-sm">
+                                  Every
                                 </span>
                                 <Input
                                   type="number"
                                   min={1}
-                                  value={d.secondReminder.delayDays}
+                                  value={d.frequency.value}
                                   onChange={(e) =>
                                     setDraft({
                                       ...d,
-                                      secondReminder: {
-                                        ...d.secondReminder,
-                                        delayDays: Math.max(
+                                      frequency: {
+                                        ...d.frequency,
+                                        value: Math.max(
                                           1,
                                           parseInt(e.target.value, 10) || 1,
                                         ),
                                       },
                                     })
                                   }
-                                  className="h-7 w-16 text-xs"
+                                  className="h-8 w-20"
                                 />
-                                <span className="text-muted-foreground text-xs">
-                                  days after the first reminder
-                                </span>
+                                <Select
+                                  value={d.frequency.unit}
+                                  onValueChange={(v: FrequencyUnit) =>
+                                    setDraft({
+                                      ...d,
+                                      frequency: { ...d.frequency, unit: v },
+                                    })
+                                  }
+                                >
+                                  <SelectTrigger className="h-8 w-32">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="days">Days</SelectItem>
+                                    <SelectItem value="weeks">Weeks</SelectItem>
+                                    <SelectItem value="months">
+                                      Months
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
-                            )}
-                          </div>
+                            </div>
 
-                          {/* Template editor link */}
-                          <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
+                            {/* Lead time */}
                             <div>
-                              <p className="text-sm font-medium">
-                                Message template
-                              </p>
-                              <p className="text-muted-foreground line-clamp-1 text-xs">
-                                {d.template.subject}
-                              </p>
+                              <label className="text-muted-foreground text-xs font-medium">
+                                Send first reminder
+                              </label>
+                              <div className="mt-1 flex flex-wrap gap-1.5">
+                                {REMINDER_LEAD_PRESETS.map((p) => {
+                                  const active = d.leadDays === p;
+                                  return (
+                                    <button
+                                      key={p}
+                                      type="button"
+                                      onClick={() =>
+                                        setDraft({ ...d, leadDays: p })
+                                      }
+                                      className={
+                                        active
+                                          ? "border-primary bg-primary/10 text-primary rounded-full border-2 px-3 py-1 text-xs font-medium"
+                                          : "hover:bg-muted/50 rounded-full border px-3 py-1 text-xs"
+                                      }
+                                    >
+                                      {p === 0
+                                        ? "On expected date"
+                                        : `${p} days before`}
+                                    </button>
+                                  );
+                                })}
+                                <div className="flex items-center gap-1.5 rounded-full border px-2 py-0.5">
+                                  <span className="text-muted-foreground text-xs">
+                                    Custom:
+                                  </span>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    value={d.leadDays}
+                                    onChange={(e) =>
+                                      setDraft({
+                                        ...d,
+                                        leadDays: Math.max(
+                                          0,
+                                          parseInt(e.target.value, 10) || 0,
+                                        ),
+                                      })
+                                    }
+                                    className="h-6 w-14 text-xs"
+                                  />
+                                  <span className="text-muted-foreground text-xs">
+                                    d
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openTemplateEditor(d.service)}
-                            >
-                              <Pencil className="mr-1 size-3.5" />
-                              Edit template
-                            </Button>
-                          </div>
 
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={cancelEdit}
-                            >
-                              Cancel
-                            </Button>
-                            <Button size="sm" onClick={saveEdit}>
-                              <Save className="mr-1 size-3.5" />
-                              Save
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 space-y-1.5">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold">
-                                {getServiceLabel(def.service)}
-                              </span>
-                              <Badge
-                                variant={
-                                  def.remindersEnabled ? "default" : "secondary"
-                                }
+                            {/* Channel */}
+                            <div>
+                              <label className="text-muted-foreground text-xs font-medium">
+                                Channel
+                              </label>
+                              <div className="mt-1 flex gap-1.5">
+                                {(["email", "sms", "both"] as const).map(
+                                  (c) => (
+                                    <button
+                                      key={c}
+                                      type="button"
+                                      onClick={() =>
+                                        setDraft({ ...d, channel: c })
+                                      }
+                                      className={
+                                        d.channel === c
+                                          ? "border-primary bg-primary/10 text-primary flex items-center gap-1.5 rounded-full border-2 px-3 py-1 text-xs font-medium"
+                                          : "hover:bg-muted/50 flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs capitalize"
+                                      }
+                                    >
+                                      {c === "email" && (
+                                        <Mail className="size-3" />
+                                      )}
+                                      {c === "sms" && (
+                                        <MessageSquare className="size-3" />
+                                      )}
+                                      {c === "both" && (
+                                        <>
+                                          <Mail className="size-3" />
+                                          <MessageSquare className="size-3" />
+                                        </>
+                                      )}
+                                      {c === "both" ? "Email + SMS" : c}
+                                    </button>
+                                  ),
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Second reminder */}
+                            <div className="bg-muted/20 rounded-lg border p-3">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    Follow-up reminder
+                                  </p>
+                                  <p className="text-muted-foreground text-xs">
+                                    One automatic follow-up if there&apos;s no
+                                    booking. After the second reminder, the
+                                    system stops.
+                                  </p>
+                                </div>
+                                <Switch
+                                  checked={d.secondReminder.enabled}
+                                  onCheckedChange={(v) =>
+                                    setDraft({
+                                      ...d,
+                                      secondReminder: {
+                                        ...d.secondReminder,
+                                        enabled: v,
+                                      },
+                                    })
+                                  }
+                                />
+                              </div>
+                              {d.secondReminder.enabled && (
+                                <div className="mt-2 flex items-center gap-2">
+                                  <span className="text-muted-foreground text-xs">
+                                    Send
+                                  </span>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    value={d.secondReminder.delayDays}
+                                    onChange={(e) =>
+                                      setDraft({
+                                        ...d,
+                                        secondReminder: {
+                                          ...d.secondReminder,
+                                          delayDays: Math.max(
+                                            1,
+                                            parseInt(e.target.value, 10) || 1,
+                                          ),
+                                        },
+                                      })
+                                    }
+                                    className="h-7 w-16 text-xs"
+                                  />
+                                  <span className="text-muted-foreground text-xs">
+                                    days after the first reminder
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Template editor link */}
+                            <div className="bg-muted/20 flex items-center justify-between rounded-lg border p-3">
+                              <div>
+                                <p className="text-sm font-medium">
+                                  Message template
+                                </p>
+                                <p className="text-muted-foreground line-clamp-1 text-xs">
+                                  {d.template.subject}
+                                </p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openTemplateEditor(d.service)}
                               >
-                                {def.remindersEnabled ? "On" : "Off"}
-                              </Badge>
-                              {channelIcon(def.channel)}
+                                <Pencil className="mr-1 size-3.5" />
+                                Edit template
+                              </Button>
                             </div>
-                            <div className="text-muted-foreground text-xs">
-                              {formatFrequency(def.frequency)} ·{" "}
-                              {def.leadDays === 0
-                                ? "On expected date"
-                                : `${def.leadDays}d before expected`}
-                              {def.secondReminder.enabled
-                                ? ` · Follow-up after ${def.secondReminder.delayDays}d`
-                                : " · No follow-up"}
+
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={cancelEdit}
+                              >
+                                Cancel
+                              </Button>
+                              <Button size="sm" onClick={saveEdit}>
+                                <Save className="mr-1 size-3.5" />
+                                Save
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex shrink-0 gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openTemplateEditor(def.service)}
-                            >
-                              <Pencil className="mr-1 size-3.5" />
-                              Template
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setApplyToAllService(def.service);
-                                setApplyToAllOpen(true);
-                              }}
-                            >
-                              <Users className="mr-1 size-3.5" />
-                              Apply to all
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => startEdit(def)}
-                            >
-                              <Settings className="size-4" />
-                            </Button>
+                        ) : (
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold">
+                                  {getServiceLabel(def.service)}
+                                </span>
+                                <Badge
+                                  variant={
+                                    def.remindersEnabled
+                                      ? "default"
+                                      : "secondary"
+                                  }
+                                >
+                                  {def.remindersEnabled ? "On" : "Off"}
+                                </Badge>
+                                {channelIcon(def.channel)}
+                              </div>
+                              <div className="text-muted-foreground text-xs">
+                                {formatFrequency(def.frequency)} ·{" "}
+                                {def.leadDays === 0
+                                  ? "On expected date"
+                                  : `${def.leadDays}d before expected`}
+                                {def.secondReminder.enabled
+                                  ? ` · Follow-up after ${def.secondReminder.delayDays}d`
+                                  : " · No follow-up"}
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openTemplateEditor(def.service)}
+                              >
+                                <Pencil className="mr-1 size-3.5" />
+                                Template
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setApplyToAllService(def.service);
+                                  setApplyToAllOpen(true);
+                                }}
+                              >
+                                <Users className="mr-1 size-3.5" />
+                                Apply to all
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => startEdit(def)}
+                              >
+                                <Settings className="size-4" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </TabsContent>
-
-            {/* QUEUE */}
-            <TabsContent value="queue" className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-1.5">
-                  {([30, 60, 90] as const).map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setQueueRange(r)}
-                      className={
-                        queueRange === r
-                          ? "border-primary bg-primary/10 text-primary rounded-full border-2 px-3 py-1 text-xs font-medium"
-                          : "hover:bg-muted/50 rounded-full border px-3 py-1 text-xs"
-                      }
-                    >
-                      Next {r} days
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-xs">
-                    Service:
-                  </span>
-                  <Select
-                    value={queueServiceFilter}
-                    onValueChange={(v) =>
-                      setQueueServiceFilter(v as ServiceTypeKey | "all")
-                    }
-                  >
-                    <SelectTrigger className="h-8 w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All services</SelectItem>
-                      {REBOOK_SERVICE_TYPES.map((s) => (
-                        <SelectItem key={s.key} value={s.key}>
-                          {s.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {filteredQueue.length === 0 ? (
-                <div className="text-muted-foreground py-12 text-center">
-                  <Bell className="mx-auto mb-3 size-12 opacity-50" />
-                  <p className="font-medium">No reminders in this window</p>
-                  <p className="mt-1 text-sm">
-                    Reminders appear here as clients approach their expected
-                    return date.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-5">
-                  {groupedQueue.map((group) => (
-                    <div key={group.key} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-semibold">
-                          {group.label}
-                        </h4>
-                        <span className="text-muted-foreground text-xs">
-                          ({group.items.length})
-                        </span>
+                        )}
                       </div>
-                      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                        {group.items.map((r) => (
-                          <ReminderCard
-                            key={r.id}
-                            reminder={r}
-                            onSendNow={() => sendNow(r)}
-                            onDismiss={() => openDismiss(r)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              )}
-            </TabsContent>
+              </TabsContent>
 
-            {/* LAPSED */}
-            <TabsContent value="lapsed" className="space-y-4">
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                <p className="font-medium">Lapsed clients don&apos;t get auto reminders</p>
-                <p className="mt-1">
-                  After two reminders, we stop. Take manual action below or
-                  build a marketing segment for a win-back campaign.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setLapsedServiceFilter("all")}
-                    className={
-                      lapsedServiceFilter === "all"
-                        ? "border-primary bg-primary/10 text-primary rounded-full border-2 px-3 py-1 text-xs font-medium"
-                        : "hover:bg-muted/50 rounded-full border px-3 py-1 text-xs"
-                    }
-                  >
-                    All services
-                  </button>
-                  {REBOOK_SERVICE_TYPES.map((s) => {
-                    const count = lapsedClients.filter(
-                      (l) => l.service === s.key,
-                    ).length;
-                    if (count === 0) return null;
-                    return (
+              {/* QUEUE */}
+              <TabsContent value="queue" className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-1.5">
+                    {([30, 60, 90] as const).map((r) => (
                       <button
-                        key={s.key}
+                        key={r}
                         type="button"
-                        onClick={() => setLapsedServiceFilter(s.key)}
+                        onClick={() => setQueueRange(r)}
                         className={
-                          lapsedServiceFilter === s.key
+                          queueRange === r
                             ? "border-primary bg-primary/10 text-primary rounded-full border-2 px-3 py-1 text-xs font-medium"
                             : "hover:bg-muted/50 rounded-full border px-3 py-1 text-xs"
                         }
                       >
-                        {s.label} ({count})
+                        Next {r} days
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground text-xs">
+                      Service:
+                    </span>
+                    <Select
+                      value={queueServiceFilter}
+                      onValueChange={(v) =>
+                        setQueueServiceFilter(v as ServiceTypeKey | "all")
+                      }
+                    >
+                      <SelectTrigger className="h-8 w-40">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All services</SelectItem>
+                        {REBOOK_SERVICE_TYPES.map((s) => (
+                          <SelectItem key={s.key} value={s.key}>
+                            {s.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link
-                    href={`/facility/dashboard/marketing?segment=lapsed_${lapsedServiceFilter === "all" ? "all" : lapsedServiceFilter}`}
-                  >
-                    <Sparkles className="mr-1 size-3.5" />
-                    Create marketing segment
-                    <ArrowRight className="ml-1 size-3.5" />
-                  </Link>
-                </Button>
-              </div>
 
-              {filteredLapsed.length === 0 ? (
-                <div className="text-muted-foreground py-12 text-center">
-                  <CheckCircle2 className="mx-auto mb-3 size-12 opacity-50" />
-                  <p className="font-medium">No lapsed clients</p>
+                {filteredQueue.length === 0 ? (
+                  <div className="text-muted-foreground py-12 text-center">
+                    <Bell className="mx-auto mb-3 size-12 opacity-50" />
+                    <p className="font-medium">No reminders in this window</p>
+                    <p className="mt-1 text-sm">
+                      Reminders appear here as clients approach their expected
+                      return date.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    {groupedQueue.map((group) => (
+                      <div key={group.key} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-semibold">
+                            {group.label}
+                          </h4>
+                          <span className="text-muted-foreground text-xs">
+                            ({group.items.length})
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                          {group.items.map((r) => (
+                            <ReminderCard
+                              key={r.id}
+                              reminder={r}
+                              onSendNow={() => sendNow(r)}
+                              onDismiss={() => openDismiss(r)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* LAPSED */}
+              <TabsContent value="lapsed" className="space-y-4">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                  <p className="font-medium">
+                    Lapsed clients don&apos;t get auto reminders
+                  </p>
+                  <p className="mt-1">
+                    After two reminders, we stop. Take manual action below or
+                    build a marketing segment for a win-back campaign.
+                  </p>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                  {filteredLapsed.map((l) => (
-                    <LapsedClientCard
-                      key={`${l.clientId}-${l.service}`}
-                      lapsed={l}
-                    />
-                  ))}
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setLapsedServiceFilter("all")}
+                      className={
+                        lapsedServiceFilter === "all"
+                          ? "border-primary bg-primary/10 text-primary rounded-full border-2 px-3 py-1 text-xs font-medium"
+                          : "hover:bg-muted/50 rounded-full border px-3 py-1 text-xs"
+                      }
+                    >
+                      All services
+                    </button>
+                    {REBOOK_SERVICE_TYPES.map((s) => {
+                      const count = lapsedClients.filter(
+                        (l) => l.service === s.key,
+                      ).length;
+                      if (count === 0) return null;
+                      return (
+                        <button
+                          key={s.key}
+                          type="button"
+                          onClick={() => setLapsedServiceFilter(s.key)}
+                          className={
+                            lapsedServiceFilter === s.key
+                              ? "border-primary bg-primary/10 text-primary rounded-full border-2 px-3 py-1 text-xs font-medium"
+                              : "hover:bg-muted/50 rounded-full border px-3 py-1 text-xs"
+                          }
+                        >
+                          {s.label} ({count})
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link
+                      href={`/facility/dashboard/marketing?segment=lapsed_${lapsedServiceFilter === "all" ? "all" : lapsedServiceFilter}`}
+                    >
+                      <Sparkles className="mr-1 size-3.5" />
+                      Create marketing segment
+                      <ArrowRight className="ml-1 size-3.5" />
+                    </Link>
+                  </Button>
                 </div>
-              )}
-            </TabsContent>
 
-            {/* HISTORY */}
-            <TabsContent value="history" className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <StatCard label="Sent" value={stats.sent} tone="default" />
-                <StatCard
-                  label="Rebooked"
-                  value={stats.rebooked}
-                  tone="success"
-                />
-                <StatCard
-                  label="Dismissed"
-                  value={stats.dismissed}
-                  tone="warning"
-                />
-                <StatCard
-                  label="Skipped"
-                  value={stats.skipped}
-                  tone="muted"
-                />
-              </div>
+                {filteredLapsed.length === 0 ? (
+                  <div className="text-muted-foreground py-12 text-center">
+                    <CheckCircle2 className="mx-auto mb-3 size-12 opacity-50" />
+                    <p className="font-medium">No lapsed clients</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                    {filteredLapsed.map((l) => (
+                      <LapsedClientCard
+                        key={`${l.clientId}-${l.service}`}
+                        lapsed={l}
+                      />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
 
-              {dismissedItems.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">Recent dismissals</h4>
+              {/* HISTORY */}
+              <TabsContent value="history" className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <StatCard label="Sent" value={stats.sent} tone="default" />
+                  <StatCard
+                    label="Rebooked"
+                    value={stats.rebooked}
+                    tone="success"
+                  />
+                  <StatCard
+                    label="Dismissed"
+                    value={stats.dismissed}
+                    tone="warning"
+                  />
+                  <StatCard
+                    label="Skipped"
+                    value={stats.skipped}
+                    tone="muted"
+                  />
+                </div>
+
+                {dismissedItems.length > 0 && (
                   <div className="space-y-2">
-                    {dismissedItems.map((r) => (
-                      <div
-                        key={r.id}
-                        className="rounded-lg border bg-muted/20 p-3"
-                      >
-                        <div className="flex items-start justify-between gap-3">
+                    <h4 className="text-sm font-semibold">Recent dismissals</h4>
+                    <div className="space-y-2">
+                      {dismissedItems.map((r) => (
+                        <div
+                          key={r.id}
+                          className="bg-muted/20 rounded-lg border p-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="size-9">
+                                <AvatarFallback>
+                                  {initials(r.clientName)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-sm font-medium">
+                                  {r.clientName} · {r.petName}
+                                </p>
+                                <p className="text-muted-foreground text-xs">
+                                  {getServiceLabel(r.service)} · Dismissed by{" "}
+                                  {r.dismissedBy ?? "staff"}
+                                </p>
+                                {r.dismissNote && (
+                                  <p className="text-muted-foreground mt-1 text-xs italic">
+                                    “{r.dismissNote}”
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className="border-amber-200 bg-amber-50 text-amber-700"
+                            >
+                              {r.dismissReason}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {skippedItems.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-semibold">
+                        Auto-skipped by safety check
+                      </h4>
+                      <span className="text-muted-foreground text-xs">
+                        ({skippedItems.length})
+                      </span>
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      Reminders the system held back automatically — opt-outs,
+                      open incidents, refunds in progress, or a future booking
+                      already on file.
+                    </p>
+                    <div className="space-y-2">
+                      {skippedItems.map((r) => (
+                        <div
+                          key={r.id}
+                          className="rounded-lg border border-slate-200 bg-slate-50/60 p-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="size-9">
+                                <AvatarFallback className="bg-slate-200 text-slate-700">
+                                  {initials(r.clientName)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium">
+                                  {r.clientName} · {r.petName}
+                                </p>
+                                <p className="text-muted-foreground text-xs">
+                                  {getServiceLabel(r.service)} · Skipped{" "}
+                                  {formatLongDate(r.skippedAt)}
+                                </p>
+                                <div className="mt-1.5 flex flex-wrap gap-1">
+                                  {(r.blockedReasons ?? []).map((reason) => (
+                                    <span
+                                      key={reason}
+                                      className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-700"
+                                    >
+                                      <ShieldOff className="size-2.5" />
+                                      {BLOCK_REASON_LABELS[reason]}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className="border-slate-300 bg-white text-slate-600"
+                            >
+                              Skipped
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {sentItems.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold">Recently sent</h4>
+                    <div className="space-y-2">
+                      {sentItems.map((r) => (
+                        <div
+                          key={r.id}
+                          className="flex items-center justify-between rounded-lg border p-3"
+                        >
                           <div className="flex items-center gap-3">
                             <Avatar className="size-9">
                               <AvatarFallback>
@@ -936,146 +1038,41 @@ export function RebookRemindersCard() {
                             <div>
                               <p className="text-sm font-medium">
                                 {r.clientName} · {r.petName}
-                              </p>
-                              <p className="text-muted-foreground text-xs">
-                                {getServiceLabel(r.service)} · Dismissed by{" "}
-                                {r.dismissedBy ?? "staff"}
-                              </p>
-                              {r.dismissNote && (
-                                <p className="text-muted-foreground mt-1 text-xs italic">
-                                  “{r.dismissNote}”
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <Badge
-                            variant="outline"
-                            className="border-amber-200 bg-amber-50 text-amber-700"
-                          >
-                            {r.dismissReason}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {skippedItems.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-semibold">
-                      Auto-skipped by safety check
-                    </h4>
-                    <span className="text-muted-foreground text-xs">
-                      ({skippedItems.length})
-                    </span>
-                  </div>
-                  <p className="text-muted-foreground text-xs">
-                    Reminders the system held back automatically — opt-outs,
-                    open incidents, refunds in progress, or a future booking
-                    already on file.
-                  </p>
-                  <div className="space-y-2">
-                    {skippedItems.map((r) => (
-                      <div
-                        key={r.id}
-                        className="rounded-lg border border-slate-200 bg-slate-50/60 p-3"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="size-9">
-                              <AvatarFallback className="bg-slate-200 text-slate-700">
-                                {initials(r.clientName)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium">
-                                {r.clientName} · {r.petName}
-                              </p>
-                              <p className="text-muted-foreground text-xs">
-                                {getServiceLabel(r.service)} · Skipped{" "}
-                                {formatLongDate(r.skippedAt)}
-                              </p>
-                              <div className="mt-1.5 flex flex-wrap gap-1">
-                                {(r.blockedReasons ?? []).map((reason) => (
-                                  <span
-                                    key={reason}
-                                    className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-700"
+                                {r.reminderNumber === 2 && (
+                                  <Badge
+                                    variant="outline"
+                                    className="ml-2 text-[10px]"
                                   >
-                                    <ShieldOff className="size-2.5" />
-                                    {BLOCK_REASON_LABELS[reason]}
-                                  </span>
-                                ))}
-                              </div>
+                                    Follow-up
+                                  </Badge>
+                                )}
+                              </p>
+                              <p className="text-muted-foreground text-xs">
+                                {getServiceLabel(r.service)} ·{" "}
+                                {r.status === "rebooked"
+                                  ? `Rebooked ${formatLongDate(r.rebookedAt)}`
+                                  : `Sent ${formatLongDate(r.sentAt)}`}
+                              </p>
                             </div>
                           </div>
                           <Badge
                             variant="outline"
-                            className="border-slate-300 bg-white text-slate-600"
+                            className={
+                              r.status === "rebooked"
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700 capitalize"
+                                : "capitalize"
+                            }
                           >
-                            Skipped
+                            {r.status}
                           </Badge>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-
-              {sentItems.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">Recently sent</h4>
-                  <div className="space-y-2">
-                    {sentItems.map((r) => (
-                      <div
-                        key={r.id}
-                        className="flex items-center justify-between rounded-lg border p-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar className="size-9">
-                            <AvatarFallback>
-                              {initials(r.clientName)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-medium">
-                              {r.clientName} · {r.petName}
-                              {r.reminderNumber === 2 && (
-                                <Badge
-                                  variant="outline"
-                                  className="ml-2 text-[10px]"
-                                >
-                                  Follow-up
-                                </Badge>
-                              )}
-                            </p>
-                            <p className="text-muted-foreground text-xs">
-                              {getServiceLabel(r.service)} ·{" "}
-                              {r.status === "rebooked"
-                                ? `Rebooked ${formatLongDate(r.rebookedAt)}`
-                                : `Sent ${formatLongDate(r.sentAt)}`}
-                            </p>
-                          </div>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={
-                            r.status === "rebooked"
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700 capitalize"
-                              : "capitalize"
-                          }
-                        >
-                          {r.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </CardContent>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
         </Card>
       </div>
 
@@ -1165,7 +1162,11 @@ interface ReminderCardProps {
   onDismiss: () => void;
 }
 
-function ReminderCard({ reminder: r, onSendNow, onDismiss }: ReminderCardProps) {
+function ReminderCard({
+  reminder: r,
+  onSendNow,
+  onDismiss,
+}: ReminderCardProps) {
   const isFollowUp = r.reminderNumber === 2;
   const blockedReasons = r.blockedReasons ?? [];
   const isBlocked = blockedReasons.length > 0;
@@ -1173,7 +1174,7 @@ function ReminderCard({ reminder: r, onSendNow, onDismiss }: ReminderCardProps) 
   return (
     <div
       data-blocked={isBlocked ? "true" : undefined}
-      className="group bg-card hover:border-primary/30 data-[blocked=true]:border-amber-200 data-[blocked=true]:bg-amber-50/30 relative rounded-xl border p-4 transition-all hover:shadow-sm"
+      className="group bg-card hover:border-primary/30 relative rounded-xl border p-4 transition-all hover:shadow-sm data-[blocked=true]:border-amber-200 data-[blocked=true]:bg-amber-50/30"
     >
       <div className="flex items-start gap-3">
         <Avatar className="size-11">
@@ -1230,7 +1231,7 @@ function ReminderCard({ reminder: r, onSendNow, onDismiss }: ReminderCardProps) 
       {/* Timeline pills */}
       <div className="bg-muted/40 mt-3 grid grid-cols-3 gap-2 rounded-lg p-2.5 text-center">
         <div>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
+          <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
             Last visit
           </p>
           <p className="mt-0.5 text-xs font-semibold">
@@ -1238,7 +1239,7 @@ function ReminderCard({ reminder: r, onSendNow, onDismiss }: ReminderCardProps) 
           </p>
         </div>
         <div>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
+          <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
             Expected
           </p>
           <p className="mt-0.5 text-xs font-semibold">
@@ -1246,7 +1247,7 @@ function ReminderCard({ reminder: r, onSendNow, onDismiss }: ReminderCardProps) 
           </p>
         </div>
         <div>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
+          <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
             Sends
           </p>
           <p className="text-primary mt-0.5 text-xs font-semibold">
@@ -1296,9 +1297,7 @@ function LapsedClientCard({ lapsed: l }: LapsedCardProps) {
         <Avatar className="size-11">
           <AvatarFallback
             className={
-              severe
-                ? "bg-red-100 text-red-700"
-                : "bg-amber-100 text-amber-700"
+              severe ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
             }
           >
             {initials(l.clientName)}
@@ -1349,9 +1348,7 @@ function LapsedClientCard({ lapsed: l }: LapsedCardProps) {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() =>
-                toast.info(`${l.clientName} marked inactive`)
-              }
+              onClick={() => toast.info(`${l.clientName} marked inactive`)}
             >
               <UserX className="mr-2 size-4" />
               Mark inactive
@@ -1368,7 +1365,7 @@ function LapsedClientCard({ lapsed: l }: LapsedCardProps) {
 
       <div className="bg-muted/40 mt-3 grid grid-cols-3 gap-2 rounded-lg p-2.5 text-center">
         <div>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
+          <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
             Last visit
           </p>
           <p className="mt-0.5 text-xs font-semibold">
@@ -1376,7 +1373,7 @@ function LapsedClientCard({ lapsed: l }: LapsedCardProps) {
           </p>
         </div>
         <div>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
+          <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
             Expected
           </p>
           <p className="mt-0.5 text-xs font-semibold">
@@ -1384,12 +1381,10 @@ function LapsedClientCard({ lapsed: l }: LapsedCardProps) {
           </p>
         </div>
         <div>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
+          <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
             Reminders
           </p>
-          <p className="mt-0.5 text-xs font-semibold">
-            {l.remindersSent} sent
-          </p>
+          <p className="mt-0.5 text-xs font-semibold">{l.remindersSent} sent</p>
         </div>
       </div>
 

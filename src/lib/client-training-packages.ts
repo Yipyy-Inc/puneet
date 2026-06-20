@@ -65,10 +65,7 @@ export function shouldSendRenewalReminder(
   if (pkg.status !== "active") return false;
   if (!isLowBalance(pkg) && !isExhausted(pkg)) return false;
   if (!pkg.lastRenewalReminderAt) return true;
-  const days = daysBetween(
-    pkg.lastRenewalReminderAt.slice(0, 10),
-    today,
-  );
+  const days = daysBetween(pkg.lastRenewalReminderAt.slice(0, 10), today);
   return days >= REMINDER_COOLDOWN_DAYS;
 }
 

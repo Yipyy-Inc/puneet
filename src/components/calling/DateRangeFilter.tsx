@@ -32,7 +32,7 @@ export function DateRangeFilter({
     <>
       <Select value={value} onValueChange={(v) => onChange(v as DateRange)}>
         <SelectTrigger className="w-40 gap-1.5">
-          <CalendarDays className="size-3.5 text-muted-foreground" />
+          <CalendarDays className="text-muted-foreground size-3.5" />
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

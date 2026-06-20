@@ -195,11 +195,41 @@ export interface MessagingStaff {
 }
 
 export const messagingStaff: MessagingStaff[] = [
-  { id: "staff-1", name: "Sarah M.", role: "Manager", initials: "SM", color: "bg-rose-500" },
-  { id: "staff-2", name: "James K.", role: "Boarding Lead", initials: "JK", color: "bg-blue-500" },
-  { id: "staff-3", name: "Priya N.", role: "Grooming Lead", initials: "PN", color: "bg-violet-500" },
-  { id: "staff-4", name: "Marcus T.", role: "Daycare", initials: "MT", color: "bg-emerald-500" },
-  { id: "staff-5", name: "Sophie R.", role: "Reception", initials: "SR", color: "bg-amber-500" },
+  {
+    id: "staff-1",
+    name: "Sarah M.",
+    role: "Manager",
+    initials: "SM",
+    color: "bg-rose-500",
+  },
+  {
+    id: "staff-2",
+    name: "James K.",
+    role: "Boarding Lead",
+    initials: "JK",
+    color: "bg-blue-500",
+  },
+  {
+    id: "staff-3",
+    name: "Priya N.",
+    role: "Grooming Lead",
+    initials: "PN",
+    color: "bg-violet-500",
+  },
+  {
+    id: "staff-4",
+    name: "Marcus T.",
+    role: "Daycare",
+    initials: "MT",
+    color: "bg-emerald-500",
+  },
+  {
+    id: "staff-5",
+    name: "Sophie R.",
+    role: "Reception",
+    initials: "SR",
+    color: "bg-amber-500",
+  },
 ];
 
 // Pet care alerts (mocked at the conversation level)
@@ -211,12 +241,24 @@ export interface PetCareAlert {
 }
 
 export const petCareAlerts: PetCareAlert[] = [
-  { petId: 1, type: "medication", text: "Apoquel 16mg — daily with morning meal" },
+  {
+    petId: 1,
+    type: "medication",
+    text: "Apoquel 16mg — daily with morning meal",
+  },
   { petId: 1, type: "allergy", text: "Chicken-based treats" },
-  { petId: 2, type: "behavior", text: "Reactive with small dogs — keep separated" },
+  {
+    petId: 2,
+    type: "behavior",
+    text: "Reactive with small dogs — keep separated",
+  },
   { petId: 3, type: "medication", text: "Joint supplement w/ dinner" },
   { petId: 5, type: "allergy", text: "Beef and lamb" },
-  { petId: 5, type: "behavior", text: "Fearful of thunder — keep indoors during storms" },
+  {
+    petId: 5,
+    type: "behavior",
+    text: "Fearful of thunder — keep indoors during storms",
+  },
 ];
 
 // Conversation assignments and open/closed state seeds

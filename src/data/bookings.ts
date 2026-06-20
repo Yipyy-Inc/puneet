@@ -2035,14 +2035,21 @@ export const bookings: Booking[] = [
     invoice: {
       id: "10023",
       status: "closed",
-      items: [{ name: "Daycare — Hourly (4 hrs)", unitPrice: 8, quantity: 4, price: 32 }],
+      items: [
+        {
+          name: "Daycare — Hourly (4 hrs)",
+          unitPrice: 8,
+          quantity: 4,
+          price: 32,
+        },
+      ],
       fees: [],
       subtotal: 32,
       discount: 0,
       taxRate: 0.14975,
       taxAmount: 4.79,
       taxes: [
-        { name: "GST", rate: 0.05, amount: 1.60 },
+        { name: "GST", rate: 0.05, amount: 1.6 },
         { name: "QST", rate: 0.09975, amount: 3.19 },
       ],
       total: 36.79,
@@ -2076,14 +2083,16 @@ export const bookings: Booking[] = [
     invoice: {
       id: "10024",
       status: "closed",
-      items: [{ name: "Daycare — Half Day", unitPrice: 22, quantity: 1, price: 22 }],
+      items: [
+        { name: "Daycare — Half Day", unitPrice: 22, quantity: 1, price: 22 },
+      ],
       fees: [],
       subtotal: 22,
       discount: 0,
       taxRate: 0.14975,
       taxAmount: 3.29,
       taxes: [
-        { name: "GST", rate: 0.05, amount: 1.10 },
+        { name: "GST", rate: 0.05, amount: 1.1 },
         { name: "QST", rate: 0.09975, amount: 2.19 },
       ],
       total: 25.29,
@@ -2119,8 +2128,21 @@ export const bookings: Booking[] = [
       id: "10025",
       status: "closed",
       items: [
-        { name: "Basic Bath", unitPrice: 43, quantity: 1, price: 43, staffName: "Jessica Martinez" },
-        { name: "Nail Grinding", unitPrice: 0, quantity: 1, price: 0, type: "addon", staffName: "Jessica Martinez" },
+        {
+          name: "Basic Bath",
+          unitPrice: 43,
+          quantity: 1,
+          price: 43,
+          staffName: "Jessica Martinez",
+        },
+        {
+          name: "Nail Grinding",
+          unitPrice: 0,
+          quantity: 1,
+          price: 0,
+          type: "addon",
+          staffName: "Jessica Martinez",
+        },
       ],
       fees: [],
       subtotal: 43,
@@ -2164,7 +2186,13 @@ export const bookings: Booking[] = [
       id: "10026",
       status: "open",
       items: [
-        { name: "Full Groom", unitPrice: 55, quantity: 1, price: 55, staffName: "Sophie Laurent" },
+        {
+          name: "Full Groom",
+          unitPrice: 55,
+          quantity: 1,
+          price: 55,
+          staffName: "Sophie Laurent",
+        },
       ],
       fees: [],
       subtotal: 55,

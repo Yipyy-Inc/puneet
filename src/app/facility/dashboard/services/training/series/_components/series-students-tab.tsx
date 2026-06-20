@@ -296,21 +296,18 @@ export function SeriesStudentsTab({ series }: { series: TrainingSeries }) {
   ) {
     const cache = queryClient.getQueryCache();
     const apply = (queryKey: readonly unknown[]) => {
-      queryClient.setQueryData<TrainingEnrollment[]>(
-        queryKey,
-        (prev = []) => {
-          const idx = prev.findIndex((e) => e.id === enrollmentId);
-          if (idx === -1) return prev;
-          const next = prev.slice();
-          const updated = update(prev[idx]!);
-          if (updated === null) {
-            next.splice(idx, 1);
-          } else {
-            next[idx] = updated;
-          }
-          return next;
-        },
-      );
+      queryClient.setQueryData<TrainingEnrollment[]>(queryKey, (prev = []) => {
+        const idx = prev.findIndex((e) => e.id === enrollmentId);
+        if (idx === -1) return prev;
+        const next = prev.slice();
+        const updated = update(prev[idx]!);
+        if (updated === null) {
+          next.splice(idx, 1);
+        } else {
+          next[idx] = updated;
+        }
+        return next;
+      });
     };
     cache
       .findAll({ queryKey: ["training", "series-enrollments"] })
@@ -382,7 +379,8 @@ export function SeriesStudentsTab({ series }: { series: TrainingSeries }) {
     const target = enrollments.find((e) => e.id === droppingId);
     if (!target) return;
     const nowISO = new Date().toISOString();
-    const freedSeat = target.status === "enrolled" || target.status === "paused";
+    const freedSeat =
+      target.status === "enrolled" || target.status === "paused";
     const dropPayload = {
       status: "dropped" as const,
       droppedAt: nowISO,
@@ -528,19 +526,17 @@ export function SeriesStudentsTab({ series }: { series: TrainingSeries }) {
         ? `${makeupNote}\n${missedAttendance.trainerNotes}`
         : makeupNote;
       const cache = queryClient.getQueryCache();
-      cache
-        .findAll({ queryKey: ["training", "attendances"] })
-        .forEach((q) => {
-          queryClient.setQueryData<typeof allAttendances>(
-            q.queryKey,
-            (prev = []) =>
-              prev.map((a) =>
-                a.id === missedAttendance.id
-                  ? { ...a, trainerNotes: updatedNotes, updatedAt: nowISO }
-                  : a,
-              ),
-          );
-        });
+      cache.findAll({ queryKey: ["training", "attendances"] }).forEach((q) => {
+        queryClient.setQueryData<typeof allAttendances>(
+          q.queryKey,
+          (prev = []) =>
+            prev.map((a) =>
+              a.id === missedAttendance.id
+                ? { ...a, trainerNotes: updatedNotes, updatedAt: nowISO }
+                : a,
+            ),
+        );
+      });
     }
 
     toast.success(
@@ -600,10 +596,10 @@ export function SeriesStudentsTab({ series }: { series: TrainingSeries }) {
     cache
       .findAll({ queryKey: ["training", "series-enrollments"] })
       .forEach((q) => {
-        queryClient.setQueryData<TrainingEnrollment[]>(q.queryKey, (prev = []) => [
-          ...prev,
-          transferred,
-        ]);
+        queryClient.setQueryData<TrainingEnrollment[]>(
+          q.queryKey,
+          (prev = []) => [...prev, transferred],
+        );
       });
 
     toast.success(`${target.petName} transferred to ${dest.seriesName}.`, {
@@ -736,8 +732,7 @@ export function SeriesStudentsTab({ series }: { series: TrainingSeries }) {
           <span className="font-semibold text-slate-800 tabular-nums">
             {enrollments.length}
           </span>{" "}
-          of{" "}
-          <span className="tabular-nums">{series.maxCapacity}</span> spots
+          of <span className="tabular-nums">{series.maxCapacity}</span> spots
           filled
         </p>
         <Button
@@ -754,9 +749,7 @@ export function SeriesStudentsTab({ series }: { series: TrainingSeries }) {
         data={enrollments}
         columns={columns}
         searchPlaceholder="Search students by owner, dog, or breed…"
-        getSearchValue={(e) =>
-          [e.ownerName, e.petName, e.petBreed].join(" ")
-        }
+        getSearchValue={(e) => [e.ownerName, e.petName, e.petBreed].join(" ")}
         itemsPerPage={10}
         actions={(e) => (
           <DropdownMenu>
@@ -799,9 +792,7 @@ export function SeriesStudentsTab({ series }: { series: TrainingSeries }) {
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem
-                  disabled={
-                    e.status === "dropped" || e.status === "completed"
-                  }
+                  disabled={e.status === "dropped" || e.status === "completed"}
                   onClick={() => setPausingId(e.id)}
                   className="gap-2"
                 >
@@ -864,9 +855,7 @@ export function SeriesStudentsTab({ series }: { series: TrainingSeries }) {
               <Label className="text-sm font-semibold">Payment</Label>
               <Select
                 value={addPayment}
-                onValueChange={(v) =>
-                  setAddPayment(v as SeriesPaymentStatus)
-                }
+                onValueChange={(v) => setAddPayment(v as SeriesPaymentStatus)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -1107,8 +1096,8 @@ export function SeriesStudentsTab({ series }: { series: TrainingSeries }) {
               Pause this enrollment
             </DialogTitle>
             <DialogDescription>
-              Temporarily holds the dog&apos;s spot — they keep their seat,
-              and we&apos;ll skip them on session attendance + homework
+              Temporarily holds the dog&apos;s spot — they keep their seat, and
+              we&apos;ll skip them on session attendance + homework
               notifications until you resume. When they rejoin, they pick up
               from whichever session is current. Use Remove if they&apos;re
               leaving for good.
@@ -1224,8 +1213,8 @@ export function SeriesStudentsTab({ series }: { series: TrainingSeries }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Remove from this series?</AlertDialogTitle>
             <AlertDialogDescription>
-              Removing a student erases their roster entry for this series.
-              Use &quot;Mark as dropped&quot; if you want to keep the record.
+              Removing a student erases their roster entry for this series. Use
+              &quot;Mark as dropped&quot; if you want to keep the record.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1273,10 +1262,7 @@ function MakeupSessionPickerDialog({
   onNotesChange: (notes: string) => void;
   onConfirm: () => void;
 }) {
-  const todayISO = useMemo(
-    () => new Date().toISOString().split("T")[0]!,
-    [],
-  );
+  const todayISO = useMemo(() => new Date().toISOString().split("T")[0]!, []);
 
   // Enrolled count per series — drives capacity-aware filtering.
   const enrolledBySeries = useMemo(() => {
@@ -1304,8 +1290,7 @@ function MakeupSessionPickerDialog({
         if (spotsLeft === 0) return [];
         return s.sessions
           .filter(
-            (sess) =>
-              sess.date >= todayISO && sess.status === "scheduled",
+            (sess) => sess.date >= todayISO && sess.status === "scheduled",
           )
           .map((sess) => ({
             key: `${s.id}::${sess.id}`,
@@ -1360,7 +1345,7 @@ function MakeupSessionPickerDialog({
                           : "border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40 dark:hover:bg-slate-900/40",
                       )}
                     >
-                      <div className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200 mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl">
+                      <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">
                         <span className="text-xs font-bold tabular-nums">
                           S{c.session.sessionNumber}
                         </span>

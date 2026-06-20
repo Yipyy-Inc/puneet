@@ -35,8 +35,13 @@ export function generateMockVanPings(args: {
   /** Override the van's per-stop duration delay in minutes; defaults to 0. */
   extraDelayPerStopMin?: number;
 }): VanLocationPing[] {
-  const { vanId, date, appointments, nowMinutes, extraDelayPerStopMin = 0 } =
-    args;
+  const {
+    vanId,
+    date,
+    appointments,
+    nowMinutes,
+    extraDelayPerStopMin = 0,
+  } = args;
   if (appointments.length === 0) return [];
 
   const sorted = [...appointments].sort((a, b) =>

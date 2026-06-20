@@ -141,10 +141,7 @@ export function GroomingPrepaidPackages() {
   // ── Form helpers ─────────────────────────────────────────────────────────
   const regularPrice = useMemo(
     () =>
-      form.services.reduce(
-        (sum, s) => sum + s.pricePerSession * s.quantity,
-        0,
-      ),
+      form.services.reduce((sum, s) => sum + s.pricePerSession * s.quantity, 0),
     [form.services],
   );
   const savings = Math.max(0, regularPrice - form.packagePrice);
@@ -154,7 +151,10 @@ export function GroomingPrepaidPackages() {
 
   const handleNew = () => {
     setEditing(null);
-    setForm({ ...emptyForm, policy: { ...defaultGroomingPrepaidPackagePolicy } });
+    setForm({
+      ...emptyForm,
+      policy: { ...defaultGroomingPrepaidPackagePolicy },
+    });
     setPendingService({ serviceId: "", quantity: 1 });
     setEditorOpen(true);
   };
@@ -317,7 +317,10 @@ export function GroomingPrepaidPackages() {
       icon: Percent,
       defaultVisible: true,
       render: (item) => (
-        <Badge variant="outline" className="border-emerald-200 text-emerald-700">
+        <Badge
+          variant="outline"
+          className="border-emerald-200 text-emerald-700"
+        >
           {item.savingsPercentage.toFixed(1)}% off
         </Badge>
       ),
@@ -343,7 +346,9 @@ export function GroomingPrepaidPackages() {
       label: "Sold",
       icon: ShoppingBag,
       defaultVisible: true,
-      render: (item) => <span className="font-medium">{item.purchaseCount}</span>,
+      render: (item) => (
+        <span className="font-medium">{item.purchaseCount}</span>
+      ),
     },
     {
       key: "status",
@@ -383,14 +388,14 @@ export function GroomingPrepaidPackages() {
   return (
     <div className="space-y-6 pb-20">
       {/* Header */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center">
         <div>
           <h2 className="text-lg font-bold tracking-tight text-slate-800">
             Prepaid Grooming Packages
           </h2>
           <p className="text-muted-foreground mt-0.5 text-sm">
-            Bundle multiple grooming sessions at a discount with a fixed validity
-            window — like a daycare pass for grooming.
+            Bundle multiple grooming sessions at a discount with a fixed
+            validity window — like a daycare pass for grooming.
           </p>
         </div>
         <Button onClick={handleNew}>
@@ -403,7 +408,9 @@ export function GroomingPrepaidPackages() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Packages</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Packages
+            </CardTitle>
             <Package className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
@@ -425,7 +432,9 @@ export function GroomingPrepaidPackages() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Package Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Package Revenue
+            </CardTitle>
             <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
@@ -463,14 +472,18 @@ export function GroomingPrepaidPackages() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
-                onClick={() => handleEdit(item as unknown as GroomingPrepaidPackage)}
+                onClick={() =>
+                  handleEdit(item as unknown as GroomingPrepaidPackage)
+                }
               >
                 <Edit className="mr-2 size-4" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive"
-                onClick={() => setDeleting(item as unknown as GroomingPrepaidPackage)}
+                onClick={() =>
+                  setDeleting(item as unknown as GroomingPrepaidPackage)
+                }
               >
                 <Trash2 className="mr-2 size-4" />
                 Delete
@@ -493,361 +506,383 @@ export function GroomingPrepaidPackages() {
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs defaultValue="details" className="w-full mt-2">
+          <Tabs defaultValue="details" className="mt-2 w-full">
             {editing && (
-              <TabsList className="w-full grid grid-cols-2 mb-4">
+              <TabsList className="mb-4 grid w-full grid-cols-2">
                 <TabsTrigger value="details">Package Details</TabsTrigger>
                 <TabsTrigger value="history">Redemption History</TabsTrigger>
               </TabsList>
             )}
             <TabsContent value="details">
               <div className="grid gap-4 py-2">
-            {/* Basic info */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="pkg-name">Package Name</Label>
-                <Input
-                  id="pkg-name"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="e.g., 5x Full Groom Pack"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="pkg-status">Status</Label>
-                <Select
-                  value={form.status}
-                  onValueChange={(value: GroomingPrepaidPackageStatus) =>
-                    setForm({ ...form, status: value })
-                  }
-                >
-                  <SelectTrigger id="pkg-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="seasonal">Seasonal</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="pkg-desc">Description</Label>
-              <Textarea
-                id="pkg-desc"
-                rows={2}
-                value={form.description}
-                onChange={(e) =>
-                  setForm({ ...form, description: e.target.value })
-                }
-                placeholder="What's included and who is this for?"
-              />
-            </div>
-
-            {/* Services */}
-            <div className="space-y-3">
-              <div>
-                <Label>Included Services</Label>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  Add one or more service types to create single-service or mixed bundles.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Select
-                  value={pendingService.serviceId}
-                  onValueChange={(value) =>
-                    setPendingService({ ...pendingService, serviceId: value })
-                  }
-                >
-                  <SelectTrigger className="min-w-[260px] flex-1">
-                    <SelectValue 
-                      placeholder={form.services.length > 0 ? "Add another service to this bundle…" : "Select a grooming service…"} 
+                {/* Basic info */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="pkg-name">Package Name</Label>
+                    <Input
+                      id="pkg-name"
+                      value={form.name}
+                      onChange={(e) =>
+                        setForm({ ...form, name: e.target.value })
+                      }
+                      placeholder="e.g., 5x Full Groom Pack"
                     />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {services
-                      .filter((s) => s.isActive)
-                      .map((svc) => (
-                        <SelectItem key={svc.id} value={svc.id}>
-                          {svc.name} — ${svc.basePrice}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="number"
-                  min={1}
-                  className="w-24"
-                  placeholder="Qty"
-                  value={pendingService.quantity}
-                  onChange={(e) =>
-                    setPendingService({
-                      ...pendingService,
-                      quantity: Math.max(1, parseInt(e.target.value) || 1),
-                    })
-                  }
-                />
-                <Button type="button" variant="secondary" onClick={addServiceRow}>
-                  <Plus className="mr-1.5 size-4" />
-                  Add
-                </Button>
-              </div>
-              {form.services.length > 0 ? (
-                <div className="space-y-2 rounded-lg border p-3">
-                  {form.services.map((s) => (
-                    <div
-                      key={s.serviceId}
-                      className="flex items-center justify-between text-sm"
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pkg-status">Status</Label>
+                    <Select
+                      value={form.status}
+                      onValueChange={(value: GroomingPrepaidPackageStatus) =>
+                        setForm({ ...form, status: value })
+                      }
                     >
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="text-muted-foreground size-3.5" />
-                        <span>
-                          {s.quantity}× {s.serviceName} @ $
-                          {s.pricePerSession}/session
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-muted-foreground tabular-nums">
-                          ${(s.pricePerSession * s.quantity).toFixed(2)}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="size-7"
-                          onClick={() => removeServiceRow(s.serviceId)}
-                        >
-                          <Trash2 className="text-destructive size-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="border-t pt-2 text-sm font-medium">
-                    {totalSessions} session{totalSessions === 1 ? "" : "s"} ·
-                    Regular price ${regularPrice.toFixed(2)}
+                      <SelectTrigger id="pkg-status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                        <SelectItem value="seasonal">Seasonal</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              ) : (
-                <div className="text-muted-foreground rounded-lg border border-dashed px-3 py-4 text-center text-xs">
-                  Add at least one grooming service to this package.
-                </div>
-              )}
-            </div>
-
-            {/* Pricing & validity */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="pkg-price">Package Price ($)</Label>
-                <Input
-                  id="pkg-price"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.packagePrice}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      packagePrice: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                />
-                {form.packagePrice > 0 && regularPrice > 0 && (
-                  <p
-                    className={
-                      savings > 0
-                        ? "text-emerald-600 text-xs"
-                        : "text-amber-600 text-xs"
-                    }
-                  >
-                    {savings > 0
-                      ? `Customer saves $${savings.toFixed(2)} (${savingsPercentage.toFixed(1)}% off)`
-                      : "Package price ≥ regular price — no savings"}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="pkg-validity">Validity</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="pkg-validity"
-                    type="number"
-                    min={1}
-                    value={form.validityDays}
+                <div className="space-y-2">
+                  <Label htmlFor="pkg-desc">Description</Label>
+                  <Textarea
+                    id="pkg-desc"
+                    rows={2}
+                    value={form.description}
                     onChange={(e) =>
-                      setForm({
-                        ...form,
-                        validityDays: parseInt(e.target.value) || 1,
-                      })
+                      setForm({ ...form, description: e.target.value })
                     }
-                    className="flex-1"
+                    placeholder="What's included and who is this for?"
                   />
-                  <Select
-                    value={String(form.validityDays)}
-                    onValueChange={(v) =>
-                      setForm({ ...form, validityDays: parseInt(v) || 180 })
-                    }
-                  >
-                    <SelectTrigger className="w-[140px]">
-                      <SelectValue placeholder="Preset" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {VALIDITY_PRESETS.map((p) => (
-                        <SelectItem key={p.value} value={String(p.value)}>
-                          {p.label}
-                        </SelectItem>
+                </div>
+
+                {/* Services */}
+                <div className="space-y-3">
+                  <div>
+                    <Label>Included Services</Label>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      Add one or more service types to create single-service or
+                      mixed bundles.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Select
+                      value={pendingService.serviceId}
+                      onValueChange={(value) =>
+                        setPendingService({
+                          ...pendingService,
+                          serviceId: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="min-w-[260px] flex-1">
+                        <SelectValue
+                          placeholder={
+                            form.services.length > 0
+                              ? "Add another service to this bundle…"
+                              : "Select a grooming service…"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {services
+                          .filter((s) => s.isActive)
+                          .map((svc) => (
+                            <SelectItem key={svc.id} value={svc.id}>
+                              {svc.name} — ${svc.basePrice}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      min={1}
+                      className="w-24"
+                      placeholder="Qty"
+                      value={pendingService.quantity}
+                      onChange={(e) =>
+                        setPendingService({
+                          ...pendingService,
+                          quantity: Math.max(1, parseInt(e.target.value) || 1),
+                        })
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={addServiceRow}
+                    >
+                      <Plus className="mr-1.5 size-4" />
+                      Add
+                    </Button>
+                  </div>
+                  {form.services.length > 0 ? (
+                    <div className="space-y-2 rounded-lg border p-3">
+                      {form.services.map((s) => (
+                        <div
+                          key={s.serviceId}
+                          className="flex items-center justify-between text-sm"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="text-muted-foreground size-3.5" />
+                            <span>
+                              {s.quantity}× {s.serviceName} @ $
+                              {s.pricePerSession}/session
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-muted-foreground tabular-nums">
+                              ${(s.pricePerSession * s.quantity).toFixed(2)}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="size-7"
+                              onClick={() => removeServiceRow(s.serviceId)}
+                            >
+                              <Trash2 className="text-destructive size-4" />
+                            </Button>
+                          </div>
+                        </div>
                       ))}
-                    </SelectContent>
-                  </Select>
+                      <div className="border-t pt-2 text-sm font-medium">
+                        {totalSessions} session{totalSessions === 1 ? "" : "s"}{" "}
+                        · Regular price ${regularPrice.toFixed(2)}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-muted-foreground rounded-lg border border-dashed px-3 py-4 text-center text-xs">
+                      Add at least one grooming service to this package.
+                    </div>
+                  )}
                 </div>
-                <p className="text-muted-foreground text-xs">
-                  Days after purchase until unused passes expire.
-                </p>
-              </div>
-            </div>
 
-            {/* Popular flag */}
-            <label className="hover:bg-muted/30 flex cursor-pointer items-center justify-between rounded-md border px-3 py-2">
-              <div>
-                <p className="text-sm font-medium">Mark as popular</p>
-                <p className="text-muted-foreground text-xs">
-                  Highlights the package in the customer storefront.
-                </p>
-              </div>
-              <Switch
-                checked={form.isPopular}
-                onCheckedChange={(v) => setForm({ ...form, isPopular: v })}
-              />
-            </label>
+                {/* Pricing & validity */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="pkg-price">Package Price ($)</Label>
+                    <Input
+                      id="pkg-price"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={form.packagePrice}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          packagePrice: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                    />
+                    {form.packagePrice > 0 && regularPrice > 0 && (
+                      <p
+                        className={
+                          savings > 0
+                            ? "text-xs text-emerald-600"
+                            : "text-xs text-amber-600"
+                        }
+                      >
+                        {savings > 0
+                          ? `Customer saves $${savings.toFixed(2)} (${savingsPercentage.toFixed(1)}% off)`
+                          : "Package price ≥ regular price — no savings"}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pkg-validity">Validity</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="pkg-validity"
+                        type="number"
+                        min={1}
+                        value={form.validityDays}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            validityDays: parseInt(e.target.value) || 1,
+                          })
+                        }
+                        className="flex-1"
+                      />
+                      <Select
+                        value={String(form.validityDays)}
+                        onValueChange={(v) =>
+                          setForm({ ...form, validityDays: parseInt(v) || 180 })
+                        }
+                      >
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue placeholder="Preset" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {VALIDITY_PRESETS.map((p) => (
+                            <SelectItem key={p.value} value={String(p.value)}>
+                              {p.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      Days after purchase until unused passes expire.
+                    </p>
+                  </div>
+                </div>
 
-            {/* Customer policy */}
-            <div className="space-y-3 rounded-lg border p-4">
-              <div>
-                <Label className="text-sm font-semibold">
-                  Customer self-service policy
-                </Label>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  Controls what pass-holders can do from their account.
-                </p>
-              </div>
-              <div className="grid gap-2 md:grid-cols-2">
-                <PolicyToggle
-                  label="Refund unused passes"
-                  checked={form.policy.allowRefundUnused}
-                  onChange={(v) =>
-                    setForm({
-                      ...form,
-                      policy: { ...form.policy, allowRefundUnused: v },
-                    })
-                  }
-                />
-                <PolicyToggle
-                  label="Store credit on cancel"
-                  checked={form.policy.allowStoreCreditOnCancel}
-                  onChange={(v) =>
-                    setForm({
-                      ...form,
-                      policy: { ...form.policy, allowStoreCreditOnCancel: v },
-                    })
-                  }
-                />
-                <PolicyToggle
-                  label="Allow transfer to household"
-                  checked={form.policy.allowTransfer}
-                  onChange={(v) =>
-                    setForm({
-                      ...form,
-                      policy: { ...form.policy, allowTransfer: v },
-                    })
-                  }
-                />
-                <PolicyToggle
-                  label="Allow validity extension"
-                  checked={form.policy.allowExtension}
-                  onChange={(v) =>
-                    setForm({
-                      ...form,
-                      policy: { ...form.policy, allowExtension: v },
-                    })
-                  }
-                />
-              </div>
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Refund per unused pass ($)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    disabled={!form.policy.allowRefundUnused}
-                    value={form.policy.refundPerUnusedPass ?? ""}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        policy: {
-                          ...form.policy,
-                          refundPerUnusedPass:
-                            parseFloat(e.target.value) || undefined,
-                        },
-                      })
-                    }
+                {/* Popular flag */}
+                <label className="hover:bg-muted/30 flex cursor-pointer items-center justify-between rounded-md border px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium">Mark as popular</p>
+                    <p className="text-muted-foreground text-xs">
+                      Highlights the package in the customer storefront.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={form.isPopular}
+                    onCheckedChange={(v) => setForm({ ...form, isPopular: v })}
                   />
+                </label>
+
+                {/* Customer policy */}
+                <div className="space-y-3 rounded-lg border p-4">
+                  <div>
+                    <Label className="text-sm font-semibold">
+                      Customer self-service policy
+                    </Label>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      Controls what pass-holders can do from their account.
+                    </p>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <PolicyToggle
+                      label="Refund unused passes"
+                      checked={form.policy.allowRefundUnused}
+                      onChange={(v) =>
+                        setForm({
+                          ...form,
+                          policy: { ...form.policy, allowRefundUnused: v },
+                        })
+                      }
+                    />
+                    <PolicyToggle
+                      label="Store credit on cancel"
+                      checked={form.policy.allowStoreCreditOnCancel}
+                      onChange={(v) =>
+                        setForm({
+                          ...form,
+                          policy: {
+                            ...form.policy,
+                            allowStoreCreditOnCancel: v,
+                          },
+                        })
+                      }
+                    />
+                    <PolicyToggle
+                      label="Allow transfer to household"
+                      checked={form.policy.allowTransfer}
+                      onChange={(v) =>
+                        setForm({
+                          ...form,
+                          policy: { ...form.policy, allowTransfer: v },
+                        })
+                      }
+                    />
+                    <PolicyToggle
+                      label="Allow validity extension"
+                      checked={form.policy.allowExtension}
+                      onChange={(v) =>
+                        setForm({
+                          ...form,
+                          policy: { ...form.policy, allowExtension: v },
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">
+                        Refund per unused pass ($)
+                      </Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        disabled={!form.policy.allowRefundUnused}
+                        value={form.policy.refundPerUnusedPass ?? ""}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            policy: {
+                              ...form.policy,
+                              refundPerUnusedPass:
+                                parseFloat(e.target.value) || undefined,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Max extension (days)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        disabled={!form.policy.allowExtension}
+                        value={form.policy.maxExtensionDays}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            policy: {
+                              ...form.policy,
+                              maxExtensionDays: parseInt(e.target.value) || 0,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Extension fee ($)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        disabled={!form.policy.allowExtension}
+                        value={form.policy.extensionFee}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            policy: {
+                              ...form.policy,
+                              extensionFee: parseFloat(e.target.value) || 0,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">
+                      Policy explanation shown to customers
+                    </Label>
+                    <Textarea
+                      rows={2}
+                      value={form.policy.policyNotes ?? ""}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          policy: {
+                            ...form.policy,
+                            policyNotes: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="e.g. Refunds on unused passes are issued at $50/pass."
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Max extension (days)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    disabled={!form.policy.allowExtension}
-                    value={form.policy.maxExtensionDays}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        policy: {
-                          ...form.policy,
-                          maxExtensionDays: parseInt(e.target.value) || 0,
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Extension fee ($)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    disabled={!form.policy.allowExtension}
-                    value={form.policy.extensionFee}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        policy: {
-                          ...form.policy,
-                          extensionFee: parseFloat(e.target.value) || 0,
-                        },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">
-                  Policy explanation shown to customers
-                </Label>
-                <Textarea
-                  rows={2}
-                  value={form.policy.policyNotes ?? ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      policy: { ...form.policy, policyNotes: e.target.value },
-                    })
-                  }
-                  placeholder="e.g. Refunds on unused passes are issued at $50/pass."
-                />
-              </div>
-            </div>
               </div>
             </TabsContent>
             {editing && (
@@ -855,17 +890,27 @@ export function GroomingPrepaidPackages() {
                 <div className="space-y-4 py-2">
                   {(() => {
                     const packageRedemptions = customerPackages
-                      .filter(cp => cp.packageId === editing.id)
-                      .flatMap(cp => {
-                        const client = clients.find(c => c.id === cp.customerId);
-                        return cp.redemptions.map(r => ({ ...r, clientName: client?.name ?? "Unknown Client" }));
+                      .filter((cp) => cp.packageId === editing.id)
+                      .flatMap((cp) => {
+                        const client = clients.find(
+                          (c) => c.id === cp.customerId,
+                        );
+                        return cp.redemptions.map((r) => ({
+                          ...r,
+                          clientName: client?.name ?? "Unknown Client",
+                        }));
                       })
-                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                      .sort(
+                        (a, b) =>
+                          new Date(b.date).getTime() -
+                          new Date(a.date).getTime(),
+                      );
 
                     if (packageRedemptions.length === 0) {
                       return (
                         <div className="text-muted-foreground rounded-lg border border-dashed px-3 py-8 text-center text-sm">
-                          No passes have been redeemed for this package type yet.
+                          No passes have been redeemed for this package type
+                          yet.
                         </div>
                       );
                     }
@@ -874,20 +919,42 @@ export function GroomingPrepaidPackages() {
                       <div className="rounded-md border">
                         <div className="divide-y">
                           {packageRedemptions.map((redemption) => (
-                            <div key={redemption.id} className="p-3 text-sm hover:bg-muted/50 transition-colors">
-                              <div className="flex items-center justify-between mb-1">
+                            <div
+                              key={redemption.id}
+                              className="hover:bg-muted/50 p-3 text-sm transition-colors"
+                            >
+                              <div className="mb-1 flex items-center justify-between">
                                 <span className="font-semibold text-slate-800">
                                   {redemption.clientName}
                                 </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(redemption.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                                <span className="text-muted-foreground text-xs">
+                                  {new Date(redemption.date).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                      hour: "numeric",
+                                      minute: "2-digit",
+                                    },
+                                  )}
                                 </span>
                               </div>
-                              <div className="text-slate-600 flex items-center justify-between">
+                              <div className="flex items-center justify-between text-slate-600">
                                 <span>
-                                  Redeemed <span className="font-medium text-slate-800">{redemption.serviceLabel}</span> pass for <span className="font-medium text-slate-800">{redemption.petName}</span>
+                                  Redeemed{" "}
+                                  <span className="font-medium text-slate-800">
+                                    {redemption.serviceLabel}
+                                  </span>{" "}
+                                  pass for{" "}
+                                  <span className="font-medium text-slate-800">
+                                    {redemption.petName}
+                                  </span>
                                 </span>
-                                <Badge variant="outline" className="text-[10px]">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px]"
+                                >
                                   Pass #{redemption.passNumber}
                                 </Badge>
                               </div>
@@ -913,15 +980,18 @@ export function GroomingPrepaidPackages() {
       </Dialog>
 
       {/* Delete confirmation */}
-      <Dialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
+      <Dialog
+        open={!!deleting}
+        onOpenChange={(open) => !open && setDeleting(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Package</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete{" "}
-              <span className="font-semibold">{deleting?.name}</span>? This won&#39;t
-              affect customers who have already purchased it, but it will be
-              hidden from the storefront.
+              <span className="font-semibold">{deleting?.name}</span>? This
+              won&#39;t affect customers who have already purchased it, but it
+              will be hidden from the storefront.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

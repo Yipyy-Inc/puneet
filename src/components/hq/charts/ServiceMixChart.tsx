@@ -30,7 +30,12 @@ export function ServiceMixChart({ data, height = 260 }: Props) {
           paddingAngle={2}
         >
           {data.map((entry) => (
-            <Cell key={entry.service} fill={entry.color} stroke="white" strokeWidth={2} />
+            <Cell
+              key={entry.service}
+              fill={entry.color}
+              stroke="white"
+              strokeWidth={2}
+            />
           ))}
         </Pie>
         <Tooltip

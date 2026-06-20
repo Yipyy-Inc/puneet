@@ -59,14 +59,15 @@ export interface GroomingPrepaidPackage {
   policy: GroomingPrepaidPackagePolicy;
 }
 
-export const defaultGroomingPrepaidPackagePolicy: GroomingPrepaidPackagePolicy = {
-  allowRefundUnused: false,
-  allowStoreCreditOnCancel: true,
-  allowTransfer: false,
-  allowExtension: true,
-  maxExtensionDays: 30,
-  extensionFee: 0,
-};
+export const defaultGroomingPrepaidPackagePolicy: GroomingPrepaidPackagePolicy =
+  {
+    allowRefundUnused: false,
+    allowStoreCreditOnCancel: true,
+    allowTransfer: false,
+    allowExtension: true,
+    maxExtensionDays: 30,
+    extensionFee: 0,
+  };
 
 export const groomingPrepaidPackages: GroomingPrepaidPackage[] = [
   {

@@ -513,7 +513,9 @@ export default function ClientDetailPage({
                 Edit
               </Button>
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/facility/dashboard/clients/${client.id}/settings`}>
+                <Link
+                  href={`/facility/dashboard/clients/${client.id}/settings`}
+                >
                   <SettingsIcon className="mr-1 size-4" />
                   Settings
                 </Link>
@@ -2510,9 +2512,7 @@ export default function ClientDetailPage({
       {/* Grooming appointment entry point — opens the same dialog used on the
           calendar, pre-filled with this client and (optionally) the first pet. */}
       {(() => {
-        const targetPet = client.pets.find(
-          (p) => p.id === groomingDialogPetId,
-        );
+        const targetPet = client.pets.find((p) => p.id === groomingDialogPetId);
         const targetPetExtras = targetPet as
           | (Pet & { coatType?: string })
           | undefined;

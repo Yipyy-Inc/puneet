@@ -40,7 +40,12 @@ const COLUMNS: { key: SortKey; label: string; numeric: boolean }[] = [
 ];
 
 // Nulls always sort to the bottom regardless of direction.
-function compareRows(a: StaffPerfRow, b: StaffPerfRow, key: SortKey, dir: 1 | -1): number {
+function compareRows(
+  a: StaffPerfRow,
+  b: StaffPerfRow,
+  key: SortKey,
+  dir: 1 | -1,
+): number {
   if (key === "name") return a.name.localeCompare(b.name) * dir;
   const av = a[key] as number | null;
   const bv = b[key] as number | null;
@@ -124,7 +129,7 @@ export function StaffPerformanceReport({
               <Users className="size-4 text-teal-600" />
               Staff Phone Performance
             </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-xs">
               Per-staff breakdown for the selected period & location · manager
               view. Click a column to sort.
             </p>
@@ -143,26 +148,29 @@ export function StaffPerformanceReport({
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
+          <p className="text-muted-foreground py-8 text-center text-sm">
             No handled calls in this period.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b text-xs text-muted-foreground">
+                <tr className="text-muted-foreground border-b text-xs">
                   {COLUMNS.map((col) => {
                     const active = sortKey === col.key;
                     return (
                       <th
                         key={col.key}
-                        className={cn("pb-2 font-medium", col.numeric ? "text-right" : "text-left")}
+                        className={cn(
+                          "pb-2 font-medium",
+                          col.numeric ? "text-right" : "text-left",
+                        )}
                       >
                         <button
                           type="button"
                           onClick={() => toggleSort(col.key)}
                           className={cn(
-                            "inline-flex items-center gap-1 hover:text-foreground",
+                            "hover:text-foreground inline-flex items-center gap-1",
                             col.numeric && "flex-row-reverse",
                             active && "text-foreground",
                           )}
@@ -194,7 +202,9 @@ export function StaffPerformanceReport({
                           {r.name}
                         </span>
                       </td>
-                      <td className="py-2.5 text-right tabular-nums">{r.callsHandled}</td>
+                      <td className="py-2.5 text-right tabular-nums">
+                        {r.callsHandled}
+                      </td>
                       <td className="py-2.5 text-right">
                         {r.avgSentiment === null ? (
                           <span className="text-muted-foreground">—</span>
@@ -217,7 +227,7 @@ export function StaffPerformanceReport({
                         {r.avgQa === null ? (
                           <span className="text-muted-foreground">—</span>
                         ) : (
-                          <span className="inline-flex items-center gap-0.5 font-semibold tabular-nums text-amber-600">
+                          <span className="inline-flex items-center gap-0.5 font-semibold text-amber-600 tabular-nums">
                             <Star className="size-3 fill-amber-400" />
                             {r.avgQa.toFixed(1)}
                           </span>
@@ -228,7 +238,9 @@ export function StaffPerformanceReport({
                           <span className="text-muted-foreground">—</span>
                         ) : (
                           <Badge
-                            variant={r.followUpRate >= 80 ? "default" : "secondary"}
+                            variant={
+                              r.followUpRate >= 80 ? "default" : "secondary"
+                            }
                             className="tabular-nums"
                             title={`${r.followUpResolved} of ${r.followUpTotal} resolved`}
                           >
@@ -236,8 +248,10 @@ export function StaffPerformanceReport({
                           </Badge>
                         )}
                       </td>
-                      <td className="py-2.5 text-right tabular-nums text-muted-foreground">
-                        {r.avgDuration === null ? "—" : formatMinSec(r.avgDuration)}
+                      <td className="text-muted-foreground py-2.5 text-right tabular-nums">
+                        {r.avgDuration === null
+                          ? "—"
+                          : formatMinSec(r.avgDuration)}
                       </td>
                     </tr>
                   );

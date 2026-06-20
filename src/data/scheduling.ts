@@ -1285,7 +1285,8 @@ export const enhancedShiftSwaps: EnhancedShiftSwap[] = [
     requestedAt: "2026-04-02",
     reviewedBy: "emp-7",
     reviewedAt: "2026-04-03",
-    reviewNotes: "Alex already has a long stretch that week — can't stack another.",
+    reviewNotes:
+      "Alex already has a long stretch that week — can't stack another.",
     departmentId: "dept-2",
   },
   {
@@ -2052,7 +2053,8 @@ export const availabilityChangeRequests: AvailabilityChangeRequest[] = [
     reviewedBy: "emp-7",
     reviewedByName: "Sophie Martin",
     reviewedAt: "2026-03-07",
-    reviewNotes: "Too much of a cut during onboarding — let's revisit after May.",
+    reviewNotes:
+      "Too much of a cut during onboarding — let's revisit after May.",
   },
   {
     id: "ac-10",

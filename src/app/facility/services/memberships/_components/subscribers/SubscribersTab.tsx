@@ -125,7 +125,9 @@ export function SubscribersTab() {
     .reduce((sum, r) => sum + r.monthlyPrice, 0);
   const avgPrice =
     rows.length > 0
-      ? Math.round(rows.reduce((sum, r) => sum + r.monthlyPrice, 0) / rows.length)
+      ? Math.round(
+          rows.reduce((sum, r) => sum + r.monthlyPrice, 0) / rows.length,
+        )
       : 0;
 
   const columns: ColumnDef<Row>[] = [
@@ -146,7 +148,11 @@ export function SubscribersTab() {
             >
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarUrl} alt={name} className="size-full object-cover" />
+                <img
+                  src={avatarUrl}
+                  alt={name}
+                  className="size-full object-cover"
+                />
               ) : (
                 getInitials(name)
               )}
@@ -375,7 +381,9 @@ export function SubscribersTab() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{rows.length}</div>
-            <p className="text-muted-foreground text-xs">All membership plans</p>
+            <p className="text-muted-foreground text-xs">
+              All membership plans
+            </p>
           </CardContent>
         </Card>
         <Card className="border border-slate-200/80 bg-linear-to-br from-white to-emerald-50/60 shadow-sm">
@@ -406,7 +414,9 @@ export function SubscribersTab() {
         </Card>
         <Card className="border border-slate-200/80 bg-linear-to-br from-white to-indigo-50/60 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Plan Price</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Avg Plan Price
+            </CardTitle>
             <CreditCard className="size-4 text-indigo-600" />
           </CardHeader>
           <CardContent>

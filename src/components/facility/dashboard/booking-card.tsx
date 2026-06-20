@@ -260,10 +260,10 @@ export function BookingCard({
         }
       }}
       className={cn(
-        "group relative flex h-full cursor-pointer items-center gap-3 rounded-2xl border border-border/70 bg-card p-3 transition-all",
+        "group border-border/70 bg-card relative flex h-full cursor-pointer items-center gap-3 rounded-2xl border p-3 transition-all",
         "hover:border-border hover:shadow-sm",
         "data-[status=checked-out]:opacity-80",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "focus-visible:ring-ring focus:outline-none focus-visible:ring-2",
       )}
       data-status={booking.status}
     >
@@ -275,7 +275,7 @@ export function BookingCard({
           className="relative block size-12 shrink-0"
         >
           {petImage ? (
-            <div className="size-12 overflow-hidden rounded-2xl ring-2 ring-background">
+            <div className="ring-background size-12 overflow-hidden rounded-2xl ring-2">
               <Image
                 src={petImage}
                 alt={booking.petName}
@@ -285,12 +285,12 @@ export function BookingCard({
               />
             </div>
           ) : (
-            <div className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-2xl ring-2 ring-background">
+            <div className="bg-muted text-muted-foreground ring-background flex size-12 items-center justify-center rounded-2xl ring-2">
               <PawPrint className="size-5" />
             </div>
           )}
           {booking.isGoingHomeToday && booking.status === "checked-in" && (
-            <span className="absolute -bottom-1 -right-1 flex size-4 items-center justify-center rounded-full bg-violet-500 ring-2 ring-background">
+            <span className="ring-background absolute -right-1 -bottom-1 flex size-4 items-center justify-center rounded-full bg-violet-500 ring-2">
               <Home className="size-2.5 text-white" />
             </span>
           )}
@@ -301,7 +301,7 @@ export function BookingCard({
             <Link
               href={petHref}
               onClick={(e) => e.stopPropagation()}
-              className="min-w-0 truncate text-sm font-semibold leading-none hover:underline"
+              className="min-w-0 truncate text-sm leading-none font-semibold hover:underline"
             >
               {booking.petName}
             </Link>
@@ -335,7 +335,7 @@ export function BookingCard({
           <p className="text-muted-foreground line-clamp-1 text-xs">
             {booking.resourceLabel && (
               <>
-                <span className="font-medium text-foreground/80">
+                <span className="text-foreground/80 font-medium">
                   {booking.resourceLabel}
                 </span>
                 <span className="mx-1.5">·</span>
@@ -413,9 +413,13 @@ export function BookingCard({
                 <PaymentCheckoutFlow
                   open={paymentOpen}
                   onOpenChange={setPaymentOpen}
-                  amountDue={(booking.price ?? 0) + (pendingLateFee?.amount ?? 0)}
+                  amountDue={
+                    (booking.price ?? 0) + (pendingLateFee?.amount ?? 0)
+                  }
                   depositPaid={0}
-                  invoiceTotal={(booking.price ?? 0) + (pendingLateFee?.amount ?? 0)}
+                  invoiceTotal={
+                    (booking.price ?? 0) + (pendingLateFee?.amount ?? 0)
+                  }
                   loyaltyDiscount={loyaltyDiscount ?? undefined}
                   onConfirm={handlePaymentConfirm}
                 />

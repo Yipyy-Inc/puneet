@@ -205,7 +205,7 @@ export function InvoiceActivityLog({ invoice }: InvoiceActivityLogProps) {
   if (events.length === 0) {
     return (
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-wider uppercase flex items-center gap-1.5">
+        <p className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wider uppercase">
           <History className="size-3.5" />
           Invoice Activity
         </p>
@@ -220,7 +220,7 @@ export function InvoiceActivityLog({ invoice }: InvoiceActivityLogProps) {
     <>
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase flex items-center gap-1.5">
+          <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold tracking-wider uppercase">
             <History className="size-3.5" />
             Invoice Activity
           </p>
@@ -242,7 +242,7 @@ export function InvoiceActivityLog({ invoice }: InvoiceActivityLogProps) {
                   {/* Dot */}
                   <span
                     className={cn(
-                      "absolute -left-4 top-1.5 flex size-4 items-center justify-center rounded-full ring-2 ring-background",
+                      "ring-background absolute top-1.5 -left-4 flex size-4 items-center justify-center rounded-full ring-2",
                       meta.bg,
                     )}
                   >
@@ -258,7 +258,7 @@ export function InvoiceActivityLog({ invoice }: InvoiceActivityLogProps) {
                       <p className="text-foreground text-[12px] leading-snug">
                         {event.description}
                         {event.amount !== undefined && (
-                          <span className="ml-1 font-semibold font-[tabular-nums]">
+                          <span className="ml-1 font-[tabular-nums] font-semibold">
                             ${fmt(event.amount)}
                           </span>
                         )}
@@ -301,7 +301,7 @@ export function InvoiceActivityLog({ invoice }: InvoiceActivityLogProps) {
             <DialogDescription>
               {openEvent && (
                 <>
-                  <span className="font-medium text-foreground">
+                  <span className="text-foreground font-medium">
                     {openEvent.description}
                   </span>
                   <span className="text-muted-foreground">
@@ -328,8 +328,7 @@ export function InvoiceActivityLog({ invoice }: InvoiceActivityLogProps) {
 function statusBadgeClass(status: string): string {
   if (status === "closed")
     return "border-emerald-300 bg-emerald-100 text-emerald-800";
-  if (status === "open")
-    return "border-amber-300 bg-amber-100 text-amber-800";
+  if (status === "open") return "border-amber-300 bg-amber-100 text-amber-800";
   return "border-zinc-300 bg-zinc-100 text-zinc-700";
 }
 
@@ -341,7 +340,7 @@ function SnapshotView({
   invoiceId: string;
 }) {
   return (
-    <div className="max-h-[60vh] overflow-y-auto rounded-md border bg-muted/20 p-3">
+    <div className="bg-muted/20 max-h-[60vh] overflow-y-auto rounded-md border p-3">
       <div className="flex items-center justify-between border-b pb-2">
         <div>
           <p className="text-sm font-semibold">#{invoiceId}</p>
@@ -370,10 +369,7 @@ function SnapshotView({
           </p>
           <div className="space-y-1">
             {snapshot.items.map((item, i) => (
-              <div
-                key={i}
-                className="flex items-start justify-between text-sm"
-              >
+              <div key={i} className="flex items-start justify-between text-sm">
                 <div className="min-w-0 flex-1">
                   <p>{item.name}</p>
                   <p className="text-muted-foreground text-[10.5px]">
@@ -440,7 +436,9 @@ function SnapshotView({
         {snapshot.tipTotal !== undefined && snapshot.tipTotal > 0 && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Tip</span>
-            <span className="font-[tabular-nums]">${fmt(snapshot.tipTotal)}</span>
+            <span className="font-[tabular-nums]">
+              ${fmt(snapshot.tipTotal)}
+            </span>
           </div>
         )}
         <div className="flex justify-between border-t pt-1 font-semibold">

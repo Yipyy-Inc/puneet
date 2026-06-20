@@ -27,8 +27,8 @@ const ServiceAreaMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full w-full items-center justify-center bg-muted/30">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      <div className="bg-muted/30 flex h-full w-full items-center justify-center">
+        <Loader2 className="text-muted-foreground size-6 animate-spin" />
       </div>
     ),
   },
@@ -108,12 +108,12 @@ export function ServiceAreasMapDialog({
         <div className="flex min-h-0 flex-1 gap-0">
           {/* Sidebar — legend with per-area visibility toggles */}
           <aside className="w-72 shrink-0 border-r p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
               Areas ({areas.length})
             </p>
             <ul className="mt-2 space-y-1.5">
               {areas.length === 0 && (
-                <li className="text-xs text-muted-foreground">
+                <li className="text-muted-foreground text-xs">
                   No service areas yet. Add one in Mobile Grooming settings.
                 </li>
               )}
@@ -129,7 +129,7 @@ export function ServiceAreasMapDialog({
                   <li
                     key={a.id}
                     className={cn(
-                      "flex items-center gap-2 rounded-md border bg-card p-2 text-sm transition-opacity",
+                      "bg-card flex items-center gap-2 rounded-md border p-2 text-sm transition-opacity",
                       !a.active && "opacity-50",
                     )}
                   >
@@ -142,7 +142,7 @@ export function ServiceAreasMapDialog({
                       <p className="truncate text-xs font-medium">
                         {a.name || "(unnamed)"}
                       </p>
-                      <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <p className="text-muted-foreground flex items-center gap-1 text-[10px]">
                         <TypeIcon className="size-2.5" />
                         {a.type === "draw"
                           ? `${(a.polygon ?? []).length} pts`
@@ -170,16 +170,16 @@ export function ServiceAreasMapDialog({
                   onCheckedChange={setShowClients}
                   className="scale-75"
                 />
-                <Users className="size-3.5 text-muted-foreground" />
+                <Users className="text-muted-foreground size-3.5" />
                 Show active clients
               </label>
-              <p className="mt-1 text-[10px] text-muted-foreground">
+              <p className="text-muted-foreground mt-1 text-[10px]">
                 Pins use mocked positions for the demo.
               </p>
             </div>
 
             <div className="mt-4 border-t pt-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                 Legend
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">

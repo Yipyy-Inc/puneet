@@ -91,7 +91,9 @@ export function SeriesMessageStudentsDialog({
   );
   const reachable = useMemo(
     () =>
-      selected.filter((r) => (channel === "email" ? r.ownerEmail : r.ownerPhone)),
+      selected.filter((r) =>
+        channel === "email" ? r.ownerEmail : r.ownerPhone,
+      ),
     [selected, channel],
   );
 

@@ -12,7 +12,10 @@ import type {
   SessionAttendance,
   TrainingEnrollment,
 } from "@/lib/training-enrollment";
-import type { TrainingSeries, TrainingSeriesSession } from "@/lib/training-series";
+import type {
+  TrainingSeries,
+  TrainingSeriesSession,
+} from "@/lib/training-series";
 import type { MakeupSession } from "@/lib/training-makeup";
 
 /** Default eligibility window. Mirrors `facility-config.training.makeupSessions

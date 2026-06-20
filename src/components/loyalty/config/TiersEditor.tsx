@@ -32,7 +32,9 @@ interface TiersEditorProps {
 
 export function TiersEditor({ value, onChange }: TiersEditorProps) {
   const updateTier = (index: number, patch: Partial<LoyaltyTierConfig>) => {
-    onChange(value.map((tier, i) => (i === index ? { ...tier, ...patch } : tier)));
+    onChange(
+      value.map((tier, i) => (i === index ? { ...tier, ...patch } : tier)),
+    );
   };
 
   const removeTier = (index: number) => {
@@ -51,10 +53,7 @@ export function TiersEditor({ value, onChange }: TiersEditorProps) {
     onChange([...value, newTier]);
   };
 
-  const updateBenefits = (
-    tierIndex: number,
-    benefits: TierBenefit[],
-  ) => {
+  const updateBenefits = (tierIndex: number, benefits: TierBenefit[]) => {
     updateTier(tierIndex, { benefits });
   };
 

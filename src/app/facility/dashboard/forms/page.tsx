@@ -67,9 +67,7 @@ export default function IntakeFormsPage() {
   const router = useRouter();
   const allForms = getFormsByFacility(FACILITY_ID);
   const formsInCategory =
-    category === "templates"
-      ? []
-      : allForms.filter((f) => f.type === category);
+    category === "templates" ? [] : allForms.filter((f) => f.type === category);
 
   const _refresh = refreshKey; // force re-render on state change
 
@@ -137,33 +135,33 @@ export default function IntakeFormsPage() {
         {category !== "templates" && (
           <TabsContent value={category} className="mt-4">
             {formsInCategory.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <p className="text-muted-foreground mb-4">
-                  No{" "}
-                  {FORM_CATEGORIES.find(
-                    (c) => c.value === category,
-                  )?.label.toLowerCase()}{" "}
-                  yet.
-                </p>
-                <Button onClick={() => setCreateModalOpen(true)}>
-                  <Plus className="mr-2 size-4" />
-                  Create form
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {formsInCategory.map((form) => (
-                <FormCard
-                  key={form.id}
-                  form={form}
-                  facilityId={FACILITY_ID}
-                  router={router}
-                  onRefresh={() => setRefreshKey((k) => k + 1)}
-                />
-              ))}
-            </div>
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                  <p className="text-muted-foreground mb-4">
+                    No{" "}
+                    {FORM_CATEGORIES.find(
+                      (c) => c.value === category,
+                    )?.label.toLowerCase()}{" "}
+                    yet.
+                  </p>
+                  <Button onClick={() => setCreateModalOpen(true)}>
+                    <Plus className="mr-2 size-4" />
+                    Create form
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {formsInCategory.map((form) => (
+                  <FormCard
+                    key={form.id}
+                    form={form}
+                    facilityId={FACILITY_ID}
+                    router={router}
+                    onRefresh={() => setRefreshKey((k) => k + 1)}
+                  />
+                ))}
+              </div>
             )}
           </TabsContent>
         )}

@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { Users } from "lucide-react";
 import { toast } from "sonner";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -40,7 +46,11 @@ export function getMaxPetsPerStaff(
  * staff member` field. Insight 3.1 (Understaffing Risk) uses this to compute
  * capacity (staff_count × max_pets_per_staff) and detect shortfalls.
  */
-export function MaxPetsPerStaffCard({ facilityId, service, defaultValue }: Props) {
+export function MaxPetsPerStaffCard({
+  facilityId,
+  service,
+  defaultValue,
+}: Props) {
   const [value, setValue] = useState<number>(defaultValue ?? DEFAULT_MAX_PETS);
   const [initial, setInitial] = useState<number>(DEFAULT_MAX_PETS);
 
@@ -76,8 +86,8 @@ export function MaxPetsPerStaffCard({ facilityId, service, defaultValue }: Props
         </CardTitle>
         <CardDescription>
           Smart Insights uses this to detect understaffed days — when the
-          confirmed pet count exceeds (scheduled staff × this number),
-          an Understaffing Risk insight fires.
+          confirmed pet count exceeds (scheduled staff × this number), an
+          Understaffing Risk insight fires.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -96,7 +106,12 @@ export function MaxPetsPerStaffCard({ facilityId, service, defaultValue }: Props
           </div>
           <div className="flex gap-2">
             {dirty && (
-              <Button type="button" variant="ghost" size="sm" onClick={handleReset}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleReset}
+              >
                 Cancel
               </Button>
             )}

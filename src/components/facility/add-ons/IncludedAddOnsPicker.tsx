@@ -9,24 +9,39 @@ import { defaultServiceAddOns } from "@/data/service-addons";
 import type { ServiceAddOn } from "@/types/facility";
 
 function loadServiceAddOns(serviceFilter: string): ServiceAddOn[] {
-  if (typeof window === "undefined") return defaultServiceAddOns.filter((a) => a.applicableServices.includes(serviceFilter));
+  if (typeof window === "undefined")
+    return defaultServiceAddOns.filter((a) =>
+      a.applicableServices.includes(serviceFilter),
+    );
   try {
     const raw = localStorage.getItem("settings-service-addons");
-    const all = raw ? (JSON.parse(raw) as ServiceAddOn[]) : defaultServiceAddOns;
-    return all.filter((a) => a.isActive && a.applicableServices.includes(serviceFilter));
+    const all = raw
+      ? (JSON.parse(raw) as ServiceAddOn[])
+      : defaultServiceAddOns;
+    return all.filter(
+      (a) => a.isActive && a.applicableServices.includes(serviceFilter),
+    );
   } catch {
-    return defaultServiceAddOns.filter((a) => a.applicableServices.includes(serviceFilter));
+    return defaultServiceAddOns.filter((a) =>
+      a.applicableServices.includes(serviceFilter),
+    );
   }
 }
 
 function fmtPrice(addon: ServiceAddOn): string {
   switch (addon.pricingType) {
-    case "flat": return `$${addon.price}`;
-    case "per_day": return `$${addon.price}/day`;
-    case "per_session": return `$${addon.price}/${addon.unitLabel ?? "session"}`;
-    case "per_hour": return `$${addon.price}/${addon.unitLabel ?? "hr"}`;
-    case "per_item": return `$${addon.price}/${addon.unitLabel ?? "item"}`;
-    case "percentage_of_booking": return `${addon.price}% of booking`;
+    case "flat":
+      return `$${addon.price}`;
+    case "per_day":
+      return `$${addon.price}/day`;
+    case "per_session":
+      return `$${addon.price}/${addon.unitLabel ?? "session"}`;
+    case "per_hour":
+      return `$${addon.price}/${addon.unitLabel ?? "hr"}`;
+    case "per_item":
+      return `$${addon.price}/${addon.unitLabel ?? "item"}`;
+    case "percentage_of_booking":
+      return `${addon.price}% of booking`;
   }
 }
 
@@ -36,7 +51,11 @@ interface Props {
   onChange: (ids: string[]) => void;
 }
 
-export function IncludedAddOnsPicker({ serviceFilter, selectedIds, onChange }: Props) {
+export function IncludedAddOnsPicker({
+  serviceFilter,
+  selectedIds,
+  onChange,
+}: Props) {
   const [addOns, setAddOns] = useState<ServiceAddOn[]>([]);
 
   useEffect(() => {
@@ -59,7 +78,8 @@ export function IncludedAddOnsPicker({ serviceFilter, selectedIds, onChange }: P
           Included Add-Ons (free)
         </Label>
         <p className="text-muted-foreground mt-0.5 text-xs">
-          These add-ons are bundled into this rate at no extra charge, even if they have a price in your catalog.
+          These add-ons are bundled into this rate at no extra charge, even if
+          they have a price in your catalog.
         </p>
       </div>
 
@@ -78,7 +98,7 @@ export function IncludedAddOnsPicker({ serviceFilter, selectedIds, onChange }: P
                 type="button"
                 onClick={() => toggle(addon.id)}
                 className={cn(
-                  "flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/50",
+                  "hover:bg-muted/50 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors",
                   i > 0 && "border-t",
                   selected && "bg-emerald-50/60",
                 )}
@@ -86,19 +106,28 @@ export function IncludedAddOnsPicker({ serviceFilter, selectedIds, onChange }: P
                 <div
                   className={cn(
                     "flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors",
-                    selected ? "border-emerald-600 bg-emerald-600" : "border-muted-foreground/30",
+                    selected
+                      ? "border-emerald-600 bg-emerald-600"
+                      : "border-muted-foreground/30",
                   )}
                 >
                   {selected && <Check className="size-3 text-white" />}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium leading-none">{addon.name}</p>
+                  <p className="text-sm leading-none font-medium">
+                    {addon.name}
+                  </p>
                   {addon.description && (
-                    <p className="text-muted-foreground mt-0.5 truncate text-xs">{addon.description}</p>
+                    <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                      {addon.description}
+                    </p>
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
-                  <Badge variant="outline" className="text-xs line-through opacity-60">
+                  <Badge
+                    variant="outline"
+                    className="text-xs line-through opacity-60"
+                  >
                     {fmtPrice(addon)}
                   </Badge>
                   <Badge className="gap-1 bg-emerald-100 text-[10px] text-emerald-700 hover:bg-emerald-100">
@@ -113,7 +142,8 @@ export function IncludedAddOnsPicker({ serviceFilter, selectedIds, onChange }: P
 
       {selectedIds.length > 0 && (
         <p className="text-muted-foreground text-xs">
-          {selectedIds.length} add-on{selectedIds.length > 1 ? "s" : ""} included free with this rate
+          {selectedIds.length} add-on{selectedIds.length > 1 ? "s" : ""}{" "}
+          included free with this rate
         </p>
       )}
     </div>

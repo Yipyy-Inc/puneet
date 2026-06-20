@@ -36,7 +36,11 @@ export function WeeklyOccupancyChart({
         margin={{ top: 8, right: 16, left: 8, bottom: 0 }}
         barCategoryGap={20}
       >
-        <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" vertical={false} />
+        <CartesianGrid
+          strokeDasharray="3 3"
+          className="stroke-border/40"
+          vertical={false}
+        />
         <XAxis
           dataKey="week"
           tick={{ fontSize: 10, fill: "currentColor" }}

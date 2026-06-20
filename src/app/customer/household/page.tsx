@@ -48,7 +48,8 @@ export default function CustomerHouseholdPage() {
     [customer],
   );
 
-  const [contacts, setContacts] = useState<AdditionalContact[]>(initialContacts);
+  const [contacts, setContacts] =
+    useState<AdditionalContact[]>(initialContacts);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 

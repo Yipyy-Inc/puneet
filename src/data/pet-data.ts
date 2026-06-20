@@ -261,7 +261,8 @@ export const vaccinationRecords: VaccinationRecord[] = [
     veterinarianName: "Dr. Emily Chen",
     veterinaryClinic: "Happy Paws Veterinary Clinic",
     reminderSent: true,
-    notes: "Annual booster overdue — Buddy hikes regularly so renewal is recommended.",
+    notes:
+      "Annual booster overdue — Buddy hikes regularly so renewal is recommended.",
     status: "approved" as const,
     reviewedBy: "Sarah (Staff)",
     reviewedById: 1,

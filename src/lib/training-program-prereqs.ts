@@ -61,7 +61,10 @@ function getCompletedProgramIdsForPet(petId: number): Set<string> {
 }
 
 function normalize(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 /** Resolve a list of prerequisite program ids back to their package records. */
@@ -120,9 +123,10 @@ export function checkPrerequisitesWithProgress(
           (normalize(e.courseTypeName) === targetName ||
             normalize(e.seriesName) === targetName),
       )
-      .sort((a, b) =>
-        // Most-progressed enrollment wins — `sessionsAttended` descending.
-        b.sessionsAttended - a.sessionsAttended,
+      .sort(
+        (a, b) =>
+          // Most-progressed enrollment wins — `sessionsAttended` descending.
+          b.sessionsAttended - a.sessionsAttended,
       )[0];
     if (!candidate) return row;
     return {

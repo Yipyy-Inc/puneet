@@ -100,7 +100,9 @@ function mockCheckAvailability(
   basePrice: number,
 ): TransferAvailabilityCheck {
   const serviceAvailable = destLocation.services.includes(service);
-  const destPricing = destLocation.pricing.find((p) => p.serviceId.includes(service));
+  const destPricing = destLocation.pricing.find((p) =>
+    p.serviceId.includes(service),
+  );
   const destinationPrice = destPricing ? destPricing.basePrice : basePrice;
   const priceDelta = destinationPrice - basePrice;
 
@@ -115,11 +117,17 @@ function mockCheckAvailability(
     destinationPrice,
     originalPrice: basePrice,
     warnings: [
-      ...(Math.abs(priceDelta) > 0 ? [`Price will ${priceDelta > 0 ? "increase" : "decrease"} by $${Math.abs(priceDelta).toFixed(2)}`] : []),
+      ...(Math.abs(priceDelta) > 0
+        ? [
+            `Price will ${priceDelta > 0 ? "increase" : "decrease"} by $${Math.abs(priceDelta).toFixed(2)}`,
+          ]
+        : []),
       ...(!capacityAvailable ? ["Location is at near-full capacity"] : []),
     ],
     blockers: [
-      ...(!serviceAvailable ? [`${service} is not available at this location`] : []),
+      ...(!serviceAvailable
+        ? [`${service} is not available at this location`]
+        : []),
     ],
   };
 }
@@ -141,16 +149,23 @@ export function BookingTransferModal({
   const [step, setStep] = useState<Step>("select");
   const [destId, setDestId] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
-  const [availability, setAvailability] = useState<TransferAvailabilityCheck | null>(null);
-  const [pricingPolicy, setPricingPolicy] = useState<"keep_original" | "apply_destination">(
-    hqSettings.transferPricingPolicy === "keep_original" ? "keep_original" : "apply_destination",
+  const [availability, setAvailability] =
+    useState<TransferAvailabilityCheck | null>(null);
+  const [pricingPolicy, setPricingPolicy] = useState<
+    "keep_original" | "apply_destination"
+  >(
+    hqSettings.transferPricingPolicy === "keep_original"
+      ? "keep_original"
+      : "apply_destination",
   );
   const [reason, setReason] = useState("");
   const [notifyCustomer, setNotifyCustomer] = useState(true);
 
   const currentLocation = locations.find((l) => l.id === currentLocationId);
   const destLocation = locations.find((l) => l.id === destId);
-  const eligibleDests = locations.filter((l) => l.id !== currentLocationId && l.isActive);
+  const eligibleDests = locations.filter(
+    (l) => l.id !== currentLocationId && l.isActive,
+  );
 
   const effectivePriceDelta =
     pricingPolicy === "keep_original" ? 0 : (availability?.priceDelta ?? 0);
@@ -203,7 +218,12 @@ export function BookingTransferModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) reset();
+      }}
+    >
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -237,11 +257,17 @@ export function BookingTransferModal({
               >
                 {currentLocation?.shortCode ?? "??"}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium">{currentLocation?.name ?? "Current location"}</p>
-                <p className="text-muted-foreground text-[10px]">Current location</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium">
+                  {currentLocation?.name ?? "Current location"}
+                </p>
+                <p className="text-muted-foreground text-[10px]">
+                  Current location
+                </p>
               </div>
-              <Badge variant="outline" className="text-[10px]">From</Badge>
+              <Badge variant="outline" className="text-[10px]">
+                From
+              </Badge>
             </div>
 
             {/* Destinations */}
@@ -269,11 +295,15 @@ export function BookingTransferModal({
                     >
                       {loc.shortCode}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium truncate">{loc.name}</p>
+                        <p className="truncate text-sm font-medium">
+                          {loc.name}
+                        </p>
                         {loc.isPrimary && (
-                          <Badge variant="secondary" className="text-[10px]">Main</Badge>
+                          <Badge variant="secondary" className="text-[10px]">
+                            Main
+                          </Badge>
                         )}
                       </div>
                       <p className="text-muted-foreground flex items-center gap-1 text-[11px]">
@@ -282,7 +312,10 @@ export function BookingTransferModal({
                       </p>
                     </div>
                     {!serviceAvail && (
-                      <Badge variant="outline" className="text-[10px] text-red-500 border-red-200">
+                      <Badge
+                        variant="outline"
+                        className="border-red-200 text-[10px] text-red-500"
+                      >
                         No {service}
                       </Badge>
                     )}
@@ -315,27 +348,49 @@ export function BookingTransferModal({
               </div>
               <div>
                 <p className="text-sm font-medium">{destLocation?.name}</p>
-                <p className="text-muted-foreground text-xs">{destLocation?.city}</p>
+                <p className="text-muted-foreground text-xs">
+                  {destLocation?.city}
+                </p>
               </div>
             </div>
 
             {checking ? (
               <div className="flex flex-col items-center gap-3 py-8">
                 <Loader2 className="text-primary size-8 animate-spin" />
-                <p className="text-muted-foreground text-sm">Checking availability...</p>
+                <p className="text-muted-foreground text-sm">
+                  Checking availability...
+                </p>
                 <div className="space-y-1 text-center">
-                  <p className="text-muted-foreground text-xs">Verifying service availability</p>
-                  <p className="text-muted-foreground text-xs">Checking capacity</p>
-                  <p className="text-muted-foreground text-xs">Validating staff coverage</p>
+                  <p className="text-muted-foreground text-xs">
+                    Verifying service availability
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Checking capacity
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Validating staff coverage
+                  </p>
                 </div>
               </div>
             ) : availability ? (
               <div className="space-y-3">
                 {/* Checks */}
                 {[
-                  { ok: availability.serviceAvailable, label: `${service} available`, icon: CalendarDays },
-                  { ok: availability.capacityAvailable, label: "Capacity available", icon: Bed },
-                  { ok: availability.staffAvailable, label: "Staff coverage", icon: Users },
+                  {
+                    ok: availability.serviceAvailable,
+                    label: `${service} available`,
+                    icon: CalendarDays,
+                  },
+                  {
+                    ok: availability.capacityAvailable,
+                    label: "Capacity available",
+                    icon: Bed,
+                  },
+                  {
+                    ok: availability.staffAvailable,
+                    label: "Staff coverage",
+                    icon: Users,
+                  },
                 ].map(({ ok, label, icon: Icon }) => (
                   <div
                     key={label}
@@ -351,8 +406,20 @@ export function BookingTransferModal({
                     ) : (
                       <XCircle className="size-4 shrink-0 text-red-500" />
                     )}
-                    <Icon className={cn("size-3.5 shrink-0", ok ? "text-emerald-500" : "text-red-400")} />
-                    <span className={cn("text-sm font-medium", ok ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400")}>
+                    <Icon
+                      className={cn(
+                        "size-3.5 shrink-0",
+                        ok ? "text-emerald-500" : "text-red-400",
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        "text-sm font-medium",
+                        ok
+                          ? "text-emerald-700 dark:text-emerald-400"
+                          : "text-red-700 dark:text-red-400",
+                      )}
+                    >
                       {label}
                     </span>
                   </div>
@@ -365,40 +432,60 @@ export function BookingTransferModal({
                     className="flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-900/40 dark:bg-amber-950/20"
                   >
                     <AlertTriangle className="size-4 shrink-0 text-amber-500" />
-                    <span className="text-sm text-amber-700 dark:text-amber-400">{w}</span>
+                    <span className="text-sm text-amber-700 dark:text-amber-400">
+                      {w}
+                    </span>
                   </div>
                 ))}
 
                 {/* Price delta */}
                 {availability.priceDelta !== 0 && (
                   <div className="rounded-xl border bg-gray-50 px-4 py-3 dark:bg-gray-900/50">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="mb-2 flex items-center gap-2">
                       <DollarSign className="size-4 text-gray-500" />
-                      <p className="text-sm font-semibold">Pricing at Destination</p>
+                      <p className="text-sm font-semibold">
+                        Pricing at Destination
+                      </p>
                     </div>
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Current price</span>
+                        <span className="text-muted-foreground">
+                          Current price
+                        </span>
                         <span>${availability.originalPrice.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Destination price</span>
+                        <span className="text-muted-foreground">
+                          Destination price
+                        </span>
                         <span>${availability.destinationPrice.toFixed(2)}</span>
                       </div>
                       <Separator className="my-1" />
                       <div className="flex justify-between font-semibold">
                         <span>Difference</span>
-                        <span className={availability.priceDelta > 0 ? "text-amber-600" : "text-emerald-600"}>
-                          {availability.priceDelta > 0 ? "+" : ""}${availability.priceDelta.toFixed(2)}
+                        <span
+                          className={
+                            availability.priceDelta > 0
+                              ? "text-amber-600"
+                              : "text-emerald-600"
+                          }
+                        >
+                          {availability.priceDelta > 0 ? "+" : ""}$
+                          {availability.priceDelta.toFixed(2)}
                         </span>
                       </div>
                     </div>
                     {/* Pricing policy choice */}
                     <div className="mt-3 grid grid-cols-2 gap-2">
-                      {([
-                        { value: "keep_original", label: "Keep original" },
-                        { value: "apply_destination", label: "Apply new price" },
-                      ] as const).map((opt) => (
+                      {(
+                        [
+                          { value: "keep_original", label: "Keep original" },
+                          {
+                            value: "apply_destination",
+                            label: "Apply new price",
+                          },
+                        ] as const
+                      ).map((opt) => (
                         <button
                           key={opt.value}
                           onClick={() => setPricingPolicy(opt.value)}
@@ -422,7 +509,11 @@ export function BookingTransferModal({
                     variant="outline"
                     size="sm"
                     className="flex-1"
-                    onClick={() => { setStep("select"); setDestId(null); setAvailability(null); }}
+                    onClick={() => {
+                      setStep("select");
+                      setDestId(null);
+                      setAvailability(null);
+                    }}
                   >
                     Back
                   </Button>
@@ -458,20 +549,28 @@ export function BookingTransferModal({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Dates</span>
-                  <span className="font-medium">{startDate} → {endDate}</span>
+                  <span className="font-medium">
+                    {startDate} → {endDate}
+                  </span>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">From</span>
                   <div className="flex items-center gap-1.5">
-                    <div className="size-2 rounded-full" style={{ backgroundColor: currentLocation?.color }} />
+                    <div
+                      className="size-2 rounded-full"
+                      style={{ backgroundColor: currentLocation?.color }}
+                    />
                     <span className="font-medium">{currentLocation?.name}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">To</span>
                   <div className="flex items-center gap-1.5">
-                    <div className="size-2 rounded-full" style={{ backgroundColor: destLocation.color }} />
+                    <div
+                      className="size-2 rounded-full"
+                      style={{ backgroundColor: destLocation.color }}
+                    />
                     <span className="font-medium">{destLocation.name}</span>
                   </div>
                 </div>
@@ -480,8 +579,16 @@ export function BookingTransferModal({
                   <span className="font-medium">
                     ${(basePrice + effectivePriceDelta).toFixed(2)}
                     {effectivePriceDelta !== 0 && (
-                      <span className={cn("ml-1 text-xs", effectivePriceDelta > 0 ? "text-amber-600" : "text-emerald-600")}>
-                        ({effectivePriceDelta > 0 ? "+" : ""}${effectivePriceDelta.toFixed(2)})
+                      <span
+                        className={cn(
+                          "ml-1 text-xs",
+                          effectivePriceDelta > 0
+                            ? "text-amber-600"
+                            : "text-emerald-600",
+                        )}
+                      >
+                        ({effectivePriceDelta > 0 ? "+" : ""}$
+                        {effectivePriceDelta.toFixed(2)})
                       </span>
                     )}
                   </span>
@@ -489,13 +596,18 @@ export function BookingTransferModal({
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Pricing policy</span>
                   <Badge variant="outline" className="text-[10px] capitalize">
-                    {pricingPolicy === "keep_original" ? "Keep original" : "Apply destination"}
+                    {pricingPolicy === "keep_original"
+                      ? "Keep original"
+                      : "Apply destination"}
                   </Badge>
                 </div>
                 {hqSettings.transferRequiresCustomerApproval && (
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Approval</span>
-                    <Badge variant="outline" className="border-amber-200 bg-amber-50 text-[10px] text-amber-700">
+                    <Badge
+                      variant="outline"
+                      className="border-amber-200 bg-amber-50 text-[10px] text-amber-700"
+                    >
                       Awaiting customer
                     </Badge>
                   </div>
@@ -505,21 +617,28 @@ export function BookingTransferModal({
 
             {/* Reason */}
             <div>
-              <label className="mb-1.5 block text-xs font-medium">Reason (optional)</label>
+              <label className="mb-1.5 block text-xs font-medium">
+                Reason (optional)
+              </label>
               <Textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Why is this booking being transferred?"
-                className="min-h-[72px] text-sm resize-none"
+                className="min-h-[72px] resize-none text-sm"
               />
             </div>
 
             {/* Notify */}
             <button
               onClick={() => setNotifyCustomer(!notifyCustomer)}
-              className="flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors hover:bg-muted/30"
+              className="hover:bg-muted/30 flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors"
             >
-              <Bell className={cn("size-4 shrink-0", notifyCustomer ? "text-primary" : "text-muted-foreground")} />
+              <Bell
+                className={cn(
+                  "size-4 shrink-0",
+                  notifyCustomer ? "text-primary" : "text-muted-foreground",
+                )}
+              />
               <div className="flex-1">
                 <p className="text-sm font-medium">Notify customer</p>
                 <p className="text-muted-foreground text-xs">
@@ -529,7 +648,9 @@ export function BookingTransferModal({
               <div
                 className={cn(
                   "relative inline-flex h-5 w-9 items-center rounded-full transition-all",
-                  notifyCustomer ? "bg-primary" : "bg-gray-200 dark:bg-gray-700",
+                  notifyCustomer
+                    ? "bg-primary"
+                    : "bg-gray-200 dark:bg-gray-700",
                 )}
               >
                 <span
@@ -542,10 +663,19 @@ export function BookingTransferModal({
             </button>
 
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => setStep("check")}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => setStep("check")}
+              >
                 Back
               </Button>
-              <Button size="sm" className="flex-1 gap-1.5" onClick={handleConfirm}>
+              <Button
+                size="sm"
+                className="flex-1 gap-1.5"
+                onClick={handleConfirm}
+              >
                 <ArrowLeftRight className="size-3.5" />
                 Confirm Transfer
               </Button>
@@ -563,7 +693,9 @@ export function BookingTransferModal({
               <p className="text-lg font-bold">Transfer Complete</p>
               <p className="text-muted-foreground text-sm">
                 Booking #{bookingId} has been transferred to{" "}
-                <strong style={{ color: destLocation.color }}>{destLocation.name}</strong>
+                <strong style={{ color: destLocation.color }}>
+                  {destLocation.name}
+                </strong>
               </p>
             </div>
 
@@ -576,7 +708,9 @@ export function BookingTransferModal({
                   "Booking location updated",
                   "Calendar placement moved",
                   "Tasks regenerated for new location",
-                  notifyCustomer ? "Customer notification sent" : "Customer not notified (manual)",
+                  notifyCustomer
+                    ? "Customer notification sent"
+                    : "Customer not notified (manual)",
                   hqSettings.transferRequiresCustomerApproval
                     ? "Awaiting customer approval"
                     : "Transfer finalized",
@@ -592,7 +726,10 @@ export function BookingTransferModal({
             <div className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-left text-xs text-blue-700 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-400">
               <MapPin className="mt-0.5 size-3.5 shrink-0" />
               <span>
-                New location: <strong>{destLocation.address}, {destLocation.city}</strong>
+                New location:{" "}
+                <strong>
+                  {destLocation.address}, {destLocation.city}
+                </strong>
                 <br />
                 Phone: {destLocation.phone}
               </span>

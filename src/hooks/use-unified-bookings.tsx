@@ -18,10 +18,7 @@ import {
   type CustomServiceCheckIn,
 } from "@/data/custom-service-checkins";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import {
-  COLOR_HEX_MAP,
-  getCategoryMeta,
-} from "@/data/custom-services";
+import { COLOR_HEX_MAP, getCategoryMeta } from "@/data/custom-services";
 import type { CustomServiceModule } from "@/types/facility";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { deriveLocationId } from "@/data/locations";
@@ -128,7 +125,12 @@ const BUILTIN_SERVICES: ServiceMeta[] = [
   { key: "daycare", label: "Daycare", color: "#3b82f6", icon: "Sun" },
   { key: "boarding", label: "Boarding", color: "#a855f7", icon: "Bed" },
   { key: "grooming", label: "Grooming", color: "#ec4899", icon: "Scissors" },
-  { key: "training", label: "Training", color: "#f59e0b", icon: "GraduationCap" },
+  {
+    key: "training",
+    label: "Training",
+    color: "#f59e0b",
+    icon: "GraduationCap",
+  },
 ];
 
 function endOfTodayMs(): number {
@@ -501,10 +503,8 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
                 ? {
                     ...d,
                     status: next,
-                    checkInTime:
-                      next === "checked-in" ? now : d.checkInTime,
-                    checkOutTime:
-                      next === "checked-out" ? now : d.checkOutTime,
+                    checkInTime: next === "checked-in" ? now : d.checkInTime,
+                    checkOutTime: next === "checked-out" ? now : d.checkOutTime,
                   }
                 : d,
             ),
@@ -522,10 +522,8 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
                         : next === "checked-out"
                           ? "completed"
                           : "scheduled",
-                    checkInTime:
-                      next === "checked-in" ? now : g.checkInTime,
-                    checkOutTime:
-                      next === "checked-out" ? now : g.checkOutTime,
+                    checkInTime: next === "checked-in" ? now : g.checkInTime,
+                    checkOutTime: next === "checked-out" ? now : g.checkOutTime,
                   }
                 : g,
             ),
@@ -562,10 +560,8 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
                         : next === "checked-out"
                           ? "checked-out"
                           : "scheduled",
-                    checkInTime:
-                      next === "checked-in" ? now : c.checkInTime,
-                    checkOutTime:
-                      next === "checked-out" ? now : c.checkOutTime,
+                    checkInTime: next === "checked-in" ? now : c.checkInTime,
+                    checkOutTime: next === "checked-out" ? now : c.checkOutTime,
                   }
                 : c,
             ),

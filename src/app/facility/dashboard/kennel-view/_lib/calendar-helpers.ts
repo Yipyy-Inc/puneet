@@ -1,4 +1,8 @@
-import type { OccupancyKennel, RoomBlock, BookingWorkflowStatus } from "./calendar-types";
+import type {
+  OccupancyKennel,
+  RoomBlock,
+  BookingWorkflowStatus,
+} from "./calendar-types";
 
 export function toLocalISODate(date: Date): string {
   const y = date.getFullYear();
@@ -120,9 +124,7 @@ export function isRoomBlockedOnDate(
   date: string,
 ): RoomBlock | undefined {
   return blocks.find(
-    (b) =>
-      b.roomId === roomId &&
-      dateWithinRange(date, b.startDate, b.endDate),
+    (b) => b.roomId === roomId && dateWithinRange(date, b.startDate, b.endDate),
   );
 }
 

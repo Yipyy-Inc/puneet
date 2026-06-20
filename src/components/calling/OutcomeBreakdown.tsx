@@ -74,13 +74,13 @@ export function OutcomeBreakdown({
           <PieChart className="size-4 text-indigo-600" />
           Call Outcome Breakdown
         </CardTitle>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           Where every call landed — phone inquiry to booking conversion.
           {showCompare && (
             <>
               {" "}
               Booking conversion{" "}
-              <span className="font-semibold text-foreground">
+              <span className="text-foreground font-semibold">
                 {Math.round(bookingPct)}%
               </span>{" "}
               vs{" "}
@@ -110,7 +110,7 @@ export function OutcomeBreakdown({
       </CardHeader>
       <CardContent>
         {total === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
+          <p className="text-muted-foreground py-8 text-center text-sm">
             No calls in this period.
           </p>
         ) : (
@@ -141,10 +141,10 @@ export function OutcomeBreakdown({
                 ))}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-bold tabular-nums text-emerald-600">
+                <span className="text-2xl font-bold text-emerald-600 tabular-nums">
                   {Math.round(bookingPct)}%
                 </span>
-                <span className="text-[10px] font-medium text-muted-foreground">
+                <span className="text-muted-foreground text-[10px] font-medium">
                   to booking
                 </span>
               </div>
@@ -163,16 +163,18 @@ export function OutcomeBreakdown({
                       className="size-3 shrink-0 rounded-sm"
                       style={{ backgroundColor: OUTCOME_META[k].color }}
                     />
-                    <span className="flex-1 truncate">{OUTCOME_META[k].label}</span>
+                    <span className="flex-1 truncate">
+                      {OUTCOME_META[k].label}
+                    </span>
                     <span className="w-7 text-right font-semibold tabular-nums">
                       {c}
                     </span>
-                    <span className="w-10 text-right tabular-nums text-muted-foreground">
+                    <span className="text-muted-foreground w-10 text-right tabular-nums">
                       {Math.round(p)}%
                     </span>
                     {showCompare && (
                       <span
-                        className="flex w-24 items-center justify-end gap-0.5 text-right text-xs tabular-nums text-muted-foreground"
+                        className="text-muted-foreground flex w-24 items-center justify-end gap-0.5 text-right text-xs tabular-nums"
                         title={`${Math.round(p)}% this period vs ${Math.round(prevP)}% ${comparisonLabel}`}
                       >
                         {delta > 0 ? "▲" : delta < 0 ? "▼" : "–"}

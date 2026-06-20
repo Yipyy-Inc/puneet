@@ -72,7 +72,7 @@ export function CareCompletionInlineBanner({
           {pending.length} care item{pending.length > 1 ? "s" : ""} not logged
           today
           {hasCritical && (
-            <span className="ml-1.5 rounded-full bg-rose-200 px-1.5 py-0 text-[9px] font-bold text-rose-900 uppercase tracking-wider">
+            <span className="ml-1.5 rounded-full bg-rose-200 px-1.5 py-0 text-[9px] font-bold tracking-wider text-rose-900 uppercase">
               Critical
             </span>
           )}
@@ -130,13 +130,13 @@ export function CareCompletionGateDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="mt-2 max-h-64 space-y-1.5 overflow-y-auto rounded-md border bg-muted/30 p-3">
+        <div className="bg-muted/30 mt-2 max-h-64 space-y-1.5 overflow-y-auto rounded-md border p-3">
           {pending.map((item, i) => {
             const Icon = item.kind === "medication" ? Pill : Utensils;
             return (
               <div
                 key={i}
-                className="flex items-start gap-2 rounded-md bg-background px-2.5 py-1.5"
+                className="bg-background flex items-start gap-2 rounded-md px-2.5 py-1.5"
               >
                 <Icon
                   className={cn(
@@ -148,7 +148,7 @@ export function CareCompletionGateDialog({
                   <p className="text-xs font-medium">
                     {item.label}
                     {item.isCritical && (
-                      <span className="ml-1.5 text-[9px] font-bold text-rose-700 uppercase tracking-wider">
+                      <span className="ml-1.5 text-[9px] font-bold tracking-wider text-rose-700 uppercase">
                         Critical
                       </span>
                     )}
@@ -189,7 +189,8 @@ export function CareCompletionGateDialog({
 function buildSummary(pending: PendingCareItem[]): string {
   if (pending.length === 0) return "";
   if (pending.length === 1) return pending[0].label;
-  if (pending.length === 2) return `${pending[0].label} and ${pending[1].label}`;
+  if (pending.length === 2)
+    return `${pending[0].label} and ${pending[1].label}`;
   return `${pending[0].label}, ${pending[1].label}, and ${pending.length - 2} more`;
 }
 

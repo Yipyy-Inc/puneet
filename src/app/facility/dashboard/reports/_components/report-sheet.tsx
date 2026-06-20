@@ -31,7 +31,9 @@ import {
 import { ExportReportModal } from "@/components/reports/ExportReportModal";
 import type { ReportEntry } from "./reports-hub";
 
-type ReportWithCategory = ReportEntry & { categoryTier: "Essential" | "Beneficial" };
+type ReportWithCategory = ReportEntry & {
+  categoryTier: "Essential" | "Beneficial";
+};
 
 // ── Coming Soon ───────────────────────────────────────────────────────────────
 
@@ -44,17 +46,17 @@ function ComingSoon({
 }) {
   return (
     <div className="flex flex-col items-center justify-center gap-5 py-24 text-center">
-      <div className="flex size-16 items-center justify-center rounded-2xl border-2 border-dashed border-muted-foreground/20 bg-muted/30">
-        <Clock className="size-7 text-muted-foreground/50" />
+      <div className="border-muted-foreground/20 bg-muted/30 flex size-16 items-center justify-center rounded-2xl border-2 border-dashed">
+        <Clock className="text-muted-foreground/50 size-7" />
       </div>
       <div className="space-y-1.5">
         <p className="text-lg font-semibold">{name}</p>
-        <p className="max-w-xs text-sm text-muted-foreground">{description}</p>
+        <p className="text-muted-foreground max-w-xs text-sm">{description}</p>
       </div>
       <Badge variant="outline" className="px-3 py-1 text-xs font-medium">
         Coming Soon
       </Badge>
-      <p className="max-w-xs text-xs text-muted-foreground/60">
+      <p className="text-muted-foreground/60 max-w-xs text-xs">
         This report is part of the upcoming Yipyy analytics suite and will be
         available in a future update.
       </p>
@@ -86,17 +88,19 @@ function RevenueContent({ facilityId }: { facilityId: number }) {
         ].map((tile) => (
           <div
             key={tile.label}
-            className="rounded-lg border bg-card p-3 text-center"
+            className="bg-card rounded-lg border p-3 text-center"
           >
-            <p className="text-xs text-muted-foreground">{tile.label}</p>
-            <p className="mt-0.5 text-xl font-bold tabular-nums">{tile.value}</p>
+            <p className="text-muted-foreground text-xs">{tile.label}</p>
+            <p className="mt-0.5 text-xl font-bold tabular-nums">
+              {tile.value}
+            </p>
           </div>
         ))}
       </div>
 
       {/* Distribution bar */}
       <div>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-widest uppercase">
           Revenue Distribution
         </p>
         <div className="flex h-4 overflow-hidden rounded-full">
@@ -117,10 +121,10 @@ function RevenueContent({ facilityId }: { facilityId: number }) {
           {revenueData.map((row) => (
             <span key={row.service} className="flex items-center gap-1.5">
               <span
-                className="size-2 rounded-full inline-block"
+                className="inline-block size-2 rounded-full"
                 style={{ backgroundColor: row.color }}
               />
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 {row.service}
               </span>
             </span>
@@ -130,11 +134,11 @@ function RevenueContent({ facilityId }: { facilityId: number }) {
 
       {/* Revenue table */}
       <div>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-widest uppercase">
           By Service
         </p>
         <div className="space-y-0.5">
-          <div className="grid grid-cols-5 gap-3 border-b pb-2 px-2 text-xs font-semibold text-muted-foreground">
+          <div className="text-muted-foreground grid grid-cols-5 gap-3 border-b px-2 pb-2 text-xs font-semibold">
             <span className="col-span-2">Service</span>
             <span className="text-right">Revenue</span>
             <span className="text-right">Bookings</span>
@@ -148,7 +152,7 @@ function RevenueContent({ facilityId }: { facilityId: number }) {
             return (
               <div
                 key={row.service}
-                className="grid grid-cols-5 items-center gap-3 rounded-md px-2 py-2.5 hover:bg-muted/30"
+                className="hover:bg-muted/30 grid grid-cols-5 items-center gap-3 rounded-md px-2 py-2.5"
               >
                 <div className="col-span-2 flex items-center gap-2">
                   <span
@@ -156,15 +160,18 @@ function RevenueContent({ facilityId }: { facilityId: number }) {
                     style={{ backgroundColor: row.color }}
                   />
                   <span className="text-sm font-medium">{row.service}</span>
-                  <span className="text-xs text-muted-foreground">{pct}%</span>
+                  <span className="text-muted-foreground text-xs">{pct}%</span>
                 </div>
                 <span className="text-right text-sm tabular-nums">
-                  ${row.revenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  $
+                  {row.revenue.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                  })}
                 </span>
                 <span className="text-right text-sm tabular-nums">
                   {row.bookings}
                 </span>
-                <span className="text-right text-sm tabular-nums text-muted-foreground">
+                <span className="text-muted-foreground text-right text-sm tabular-nums">
                   ${row.avgPerBooking.toFixed(2)}
                 </span>
               </div>
@@ -174,7 +181,10 @@ function RevenueContent({ facilityId }: { facilityId: number }) {
           <div className="grid grid-cols-5 gap-3 px-2 pt-1 text-sm font-semibold">
             <span className="col-span-2">Total</span>
             <span className="text-right tabular-nums">
-              ${totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              $
+              {totalRevenue.toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+              })}
             </span>
             <span className="text-right tabular-nums">{totalBookings}</span>
             <span />
@@ -184,11 +194,11 @@ function RevenueContent({ facilityId }: { facilityId: number }) {
 
       {/* Staff time */}
       <div>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-widest uppercase">
           Staff Time by Service
         </p>
         <div className="space-y-0.5">
-          <div className="grid grid-cols-4 gap-3 border-b pb-2 px-2 text-xs font-semibold text-muted-foreground">
+          <div className="text-muted-foreground grid grid-cols-4 gap-3 border-b px-2 pb-2 text-xs font-semibold">
             <span className="col-span-2">Service</span>
             <span className="text-right">Hours</span>
             <span className="text-right">Staff</span>
@@ -196,7 +206,7 @@ function RevenueContent({ facilityId }: { facilityId: number }) {
           {staffData.map((row) => (
             <div
               key={row.service}
-              className="grid grid-cols-4 items-center gap-3 rounded-md px-2 py-2.5 hover:bg-muted/30"
+              className="hover:bg-muted/30 grid grid-cols-4 items-center gap-3 rounded-md px-2 py-2.5"
             >
               <div className="col-span-2 flex items-center gap-2">
                 <span
@@ -205,8 +215,10 @@ function RevenueContent({ facilityId }: { facilityId: number }) {
                 />
                 <span className="text-sm font-medium">{row.service}</span>
               </div>
-              <span className="text-right text-sm tabular-nums">{row.hours}h</span>
-              <span className="text-right text-sm text-muted-foreground">
+              <span className="text-right text-sm tabular-nums">
+                {row.hours}h
+              </span>
+              <span className="text-muted-foreground text-right text-sm">
                 {row.staffCount}
               </span>
             </div>
@@ -262,9 +274,9 @@ function OccupancyContent({
           <span className="w-12 text-sm tabular-nums">
             {row.original.occupancyRate.toFixed(1)}%
           </span>
-          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+          <div className="bg-muted h-1.5 w-20 overflow-hidden rounded-full">
             <div
-              className="h-1.5 rounded-full bg-primary"
+              className="bg-primary h-1.5 rounded-full"
               style={{
                 width: `${Math.min(row.original.occupancyRate, 100)}%`,
               }}
@@ -294,8 +306,11 @@ function OccupancyContent({
           { label: "Total Revenue", value: `$${totalRevenue.toFixed(0)}` },
           { label: "Days in Range", value: data.length.toString() },
         ].map((t) => (
-          <div key={t.label} className="rounded-lg border bg-card p-3 text-center">
-            <p className="text-xs text-muted-foreground">{t.label}</p>
+          <div
+            key={t.label}
+            className="bg-card rounded-lg border p-3 text-center"
+          >
+            <p className="text-muted-foreground text-xs">{t.label}</p>
             <p className="mt-0.5 text-xl font-bold tabular-nums">{t.value}</p>
           </div>
         ))}
@@ -351,14 +366,14 @@ function NoShowContent({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5">
-        <span className="text-sm font-medium text-destructive">
+      <div className="border-destructive/20 bg-destructive/5 flex items-center gap-2 rounded-lg border px-3 py-2.5">
+        <span className="text-destructive text-sm font-medium">
           Total Lost Revenue:
         </span>
-        <span className="text-sm font-bold text-destructive">
+        <span className="text-destructive text-sm font-bold">
           ${totalLost.toFixed(2)}
         </span>
-        <span className="ml-1 text-xs text-muted-foreground">
+        <span className="text-muted-foreground ml-1 text-xs">
           across {data.length} no-show{data.length !== 1 ? "s" : ""}
         </span>
       </div>
@@ -429,7 +444,7 @@ function CancellationContent({
         <span className="text-sm font-bold text-orange-700 dark:text-orange-400">
           ${totalRefunds.toFixed(2)}
         </span>
-        <span className="ml-1 text-xs text-muted-foreground">
+        <span className="text-muted-foreground ml-1 text-xs">
           across {data.length} cancellation{data.length !== 1 ? "s" : ""}
         </span>
       </div>
@@ -456,7 +471,7 @@ function CustomerValueContent({ facilityId }: { facilityId: number }) {
       cell: ({ row }) => (
         <div>
           <p className="text-sm font-medium">{row.original.client.name}</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {row.original.client.email}
           </p>
         </div>
@@ -477,7 +492,7 @@ function CustomerValueContent({ facilityId }: { facilityId: number }) {
       accessorKey: "clv",
       header: "CLV (Est.)",
       cell: ({ row }) => (
-        <span className="font-semibold text-primary">
+        <span className="text-primary font-semibold">
           ${row.original.clv.toFixed(2)}
         </span>
       ),
@@ -505,8 +520,11 @@ function CustomerValueContent({ facilityId }: { facilityId: number }) {
           },
           { label: "Combined CLV", value: `$${totalLTV.toFixed(0)}` },
         ].map((t) => (
-          <div key={t.label} className="rounded-lg border bg-card p-3 text-center">
-            <p className="text-xs text-muted-foreground">{t.label}</p>
+          <div
+            key={t.label}
+            className="bg-card rounded-lg border p-3 text-center"
+          >
+            <p className="text-muted-foreground text-xs">{t.label}</p>
             <p className="mt-0.5 text-xl font-bold tabular-nums">{t.value}</p>
           </div>
         ))}
@@ -556,9 +574,7 @@ export function ReportSheet({
   function renderContent() {
     if (!report) return null;
     if (!report.implemented) {
-      return (
-        <ComingSoon name={report.name} description={report.description} />
-      );
+      return <ComingSoon name={report.name} description={report.description} />;
     }
     switch (report.id) {
       case "revenue-by-service":
@@ -602,9 +618,11 @@ export function ReportSheet({
       <Dialog open={!!report} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="flex max-h-[88vh] w-full max-w-3xl flex-col gap-0 overflow-hidden p-0">
           {/* Header */}
-          <div className="shrink-0 border-b px-6 pb-4 pt-6">
+          <div className="shrink-0 border-b px-6 pt-6 pb-4">
             <DialogHeader>
-              <DialogTitle className="text-lg">{report?.name ?? ""}</DialogTitle>
+              <DialogTitle className="text-lg">
+                {report?.name ?? ""}
+              </DialogTitle>
               <DialogDescription className="text-xs">
                 {report?.description ?? ""}
               </DialogDescription>
@@ -622,7 +640,7 @@ export function ReportSheet({
                       }
                       className="h-8 w-[140px] text-xs"
                     />
-                    <span className="text-xs text-muted-foreground">to</span>
+                    <span className="text-muted-foreground text-xs">to</span>
                     <Input
                       type="date"
                       value={dateRange.end}

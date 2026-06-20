@@ -675,7 +675,9 @@ export const walletTransactionSchema = z.object({
   balanceAfter: z.number(),
   description: z.string(),
   referenceId: z.string().optional(),
-  referenceType: z.enum(["gift_card", "booking", "invoice", "adjustment"]).optional(),
+  referenceType: z
+    .enum(["gift_card", "booking", "invoice", "adjustment"])
+    .optional(),
   performedBy: z.string().optional(),
   performedById: z.number().optional(),
   createdAt: z.string(),
@@ -724,7 +726,11 @@ export const giftCardProgramSettingsSchema = z.object({
   partialRedemptionAllowed: z.boolean(),
   pinRequiredAbove: z.number(),
   /** Where gift cards issued at one location may be redeemed (multi-location facilities). */
-  redemptionLocationScope: z.enum(["this_location", "all_locations", "selected"]),
+  redemptionLocationScope: z.enum([
+    "this_location",
+    "all_locations",
+    "selected",
+  ]),
   /** When scope is "selected", the location ids permitted to redeem. */
   redemptionLocationIds: z.array(z.string()).optional(),
   /** When a service is refunded, staff may issue the refund as gift card credit. */
@@ -747,13 +753,20 @@ export const giftCardProgramSettingsSchema = z.object({
     .optional(),
   updatedAt: z.string(),
 });
-export type GiftCardProgramSettings = z.infer<typeof giftCardProgramSettingsSchema>;
+export type GiftCardProgramSettings = z.infer<
+  typeof giftCardProgramSettingsSchema
+>;
 
 // ============================================================================
 // Physical Card Batch (inventory)
 // ============================================================================
 
-export const physicalCardStatusEnum = z.enum(["inactive", "active", "sold", "voided"]);
+export const physicalCardStatusEnum = z.enum([
+  "inactive",
+  "active",
+  "sold",
+  "voided",
+]);
 
 export const physicalCardSchema = z.object({
   id: z.string(),

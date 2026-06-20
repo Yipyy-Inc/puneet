@@ -30,9 +30,7 @@ export function CustomerMyPetsTab({ customerId }: Props) {
     trainingQueries.allSeriesEnrollments(),
   );
   const { data: seriesList = [] } = useQuery(trainingQueries.series());
-  const { data: attendances = [] } = useQuery(
-    trainingQueries.allAttendances(),
-  );
+  const { data: attendances = [] } = useQuery(trainingQueries.allAttendances());
   const { data: homework = [] } = useQuery(trainingQueries.allHomework());
   const { data: packages = [] } = useQuery(
     trainingQueries.clientTrainingPackagesForClient(customerId),
@@ -100,10 +98,13 @@ export function CustomerMyPetsTab({ customerId }: Props) {
       <div className="text-muted-foreground rounded-xl border border-dashed py-16 text-center text-sm">
         <PawPrint className="text-muted-foreground/30 mx-auto mb-2 size-8" />
         <p>
-          No training history for {customer.pets.map((p) => p.name).join(" or ")} yet.
+          No training history for{" "}
+          {customer.pets.map((p) => p.name).join(" or ")} yet.
         </p>
         <Button asChild size="sm" className="mt-4">
-          <Link href="/customer/training?tab=classes">Browse Training Classes</Link>
+          <Link href="/customer/training?tab=classes">
+            Browse Training Classes
+          </Link>
         </Button>
       </div>
     );

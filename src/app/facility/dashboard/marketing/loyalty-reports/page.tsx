@@ -1106,8 +1106,8 @@ export default function LoyaltyReportsPage() {
                 <CardTitle>Badge Achievement Rate</CardTitle>
                 <CardDescription>
                   Who earns each badge, how long it takes from their first
-                  booking, and the revenue uplift after earning — to tell whether
-                  each badge&apos;s condition is set at the right level.
+                  booking, and the revenue uplift after earning — to tell
+                  whether each badge&apos;s condition is set at the right level.
                 </CardDescription>
               </CardHeader>
               <CardContent>

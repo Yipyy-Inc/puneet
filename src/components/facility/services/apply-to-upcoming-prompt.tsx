@@ -61,13 +61,16 @@ export function ApplyToUpcomingPrompt({
               {count} upcoming unconfirmed{" "}
               {count === 1 ? "appointment uses" : "appointments use"}
             </strong>{" "}
-            this {serviceKind} (<span className="font-medium">{serviceName}</span>
-            ). Do you want to apply the change{changes.length === 1 ? "" : "s"} to{" "}
-            {count === 1 ? "this booking" : "all of them"}?
+            this {serviceKind} (
+            <span className="font-medium">{serviceName}</span>
+            ). Do you want to apply the change{changes.length === 1
+              ? ""
+              : "s"}{" "}
+            to {count === 1 ? "this booking" : "all of them"}?
           </p>
 
           {changes.length > 0 && (
-            <div className="space-y-1 rounded-md border bg-muted/30 px-3 py-2 text-xs">
+            <div className="bg-muted/30 space-y-1 rounded-md border px-3 py-2 text-xs">
               {changes.map((c, i) => (
                 <p key={i}>
                   <span className="font-medium">{c.label}:</span>{" "}
@@ -90,7 +93,7 @@ export function ApplyToUpcomingPrompt({
           )}
 
           {count > 0 && (
-            <details className="rounded-md border bg-card px-3 py-2 text-xs">
+            <details className="bg-card rounded-md border px-3 py-2 text-xs">
               <summary className="cursor-pointer font-medium">
                 Show affected appointments ({count})
               </summary>
@@ -101,20 +104,20 @@ export function ApplyToUpcomingPrompt({
                     className="flex items-center justify-between gap-2"
                   >
                     {a.date && (
-                      <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                      <span className="text-muted-foreground font-mono text-[11px] tabular-nums">
                         {a.date}
                       </span>
                     )}
                     <span className="min-w-0 flex-1 truncate">{a.primary}</span>
                     {a.secondary && (
-                      <span className="shrink-0 text-muted-foreground">
+                      <span className="text-muted-foreground shrink-0">
                         {a.secondary}
                       </span>
                     )}
                   </li>
                 ))}
                 {count > 50 && (
-                  <li className="text-[10px] text-muted-foreground italic">
+                  <li className="text-muted-foreground text-[10px] italic">
                     + {count - 50} more
                   </li>
                 )}
@@ -122,7 +125,7 @@ export function ApplyToUpcomingPrompt({
             </details>
           )}
 
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-muted-foreground text-[11px]">
             {footerNote ??
               "Only scheduled appointments dated today or later are affected. Checked-in, completed, cancelled, and no-show bookings are left untouched."}
           </p>

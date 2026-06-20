@@ -25,7 +25,11 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { WARNING_TYPE_META } from "@/types/facility-warnings";
-import type { WarningTemplate, WarningTemplateField, WarningType } from "@/types/facility-warnings";
+import type {
+  WarningTemplate,
+  WarningTemplateField,
+  WarningType,
+} from "@/types/facility-warnings";
 
 interface Props {
   open: boolean;
@@ -41,13 +45,24 @@ const FIELD_TYPE_LABELS = {
   checkbox: "Checkbox",
 } as const;
 
-export function WarningTemplateBuilder({ open, onOpenChange, onSave, existing }: Props) {
+export function WarningTemplateBuilder({
+  open,
+  onOpenChange,
+  onSave,
+  existing,
+}: Props) {
   const [title, setTitle] = useState(existing?.title ?? "");
   const [description, setDescription] = useState(existing?.description ?? "");
   const [body, setBody] = useState(existing?.body ?? "");
-  const [defaultType, setDefaultType] = useState<WarningType>(existing?.defaultType ?? "written");
-  const [requiresSignature, setRequiresSignature] = useState(existing?.requiresSignature ?? true);
-  const [fields, setFields] = useState<WarningTemplateField[]>(existing?.fields ?? []);
+  const [defaultType, setDefaultType] = useState<WarningType>(
+    existing?.defaultType ?? "written",
+  );
+  const [requiresSignature, setRequiresSignature] = useState(
+    existing?.requiresSignature ?? true,
+  );
+  const [fields, setFields] = useState<WarningTemplateField[]>(
+    existing?.fields ?? [],
+  );
 
   const addField = () => {
     setFields((prev) => [
@@ -63,7 +78,9 @@ export function WarningTemplateBuilder({ open, onOpenChange, onSave, existing }:
   };
 
   const updateField = (id: string, patch: Partial<WarningTemplateField>) => {
-    setFields((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
+    setFields((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, ...patch } : f)),
+    );
   };
 
   const removeField = (id: string) => {
@@ -107,7 +124,10 @@ export function WarningTemplateBuilder({ open, onOpenChange, onSave, existing }:
           </TabsList>
 
           {/* ── Tab 1: template info ── */}
-          <TabsContent value="template" className="mt-4 min-h-0 flex-1 overflow-y-auto space-y-4 pr-1">
+          <TabsContent
+            value="template"
+            className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1"
+          >
             <div className="space-y-1.5">
               <Label>Template Title *</Label>
               <Input
@@ -155,7 +175,9 @@ export function WarningTemplateBuilder({ open, onOpenChange, onSave, existing }:
                       onCheckedChange={setRequiresSignature}
                     />
                     <span className="text-muted-foreground text-sm">
-                      {requiresSignature ? "Yes — signature required" : "No signature"}
+                      {requiresSignature
+                        ? "Yes — signature required"
+                        : "No signature"}
                     </span>
                   </div>
                 </div>
@@ -165,7 +187,8 @@ export function WarningTemplateBuilder({ open, onOpenChange, onSave, existing }:
             <div className="space-y-1.5">
               <Label>Warning Document Body *</Label>
               <p className="text-muted-foreground text-xs">
-                This is the full text of the warning that will be shown to the employee before they sign.
+                This is the full text of the warning that will be shown to the
+                employee before they sign.
               </p>
               <Textarea
                 value={body}
@@ -178,16 +201,24 @@ export function WarningTemplateBuilder({ open, onOpenChange, onSave, existing }:
           </TabsContent>
 
           {/* ── Tab 2: custom fields ── */}
-          <TabsContent value="fields" className="mt-4 min-h-0 flex-1 overflow-y-auto space-y-3 pr-1">
+          <TabsContent
+            value="fields"
+            className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1"
+          >
             <p className="text-muted-foreground text-sm">
-              Add fields that managers must fill in when issuing this warning (e.g., incident dates, a description). These values are stored with the signed record.
+              Add fields that managers must fill in when issuing this warning
+              (e.g., incident dates, a description). These values are stored
+              with the signed record.
             </p>
 
             {fields.length === 0 && (
               <div className="border-border/60 rounded-xl border border-dashed p-6 text-center">
-                <p className="text-muted-foreground text-sm">No custom fields yet.</p>
+                <p className="text-muted-foreground text-sm">
+                  No custom fields yet.
+                </p>
                 <p className="text-muted-foreground text-xs">
-                  Click &quot;Add Field&quot; to collect specific information when issuing this warning.
+                  Click &quot;Add Field&quot; to collect specific information
+                  when issuing this warning.
                 </p>
               </div>
             )}
@@ -204,7 +235,9 @@ export function WarningTemplateBuilder({ open, onOpenChange, onSave, existing }:
                       <Label className="text-xs">Label</Label>
                       <Input
                         value={field.label}
-                        onChange={(e) => updateField(field.id, { label: e.target.value })}
+                        onChange={(e) =>
+                          updateField(field.id, { label: e.target.value })
+                        }
                         placeholder={`Field ${idx + 1} label`}
                         className="h-8 text-sm"
                       />
@@ -235,7 +268,9 @@ export function WarningTemplateBuilder({ open, onOpenChange, onSave, existing }:
                       <Label className="text-xs">Placeholder (optional)</Label>
                       <Input
                         value={field.placeholder ?? ""}
-                        onChange={(e) => updateField(field.id, { placeholder: e.target.value })}
+                        onChange={(e) =>
+                          updateField(field.id, { placeholder: e.target.value })
+                        }
                         placeholder="Help text shown inside the field"
                         className="h-8 text-sm"
                       />
@@ -243,10 +278,15 @@ export function WarningTemplateBuilder({ open, onOpenChange, onSave, existing }:
                     <div className="col-span-2 flex items-center gap-2">
                       <Switch
                         checked={field.required}
-                        onCheckedChange={(v) => updateField(field.id, { required: v })}
+                        onCheckedChange={(v) =>
+                          updateField(field.id, { required: v })
+                        }
                         id={`req-${field.id}`}
                       />
-                      <Label htmlFor={`req-${field.id}`} className="text-xs font-normal">
+                      <Label
+                        htmlFor={`req-${field.id}`}
+                        className="text-xs font-normal"
+                      >
                         Required field
                       </Label>
                     </div>
@@ -264,13 +304,21 @@ export function WarningTemplateBuilder({ open, onOpenChange, onSave, existing }:
               ))}
             </div>
 
-            <Button type="button" variant="outline" size="sm" onClick={addField}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addField}
+            >
               <Plus className="mr-1.5 size-3.5" /> Add Field
             </Button>
           </TabsContent>
 
           {/* ── Tab 3: preview ── */}
-          <TabsContent value="preview" className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+          <TabsContent
+            value="preview"
+            className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1"
+          >
             {!title && !body ? (
               <div className="border-border/60 rounded-xl border border-dashed p-8 text-center">
                 <FileText className="text-muted-foreground mx-auto mb-2 size-8 opacity-30" />
@@ -281,8 +329,16 @@ export function WarningTemplateBuilder({ open, onOpenChange, onSave, existing }:
             ) : (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-lg font-bold">{title || "Untitled Template"}</span>
-                  <Badge className={cn("border-0 text-[10px]", typeMeta.bg, typeMeta.text)}>
+                  <span className="text-lg font-bold">
+                    {title || "Untitled Template"}
+                  </span>
+                  <Badge
+                    className={cn(
+                      "border-0 text-[10px]",
+                      typeMeta.bg,
+                      typeMeta.text,
+                    )}
+                  >
                     {typeMeta.label}
                   </Badge>
                   {requiresSignature && (
@@ -302,8 +358,13 @@ export function WarningTemplateBuilder({ open, onOpenChange, onSave, existing }:
                       Manager fills in
                     </p>
                     {fields.map((f) => (
-                      <div key={f.id} className="flex items-center gap-2 text-sm">
-                        <span className="font-medium">{f.label || "Unnamed field"}</span>
+                      <div
+                        key={f.id}
+                        className="flex items-center gap-2 text-sm"
+                      >
+                        <span className="font-medium">
+                          {f.label || "Unnamed field"}
+                        </span>
                         <Badge variant="secondary" className="text-[10px]">
                           {FIELD_TYPE_LABELS[f.type]}
                         </Badge>
@@ -334,10 +395,7 @@ export function WarningTemplateBuilder({ open, onOpenChange, onSave, existing }:
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!title.trim() || !body.trim()}
-          >
+          <Button onClick={handleSave} disabled={!title.trim() || !body.trim()}>
             {existing ? "Save Changes" : "Create Template"}
           </Button>
         </DialogFooter>

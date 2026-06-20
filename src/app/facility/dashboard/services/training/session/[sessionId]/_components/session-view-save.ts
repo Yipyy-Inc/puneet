@@ -189,7 +189,9 @@ export function saveSession(input: SaveSessionInput): PresentStudentSummary[] {
   queryClient.setQueryData<TrainingSession[]>(
     trainingQueries.sessions().queryKey,
     (prev = []) =>
-      prev.map((s) => (s.id === session.id ? { ...s, status: "completed" } : s)),
+      prev.map((s) =>
+        s.id === session.id ? { ...s, status: "completed" } : s,
+      ),
   );
 
   // ── Graduation sweep ──────────────────────────────────────────────
@@ -219,8 +221,14 @@ function runGraduationSweep(input: {
   photos: { url: string; caption?: string; takenAt: string }[];
   trainerName: string;
 }): void {
-  const { queryClient, session, presentSummary, petImageById, photos, trainerName } =
-    input;
+  const {
+    queryClient,
+    session,
+    presentSummary,
+    petImageById,
+    photos,
+    trainerName,
+  } = input;
   const touchedSeriesIds = new Set<string>();
   for (const p of presentSummary) {
     if (p.seriesEnrollment) touchedSeriesIds.add(p.seriesEnrollment.seriesId);
@@ -286,26 +294,28 @@ function runGraduationSweep(input: {
       cache
         .findAll({ queryKey: ["training", "series-enrollments"] })
         .forEach((q) => {
-          queryClient.setQueryData<TrainingEnrollment[]>(q.queryKey, (prev = []) =>
+          queryClient.setQueryData<TrainingEnrollment[]>(
+            q.queryKey,
+            (prev = []) =>
+              prev.map((e) =>
+                e.id === enrollment.id
+                  ? { ...e, status: "completed", updatedAt: nowISO }
+                  : e,
+              ),
+          );
+        });
+      cache.findAll({ queryKey: ["training", "series"] }).forEach((q) => {
+        if (q.queryKey[3] !== "enrollments") return;
+        queryClient.setQueryData<TrainingEnrollment[]>(
+          q.queryKey,
+          (prev = []) =>
             prev.map((e) =>
               e.id === enrollment.id
                 ? { ...e, status: "completed", updatedAt: nowISO }
                 : e,
             ),
-          );
-        });
-      cache
-        .findAll({ queryKey: ["training", "series"] })
-        .forEach((q) => {
-          if (q.queryKey[3] !== "enrollments") return;
-          queryClient.setQueryData<TrainingEnrollment[]>(q.queryKey, (prev = []) =>
-            prev.map((e) =>
-              e.id === enrollment.id
-                ? { ...e, status: "completed", updatedAt: nowISO }
-                : e,
-            ),
-          );
-        });
+        );
+      });
     }
   }
 }
@@ -315,30 +325,25 @@ function fanOutAttendance(
   record: SessionAttendance,
 ): void {
   const cache = queryClient.getQueryCache();
-  cache
-    .findAll({ queryKey: ["training", "attendances"] })
-    .forEach((query) => {
-      const key = query.queryKey;
-      // Accept: all-attendances catalog + per-pet caches keyed on this pet.
-      const scope = key[2];
-      let accepts = false;
-      if (scope === "all") accepts = true;
-      else if (scope === "pet" && key[3] === record.petId) accepts = true;
-      if (!accepts) return;
-      queryClient.setQueryData<SessionAttendance[]>(key, (prev = []) => {
-        const idx = prev.findIndex((a) => a.id === record.id);
-        if (idx === -1) return [...prev, record];
-        const next = prev.slice();
-        next[idx] = record;
-        return next;
-      });
+  cache.findAll({ queryKey: ["training", "attendances"] }).forEach((query) => {
+    const key = query.queryKey;
+    // Accept: all-attendances catalog + per-pet caches keyed on this pet.
+    const scope = key[2];
+    let accepts = false;
+    if (scope === "all") accepts = true;
+    else if (scope === "pet" && key[3] === record.petId) accepts = true;
+    if (!accepts) return;
+    queryClient.setQueryData<SessionAttendance[]>(key, (prev = []) => {
+      const idx = prev.findIndex((a) => a.id === record.id);
+      if (idx === -1) return [...prev, record];
+      const next = prev.slice();
+      next[idx] = record;
+      return next;
     });
+  });
 }
 
-function fanOutTrainerNote(
-  queryClient: QueryClient,
-  note: TrainerNote,
-): void {
+function fanOutTrainerNote(queryClient: QueryClient, note: TrainerNote): void {
   const cache = queryClient.getQueryCache();
   cache
     .findAll({ queryKey: trainingQueries.trainerNotes().queryKey })
@@ -405,27 +410,25 @@ function bumpSeriesEnrollmentProgress(
       // The seriesEnrollments(seriesId) cache lives at
       // ["training","series", seriesId, "enrollments"].
       if (key[3] !== "enrollments") return;
-      queryClient.setQueryData<TrainingEnrollment[]>(
-        key,
-        (prev = []) =>
-          prev.map((e) => {
-            if (e.id !== enrollmentId) return e;
-            const sessionsAttended = e.sessionsAttended + 1;
-            const currentSessionNumber = Math.min(
-              e.currentSessionNumber + 1,
-              e.totalSessions,
-            );
-            const progress = Math.round(
-              (sessionsAttended / e.totalSessions) * 100,
-            );
-            return {
-              ...e,
-              sessionsAttended,
-              currentSessionNumber,
-              progress,
-              updatedAt: new Date().toISOString(),
-            };
-          }),
+      queryClient.setQueryData<TrainingEnrollment[]>(key, (prev = []) =>
+        prev.map((e) => {
+          if (e.id !== enrollmentId) return e;
+          const sessionsAttended = e.sessionsAttended + 1;
+          const currentSessionNumber = Math.min(
+            e.currentSessionNumber + 1,
+            e.totalSessions,
+          );
+          const progress = Math.round(
+            (sessionsAttended / e.totalSessions) * 100,
+          );
+          return {
+            ...e,
+            sessionsAttended,
+            currentSessionNumber,
+            progress,
+            updatedAt: new Date().toISOString(),
+          };
+        }),
       );
     });
 }

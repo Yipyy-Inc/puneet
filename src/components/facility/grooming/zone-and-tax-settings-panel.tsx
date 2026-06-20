@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,9 +65,7 @@ function TravelZonesCard({
 
   function addZone() {
     const nextMax =
-      sorted.length === 0
-        ? 5
-        : Math.max(...sorted.map((z) => z.maxMiles)) + 10;
+      sorted.length === 0 ? 5 : Math.max(...sorted.map((z) => z.maxMiles)) + 10;
     const next: TravelZone = {
       id: `zone-${Date.now()}`,
       label: `Zone ${sorted.length + 1}`,
@@ -92,14 +85,14 @@ function TravelZonesCard({
           <MapPinned className="size-4 text-sky-600" />
           Travel Zones
         </CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Distance from the facility base · adds a surcharge as its own
-          invoice line. Tightest matching zone wins.
+        <p className="text-muted-foreground text-xs">
+          Distance from the facility base · adds a surcharge as its own invoice
+          line. Tightest matching zone wins.
         </p>
       </CardHeader>
       <CardContent className="space-y-2">
         {sorted.length === 0 && (
-          <p className="rounded-md border border-dashed bg-muted/10 px-3 py-3 text-center text-xs text-muted-foreground">
+          <p className="bg-muted/10 text-muted-foreground rounded-md border border-dashed px-3 py-3 text-center text-xs">
             No zones configured.
           </p>
         )}
@@ -139,7 +132,7 @@ function TravelZoneRow({
     onChange({ ...zone, ...p });
   }
   return (
-    <div className="rounded-md border bg-card px-2.5 py-2">
+    <div className="bg-card rounded-md border px-2.5 py-2">
       <div className="flex items-center gap-2">
         <Input
           value={zone.label}
@@ -162,7 +155,7 @@ function TravelZoneRow({
       </div>
       <div className="mt-2 grid grid-cols-3 items-end gap-2">
         <div>
-          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <Label className="text-muted-foreground text-[10px] tracking-wide uppercase">
             Max miles
           </Label>
           <Input
@@ -176,7 +169,7 @@ function TravelZoneRow({
           />
         </div>
         <div>
-          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <Label className="text-muted-foreground text-[10px] tracking-wide uppercase">
             Mode
           </Label>
           <Select
@@ -199,7 +192,7 @@ function TravelZoneRow({
           </Select>
         </div>
         <div>
-          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <Label className="text-muted-foreground text-[10px] tracking-wide uppercase">
             {zone.surchargeMode === "flat" ? "Amount $" : "Amount %"}
           </Label>
           <Input
@@ -216,7 +209,7 @@ function TravelZoneRow({
           />
         </div>
       </div>
-      <label className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
+      <label className="text-muted-foreground mt-2 flex items-center gap-2 text-[11px]">
         <input
           type="checkbox"
           checked={zone.active}
@@ -242,7 +235,8 @@ function ZipTaxCard({
   onSetDefault: (id: string) => void;
 }) {
   const sorted = [...rates].sort(
-    (a, b) => b.prefix.length - a.prefix.length || a.prefix.localeCompare(b.prefix),
+    (a, b) =>
+      b.prefix.length - a.prefix.length || a.prefix.localeCompare(b.prefix),
   );
 
   function addRate() {
@@ -263,14 +257,14 @@ function ZipTaxCard({
           <Receipt className="size-4 text-emerald-600" />
           ZIP / Postal Tax Rates
         </CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Per-prefix tax that auto-applies based on the client&apos;s
-          postal code. Longest-prefix wins. Star to mark the default fallback.
+        <p className="text-muted-foreground text-xs">
+          Per-prefix tax that auto-applies based on the client&apos;s postal
+          code. Longest-prefix wins. Star to mark the default fallback.
         </p>
       </CardHeader>
       <CardContent className="space-y-2">
         {sorted.length === 0 && (
-          <p className="rounded-md border border-dashed bg-muted/10 px-3 py-3 text-center text-xs text-muted-foreground">
+          <p className="bg-muted/10 text-muted-foreground rounded-md border border-dashed px-3 py-3 text-center text-xs">
             No tax rates configured.
           </p>
         )}
@@ -313,7 +307,7 @@ function ZipTaxRow({
     onChange({ ...rate, ...p });
   }
   return (
-    <div className="rounded-md border bg-card px-2.5 py-2">
+    <div className="bg-card rounded-md border px-2.5 py-2">
       <div className="flex items-center gap-2">
         <Input
           value={rate.label}
@@ -335,7 +329,7 @@ function ZipTaxRow({
           onClick={() => onSetDefault(rate.id)}
           title="Mark as default fallback"
           aria-label="Mark default"
-          className="text-muted-foreground hover:text-amber-600 shrink-0"
+          className="text-muted-foreground shrink-0 hover:text-amber-600"
         >
           <Star className="size-3.5" />
         </button>
@@ -355,20 +349,22 @@ function ZipTaxRow({
       </div>
       <div className="mt-2 grid grid-cols-2 items-end gap-2">
         <div>
-          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <Label className="text-muted-foreground text-[10px] tracking-wide uppercase">
             Postal / ZIP prefix
           </Label>
           <Input
             value={rate.prefix}
             onChange={(e) =>
-              patch({ prefix: e.target.value.toUpperCase().replace(/\s+/g, "") })
+              patch({
+                prefix: e.target.value.toUpperCase().replace(/\s+/g, ""),
+              })
             }
             className="mt-0.5 h-7 text-xs"
             placeholder="H3A, M5V, 90210…"
           />
         </div>
         <div>
-          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <Label className="text-muted-foreground text-[10px] tracking-wide uppercase">
             Rate %
           </Label>
           <Input

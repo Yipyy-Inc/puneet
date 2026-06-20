@@ -55,7 +55,8 @@ export function SaveAsReplyDialog({
       id: `sr-${Date.now()}`,
       title: title.trim(),
       shortcut:
-        shortcut.trim() || title.trim().toLowerCase().replace(/\s+/g, "-").slice(0, 24),
+        shortcut.trim() ||
+        title.trim().toLowerCase().replace(/\s+/g, "-").slice(0, 24),
       body: body.trim(),
       category,
       createdAt: new Date().toISOString(),
@@ -128,8 +129,10 @@ export function SaveAsReplyDialog({
               className="resize-none text-sm"
             />
             <p className="text-[10px] text-slate-400">
-              Use <code className="rounded bg-slate-100 px-1">{`{ClientName}`}</code>{" "}
-              and <code className="rounded bg-slate-100 px-1">{`{PetName}`}</code>{" "}
+              Use{" "}
+              <code className="rounded bg-slate-100 px-1">{`{ClientName}`}</code>{" "}
+              and{" "}
+              <code className="rounded bg-slate-100 px-1">{`{PetName}`}</code>{" "}
               to personalize on the fly.
             </p>
           </div>
@@ -138,7 +141,11 @@ export function SaveAsReplyDialog({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="button" onClick={submit} disabled={!title.trim() || !body.trim()}>
+            <Button
+              type="button"
+              onClick={submit}
+              disabled={!title.trim() || !body.trim()}
+            >
               Save Reply
             </Button>
           </div>

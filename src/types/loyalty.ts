@@ -410,9 +410,7 @@ export const redeemMethodEnum = z.enum([
 export type RedeemMethod = z.infer<typeof redeemMethodEnum>;
 
 export const redemptionRecordStatusEnum = z.enum(["active", "used", "expired"]);
-export type RedemptionRecordStatus = z.infer<
-  typeof redemptionRecordStatusEnum
->;
+export type RedemptionRecordStatus = z.infer<typeof redemptionRecordStatusEnum>;
 
 export const redemptionRecordSchema = z.object({
   id: z.string(),
@@ -871,7 +869,11 @@ export type ReferralProgram = z.infer<typeof referralProgramSchema>;
 // each loyalty notification type, edited in Marketing → Loyalty → Notifications.
 // ============================================================================
 
-export const loyaltyNotificationMethodEnum = z.enum(["email", "portal", "both"]);
+export const loyaltyNotificationMethodEnum = z.enum([
+  "email",
+  "portal",
+  "both",
+]);
 export type LoyaltyNotificationMethod = z.infer<
   typeof loyaltyNotificationMethodEnum
 >;

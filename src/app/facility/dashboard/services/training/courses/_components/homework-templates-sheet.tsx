@@ -415,9 +415,7 @@ function TemplateEditorDialog({
   function patchItem(id: string, patch: Partial<HomeworkTemplateItem>) {
     setState((prev) => ({
       ...prev,
-      items: prev.items.map((it) =>
-        it.id === id ? { ...it, ...patch } : it,
-      ),
+      items: prev.items.map((it) => (it.id === id ? { ...it, ...patch } : it)),
     }));
   }
 
@@ -477,9 +475,9 @@ function TemplateEditorDialog({
             {editing ? "Edit template" : "New template"}
           </DialogTitle>
           <DialogDescription>
-            Scoped to <span className="font-medium">{courseTypeName}</span>.
-            Tag a session number so it auto-loads when that week&apos;s
-            session completes.
+            Scoped to <span className="font-medium">{courseTypeName}</span>. Tag
+            a session number so it auto-loads when that week&apos;s session
+            completes.
           </DialogDescription>
         </DialogHeader>
 
@@ -496,9 +494,7 @@ function TemplateEditorDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm font-semibold">
-                Week (optional)
-              </Label>
+              <Label className="text-sm font-semibold">Week (optional)</Label>
               <Input
                 type="number"
                 min={1}
@@ -545,7 +541,7 @@ function TemplateEditorDialog({
                   className="rounded-lg border bg-slate-50/40 p-2.5"
                 >
                   <div className="mb-2 flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <p className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
                       Item {idx + 1}
                     </p>
                     <Button
@@ -627,7 +623,7 @@ function TemplateEditorDialog({
                         className="min-h-[60px] text-[12px] leading-relaxed"
                       />
                       <div className="space-y-1">
-                        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        <Label className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
                           Due in (days)
                         </Label>
                         <Input

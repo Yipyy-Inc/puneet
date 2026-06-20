@@ -110,7 +110,9 @@ export const customerNotificationsStore = {
   },
 
   markAllRead(): void {
-    notifications = notifications.map((n) => (n.read ? n : { ...n, read: true }));
+    notifications = notifications.map((n) =>
+      n.read ? n : { ...n, read: true },
+    );
     emit();
   },
 

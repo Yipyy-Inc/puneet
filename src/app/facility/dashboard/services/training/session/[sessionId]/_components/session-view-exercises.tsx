@@ -378,7 +378,7 @@ export function SessionExercisesSection({
           sessions with no plan show a "build from scratch" note instead. */}
       {curriculumWeek ? (
         <div className="flex items-center gap-2.5 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 dark:border-indigo-900/50 dark:bg-indigo-950/30">
-          <div className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 flex size-8 shrink-0 items-center justify-center rounded-lg">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
             <GraduationCap className="size-4" />
           </div>
           <div className="min-w-0">
@@ -395,7 +395,7 @@ export function SessionExercisesSection({
         </div>
       ) : isAdaptive ? (
         <div className="flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 dark:border-amber-900/50 dark:bg-amber-950/30">
-          <div className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200 flex size-8 shrink-0 items-center justify-center rounded-lg">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">
             <Sparkles className="size-4" />
           </div>
           <div className="min-w-0">
@@ -478,10 +478,10 @@ export function SessionExercisesSection({
 
       <Card className="overflow-hidden">
         <div className="flex items-center gap-2 border-b bg-slate-50/60 px-4 py-2.5 dark:bg-slate-900/40">
-          <NotebookPen className="text-indigo-600 size-4" />
+          <NotebookPen className="size-4 text-indigo-600" />
           <Label
             htmlFor="session-notes"
-            className="text-sm font-semibold leading-none"
+            className="text-sm leading-none font-semibold"
           >
             Session Notes
           </Label>
@@ -581,12 +581,18 @@ function AddExerciseSearch({
         return a.name.localeCompare(b.name);
       })
       .slice(0, 12);
-  }, [query, exercises, preferredDisciplineId, curriculumIds, existingExerciseIds]);
+  }, [
+    query,
+    exercises,
+    preferredDisciplineId,
+    curriculumIds,
+    existingExerciseIds,
+  ]);
 
   return (
     <Card className="overflow-hidden p-0">
       <div className="relative">
-        <Search className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+        <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -614,17 +620,18 @@ function AddExerciseSearch({
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{ex.name}</p>
                     <p className="text-muted-foreground truncate text-[11px]">
-                      {disciplineNameById.get(ex.disciplineId) ?? ex.disciplineId}
+                      {disciplineNameById.get(ex.disciplineId) ??
+                        ex.disciplineId}
                       <span className="mx-1">·</span>
                       {DIFFICULTY_LABELS[ex.difficultyLevel]}
                     </p>
                   </div>
                   {curriculumIds.has(ex.id) ? (
-                    <span className="rounded-full bg-indigo-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                    <span className="rounded-full bg-indigo-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">
                       Curriculum
                     </span>
                   ) : ex.disciplineId === preferredDisciplineId ? (
-                    <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-indigo-700">
+                    <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-indigo-700 uppercase">
                       Course
                     </span>
                   ) : null}
@@ -693,7 +700,7 @@ function ExerciseRatingCard({
   const sourceBadge = (
     <span
       className={cn(
-        "rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
+        "rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase",
         isCurriculum
           ? "bg-indigo-600 text-white"
           : "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-200",
@@ -714,7 +721,7 @@ function ExerciseRatingCard({
                 {entry.exerciseName}
               </p>
               {disciplineName && (
-                <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-indigo-700">
+                <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-indigo-700 uppercase">
                   {disciplineName}
                 </span>
               )}
@@ -744,16 +751,19 @@ function ExerciseRatingCard({
       <div className="flex items-start justify-between gap-3 border-b bg-slate-50/60 px-4 py-2.5 dark:bg-slate-900/40">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-semibold">{entry.exerciseName}</p>
+            <p className="truncate text-sm font-semibold">
+              {entry.exerciseName}
+            </p>
             {disciplineName && (
-              <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-indigo-700">
+              <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-indigo-700 uppercase">
                 {disciplineName}
               </span>
             )}
             {sourceBadge}
           </div>
           <p className="text-muted-foreground mt-0.5 text-[11px]">
-            {ratedCount} / {includedCount} rated · {presentRows.length - includedCount} skipped
+            {ratedCount} / {includedCount} rated ·{" "}
+            {presentRows.length - includedCount} skipped
           </p>
         </div>
         <Button
@@ -799,7 +809,7 @@ function ExerciseRatingCard({
                   onChange={(value) => setStudentNote(row.enrollmentId, value)}
                 />
                 {!included && (
-                  <span className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide">
+                  <span className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-semibold tracking-wide uppercase">
                     <X className="size-3" /> not worked
                   </span>
                 )}
@@ -828,7 +838,7 @@ function ExerciseRatingCard({
                           is self-explaining at a glance; collapses on
                           larger screens where the inline name + secondary
                           caption already cover it. */}
-                      <span className="text-[9px] font-semibold uppercase tracking-wider leading-tight sm:hidden">
+                      <span className="text-[9px] leading-tight font-semibold tracking-wider uppercase sm:hidden">
                         {RATING_LABELS[n]}
                       </span>
                     </button>
@@ -851,7 +861,9 @@ function ExerciseRatingCard({
         <p className="text-muted-foreground flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] leading-tight">
           {([1, 2, 3, 4, 5] as const).map((n) => (
             <span key={n} className="inline-flex items-center">
-              <span className="font-bold tabular-nums text-slate-500">{n}=</span>
+              <span className="font-bold text-slate-500 tabular-nums">
+                {n}=
+              </span>
               {RATING_LABELS[n]}
             </span>
           ))}
@@ -879,8 +891,8 @@ function SessionPhotosCard({
   return (
     <Card className="overflow-hidden">
       <div className="flex items-center gap-2 border-b bg-slate-50/60 px-4 py-2.5 dark:bg-slate-900/40">
-        <Camera className="text-indigo-600 size-4" />
-        <Label className="text-sm font-semibold leading-none">
+        <Camera className="size-4 text-indigo-600" />
+        <Label className="text-sm leading-none font-semibold">
           Session Photos
         </Label>
         <span className="text-muted-foreground ml-auto text-[11px]">
@@ -894,7 +906,7 @@ function SessionPhotosCard({
         <button
           type="button"
           onClick={onAddPhotos}
-          className="text-muted-foreground hover:bg-slate-50 hover:text-foreground flex w-full flex-col items-center gap-2 border-dashed border-slate-200 px-4 py-6 text-center transition-colors dark:border-slate-800 dark:hover:bg-slate-900/40"
+          className="text-muted-foreground hover:text-foreground flex w-full flex-col items-center gap-2 border-dashed border-slate-200 px-4 py-6 text-center transition-colors hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900/40"
         >
           <ImagePlus className="size-6 text-indigo-400" />
           <span className="text-sm font-medium">
@@ -925,7 +937,7 @@ function SessionPhotosCard({
                   <button
                     type="button"
                     onClick={() => onRemovePhoto(photo.id)}
-                    className="absolute right-1.5 top-1.5 inline-flex size-7 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur transition-opacity hover:bg-black/80 group-hover:opacity-100 focus-visible:opacity-100"
+                    className="absolute top-1.5 right-1.5 inline-flex size-7 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100 hover:bg-black/80 focus-visible:opacity-100"
                     aria-label="Remove photo"
                     title="Remove photo"
                   >
@@ -943,7 +955,7 @@ function SessionPhotosCard({
             <button
               type="button"
               onClick={onAddPhotos}
-              className="text-muted-foreground hover:bg-slate-50 hover:text-foreground flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-200 transition-colors dark:border-slate-800 dark:hover:bg-slate-900/40"
+              className="text-muted-foreground hover:text-foreground flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-200 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900/40"
             >
               <ImagePlus className="size-5 text-indigo-400" />
               <span className="text-[11px] font-medium">Add more</span>
@@ -1000,11 +1012,12 @@ function StudentNotePopover({
       <PopoverContent align="start" className="w-80 p-3">
         <div className="space-y-2">
           <div>
-            <p className="text-sm font-semibold leading-none">
+            <p className="text-sm leading-none font-semibold">
               Note for {petName}
             </p>
             <p className="text-muted-foreground mt-1 text-[11px]">
-              Trainer-only · saves to the student&#39;s Notes tab for this session.
+              Trainer-only · saves to the student&#39;s Notes tab for this
+              session.
             </p>
           </div>
           <Textarea
@@ -1054,9 +1067,7 @@ function collectPlannedExercises(input: {
   const { session, attendances, enrollments, exerciseByName } = input;
 
   const enrollmentIdsForClass = new Set(
-    enrollments
-      .filter((e) => e.classId === session.classId)
-      .map((e) => e.id),
+    enrollments.filter((e) => e.classId === session.classId).map((e) => e.id),
   );
 
   const priorAttendances = attendances

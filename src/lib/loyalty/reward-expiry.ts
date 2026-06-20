@@ -13,7 +13,9 @@ const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 /** Whole days until expiry (negative if already past). */
 export function daysUntil(expiresAt: string, now: string): number {
-  return Math.ceil((new Date(expiresAt).getTime() - new Date(now).getTime()) / DAY_MS);
+  return Math.ceil(
+    (new Date(expiresAt).getTime() - new Date(now).getTime()) / DAY_MS,
+  );
 }
 
 /** "$25 account credit", "5% off your next grooming", "Free Add-on". */
@@ -70,7 +72,9 @@ export function buildExpiryWarningEmail(vars: {
   const days = Math.max(0, daysUntil(record.expiresAt ?? vars.now, vars.now));
   const dayWord = days === 1 ? "day" : "days";
   const byDate = record.expiresAt ? formatExpiryDate(record.expiresAt) : "soon";
-  const lead = vars.customerFirstName ? `Hi ${vars.customerFirstName} — your` : "Your";
+  const lead = vars.customerFirstName
+    ? `Hi ${vars.customerFirstName} — your`
+    : "Your";
   const headline = `${lead} ${desc} expires in ${days} ${dayWord} — book before ${byDate} to use it.`;
   return {
     subject: `Your ${cap(desc)} expires in ${days} ${dayWord}`,

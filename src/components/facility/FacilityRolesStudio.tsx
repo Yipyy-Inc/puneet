@@ -3,12 +3,7 @@
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,20 +63,21 @@ type RoleKind =
   | { type: "preset"; id: FacilityStaffRole }
   | { type: "custom"; id: string };
 
-export const ACCENT_CHOICES: { label: string; accent: string; ring: string }[] = [
-  { label: "Amber", accent: "bg-amber-500/10", ring: "ring-amber-500/40" },
-  { label: "Violet", accent: "bg-violet-500/10", ring: "ring-violet-500/40" },
-  { label: "Sky", accent: "bg-sky-500/10", ring: "ring-sky-500/40" },
-  { label: "Rose", accent: "bg-rose-500/10", ring: "ring-rose-500/40" },
-  {
-    label: "Emerald",
-    accent: "bg-emerald-500/10",
-    ring: "ring-emerald-500/40",
-  },
-  { label: "Orange", accent: "bg-orange-500/10", ring: "ring-orange-500/40" },
-  { label: "Indigo", accent: "bg-indigo-500/10", ring: "ring-indigo-500/40" },
-  { label: "Teal", accent: "bg-teal-500/10", ring: "ring-teal-500/40" },
-];
+export const ACCENT_CHOICES: { label: string; accent: string; ring: string }[] =
+  [
+    { label: "Amber", accent: "bg-amber-500/10", ring: "ring-amber-500/40" },
+    { label: "Violet", accent: "bg-violet-500/10", ring: "ring-violet-500/40" },
+    { label: "Sky", accent: "bg-sky-500/10", ring: "ring-sky-500/40" },
+    { label: "Rose", accent: "bg-rose-500/10", ring: "ring-rose-500/40" },
+    {
+      label: "Emerald",
+      accent: "bg-emerald-500/10",
+      ring: "ring-emerald-500/40",
+    },
+    { label: "Orange", accent: "bg-orange-500/10", ring: "ring-orange-500/40" },
+    { label: "Indigo", accent: "bg-indigo-500/10", ring: "ring-indigo-500/40" },
+    { label: "Teal", accent: "bg-teal-500/10", ring: "ring-teal-500/40" },
+  ];
 
 // ============================================================================
 // Wrapper — ensures the provider is available in the settings tree
@@ -109,8 +105,9 @@ function StudioInner() {
     id: "manager",
   });
   const [createOpen, setCreateOpen] = useState(false);
-  const [pendingDelete, setPendingDelete] =
-    useState<CustomFacilityRole | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<CustomFacilityRole | null>(
+    null,
+  );
 
   const presetRoles = Object.keys(ROLE_META) as FacilityStaffRole[];
   const customList = Object.values(customRoles);
@@ -185,8 +182,8 @@ function StudioInner() {
             </CardTitle>
             <p className="text-muted-foreground mt-1 text-sm">
               Define what each role can do. Create custom roles for your
-              facility, or override the built-in presets. Assign roles to
-              staff from{" "}
+              facility, or override the built-in presets. Assign roles to staff
+              from{" "}
               <span className="text-foreground font-medium">
                 Staff Management
               </span>
@@ -221,10 +218,7 @@ function StudioInner() {
             value={totalPresetOverrides}
             tone={totalPresetOverrides > 0 ? "warning" : "default"}
           />
-          <StudioStat
-            label="Staff assigned"
-            value={facilityStaff.length}
-          />
+          <StudioStat label="Staff assigned" value={facilityStaff.length} />
         </div>
 
         <div className="relative w-full max-w-md">
@@ -252,16 +246,12 @@ function StudioInner() {
                     <PresetRoleButton
                       key={r}
                       role={r}
-                      active={
-                        selected.type === "preset" && selected.id === r
-                      }
+                      active={selected.type === "preset" && selected.id === r}
                       staffCount={staffCounts[r] ?? 0}
                       overrideCount={
                         Object.keys(presetOverrides[r] ?? {}).length
                       }
-                      onClick={() =>
-                        setSelected({ type: "preset", id: r })
-                      }
+                      onClick={() => setSelected({ type: "preset", id: r })}
                     />
                   ))}
                 </div>
@@ -282,9 +272,7 @@ function StudioInner() {
                         selected.type === "custom" && selected.id === r.id
                       }
                       staffCount={staffCounts[r.id] ?? 0}
-                      onClick={() =>
-                        setSelected({ type: "custom", id: r.id })
-                      }
+                      onClick={() => setSelected({ type: "custom", id: r.id })}
                     />
                   ))}
                 </div>
@@ -339,10 +327,7 @@ function StudioInner() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setPendingDelete(null)}
-            >
+            <Button variant="outline" onClick={() => setPendingDelete(null)}>
               Cancel
             </Button>
             <Button
@@ -374,8 +359,9 @@ function StudioStat({
   return (
     <div
       className={cn(
-        "border-border/60 rounded-xl border bg-card/80 p-3",
-        tone === "warning" && "border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-600/40",
+        "border-border/60 bg-card/80 rounded-xl border p-3",
+        tone === "warning" &&
+          "border-amber-300 bg-amber-50 dark:border-amber-600/40 dark:bg-amber-950/20",
       )}
     >
       <p className="text-muted-foreground text-[11px] font-medium">{label}</p>
@@ -474,8 +460,7 @@ function CustomRoleButton({
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-semibold">{role.label}</div>
         <div className="text-muted-foreground truncate text-[11px]">
-          {staffCount} staff ·{" "}
-          {Object.keys(role.permissions).length} permission
+          {staffCount} staff · {Object.keys(role.permissions).length} permission
           {Object.keys(role.permissions).length === 1 ? "" : "s"}
         </div>
       </div>
@@ -502,8 +487,7 @@ function PresetRoleEditor({ role }: { role: FacilityStaffRole }) {
   }
 
   const totalGranted = PERMISSION_GROUPS.reduce(
-    (n, g) =>
-      n + g.permissions.filter((p) => effectiveScope(p.key)).length,
+    (n, g) => n + g.permissions.filter((p) => effectiveScope(p.key)).length,
     0,
   );
   const totalPermissions = PERMISSION_GROUPS.reduce(
@@ -613,11 +597,8 @@ function CustomRoleEditor({
   roleId: string;
   onDelete: () => void;
 }) {
-  const {
-    customRoles,
-    updateCustomRole,
-    setCustomRolePermission,
-  } = useFacilityRbac();
+  const { customRoles, updateCustomRole, setCustomRolePermission } =
+    useFacilityRbac();
   const role = customRoles[roleId];
   const [editingMeta, setEditingMeta] = useState(false);
   const [localLabel, setLocalLabel] = useState(role?.label ?? "");
@@ -924,7 +905,9 @@ function PermissionValueSelect({
       <SelectTrigger className="h-7 w-40 px-2 text-[11px]">
         <SelectValue>
           <span className="inline-flex items-center gap-1.5">
-            <span className={cn("inline-block size-2 rounded-full", dotColor)} />
+            <span
+              className={cn("inline-block size-2 rounded-full", dotColor)}
+            />
             {alwaysOn ? "Always on" : label}
           </span>
         </SelectValue>
@@ -934,7 +917,8 @@ function PermissionValueSelect({
           <SelectItem value="preset">
             <span className="inline-flex items-center gap-1.5 text-[11px]">
               <RotateCcw className="size-3" />
-              Default{presetDefault && ` (${ACCESS_SCOPE_META[presetDefault].label})`}
+              Default
+              {presetDefault && ` (${ACCESS_SCOPE_META[presetDefault].label})`}
             </span>
           </SelectItem>
         )}
@@ -1031,8 +1015,8 @@ function CreateRoleDialog({
         <DialogHeader>
           <DialogTitle>Create a custom role</DialogTitle>
           <DialogDescription>
-            Give your new role a name and starting permissions. You can fine-tune
-            them after creation.
+            Give your new role a name and starting permissions. You can
+            fine-tune them after creation.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -1077,13 +1061,15 @@ function CreateRoleDialog({
               <SelectContent>
                 <SelectItem value="blank">
                   <span className="inline-flex items-center gap-1.5">
-                    <CheckCheck className="size-3" /> Blank (core permissions only)
+                    <CheckCheck className="size-3" /> Blank (core permissions
+                    only)
                   </span>
                 </SelectItem>
                 {(Object.keys(ROLE_META) as FacilityStaffRole[]).map((r) => (
                   <SelectItem key={r} value={r}>
                     <span className="inline-flex items-center gap-1.5">
-                      <Users className="size-3" /> Copy from {ROLE_META[r].label}
+                      <Users className="size-3" /> Copy from{" "}
+                      {ROLE_META[r].label}
                     </span>
                   </SelectItem>
                 ))}
@@ -1120,8 +1106,7 @@ export function AccentPicker({
           className={cn(
             "border-border/60 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all",
             choice.accent,
-            accent === choice.accent &&
-              "ring-primary/50 ring-2 ring-offset-1",
+            accent === choice.accent && "ring-primary/50 ring-2 ring-offset-1",
           )}
         >
           {choice.label}

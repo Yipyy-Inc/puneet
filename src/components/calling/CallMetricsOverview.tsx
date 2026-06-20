@@ -37,7 +37,10 @@ import {
   HEATMAP_DAYS,
   HEATMAP_HOURS,
 } from "@/lib/calling/call-metrics";
-import { INQUIRY_TAG_META, IVR_KEY_TO_INQUIRY_TAG } from "@/lib/calling/inquiry-tags";
+import {
+  INQUIRY_TAG_META,
+  IVR_KEY_TO_INQUIRY_TAG,
+} from "@/lib/calling/inquiry-tags";
 import type { CallLog } from "@/types/communications";
 import type { AICallSummary, InquiryTag } from "@/types/calling";
 
@@ -151,9 +154,9 @@ export function CallMetricsOverview({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold">Call Metrics</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-0.5 text-sm">
             Live from the call log · {PERIOD_LABEL[dateRange]} ·{" "}
-            <span className="font-medium text-foreground">{m.total}</span> call
+            <span className="text-foreground font-medium">{m.total}</span> call
             {m.total === 1 ? "" : "s"}
           </p>
         </div>
@@ -202,7 +205,11 @@ export function CallMetricsOverview({
         />
         <KpiTile
           label="Avg Queue Wait"
-          value={m.avgQueueWait >= 60 ? formatMinSec(m.avgQueueWait) : `${m.avgQueueWait}s`}
+          value={
+            m.avgQueueWait >= 60
+              ? formatMinSec(m.avgQueueWait)
+              : `${m.avgQueueWait}s`
+          }
           hint={`${m.queueWaitSamples} call${m.queueWaitSamples === 1 ? "" : "s"} queued`}
           icon={Timer}
           tone="amber"
@@ -230,7 +237,9 @@ export function CallMetricsOverview({
         />
         <KpiTile
           label="Avg AI Sentiment"
-          value={m.avgSentiment === null ? "—" : `${m.avgSentiment.toFixed(1)}/10`}
+          value={
+            m.avgSentiment === null ? "—" : `${m.avgSentiment.toFixed(1)}/10`
+          }
           hint={`${m.sentimentSamples} call${m.sentimentSamples === 1 ? "" : "s"} analyzed`}
           icon={Smile}
           tone={sentimentTone}
@@ -258,13 +267,13 @@ export function CallMetricsOverview({
             <Hash className="size-4 text-indigo-600" />
             Calls by IVR Menu Option
           </CardTitle>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             What inbound callers press most — reveals demand by department.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
           {m.byIvrOption.length === 0 && (
-            <p className="py-4 text-center text-sm text-muted-foreground">
+            <p className="text-muted-foreground py-4 text-center text-sm">
               No tagged inbound calls in this period.
             </p>
           )}
@@ -272,18 +281,26 @@ export function CallMetricsOverview({
             <div key={tag}>
               <div className="mb-1 flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2">
-                  <Badge variant="outline" className="px-1.5 py-0 text-[10px] tabular-nums">
+                  <Badge
+                    variant="outline"
+                    className="px-1.5 py-0 text-[10px] tabular-nums"
+                  >
                     {TAG_KEY[tag] ? `Press ${TAG_KEY[tag]}` : "—"}
                   </Badge>
-                  <span className="font-medium">{INQUIRY_TAG_META[tag].label}</span>
+                  <span className="font-medium">
+                    {INQUIRY_TAG_META[tag].label}
+                  </span>
                 </span>
-                <span className="font-semibold tabular-nums text-muted-foreground">
+                <span className="text-muted-foreground font-semibold tabular-nums">
                   {count}
                 </span>
               </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
                 <div
-                  className={cn("h-2 rounded-full transition-all", TAG_BAR[tag])}
+                  className={cn(
+                    "h-2 rounded-full transition-all",
+                    TAG_BAR[tag],
+                  )}
                   style={{ width: `${(count / ivrMax) * 100}%` }}
                 />
               </div>
@@ -299,7 +316,7 @@ export function CallMetricsOverview({
             <BarChart3 className="size-4 text-indigo-600" />
             Calls by Hour of Day
           </CardTitle>
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
             <CalendarClock className="size-3.5" />
             Day × hour volume — darker means busier. Reveals understaffed hours.
           </p>
@@ -313,7 +330,7 @@ export function CallMetricsOverview({
                 {HEATMAP_HOURS.map((h) => (
                   <div
                     key={h}
-                    className="w-6 shrink-0 text-center text-[9px] text-muted-foreground"
+                    className="text-muted-foreground w-6 shrink-0 text-center text-[9px]"
                   >
                     {h % 3 === 0 ? hourLabel(h) : ""}
                   </div>
@@ -322,7 +339,7 @@ export function CallMetricsOverview({
               {/* Day rows */}
               {HEATMAP_DAYS.map((day, di) => (
                 <div key={day} className="flex items-center">
-                  <div className="w-9 shrink-0 pr-1.5 text-right text-[11px] font-medium text-muted-foreground">
+                  <div className="text-muted-foreground w-9 shrink-0 pr-1.5 text-right text-[11px] font-medium">
                     {day}
                   </div>
                   {HEATMAP_HOURS.map((h) => {
@@ -344,7 +361,7 @@ export function CallMetricsOverview({
             </div>
           </div>
           {/* Legend */}
-          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="text-muted-foreground mt-3 flex items-center gap-2 text-xs">
             <span>Fewer</span>
             <div className="flex items-center gap-0.5">
               {[

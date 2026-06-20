@@ -81,13 +81,13 @@ export function CancelAppointmentDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
-            <XCircle className="size-4 text-destructive" />
+            <XCircle className="text-destructive size-4" />
             Cancel Appointment
           </DialogTitle>
         </DialogHeader>
         {appointment && (
           <div className="space-y-4 py-2">
-            <div className="rounded-lg border bg-muted/40 px-3 py-2.5 text-xs">
+            <div className="bg-muted/40 rounded-lg border px-3 py-2.5 text-xs">
               <p className="font-medium">
                 {appointment.petName} · {appointment.packageName}
               </p>
@@ -252,13 +252,13 @@ export function NoShowDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
-            <UserX className="size-4 text-destructive" />
+            <UserX className="text-destructive size-4" />
             Mark as No-Show
           </DialogTitle>
         </DialogHeader>
         {appointment && (
           <div className="space-y-4 py-2">
-            <div className="rounded-lg border bg-muted/40 px-3 py-2.5 text-xs">
+            <div className="bg-muted/40 rounded-lg border px-3 py-2.5 text-xs">
               <p className="font-medium">
                 {appointment.petName} · {appointment.packageName}
               </p>
@@ -441,7 +441,7 @@ export function RescheduleDialog({
         </DialogHeader>
         {appointment && (
           <div className="space-y-4 py-2">
-            <div className="rounded-lg border bg-muted/40 px-3 py-2.5 text-xs">
+            <div className="bg-muted/40 rounded-lg border px-3 py-2.5 text-xs">
               <p className="font-medium">
                 {appointment.petName} · {appointment.packageName}
               </p>
@@ -584,7 +584,10 @@ export function toastClientNotification(
     reschedule: "Reschedule",
     "no-show": "No-show",
   };
-  toast.success(`${labels[kind]} notification sent to ${appointment.ownerName}`, {
-    description: `${appointment.ownerEmail} · ${appointment.ownerPhone}`,
-  });
+  toast.success(
+    `${labels[kind]} notification sent to ${appointment.ownerName}`,
+    {
+      description: `${appointment.ownerEmail} · ${appointment.ownerPhone}`,
+    },
+  );
 }

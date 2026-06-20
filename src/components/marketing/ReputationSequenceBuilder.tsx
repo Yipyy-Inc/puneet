@@ -72,7 +72,7 @@ export function ReputationSequenceBuilder({
                 <ArrowDown className="text-muted-foreground/40 size-3.5" />
               </div>
             )}
-            <div className="rounded-xl border bg-card p-3">
+            <div className="bg-card rounded-xl border p-3">
               <div className="mb-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span
@@ -89,7 +89,7 @@ export function ReputationSequenceBuilder({
                     {isInitial ? "Initial send" : "Backup"}
                   </span>
                   {!isInitial && (
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-medium">
                       only if no response
                     </span>
                   )}
@@ -109,7 +109,9 @@ export function ReputationSequenceBuilder({
 
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-[140px_1fr]">
                 <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs">Channel</Label>
+                  <Label className="text-muted-foreground text-xs">
+                    Channel
+                  </Label>
                   <Select
                     value={step.channel}
                     onValueChange={(v) =>
@@ -127,7 +129,9 @@ export function ReputationSequenceBuilder({
                 </div>
                 <div className="space-y-1">
                   <Label className="text-muted-foreground text-xs">
-                    {isInitial ? "Send delay (after checkout)" : "Send (after checkout)"}
+                    {isInitial
+                      ? "Send delay (after checkout)"
+                      : "Send (after checkout)"}
                   </Label>
                   <div className="flex gap-2">
                     <Input

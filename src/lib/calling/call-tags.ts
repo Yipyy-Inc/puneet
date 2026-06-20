@@ -23,7 +23,10 @@ export const TAG_COLORS = [
 export type TagColor = (typeof TAG_COLORS)[number];
 
 /** pill = chip styling for a tag; solid = swatch / analytics bar fill. */
-export const TAG_COLOR_CLASSES: Record<TagColor, { pill: string; solid: string }> = {
+export const TAG_COLOR_CLASSES: Record<
+  TagColor,
+  { pill: string; solid: string }
+> = {
   red: {
     pill: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800",
     solid: "bg-red-500",
@@ -66,7 +69,10 @@ export const TAG_COLOR_CLASSES: Record<TagColor, { pill: string; solid: string }
   },
 };
 
-export function tagColorClasses(color: string): { pill: string; solid: string } {
+export function tagColorClasses(color: string): {
+  pill: string;
+  solid: string;
+} {
   return TAG_COLOR_CLASSES[color as TagColor] ?? TAG_COLOR_CLASSES.gray;
 }
 

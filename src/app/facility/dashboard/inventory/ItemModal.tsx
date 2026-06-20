@@ -47,8 +47,17 @@ const EMPTY_FORM = (facilityId: number): Omit<OpsInventoryItem, "id"> => ({
   notes: undefined,
 });
 
-export function ItemModal({ open, item, suppliers, facilityId, onClose, onSave }: Props) {
-  const [form, setForm] = useState<Omit<OpsInventoryItem, "id">>(EMPTY_FORM(facilityId));
+export function ItemModal({
+  open,
+  item,
+  suppliers,
+  facilityId,
+  onClose,
+  onSave,
+}: Props) {
+  const [form, setForm] = useState<Omit<OpsInventoryItem, "id">>(
+    EMPTY_FORM(facilityId),
+  );
 
   useEffect(() => {
     if (open) {
@@ -146,7 +155,10 @@ export function ItemModal({ open, item, suppliers, facilityId, onClose, onSave }
                 min="0"
                 value={form.quantity}
                 onChange={(e) =>
-                  setForm({ ...form, quantity: parseFloat(e.target.value) || 0 })
+                  setForm({
+                    ...form,
+                    quantity: parseFloat(e.target.value) || 0,
+                  })
                 }
               />
             </div>
@@ -171,36 +183,47 @@ export function ItemModal({ open, item, suppliers, facilityId, onClose, onSave }
           </div>
 
           {/* Daily Usage + Reorder Point */}
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-3">
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
             <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
               Usage & Reorder
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Avg Daily Usage ({form.unit}/day)</Label>
+                <Label className="text-xs">
+                  Avg Daily Usage ({form.unit}/day)
+                </Label>
                 <Input
                   type="number"
                   min="0"
                   step="0.01"
                   value={form.dailyUsage}
                   onChange={(e) =>
-                    setForm({ ...form, dailyUsage: parseFloat(e.target.value) || 0 })
+                    setForm({
+                      ...form,
+                      dailyUsage: parseFloat(e.target.value) || 0,
+                    })
                   }
                 />
                 {form.dailyUsage > 0 && form.quantity > 0 && (
                   <p className="text-muted-foreground text-xs">
-                    ~{Math.floor(form.quantity / form.dailyUsage)} days of stock remaining
+                    ~{Math.floor(form.quantity / form.dailyUsage)} days of stock
+                    remaining
                   </p>
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Reorder Alert Threshold ({form.unit})</Label>
+                <Label className="text-xs">
+                  Reorder Alert Threshold ({form.unit})
+                </Label>
                 <Input
                   type="number"
                   min="0"
                   value={form.reorderPoint}
                   onChange={(e) =>
-                    setForm({ ...form, reorderPoint: parseInt(e.target.value) || 0 })
+                    setForm({
+                      ...form,
+                      reorderPoint: parseInt(e.target.value) || 0,
+                    })
                   }
                 />
                 <p className="text-muted-foreground text-xs">
@@ -220,7 +243,10 @@ export function ItemModal({ open, item, suppliers, facilityId, onClose, onSave }
                 step="0.01"
                 value={form.costPerUnit}
                 onChange={(e) =>
-                  setForm({ ...form, costPerUnit: parseFloat(e.target.value) || 0 })
+                  setForm({
+                    ...form,
+                    costPerUnit: parseFloat(e.target.value) || 0,
+                  })
                 }
               />
             </div>
@@ -229,7 +255,9 @@ export function ItemModal({ open, item, suppliers, facilityId, onClose, onSave }
               <Input
                 type="date"
                 value={form.lastRestocked}
-                onChange={(e) => setForm({ ...form, lastRestocked: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, lastRestocked: e.target.value })
+                }
               />
             </div>
           </div>
@@ -252,7 +280,9 @@ export function ItemModal({ open, item, suppliers, facilityId, onClose, onSave }
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>{item ? "Save Changes" : "Add Item"}</Button>
+          <Button onClick={handleSave}>
+            {item ? "Save Changes" : "Add Item"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

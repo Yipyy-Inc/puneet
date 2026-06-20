@@ -21,10 +21,34 @@ const GROOMER = {
 };
 
 const METRICS = [
-  { label: "Revenue / appt", value: "$53", teamAvg: "$80", delta: "-34%", bad: true },
-  { label: "Avg rating", value: "4.1 ★", teamAvg: "4.7 ★", delta: "-0.6", bad: true },
-  { label: "Cancellation rate", value: "12%", teamAvg: "6%", delta: "+6 pts", bad: true },
-  { label: "Appts / week", value: "18", teamAvg: "21", delta: "-3", bad: false },
+  {
+    label: "Revenue / appt",
+    value: "$53",
+    teamAvg: "$80",
+    delta: "-34%",
+    bad: true,
+  },
+  {
+    label: "Avg rating",
+    value: "4.1 ★",
+    teamAvg: "4.7 ★",
+    delta: "-0.6",
+    bad: true,
+  },
+  {
+    label: "Cancellation rate",
+    value: "12%",
+    teamAvg: "6%",
+    delta: "+6 pts",
+    bad: true,
+  },
+  {
+    label: "Appts / week",
+    value: "18",
+    teamAvg: "21",
+    delta: "-3",
+    bad: false,
+  },
 ];
 
 interface RecentAppt {
@@ -37,21 +61,66 @@ interface RecentAppt {
 }
 
 const RECENT: RecentAppt[] = [
-  { date: "May 19", pet: "Daisy", service: "Spaniel cut", revenue: 65, rating: 4, outcome: "completed" },
-  { date: "May 18", pet: "Pepper", service: "Full", revenue: 95, rating: 5, outcome: "completed" },
-  { date: "May 18", pet: "Otis", service: "Senior groom", revenue: 75, rating: 3, outcome: "missed_task" },
-  { date: "May 17", pet: "—", service: "Bath & brush", revenue: 0, rating: 0, outcome: "cancelled" },
-  { date: "May 16", pet: "Luna", service: "Full", revenue: 95, rating: 4, outcome: "completed" },
-  { date: "May 15", pet: "Charlie", service: "Bath & brush", revenue: 45, rating: 5, outcome: "completed" },
+  {
+    date: "May 19",
+    pet: "Daisy",
+    service: "Spaniel cut",
+    revenue: 65,
+    rating: 4,
+    outcome: "completed",
+  },
+  {
+    date: "May 18",
+    pet: "Pepper",
+    service: "Full",
+    revenue: 95,
+    rating: 5,
+    outcome: "completed",
+  },
+  {
+    date: "May 18",
+    pet: "Otis",
+    service: "Senior groom",
+    revenue: 75,
+    rating: 3,
+    outcome: "missed_task",
+  },
+  {
+    date: "May 17",
+    pet: "—",
+    service: "Bath & brush",
+    revenue: 0,
+    rating: 0,
+    outcome: "cancelled",
+  },
+  {
+    date: "May 16",
+    pet: "Luna",
+    service: "Full",
+    revenue: 95,
+    rating: 4,
+    outcome: "completed",
+  },
+  {
+    date: "May 15",
+    pet: "Charlie",
+    service: "Bath & brush",
+    revenue: 45,
+    rating: 5,
+    outcome: "completed",
+  },
 ];
 
-export function GroomerProfilePanel({ onComplete, onCancel }: InsightPanelProps) {
+export function GroomerProfilePanel({
+  onComplete,
+  onCancel,
+}: InsightPanelProps) {
   return (
     <div className="flex h-full flex-col gap-5 px-1">
       <div className="rounded-lg border bg-slate-50 p-3 text-sm">
         <Link
           href={insightLinks.staff(GROOMER.id)}
-          className="inline-flex items-center gap-1 font-semibold hover:text-primary hover:underline"
+          className="hover:text-primary inline-flex items-center gap-1 font-semibold hover:underline"
         >
           {GROOMER.name}
           <ExternalLink className="size-3" />
@@ -86,7 +155,7 @@ export function GroomerProfilePanel({ onComplete, onCancel }: InsightPanelProps)
       </ul>
 
       <div>
-        <p className="text-muted-foreground mb-2 text-xs uppercase tracking-wide">
+        <p className="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
           Recent appointments
         </p>
         <ul className="space-y-1.5">
@@ -112,12 +181,18 @@ export function GroomerProfilePanel({ onComplete, onCancel }: InsightPanelProps)
                   </>
                 )}
                 {a.outcome === "cancelled" && (
-                  <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-900">
+                  <Badge
+                    variant="outline"
+                    className="border-amber-300 bg-amber-50 text-amber-900"
+                  >
                     Cancelled
                   </Badge>
                 )}
                 {a.outcome === "missed_task" && (
-                  <Badge variant="outline" className="border-red-300 bg-red-50 text-red-800">
+                  <Badge
+                    variant="outline"
+                    className="border-red-300 bg-red-50 text-red-800"
+                  >
                     Missed task
                   </Badge>
                 )}
@@ -128,7 +203,7 @@ export function GroomerProfilePanel({ onComplete, onCancel }: InsightPanelProps)
       </div>
 
       <div className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
-        <div className="mb-1 flex items-center gap-1.5 font-semibold uppercase tracking-wide">
+        <div className="mb-1 flex items-center gap-1.5 font-semibold tracking-wide uppercase">
           <Info className="size-3.5" />
           Manager judgment
         </div>

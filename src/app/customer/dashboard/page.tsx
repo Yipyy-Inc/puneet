@@ -469,7 +469,9 @@ export default function CustomerDashboardPage() {
                   className="size-4 shrink-0 text-amber-600 transition-transform duration-200"
                   data-open={unfinishedOpen || undefined}
                   style={{
-                    transform: unfinishedOpen ? "rotate(180deg)" : "rotate(0deg)",
+                    transform: unfinishedOpen
+                      ? "rotate(180deg)"
+                      : "rotate(0deg)",
                   }}
                 />
               </CollapsibleTrigger>
@@ -477,7 +479,8 @@ export default function CustomerDashboardPage() {
                 <div className="divide-y divide-amber-100 border-t border-amber-200 dark:divide-amber-900 dark:border-amber-800">
                   {unfinishedBookings.slice(0, 3).map((ub) => {
                     const ServiceIcon = getServiceIcon(ub.service ?? "");
-                    const stepInfo = ABANDONMENT_STEP_LABELS[ub.abandonmentStep];
+                    const stepInfo =
+                      ABANDONMENT_STEP_LABELS[ub.abandonmentStep];
                     return (
                       <div
                         key={ub.id}
@@ -487,7 +490,7 @@ export default function CustomerDashboardPage() {
                           <ServiceIcon className="size-4 text-amber-600" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold capitalize text-amber-900 dark:text-amber-200">
+                          <p className="text-sm font-semibold text-amber-900 capitalize dark:text-amber-200">
                             {ub.service ?? "Booking"}
                             {ub.petName && (
                               <span className="font-normal text-amber-700 dark:text-amber-400">

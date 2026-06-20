@@ -9,12 +9,7 @@ import {
   FileText,
   Receipt,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -61,7 +56,9 @@ function buildInvoiceDocumentData(
   petName: string,
 ): InvoiceDocumentData {
   const dateRange =
-    booking.startDate && booking.endDate && booking.startDate !== booking.endDate
+    booking.startDate &&
+    booking.endDate &&
+    booking.startDate !== booking.endDate
       ? `${formatDate(booking.startDate)} – ${formatDate(booking.endDate)}`
       : booking.startDate
         ? formatDate(booking.startDate)
@@ -94,10 +91,7 @@ function buildInvoiceDocumentData(
   };
 }
 
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; classes: string }
-> = {
+const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
   estimate: {
     label: "Estimate",
     classes: "border-zinc-300 bg-zinc-100 text-zinc-700",
@@ -150,8 +144,8 @@ export function CustomerInvoiceCard({
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Receipt className="size-4 text-muted-foreground" />
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Receipt className="text-muted-foreground size-4" />
                 Invoice {invoice.id}
               </CardTitle>
               <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-3 text-xs">
@@ -183,14 +177,19 @@ export function CustomerInvoiceCard({
             </p>
             <div className="space-y-1">
               {invoice.items.map((item, i) => (
-                <div key={i} className="flex items-start justify-between text-sm">
+                <div
+                  key={i}
+                  className="flex items-start justify-between text-sm"
+                >
                   <div className="min-w-0 flex-1">
                     <p>{item.name}</p>
                     <p className="text-muted-foreground text-[11px]">
                       ${fmt(item.unitPrice)} × {item.quantity}
                     </p>
                   </div>
-                  <span className="font-[tabular-nums]">${fmt(item.price)}</span>
+                  <span className="font-[tabular-nums]">
+                    ${fmt(item.price)}
+                  </span>
                 </div>
               ))}
               {invoice.fees.map((fee, i) => (
@@ -230,7 +229,8 @@ export function CustomerInvoiceCard({
             ).map((tax, i) => (
               <div key={i} className="flex justify-between">
                 <span className="text-muted-foreground">
-                  {tax.name} ({(tax.rate * 100).toFixed(tax.rate < 0.1 ? 1 : 3)}%)
+                  {tax.name} ({(tax.rate * 100).toFixed(tax.rate < 0.1 ? 1 : 3)}
+                  %)
                 </span>
                 <span className="font-[tabular-nums]">${fmt(tax.amount)}</span>
               </div>
@@ -311,7 +311,7 @@ export function CustomerInvoiceCard({
           <DialogHeader>
             <DialogTitle>Invoice {invoice.id}</DialogTitle>
           </DialogHeader>
-          <div className="bg-zinc-100 p-3 rounded-md">
+          <div className="rounded-md bg-zinc-100 p-3">
             <iframe
               title="Invoice preview"
               srcDoc={previewHtml}
@@ -320,7 +320,11 @@ export function CustomerInvoiceCard({
             />
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={handleDownload} className="gap-1.5">
+            <Button
+              variant="outline"
+              onClick={handleDownload}
+              className="gap-1.5"
+            >
               <Download className="size-3.5" />
               Download PDF
             </Button>

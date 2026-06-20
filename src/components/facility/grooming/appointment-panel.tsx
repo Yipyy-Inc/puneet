@@ -50,14 +50,8 @@ import {
   MarkReadyDialog,
   type MarkReadyConfirmation,
 } from "./mark-ready-dialog";
-import {
-  PaymentDialog,
-  type PaymentResult,
-} from "./payment-dialog";
-import {
-  groomingQueries,
-  getEffectiveAlertNotes,
-} from "@/lib/api/grooming";
+import { PaymentDialog, type PaymentResult } from "./payment-dialog";
+import { groomingQueries, getEffectiveAlertNotes } from "@/lib/api/grooming";
 import { PreVisitBriefing } from "./pre-visit-briefing";
 import {
   CheckInConfirmationDialog,
@@ -99,17 +93,17 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-muted">
-        <Icon className="size-3.5 text-muted-foreground" />
+      <div className="bg-muted mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md">
+        <Icon className="text-muted-foreground size-3.5" />
       </div>
       <div className="min-w-0">
-        <p className="mb-0.5 text-[11px] leading-none text-muted-foreground">
+        <p className="text-muted-foreground mb-0.5 text-[11px] leading-none">
           {label}
         </p>
         {href ? (
           <a
             href={href}
-            className="text-sm font-medium text-primary hover:underline"
+            className="text-primary text-sm font-medium hover:underline"
           >
             {value}
           </a>
@@ -123,7 +117,7 @@ function InfoRow({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-3 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+    <p className="text-muted-foreground mb-3 text-[11px] font-semibold tracking-wider uppercase">
       {children}
     </p>
   );
@@ -249,8 +243,7 @@ export function AppointmentPanel({
   // transition is the logical next step in the workflow.
   const canCheckIn = appointment.status === "scheduled";
   const canMarkReady =
-    appointment.status === "checked-in" ||
-    appointment.status === "in-progress";
+    appointment.status === "checked-in" || appointment.status === "in-progress";
   const canCheckOut = appointment.status === "ready-for-pickup";
 
   function advance(next: GroomingStatus) {
@@ -286,16 +279,16 @@ export function AppointmentPanel({
         <DialogPrimitive.Content
           aria-describedby={undefined}
           className={cn(
-            "fixed top-1/2 left-1/2 z-50 flex w-[460px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col",
-            "rounded-2xl border bg-background shadow-2xl outline-none",
+            "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100vh-2rem)] w-[460px] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col",
+            "bg-background rounded-2xl border shadow-2xl outline-none",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
             "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
-            "data-[state=open]:duration-200 data-[state=closed]:duration-150",
+            "data-[state=closed]:duration-150 data-[state=open]:duration-200",
           )}
         >
           {/* ── Header ── */}
-          <div className="shrink-0 border-b bg-muted/20 px-5 pt-5 pb-4">
+          <div className="bg-muted/20 shrink-0 border-b px-5 pt-5 pb-4">
             <div className="flex items-start justify-between gap-2">
               <div className="flex min-w-0 items-center gap-3">
                 {appointment.petPhotoUrl ? (
@@ -314,7 +307,7 @@ export function AppointmentPanel({
                   <DialogPrimitive.Title className="truncate text-base/tight font-semibold">
                     {appointment.petName}
                   </DialogPrimitive.Title>
-                  <p className="truncate text-sm text-muted-foreground">
+                  <p className="text-muted-foreground truncate text-sm">
                     {appointment.petBreed}
                   </p>
                   <Badge
@@ -331,7 +324,7 @@ export function AppointmentPanel({
               <div className="flex items-center gap-1">
                 {destructiveActions.length > 0 && (
                   <DropdownMenu>
-                    <DropdownMenuTrigger className="flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted">
+                    <DropdownMenuTrigger className="text-muted-foreground hover:bg-muted flex size-8 items-center justify-center rounded-md transition-colors outline-none">
                       <MoreHorizontal className="size-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -349,13 +342,13 @@ export function AppointmentPanel({
                 )}
                 <Link
                   href={`/facility/dashboard/services/grooming/appointments/${appointment.id}`}
-                  className="flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted"
+                  className="text-muted-foreground hover:bg-muted flex size-8 items-center justify-center rounded-md transition-colors outline-none"
                   title="Open full detail page"
                 >
                   <ExternalLink className="size-4" />
                 </Link>
                 <DialogPrimitive.Close
-                  className="flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted"
+                  className="text-muted-foreground hover:bg-muted flex size-8 items-center justify-center rounded-md transition-colors outline-none"
                   aria-label="Close panel"
                 >
                   <X className="size-4" />
@@ -373,7 +366,7 @@ export function AppointmentPanel({
               <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 dark:border-amber-800 dark:bg-amber-950/30">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-amber-800 uppercase dark:text-amber-200">
                       <Hourglass className="size-3.5" />
                       Running long · {runningLongMin} min over
                     </p>
@@ -405,7 +398,7 @@ export function AppointmentPanel({
             )}
             {effectiveAlerts.length > 0 && (
               <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2.5 dark:border-red-900 dark:bg-red-950/30">
-                <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">
+                <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold tracking-wide text-red-700 uppercase dark:text-red-300">
                   <AlertTriangle className="size-3" />
                   Alert · {effectiveAlerts.length} note
                   {effectiveAlerts.length > 1 ? "s" : ""}
@@ -417,7 +410,7 @@ export function AppointmentPanel({
                       <span>
                         {n.text}
                         {n.carriedFromAppointmentId && (
-                          <span className="ml-1 text-[10px] uppercase tracking-wide text-red-700/70 dark:text-red-300/70">
+                          <span className="ml-1 text-[10px] tracking-wide text-red-700/70 uppercase dark:text-red-300/70">
                             · carried
                           </span>
                         )}
@@ -468,7 +461,7 @@ export function AppointmentPanel({
                 />
                 {(appointment.additionalStylistIds?.length ?? 0) > 0 && (
                   <div className="ml-10 flex flex-wrap items-center gap-1">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                    <span className="text-muted-foreground text-[10px] tracking-wide uppercase">
                       Working alongside:
                     </span>
                     {appointment.additionalStylistIds!.map((id) => (
@@ -482,11 +475,7 @@ export function AppointmentPanel({
                     ))}
                   </div>
                 )}
-                <InfoRow
-                  icon={CalendarDays}
-                  label="Date"
-                  value={displayDate}
-                />
+                <InfoRow icon={CalendarDays} label="Date" value={displayDate} />
                 <InfoRow
                   icon={Clock}
                   label="Time"
@@ -495,7 +484,7 @@ export function AppointmentPanel({
               </div>
               {appointment.addOns.length > 0 && (
                 <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-muted-foreground text-[11px]">
                     <PawPrint className="mr-1 inline size-3" />
                     Add-ons:
                   </span>
@@ -510,7 +499,7 @@ export function AppointmentPanel({
               {/* Stages — split-service handoff chain */}
               {(appointment.stages?.length ?? 0) > 0 && (
                 <div className="mt-3 rounded-lg border border-violet-200/70 bg-violet-50/40 px-3 py-2.5 dark:border-violet-900/40 dark:bg-violet-950/20">
-                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+                  <p className="mb-1.5 text-[10px] font-semibold tracking-wide text-violet-700 uppercase dark:text-violet-300">
                     Split service · {appointment.stages?.length} stages
                   </p>
                   <ol className="space-y-1.5">
@@ -518,15 +507,15 @@ export function AppointmentPanel({
                       const isDone = !!st.completedAt;
                       const isCurrent =
                         !isDone &&
-                        appointment.stages!.slice(0, i).every(
-                          (prev) => prev.completedAt,
-                        );
+                        appointment
+                          .stages!.slice(0, i)
+                          .every((prev) => prev.completedAt);
                       const next = appointment.stages![i + 1];
                       return (
                         <li
                           key={st.id}
                           className={cn(
-                            "flex items-center gap-2 rounded-md border bg-card px-2.5 py-1.5 text-xs",
+                            "bg-card flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs",
                             isDone && "opacity-70",
                             isCurrent && "border-emerald-400",
                           )}
@@ -575,7 +564,10 @@ export function AppointmentPanel({
                                 // Release the just-completed station, or hand
                                 // it to the next stage's groomer if they're
                                 // staying put.
-                                if (st.stationId && next?.stationId !== st.stationId) {
+                                if (
+                                  st.stationId &&
+                                  next?.stationId !== st.stationId
+                                ) {
                                   setStationStatus(
                                     st.stationId,
                                     "needs-cleaning",
@@ -615,23 +607,21 @@ export function AppointmentPanel({
               {/* Additional pets — multi-pet bookings */}
               {(appointment.additionalPets?.length ?? 0) > 0 && (
                 <div className="mt-3 rounded-lg border border-pink-200/70 bg-pink-50/40 px-3 py-2.5 dark:border-pink-900/40 dark:bg-pink-950/20">
-                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-pink-700 dark:text-pink-300">
+                  <p className="mb-1.5 text-[10px] font-semibold tracking-wide text-pink-700 uppercase dark:text-pink-300">
                     Multi-pet booking ·{" "}
                     {(appointment.additionalPets?.length ?? 0) + 1} pets
                   </p>
                   <ul className="space-y-1 text-xs">
                     <li className="flex items-start gap-2">
-                      <PawPrint className="mt-0.5 size-3 text-pink-600 shrink-0" />
-                      <span className="font-medium">
-                        {appointment.petName}
-                      </span>
+                      <PawPrint className="mt-0.5 size-3 shrink-0 text-pink-600" />
+                      <span className="font-medium">{appointment.petName}</span>
                       <span className="text-muted-foreground">
                         · {appointment.packageName} · {appointment.petSize}
                       </span>
                     </li>
                     {appointment.additionalPets!.map((p, i) => (
                       <li key={i} className="flex items-start gap-2">
-                        <PawPrint className="mt-0.5 size-3 text-pink-600 shrink-0" />
+                        <PawPrint className="mt-0.5 size-3 shrink-0 text-pink-600" />
                         <span className="font-medium">{p.petName}</span>
                         <span className="text-muted-foreground">
                           · {p.packageName} · {p.petSize}
@@ -680,9 +670,9 @@ export function AppointmentPanel({
                 ].map(({ label, value }) => (
                   <div
                     key={label}
-                    className="rounded-lg bg-muted/50 px-3 py-2 text-center"
+                    className="bg-muted/50 rounded-lg px-3 py-2 text-center"
                   >
-                    <p className="text-[10px] tracking-wide text-muted-foreground uppercase">
+                    <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
                       {label}
                     </p>
                     <p className="mt-0.5 text-xs font-semibold capitalize">
@@ -698,7 +688,7 @@ export function AppointmentPanel({
                 <Separator />
                 <div>
                   <SectionLabel>Internal Notes</SectionLabel>
-                  <p className="rounded-lg bg-muted/40 px-3 py-2.5 text-sm/relaxed text-muted-foreground">
+                  <p className="bg-muted/40 text-muted-foreground rounded-lg px-3 py-2.5 text-sm/relaxed">
                     {appointment.notes}
                   </p>
                 </div>
@@ -710,7 +700,7 @@ export function AppointmentPanel({
             <div>
               <SectionLabel>Price</SectionLabel>
               <div className="space-y-1.5 text-sm">
-                <div className="flex justify-between text-muted-foreground">
+                <div className="text-muted-foreground flex justify-between">
                   <span>Base — {appointment.packageName}</span>
                   <span>${appointment.basePrice}</span>
                 </div>
@@ -735,7 +725,7 @@ export function AppointmentPanel({
           </div>
 
           {/* ── Quick actions footer ── */}
-          <div className="shrink-0 space-y-2 border-t bg-muted/10 px-5 py-3">
+          <div className="bg-muted/10 shrink-0 space-y-2 border-t px-5 py-3">
             <div className="grid grid-cols-3 gap-2">
               <Button
                 size="sm"
@@ -821,7 +811,8 @@ export function AppointmentPanel({
             description:
               (result.mattedSurcharge > 0
                 ? `Station ${result.stationName} · matting fee +$${result.mattedSurcharge}`
-                : `Station ${result.stationName} · session started`) + readyLine,
+                : `Station ${result.stationName} · session started`) +
+              readyLine,
           });
           setCheckInOpen(false);
         }}
@@ -856,35 +847,35 @@ export function AppointmentPanel({
         );
         const resolvedTaxRate = matchedTax ? matchedTax.ratePercent / 100 : 0;
         return (
-      <PaymentDialog
-        open={paymentOpen}
-        onOpenChange={setPaymentOpen}
-        apt={appointment}
-        client={paymentClient}
-        applicableCustomerPackages={applicableCustomerPackages}
-        taxRate={resolvedTaxRate}
-        onConfirm={(result: PaymentResult) => {
-          const summary = applyPaymentResult(appointment, result, {
-            clients: initialClients,
-            setStationStatus,
-            notify: (title, detail) => toast.message(title, detail),
-            facilityName: "Doggieville MTL",
-          });
-          toast.success(`${appointment.petName} — Completed`, {
-            description: `Receipt sent · $${summary.amountCharged.toFixed(2)} charged`,
-          });
-          // Loyalty automation off the completed grooming booking.
-          recordEvent({
-            type: "booking_completed",
-            id: String(appointment.id),
-            customerId: appointment.ownerId,
-            amount: summary.grandTotal,
-            serviceType: "grooming",
-            isService: true,
-          });
-          setPaymentOpen(false);
-        }}
-      />
+          <PaymentDialog
+            open={paymentOpen}
+            onOpenChange={setPaymentOpen}
+            apt={appointment}
+            client={paymentClient}
+            applicableCustomerPackages={applicableCustomerPackages}
+            taxRate={resolvedTaxRate}
+            onConfirm={(result: PaymentResult) => {
+              const summary = applyPaymentResult(appointment, result, {
+                clients: initialClients,
+                setStationStatus,
+                notify: (title, detail) => toast.message(title, detail),
+                facilityName: "Doggieville MTL",
+              });
+              toast.success(`${appointment.petName} — Completed`, {
+                description: `Receipt sent · $${summary.amountCharged.toFixed(2)} charged`,
+              });
+              // Loyalty automation off the completed grooming booking.
+              recordEvent({
+                type: "booking_completed",
+                id: String(appointment.id),
+                customerId: appointment.ownerId,
+                amount: summary.grandTotal,
+                serviceType: "grooming",
+                isService: true,
+              });
+              setPaymentOpen(false);
+            }}
+          />
         );
       })()}
     </DialogPrimitive.Root>

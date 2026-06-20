@@ -35,7 +35,7 @@ export function SlotGrid({
 }: SlotGridProps) {
   if (slots.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-center text-xs text-muted-foreground">
+      <div className="bg-muted/30 text-muted-foreground rounded-lg border border-dashed p-4 text-center text-xs">
         {emptyLabel}
       </div>
     );
@@ -63,7 +63,7 @@ export function SlotGrid({
               className={cn(
                 "group relative rounded-md border px-2 py-1.5 text-left text-xs transition-colors",
                 isConflict &&
-                  "cursor-not-allowed border-muted bg-muted/30 text-muted-foreground line-through",
+                  "border-muted bg-muted/30 text-muted-foreground cursor-not-allowed line-through",
                 !isConflict &&
                   !isDimmed &&
                   !isSelected &&
@@ -71,7 +71,7 @@ export function SlotGrid({
                 !isConflict &&
                   isDimmed &&
                   !isSelected &&
-                  "border-dashed border-muted-foreground/40 bg-transparent text-muted-foreground hover:bg-muted/40",
+                  "border-muted-foreground/40 text-muted-foreground hover:bg-muted/40 border-dashed bg-transparent",
                 isSelected &&
                   "border-pink-400 bg-pink-100 text-pink-900 ring-2 ring-pink-300 dark:border-pink-700 dark:bg-pink-950/40 dark:text-pink-100 dark:ring-pink-700",
               )}
@@ -94,7 +94,7 @@ export function SlotGrid({
               {showDriveTime &&
                 !isConflict &&
                 slot.driveMinFromPrev !== undefined && (
-                  <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <div className="text-muted-foreground mt-0.5 flex items-center gap-1 text-[10px]">
                     <Car className="size-2.5" />
                     <span>~{slot.driveMinFromPrev} min drive</span>
                   </div>
@@ -104,7 +104,7 @@ export function SlotGrid({
         })}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
+      <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-[10px]">
         {smartSchedulingEnabled && (
           <span className="inline-flex items-center gap-1">
             <Sparkles className="size-3 text-pink-500" />
@@ -112,12 +112,12 @@ export function SlotGrid({
           </span>
         )}
         <span className="inline-flex items-center gap-1">
-          <span className="inline-block size-2 rounded-sm border border-muted bg-muted/30" />
+          <span className="border-muted bg-muted/30 inline-block size-2 rounded-sm border" />
           Conflict (occupied)
         </span>
         {smartSchedulingEnabled && (
           <span className="inline-flex items-center gap-1">
-            <span className="inline-block size-2 rounded-sm border border-dashed border-muted-foreground/40" />
+            <span className="border-muted-foreground/40 inline-block size-2 rounded-sm border border-dashed" />
             Outside buffer
           </span>
         )}

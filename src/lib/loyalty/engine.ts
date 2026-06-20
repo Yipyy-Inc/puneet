@@ -20,10 +20,7 @@ import {
 } from "./engine-tier";
 import { evaluateBadges } from "./engine-badges";
 import { tierBenefitList } from "./tier-notification";
-import {
-  badgeEarnedPortalBody,
-  badgeEarnedTitle,
-} from "./badge-notification";
+import { badgeEarnedPortalBody, badgeEarnedTitle } from "./badge-notification";
 
 /**
  * Loyalty automation engine — the core of the loyalty module.
@@ -147,7 +144,10 @@ function asNumber(value: number | string): number {
 }
 
 /** Deterministic, collision-free referral code from the id pair. */
-export function makeReferralCode(facilityId: number, customerId: number): string {
+export function makeReferralCode(
+  facilityId: number,
+  customerId: number,
+): string {
   const seed = (facilityId * 100003 + customerId).toString(36).toUpperCase();
   return `REF-${seed.padStart(5, "0")}`;
 }
@@ -378,7 +378,8 @@ export function processLoyaltyEvent(
     };
   }
 
-  const tiers = config.tiersEnabled === false ? [] : (config.tierDefinitions ?? []);
+  const tiers =
+    config.tiersEnabled === false ? [] : (config.tierDefinitions ?? []);
   const preTier = resolveTier(tiers, account);
   const multiplier = tierEarnMultiplier(preTier);
 
@@ -435,10 +436,15 @@ export function processLoyaltyEvent(
   } else {
     const activeRules = getActiveEarnRules(config.earnRules ?? []);
     const visitNumber = acc.totalVisits + 1;
-    const outcomes: EarnOutcome[] = computeEarnings(activeRules, event, config, {
-      tierMultiplier: multiplier,
-      visitNumber,
-    });
+    const outcomes: EarnOutcome[] = computeEarnings(
+      activeRules,
+      event,
+      config,
+      {
+        tierMultiplier: multiplier,
+        visitNumber,
+      },
+    );
 
     for (const o of outcomes) {
       const txnType: LoyaltyTransactionType =
@@ -654,7 +660,11 @@ export function processLoyaltyEvent(
  * batch is collision-free regardless of order or concurrency.
  */
 export function processLoyaltyEventBatch(
-  items: { event: LoyaltyEvent; config: FacilityLoyaltyConfig; account: CustomerLoyaltyAccount }[],
+  items: {
+    event: LoyaltyEvent;
+    config: FacilityLoyaltyConfig;
+    account: CustomerLoyaltyAccount;
+  }[],
   now: string,
 ): EngineResult[] {
   return items.map((it) =>

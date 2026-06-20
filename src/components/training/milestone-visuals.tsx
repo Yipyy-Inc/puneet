@@ -170,7 +170,7 @@ export function MilestoneTrophyShelf({
   return (
     <section className="space-y-2">
       <div className="flex items-center gap-2">
-        <Trophy className="text-amber-500 size-4" />
+        <Trophy className="size-4 text-amber-500" />
         <h3 className="text-sm font-semibold text-slate-800">
           {petName}&apos;s trophy shelf
         </h3>
@@ -182,7 +182,7 @@ export function MilestoneTrophyShelf({
         {milestones.map((m) => (
           <li
             key={`${m.kind}-${m.achievedISO}`}
-            className="min-w-[220px] max-w-[260px] flex-1 snap-start"
+            className="max-w-[260px] min-w-[220px] flex-1 snap-start"
           >
             <MilestoneCard milestone={m} />
           </li>

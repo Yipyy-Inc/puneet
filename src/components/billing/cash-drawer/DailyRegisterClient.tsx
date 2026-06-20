@@ -24,10 +24,7 @@ import type {
   RegisterSession,
 } from "@/data/cash-drawer";
 import { payments } from "@/data/payments";
-import {
-  CAD_DENOMINATIONS,
-  USD_DENOMINATIONS,
-} from "@/data/cash-drawer";
+import { CAD_DENOMINATIONS, USD_DENOMINATIONS } from "@/data/cash-drawer";
 import {
   classifyVariance,
   computeTrackedTotal,
@@ -60,12 +57,16 @@ export function DailyRegisterClient({
   staffName,
   isManager,
 }: Props) {
-  const denominations = currency === "CAD" ? CAD_DENOMINATIONS : USD_DENOMINATIONS;
+  const denominations =
+    currency === "CAD" ? CAD_DENOMINATIONS : USD_DENOMINATIONS;
   const symbol = currency === "CAD" ? "CA$" : "$";
   const fmt = (n: number) => `${symbol}${Math.abs(n).toFixed(2)}`;
 
-  const [sessions, setSessions] = useState<RegisterSession[]>(mockRegisterSessions);
-  const [tab, setTab] = useState<"today" | "ledger" | "reports" | "history">("today");
+  const [sessions, setSessions] =
+    useState<RegisterSession[]>(mockRegisterSessions);
+  const [tab, setTab] = useState<"today" | "ledger" | "reports" | "history">(
+    "today",
+  );
   const [showOpen, setShowOpen] = useState(false);
   const [showMovement, setShowMovement] = useState(false);
   const [showClose, setShowClose] = useState(false);
@@ -82,7 +83,11 @@ export function DailyRegisterClient({
 
   const moveNet = active ? movementsNet(active.movements) : 0;
   const trackedTotal = active
-    ? computeTrackedTotal(active.opening.floatTotal, live.total, active.movements)
+    ? computeTrackedTotal(
+        active.opening.floatTotal,
+        live.total,
+        active.movements,
+      )
     : 0;
 
   // Yesterday's closing total (for the empty state hint and the open dialog)
@@ -196,7 +201,10 @@ export function DailyRegisterClient({
         },
         {
           label: "Movements",
-          value: moveNet === 0 ? `±${symbol}0.00` : `${moveNet > 0 ? "+" : "-"}${fmt(moveNet)}`,
+          value:
+            moveNet === 0
+              ? `±${symbol}0.00`
+              : `${moveNet > 0 ? "+" : "-"}${fmt(moveNet)}`,
           hint: `${active.movements.length} entr${active.movements.length === 1 ? "y" : "ies"}`,
           tone: moveNet < 0 ? ("rose" as const) : ("violet" as const),
           icon: moveNet < 0 ? ArrowUpFromLine : ArrowDownToLine,
@@ -319,7 +327,7 @@ export function DailyRegisterClient({
           {active ? (
             <CashLedgerTable txns={live.txns} currencySymbol={symbol} />
           ) : (
-            <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+            <p className="text-muted-foreground rounded-md border border-dashed p-6 text-center text-sm">
               No active session. The ledger will start filling once today&apos;s
               register opens.
             </p>
@@ -330,7 +338,7 @@ export function DailyRegisterClient({
           {isManager ? (
             <CashReportsPanel sessions={sessions} currencySymbol={symbol} />
           ) : (
-            <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+            <p className="text-muted-foreground rounded-md border border-dashed p-6 text-center text-sm">
               Reports are restricted to managers.
             </p>
           )}

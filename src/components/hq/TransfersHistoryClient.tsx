@@ -83,10 +83,17 @@ function formatDt(iso: string) {
   });
 }
 
-function bucketByRecency(iso: string, today: Date): "today" | "yesterday" | "week" | "older" {
+function bucketByRecency(
+  iso: string,
+  today: Date,
+): "today" | "yesterday" | "week" | "older" {
   const d = new Date(iso);
   const dayMs = 24 * 60 * 60 * 1000;
-  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const startOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  ).getTime();
   const t = d.getTime();
   if (t >= startOfToday) return "today";
   if (t >= startOfToday - dayMs) return "yesterday";
@@ -94,7 +101,10 @@ function bucketByRecency(iso: string, today: Date): "today" | "yesterday" | "wee
   return "older";
 }
 
-const BUCKETS: { key: "today" | "yesterday" | "week" | "older"; label: string }[] = [
+const BUCKETS: {
+  key: "today" | "yesterday" | "week" | "older";
+  label: string;
+}[] = [
   { key: "today", label: "Today" },
   { key: "yesterday", label: "Yesterday" },
   { key: "week", label: "This week" },
@@ -103,7 +113,9 @@ const BUCKETS: { key: "today" | "yesterday" | "week" | "older"; label: string }[
 
 export function TransfersHistoryClient({ transfers, locations }: Props) {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<BookingTransfer["status"] | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    BookingTransfer["status"] | "all"
+  >("all");
 
   const getLocation = (id: string) => locations.find((l) => l.id === id);
 
@@ -127,14 +139,18 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
   const counts = {
     all: transfers.length,
     completed: transfers.filter((t) => t.status === "completed").length,
-    pending_approval: transfers.filter((t) => t.status === "pending_approval").length,
+    pending_approval: transfers.filter((t) => t.status === "pending_approval")
+      .length,
     approved: transfers.filter((t) => t.status === "approved").length,
     rejected: transfers.filter((t) => t.status === "rejected").length,
   };
 
   // Aggregate flow matrix
   const flow = useMemo(() => {
-    const result: Record<string, Record<string, { count: number; volume: number }>> = {};
+    const result: Record<
+      string,
+      Record<string, { count: number; volume: number }>
+    > = {};
     locations.forEach((from) => {
       result[from.id] = {};
       locations.forEach((to) => {
@@ -151,11 +167,16 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
 
   const maxFlowCount = Math.max(
     1,
-    ...Object.values(flow).flatMap((row) => Object.values(row).map((c) => c.count)),
+    ...Object.values(flow).flatMap((row) =>
+      Object.values(row).map((c) => c.count),
+    ),
   );
 
   // Stats
-  const totalAdjusted = transfers.reduce((sum, t) => sum + Math.abs(t.priceDelta), 0);
+  const totalAdjusted = transfers.reduce(
+    (sum, t) => sum + Math.abs(t.priceDelta),
+    0,
+  );
   const completedTransfers = transfers.filter(
     (t) => t.status === "completed" && t.completedAt,
   );
@@ -168,17 +189,23 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
     }, 0);
     return Math.round(sum / completedTransfers.length);
   })();
-  const successRate = transfers.length === 0
-    ? 0
-    : Math.round(
-        (transfers.filter((t) => t.status === "completed" || t.status === "approved").length /
-          transfers.length) *
-          100,
-      );
+  const successRate =
+    transfers.length === 0
+      ? 0
+      : Math.round(
+          (transfers.filter(
+            (t) => t.status === "completed" || t.status === "approved",
+          ).length /
+            transfers.length) *
+            100,
+        );
 
   const grouped = useMemo(() => {
     const today = new Date();
-    const out: Record<"today" | "yesterday" | "week" | "older", BookingTransfer[]> = {
+    const out: Record<
+      "today" | "yesterday" | "week" | "older",
+      BookingTransfer[]
+    > = {
       today: [],
       yesterday: [],
       week: [],
@@ -202,15 +229,21 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
           </Link>
           <div>
             <div className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium">
-              <Link href="/facility/hq/overview" className="hover:text-foreground transition-colors">
+              <Link
+                href="/facility/hq/overview"
+                className="hover:text-foreground transition-colors"
+              >
                 HQ
               </Link>
               <ChevronRight className="size-3" />
               <span>Transfer History</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">Transfer History</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Transfer History
+            </h1>
             <p className="text-muted-foreground text-sm">
-              All inter-location booking moves · {transfers.length} total · {counts.pending_approval} awaiting approval
+              All inter-location booking moves · {transfers.length} total ·{" "}
+              {counts.pending_approval} awaiting approval
             </p>
           </div>
         </div>
@@ -275,7 +308,7 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
             <table className="w-full border-collapse text-xs">
               <thead>
                 <tr>
-                  <th className="bg-muted/30 text-muted-foreground rounded-tl-lg border-b border-r px-3 py-2 text-left text-[10px] font-semibold tracking-wider uppercase">
+                  <th className="bg-muted/30 text-muted-foreground rounded-tl-lg border-r border-b px-3 py-2 text-left text-[10px] font-semibold tracking-wider uppercase">
                     From → To
                   </th>
                   {locations.map((loc, i) => {
@@ -327,7 +360,12 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
                           >
                             {from.shortCode}
                           </span>
-                          <span className={cn("text-[11px] font-semibold", fromS.text)}>
+                          <span
+                            className={cn(
+                              "text-[11px] font-semibold",
+                              fromS.text,
+                            )}
+                          >
                             {from.name.split("–")[1]?.trim() ?? from.name}
                           </span>
                         </div>
@@ -349,9 +387,13 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
                             )}
                           >
                             {isSelf ? (
-                              <span className="text-muted-foreground/50">—</span>
+                              <span className="text-muted-foreground/50">
+                                —
+                              </span>
                             ) : count === 0 ? (
-                              <span className="text-muted-foreground/40">·</span>
+                              <span className="text-muted-foreground/40">
+                                ·
+                              </span>
                             ) : (
                               <div
                                 className={cn(
@@ -360,7 +402,12 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
                                   intensity > 0.5 && toS.bgSofter,
                                 )}
                               >
-                                <span className={cn("text-sm font-bold tabular-nums", toS.text)}>
+                                <span
+                                  className={cn(
+                                    "text-sm font-bold tabular-nums",
+                                    toS.text,
+                                  )}
+                                >
                                   {count}
                                 </span>
                                 {volume > 0 && (
@@ -398,14 +445,19 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
             [
               { v: "all", label: `All · ${counts.all}` },
               { v: "completed", label: `Completed · ${counts.completed}` },
-              { v: "pending_approval", label: `Pending · ${counts.pending_approval}` },
+              {
+                v: "pending_approval",
+                label: `Pending · ${counts.pending_approval}`,
+              },
               { v: "approved", label: `Approved · ${counts.approved}` },
               { v: "rejected", label: `Rejected · ${counts.rejected}` },
             ] as const
           ).map((s) => (
             <button
               key={s.v}
-              onClick={() => setStatusFilter(s.v as BookingTransfer["status"] | "all")}
+              onClick={() =>
+                setStatusFilter(s.v as BookingTransfer["status"] | "all")
+              }
               className={cn(
                 "rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all",
                 statusFilter === s.v
@@ -424,7 +476,9 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-12">
             <ArrowLeftRight className="text-muted-foreground/40 size-10" />
-            <p className="text-muted-foreground text-sm">No transfers match your filters</p>
+            <p className="text-muted-foreground text-sm">
+              No transfers match your filters
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -439,14 +493,18 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
                   <h3 className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                     {b.label}
                   </h3>
-                  <span className="text-muted-foreground text-[11px]">· {list.length}</span>
+                  <span className="text-muted-foreground text-[11px]">
+                    · {list.length}
+                  </span>
                   <div className="bg-border ml-2 h-px flex-1" />
                 </div>
                 <div className="space-y-2.5">
                   {list.map((t) => {
                     const from = getLocation(t.fromLocationId);
                     const to = getLocation(t.toLocationId);
-                    const fromS = from ? locationStyles(from) : styleFromKey("sky");
+                    const fromS = from
+                      ? locationStyles(from)
+                      : styleFromKey("sky");
                     const toS = to ? locationStyles(to) : styleFromKey("sky");
                     return (
                       <TransferCard
@@ -486,7 +544,13 @@ function KpiTile({
   return (
     <Card className="overflow-hidden">
       <CardContent className="relative pt-4 pb-4">
-        <div className={cn("absolute inset-0 bg-linear-to-br opacity-50", s.gradFrom, s.gradTo)} />
+        <div
+          className={cn(
+            "absolute inset-0 bg-linear-to-br opacity-50",
+            s.gradFrom,
+            s.gradTo,
+          )}
+        />
         <div className="relative flex items-start justify-between gap-2">
           <div>
             <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
@@ -495,7 +559,12 @@ function KpiTile({
             <p className="mt-1 text-2xl font-bold">{value}</p>
             <p className="text-muted-foreground text-[11px]">{caption}</p>
           </div>
-          <div className={cn("flex size-9 items-center justify-center rounded-xl", s.bgSoft)}>
+          <div
+            className={cn(
+              "flex size-9 items-center justify-center rounded-xl",
+              s.bgSoft,
+            )}
+          >
             <Icon className={cn("size-4.5", s.text)} />
           </div>
         </div>
@@ -552,7 +621,9 @@ function TransferCard({
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-semibold">Booking #{transfer.bookingId}</span>
+                <span className="text-sm font-semibold">
+                  Booking #{transfer.bookingId}
+                </span>
                 <span
                   className={cn(
                     "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
@@ -562,17 +633,22 @@ function TransferCard({
                   <StatusIcon className="size-2.5" />
                   {meta.label}
                 </span>
-                {transfer.requiresCustomerApproval && !transfer.customerApprovedAt && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400">
-                    <AlertTriangle className="size-2.5" />
-                    Awaiting customer
-                  </span>
-                )}
+                {transfer.requiresCustomerApproval &&
+                  !transfer.customerApprovedAt && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400">
+                      <AlertTriangle className="size-2.5" />
+                      Awaiting customer
+                    </span>
+                  )}
               </div>
               <p className="text-muted-foreground mt-1 text-[11px]">
-                <span className={cn("font-semibold", fromS.text)}>{from?.name}</span>
+                <span className={cn("font-semibold", fromS.text)}>
+                  {from?.name}
+                </span>
                 {" → "}
-                <span className={cn("font-semibold", toS.text)}>{to?.name}</span>
+                <span className={cn("font-semibold", toS.text)}>
+                  {to?.name}
+                </span>
               </p>
               <p className="text-muted-foreground text-[11px]">
                 {transfer.initiatedBy} · {formatDt(transfer.initiatedAt)}
@@ -586,19 +662,24 @@ function TransferCard({
           </div>
 
           {/* Right side: pricing + actions */}
-          <div className="flex flex-col items-end gap-2 shrink-0">
+          <div className="flex shrink-0 flex-col items-end gap-2">
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-[10px] capitalize">
-                {transfer.pricingPolicy === "keep_original" ? "Price kept" : "Price updated"}
+                {transfer.pricingPolicy === "keep_original"
+                  ? "Price kept"
+                  : "Price updated"}
               </Badge>
               {transfer.priceDelta !== 0 && (
                 <span
                   className={cn(
                     "text-xs font-semibold tabular-nums",
-                    transfer.priceDelta > 0 ? "text-amber-600" : "text-emerald-600",
+                    transfer.priceDelta > 0
+                      ? "text-amber-600"
+                      : "text-emerald-600",
                   )}
                 >
-                  {transfer.priceDelta > 0 ? "+" : ""}${transfer.priceDelta.toFixed(2)}
+                  {transfer.priceDelta > 0 ? "+" : ""}$
+                  {transfer.priceDelta.toFixed(2)}
                 </span>
               )}
             </div>
@@ -609,7 +690,9 @@ function TransferCard({
                   <Button
                     size="sm"
                     className="h-7 gap-1 text-xs"
-                    onClick={() => toast.success(`Transfer #${transfer.bookingId} approved`)}
+                    onClick={() =>
+                      toast.success(`Transfer #${transfer.bookingId} approved`)
+                    }
                   >
                     <CheckCircle2 className="size-3" />
                     Approve
@@ -618,7 +701,9 @@ function TransferCard({
                     variant="outline"
                     size="sm"
                     className="text-destructive h-7 gap-1 text-xs"
-                    onClick={() => toast.info(`Transfer #${transfer.bookingId} rejected`)}
+                    onClick={() =>
+                      toast.info(`Transfer #${transfer.bookingId} rejected`)
+                    }
                   >
                     <XCircle className="size-3" />
                     Reject
@@ -629,7 +714,9 @@ function TransferCard({
                 <Button
                   size="sm"
                   className="h-7 gap-1 text-xs"
-                  onClick={() => toast.success(`Transfer #${transfer.bookingId} finalized`)}
+                  onClick={() =>
+                    toast.success(`Transfer #${transfer.bookingId} finalized`)
+                  }
                 >
                   <CheckCircle2 className="size-3" />
                   Finalize

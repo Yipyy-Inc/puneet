@@ -120,9 +120,7 @@ function fallbackColorFor(staffId: string): string {
   ];
 }
 
-function buildMergedStylists(
-  staffList: StaffProfile[],
-): MergedStylist[] {
+function buildMergedStylists(staffList: StaffProfile[]): MergedStylist[] {
   const groomers = staffList.filter((s) => s.primaryRole === "groomer");
   return groomers.map((staff) => {
     const profile = stylists.find((s) => s.staffId === staff.id);
@@ -161,10 +159,14 @@ const dayNames = [
 ];
 
 export default function StylistsPage() {
-  const [editingGroomer, setEditingGroomer] = useState<MergedStylist | null>(null);
+  const [editingGroomer, setEditingGroomer] = useState<MergedStylist | null>(
+    null,
+  );
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
-  const [selectedGroomer, setSelectedGroomer] = useState<MergedStylist | null>(null);
+  const [selectedGroomer, setSelectedGroomer] = useState<MergedStylist | null>(
+    null,
+  );
 
   const [formData, setFormData] = useState({
     specializations: "",
@@ -207,10 +209,7 @@ export default function StylistsPage() {
     6: { isAvailable: false, startTime: "08:00", endTime: "17:00" },
   });
 
-  const mergedStylists = useMemo(
-    () => buildMergedStylists(facilityStaff),
-    [],
-  );
+  const mergedStylists = useMemo(() => buildMergedStylists(facilityStaff), []);
 
   const stylistMetrics = useMemo(() => {
     const metricsMap = new Map<
@@ -230,7 +229,10 @@ export default function StylistsPage() {
   }, [mergedStylists]);
 
   const thirtyDayStats = useMemo(() => {
-    const m = new Map<string, ReturnType<typeof calculateStylistThirtyDayStats>>();
+    const m = new Map<
+      string,
+      ReturnType<typeof calculateStylistThirtyDayStats>
+    >();
     mergedStylists.forEach((g) => {
       if (g.stylistId) {
         m.set(
@@ -299,7 +301,9 @@ export default function StylistsPage() {
     [],
   );
 
-  const activeStylists = mergedStylists.filter((s) => s.status === "active").length;
+  const activeStylists = mergedStylists.filter(
+    (s) => s.status === "active",
+  ).length;
   const totalAppointments = mergedStylists.reduce(
     (sum, s) => sum + s.totalAppointments,
     0,
@@ -307,9 +311,12 @@ export default function StylistsPage() {
   const ratedStylists = mergedStylists.filter((s) => s.rating > 0);
   const avgRating =
     ratedStylists.length > 0
-      ? ratedStylists.reduce((sum, s) => sum + s.rating, 0) / ratedStylists.length
+      ? ratedStylists.reduce((sum, s) => sum + s.rating, 0) /
+        ratedStylists.length
       : 0;
-  const experiencedStylists = mergedStylists.filter((s) => s.yearsExperience > 0);
+  const experiencedStylists = mergedStylists.filter(
+    (s) => s.yearsExperience > 0,
+  );
   const avgExperience =
     experiencedStylists.length > 0
       ? experiencedStylists.reduce((sum, s) => sum + s.yearsExperience, 0) /
@@ -335,7 +342,8 @@ export default function StylistsPage() {
       certifications: groomer.certifications.join(", "),
       yearsExperience: groomer.yearsExperience,
       bio: groomer.bio,
-      visibleOnline: groomerVisibility[groomer.staffId] ?? groomer.visibleOnline,
+      visibleOnline:
+        groomerVisibility[groomer.staffId] ?? groomer.visibleOnline,
       maxDailyAppointments: groomer.capacity.maxDailyAppointments,
       maxWeeklyAppointments: groomer.capacity.maxWeeklyAppointments ?? 30,
       maxConcurrentAppointments: groomer.capacity.maxConcurrentAppointments,
@@ -456,9 +464,7 @@ export default function StylistsPage() {
       icon: Award,
       defaultVisible: true,
       render: (groomer) =>
-        groomer.yearsExperience > 0
-          ? `${groomer.yearsExperience} years`
-          : "—",
+        groomer.yearsExperience > 0 ? `${groomer.yearsExperience} years` : "—",
     },
     {
       key: "skillLevel",
@@ -468,7 +474,8 @@ export default function StylistsPage() {
       render: (groomer) => {
         const level = groomer.capacity.skillLevel;
         const cls: Record<typeof level, string> = {
-          standard: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+          standard:
+            "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
           premium:
             "bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300",
           platinum:
@@ -553,15 +560,16 @@ export default function StylistsPage() {
       label: "Calendar Color",
       defaultVisible: true,
       render: (groomer) => {
-        const color = groomer.calendarColor ?? fallbackColorFor(groomer.staffId);
+        const color =
+          groomer.calendarColor ?? fallbackColorFor(groomer.staffId);
         return (
           <div className="flex items-center gap-2">
             <span
-              className="inline-block size-5 rounded-md ring-2 ring-background shadow-sm"
+              className="ring-background inline-block size-5 rounded-md shadow-sm ring-2"
               style={{ backgroundColor: color }}
               aria-label={`Calendar color ${color}`}
             />
-            <span className="text-muted-foreground text-[10px] font-mono uppercase">
+            <span className="text-muted-foreground font-mono text-[10px] uppercase">
               {color}
             </span>
           </div>
@@ -579,9 +587,11 @@ export default function StylistsPage() {
           return <span className="text-muted-foreground text-xs">—</span>;
         }
         const ratingDisplay =
-          s.ratedCount > 0 ? s.averageRating.toFixed(1) : groomer.rating > 0
-            ? groomer.rating.toFixed(1)
-            : "—";
+          s.ratedCount > 0
+            ? s.averageRating.toFixed(1)
+            : groomer.rating > 0
+              ? groomer.rating.toFixed(1)
+              : "—";
         return (
           <div className="text-xs leading-tight">
             <div>
@@ -596,7 +606,10 @@ export default function StylistsPage() {
               </span>
             </div>
             <div className="text-muted-foreground">
-              ${s.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              $
+              {s.totalRevenue.toLocaleString(undefined, {
+                maximumFractionDigits: 0,
+              })}
               <span className="text-muted-foreground/70"> revenue</span>
             </div>
           </div>
@@ -721,7 +734,8 @@ export default function StylistsPage() {
       label: "Online Visibility",
       defaultVisible: true,
       render: (groomer) => {
-        const isVisible = groomerVisibility[groomer.staffId] ?? groomer.visibleOnline;
+        const isVisible =
+          groomerVisibility[groomer.staffId] ?? groomer.visibleOnline;
         return (
           <div className="flex items-center gap-2">
             <Switch
@@ -901,10 +915,12 @@ export default function StylistsPage() {
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Grooming Profile — {editingGroomer?.name}</DialogTitle>
+            <DialogTitle>
+              Edit Grooming Profile — {editingGroomer?.name}
+            </DialogTitle>
             <DialogDescription>
-              Update grooming-specific details. To edit contact info or role,
-              go to{" "}
+              Update grooming-specific details. To edit contact info or role, go
+              to{" "}
               <Link
                 href="/facility/dashboard/staff"
                 className="text-primary underline"
@@ -1029,8 +1045,7 @@ export default function StylistsPage() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      maxConcurrentAppointments:
-                        parseInt(e.target.value) || 0,
+                      maxConcurrentAppointments: parseInt(e.target.value) || 0,
                     })
                   }
                 />
@@ -1051,11 +1066,12 @@ export default function StylistsPage() {
                   }
                   className="h-9 w-14 cursor-pointer rounded-md border bg-transparent p-0.5"
                 />
-                <span className="text-muted-foreground text-xs font-mono uppercase">
+                <span className="text-muted-foreground font-mono text-xs uppercase">
                   {formData.calendarColor}
                 </span>
                 <span className="text-muted-foreground text-xs">
-                  Used on the day-view calendar to identify this groomer&#39;s blocks.
+                  Used on the day-view calendar to identify this groomer&#39;s
+                  blocks.
                 </span>
               </div>
             </div>
@@ -1063,7 +1079,8 @@ export default function StylistsPage() {
               <div className="flex items-center justify-between">
                 <Label>Qualified Services</Label>
                 <span className="text-muted-foreground text-xs">
-                  {formData.qualifiedPackageIds.length} of {activePackages.length}
+                  {formData.qualifiedPackageIds.length} of{" "}
+                  {activePackages.length}
                 </span>
               </div>
               <p className="text-muted-foreground text-xs">
@@ -1141,10 +1158,7 @@ export default function StylistsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditModalOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancel
             </Button>
             <Button onClick={handleSave}>Save Changes</Button>

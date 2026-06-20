@@ -121,7 +121,10 @@ export function HomeworkEditDialog({
   // Group enrollments by pet for the Select — owners with multiple dogs read
   // cleaner with one section per pet.
   const enrollmentsByPet = useMemo(() => {
-    const out = new Map<number, { petName: string; rows: TrainingEnrollment[] }>();
+    const out = new Map<
+      number,
+      { petName: string; rows: TrainingEnrollment[] }
+    >();
     for (const e of activeEnrollments) {
       const existing = out.get(e.petId);
       if (existing) existing.rows.push(e);
@@ -148,8 +151,7 @@ export function HomeworkEditDialog({
     } else {
       setForm({
         ...EMPTY_FORM,
-        enrollmentId:
-          lockedEnrollmentId ?? activeEnrollments[0]?.id ?? "",
+        enrollmentId: lockedEnrollmentId ?? activeEnrollments[0]?.id ?? "",
         nextDueDate: nextDay(todayISO),
       });
     }
@@ -271,7 +273,7 @@ export function HomeworkEditDialog({
                   )}
                   {enrollmentsByPet.map((group) => (
                     <SelectGroup key={group.petName}>
-                      <SelectLabel className="text-[10px] uppercase tracking-wider">
+                      <SelectLabel className="text-[10px] tracking-wider uppercase">
                         {group.petName}
                       </SelectLabel>
                       {group.rows.map((e) => (

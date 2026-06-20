@@ -249,18 +249,18 @@ export default function AutomationsPage() {
 
       {/* Automation Categories */}
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsList className="bg-gradient-to-r from-sky-50/60 via-white to-orange-50/40 rounded-xl border px-2 py-1">
+        <TabsList className="rounded-xl border bg-gradient-to-r from-sky-50/60 via-white to-orange-50/40 px-2 py-1">
           <TabsTrigger
             value="all"
             onClick={() => setFilterCategory("all")}
-            className="data-[state=active]:!border-sky-500 data-[state=active]:!text-sky-700 data-[state=active]:bg-sky-50/70"
+            className="data-[state=active]:!border-sky-500 data-[state=active]:bg-sky-50/70 data-[state=active]:!text-sky-700"
           >
             All Rules
           </TabsTrigger>
           <TabsTrigger
             value="booking"
             onClick={() => setFilterCategory("booking")}
-            className="data-[state=active]:!border-blue-500 data-[state=active]:!text-blue-700 data-[state=active]:bg-blue-50/70"
+            className="data-[state=active]:!border-blue-500 data-[state=active]:bg-blue-50/70 data-[state=active]:!text-blue-700"
           >
             <Calendar className="mr-2 size-4" />
             Booking & Check-ins
@@ -268,7 +268,7 @@ export default function AutomationsPage() {
           <TabsTrigger
             value="reminder"
             onClick={() => setFilterCategory("reminder")}
-            className="data-[state=active]:!border-amber-500 data-[state=active]:!text-amber-700 data-[state=active]:bg-amber-50/70"
+            className="data-[state=active]:!border-amber-500 data-[state=active]:bg-amber-50/70 data-[state=active]:!text-amber-700"
           >
             <Clock className="mr-2 size-4" />
             Reminders
@@ -276,7 +276,7 @@ export default function AutomationsPage() {
           <TabsTrigger
             value="rebook"
             onClick={() => setFilterCategory("rebook")}
-            className="data-[state=active]:!border-violet-500 data-[state=active]:!text-violet-700 data-[state=active]:bg-violet-50/70"
+            className="data-[state=active]:!border-violet-500 data-[state=active]:bg-violet-50/70 data-[state=active]:!text-violet-700"
           >
             <RefreshCw className="mr-2 size-4" />
             Rebook Reminders
@@ -284,7 +284,7 @@ export default function AutomationsPage() {
           <TabsTrigger
             value="payment"
             onClick={() => setFilterCategory("payment")}
-            className="data-[state=active]:!border-emerald-500 data-[state=active]:!text-emerald-700 data-[state=active]:bg-emerald-50/70"
+            className="data-[state=active]:!border-emerald-500 data-[state=active]:bg-emerald-50/70 data-[state=active]:!text-emerald-700"
           >
             <DollarSign className="mr-2 size-4" />
             Payment
@@ -292,7 +292,7 @@ export default function AutomationsPage() {
           <TabsTrigger
             value="forms"
             onClick={() => setFilterCategory("forms")}
-            className="data-[state=active]:!border-indigo-500 data-[state=active]:!text-indigo-700 data-[state=active]:bg-indigo-50/70"
+            className="data-[state=active]:!border-indigo-500 data-[state=active]:bg-indigo-50/70 data-[state=active]:!text-indigo-700"
           >
             <FileText className="mr-2 size-4" />
             Forms
@@ -300,7 +300,7 @@ export default function AutomationsPage() {
           <TabsTrigger
             value="recovery"
             onClick={() => setFilterCategory("recovery")}
-            className="data-[state=active]:!border-rose-500 data-[state=active]:!text-rose-700 data-[state=active]:bg-rose-50/70"
+            className="data-[state=active]:!border-rose-500 data-[state=active]:bg-rose-50/70 data-[state=active]:!text-rose-700"
           >
             <ShoppingCart className="mr-2 size-4" />
             Recovery
@@ -308,7 +308,7 @@ export default function AutomationsPage() {
           <TabsTrigger
             value="campaign"
             onClick={() => setFilterCategory("campaign")}
-            className="data-[state=active]:!border-orange-500 data-[state=active]:!text-orange-700 data-[state=active]:bg-orange-50/70"
+            className="data-[state=active]:!border-orange-500 data-[state=active]:bg-orange-50/70 data-[state=active]:!text-orange-700"
           >
             <Megaphone className="mr-2 size-4" />
             Campaigns
@@ -334,7 +334,7 @@ export default function AutomationsPage() {
                 {filteredAutomations.map((rule) => (
                   <div
                     key={rule.id}
-                    className="hover:bg-sky-50/40 hover:border-sky-200 rounded-lg border bg-white p-4 transition-colors"
+                    className="rounded-lg border bg-white p-4 transition-colors hover:border-sky-200 hover:bg-sky-50/40"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">

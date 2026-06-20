@@ -75,7 +75,8 @@ export function PrintableDaySheet({
   allAppointments?: GroomingAppointment[];
 }) {
   const dayAppointments = appointments.filter(
-    (a) => a.date === date && a.status !== "cancelled" && a.status !== "no-show",
+    (a) =>
+      a.date === date && a.status !== "cancelled" && a.status !== "no-show",
   );
   const dayBlocks = timeBlocks.filter((b) => b.date === date);
 
@@ -104,18 +105,18 @@ export function PrintableDaySheet({
   return (
     <div
       // Visible only when printing; the regular calendar gets print:hidden.
-      className="hidden print:block bg-white text-black"
+      className="hidden bg-white text-black print:block"
     >
       <header className="mb-4 border-b-2 border-black pb-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold leading-tight">
+            <h1 className="text-2xl leading-tight font-bold">
               Daily Grooming Schedule
             </h1>
             <p className="text-base">{formatDateLong(date)}</p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-wide text-gray-600">
+            <p className="text-[10px] tracking-wide text-gray-600 uppercase">
               Totals
             </p>
             <p className="text-sm font-semibold tabular-nums">
@@ -159,9 +160,7 @@ export function PrintableDaySheet({
                 ownerPhone: a.ownerPhone,
                 price: a.totalPrice,
                 alertCount: effectiveAlerts.length,
-                alertSummary: effectiveAlerts
-                  .map((n) => n.text)
-                  .join(" · "),
+                alertSummary: effectiveAlerts.map((n) => n.text).join(" · "),
                 notes: [
                   a.allergies.length > 0
                     ? `Allergies: ${a.allergies.join(", ")}`
@@ -182,10 +181,7 @@ export function PrintableDaySheet({
           ].sort((a, b) => a.sortKey - b.sortKey);
 
           return (
-            <section
-              key={stylist.id}
-              className="break-inside-avoid"
-            >
+            <section key={stylist.id} className="break-inside-avoid">
               <h2 className="mb-1 border-b border-black pb-0.5 text-lg font-bold">
                 {stylist.name}
                 <span className="ml-2 text-sm font-normal text-gray-700">
@@ -211,13 +207,14 @@ export function PrintableDaySheet({
                       return (
                         <tr
                           key={`b-${i}`}
-                          className="border-b border-gray-300 italic text-gray-700"
+                          className="border-b border-gray-300 text-gray-700 italic"
                         >
                           <td className="py-1 pr-2 align-top tabular-nums">
                             {row.time}
                           </td>
                           <td className="py-1 pr-2 align-top" colSpan={6}>
-                            BLOCKED · <span className="capitalize">{row.reason}</span>
+                            BLOCKED ·{" "}
+                            <span className="capitalize">{row.reason}</span>
                             {row.notes ? ` — ${row.notes}` : ""}
                           </td>
                         </tr>
@@ -240,7 +237,7 @@ export function PrintableDaySheet({
                         <td className="py-1 pr-2 tabular-nums">
                           {row.ownerPhone}
                         </td>
-                        <td className="py-1 pr-2 text-right tabular-nums font-semibold">
+                        <td className="py-1 pr-2 text-right font-semibold tabular-nums">
                           ${row.price}
                         </td>
                         <td className="py-1">
@@ -263,7 +260,10 @@ export function PrintableDaySheet({
                       r.kind === "appointment" && (r.notes || r.alertSummary),
                   ) && (
                     <tr>
-                      <td colSpan={7} className="pt-1 text-[10px] text-gray-600">
+                      <td
+                        colSpan={7}
+                        className="pt-1 text-[10px] text-gray-600"
+                      >
                         {rows
                           .filter(
                             (r): r is Extract<Row, { kind: "appointment" }> =>
@@ -287,7 +287,7 @@ export function PrintableDaySheet({
         })}
 
         {dayAppointments.length === 0 && dayBlocks.length === 0 && (
-          <p className="text-sm italic text-gray-600">
+          <p className="text-sm text-gray-600 italic">
             No appointments scheduled for this day.
           </p>
         )}

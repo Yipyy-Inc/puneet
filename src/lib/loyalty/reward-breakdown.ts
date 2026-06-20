@@ -49,7 +49,9 @@ export function rewardBreakdownByMonth(
   const nowD = new Date(now);
   const rows: RewardMonthRow[] = [];
   for (let i = months - 1; i >= 0; i--) {
-    const m = new Date(Date.UTC(nowD.getUTCFullYear(), nowD.getUTCMonth() - i, 1));
+    const m = new Date(
+      Date.UTC(nowD.getUTCFullYear(), nowD.getUTCMonth() - i, 1),
+    );
     const year = m.getUTCFullYear();
     const month = m.getUTCMonth();
     const row: RewardMonthRow = {

@@ -200,13 +200,16 @@ export function isMilestoneNotificationEnabled(
   return explicit === undefined ? true : explicit;
 }
 
-export const DURATION_OPTIONS: readonly number[] = [30, 45, 60, 90, 120] as const;
+export const DURATION_OPTIONS: readonly number[] = [
+  30, 45, 60, 90, 120,
+] as const;
 
-export const REPORT_CARD_SEND_MODE_LABELS: Record<ReportCardSendMode, string> = {
-  immediate: "Send immediately",
-  after_review: "Hold as draft for instructor review",
-  scheduled_batch: "Send in a daily batch",
-};
+export const REPORT_CARD_SEND_MODE_LABELS: Record<ReportCardSendMode, string> =
+  {
+    immediate: "Send immediately",
+    after_review: "Hold as draft for instructor review",
+    scheduled_batch: "Send in a daily batch",
+  };
 
 export const REPORT_CARD_SEND_MODE_HELP: Record<ReportCardSendMode, string> = {
   immediate:

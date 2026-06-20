@@ -15,8 +15,24 @@ import type { Insight, MetricChip } from "@/types/smart-insights";
 const LOC = { id: "loc-dv-main", name: "Doggieville – Plateau" };
 const GENERATED_AT = "2026-06-04T07:05:00.000Z"; // nightly run
 
-const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const DAY_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+const WEEKDAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+const DAY_KEYS = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+] as const;
 
 function hourLabel(h: number): string {
   const period = h < 12 ? "AM" : "PM";
@@ -37,9 +53,15 @@ const summaryByCall = new Map(aiCallSummaries.map((s) => [s.callId, s]));
 
 // Keyword stems we care about, mapped to a display label.
 const KEYWORD_TERMS: { stems: string[]; label: string }[] = [
-  { stems: ["boarding", "board our", "board your", "to board"], label: "boarding" },
+  {
+    stems: ["boarding", "board our", "board your", "to board"],
+    label: "boarding",
+  },
   { stems: ["grooming"], label: "grooming" },
-  { stems: ["medication", "twice daily", "twice a day", "apoquel"], label: "medication schedules" },
+  {
+    stems: ["medication", "twice daily", "twice a day", "apoquel"],
+    label: "medication schedules",
+  },
   { stems: ["vaccin"], label: "vaccination records" },
   { stems: ["cancel", "reschedul"], label: "rescheduling" },
   { stems: ["training", "obedience"], label: "training classes" },
@@ -74,14 +96,18 @@ export function generateCallingInsights(facilityId: number): Insight[] {
   const hourCounts = new Array(24).fill(0);
   for (const c of callLogs) hourCounts[new Date(c.timestamp).getHours()] += 1;
   let busiestHour = 0;
-  for (let h = 1; h < 24; h++) if (hourCounts[h] > hourCounts[busiestHour]) busiestHour = h;
+  for (let h = 1; h < 24; h++)
+    if (hourCounts[h] > hourCounts[busiestHour]) busiestHour = h;
 
   // ── 1) MISSED_CALL_SPIKE ──
   const missedRate = (set: typeof callLogs) =>
-    set.length ? set.filter((c) => c.status === "missed").length / set.length : 0;
+    set.length
+      ? set.filter((c) => c.status === "missed").length / set.length
+      : 0;
   const twRate = missedRate(thisWeek);
   const pwRate = missedRate(priorWeek);
-  const relChange = pwRate > 0 ? (twRate - pwRate) / pwRate : twRate > 0 ? 1 : 0;
+  const relChange =
+    pwRate > 0 ? (twRate - pwRate) / pwRate : twRate > 0 ? 1 : 0;
   if (relChange > 0.25) {
     const pct = Math.round(relChange * 100);
     insights.push({
@@ -156,7 +182,8 @@ export function generateCallingInsights(facilityId: number): Insight[] {
   const afterHours = callLogs.filter(isAfterHours);
   if (afterHours.length >= 1) {
     // Busiest (weekday, hour) bucket among after-hours calls.
-    const buckets: Record<string, { day: number; hour: number; n: number }> = {};
+    const buckets: Record<string, { day: number; hour: number; n: number }> =
+      {};
     for (const c of afterHours) {
       const d = new Date(c.timestamp);
       const key = `${d.getDay()}-${d.getHours()}`;
@@ -232,7 +259,11 @@ export function generateCallingInsights(facilityId: number): Insight[] {
   let sampleUpsell: string | undefined;
   for (const c of callLogs) {
     const s = summaryByCall.get(c.id);
-    if (s && s.upsellOpportunities.length > 0 && c.outcome !== "booking_created") {
+    if (
+      s &&
+      s.upsellOpportunities.length > 0 &&
+      c.outcome !== "booking_created"
+    ) {
       upsellCalls += 1;
       upsellOpps += s.upsellOpportunities.length;
       sampleUpsell ??= s.upsellOpportunities[0];
@@ -256,7 +287,9 @@ export function generateCallingInsights(facilityId: number): Insight[] {
         { label: "Opportunities", value: upsellOpps },
         { label: "Calls", value: upsellCalls },
         { label: "Converted", value: 0 },
-        ...(sampleUpsell ? [{ label: "Example", value: sampleUpsell } as MetricChip] : []),
+        ...(sampleUpsell
+          ? [{ label: "Example", value: sampleUpsell } as MetricChip]
+          : []),
       ],
     });
   }

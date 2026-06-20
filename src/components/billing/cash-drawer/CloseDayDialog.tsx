@@ -62,8 +62,7 @@ export function CloseDayDialog({
   const [managerNote, setManagerNote] = useState("");
 
   const drawerTotal = useMemo(
-    () =>
-      denominations.reduce((s, d) => s + d.value * (counts[d.id] ?? 0), 0),
+    () => denominations.reduce((s, d) => s + d.value * (counts[d.id] ?? 0), 0),
     [denominations, counts],
   );
 
@@ -119,11 +118,15 @@ export function CloseDayDialog({
           </DialogTitle>
           <DialogDescription>
             {step === "count" ? (
-              <>Count every coin and bill in the drawer right now. We&apos;ll
-              compare your count to what the system tracked through the day.</>
+              <>
+                Count every coin and bill in the drawer right now. We&apos;ll
+                compare your count to what the system tracked through the day.
+              </>
             ) : (
-              <>Review the breakdown. Locking confirms today&apos;s session is
-              done — only the manager note can change after.</>
+              <>
+                Review the breakdown. Locking confirms today&apos;s session is
+                done — only the manager note can change after.
+              </>
             )}
           </DialogDescription>
         </DialogHeader>
@@ -137,11 +140,11 @@ export function CloseDayDialog({
               currencySymbol={symbol}
             />
             <div className="flex items-center justify-between rounded-md border bg-indigo-50/60 px-3 py-2.5">
-              <span className="text-sm font-medium flex items-center gap-2">
+              <span className="flex items-center gap-2 text-sm font-medium">
                 <Coins className="size-4 text-indigo-500" />
                 Drawer count
               </span>
-              <span className="text-lg font-bold tabular-nums text-indigo-700">
+              <span className="text-lg font-bold text-indigo-700 tabular-nums">
                 {symbol}
                 {drawerTotal.toFixed(2)}
               </span>
@@ -183,7 +186,7 @@ export function CloseDayDialog({
                   )}
                 />
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  <p className="text-muted-foreground text-xs tracking-wide uppercase">
                     Variance
                   </p>
                   <p
@@ -243,7 +246,7 @@ export function CloseDayDialog({
               </div>
             </div>
 
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Drawer count − Tracked total = Variance · {fmtAbs(drawerTotal)} −{" "}
               {fmtAbs(trackedTotal)} = {fmtSigned(variance)}
             </p>
@@ -263,7 +266,7 @@ export function CloseDayDialog({
               </div>
             )}
 
-            <p className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+            <p className="bg-muted/50 text-muted-foreground rounded-md px-3 py-2 text-xs">
               Locking this session prevents further changes — only the manager
               note can be edited later.
             </p>
@@ -319,12 +322,12 @@ function BreakdownCell({
         highlight && "bg-indigo-50/60",
       )}
     >
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <span className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
         {label}
       </span>
       <span className="text-base font-semibold tabular-nums">{value}</span>
       {hint && (
-        <span className="text-[10px] text-muted-foreground">{hint}</span>
+        <span className="text-muted-foreground text-[10px]">{hint}</span>
       )}
     </div>
   );

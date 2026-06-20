@@ -118,12 +118,10 @@ export function KennelCalendarView({
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(
     new Set(),
   );
-  const [filters, setFilters] = useState<CalendarFilterState>(
-    DEFAULT_FILTER_STATE,
-  );
-  const [selectedBooking, setSelectedBooking] = useState<OccupancyKennel | null>(
-    null,
-  );
+  const [filters, setFilters] =
+    useState<CalendarFilterState>(DEFAULT_FILTER_STATE);
+  const [selectedBooking, setSelectedBooking] =
+    useState<OccupancyKennel | null>(null);
   const [blocks, setBlocks] = useState<RoomBlock[]>([]);
   const [blockDialog, setBlockDialog] = useState<{
     roomId: string;
@@ -265,13 +263,11 @@ export function KennelCalendarView({
 
   // Today's arrivals and departures
   const arrivalsToday = useMemo(
-    () =>
-      filteredKennels.filter((k) => k.checkIn === todayStr).length,
+    () => filteredKennels.filter((k) => k.checkIn === todayStr).length,
     [filteredKennels, todayStr],
   );
   const departuresToday = useMemo(
-    () =>
-      filteredKennels.filter((k) => k.checkOut === todayStr).length,
+    () => filteredKennels.filter((k) => k.checkOut === todayStr).length,
     [filteredKennels, todayStr],
   );
 
@@ -319,9 +315,10 @@ export function KennelCalendarView({
     });
   };
 
-  const calculateBookingPosition = (
-    booking: { checkIn: string; checkOut: string },
-  ): { startCol: number; span: number } | null => {
+  const calculateBookingPosition = (booking: {
+    checkIn: string;
+    checkOut: string;
+  }): { startCol: number; span: number } | null => {
     const checkIn = new Date(booking.checkIn);
     const checkOut = new Date(booking.checkOut);
     const rangeStart = startOfDay(dates[0]);
@@ -362,11 +359,7 @@ export function KennelCalendarView({
   );
 
   const startResize = useCallback(
-    (
-      booking: OccupancyKennel,
-      edge: "start" | "end",
-      e: React.MouseEvent,
-    ) => {
+    (booking: OccupancyKennel, edge: "start" | "end", e: React.MouseEvent) => {
       if (isPastWeek || !booking.checkIn || !booking.checkOut) return;
       e.preventDefault();
       e.stopPropagation();
@@ -532,11 +525,7 @@ export function KennelCalendarView({
     setBlocks((prev) =>
       prev.filter(
         (b) =>
-          !(
-            b.roomId === roomId &&
-            date >= b.startDate &&
-            date <= b.endDate
-          ),
+          !(b.roomId === roomId && date >= b.startDate && date <= b.endDate),
       ),
     );
   };
@@ -649,7 +638,7 @@ export function KennelCalendarView({
           <div className="min-w-[900px]">
             {/* Date Header */}
             <div className="bg-muted/30 sticky top-0 z-10 flex border-b">
-              <div className="w-[180px] min-w-[180px] shrink-0 border-r p-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <div className="text-muted-foreground w-[180px] min-w-[180px] shrink-0 border-r p-2 text-xs font-medium tracking-wider uppercase">
                 Room
               </div>
               {dates.map((date, i) => {
@@ -670,9 +659,7 @@ export function KennelCalendarView({
                     <div
                       className={cn(
                         "text-sm font-semibold",
-                        isTodayDate
-                          ? "text-primary"
-                          : "text-foreground",
+                        isTodayDate ? "text-primary" : "text-foreground",
                       )}
                     >
                       {dayNum}
@@ -680,9 +667,7 @@ export function KennelCalendarView({
                     <div
                       className={cn(
                         "text-[11px]",
-                        isTodayDate
-                          ? "text-primary"
-                          : "text-muted-foreground",
+                        isTodayDate ? "text-primary" : "text-muted-foreground",
                       )}
                     >
                       {dayName} {occ}%
@@ -780,13 +765,19 @@ export function KennelCalendarView({
                                 );
 
                                 return (
-                                  <div key={i} className="relative min-w-[64px]">
+                                  <div
+                                    key={i}
+                                    className="relative min-w-[64px]"
+                                  >
                                     <RoomCell
                                       date={dateStr}
-                                      dateLabel={date.toLocaleDateString("en-US", {
-                                        month: "short",
-                                        day: "numeric",
-                                      })}
+                                      dateLabel={date.toLocaleDateString(
+                                        "en-US",
+                                        {
+                                          month: "short",
+                                          day: "numeric",
+                                        },
+                                      )}
                                       roomName={kennel.name}
                                       isToday={isTodayDate}
                                       isPastWeek={isPastWeek}
@@ -794,7 +785,10 @@ export function KennelCalendarView({
                                       isBlocked={!!block}
                                       blockedReason={block?.reason}
                                       onAddBooking={() =>
-                                        handleAddBookingForCell(kennel.id, dateStr)
+                                        handleAddBookingForCell(
+                                          kennel.id,
+                                          dateStr,
+                                        )
                                       }
                                       onBlockRoom={() =>
                                         setBlockDialog({
@@ -804,7 +798,10 @@ export function KennelCalendarView({
                                         })
                                       }
                                       onUnblockRoom={() =>
-                                        handleUnblockRoomDate(kennel.id, dateStr)
+                                        handleUnblockRoomDate(
+                                          kennel.id,
+                                          dateStr,
+                                        )
                                       }
                                     />
                                   </div>
@@ -824,7 +821,7 @@ export function KennelCalendarView({
                               {isMaint && (
                                 <div
                                   className={cn(
-                                    "pointer-events-none my-1.5 mx-0.5 flex items-center gap-2 rounded-sm border-l-4 border-l-red-500 bg-red-100 px-2 dark:bg-red-900/30",
+                                    "pointer-events-none mx-0.5 my-1.5 flex items-center gap-2 rounded-sm border-l-4 border-l-red-500 bg-red-100 px-2 dark:bg-red-900/30",
                                     colStart(1),
                                     colSpan(numDays),
                                   )}
@@ -836,38 +833,74 @@ export function KennelCalendarView({
                               )}
 
                               {/* Booking bar */}
-                              {!isMaint && kennel.checkIn && kennel.checkOut && kennel.petName && (
-                              (() => {
-                                const displayBooking =
-                                  dragPreview &&
-                                  drag &&
-                                  drag.sourceRoomId === kennel.id
-                                    ? {
-                                        checkIn: dragPreview.checkIn,
-                                        checkOut: dragPreview.checkOut,
-                                      }
-                                    : {
-                                        checkIn: kennel.checkIn,
-                                        checkOut: kennel.checkOut,
-                                      };
-                                const pos = calculateBookingPosition(displayBooking);
-                                if (!pos) return null;
-                                const isMoveDragging =
-                                  drag?.kind === "move" &&
-                                  drag.sourceRoomId === kennel.id;
-                                if (
-                                  isMoveDragging &&
-                                  dragPreview &&
-                                  dragPreview.roomId !== kennel.id
-                                ) {
-                                  // Source row — fade the bar so the user sees it's being relocated
+                              {!isMaint &&
+                                kennel.checkIn &&
+                                kennel.checkOut &&
+                                kennel.petName &&
+                                (() => {
+                                  const displayBooking =
+                                    dragPreview &&
+                                    drag &&
+                                    drag.sourceRoomId === kennel.id
+                                      ? {
+                                          checkIn: dragPreview.checkIn,
+                                          checkOut: dragPreview.checkOut,
+                                        }
+                                      : {
+                                          checkIn: kennel.checkIn,
+                                          checkOut: kennel.checkOut,
+                                        };
+                                  const pos =
+                                    calculateBookingPosition(displayBooking);
+                                  if (!pos) return null;
+                                  const isMoveDragging =
+                                    drag?.kind === "move" &&
+                                    drag.sourceRoomId === kennel.id;
+                                  if (
+                                    isMoveDragging &&
+                                    dragPreview &&
+                                    dragPreview.roomId !== kennel.id
+                                  ) {
+                                    // Source row — fade the bar so the user sees it's being relocated
+                                    return (
+                                      <BookingBar
+                                        booking={kennel}
+                                        startCol={pos.startCol}
+                                        span={pos.span}
+                                        isGhost
+                                        isPastWeek={isPastWeek}
+                                        customServices={
+                                          kennel.petId
+                                            ? customServicesMap?.get(
+                                                kennel.petId,
+                                              )
+                                            : undefined
+                                        }
+                                        moduleColorMap={moduleColorMap}
+                                        showCustomServices={showCustomServices}
+                                      />
+                                    );
+                                  }
                                   return (
                                     <BookingBar
                                       booking={kennel}
                                       startCol={pos.startCol}
                                       span={pos.span}
-                                      isGhost
+                                      isDragging={
+                                        drag?.sourceRoomId === kennel.id
+                                      }
                                       isPastWeek={isPastWeek}
+                                      hideResizeHandles={disableResize}
+                                      arrivalGlow={
+                                        filters.arrivalDepartureFocus ===
+                                          "arrivals" &&
+                                        kennel.checkIn === todayStr
+                                      }
+                                      departureGlow={
+                                        filters.arrivalDepartureFocus ===
+                                          "departures" &&
+                                        kennel.checkOut === todayStr
+                                      }
                                       customServices={
                                         kennel.petId
                                           ? customServicesMap?.get(kennel.petId)
@@ -875,95 +908,65 @@ export function KennelCalendarView({
                                       }
                                       moduleColorMap={moduleColorMap}
                                       showCustomServices={showCustomServices}
+                                      onClick={() => setSelectedBooking(kennel)}
+                                      onMoveStart={(e) => startMove(kennel, e)}
+                                      onResizeStart={(edge, e) =>
+                                        startResize(kennel, edge, e)
+                                      }
                                     />
                                   );
-                                }
-                                return (
-                                  <BookingBar
-                                    booking={kennel}
-                                    startCol={pos.startCol}
-                                    span={pos.span}
-                                    isDragging={
-                                      drag?.sourceRoomId === kennel.id
-                                    }
-                                    isPastWeek={isPastWeek}
-                                    hideResizeHandles={disableResize}
-                                    arrivalGlow={
-                                      filters.arrivalDepartureFocus ===
-                                        "arrivals" &&
-                                      kennel.checkIn === todayStr
-                                    }
-                                    departureGlow={
-                                      filters.arrivalDepartureFocus ===
-                                        "departures" &&
-                                      kennel.checkOut === todayStr
-                                    }
-                                    customServices={
-                                      kennel.petId
-                                        ? customServicesMap?.get(kennel.petId)
-                                        : undefined
-                                    }
-                                    moduleColorMap={moduleColorMap}
-                                    showCustomServices={showCustomServices}
-                                    onClick={() => setSelectedBooking(kennel)}
-                                    onMoveStart={(e) => startMove(kennel, e)}
-                                    onResizeStart={(edge, e) =>
-                                      startResize(kennel, edge, e)
-                                    }
-                                  />
-                                );
-                              })()
-                            )}
+                                })()}
 
-                            {/* Subtle ghost preview at the proposed drop spot */}
-                            {drag?.kind === "move" &&
-                              dragPreview?.roomId === kennel.id &&
-                              drag.sourceRoomId !== kennel.id &&
-                              (() => {
-                                const sourceKennel = kennels.find(
-                                  (k) => k.id === drag.sourceRoomId,
-                                );
-                                const pos = calculateBookingPosition({
-                                  checkIn: dragPreview.checkIn,
-                                  checkOut: dragPreview.checkOut,
-                                });
-                                if (!pos) return null;
-                                return (
-                                  <div
-                                    className={cn(
-                                      "pointer-events-none z-20 my-1.5 mx-0.5 flex h-12 items-center gap-2.5 overflow-hidden rounded-lg border border-dashed bg-background/50 px-2 backdrop-blur-sm",
-                                      colStart(pos.startCol + 1),
-                                      colSpan(pos.span),
-                                      dropConflict
-                                        ? "border-red-400/80"
-                                        : "border-foreground/30",
-                                    )}
-                                  >
-                                    {sourceKennel?.petPhotoUrl ? (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img
-                                        src={sourceKennel.petPhotoUrl}
-                                        alt=""
-                                        width={40}
-                                        height={40}
-                                        className="size-10 shrink-0 rounded-full object-cover opacity-60"
-                                      />
-                                    ) : null}
-                                    <span
+                              {/* Subtle ghost preview at the proposed drop spot */}
+                              {drag?.kind === "move" &&
+                                dragPreview?.roomId === kennel.id &&
+                                drag.sourceRoomId !== kennel.id &&
+                                (() => {
+                                  const sourceKennel = kennels.find(
+                                    (k) => k.id === drag.sourceRoomId,
+                                  );
+                                  const pos = calculateBookingPosition({
+                                    checkIn: dragPreview.checkIn,
+                                    checkOut: dragPreview.checkOut,
+                                  });
+                                  if (!pos) return null;
+                                  return (
+                                    <div
                                       className={cn(
-                                        "truncate text-sm font-medium",
+                                        "bg-background/50 pointer-events-none z-20 mx-0.5 my-1.5 flex h-12 items-center gap-2.5 overflow-hidden rounded-lg border border-dashed px-2 backdrop-blur-sm",
+                                        colStart(pos.startCol + 1),
+                                        colSpan(pos.span),
                                         dropConflict
-                                          ? "text-red-600 dark:text-red-300"
-                                          : "text-foreground/70",
+                                          ? "border-red-400/80"
+                                          : "border-foreground/30",
                                       )}
                                     >
-                                      {dropConflict
-                                        ? "Can't drop here"
-                                        : (sourceKennel?.petName ?? drag.petName)}
-                                    </span>
-                                  </div>
-                                );
-                              })()}
+                                      {sourceKennel?.petPhotoUrl ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                          src={sourceKennel.petPhotoUrl}
+                                          alt=""
+                                          width={40}
+                                          height={40}
+                                          className="size-10 shrink-0 rounded-full object-cover opacity-60"
+                                        />
+                                      ) : null}
+                                      <span
+                                        className={cn(
+                                          "truncate text-sm font-medium",
+                                          dropConflict
+                                            ? "text-red-600 dark:text-red-300"
+                                            : "text-foreground/70",
+                                        )}
+                                      >
+                                        {dropConflict
+                                          ? "Can't drop here"
+                                          : (sourceKennel?.petName ??
+                                            drag.petName)}
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
                             </div>
                           </div>
                         </div>

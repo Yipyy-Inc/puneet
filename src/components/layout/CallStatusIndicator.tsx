@@ -34,14 +34,14 @@ export function CallStatusIndicator() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative size-9 rounded-xl transition-colors hover:bg-muted"
+          className="hover:bg-muted relative size-9 rounded-xl transition-colors"
           aria-label={`Call status: ${meta.label}`}
           title={`Call status: ${meta.label}`}
         >
-          <Phone className="size-5 text-muted-foreground" />
+          <Phone className="text-muted-foreground size-5" />
           <span
             className={cn(
-              "absolute right-1 top-1 size-2.5 rounded-full ring-2 ring-background",
+              "ring-background absolute top-1 right-1 size-2.5 rounded-full ring-2",
               meta.dot,
             )}
           />
@@ -50,7 +50,12 @@ export function CallStatusIndicator() {
       <DropdownMenuContent align="end" className="w-60">
         <DropdownMenuLabel className="flex items-center justify-between gap-2">
           <span>Call availability</span>
-          <span className={cn("flex items-center gap-1.5 text-xs font-medium", meta.text)}>
+          <span
+            className={cn(
+              "flex items-center gap-1.5 text-xs font-medium",
+              meta.text,
+            )}
+          >
             <span className={cn("size-2 rounded-full", meta.dot)} />
             {meta.label}
           </span>
@@ -67,22 +72,22 @@ export function CallStatusIndicator() {
               <span className={cn("size-2.5 rounded-full", m.dot)} />
               <span className="flex-1">
                 <span className="block text-sm">{m.label}</span>
-                <span className="block text-xs text-muted-foreground">
+                <span className="text-muted-foreground block text-xs">
                   {m.description}
                 </span>
               </span>
-              {status === opt && <Check className="size-4 text-primary" />}
+              {status === opt && <Check className="text-primary size-4" />}
             </DropdownMenuItem>
           );
         })}
         {status !== "available" && (
           <>
             <DropdownMenuSeparator />
-            <div className="px-2 py-1 text-xs text-muted-foreground">
+            <div className="text-muted-foreground px-2 py-1 text-xs">
               {secondsUntilReset != null ? (
                 <>
                   Auto-resets to Available in{" "}
-                  <span className="font-semibold tabular-nums text-foreground">
+                  <span className="text-foreground font-semibold tabular-nums">
                     {formatCountdown(secondsUntilReset)}
                   </span>
                 </>

@@ -2,7 +2,15 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { Bed, GraduationCap, LogIn, PawPrint, Scissors, Sun, UserX } from "lucide-react";
+import {
+  Bed,
+  GraduationCap,
+  LogIn,
+  PawPrint,
+  Scissors,
+  Sun,
+  UserX,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -16,10 +24,7 @@ import { Label } from "@/components/ui/label";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { cn } from "@/lib/utils";
-import {
-  getPetImage,
-  type UnifiedBooking,
-} from "@/hooks/use-unified-bookings";
+import { getPetImage, type UnifiedBooking } from "@/hooks/use-unified-bookings";
 
 interface CheckInDialogProps {
   booking: UnifiedBooking;
@@ -95,9 +100,9 @@ export function CheckInDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex items-center gap-3 rounded-2xl border bg-muted/30 p-3">
+        <div className="bg-muted/30 flex items-center gap-3 rounded-2xl border p-3">
           {petImage ? (
-            <div className="size-14 overflow-hidden rounded-2xl ring-2 ring-background">
+            <div className="ring-background size-14 overflow-hidden rounded-2xl ring-2">
               <Image
                 src={petImage}
                 alt={booking.petName}
@@ -107,13 +112,13 @@ export function CheckInDialog({
               />
             </div>
           ) : (
-            <div className="bg-muted text-muted-foreground flex size-14 items-center justify-center rounded-2xl ring-2 ring-background">
+            <div className="bg-muted text-muted-foreground ring-background flex size-14 items-center justify-center rounded-2xl ring-2">
               <PawPrint className="size-6" />
             </div>
           )}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
-              <p className="text-sm font-semibold leading-none">
+              <p className="text-sm leading-none font-semibold">
                 {booking.petName}
               </p>
               <span
@@ -138,7 +143,7 @@ export function CheckInDialog({
             <p className="text-muted-foreground mt-0.5 text-xs">
               {booking.resourceLabel ? (
                 <>
-                  <span className="font-medium text-foreground/80">
+                  <span className="text-foreground/80 font-medium">
                     {booking.resourceLabel}
                   </span>
                   <span className="mx-1.5">·</span>
@@ -150,7 +155,7 @@ export function CheckInDialog({
         </div>
 
         <div className="space-y-4 py-1">
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors hover:bg-accent/50">
+          <label className="hover:bg-accent/50 flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors">
             <Checkbox
               checked={noShow}
               onCheckedChange={(v) => setNoShow(v === true)}

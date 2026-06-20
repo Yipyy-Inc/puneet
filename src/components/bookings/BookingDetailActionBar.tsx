@@ -157,10 +157,7 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
     (invoice?.depositCollected ?? 0) === 0;
   const remainingDue = invoice?.remainingDue ?? 0;
   const showTakePrepayment =
-    !isCancelled &&
-    !isPaid &&
-    invoice?.status !== "closed" &&
-    remainingDue > 0;
+    !isCancelled && !isPaid && invoice?.status !== "closed" && remainingDue > 0;
   const showMarkAsReady =
     booking.status === "confirmed" ||
     booking.status === "pending" ||
@@ -210,7 +207,7 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
             size="lg"
             onClick={primary.onClick}
             className={cn(
-              "h-11 flex-1 gap-2 text-sm font-semibold sm:flex-none sm:min-w-[240px]",
+              "h-11 flex-1 gap-2 text-sm font-semibold sm:min-w-[240px] sm:flex-none",
               primary.tone === "emerald" &&
                 "bg-emerald-600 hover:bg-emerald-700",
             )}
@@ -271,11 +268,7 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5 text-xs"
-            >
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
               <Send className="size-3.5" />
               Send
               <ChevronDown className="size-3" />
@@ -295,11 +288,7 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5 text-xs"
-            >
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
               <Printer className="size-3.5" />
               Print
               <ChevronDown className="size-3" />
@@ -461,7 +450,7 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="text-muted-foreground hover:text-amber-700 hover:bg-amber-50 h-7 gap-1.5 text-[11px]"
+              className="text-muted-foreground h-7 gap-1.5 text-[11px] hover:bg-amber-50 hover:text-amber-700"
               onClick={() =>
                 requestConfirm({
                   title: "Mark as no-show?",

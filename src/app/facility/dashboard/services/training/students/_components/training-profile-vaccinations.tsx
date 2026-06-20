@@ -119,10 +119,7 @@ export function TrainingProfileVaccinations({
   petName,
   ownerId,
 }: Props) {
-  const todayISO = useMemo(
-    () => new Date().toISOString().split("T")[0],
-    [],
-  );
+  const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
   const { data: allVaccinations = [] } = useQuery(
     trainingQueries.vaccinations(),
   );
@@ -177,11 +174,7 @@ export function TrainingProfileVaccinations({
 
   const petProfileHref = `/facility/dashboard/clients/${ownerId}/pets/${petId}`;
   const overallTone: VaccineState =
-    counts.expired > 0
-      ? "expired"
-      : counts.expiring > 0
-        ? "expiring"
-        : "ok";
+    counts.expired > 0 ? "expired" : counts.expiring > 0 ? "expiring" : "ok";
   const overallMeta = STATE_META[overallTone];
   const OverallIcon = overallMeta.Icon;
 
@@ -293,9 +286,7 @@ export function TrainingProfileVaccinations({
             const { record, state, daysUntilExpiry } = row;
             const meta = STATE_META[state];
             const StateIcon = meta.Icon;
-            const review = record.status
-              ? REVIEW_META[record.status]
-              : null;
+            const review = record.status ? REVIEW_META[record.status] : null;
             return (
               <li
                 key={record.id}
@@ -347,7 +338,10 @@ export function TrainingProfileVaccinations({
                         {review && (
                           <Badge
                             variant="outline"
-                            className={cn("gap-1 border text-[10px]", review.cls)}
+                            className={cn(
+                              "gap-1 border text-[10px]",
+                              review.cls,
+                            )}
                             title="Document review status from the pet profile."
                           >
                             {review.label}
@@ -360,7 +354,7 @@ export function TrainingProfileVaccinations({
                       <span className="inline-flex items-center gap-1">
                         <CalendarDays className="size-3" />
                         Administered{" "}
-                        <span className="text-slate-700 font-semibold">
+                        <span className="font-semibold text-slate-700">
                           {formatDate(record.administeredDate)}
                         </span>
                       </span>

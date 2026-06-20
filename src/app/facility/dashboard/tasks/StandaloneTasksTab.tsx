@@ -29,7 +29,13 @@ import {
   Phone,
   AlertTriangle,
 } from "lucide-react";
-import { standaloneTasks, type StandaloneTask, type WorkTaskCategory, type WorkTaskPriority, type WorkTaskStatus } from "@/data/work-tasks";
+import {
+  standaloneTasks,
+  type StandaloneTask,
+  type WorkTaskCategory,
+  type WorkTaskPriority,
+  type WorkTaskStatus,
+} from "@/data/work-tasks";
 import { TaskWizard } from "./TaskWizard";
 import { toast } from "sonner";
 import { ClickableStatCard } from "@/components/ui/ClickableStatCard";
@@ -120,7 +126,9 @@ function CompleteDialog({
             <div className="bg-muted/30 rounded-lg border p-3">
               <p className="text-sm font-semibold">{task.title}</p>
               {task.description && (
-                <p className="text-muted-foreground mt-0.5 text-xs">{task.description}</p>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  {task.description}
+                </p>
               )}
               <div className="text-muted-foreground mt-2 flex items-center gap-3 text-[11px]">
                 <span className="flex items-center gap-1">
@@ -137,7 +145,9 @@ function CompleteDialog({
             {task.requiresPhoto && (
               <div className="rounded-lg border-2 border-dashed p-6 text-center">
                 <Camera className="text-muted-foreground mx-auto mb-2 size-7" />
-                <p className="text-muted-foreground text-sm">Photo proof required</p>
+                <p className="text-muted-foreground text-sm">
+                  Photo proof required
+                </p>
                 <Button variant="outline" size="sm" className="mt-2">
                   Upload Photo
                 </Button>
@@ -153,8 +163,9 @@ function CompleteDialog({
               />
             </div>
             {task.requiresSignoff && (
-              <p className="bg-amber-50 rounded-lg border border-amber-200 px-3 py-2 text-xs text-amber-700">
-                This task requires manager sign-off. It will be marked pending review.
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                This task requires manager sign-off. It will be marked pending
+                review.
               </p>
             )}
           </div>
@@ -183,11 +194,18 @@ export function StandaloneTasksTab() {
   const today = new Date().toISOString().slice(0, 10);
 
   const dueTodayCount = standaloneTasks.filter(
-    (t) => t.dueDate === today && t.status !== "completed" && t.status !== "cancelled",
+    (t) =>
+      t.dueDate === today &&
+      t.status !== "completed" &&
+      t.status !== "cancelled",
   ).length;
   const overdueCount = standaloneTasks.filter(isOverdue).length;
-  const pendingCount = standaloneTasks.filter((t) => t.status === "pending").length;
-  const completedCount = standaloneTasks.filter((t) => t.status === "completed").length;
+  const pendingCount = standaloneTasks.filter(
+    (t) => t.status === "pending",
+  ).length;
+  const completedCount = standaloneTasks.filter(
+    (t) => t.status === "completed",
+  ).length;
 
   const data: ExtendedTask[] = standaloneTasks as ExtendedTask[];
 
@@ -218,12 +236,20 @@ export function StandaloneTasksTab() {
             {isOverdue(t as StandaloneTask) && (
               <span className="size-1.5 shrink-0 rounded-full bg-red-500" />
             )}
-            <span className={cn("font-medium", t.status === "completed" && "line-through text-muted-foreground")}>
+            <span
+              className={cn(
+                "font-medium",
+                t.status === "completed" &&
+                  "text-muted-foreground line-through",
+              )}
+            >
               {t.title}
             </span>
           </div>
           {t.description && (
-            <p className="text-muted-foreground line-clamp-1 text-xs">{t.description as string}</p>
+            <p className="text-muted-foreground line-clamp-1 text-xs">
+              {t.description as string}
+            </p>
           )}
         </div>
       ),
@@ -252,7 +278,10 @@ export function StandaloneTasksTab() {
       defaultVisible: true,
       render: (t) => (
         <Badge
-          className={cn("px-1.5 py-0 text-[10px]", CATEGORY_COLORS[t.category as WorkTaskCategory])}
+          className={cn(
+            "px-1.5 py-0 text-[10px]",
+            CATEGORY_COLORS[t.category as WorkTaskCategory],
+          )}
           variant="secondary"
         >
           {(t.category as string).replace("-", " ")}
@@ -265,7 +294,10 @@ export function StandaloneTasksTab() {
       defaultVisible: true,
       render: (t) => (
         <Badge
-          className={cn("px-1.5 py-0 text-[10px]", PRIORITY_COLORS[t.priority as WorkTaskPriority])}
+          className={cn(
+            "px-1.5 py-0 text-[10px]",
+            PRIORITY_COLORS[t.priority as WorkTaskPriority],
+          )}
           variant="secondary"
         >
           {t.priority as string}
@@ -280,7 +312,9 @@ export function StandaloneTasksTab() {
       render: (t) => {
         const overdue = isOverdue(t as StandaloneTask);
         return (
-          <span className={cn("text-sm", overdue && "font-semibold text-red-600")}>
+          <span
+            className={cn("text-sm", overdue && "font-semibold text-red-600")}
+          >
             {fmtDate(t.dueDate as string)}
             {t.dueTime && (
               <span className="text-muted-foreground ml-1 text-[11px]">
@@ -307,7 +341,13 @@ export function StandaloneTasksTab() {
         const status = t.status as WorkTaskStatus;
         const Icon = STATUS_ICONS[status];
         return (
-          <Badge className={cn("gap-1 px-1.5 py-0 text-[10px]", STATUS_COLORS[status])} variant="secondary">
+          <Badge
+            className={cn(
+              "gap-1 px-1.5 py-0 text-[10px]",
+              STATUS_COLORS[status],
+            )}
+            variant="secondary"
+          >
             <Icon className="size-3" />
             {status.replace("_", " ")}
           </Badge>
@@ -447,7 +487,11 @@ export function StandaloneTasksTab() {
         }}
       />
 
-      <TaskWizard open={wizardOpen} onClose={() => setWizardOpen(false)} defaultType="standalone" />
+      <TaskWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        defaultType="standalone"
+      />
       <CompleteDialog
         task={completeTask}
         open={!!completeTask}

@@ -84,10 +84,7 @@ function relativeDays(iso: string, todayISO: string): string {
 
 export function TrainingProfileReportCards({ petId, petName }: Props) {
   const queryClient = useQueryClient();
-  const todayISO = useMemo(
-    () => new Date().toISOString().split("T")[0]!,
-    [],
-  );
+  const todayISO = useMemo(() => new Date().toISOString().split("T")[0]!, []);
 
   const reportCardsQuery = trainingQueries.reportCardsForPet(petId);
   const { data: reportCards = [] } = useQuery(reportCardsQuery);
@@ -95,12 +92,12 @@ export function TrainingProfileReportCards({ petId, petName }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAssessment, setEditAssessment] = useState("");
   const [editLevel, setEditLevel] = useState<TrainingLevel>("progressing");
-  const [sendDialogCard, setSendDialogCard] = useState<TrainingReportCard | null>(
-    null,
-  );
+  const [sendDialogCard, setSendDialogCard] =
+    useState<TrainingReportCard | null>(null);
 
   const sorted = useMemo(
-    () => reportCards.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
+    () =>
+      reportCards.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
     [reportCards],
   );
 
@@ -168,11 +165,11 @@ export function TrainingProfileReportCards({ petId, petName }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 text-sm">
+      <div className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm">
         <div className="flex items-center gap-3 text-slate-700">
           <FileText className="text-muted-foreground size-4" />
           <span>
-            <span className="font-semibold tabular-nums text-slate-900">
+            <span className="font-semibold text-slate-900 tabular-nums">
               {reportCards.length}
             </span>{" "}
             report card{reportCards.length === 1 ? "" : "s"}
@@ -292,7 +289,7 @@ function ReportCardPanel({
   return (
     <li
       className={cn(
-        "overflow-hidden rounded-xl border bg-card shadow-sm",
+        "bg-card overflow-hidden rounded-xl border shadow-sm",
         isGraduation && "ring-2 ring-amber-200",
       )}
     >
@@ -334,7 +331,7 @@ function ReportCardPanel({
             )}
             <span
               className={cn(
-                "absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full ring-2 ring-white shadow-sm",
+                "absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full shadow-sm ring-2 ring-white",
                 isGraduation
                   ? "bg-amber-500 text-white"
                   : "bg-indigo-500 text-white",
@@ -406,7 +403,11 @@ function ReportCardPanel({
               <Badge
                 variant="outline"
                 className="gap-1 border-sky-200 bg-sky-50 text-[10px] text-sky-700"
-                title={card.sentAt ? `Sent ${formatDateTime(card.sentAt)}` : undefined}
+                title={
+                  card.sentAt
+                    ? `Sent ${formatDateTime(card.sentAt)}`
+                    : undefined
+                }
               >
                 <Send className="size-3" />
                 Sent
@@ -441,11 +442,11 @@ function ReportCardPanel({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider">
+              <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-medium tracking-wider uppercase">
                 <TrendingUp className="size-3" />
                 Progress
               </span>
-              <span className="font-semibold tabular-nums text-slate-800">
+              <span className="font-semibold text-slate-800 tabular-nums">
                 {card.sessionsAttended}/{card.totalSessions} sessions ·{" "}
                 {progressPct}%
               </span>
@@ -453,7 +454,7 @@ function ReportCardPanel({
             <Progress value={progressPct} className="h-2" />
           </div>
           <div className="space-y-1.5">
-            <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider">
+            <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-medium tracking-wider uppercase">
               <Users className="size-3" />
               Attendance
             </p>
@@ -493,7 +494,7 @@ function ReportCardPanel({
         {/* Session summary — verbatim from the completion log ─────────── */}
         {card.sessionSummary && (
           <div className="rounded-lg border-l-2 border-l-indigo-300 bg-indigo-50/40 px-3 py-2.5">
-            <p className="text-indigo-700 mb-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+            <p className="mb-1 inline-flex items-center gap-1 text-[10px] font-bold tracking-wider text-indigo-700 uppercase">
               <Quote className="size-3" />
               {isGraduation ? "Series wrap-up" : "Session summary"}
             </p>
@@ -506,7 +507,7 @@ function ReportCardPanel({
         {/* Exercises covered — full list with star icons ──────────────── */}
         {card.exercisesCovered.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
               <Star className="size-3" />
               Exercises covered ({card.exercisesCovered.length})
             </p>
@@ -525,7 +526,8 @@ function ReportCardPanel({
         )}
 
         {/* Exercises — top vs needs work derived view ─────────────────── */}
-        {(card.topExercises.length > 0 || card.needsWorkExercises.length > 0) && (
+        {(card.topExercises.length > 0 ||
+          card.needsWorkExercises.length > 0) && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <ExercisePanel
               title="Strongest"
@@ -547,7 +549,7 @@ function ReportCardPanel({
         {/* Assigned homework ──────────────────────────────────────────── */}
         {card.assignedHomework.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
               <BookOpen className="size-3" />
               Assigned homework
             </p>
@@ -576,16 +578,13 @@ function ReportCardPanel({
         {/* Session photos ─────────────────────────────────────────────── */}
         {card.photos.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
               <Camera className="size-3" />
               Photos ({card.photos.length})
             </p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {card.photos.map((photo, idx) => (
-                <figure
-                  key={`${card.id}-photo-${idx}`}
-                  className="space-y-1"
-                >
+                <figure key={`${card.id}-photo-${idx}`} className="space-y-1">
                   <div className="relative aspect-square overflow-hidden rounded-lg bg-slate-100">
                     <Image
                       src={photo.url}
@@ -610,7 +609,7 @@ function ReportCardPanel({
         {/* Progress narrative — auto-drafted arc ──────────────────────── */}
         {card.progressNarrative && (
           <div className="rounded-lg border bg-slate-50/40 px-3 py-2.5">
-            <p className="text-muted-foreground mb-1 text-[10px] font-bold uppercase tracking-wider">
+            <p className="text-muted-foreground mb-1 text-[10px] font-bold tracking-wider uppercase">
               Progression arc
             </p>
             <p className="text-[13px]/relaxed text-slate-700">
@@ -621,14 +620,14 @@ function ReportCardPanel({
 
         {/* Overall assessment + Training Level ────────────────────────── */}
         <div className="space-y-1.5">
-          <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+          <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
             <Award className="size-3" />
             Overall assessment
           </p>
           {isEditing ? (
             <div className="space-y-2.5">
               <div className="space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                <p className="text-[10px] font-bold tracking-wider text-slate-600 uppercase">
                   Training level
                 </p>
                 <div className="flex flex-wrap gap-1">
@@ -658,7 +657,7 @@ function ReportCardPanel({
                 </p>
               </div>
               <div className="space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                <p className="text-[10px] font-bold tracking-wider text-slate-600 uppercase">
                   Assessment (1-2 sentences)
                 </p>
                 <Textarea
@@ -764,9 +763,7 @@ function ReportCardPanel({
               Delivered{" "}
               {card.sentAt ? `· ${relativeDays(card.sentAt, todayISO)}` : ""}
               <ChevronRight className="size-3" />
-              {card.viewedByOwner
-                ? "Owner has read it"
-                : "Awaiting owner read"}
+              {card.viewedByOwner ? "Owner has read it" : "Awaiting owner read"}
             </span>
           )}
         </div>
@@ -783,7 +780,10 @@ function StarRow({ value, count }: { value: number; count: number }) {
   const hasHalf = value - full >= 0.5;
   return (
     <span className="inline-flex shrink-0 items-center gap-1 tabular-nums">
-      <span className="inline-flex items-center" aria-label={`${value} out of 5 stars`}>
+      <span
+        className="inline-flex items-center"
+        aria-label={`${value} out of 5 stars`}
+      >
         {Array.from({ length: 5 }).map((_, i) => {
           const filled = i < full;
           const half = !filled && i === full && hasHalf;
@@ -844,7 +844,7 @@ function ExercisePanel({
     <div className="rounded-lg border bg-white px-3 py-2.5">
       <p
         className={cn(
-          "mb-1.5 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider",
+          "mb-1.5 inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase",
           toneCls,
         )}
       >

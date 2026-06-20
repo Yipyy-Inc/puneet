@@ -26,7 +26,10 @@ interface InstantBookingCardProps {
   hasAny: boolean;
 }
 
-export function InstantBookingCard({ summary, hasAny }: InstantBookingCardProps) {
+export function InstantBookingCard({
+  summary,
+  hasAny,
+}: InstantBookingCardProps) {
   return (
     <Card className="border-amber-200/70">
       <CardHeader>
@@ -59,9 +62,7 @@ export function InstantBookingCard({ summary, hasAny }: InstantBookingCardProps)
                 key={s.key}
                 className={cn(
                   "flex items-center justify-between rounded-lg border p-3",
-                  enabled
-                    ? "border-amber-200 bg-amber-50/40"
-                    : "bg-muted/20",
+                  enabled ? "border-amber-200 bg-amber-50/40" : "bg-muted/20",
                 )}
               >
                 <div className="flex items-center gap-2">

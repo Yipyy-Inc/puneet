@@ -92,12 +92,18 @@ const SCHEDULING_LABEL: Record<string, string> = {
 
 function formatPrice(addon: ServiceAddOn): string {
   switch (addon.pricingType) {
-    case "flat": return `$${addon.price}`;
-    case "per_day": return `$${addon.price}/day`;
-    case "per_session": return `$${addon.price}/${addon.unitLabel || "session"}`;
-    case "per_hour": return `$${addon.price}/${addon.unitLabel || "hr"}`;
-    case "per_item": return `$${addon.price}/${addon.unitLabel || "item"}`;
-    case "percentage_of_booking": return `${addon.price}% of booking`;
+    case "flat":
+      return `$${addon.price}`;
+    case "per_day":
+      return `$${addon.price}/day`;
+    case "per_session":
+      return `$${addon.price}/${addon.unitLabel || "session"}`;
+    case "per_hour":
+      return `$${addon.price}/${addon.unitLabel || "hr"}`;
+    case "per_item":
+      return `$${addon.price}/${addon.unitLabel || "item"}`;
+    case "percentage_of_booking":
+      return `${addon.price}% of booking`;
   }
 }
 
@@ -227,7 +233,9 @@ export function AddOnsManager({ serviceFilter }: AddOnsManagerProps = {}) {
 
   // Filtered + grouped
   const filtered = addOns
-    .filter((a) => !serviceFilter || a.applicableServices.includes(serviceFilter))
+    .filter(
+      (a) => !serviceFilter || a.applicableServices.includes(serviceFilter),
+    )
     .filter((a) => !filterCat || a.category === filterCat)
     .filter(
       (a) => !search || a.name.toLowerCase().includes(search.toLowerCase()),
@@ -330,7 +338,7 @@ export function AddOnsManager({ serviceFilter }: AddOnsManagerProps = {}) {
               "h-8 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors",
               filterCat === null
                 ? "bg-foreground text-background border-foreground"
-                : "border-transparent text-muted-foreground hover:bg-muted",
+                : "text-muted-foreground hover:bg-muted border-transparent",
             )}
           >
             All
@@ -419,7 +427,7 @@ export function AddOnsManager({ serviceFilter }: AddOnsManagerProps = {}) {
                       <div
                         key={addon.id}
                         className={cn(
-                          "group bg-card relative flex items-center gap-4 rounded-2xl border p-4 transition-all duration-200 hover:border-foreground/10 hover:shadow-sm",
+                          "group bg-card hover:border-foreground/10 relative flex items-center gap-4 rounded-2xl border p-4 transition-all duration-200 hover:shadow-sm",
                           !addon.isActive && "opacity-60",
                         )}
                       >

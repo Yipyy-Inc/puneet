@@ -52,7 +52,10 @@ import type {
 } from "@/types/rooms";
 import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
-import { KpiTile, type KpiTone } from "@/components/facility/dashboard/kpi-tile";
+import {
+  KpiTile,
+  type KpiTone,
+} from "@/components/facility/dashboard/kpi-tile";
 
 // ── Station type config ────────────────────────────────────────────────────────
 
@@ -173,7 +176,8 @@ function formatCompletion(iso?: string) {
     hour12: true,
   });
   const mins = Math.round((date.getTime() - Date.now()) / 60_000);
-  if (mins > 1) return { timeLabel, relative: `in ${mins} min`, overdue: false };
+  if (mins > 1)
+    return { timeLabel, relative: `in ${mins} min`, overdue: false };
   if (mins >= 0)
     return { timeLabel, relative: "any minute now", overdue: false };
   return {
@@ -200,8 +204,10 @@ const PET_SIZE_OPTIONS: { value: GroomingStationPetSize; label: string }[] = [
 const SIZE_BADGE_PALETTE: Record<GroomingStationPetSize, string> = {
   small: "bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300",
   medium: "bg-teal-100 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300",
-  large: "bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300",
-  giant: "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/40 dark:text-fuchsia-300",
+  large:
+    "bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300",
+  giant:
+    "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/40 dark:text-fuchsia-300",
 };
 
 /**
@@ -257,7 +263,10 @@ function PetSizeBadges({
 
 function formatRelative(iso?: string): string {
   if (!iso) return "";
-  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
+  const mins = Math.max(
+    0,
+    Math.round((Date.now() - new Date(iso).getTime()) / 60_000),
+  );
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins} min ago`;
   const hours = Math.round(mins / 60);
@@ -370,9 +379,8 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
   }>({ open: false, editing: null });
   const [form, setForm] = useState<GroomingStation>(() => blank(facilityId));
   const [view, setView] = useState<"board" | "manage">("board");
-  const [statusFilter, setStatusFilter] = useState<GroomingStationStatus | null>(
-    null,
-  );
+  const [statusFilter, setStatusFilter] =
+    useState<GroomingStationStatus | null>(null);
 
   function toggleStatusFilter(s: GroomingStationStatus) {
     setStatusFilter((prev) => (prev === s ? null : s));
@@ -424,10 +432,7 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
     } as Record<GroomingStationStatus, number>,
   );
 
-  const handleStatusChange = (
-    id: string,
-    next: GroomingStationStatus,
-  ) => {
+  const handleStatusChange = (id: string, next: GroomingStationStatus) => {
     setStationStatus(id, next);
     toast.success(`Station marked ${STATUS_META[next].label.toLowerCase()}`);
   };
@@ -448,7 +453,7 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-full border bg-card p-1 shadow-sm">
+          <div className="bg-card flex rounded-full border p-1 shadow-sm">
             {(["board", "manage"] as const).map((v) => (
               <button
                 key={v}
@@ -503,7 +508,7 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
         <button
           type="button"
           onClick={() => setStatusFilter(null)}
-          className="self-start text-xs font-medium text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground self-start text-xs font-medium"
         >
           Showing {STATUS_META[statusFilter].label.toLowerCase()} stations ·{" "}
           <span className="underline">clear filter</span>
@@ -519,79 +524,83 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
       )}
 
       {view === "manage" && (
-      <>
-      {/* Capacity stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-card rounded-xl border px-4 py-3">
-          <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-            Active Stations
-          </p>
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-            {activeCount}
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            total operational
-          </p>
-        </div>
-        <div className="bg-card rounded-xl border px-4 py-3">
-          <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-            Tables
-          </p>
-          <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">
-            {tableCount}
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            grooming tables
-          </p>
-        </div>
-        <div className="bg-card rounded-xl border px-4 py-3">
-          <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-            Tubs
-          </p>
-          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-            {tubCount}
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">bathing tubs</p>
-        </div>
-      </div>
+        <>
+          {/* Capacity stats */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-card rounded-xl border px-4 py-3">
+              <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                Active Stations
+              </p>
+              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                {activeCount}
+              </p>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                total operational
+              </p>
+            </div>
+            <div className="bg-card rounded-xl border px-4 py-3">
+              <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                Tables
+              </p>
+              <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">
+                {tableCount}
+              </p>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                grooming tables
+              </p>
+            </div>
+            <div className="bg-card rounded-xl border px-4 py-3">
+              <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                Tubs
+              </p>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {tubCount}
+              </p>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                bathing tubs
+              </p>
+            </div>
+          </div>
 
-      {/* Sections per type */}
-      {stations.length === 0 ? (
-        <EmptyGrooming
-          onAdd={() => openDialog()}
-          isMobileOnly={mobileIsActive}
-        />
-      ) : (
-        <div className="space-y-8">
-          {STATION_TYPES.map((sType) => {
-            const typeStations = stations.filter((s) => s.type === sType.value);
-            if (typeStations.length === 0) return null;
-            return (
-              <StationSection
-                key={sType.value}
-                sType={sType}
-                stations={typeStations}
-                onEdit={openDialog}
-                onToggle={toggle}
-                onDelete={remove}
-                onStatusChange={handleStatusChange}
-              />
-            );
-          })}
-        </div>
-      )}
+          {/* Sections per type */}
+          {stations.length === 0 ? (
+            <EmptyGrooming
+              onAdd={() => openDialog()}
+              isMobileOnly={mobileIsActive}
+            />
+          ) : (
+            <div className="space-y-8">
+              {STATION_TYPES.map((sType) => {
+                const typeStations = stations.filter(
+                  (s) => s.type === sType.value,
+                );
+                if (typeStations.length === 0) return null;
+                return (
+                  <StationSection
+                    key={sType.value}
+                    sType={sType}
+                    stations={typeStations}
+                    onEdit={openDialog}
+                    onToggle={toggle}
+                    onDelete={remove}
+                    onStatusChange={handleStatusChange}
+                  />
+                );
+              })}
+            </div>
+          )}
 
-      {stations.length > 0 && (
-        <Button
-          variant="outline"
-          onClick={() => openDialog()}
-          className="gap-1.5"
-        >
-          <Plus className="size-4" />
-          Add Station
-        </Button>
-      )}
-      </>
+          {stations.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => openDialog()}
+              className="gap-1.5"
+            >
+              <Plus className="size-4" />
+              Add Station
+            </Button>
+          )}
+        </>
       )}
 
       {/* Dialog */}
@@ -707,7 +716,7 @@ function StationCard({
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-xl border bg-card transition-all hover:shadow-md",
+        "group bg-card relative overflow-hidden rounded-xl border transition-all hover:shadow-md",
       )}
     >
       {/* Status accent bar — lets a manager scan a wall of cards at a glance. */}
@@ -755,7 +764,7 @@ function StationCard({
           <p className="truncate text-sm font-semibold">{station.name}</p>
           {relative && (
             <span
-              className="flex shrink-0 items-center gap-0.5 text-[10px] text-muted-foreground"
+              className="text-muted-foreground flex shrink-0 items-center gap-0.5 text-[10px]"
               title={`Status changed ${relative}`}
             >
               <Clock className="size-2.5" />
@@ -765,30 +774,31 @@ function StationCard({
         </div>
 
         {/* Occupancy info when in use */}
-        {status === "in-use" && (station.currentPetName || station.currentStylistName) && (
-          <div className="mt-2 rounded-lg bg-blue-50/70 px-2.5 py-1.5 text-[11px] text-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
-            {station.currentPetName && (
-              <p className="truncate font-semibold">
-                {station.currentPetName}
-              </p>
-            )}
-            {station.currentStylistName && (
-              <p className="truncate text-blue-700/80 dark:text-blue-300/80">
-                with {station.currentStylistName}
-              </p>
-            )}
-          </div>
-        )}
+        {status === "in-use" &&
+          (station.currentPetName || station.currentStylistName) && (
+            <div className="mt-2 rounded-lg bg-blue-50/70 px-2.5 py-1.5 text-[11px] text-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
+              {station.currentPetName && (
+                <p className="truncate font-semibold">
+                  {station.currentPetName}
+                </p>
+              )}
+              {station.currentStylistName && (
+                <p className="truncate text-blue-700/80 dark:text-blue-300/80">
+                  with {station.currentStylistName}
+                </p>
+              )}
+            </div>
+          )}
 
         <PetSizeBadges sizes={station.allowedPetSizes} className="mt-2" />
         {station.maxWeightLbs && (
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <p className="text-muted-foreground mt-1 text-[11px]">
             Max {station.maxWeightLbs} lbs
           </p>
         )}
         {station.staffNotes && (
           <p
-            className="mt-1 truncate text-[11px] text-muted-foreground"
+            className="text-muted-foreground mt-1 truncate text-[11px]"
             title={station.staffNotes}
           >
             {station.staffNotes}
@@ -853,7 +863,7 @@ function StationCard({
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 px-2 text-destructive/70 hover:text-destructive"
+              className="text-destructive/70 hover:text-destructive h-7 px-2"
               onClick={onDelete}
             >
               <Trash2 className="size-3" />
@@ -903,8 +913,9 @@ function StationBoard({
 
   if (sorted.length === 0 && statusFilter) {
     return (
-      <div className="rounded-xl border border-dashed bg-muted/20 px-6 py-10 text-center text-sm text-muted-foreground">
-        No stations are currently {STATUS_META[statusFilter].label.toLowerCase()}.
+      <div className="bg-muted/20 text-muted-foreground rounded-xl border border-dashed px-6 py-10 text-center text-sm">
+        No stations are currently{" "}
+        {STATUS_META[statusFilter].label.toLowerCase()}.
       </div>
     );
   }
@@ -955,16 +966,13 @@ function StationBoard({
             </div>
 
             {/* Station identity */}
-            <p className="mt-1.5 text-sm/tight font-extrabold truncate">
+            <p className="mt-1.5 truncate text-sm/tight font-extrabold">
               {station.name}
             </p>
-            <p className="mt-0.5 text-[10px] opacity-70 truncate">
+            <p className="mt-0.5 truncate text-[10px] opacity-70">
               {sType.label}
             </p>
-            <PetSizeBadges
-              sizes={station.allowedPetSizes}
-              className="mt-1"
-            />
+            <PetSizeBadges sizes={station.allowedPetSizes} className="mt-1" />
 
             {/* In-use details — pet + completion time */}
             {status === "in-use" && (station.currentPetName || completion) && (
@@ -1021,7 +1029,7 @@ function StationBoard({
               {status === "needs-cleaning" && (
                 <Button
                   size="sm"
-                  className="h-7 w-full gap-1 px-2 text-xs bg-emerald-600 text-white hover:bg-emerald-700"
+                  className="h-7 w-full gap-1 bg-emerald-600 px-2 text-xs text-white hover:bg-emerald-700"
                   onClick={() => onStatusChange(station.id, "available")}
                 >
                   <CheckCircle2 className="size-3" />
@@ -1031,10 +1039,8 @@ function StationBoard({
               {status === "in-use" && (
                 <Button
                   size="sm"
-                  className="h-7 w-full gap-1 px-2 text-xs bg-red-600 text-white hover:bg-red-700"
-                  onClick={() =>
-                    onStatusChange(station.id, "needs-cleaning")
-                  }
+                  className="h-7 w-full gap-1 bg-red-600 px-2 text-xs text-white hover:bg-red-700"
+                  onClick={() => onStatusChange(station.id, "needs-cleaning")}
                 >
                   <Sparkles className="size-3" />
                   Check Out
@@ -1043,7 +1049,7 @@ function StationBoard({
               {status === "out-of-service" && (
                 <Button
                   size="sm"
-                  className="h-7 w-full gap-1 px-2 text-xs bg-emerald-600 text-white hover:bg-emerald-700"
+                  className="h-7 w-full gap-1 bg-emerald-600 px-2 text-xs text-white hover:bg-emerald-700"
                   onClick={() => onStatusChange(station.id, "available")}
                 >
                   <CheckCircle2 className="size-3" />
@@ -1163,7 +1169,8 @@ function StationDialog({
                       checked={checked}
                       onCheckedChange={(c) => {
                         const current =
-                          form.allowedPetSizes && form.allowedPetSizes.length > 0
+                          form.allowedPetSizes &&
+                          form.allowedPetSizes.length > 0
                             ? form.allowedPetSizes
                             : (PET_SIZE_OPTIONS.map(
                                 (o) => o.value,
@@ -1176,8 +1183,7 @@ function StationDialog({
                           // Empty array stays as empty (no size accepted) so the
                           // staff explicitly sees the warning below; toggling all
                           // four back on cleans it to undefined = multi-purpose.
-                          allowedPetSizes:
-                            next.length === 4 ? undefined : next,
+                          allowedPetSizes: next.length === 4 ? undefined : next,
                         });
                       }}
                     />
@@ -1186,7 +1192,7 @@ function StationDialog({
                 );
               })}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {!form.allowedPetSizes || form.allowedPetSizes.length === 0
                 ? form.allowedPetSizes
                   ? "No sizes selected — this station will be hidden from bookings."
@@ -1255,11 +1261,11 @@ function EmptyGrooming({
           No stations configured for this facility
         </h3>
         <p className="text-muted-foreground mb-6 max-w-md text-sm">
-          This is a mobile-only operation — grooming happens in the vans, not
-          at fixed stations. Capacity is governed by the number of active
-          staffed vans and their daily service area schedules. Use{" "}
-          <strong>Route Planner</strong> and <strong>Live Tracking</strong>{" "}
-          to manage the day.
+          This is a mobile-only operation — grooming happens in the vans, not at
+          fixed stations. Capacity is governed by the number of active staffed
+          vans and their daily service area schedules. Use{" "}
+          <strong>Route Planner</strong> and <strong>Live Tracking</strong> to
+          manage the day.
         </p>
         <Button variant="outline" onClick={onAdd} className="gap-2">
           <Plus className="size-4" />

@@ -122,7 +122,11 @@ export function buildPointsExpiryEmail(vars: {
   const points = vars.account.pointsBalance;
   const date = new Date(
     pointsExpiryDate(vars.account, vars.expiryDays),
-  ).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  ).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
   const lead = vars.customerFirstName
     ? `Hi ${vars.customerFirstName}, your`
     : "Your";

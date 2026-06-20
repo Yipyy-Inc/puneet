@@ -87,7 +87,9 @@ export function NotificationSettingsEditor({
 
                   {row.key === "rewardExpiry" && (
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Warn this many days before</Label>
+                      <Label className="text-xs">
+                        Warn this many days before
+                      </Label>
                       <div className="flex items-center gap-2">
                         <Input
                           type="number"

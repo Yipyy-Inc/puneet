@@ -36,13 +36,28 @@ function StarRow({ rating }: { rating: number }) {
 
 function PlatformBadge({ platform }: { platform: string }) {
   const cfg: Record<string, { label: string; color: string }> = {
-    google: { label: "Google", color: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300" },
-    facebook: { label: "Facebook", color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300" },
-    yelp: { label: "Yelp", color: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300" },
+    google: {
+      label: "Google",
+      color: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+    },
+    facebook: {
+      label: "Facebook",
+      color:
+        "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
+    },
+    yelp: {
+      label: "Yelp",
+      color: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+    },
   };
-  const c = cfg[platform] ?? { label: platform, color: "bg-muted text-muted-foreground" };
+  const c = cfg[platform] ?? {
+    label: platform,
+    color: "bg-muted text-muted-foreground",
+  };
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${c.color}`}>
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${c.color}`}
+    >
       <Globe className="h-2.5 w-2.5" />
       {c.label}
     </span>
@@ -60,7 +75,7 @@ function ReviewCard({
 }) {
   return (
     <div
-      className={`flex flex-col gap-2.5 rounded-xl border bg-card p-3.5 transition-all hover:shadow-sm ${
+      className={`bg-card flex flex-col gap-2.5 rounded-xl border p-3.5 transition-all hover:shadow-sm ${
         req.isPubliclyDisplayed
           ? "border-emerald-300 dark:border-emerald-800"
           : ""
@@ -69,11 +84,11 @@ function ReviewCard({
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/40 text-xs font-bold text-primary">
+          <div className="from-primary/20 to-primary/40 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold">
             {req.clientName.charAt(0)}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-xs font-semibold leading-none">
+            <p className="truncate text-xs leading-none font-semibold">
               {req.clientName}
             </p>
             <p className="text-muted-foreground mt-0.5 truncate text-[10px]">
@@ -102,7 +117,7 @@ function ReviewCard({
       </div>
 
       {/* Comment */}
-      <p className="text-muted-foreground line-clamp-3 flex-1 text-xs italic leading-relaxed">
+      <p className="text-muted-foreground line-clamp-3 flex-1 text-xs leading-relaxed italic">
         &quot;{req.clientComment}&quot;
       </p>
 
@@ -148,17 +163,18 @@ function ReviewRow({
 }) {
   return (
     <div
-      className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-all hover:bg-muted/30
-      ${req.isPubliclyDisplayed ? "border-emerald-200 bg-emerald-50/30 dark:border-emerald-800 dark:bg-emerald-950/10" : "bg-card"}`}
+      className={`hover:bg-muted/30 flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-all ${req.isPubliclyDisplayed ? "border-emerald-200 bg-emerald-50/30 dark:border-emerald-800 dark:bg-emerald-950/10" : "bg-card"}`}
     >
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/40 text-xs font-bold text-primary">
+      <div className="from-primary/20 to-primary/40 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold">
         {req.clientName.charAt(0)}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
           <p className="text-xs font-semibold">{req.clientName}</p>
           <StarRow rating={req.rating!} />
-          {req.publicPlatform && <PlatformBadge platform={req.publicPlatform} />}
+          {req.publicPlatform && (
+            <PlatformBadge platform={req.publicPlatform} />
+          )}
         </div>
         <p className="text-muted-foreground mt-0.5 truncate text-[11px] italic">
           &quot;{req.clientComment}&quot;
@@ -200,50 +216,102 @@ export function ReputationPublicReviewsTab() {
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
 
   const eligible = useMemo(
-    () => requests.filter((r) => r.isApprovedForPublicDisplay && r.rating && r.rating >= 4 && r.clientComment),
-    [requests]
+    () =>
+      requests.filter(
+        (r) =>
+          r.isApprovedForPublicDisplay &&
+          r.rating &&
+          r.rating >= 4 &&
+          r.clientComment,
+      ),
+    [requests],
   );
 
   const pending = useMemo(
-    () => requests.filter((r) => !r.isApprovedForPublicDisplay && r.rating && r.rating >= 4 && r.clientComment),
-    [requests]
+    () =>
+      requests.filter(
+        (r) =>
+          !r.isApprovedForPublicDisplay &&
+          r.rating &&
+          r.rating >= 4 &&
+          r.clientComment,
+      ),
+    [requests],
   );
 
-  const displayed = eligible.filter((r) => overrides[r.id] !== undefined ? overrides[r.id] : r.isPubliclyDisplayed);
-  const notDisplayed = eligible.filter((r) => !(overrides[r.id] !== undefined ? overrides[r.id] : r.isPubliclyDisplayed));
+  const displayed = eligible.filter((r) =>
+    overrides[r.id] !== undefined ? overrides[r.id] : r.isPubliclyDisplayed,
+  );
+  const notDisplayed = eligible.filter(
+    (r) =>
+      !(overrides[r.id] !== undefined
+        ? overrides[r.id]
+        : r.isPubliclyDisplayed),
+  );
 
   const visible = showLiveOnly ? displayed : eligible;
 
   function toggleDisplay(id: string) {
-    const current = overrides[id] !== undefined ? overrides[id] : eligible.find((r) => r.id === id)?.isPubliclyDisplayed ?? false;
+    const current =
+      overrides[id] !== undefined
+        ? overrides[id]
+        : (eligible.find((r) => r.id === id)?.isPubliclyDisplayed ?? false);
     setOverrides((prev) => ({ ...prev, [id]: !current }));
   }
 
   const isLive = (req: ReputationRequest) =>
-    overrides[req.id] !== undefined ? overrides[req.id] : req.isPubliclyDisplayed;
+    overrides[req.id] !== undefined
+      ? overrides[req.id]
+      : req.isPubliclyDisplayed;
 
   return (
     <div className="space-y-6">
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
-          { label: "Eligible", value: eligible.length, icon: ThumbsUp, color: "text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-300" },
-          { label: "Live", value: displayed.length, icon: Eye, color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/15 dark:text-emerald-300" },
-          { label: "Approved, hidden", value: notDisplayed.length, icon: CheckCircle2, color: "text-amber-600 bg-amber-50 dark:bg-amber-500/15 dark:text-amber-300" },
-          { label: "Pending", value: pending.length, icon: Clock, color: "text-purple-600 bg-purple-50 dark:bg-purple-500/15 dark:text-purple-300" },
+          {
+            label: "Eligible",
+            value: eligible.length,
+            icon: ThumbsUp,
+            color:
+              "text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-300",
+          },
+          {
+            label: "Live",
+            value: displayed.length,
+            icon: Eye,
+            color:
+              "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/15 dark:text-emerald-300",
+          },
+          {
+            label: "Approved, hidden",
+            value: notDisplayed.length,
+            icon: CheckCircle2,
+            color:
+              "text-amber-600 bg-amber-50 dark:bg-amber-500/15 dark:text-amber-300",
+          },
+          {
+            label: "Pending",
+            value: pending.length,
+            icon: Clock,
+            color:
+              "text-purple-600 bg-purple-50 dark:bg-purple-500/15 dark:text-purple-300",
+          },
         ].map((s) => (
           <div
             key={s.label}
-            className="flex items-center gap-2.5 rounded-xl border bg-card px-3 py-2.5"
+            className="bg-card flex items-center gap-2.5 rounded-xl border px-3 py-2.5"
           >
-            <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${s.color}`}>
+            <div
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${s.color}`}
+            >
               <s.icon className="h-3.5 w-3.5" />
             </div>
             <div className="min-w-0">
-              <p className="text-muted-foreground text-[10px] uppercase tracking-wide leading-none">
+              <p className="text-muted-foreground text-[10px] leading-none tracking-wide uppercase">
                 {s.label}
               </p>
-              <p className="mt-1 text-lg font-bold tabular-nums leading-none">
+              <p className="mt-1 text-lg leading-none font-bold tabular-nums">
                 {s.value}
               </p>
             </div>
@@ -264,9 +332,9 @@ export function ReputationPublicReviewsTab() {
             {pending.map((req) => (
               <div
                 key={req.id}
-                className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2"
+                className="bg-background flex items-center gap-2.5 rounded-lg border px-3 py-2"
               >
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/40 text-xs font-bold text-primary">
+                <div className="from-primary/20 to-primary/40 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold">
                   {req.clientName.charAt(0)}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -306,7 +374,7 @@ export function ReputationPublicReviewsTab() {
           <Button
             variant={showLiveOnly ? "default" : "outline"}
             size="sm"
-            className="h-8 text-xs gap-1"
+            className="h-8 gap-1 text-xs"
             onClick={() => setShowLiveOnly((v) => !v)}
           >
             <Eye className="h-3.5 w-3.5" />
@@ -337,22 +405,33 @@ export function ReputationPublicReviewsTab() {
       {viewMode === "grid" ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((req) => (
-            <ReviewCard key={req.id} req={{ ...req, isPubliclyDisplayed: isLive(req) }} onToggleDisplay={toggleDisplay} />
+            <ReviewCard
+              key={req.id}
+              req={{ ...req, isPubliclyDisplayed: isLive(req) }}
+              onToggleDisplay={toggleDisplay}
+            />
           ))}
         </div>
       ) : (
         <div className="space-y-2">
           {visible.map((req) => (
-            <ReviewRow key={req.id} req={{ ...req, isPubliclyDisplayed: isLive(req) }} onToggleDisplay={toggleDisplay} />
+            <ReviewRow
+              key={req.id}
+              req={{ ...req, isPubliclyDisplayed: isLive(req) }}
+              onToggleDisplay={toggleDisplay}
+            />
           ))}
         </div>
       )}
 
       {eligible.length === 0 && (
-        <div className="py-20 text-center text-muted-foreground">
-          <Globe className="h-10 w-10 mx-auto mb-3 opacity-20" />
+        <div className="text-muted-foreground py-20 text-center">
+          <Globe className="mx-auto mb-3 h-10 w-10 opacity-20" />
           <p className="text-sm font-medium">No approved reviews yet</p>
-          <p className="text-xs mt-1">Once clients rate their experience 4 or 5 stars, you&#39;ll be able to approve and display them here.</p>
+          <p className="mt-1 text-xs">
+            Once clients rate their experience 4 or 5 stars, you&#39;ll be able
+            to approve and display them here.
+          </p>
         </div>
       )}
 
@@ -363,8 +442,8 @@ export function ReputationPublicReviewsTab() {
           <span className="text-foreground font-medium">
             Booking page showcase
           </span>{" "}
-          — Reviews set to &quot;Live&quot; appear on your public booking page. Only
-          reviews with a written comment are eligible.
+          — Reviews set to &quot;Live&quot; appear on your public booking page.
+          Only reviews with a written comment are eligible.
         </div>
       </div>
     </div>

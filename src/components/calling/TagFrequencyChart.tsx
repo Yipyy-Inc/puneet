@@ -43,7 +43,9 @@ export function TagFrequencyChart({
   const spikes = showCompare
     ? present.filter((x) => isSpike(x.count, x.prev))
     : [];
-  const topSpike = spikes.sort((a, b) => b.count - b.prev - (a.count - a.prev))[0];
+  const topSpike = spikes.sort(
+    (a, b) => b.count - b.prev - (a.count - a.prev),
+  )[0];
 
   return (
     <Card>
@@ -52,8 +54,9 @@ export function TagFrequencyChart({
           <Tags className="size-4 text-pink-600" />
           Call Tag Frequency
         </CardTitle>
-        <p className="text-xs text-muted-foreground">
-          How often each category is tagged — a spike signals an issue to act on.
+        <p className="text-muted-foreground text-xs">
+          How often each category is tagged — a spike signals an issue to act
+          on.
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -61,15 +64,15 @@ export function TagFrequencyChart({
           <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50/70 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
             <span>
-              Spike detected:{" "}
-              <strong>{topSpike.tag.name}</strong> is up to {topSpike.count} this
-              period (from {topSpike.prev} {comparisonLabel}). Worth a look.
+              Spike detected: <strong>{topSpike.tag.name}</strong> is up to{" "}
+              {topSpike.count} this period (from {topSpike.prev}{" "}
+              {comparisonLabel}). Worth a look.
             </span>
           </div>
         )}
 
         {present.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
+          <p className="text-muted-foreground py-6 text-center text-sm">
             No tagged calls in this period.
           </p>
         ) : (
@@ -93,7 +96,7 @@ export function TagFrequencyChart({
                     <span className="font-semibold tabular-nums">{count}</span>
                     {showCompare && (
                       <span
-                        className="flex w-20 items-center justify-end gap-0.5 text-xs tabular-nums text-muted-foreground"
+                        className="text-muted-foreground flex w-20 items-center justify-end gap-0.5 text-xs tabular-nums"
                         title={`${count} this period vs ${prev} ${comparisonLabel}`}
                       >
                         {delta > 0 ? (
@@ -107,7 +110,7 @@ export function TagFrequencyChart({
                     )}
                   </span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
                   <div
                     className={cn("h-2 rounded-full transition-all", c.solid)}
                     style={{ width: `${(count / max) * 100}%` }}

@@ -46,8 +46,7 @@ export function OpenDayDialog({
   const symbol = currency === "CAD" ? "CA$" : "$";
 
   const floatTotal = useMemo(
-    () =>
-      denominations.reduce((s, d) => s + d.value * (counts[d.id] ?? 0), 0),
+    () => denominations.reduce((s, d) => s + d.value * (counts[d.id] ?? 0), 0),
     [denominations, counts],
   );
 
@@ -94,7 +93,7 @@ export function OpenDayDialog({
 
         <div className="space-y-4">
           {priorClosingTotal !== undefined && (
-            <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-sm">
+            <div className="bg-muted/30 rounded-md border border-dashed px-3 py-2 text-sm">
               <span className="text-muted-foreground">
                 Yesterday&apos;s drawer ended at{" "}
               </span>
@@ -118,7 +117,7 @@ export function OpenDayDialog({
 
           <div className="flex items-center justify-between rounded-md border bg-amber-50/60 px-3 py-2.5">
             <span className="text-sm font-medium">Opening float</span>
-            <span className="text-lg font-bold tabular-nums text-amber-700">
+            <span className="text-lg font-bold text-amber-700 tabular-nums">
               {symbol}
               {floatTotal.toFixed(2)}
             </span>

@@ -1,7 +1,4 @@
-import type {
-  CustomerLoyaltyAccount,
-  RedemptionRecord,
-} from "@/types/loyalty";
+import type { CustomerLoyaltyAccount, RedemptionRecord } from "@/types/loyalty";
 
 /**
  * Pure program-performance metrics for the Loyalty tab banner: revenue retained
@@ -76,7 +73,8 @@ function rebookedWithinWindow(times: number[]): boolean {
   if (times.length < 2) return false;
   const sorted = [...times].sort((a, b) => a - b);
   for (let i = 1; i < sorted.length; i++) {
-    if (sorted[i] - sorted[i - 1] <= RETENTION_WINDOW_DAYS * DAY_MS) return true;
+    if (sorted[i] - sorted[i - 1] <= RETENTION_WINDOW_DAYS * DAY_MS)
+      return true;
   }
   return false;
 }
@@ -101,7 +99,9 @@ export function computeProgramPerformance(input: {
     ) / 100;
 
   const totalMembers = input.accounts.length;
-  const redeemedCustomerIds = new Set(monthRedemptions.map((r) => r.customerId));
+  const redeemedCustomerIds = new Set(
+    monthRedemptions.map((r) => r.customerId),
+  );
   const membersRedeemed = input.accounts.filter((a) =>
     redeemedCustomerIds.has(a.customerId),
   ).length;

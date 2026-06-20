@@ -54,7 +54,7 @@ function VariableChips({ onInsert }: { onInsert: (token: string) => void }) {
           onDragStart={(e) => e.dataTransfer.setData("text/plain", v.token)}
           onClick={() => onInsert(v.token)}
           title={`${v.label} — ${v.description}`}
-          className="bg-muted hover:bg-amber-100 dark:hover:bg-amber-950/40 cursor-grab rounded-md px-2 py-1 text-[11px] font-medium transition-colors active:cursor-grabbing"
+          className="bg-muted cursor-grab rounded-md px-2 py-1 text-[11px] font-medium transition-colors hover:bg-amber-100 active:cursor-grabbing dark:hover:bg-amber-950/40"
         >
           {v.token}
         </button>
@@ -101,15 +101,9 @@ function PhonePreview({
   );
 }
 
-function EmailPreview({
-  subject,
-  body,
-}: {
-  subject: string;
-  body: string;
-}) {
+function EmailPreview({ subject, body }: { subject: string; body: string }) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card">
+    <div className="bg-card overflow-hidden rounded-xl border">
       <div className="border-b p-3">
         <div className="flex items-center gap-2">
           <div className="flex size-8 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-700">
@@ -120,7 +114,9 @@ function EmailPreview({
               {businessProfile.businessName}
             </p>
             <p className="text-muted-foreground truncate text-xs">
-              reviews@{businessProfile.website.replace(/^https?:\/\//, "") || "yourbusiness.com"}
+              reviews@
+              {businessProfile.website.replace(/^https?:\/\//, "") ||
+                "yourbusiness.com"}
             </p>
           </div>
           <span className="text-muted-foreground ml-auto shrink-0 text-xs">
@@ -131,7 +127,7 @@ function EmailPreview({
           {renderTemplate(subject) || "(no subject)"}
         </p>
       </div>
-      <div className="text-foreground whitespace-pre-line p-3 text-sm leading-relaxed">
+      <div className="text-foreground p-3 text-sm leading-relaxed whitespace-pre-line">
         {renderTemplate(body) || "Your email body preview appears here…"}
       </div>
     </div>
@@ -153,14 +149,19 @@ export function ReputationMessageBuilder() {
 
   const step = steps.find((s) => s.id === selectedId) ?? steps[0];
 
-  const localization = settings.localization ?? { enabled: false, locales: ["en"] };
+  const localization = settings.localization ?? {
+    enabled: false,
+    locales: ["en"],
+  };
   const locales = localization.locales.length ? localization.locales : ["en"];
   const baseLocale = locales[0];
   const locale =
     localization.enabled && locales.includes(activeLocale)
       ? activeLocale
       : baseLocale;
-  const available = Object.keys(LOCALE_LABELS).filter((c) => !locales.includes(c));
+  const available = Object.keys(LOCALE_LABELS).filter(
+    (c) => !locales.includes(c),
+  );
 
   function patchStep(patch: Partial<ReputationSequenceStep>) {
     patchSettings({
@@ -179,7 +180,7 @@ export function ReputationMessageBuilder() {
           emailSubject: step.emailSubject,
           emailBody: step.emailBody,
         }
-      : step.localized?.[locale] ?? {};
+      : (step.localized?.[locale] ?? {});
 
   function patchContent(patch: {
     smsBody?: string;
@@ -208,7 +209,7 @@ export function ReputationMessageBuilder() {
     <div className="grid gap-4 lg:grid-cols-[230px_minmax(0,1fr)_340px]">
       {/* Column 1 — Sequence & channel sidebar */}
       <div className="space-y-3">
-        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
           Touchpoints
         </p>
         <div className="space-y-1.5">
@@ -227,7 +228,7 @@ export function ReputationMessageBuilder() {
                     : "hover:bg-muted/50",
                 )}
               >
-                <p className="text-sm font-medium leading-tight">
+                <p className="text-sm leading-tight font-medium">
                   {touchpointLabel(i)}
                 </p>
                 <p className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
@@ -235,7 +236,10 @@ export function ReputationMessageBuilder() {
                   {s.channel.toUpperCase()}
                   <span className="opacity-50">·</span>
                   <Clock className="size-3" />
-                  {describeMinutes(s.delayMinutes).replace(" after checkout", "")}
+                  {describeMinutes(s.delayMinutes).replace(
+                    " after checkout",
+                    "",
+                  )}
                 </p>
               </button>
             );
@@ -243,7 +247,9 @@ export function ReputationMessageBuilder() {
         </div>
 
         <div className="space-y-1.5 pt-1">
-          <Label className="text-muted-foreground text-xs">Delivery medium</Label>
+          <Label className="text-muted-foreground text-xs">
+            Delivery medium
+          </Label>
           <div className="grid grid-cols-2 gap-1 rounded-lg border p-1">
             {(["sms", "email"] as ReputationChannel[]).map((c) => (
               <button
@@ -270,7 +276,7 @@ export function ReputationMessageBuilder() {
       </div>
 
       {/* Column 2 — Contextual content editor */}
-      <div className="min-w-0 space-y-4 rounded-xl border bg-card p-4">
+      <div className="bg-card min-w-0 space-y-4 rounded-xl border p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold">
@@ -282,7 +288,9 @@ export function ReputationMessageBuilder() {
           </div>
           <label className="flex shrink-0 items-center gap-2">
             <Languages className="text-muted-foreground size-3.5" />
-            <span className="text-muted-foreground text-xs">Multi-language</span>
+            <span className="text-muted-foreground text-xs">
+              Multi-language
+            </span>
             <Switch
               checked={localization.enabled}
               onCheckedChange={(v) =>
@@ -304,13 +312,15 @@ export function ReputationMessageBuilder() {
                   className={cn(
                     "border-b-2 px-3 py-1.5 text-xs font-medium transition-colors",
                     code === locale
-                      ? "border-amber-500 text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground",
+                      ? "text-foreground border-amber-500"
+                      : "text-muted-foreground hover:text-foreground border-transparent",
                   )}
                 >
                   {localeLabel(code)}
                   {code === baseLocale && (
-                    <span className="text-muted-foreground/70 ml-1">(default)</span>
+                    <span className="text-muted-foreground/70 ml-1">
+                      (default)
+                    </span>
                   )}
                 </button>
                 {code !== baseLocale && (
@@ -323,7 +333,7 @@ export function ReputationMessageBuilder() {
                         locales: locales.filter((c) => c !== code),
                       });
                     }}
-                    className="text-muted-foreground/50 hover:text-destructive absolute -right-0.5 top-0.5"
+                    className="text-muted-foreground/50 hover:text-destructive absolute top-0.5 -right-0.5"
                     aria-label={`Remove ${localeLabel(code)}`}
                   >
                     <X className="size-3" />
@@ -352,10 +362,11 @@ export function ReputationMessageBuilder() {
         )}
 
         {localization.enabled && locales.length >= 2 && (
-          <p className="text-muted-foreground rounded-lg bg-muted/40 px-3 py-2 text-[11px]">
-            <strong>Routing:</strong> clients with a saved language preference get
-            that translation. Clients with no preference get a stacked bilingual
-            message ({locales.map(localeLabel).join(" + ")}), separated by a divider line.
+          <p className="text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 text-[11px]">
+            <strong>Routing:</strong> clients with a saved language preference
+            get that translation. Clients with no preference get a stacked
+            bilingual message ({locales.map(localeLabel).join(" + ")}),
+            separated by a divider line.
           </p>
         )}
 
@@ -369,7 +380,8 @@ export function ReputationMessageBuilder() {
               onDrop={(e) => {
                 e.preventDefault();
                 const token = e.dataTransfer.getData("text/plain");
-                if (token) patchContent({ smsBody: (content.smsBody ?? "") + token });
+                if (token)
+                  patchContent({ smsBody: (content.smsBody ?? "") + token });
               }}
               placeholder="Type your SMS… drag a variable below to insert it."
               className="min-h-32 resize-none text-sm"
@@ -412,7 +424,9 @@ export function ReputationMessageBuilder() {
               />
               <VariableChips
                 onInsert={(t) =>
-                  patchContent({ emailSubject: (content.emailSubject ?? "") + t })
+                  patchContent({
+                    emailSubject: (content.emailSubject ?? "") + t,
+                  })
                 }
               />
             </div>
@@ -426,7 +440,9 @@ export function ReputationMessageBuilder() {
                   e.preventDefault();
                   const token = e.dataTransfer.getData("text/plain");
                   if (token)
-                    patchContent({ emailBody: (content.emailBody ?? "") + token });
+                    patchContent({
+                      emailBody: (content.emailBody ?? "") + token,
+                    });
                 }}
                 placeholder="Write your email… drag variables in to personalize."
                 className="min-h-44 resize-none text-sm"
@@ -442,14 +458,15 @@ export function ReputationMessageBuilder() {
 
         <p className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
           <Sparkles className="size-3 text-amber-500" />
-          Drag a variable chip into a field, or click it to insert. Changes save automatically.
+          Drag a variable chip into a field, or click it to insert. Changes save
+          automatically.
         </p>
       </div>
 
       {/* Column 3 — Live simulator */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
             Live preview
           </p>
           {step.channel === "sms" && (

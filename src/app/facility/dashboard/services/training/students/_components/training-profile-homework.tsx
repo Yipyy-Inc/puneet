@@ -183,8 +183,7 @@ function HomeworkCard({
               </p>
               {enrollment && (
                 <p className="text-muted-foreground mt-0.5 text-[11px]">
-                  {enrollment.seriesName} · Session{" "}
-                  {homework.sessionNumber}
+                  {enrollment.seriesName} · Session {homework.sessionNumber}
                 </p>
               )}
             </div>
@@ -247,7 +246,7 @@ function HomeworkCard({
               {!isCompleted && !lastPracticed && (
                 <Badge
                   variant="outline"
-                  className="gap-1 border-slate-200 bg-slate-50 italic text-slate-500"
+                  className="gap-1 border-slate-200 bg-slate-50 text-slate-500 italic"
                   title="Owner hasn't logged any practice yet"
                 >
                   <TrendingDown className="size-3" />
@@ -390,10 +389,7 @@ export function TrainingProfileHomework({
   enrollments,
 }: Props) {
   const queryClient = useQueryClient();
-  const todayISO = useMemo(
-    () => new Date().toISOString().split("T")[0]!,
-    [],
-  );
+  const todayISO = useMemo(() => new Date().toISOString().split("T")[0]!, []);
 
   const enrollmentIds = useMemo(
     () => enrollments.map((e) => e.id),
@@ -516,11 +512,7 @@ export function TrainingProfileHomework({
             a session.
           </p>
           {canAddHomework && (
-            <Button
-              className="mt-4"
-              size="sm"
-              onClick={openAdd}
-            >
+            <Button className="mt-4" size="sm" onClick={openAdd}>
               <Plus className="mr-1.5 size-4" />
               Add homework now
             </Button>
@@ -544,11 +536,11 @@ export function TrainingProfileHomework({
   return (
     <div className="space-y-4">
       {/* Top summary strip ───────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-card px-4 py-3 text-sm">
+      <div className="bg-card flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm">
         <div className="flex items-center gap-3 text-slate-700">
           <BookOpen className="text-muted-foreground size-4" />
           <span>
-            <span className="font-semibold tabular-nums text-slate-900">
+            <span className="font-semibold text-slate-900 tabular-nums">
               {active.length}
             </span>{" "}
             active
@@ -556,7 +548,7 @@ export function TrainingProfileHomework({
           {completed.length > 0 && (
             <span className="text-muted-foreground">
               ·{" "}
-              <span className="font-semibold tabular-nums text-slate-700">
+              <span className="font-semibold text-slate-700 tabular-nums">
                 {completed.length}
               </span>{" "}
               completed
@@ -569,7 +561,11 @@ export function TrainingProfileHomework({
             Owners see this list in their portal.
           </p>
           {canAddHomework && (
-            <Button size="sm" onClick={openAdd} className="h-7 gap-1 text-[11px]">
+            <Button
+              size="sm"
+              onClick={openAdd}
+              className="h-7 gap-1 text-[11px]"
+            >
               <Plus className="size-3" />
               Add homework
             </Button>
@@ -580,7 +576,7 @@ export function TrainingProfileHomework({
       {/* Active homework ─────────────────────────────────────────────── */}
       <section className="space-y-2">
         <div className="flex items-center gap-2">
-          <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          <h3 className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
             Active homework
           </h3>
           {active.length > 0 && (
@@ -646,9 +642,7 @@ export function TrainingProfileHomework({
                   key={row.homework.id}
                   row={row}
                   todayISO={todayISO}
-                  onToggleComplete={() =>
-                    toggleHomeworkComplete(row.homework)
-                  }
+                  onToggleComplete={() => toggleHomeworkComplete(row.homework)}
                   onEdit={() => openEdit(row.homework)}
                   onMarkPracticed={() => markPracticed(row.homework)}
                   onDelete={() => setDeleting(row.homework)}

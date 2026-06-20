@@ -16,7 +16,9 @@ const monthLabel = (d: Date) =>
 const inSameMonth = (iso: string | undefined, ref: Date) => {
   if (!iso) return false;
   const d = new Date(iso);
-  return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth();
+  return (
+    d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth()
+  );
 };
 
 interface RebookAnalyticsRowProps {

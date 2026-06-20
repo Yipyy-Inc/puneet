@@ -159,7 +159,7 @@ export function TransferImpactClient({ transfers, locations }: Props) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b text-[11px] uppercase tracking-wider text-muted-foreground">
+                <tr className="text-muted-foreground border-b text-[11px] tracking-wider uppercase">
                   <th className="px-4 py-2 text-left font-semibold">
                     From ↓ / To →
                   </th>
@@ -207,13 +207,13 @@ export function TransferImpactClient({ transfers, locations }: Props) {
                           </td>
                         );
                       })}
-                      <td className="px-4 py-2.5 text-right tabular-nums font-bold">
+                      <td className="px-4 py-2.5 text-right font-bold tabular-nums">
                         {totalOut}
                       </td>
                     </tr>
                   );
                 })}
-                <tr className="border-t bg-muted/20">
+                <tr className="bg-muted/20 border-t">
                   <td className="px-4 py-2.5 text-left font-semibold">
                     Total In
                   </td>
@@ -248,7 +248,7 @@ export function TransferImpactClient({ transfers, locations }: Props) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                <tr className="text-muted-foreground border-b text-left text-[11px] tracking-wider uppercase">
                   <th className="px-4 py-2 font-semibold">Date</th>
                   <th className="px-4 py-2 font-semibold">Booking</th>
                   <th className="px-4 py-2 font-semibold">From → To</th>
@@ -283,7 +283,7 @@ export function TransferImpactClient({ transfers, locations }: Props) {
                           )}
                         </p>
                       </td>
-                      <td className="px-4 py-3 text-xs font-mono">
+                      <td className="px-4 py-3 font-mono text-xs">
                         #{t.bookingId}
                       </td>
                       <td className="px-4 py-3 text-xs">
@@ -303,13 +303,15 @@ export function TransferImpactClient({ transfers, locations }: Props) {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-xs max-w-[280px]">
-                        {t.reason ?? <span className="text-muted-foreground">—</span>}
+                      <td className="max-w-[280px] px-4 py-3 text-xs">
+                        {t.reason ?? (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-xs">{t.initiatedBy}</td>
                       <td
                         className={cn(
-                          "px-4 py-3 text-right text-xs tabular-nums font-semibold",
+                          "px-4 py-3 text-right text-xs font-semibold tabular-nums",
                           t.priceDelta > 0 && "text-emerald-600",
                           t.priceDelta < 0 && "text-rose-600",
                         )}
@@ -364,7 +366,7 @@ function StatTile({
           <Icon className="size-5" />
         </div>
         <div>
-          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+          <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
             {label}
           </p>
           <p className="text-xl font-bold tabular-nums">{value}</p>

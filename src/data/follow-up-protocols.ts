@@ -220,8 +220,7 @@ export const followUpProtocols: FollowUpProtocol[] = [
         id: "step-beh-1",
         order: 1,
         title: "Discuss at pickup",
-        description:
-          "Have an in-person conversation with the owner at pickup.",
+        description: "Have an in-person conversation with the owner at pickup.",
         instructions:
           "Privately, away from other clients. Frame this as 'helping us care for your pet better next time'.",
         daysAfterIncident: 0,
@@ -327,9 +326,7 @@ export const suggestProtocols = (
         p.severityScopes.includes(
           severity as FollowUpProtocol["severityScopes"][number],
         ) &&
-        p.typeScopes.includes(
-          type as FollowUpProtocol["typeScopes"][number],
-        ),
+        p.typeScopes.includes(type as FollowUpProtocol["typeScopes"][number]),
     )
     .sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
 };

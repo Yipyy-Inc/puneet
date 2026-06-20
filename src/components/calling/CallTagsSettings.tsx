@@ -68,14 +68,17 @@ export function CallTagsSettings() {
               <Tag className="size-4 text-pink-600" />
               Call Tags
             </CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-sm">
               Define the categories staff apply to calls. Trends per tag appear
               in Analytics.
             </p>
           </div>
           <Badge
             variant="outline"
-            className={cn("shrink-0 tabular-nums", !canAddMore && "border-amber-300 text-amber-600")}
+            className={cn(
+              "shrink-0 tabular-nums",
+              !canAddMore && "border-amber-300 text-amber-600",
+            )}
           >
             {tags.length} / {MAX_CALL_TAGS}
           </Badge>
@@ -85,7 +88,7 @@ export function CallTagsSettings() {
         {/* Tag list */}
         <div className="divide-y rounded-xl border">
           {tags.length === 0 && (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+            <p className="text-muted-foreground px-3 py-6 text-center text-sm">
               No tags yet. Add your first category below.
             </p>
           )}
@@ -95,11 +98,13 @@ export function CallTagsSettings() {
             return (
               <div key={t.id}>
                 <div className="flex items-center gap-3 px-3 py-2">
-                  <span className={cn("size-3 shrink-0 rounded-full", c.solid)} />
+                  <span
+                    className={cn("size-3 shrink-0 rounded-full", c.solid)}
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{t.name}</p>
                     {t.description && (
-                      <p className="truncate text-xs text-muted-foreground">
+                      <p className="text-muted-foreground truncate text-xs">
                         {t.description}
                       </p>
                     )}
@@ -107,7 +112,7 @@ export function CallTagsSettings() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-7 text-muted-foreground/60"
+                    className="text-muted-foreground/60 size-7"
                     onClick={() => (isEditing ? cancel() : startEdit(t.id))}
                     aria-label="Edit tag"
                   >
@@ -116,7 +121,7 @@ export function CallTagsSettings() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-7 text-muted-foreground/50 hover:text-destructive"
+                    className="text-muted-foreground/50 hover:text-destructive size-7"
                     onClick={() => removeTag(t.id)}
                     aria-label="Delete tag"
                   >
@@ -138,7 +143,7 @@ export function CallTagsSettings() {
 
         {/* Add form / button */}
         {mode === "new" ? (
-          <div className="rounded-xl border border-primary/40 bg-primary/5">
+          <div className="border-primary/40 bg-primary/5 rounded-xl border">
             <TagEditor
               draft={draft}
               setDraft={setDraft}
@@ -199,7 +204,9 @@ function TagEditor({
             className="h-8 text-sm"
             placeholder="When to use this tag"
             value={draft.description}
-            onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+            onChange={(e) =>
+              setDraft({ ...draft, description: e.target.value })
+            }
           />
         </div>
       </div>
@@ -215,9 +222,9 @@ function TagEditor({
                 type="button"
                 onClick={() => setDraft({ ...draft, color })}
                 className={cn(
-                  "flex size-6 items-center justify-center rounded-full ring-offset-2 ring-offset-background transition-all",
+                  "ring-offset-background flex size-6 items-center justify-center rounded-full ring-offset-2 transition-all",
                   c.solid,
-                  active && "ring-2 ring-foreground",
+                  active && "ring-foreground ring-2",
                 )}
                 aria-label={color}
               >
@@ -228,7 +235,12 @@ function TagEditor({
         </div>
       </div>
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" size="sm" className="gap-1.5" onClick={onCancel}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-1.5"
+          onClick={onCancel}
+        >
           <X className="size-3.5" />
           Cancel
         </Button>

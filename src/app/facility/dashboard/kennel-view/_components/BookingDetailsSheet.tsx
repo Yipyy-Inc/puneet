@@ -77,9 +77,7 @@ export function BookingDetailsSheet({
           {booking && (
             <div className="flex max-h-[90vh] flex-col">
               {/* Close button (positioned over coloured header) */}
-              <DialogPrimitive.Close
-                className="ring-offset-background focus:ring-ring absolute top-4 right-4 z-10 rounded-full bg-white/70 p-1.5 shadow-sm backdrop-blur-sm transition-opacity hover:bg-white focus:ring-2 focus:ring-offset-2 focus:outline-hidden dark:bg-black/40 dark:hover:bg-black/60"
-              >
+              <DialogPrimitive.Close className="ring-offset-background focus:ring-ring absolute top-4 right-4 z-10 rounded-full bg-white/70 p-1.5 shadow-sm backdrop-blur-sm transition-opacity hover:bg-white focus:ring-2 focus:ring-offset-2 focus:outline-hidden dark:bg-black/40 dark:hover:bg-black/60">
                 <X className="size-4" />
                 <span className="sr-only">Close</span>
               </DialogPrimitive.Close>
@@ -92,7 +90,7 @@ export function BookingDetailsSheet({
                 )}
               >
                 <div className="flex items-center gap-4 pr-8">
-                  <div className="ring-background size-20 shrink-0 overflow-hidden rounded-full ring-4 shadow-lg">
+                  <div className="ring-background size-20 shrink-0 overflow-hidden rounded-full shadow-lg ring-4">
                     {booking.petPhotoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -189,7 +187,12 @@ export function BookingDetailsSheet({
                       </div>
                     </div>
                     {booking.clientPhone && (
-                      <Button asChild variant="outline" size="sm" className="gap-1.5">
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                      >
                         <a href={`tel:${booking.clientPhone}`}>
                           <Phone className="size-3.5" />
                           Call
@@ -238,7 +241,9 @@ export function BookingDetailsSheet({
                     <div className="flex items-center gap-2">
                       <Calendar className="text-muted-foreground size-4" />
                       <div>
-                        <div className="text-sm font-medium">{booking.name}</div>
+                        <div className="text-sm font-medium">
+                          {booking.name}
+                        </div>
                         <div className="text-muted-foreground text-xs">
                           {category?.name ?? "Room"}
                         </div>
@@ -248,7 +253,9 @@ export function BookingDetailsSheet({
                       <div className="text-sm font-semibold">
                         ${booking.dailyRate}
                       </div>
-                      <div className="text-muted-foreground text-xs">/ night</div>
+                      <div className="text-muted-foreground text-xs">
+                        / night
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -269,7 +276,11 @@ export function BookingDetailsSheet({
                           <Tag className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                           <div className="flex flex-wrap gap-1">
                             {petTags.map((t) => (
-                              <Badge key={t.id} variant="outline" className="text-[10px]">
+                              <Badge
+                                key={t.id}
+                                variant="outline"
+                                className="text-[10px]"
+                              >
                                 {t.name}
                               </Badge>
                             ))}
@@ -292,7 +303,8 @@ export function BookingDetailsSheet({
                         <div className="flex items-start gap-2 text-sm">
                           <Sparkles className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                           <span>
-                            {noteCount} {noteCount === 1 ? "note" : "notes"} on file
+                            {noteCount} {noteCount === 1 ? "note" : "notes"} on
+                            file
                           </span>
                         </div>
                       )}
@@ -346,12 +358,16 @@ export function BookingDetailsSheet({
                   variant="outline"
                   size="sm"
                   disabled={isPastWeek || !booking.bookingId}
-                  onClick={() => booking.bookingId && onEdit?.(booking.bookingId)}
+                  onClick={() =>
+                    booking.bookingId && onEdit?.(booking.bookingId)
+                  }
                   className="gap-1.5"
                   asChild={!!booking.bookingId && !isPastWeek}
                 >
                   {booking.bookingId && !isPastWeek ? (
-                    <Link href={`/facility/dashboard/bookings/${booking.bookingId}`}>
+                    <Link
+                      href={`/facility/dashboard/bookings/${booking.bookingId}`}
+                    >
                       <Edit3 className="size-3.5" />
                       Edit
                     </Link>

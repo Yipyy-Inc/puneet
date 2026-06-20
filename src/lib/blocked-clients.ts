@@ -1,9 +1,7 @@
 import { clients } from "@/data/clients";
 
 export function getBlockedClientIds(): Set<number> {
-  return new Set(
-    clients.filter((c) => c.isBlocked === true).map((c) => c.id),
-  );
+  return new Set(clients.filter((c) => c.isBlocked === true).map((c) => c.id));
 }
 
 export function isClientBlocked(clientId: number | null | undefined): boolean {

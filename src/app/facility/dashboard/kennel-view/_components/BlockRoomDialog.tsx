@@ -73,8 +73,8 @@ function BlockRoomDialogBody({
           Block {roomName}
         </DialogTitle>
         <DialogDescription>
-          Mark this room unavailable for a date range — maintenance, deep
-          clean, or temporary hold. Blocked dates are excluded from occupancy
+          Mark this room unavailable for a date range — maintenance, deep clean,
+          or temporary hold. Blocked dates are excluded from occupancy
           calculations.
         </DialogDescription>
       </DialogHeader>

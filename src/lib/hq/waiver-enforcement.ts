@@ -28,9 +28,7 @@ export interface WaiverCheckResult {
   reason: string | null;
 }
 
-export function checkWaiverNeedsSigning(
-  ctx: WaiverContext,
-): WaiverCheckResult {
+export function checkWaiverNeedsSigning(ctx: WaiverContext): WaiverCheckResult {
   if (!ctx.signature) {
     return {
       needsSigning: true,

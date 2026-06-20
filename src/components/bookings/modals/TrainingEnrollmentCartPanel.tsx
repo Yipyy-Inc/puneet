@@ -39,13 +39,13 @@ function EnrollmentRow({
   onRemove?: () => void;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-lg border bg-card p-3">
-      <div className="bg-indigo-100 flex size-9 shrink-0 items-center justify-center rounded-full text-indigo-700">
+    <div className="bg-card flex items-start gap-3 rounded-lg border p-3">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
         <Dog className="size-4" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="font-semibold leading-tight">{item.petName}</span>
+          <span className="leading-tight font-semibold">{item.petName}</span>
           {badge === "current" && (
             <Badge
               variant="outline"
@@ -71,8 +71,8 @@ function EnrollmentRow({
           {item.kind === "enroll" ? (
             <span>
               {getDayName(new Date(item.startDate + "T00:00:00").getDay())}s ·{" "}
-              {formatTime12(item.startTime)} · {item.numberOfWeeks} weeks · starts{" "}
-              {formatLongDate(item.startDate)}
+              {formatTime12(item.startTime)} · {item.numberOfWeeks} weeks ·
+              starts {formatLongDate(item.startDate)}
             </span>
           ) : (
             <span>

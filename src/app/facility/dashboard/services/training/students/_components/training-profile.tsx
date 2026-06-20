@@ -4,12 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -99,10 +94,7 @@ export function TrainingProfile({ petId }: Props) {
     return raw && VALID_PROFILE_TABS.has(raw) ? raw : "overview";
   })();
 
-  const todayISO = useMemo(
-    () => new Date().toISOString().split("T")[0],
-    [],
-  );
+  const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   const { data: allEnrollments = [] } = useQuery(
     trainingQueries.allSeriesEnrollments(),
@@ -122,9 +114,7 @@ export function TrainingProfile({ petId }: Props) {
   // Pet + owner lookup — re-derived from clients data so the header shows
   // canonical info even if the enrollment row is stale. Plain locals so the
   // React Compiler can analyze them without manual memo getting in the way.
-  const owningClient = clients.find((c) =>
-    c.pets.some((p) => p.id === petId),
-  );
+  const owningClient = clients.find((c) => c.pets.some((p) => p.id === petId));
   const pet = owningClient?.pets.find((p) => p.id === petId) ?? null;
   const ownerId = owningClient?.id ?? 0;
   const ownerName = owningClient?.name ?? "";
@@ -220,7 +210,7 @@ export function TrainingProfile({ petId }: Props) {
       {/* Pet header ─────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex items-center gap-4">
-          <div className="bg-muted relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl ring-2 ring-white shadow-sm">
+          <div className="bg-muted relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-sm ring-2 ring-white">
             {pet.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -242,7 +232,7 @@ export function TrainingProfile({ petId }: Props) {
                       }`
                     : "Vaccine expiring"
                 }
-                className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-rose-500 text-white shadow-sm ring-2 ring-white"
+                className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-rose-500 text-white shadow-sm ring-2 ring-white"
               >
                 <ShieldAlert className="size-3" />
               </span>
@@ -300,19 +290,19 @@ export function TrainingProfile({ petId }: Props) {
             </p>
             <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
               <span>
-                <span className="font-semibold tabular-nums text-slate-700">
+                <span className="font-semibold text-slate-700 tabular-nums">
                   {sessionsCompleted}
                 </span>{" "}
                 sessions attended
               </span>
               <span>
-                <span className="font-semibold tabular-nums text-slate-700">
+                <span className="font-semibold text-slate-700 tabular-nums">
                   {enrollments.length}
                 </span>{" "}
                 program{enrollments.length === 1 ? "" : "s"} on file
               </span>
               <span>
-                <span className="font-semibold tabular-nums text-slate-700">
+                <span className="font-semibold text-slate-700 tabular-nums">
                   {trainerNotesForPet.length}
                 </span>{" "}
                 trainer note

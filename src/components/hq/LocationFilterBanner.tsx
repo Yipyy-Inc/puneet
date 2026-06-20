@@ -37,7 +37,9 @@ export function LocationFilterBanner() {
     >
       <span className={cn("size-2.5 shrink-0 rounded-full", s.bg)} />
       <MapPin className={cn("size-3.5 shrink-0", s.text)} />
-      <span className={cn("font-semibold", s.text)}>{currentLocation.name}</span>
+      <span className={cn("font-semibold", s.text)}>
+        {currentLocation.name}
+      </span>
       <span className="text-muted-foreground">— filtered to this location</span>
       <button
         onClick={setHQView}

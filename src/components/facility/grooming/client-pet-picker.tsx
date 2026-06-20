@@ -22,14 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  ArrowLeft,
-  Mail,
-  PawPrint,
-  Phone,
-  Plus,
-  User,
-} from "lucide-react";
+import { ArrowLeft, Mail, PawPrint, Phone, Plus, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clientQueries } from "@/lib/api/client";
 import type { Client } from "@/types/client";
@@ -82,7 +75,7 @@ function inferSizeFromWeight(w?: number): string {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+    <h3 className="text-muted-foreground mb-3 text-[11px] font-semibold tracking-wider uppercase">
       {children}
     </h3>
   );
@@ -93,7 +86,9 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
 
   const selectedClient = useMemo(
     () =>
-      value.clientId ? clients.find((c) => c.id === value.clientId) ?? null : null,
+      value.clientId
+        ? (clients.find((c) => c.id === value.clientId) ?? null)
+        : null,
     [clients, value.clientId],
   );
 
@@ -166,7 +161,9 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
       petSize: inferSizeFromWeight(p.weight),
       coatType: p.coatType ?? "",
       petAgeMonths:
-        typeof p.age === "number" ? Math.max(0, Math.round(p.age * 12)) : undefined,
+        typeof p.age === "number"
+          ? Math.max(0, Math.round(p.age * 12))
+          : undefined,
     });
     setAddingNewPet(false);
   }
@@ -225,7 +222,7 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
         <SectionHeading>Client</SectionHeading>
 
         {clientMode === "search" && (
-          <div className="rounded-lg border bg-card">
+          <div className="bg-card rounded-lg border">
             <Command shouldFilter={false}>
               <CommandInput
                 value={searchQuery}
@@ -234,14 +231,12 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
               />
               <CommandList className="max-h-64">
                 <CommandEmpty>
-                  <div className="py-3 text-center text-xs text-muted-foreground">
+                  <div className="text-muted-foreground py-3 text-center text-xs">
                     No matches.
                   </div>
                 </CommandEmpty>
                 {matched.length > 0 && (
-                  <CommandGroup
-                    heading={q ? "Matches" : "Recent clients"}
-                  >
+                  <CommandGroup heading={q ? "Matches" : "Recent clients"}>
                     {matched.map((c) => (
                       <CommandItem
                         key={c.id}
@@ -267,7 +262,7 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
                             {(c.outstandingBalance ?? 0) > 0 && (
                               <Badge
                                 variant="outline"
-                                className="h-4 border-amber-300 bg-amber-50 px-1 text-[9px] font-semibold uppercase tracking-wide text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
+                                className="h-4 border-amber-300 bg-amber-50 px-1 text-[9px] font-semibold tracking-wide text-amber-800 uppercase dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
                               >
                                 Bal ${c.outstandingBalance}
                               </Badge>
@@ -275,20 +270,20 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
                             {(c.noShowCount ?? 0) > 0 && (
                               <Badge
                                 variant="outline"
-                                className="h-4 border-red-300 bg-red-50 px-1 text-[9px] font-semibold uppercase tracking-wide text-red-800 dark:border-red-700 dark:bg-red-950/40 dark:text-red-200"
+                                className="h-4 border-red-300 bg-red-50 px-1 text-[9px] font-semibold tracking-wide text-red-800 uppercase dark:border-red-700 dark:bg-red-950/40 dark:text-red-200"
                               >
                                 No-show ×{c.noShowCount}
                               </Badge>
                             )}
                           </div>
-                          <p className="truncate text-[11px] text-muted-foreground">
+                          <p className="text-muted-foreground truncate text-[11px]">
                             {c.phone ?? "no phone"}
                             {c.lastVisitDate
                               ? ` · Last visit ${new Date(c.lastVisitDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
                               : " · No prior visits"}
                           </p>
                         </div>
-                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                        <span className="text-muted-foreground shrink-0 text-[10px]">
                           {c.pets?.length ?? 0}{" "}
                           {(c.pets?.length ?? 0) === 1 ? "pet" : "pets"}
                         </span>
@@ -298,7 +293,7 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
                 )}
               </CommandList>
             </Command>
-            <div className="border-t bg-muted/20 px-1.5 py-1">
+            <div className="bg-muted/20 border-t px-1.5 py-1">
               <button
                 type="button"
                 onClick={() => startNewClient(searchQuery.trim())}
@@ -315,9 +310,9 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
         )}
 
         {clientMode === "new" && (
-          <div className="rounded-lg border bg-card p-3">
+          <div className="bg-card rounded-lg border p-3">
             <div className="mb-2.5 flex items-center justify-between">
-              <p className="text-[11px] font-medium text-muted-foreground">
+              <p className="text-muted-foreground text-[11px] font-medium">
                 New client — quick details
               </p>
               <button
@@ -326,7 +321,7 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
                   onChange({ ...EMPTY_VALUE });
                   setAddingNewClient(false);
                 }}
-                className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted"
+                className="text-muted-foreground hover:bg-muted flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px]"
               >
                 <ArrowLeft className="size-3" />
                 Search instead
@@ -375,7 +370,7 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
         )}
 
         {clientMode === "selected" && selectedClient && (
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+          <div className="bg-card flex items-center gap-3 rounded-lg border p-3">
             <Avatar className="size-10 shrink-0">
               <AvatarImage
                 src={selectedClient.imageUrl}
@@ -389,7 +384,7 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
               <p className="truncate text-sm font-semibold">
                 {selectedClient.name}
               </p>
-              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+              <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
                 {selectedClient.phone && (
                   <span className="inline-flex items-center gap-1">
                     <Phone className="size-2.5" />
@@ -470,7 +465,9 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
                           <Label className="text-xs">Size</Label>
                           <Select
                             value={value.petSize}
-                            onValueChange={(v) => updatePetDraft({ petSize: v })}
+                            onValueChange={(v) =>
+                              updatePetDraft({ petSize: v })
+                            }
                           >
                             <SelectTrigger className="mt-1">
                               <SelectValue placeholder="Select size" />
@@ -588,7 +585,7 @@ function PetGallery({
             onClick={() => onPick(p)}
             data-selected={selected ? "true" : "false"}
             className={cn(
-              "flex items-center gap-2 rounded-lg border bg-card p-2 text-left transition-colors",
+              "bg-card flex items-center gap-2 rounded-lg border p-2 text-left transition-colors",
               "data-[selected=true]:border-pink-300 data-[selected=true]:bg-pink-50 data-[selected=true]:ring-2 data-[selected=true]:ring-pink-200",
               "dark:data-[selected=true]:border-pink-700 dark:data-[selected=true]:bg-pink-950/20 dark:data-[selected=true]:ring-pink-900",
               "hover:bg-muted/40",
@@ -602,7 +599,7 @@ function PetGallery({
             </Avatar>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{p.name}</p>
-              <p className="truncate text-[10px] text-muted-foreground">
+              <p className="text-muted-foreground truncate text-[10px]">
                 {p.breed}
               </p>
               <div className="mt-0.5 flex flex-wrap items-center gap-1">
@@ -615,7 +612,7 @@ function PetGallery({
                   </Badge>
                 )}
                 {typeof p.age === "number" && (
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-muted-foreground text-[10px]">
                     {p.age < 1
                       ? `${Math.round(p.age * 12)} mo`
                       : `${Math.floor(p.age)} yr`}
@@ -648,16 +645,16 @@ function NewPetForm({
   onCancel?: () => void;
 }) {
   return (
-    <div className="rounded-lg border bg-card p-3">
+    <div className="bg-card rounded-lg border p-3">
       {onCancel && (
         <div className="mb-2.5 flex items-center justify-between">
-          <p className="text-[11px] font-medium text-muted-foreground">
+          <p className="text-muted-foreground text-[11px] font-medium">
             New pet — quick details
           </p>
           <button
             type="button"
             onClick={onCancel}
-            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted"
+            className="text-muted-foreground hover:bg-muted flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px]"
           >
             <ArrowLeft className="size-3" />
             Pick from list
@@ -697,7 +694,7 @@ function NewPetForm({
         <div>
           <Label className="text-xs">
             Breed
-            <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+            <span className="text-muted-foreground ml-1.5 text-[10px] font-normal">
               optional
             </span>
           </Label>
@@ -711,7 +708,7 @@ function NewPetForm({
         <div>
           <Label className="text-xs">
             Size
-            <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+            <span className="text-muted-foreground ml-1.5 text-[10px] font-normal">
               optional — needed for pricing
             </span>
           </Label>
@@ -753,7 +750,7 @@ function NewPetForm({
         <div className="col-span-2">
           <Label className="text-xs">
             Age (months)
-            <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+            <span className="text-muted-foreground ml-1.5 text-[10px] font-normal">
               drives age-group pricing if the service has rules
             </span>
           </Label>

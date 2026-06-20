@@ -48,7 +48,10 @@ export function buildReferralRewardMessage(vars: {
   customerFirstName?: string;
   counterpartName?: string;
 }): ReferralRewardMessage {
-  const desc = referralRewardText(vars.reward.rewardType, vars.reward.rewardValue);
+  const desc = referralRewardText(
+    vars.reward.rewardType,
+    vars.reward.rewardValue,
+  );
   const how = howToUseReferralReward(vars.reward.rewardType);
   const reason =
     vars.side === "referrer"
@@ -58,7 +61,9 @@ export function buildReferralRewardMessage(vars: {
       : vars.counterpartName
         ? `, courtesy of ${vars.counterpartName}`
         : " as a welcome";
-  const greeting = vars.customerFirstName ? `Hi ${vars.customerFirstName}! ` : "";
+  const greeting = vars.customerFirstName
+    ? `Hi ${vars.customerFirstName}! `
+    : "";
   return {
     title: TITLE,
     body: `You've received ${desc}${reason}. ${how}`,

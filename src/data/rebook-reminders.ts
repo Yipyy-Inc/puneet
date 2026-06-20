@@ -435,7 +435,8 @@ export const rebookReminders: RebookReminder[] = [
     dismissedAt: "2026-04-12T16:30:00Z",
     dismissedBy: "Amy C.",
     dismissReason: "Already spoke to them",
-    dismissNote: "Spoke to Alice — taking a break this month, will rebook in May",
+    dismissNote:
+      "Spoke to Alice — taking a break this month, will rebook in May",
   },
   // Recent sends in the current month — power the "Sent this month" KPI.
   {
@@ -781,8 +782,7 @@ export function getReminderBlockCheck(input: {
   if (input.marketingOptOut) reasons.push("marketing_opt_out");
   if (input.hasOpenIncident) reasons.push("open_incident");
   if (input.refundInProgress) reasons.push("refund_in_progress");
-  if (input.hasFutureBookingForService)
-    reasons.push("future_booking_exists");
+  if (input.hasFutureBookingForService) reasons.push("future_booking_exists");
   return { blocked: reasons.length > 0, reasons };
 }
 
@@ -808,9 +808,7 @@ export function computeReminderSchedule(
   leadDays: number,
 ): { expectedReturnDate: string; scheduledSendDate: string } {
   const completion = new Date(completionDate + "T00:00:00").getTime();
-  const expected = new Date(
-    completion + frequencyInDays(frequency) * 86400000,
-  );
+  const expected = new Date(completion + frequencyInDays(frequency) * 86400000);
   const send = new Date(expected.getTime() - leadDays * 86400000);
   return {
     expectedReturnDate: expected.toISOString().slice(0, 10),

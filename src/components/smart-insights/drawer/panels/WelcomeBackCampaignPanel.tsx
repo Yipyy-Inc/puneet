@@ -17,25 +17,139 @@ import type { InsightPanelProps } from "../panel-types";
  * visit, recipients pre-populated.
  */
 
-const FIRST_TIMERS: { id: string; firstName: string; lastName: string; petName: string; email: string }[] = [
-  { id: "c-601", firstName: "Aiden", lastName: "Murray", petName: "Pepper", email: "amurray@example.com" },
-  { id: "c-602", firstName: "Sophie", lastName: "Bélanger", petName: "Mochi", email: "sbelanger@example.com" },
-  { id: "c-603", firstName: "Liam", lastName: "Ferrari", petName: "Tucker", email: "lferrari@example.com" },
-  { id: "c-604", firstName: "Chloé", lastName: "Tremblay", petName: "Nova", email: "ctremblay@example.com" },
-  { id: "c-605", firstName: "Noah", lastName: "Singh", petName: "Bandit", email: "nsingh@example.com" },
-  { id: "c-606", firstName: "Mia", lastName: "Levesque", petName: "Roxie", email: "mlevesque@example.com" },
-  { id: "c-607", firstName: "Ethan", lastName: "Park", petName: "Toby", email: "epark@example.com" },
-  { id: "c-608", firstName: "Zoe", lastName: "Bouchard", petName: "Hazel", email: "zbouchard@example.com" },
-  { id: "c-609", firstName: "Lucas", lastName: "Côté", petName: "Finn", email: "lcote@example.com" },
-  { id: "c-610", firstName: "Lily", lastName: "Kaur", petName: "Coco", email: "lkaur@example.com" },
-  { id: "c-611", firstName: "Oliver", lastName: "Lemire", petName: "Penny", email: "olemire@example.com" },
-  { id: "c-612", firstName: "Ava", lastName: "Roy", petName: "Oscar", email: "aroy@example.com" },
-  { id: "c-613", firstName: "Jackson", lastName: "Gauthier", petName: "Stella", email: "jgauthier@example.com" },
-  { id: "c-614", firstName: "Maya", lastName: "Choi", petName: "Bruno", email: "mchoi@example.com" },
-  { id: "c-615", firstName: "Henry", lastName: "Beaulieu", petName: "Riley", email: "hbeaulieu@example.com" },
-  { id: "c-616", firstName: "Eva", lastName: "Nguyen", petName: "Sasha", email: "enguyen@example.com" },
-  { id: "c-617", firstName: "Leo", lastName: "Smith", petName: "Olive", email: "lsmith@example.com" },
-  { id: "c-618", firstName: "Hannah", lastName: "Garcia", petName: "Murphy", email: "hgarcia@example.com" },
+const FIRST_TIMERS: {
+  id: string;
+  firstName: string;
+  lastName: string;
+  petName: string;
+  email: string;
+}[] = [
+  {
+    id: "c-601",
+    firstName: "Aiden",
+    lastName: "Murray",
+    petName: "Pepper",
+    email: "amurray@example.com",
+  },
+  {
+    id: "c-602",
+    firstName: "Sophie",
+    lastName: "Bélanger",
+    petName: "Mochi",
+    email: "sbelanger@example.com",
+  },
+  {
+    id: "c-603",
+    firstName: "Liam",
+    lastName: "Ferrari",
+    petName: "Tucker",
+    email: "lferrari@example.com",
+  },
+  {
+    id: "c-604",
+    firstName: "Chloé",
+    lastName: "Tremblay",
+    petName: "Nova",
+    email: "ctremblay@example.com",
+  },
+  {
+    id: "c-605",
+    firstName: "Noah",
+    lastName: "Singh",
+    petName: "Bandit",
+    email: "nsingh@example.com",
+  },
+  {
+    id: "c-606",
+    firstName: "Mia",
+    lastName: "Levesque",
+    petName: "Roxie",
+    email: "mlevesque@example.com",
+  },
+  {
+    id: "c-607",
+    firstName: "Ethan",
+    lastName: "Park",
+    petName: "Toby",
+    email: "epark@example.com",
+  },
+  {
+    id: "c-608",
+    firstName: "Zoe",
+    lastName: "Bouchard",
+    petName: "Hazel",
+    email: "zbouchard@example.com",
+  },
+  {
+    id: "c-609",
+    firstName: "Lucas",
+    lastName: "Côté",
+    petName: "Finn",
+    email: "lcote@example.com",
+  },
+  {
+    id: "c-610",
+    firstName: "Lily",
+    lastName: "Kaur",
+    petName: "Coco",
+    email: "lkaur@example.com",
+  },
+  {
+    id: "c-611",
+    firstName: "Oliver",
+    lastName: "Lemire",
+    petName: "Penny",
+    email: "olemire@example.com",
+  },
+  {
+    id: "c-612",
+    firstName: "Ava",
+    lastName: "Roy",
+    petName: "Oscar",
+    email: "aroy@example.com",
+  },
+  {
+    id: "c-613",
+    firstName: "Jackson",
+    lastName: "Gauthier",
+    petName: "Stella",
+    email: "jgauthier@example.com",
+  },
+  {
+    id: "c-614",
+    firstName: "Maya",
+    lastName: "Choi",
+    petName: "Bruno",
+    email: "mchoi@example.com",
+  },
+  {
+    id: "c-615",
+    firstName: "Henry",
+    lastName: "Beaulieu",
+    petName: "Riley",
+    email: "hbeaulieu@example.com",
+  },
+  {
+    id: "c-616",
+    firstName: "Eva",
+    lastName: "Nguyen",
+    petName: "Sasha",
+    email: "enguyen@example.com",
+  },
+  {
+    id: "c-617",
+    firstName: "Leo",
+    lastName: "Smith",
+    petName: "Olive",
+    email: "lsmith@example.com",
+  },
+  {
+    id: "c-618",
+    firstName: "Hannah",
+    lastName: "Garcia",
+    petName: "Murphy",
+    email: "hgarcia@example.com",
+  },
 ];
 
 const DEFAULT_SUBJECT = "We loved meeting {{petName}} — come back and save";
@@ -71,7 +185,7 @@ export function WelcomeBackCampaignPanel({
     return (
       <div className="flex h-full flex-col gap-5 px-1">
         <div className="rounded-lg border bg-slate-50 p-3">
-          <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+          <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs tracking-wide uppercase">
             <Users className="size-3.5" />
             Recipients · {FIRST_TIMERS.length} first-timers
           </div>
@@ -80,7 +194,7 @@ export function WelcomeBackCampaignPanel({
               <Link
                 key={c.id}
                 href={insightLinks.client(c.id)}
-                className="inline-flex items-center rounded-md border bg-white px-2 py-0.5 text-xs hover:border-primary/40 hover:bg-primary/5"
+                className="hover:border-primary/40 hover:bg-primary/5 inline-flex items-center rounded-md border bg-white px-2 py-0.5 text-xs"
               >
                 {c.firstName} · {c.petName}
               </Link>
@@ -88,7 +202,7 @@ export function WelcomeBackCampaignPanel({
             {FIRST_TIMERS.length > 10 && (
               <Link
                 href={insightLinks.client()}
-                className="inline-flex items-center rounded-md border bg-white px-2 py-0.5 text-xs text-muted-foreground hover:border-primary/40"
+                className="text-muted-foreground hover:border-primary/40 inline-flex items-center rounded-md border bg-white px-2 py-0.5 text-xs"
               >
                 +{FIRST_TIMERS.length - 10} more
               </Link>
@@ -136,7 +250,9 @@ export function WelcomeBackCampaignPanel({
     <div className="flex h-full flex-col gap-5 px-1">
       <PreviewBeforeSend
         channel="email"
-        recipients={FIRST_TIMERS.map((c) => `${c.firstName} ${c.lastName.charAt(0)}.`)}
+        recipients={FIRST_TIMERS.map(
+          (c) => `${c.firstName} ${c.lastName.charAt(0)}.`,
+        )}
         subject={resolved.subject}
         body={resolved.body}
         meta={[

@@ -40,10 +40,13 @@ function formatCurrency(n: number): string {
 }
 
 function formatMonth(iso: string): string {
-  return new Date(`${iso.slice(0, 7)}-01T00:00:00`).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  return new Date(`${iso.slice(0, 7)}-01T00:00:00`).toLocaleDateString(
+    "en-US",
+    {
+      month: "long",
+      year: "numeric",
+    },
+  );
 }
 
 export function HQTrainingOverviewClient() {
@@ -53,9 +56,7 @@ export function HQTrainingOverviewClient() {
   const { data: enrollments = [] } = useQuery(
     trainingQueries.allSeriesEnrollments(),
   );
-  const { data: attendances = [] } = useQuery(
-    trainingQueries.allAttendances(),
-  );
+  const { data: attendances = [] } = useQuery(trainingQueries.allAttendances());
   const { data: trainers = [] } = useQuery(trainingQueries.trainers());
   const { data: packages = [] } = useQuery(trainingQueries.packages());
 
@@ -80,8 +81,8 @@ export function HQTrainingOverviewClient() {
           Training across all locations
         </h2>
         <p className="text-muted-foreground">
-          Monday-morning rollup — every branch, every instructor, one
-          screen. Showing month-of-{formatMonth(overview.monthKey)}.
+          Monday-morning rollup — every branch, every instructor, one screen.
+          Showing month-of-{formatMonth(overview.monthKey)}.
         </p>
       </header>
 
@@ -123,14 +124,14 @@ export function HQTrainingOverviewClient() {
 
       {/* Top location banner ───────────────────────────────────────────── */}
       {overview.topLocation && (
-        <Card className="from-indigo-50 to-violet-50 bg-linear-to-br shadow-sm">
+        <Card className="bg-linear-to-br from-indigo-50 to-violet-50 shadow-sm">
           <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
             <div className="flex items-center gap-3">
-              <div className="bg-white/80 flex size-12 items-center justify-center rounded-xl shadow-sm">
-                <Trophy className="text-amber-500 size-6" />
+              <div className="flex size-12 items-center justify-center rounded-xl bg-white/80 shadow-sm">
+                <Trophy className="size-6 text-amber-500" />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                <p className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
                   Running the most classes
                 </p>
                 <p className="text-xl/tight font-bold text-slate-900">
@@ -138,8 +139,8 @@ export function HQTrainingOverviewClient() {
                 </p>
                 <p className="text-muted-foreground text-[12px]">
                   {overview.topLocation.activeSeries} active series ·{" "}
-                  {overview.topLocation.sessionsThisMonth} sessions this month
-                  · {overview.topLocation.studentsEnrolled} enrolled
+                  {overview.topLocation.sessionsThisMonth} sessions this month ·{" "}
+                  {overview.topLocation.studentsEnrolled} enrolled
                 </p>
               </div>
             </div>
@@ -158,7 +159,7 @@ export function HQTrainingOverviewClient() {
         <Card className="lg:col-span-2">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Star className="text-amber-500 size-4" />
+              <Star className="size-4 text-amber-500" />
               Top Instructors
               <Badge
                 variant="outline"
@@ -179,7 +180,7 @@ export function HQTrainingOverviewClient() {
                 {overview.topInstructors.map((row, idx) => (
                   <li
                     key={row.instructorId}
-                    className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2"
+                    className="bg-card flex items-center gap-3 rounded-lg border px-3 py-2"
                   >
                     <span
                       className={cn(
@@ -233,7 +234,7 @@ export function HQTrainingOverviewClient() {
               {overview.locationBreakdown.map((row) => (
                 <li
                   key={row.locationId}
-                  className="grid grid-cols-1 gap-2 rounded-lg border bg-card px-3 py-2.5 sm:grid-cols-[1.5fr_repeat(4,1fr)] sm:items-center"
+                  className="bg-card grid grid-cols-1 gap-2 rounded-lg border px-3 py-2.5 sm:grid-cols-[1.5fr_repeat(4,1fr)] sm:items-center"
                 >
                   <div className="flex items-center gap-2">
                     {row.color ? (
@@ -249,7 +250,7 @@ export function HQTrainingOverviewClient() {
                         {row.locationName}
                       </p>
                       {overview.topLocation?.locationId === row.locationId && (
-                        <p className="text-amber-600 inline-flex items-center gap-1 text-[10px] font-medium">
+                        <p className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600">
                           <Trophy className="size-3" />
                           Top performer
                         </p>
@@ -323,10 +324,10 @@ function KpiCard({
           <Icon className="size-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+          <p className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
             {label}
           </p>
-          <p className="text-2xl/tight font-bold tabular-nums text-slate-900">
+          <p className="text-2xl/tight font-bold text-slate-900 tabular-nums">
             {value}
           </p>
           <p className="text-muted-foreground truncate text-[11px]">{hint}</p>
@@ -348,13 +349,13 @@ function Metric({
   return (
     <div className="flex items-center gap-1.5 sm:flex-col sm:items-start sm:gap-0">
       <Icon className="text-muted-foreground size-3.5 sm:hidden" />
-      <span className="text-muted-foreground hidden text-[10px] font-bold uppercase tracking-wider sm:inline">
+      <span className="text-muted-foreground hidden text-[10px] font-bold tracking-wider uppercase sm:inline">
         {label}
       </span>
       <span className="text-muted-foreground text-[11px] sm:hidden">
         {label}:
       </span>
-      <span className="font-semibold tabular-nums text-slate-800">{value}</span>
+      <span className="font-semibold text-slate-800 tabular-nums">{value}</span>
     </div>
   );
 }
@@ -368,7 +369,7 @@ function InstructorAvatar({
 }) {
   if (photoUrl) {
     return (
-      <div className="size-9 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2 ring-white shadow-sm">
+      <div className="size-9 shrink-0 overflow-hidden rounded-full bg-slate-100 shadow-sm ring-2 ring-white">
         <Image
           src={photoUrl}
           alt={name}
@@ -388,7 +389,7 @@ function InstructorAvatar({
     .join("")
     .toUpperCase();
   return (
-    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold text-indigo-700 ring-2 ring-white shadow-sm">
+    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold text-indigo-700 shadow-sm ring-2 ring-white">
       {initials || <Award className="size-4" />}
     </div>
   );

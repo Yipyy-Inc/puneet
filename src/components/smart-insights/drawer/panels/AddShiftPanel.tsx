@@ -28,7 +28,11 @@ import type { InsightPanelProps } from "../panel-types";
 const TARGET_DATE_LABEL = "Saturday, May 24, 2026";
 const TARGET_DATE_ISO = "2026-05-24";
 
-export function AddShiftPanel({ insight, onComplete, onCancel }: InsightPanelProps) {
+export function AddShiftPanel({
+  insight,
+  onComplete,
+  onCancel,
+}: InsightPanelProps) {
   const [step, setStep] = useState<"form" | "confirm">("form");
   const [staffId, setStaffId] = useState<string>("");
   const [startTime, setStartTime] = useState<string>("08:00");
@@ -119,7 +123,9 @@ export function AddShiftPanel({ insight, onComplete, onCancel }: InsightPanelPro
           { field: "Location", to: insight.locationName },
           {
             field: "Staff",
-            to: selectedStaff ? `${selectedStaff.name} (${selectedStaff.role})` : "—",
+            to: selectedStaff
+              ? `${selectedStaff.name} (${selectedStaff.role})`
+              : "—",
           },
           { field: "Start", to: startTime },
           { field: "End", to: endTime },
@@ -142,7 +148,7 @@ export function AddShiftPanel({ insight, onComplete, onCancel }: InsightPanelPro
 function ContextCard() {
   return (
     <div className="rounded-lg border bg-slate-50 p-3 text-sm">
-      <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+      <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs tracking-wide uppercase">
         <Users className="size-3.5" />
         Current capacity
       </div>

@@ -38,15 +38,24 @@ function KPICard({
   highlight?: boolean;
 }) {
   return (
-    <Card className={cn(highlight && "border-2 border-green-500/25 bg-green-50/40")}>
+    <Card
+      className={cn(highlight && "border-2 border-green-500/25 bg-green-50/40")}
+    >
       <CardContent className="pt-5">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm text-muted-foreground">{label}</p>
-            <p className={cn("mt-1 text-3xl font-bold tabular-nums", color)}>{value}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
+            <p className="text-muted-foreground text-sm">{label}</p>
+            <p className={cn("mt-1 text-3xl font-bold tabular-nums", color)}>
+              {value}
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-xs">{sub}</p>
           </div>
-          <div className={cn("rounded-xl p-2.5", highlight ? "bg-green-100" : "bg-muted")}>
+          <div
+            className={cn(
+              "rounded-xl p-2.5",
+              highlight ? "bg-green-100" : "bg-muted",
+            )}
+          >
             <Icon className={cn("size-5", color)} />
           </div>
         </div>
@@ -55,7 +64,11 @@ function KPICard({
   );
 }
 
-function HeatMap({ hourlyVolume }: { hourlyVolume: CallAnalytics["hourlyVolume"] }) {
+function HeatMap({
+  hourlyVolume,
+}: {
+  hourlyVolume: CallAnalytics["hourlyVolume"];
+}) {
   const max = Math.max(...hourlyVolume.map((h) => h.calls));
 
   const intensity = (calls: number) => {
@@ -65,7 +78,7 @@ function HeatMap({ hourlyVolume }: { hourlyVolume: CallAnalytics["hourlyVolume"]
     if (pct < 0.35) return "bg-blue-200";
     if (pct < 0.55) return "bg-blue-300";
     if (pct < 0.75) return "bg-blue-400";
-    if (pct < 0.90) return "bg-blue-500";
+    if (pct < 0.9) return "bg-blue-500";
     return "bg-blue-600";
   };
 
@@ -83,7 +96,7 @@ function HeatMap({ hourlyVolume }: { hourlyVolume: CallAnalytics["hourlyVolume"]
           <BarChart3 className="size-4 text-blue-600" />
           Call Volume Heat Map — by Hour
         </CardTitle>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           Darker = more calls. Based on last 30 days.
         </p>
       </CardHeader>
@@ -91,7 +104,7 @@ function HeatMap({ hourlyVolume }: { hourlyVolume: CallAnalytics["hourlyVolume"]
         <div className="flex items-end gap-1.5 overflow-x-auto pb-1">
           {hourlyVolume.map(({ hour, calls }) => (
             <div key={hour} className="flex flex-col items-center gap-1">
-              <span className="text-[10px] font-semibold tabular-nums text-muted-foreground">
+              <span className="text-muted-foreground text-[10px] font-semibold tabular-nums">
                 {calls > 0 ? calls : ""}
               </span>
               <div
@@ -102,13 +115,22 @@ function HeatMap({ hourlyVolume }: { hourlyVolume: CallAnalytics["hourlyVolume"]
                 )}
                 style={{ height: `${Math.max(8, (calls / max) * 80)}px` }}
               />
-              <span className="text-[9px] text-muted-foreground">{label(hour)}</span>
+              <span className="text-muted-foreground text-[9px]">
+                {label(hour)}
+              </span>
             </div>
           ))}
         </div>
-        <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="text-muted-foreground mt-3 flex items-center gap-2 text-xs">
           <div className="flex items-center gap-1">
-            {["bg-blue-100","bg-blue-200","bg-blue-300","bg-blue-400","bg-blue-500","bg-blue-600"].map((c) => (
+            {[
+              "bg-blue-100",
+              "bg-blue-200",
+              "bg-blue-300",
+              "bg-blue-400",
+              "bg-blue-500",
+              "bg-blue-600",
+            ].map((c) => (
               <div key={c} className={cn("h-3 w-4 rounded-sm", c)} />
             ))}
           </div>
@@ -119,7 +141,11 @@ function HeatMap({ hourlyVolume }: { hourlyVolume: CallAnalytics["hourlyVolume"]
   );
 }
 
-function TopReasonsChart({ reasons }: { reasons: CallAnalytics["topCallReasons"] }) {
+function TopReasonsChart({
+  reasons,
+}: {
+  reasons: CallAnalytics["topCallReasons"];
+}) {
   const max = Math.max(...reasons.map((r) => r.count));
   return (
     <Card>
@@ -134,9 +160,11 @@ function TopReasonsChart({ reasons }: { reasons: CallAnalytics["topCallReasons"]
           <div key={reason}>
             <div className="mb-1 flex items-center justify-between text-sm">
               <span className="font-medium">{reason}</span>
-              <span className="font-semibold tabular-nums text-muted-foreground">{count}</span>
+              <span className="text-muted-foreground font-semibold tabular-nums">
+                {count}
+              </span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
               <div
                 className="h-2 rounded-full bg-purple-500 transition-all"
                 style={{ width: `${(count / max) * 100}%` }}
@@ -149,8 +177,13 @@ function TopReasonsChart({ reasons }: { reasons: CallAnalytics["topCallReasons"]
   );
 }
 
-export function CallAnalyticsDashboard({ data, flaggedThisWeek = 0 }: CallAnalyticsDashboardProps) {
-  const answerRate = Math.round(((data.totalCalls - data.missedCalls) / data.totalCalls) * 100);
+export function CallAnalyticsDashboard({
+  data,
+  flaggedThisWeek = 0,
+}: CallAnalyticsDashboardProps) {
+  const answerRate = Math.round(
+    ((data.totalCalls - data.missedCalls) / data.totalCalls) * 100,
+  );
   const avgDurMin = Math.floor(data.avgCallDuration / 60);
   const avgDurSec = data.avgCallDuration % 60;
 
@@ -160,7 +193,9 @@ export function CallAnalyticsDashboard({ data, flaggedThisWeek = 0 }: CallAnalyt
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold">Call Analytics</h2>
-          <p className="text-sm text-muted-foreground">Business intelligence for your phone system</p>
+          <p className="text-muted-foreground text-sm">
+            Business intelligence for your phone system
+          </p>
         </div>
         <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-sm">
           <Clock className="size-3.5" />
@@ -182,7 +217,13 @@ export function CallAnalyticsDashboard({ data, flaggedThisWeek = 0 }: CallAnalyt
           value={`${answerRate}%`}
           sub={`${data.missedCalls} missed`}
           icon={PhoneOff}
-          color={answerRate >= 90 ? "text-green-600" : answerRate >= 75 ? "text-amber-600" : "text-red-600"}
+          color={
+            answerRate >= 90
+              ? "text-green-600"
+              : answerRate >= 75
+                ? "text-amber-600"
+                : "text-red-600"
+          }
           highlight={answerRate >= 90}
         />
         <KPICard

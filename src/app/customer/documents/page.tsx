@@ -60,7 +60,9 @@ export default function CustomerDocumentsPage() {
   const [activeTab, setActiveTab] = useState<
     "agreements" | "documents" | "forms"
   >("agreements");
-  const [signingWaiver, setSigningWaiver] = useState<DigitalWaiver | null>(null);
+  const [signingWaiver, setSigningWaiver] = useState<DigitalWaiver | null>(
+    null,
+  );
   const [signedWaiverIds, setSignedWaiverIds] = useState<Set<string>>(
     () => new Set(waiverSignatures.map((s) => s.waiverId)),
   );

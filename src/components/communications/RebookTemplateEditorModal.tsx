@@ -120,7 +120,9 @@ export function RebookTemplateEditorModal({
 
           {showSubject && (
             <div className="space-y-1.5">
-              <label className="text-xs font-medium">Subject (email only)</label>
+              <label className="text-xs font-medium">
+                Subject (email only)
+              </label>
               <Input
                 ref={subjectRef}
                 value={subject}

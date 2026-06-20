@@ -79,11 +79,11 @@ export function CustomerTrainingPackagesTab({ customerId }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 shadow-sm">
+      <div className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3 text-sm text-slate-700">
-          <Package className="text-indigo-500 size-4" />
+          <Package className="size-4 text-indigo-500" />
           <span>
-            <span className="font-semibold tabular-nums text-slate-900">
+            <span className="font-semibold text-slate-900 tabular-nums">
               {totalSessions}
             </span>{" "}
             training session{totalSessions === 1 ? "" : "s"} remaining
@@ -189,7 +189,10 @@ export function CustomerTrainingPackagesTab({ customerId }: Props) {
                   </div>
                   <Progress
                     value={row.progressPct}
-                    className={cn("mt-2 h-2", lowOrOut && "[&>div]:bg-amber-500")}
+                    className={cn(
+                      "mt-2 h-2",
+                      lowOrOut && "[&>div]:bg-amber-500",
+                    )}
                   />
                 </div>
 

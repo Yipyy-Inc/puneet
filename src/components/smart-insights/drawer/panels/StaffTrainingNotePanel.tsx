@@ -55,7 +55,7 @@ export function StaffTrainingNotePanel({
     return (
       <div className="flex h-full flex-col gap-5 px-1">
         <div className="rounded-lg border bg-slate-50 p-3">
-          <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+          <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs tracking-wide uppercase">
             <Users className="size-3.5" />
             Recipients · {STAFF_RECIPIENTS.length} staff
           </div>
@@ -64,7 +64,7 @@ export function StaffTrainingNotePanel({
               <Link
                 key={s.id}
                 href={insightLinks.staff(s.id)}
-                className="inline-flex items-center gap-1 rounded-md border bg-white px-2 py-0.5 text-xs hover:border-primary/40 hover:bg-primary/5"
+                className="hover:border-primary/40 hover:bg-primary/5 inline-flex items-center gap-1 rounded-md border bg-white px-2 py-0.5 text-xs"
               >
                 <GraduationCap className="size-3" />
                 {s.name}

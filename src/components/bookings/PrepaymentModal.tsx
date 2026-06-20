@@ -93,7 +93,7 @@ export function PrepaymentModal({
 
         <div className="space-y-4 py-2">
           {/* Balance summary */}
-          <div className="rounded-lg border bg-muted/30 px-4 py-3">
+          <div className="bg-muted/30 rounded-lg border px-4 py-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Invoice total</span>
               <span className="font-[tabular-nums]">
@@ -154,7 +154,7 @@ export function PrepaymentModal({
             {!isFull && numericAmount > 0 && (
               <p className="text-muted-foreground text-[11px]">
                 After this prepayment:{" "}
-                <span className="text-foreground font-medium font-[tabular-nums]">
+                <span className="text-foreground font-[tabular-nums] font-medium">
                   ${newRemaining.toFixed(2)}
                 </span>{" "}
                 will remain due at checkout.
@@ -182,7 +182,7 @@ export function PrepaymentModal({
                   className={cn(
                     "flex flex-col items-center gap-1 rounded-lg border px-2 py-2 text-[11px] font-medium transition-all",
                     method === value
-                      ? "border-primary ring-1 ring-primary text-primary"
+                      ? "border-primary ring-primary text-primary ring-1"
                       : "text-muted-foreground hover:bg-muted",
                   )}
                 >

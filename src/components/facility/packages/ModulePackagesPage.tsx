@@ -86,9 +86,13 @@ function PackagePolicyToggle({
 
 export function ModulePackagesPage({ category, label }: Props) {
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
-  const [editingPackage, setEditingPackage] = useState<ServicePackage | null>(null);
+  const [editingPackage, setEditingPackage] = useState<ServicePackage | null>(
+    null,
+  );
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deletingPackage, setDeletingPackage] = useState<ServicePackage | null>(null);
+  const [deletingPackage, setDeletingPackage] = useState<ServicePackage | null>(
+    null,
+  );
 
   const [propagationPrompt, setPropagationPrompt] = useState<{
     next: ServicePackage;
@@ -106,10 +110,15 @@ export function ModulePackagesPage({ category, label }: Props) {
     policy: { ...defaultPackagePolicy } as PackagePolicy,
   });
 
-  const [newServiceEntry, setNewServiceEntry] = useState({ serviceId: "", quantity: 1 });
+  const [newServiceEntry, setNewServiceEntry] = useState({
+    serviceId: "",
+    quantity: 1,
+  });
 
   // Services belonging to this module's category
-  const moduleServices = services.filter((s) => !s.isAddOn && s.category === category);
+  const moduleServices = services.filter(
+    (s) => !s.isAddOn && s.category === category,
+  );
 
   // Packages belonging to this module's category
   const modulePackages = servicePackages.filter((p) =>
@@ -119,11 +128,18 @@ export function ModulePackagesPage({ category, label }: Props) {
     }),
   );
 
-  const totalPackagesSold = modulePackages.reduce((sum, p) => sum + p.purchaseCount, 0);
-  const totalRevenue = modulePackages.reduce((sum, p) => sum + p.packagePrice * p.purchaseCount, 0);
+  const totalPackagesSold = modulePackages.reduce(
+    (sum, p) => sum + p.purchaseCount,
+    0,
+  );
+  const totalRevenue = modulePackages.reduce(
+    (sum, p) => sum + p.packagePrice * p.purchaseCount,
+    0,
+  );
   const avgSavings =
     modulePackages.length > 0
-      ? modulePackages.reduce((sum, p) => sum + p.savingsPercentage, 0) / modulePackages.length
+      ? modulePackages.reduce((sum, p) => sum + p.savingsPercentage, 0) /
+        modulePackages.length
       : 0;
 
   const handleAddNew = () => {
@@ -236,13 +252,19 @@ export function ModulePackagesPage({ category, label }: Props) {
       updated[existingIndex].quantity += newServiceEntry.quantity;
       setFormData({ ...formData, services: updated });
     } else {
-      setFormData({ ...formData, services: [...formData.services, { ...newServiceEntry }] });
+      setFormData({
+        ...formData,
+        services: [...formData.services, { ...newServiceEntry }],
+      });
     }
     setNewServiceEntry({ serviceId: "", quantity: 1 });
   };
 
   const removeServiceFromPackage = (serviceId: string) => {
-    setFormData({ ...formData, services: formData.services.filter((s) => s.serviceId !== serviceId) });
+    setFormData({
+      ...formData,
+      services: formData.services.filter((s) => s.serviceId !== serviceId),
+    });
   };
 
   const calculateTotalValue = () =>
@@ -267,11 +289,13 @@ export function ModulePackagesPage({ category, label }: Props) {
       defaultVisible: true,
       render: (item: PackageWithRecord) => (
         <div className="flex flex-wrap gap-1">
-          {(item.services as { serviceId: string; quantity: number }[]).map((s) => (
-            <Badge key={s.serviceId} variant="secondary" className="text-xs">
-              {s.quantity}x {getServiceName(s.serviceId)}
-            </Badge>
-          ))}
+          {(item.services as { serviceId: string; quantity: number }[]).map(
+            (s) => (
+              <Badge key={s.serviceId} variant="secondary" className="text-xs">
+                {s.quantity}x {getServiceName(s.serviceId)}
+              </Badge>
+            ),
+          )}
         </div>
       ),
     },
@@ -281,7 +305,9 @@ export function ModulePackagesPage({ category, label }: Props) {
       icon: DollarSign,
       defaultVisible: true,
       render: (item: PackageWithRecord) => (
-        <span className="text-muted-foreground">${(item.totalValue as number).toFixed(2)}</span>
+        <span className="text-muted-foreground">
+          ${(item.totalValue as number).toFixed(2)}
+        </span>
       ),
     },
     {
@@ -290,7 +316,9 @@ export function ModulePackagesPage({ category, label }: Props) {
       icon: DollarSign,
       defaultVisible: true,
       render: (item: PackageWithRecord) => (
-        <span className="font-medium">${(item.packagePrice as number).toFixed(2)}</span>
+        <span className="font-medium">
+          ${(item.packagePrice as number).toFixed(2)}
+        </span>
       ),
     },
     {
@@ -309,7 +337,9 @@ export function ModulePackagesPage({ category, label }: Props) {
       label: "Validity",
       icon: Calendar,
       defaultVisible: true,
-      render: (item: PackageWithRecord) => <span>{item.validDays as number} days</span>,
+      render: (item: PackageWithRecord) => (
+        <span>{item.validDays as number} days</span>
+      ),
     },
     {
       key: "purchaseCount",
@@ -326,7 +356,11 @@ export function ModulePackagesPage({ category, label }: Props) {
       defaultVisible: true,
       render: (item: PackageWithRecord) => {
         const variant =
-          item.status === "active" ? "default" : item.status === "seasonal" ? "secondary" : "outline";
+          item.status === "active"
+            ? "default"
+            : item.status === "seasonal"
+              ? "secondary"
+              : "outline";
         return (
           <Badge variant={variant} className="capitalize">
             {item.status as string}
@@ -355,13 +389,16 @@ export function ModulePackagesPage({ category, label }: Props) {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Packages
+            </CardTitle>
             <Package className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{modulePackages.length}</div>
             <p className="text-muted-foreground text-xs">
-              {modulePackages.filter((p) => p.status === "active").length} active
+              {modulePackages.filter((p) => p.status === "active").length}{" "}
+              active
             </p>
           </CardContent>
         </Card>
@@ -377,11 +414,15 @@ export function ModulePackagesPage({ category, label }: Props) {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Package Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Package Revenue
+            </CardTitle>
             <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ${totalRevenue.toLocaleString()}
+            </div>
             <p className="text-muted-foreground text-xs">From package sales</p>
           </CardContent>
         </Card>
@@ -419,12 +460,16 @@ export function ModulePackagesPage({ category, label }: Props) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleEdit(item as unknown as ServicePackage)}>
+              <DropdownMenuItem
+                onClick={() => handleEdit(item as unknown as ServicePackage)}
+              >
                 <Edit className="mr-2 size-4" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => handleDeleteClick(item as unknown as ServicePackage)}
+                onClick={() =>
+                  handleDeleteClick(item as unknown as ServicePackage)
+                }
                 className="text-destructive"
               >
                 <Trash2 className="mr-2 size-4" />
@@ -439,7 +484,9 @@ export function ModulePackagesPage({ category, label }: Props) {
       <Dialog open={isAddEditModalOpen} onOpenChange={setIsAddEditModalOpen}>
         <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingPackage ? "Edit" : "Create"} {label} Package</DialogTitle>
+            <DialogTitle>
+              {editingPackage ? "Edit" : "Create"} {label} Package
+            </DialogTitle>
             <DialogDescription>
               {editingPackage
                 ? "Update the package details below."
@@ -453,7 +500,9 @@ export function ModulePackagesPage({ category, label }: Props) {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   placeholder={`e.g., ${label} 10-Pack`}
                 />
               </div>
@@ -461,7 +510,9 @@ export function ModulePackagesPage({ category, label }: Props) {
                 <Label htmlFor="status">Status</Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(value: ServiceStatus) => setFormData({ ...formData, status: value })}
+                  onValueChange={(value: ServiceStatus) =>
+                    setFormData({ ...formData, status: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -479,7 +530,9 @@ export function ModulePackagesPage({ category, label }: Props) {
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 placeholder="Describe the package..."
                 rows={2}
               />
@@ -490,7 +543,9 @@ export function ModulePackagesPage({ category, label }: Props) {
               <div className="flex gap-2">
                 <Select
                   value={newServiceEntry.serviceId}
-                  onValueChange={(value) => setNewServiceEntry({ ...newServiceEntry, serviceId: value })}
+                  onValueChange={(value) =>
+                    setNewServiceEntry({ ...newServiceEntry, serviceId: value })
+                  }
                 >
                   <SelectTrigger className="flex-1">
                     <SelectValue placeholder="Select a service..." />
@@ -510,10 +565,17 @@ export function ModulePackagesPage({ category, label }: Props) {
                   placeholder="Qty"
                   value={newServiceEntry.quantity}
                   onChange={(e) =>
-                    setNewServiceEntry({ ...newServiceEntry, quantity: parseInt(e.target.value) || 1 })
+                    setNewServiceEntry({
+                      ...newServiceEntry,
+                      quantity: parseInt(e.target.value) || 1,
+                    })
                   }
                 />
-                <Button type="button" variant="secondary" onClick={addServiceToPackage}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={addServiceToPackage}
+                >
                   Add
                 </Button>
               </div>
@@ -522,7 +584,10 @@ export function ModulePackagesPage({ category, label }: Props) {
                   {formData.services.map((s) => {
                     const svc = services.find((srv) => srv.id === s.serviceId);
                     return (
-                      <div key={s.serviceId} className="flex items-center justify-between">
+                      <div
+                        key={s.serviceId}
+                        className="flex items-center justify-between"
+                      >
                         <span>
                           {s.quantity}x {svc?.name} @ ${svc?.basePrice}
                         </span>
@@ -534,7 +599,9 @@ export function ModulePackagesPage({ category, label }: Props) {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => removeServiceFromPackage(s.serviceId)}
+                            onClick={() =>
+                              removeServiceFromPackage(s.serviceId)
+                            }
                           >
                             <Trash2 className="text-destructive size-4" />
                           </Button>
@@ -559,14 +626,20 @@ export function ModulePackagesPage({ category, label }: Props) {
                   step="0.01"
                   value={formData.packagePrice}
                   onChange={(e) =>
-                    setFormData({ ...formData, packagePrice: parseFloat(e.target.value) || 0 })
+                    setFormData({
+                      ...formData,
+                      packagePrice: parseFloat(e.target.value) || 0,
+                    })
                   }
                 />
                 {formData.packagePrice > 0 && calculateTotalValue() > 0 && (
                   <p className="text-sm text-green-600">
-                    Savings: ${(calculateTotalValue() - formData.packagePrice).toFixed(2)} (
+                    Savings: $
+                    {(calculateTotalValue() - formData.packagePrice).toFixed(2)}{" "}
+                    (
                     {(
-                      ((calculateTotalValue() - formData.packagePrice) / calculateTotalValue()) *
+                      ((calculateTotalValue() - formData.packagePrice) /
+                        calculateTotalValue()) *
                       100
                     ).toFixed(1)}
                     % off)
@@ -581,7 +654,10 @@ export function ModulePackagesPage({ category, label }: Props) {
                   min="1"
                   value={formData.validDays}
                   onChange={(e) =>
-                    setFormData({ ...formData, validDays: parseInt(e.target.value) || 90 })
+                    setFormData({
+                      ...formData,
+                      validDays: parseInt(e.target.value) || 90,
+                    })
                   }
                 />
               </div>
@@ -589,7 +665,9 @@ export function ModulePackagesPage({ category, label }: Props) {
 
             <div className="space-y-3 rounded-lg border p-4">
               <div>
-                <Label className="text-sm font-semibold">Customer self-service policy</Label>
+                <Label className="text-sm font-semibold">
+                  Customer self-service policy
+                </Label>
                 <p className="text-muted-foreground mt-0.5 text-xs">
                   What pass-holders can do from their account.
                 </p>
@@ -599,7 +677,10 @@ export function ModulePackagesPage({ category, label }: Props) {
                   label="Refund unused passes"
                   checked={formData.policy.allowRefundUnused}
                   onChange={(v) =>
-                    setFormData({ ...formData, policy: { ...formData.policy, allowRefundUnused: v } })
+                    setFormData({
+                      ...formData,
+                      policy: { ...formData.policy, allowRefundUnused: v },
+                    })
                   }
                 />
                 <PackagePolicyToggle
@@ -608,7 +689,10 @@ export function ModulePackagesPage({ category, label }: Props) {
                   onChange={(v) =>
                     setFormData({
                       ...formData,
-                      policy: { ...formData.policy, allowStoreCreditOnCancel: v },
+                      policy: {
+                        ...formData.policy,
+                        allowStoreCreditOnCancel: v,
+                      },
                     })
                   }
                 />
@@ -616,14 +700,20 @@ export function ModulePackagesPage({ category, label }: Props) {
                   label="Allow transfer to household"
                   checked={formData.policy.allowTransfer}
                   onChange={(v) =>
-                    setFormData({ ...formData, policy: { ...formData.policy, allowTransfer: v } })
+                    setFormData({
+                      ...formData,
+                      policy: { ...formData.policy, allowTransfer: v },
+                    })
                   }
                 />
                 <PackagePolicyToggle
                   label="Allow validity extension"
                   checked={formData.policy.allowExtension}
                   onChange={(v) =>
-                    setFormData({ ...formData, policy: { ...formData.policy, allowExtension: v } })
+                    setFormData({
+                      ...formData,
+                      policy: { ...formData.policy, allowExtension: v },
+                    })
                   }
                 />
               </div>
@@ -641,7 +731,8 @@ export function ModulePackagesPage({ category, label }: Props) {
                         ...formData,
                         policy: {
                           ...formData.policy,
-                          refundPerUnusedPass: parseFloat(e.target.value) || undefined,
+                          refundPerUnusedPass:
+                            parseFloat(e.target.value) || undefined,
                         },
                       })
                     }
@@ -657,7 +748,10 @@ export function ModulePackagesPage({ category, label }: Props) {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        policy: { ...formData.policy, maxExtensionDays: parseInt(e.target.value) || 0 },
+                        policy: {
+                          ...formData.policy,
+                          maxExtensionDays: parseInt(e.target.value) || 0,
+                        },
                       })
                     }
                   />
@@ -673,21 +767,29 @@ export function ModulePackagesPage({ category, label }: Props) {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        policy: { ...formData.policy, extensionFee: parseFloat(e.target.value) || 0 },
+                        policy: {
+                          ...formData.policy,
+                          extensionFee: parseFloat(e.target.value) || 0,
+                        },
                       })
                     }
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Policy explanation shown to customers</Label>
+                <Label className="text-xs">
+                  Policy explanation shown to customers
+                </Label>
                 <Textarea
                   rows={2}
                   value={formData.policy.policyNotes ?? ""}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      policy: { ...formData.policy, policyNotes: e.target.value },
+                      policy: {
+                        ...formData.policy,
+                        policyNotes: e.target.value,
+                      },
                     })
                   }
                   placeholder="e.g. Refunds on unused passes are issued at $25/pass."
@@ -696,10 +798,15 @@ export function ModulePackagesPage({ category, label }: Props) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddEditModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddEditModalOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSave}>{editingPackage ? "Save Changes" : "Create"}</Button>
+            <Button onClick={handleSave}>
+              {editingPackage ? "Save Changes" : "Create"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -710,12 +817,15 @@ export function ModulePackagesPage({ category, label }: Props) {
           <DialogHeader>
             <DialogTitle>Delete Package</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{deletingPackage?.name}&quot;? This action cannot
-              be undone.
+              Are you sure you want to delete &quot;{deletingPackage?.name}
+              &quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteConfirm}>

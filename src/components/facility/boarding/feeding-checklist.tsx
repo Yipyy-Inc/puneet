@@ -44,14 +44,20 @@ function fmt12(t: string): string {
   return `${h_ % 12 || 12}:${String(m ?? 0).padStart(2, "0")} ${ampm}`;
 }
 
-type FeedingOutcome = "ate_all" | "ate_half" | "ate_some" | "refused" | "slow_eater" | "vomited_after";
+type FeedingOutcome =
+  | "ate_all"
+  | "ate_half"
+  | "ate_some"
+  | "refused"
+  | "slow_eater"
+  | "vomited_after";
 
 const OUTCOME_OPTIONS: { value: FeedingOutcome; label: string }[] = [
-  { value: "ate_all",       label: "Ate All (100%)" },
-  { value: "ate_half",      label: "Ate Half (~50%)" },
-  { value: "ate_some",      label: "Ate Some (<50%)" },
-  { value: "slow_eater",    label: "Slow Eater" },
-  { value: "refused",       label: "Refused" },
+  { value: "ate_all", label: "Ate All (100%)" },
+  { value: "ate_half", label: "Ate Half (~50%)" },
+  { value: "ate_some", label: "Ate Some (<50%)" },
+  { value: "slow_eater", label: "Slow Eater" },
+  { value: "refused", label: "Refused" },
   { value: "vomited_after", label: "Vomited After" },
 ];
 
@@ -73,16 +79,26 @@ const ROLE_ORDER: UserRole[] = [
 
 // ── component ─────────────────────────────────────────────────────────────────
 
-export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) {
+export function FeedingChecklist({
+  config,
+}: {
+  config: FacilityFeedingConfig;
+}) {
   const enabledSlots = config.slots
     .filter((s) => s.enabled)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   const [activeSlotId, setActiveSlotId] = useState(enabledSlots[0]?.id ?? "");
-  const [completions, setCompletions] = useState<Map<string, Completion>>(new Map());
+  const [completions, setCompletions] = useState<Map<string, Completion>>(
+    new Map(),
+  );
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
-  const [pendingInitials, setPendingInitials] = useState<Record<string, string>>({});
-  const [pendingOutcome, setPendingOutcome] = useState<Record<string, FeedingOutcome>>({});
+  const [pendingInitials, setPendingInitials] = useState<
+    Record<string, string>
+  >({});
+  const [pendingOutcome, setPendingOutcome] = useState<
+    Record<string, FeedingOutcome>
+  >({});
   const [simulatedRole, setSimulatedRole] = useState<UserRole>("supervisor");
 
   const canView = hasPermission(simulatedRole, "boarding.feeding.view");
@@ -143,7 +159,9 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
     const outcome = pendingOutcome[guestId];
     if (!initials || !outcome) return;
     const key = `${guestId}-${activeSlotId}`;
-    setCompletions((prev) => new Map(prev).set(key, { initials, at: nowTime, outcome }));
+    setCompletions((prev) =>
+      new Map(prev).set(key, { initials, at: nowTime, outcome }),
+    );
     setSkipped((prev) => {
       const s = new Set(prev);
       s.delete(key);
@@ -261,7 +279,9 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
                           : "border-border hover:border-primary/40 hover:bg-muted/40",
                       )}
                     >
-                      <span className="text-sm font-semibold">{slot.label}</span>
+                      <span className="text-sm font-semibold">
+                        {slot.label}
+                      </span>
                       <span className="text-muted-foreground text-xs">
                         {fmt12(slot.time)}
                       </span>
@@ -279,7 +299,7 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
               </div>
 
               {/* Stats bar */}
-              <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-muted/30 px-4 py-3">
+              <div className="bg-muted/30 flex flex-wrap items-center gap-4 rounded-lg border px-4 py-3">
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="size-4 text-green-500" />
                   <span className="text-sm font-medium">{doneCount} fed</span>
@@ -322,8 +342,11 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
                   const key = `${guest.id}-${activeSlotId}`;
                   const completion = completions.get(key);
                   const isSkipped = skipped.has(key);
-                  const state =
-                    completion ? "done" : isSkipped ? "skipped" : "pending";
+                  const state = completion
+                    ? "done"
+                    : isSkipped
+                      ? "skipped"
+                      : "pending";
 
                   return (
                     <div
@@ -339,7 +362,7 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
                           "border-border bg-background",
                         state === "pending" &&
                           !isScheduled &&
-                          "border-dashed border-border/60 bg-background",
+                          "border-border/60 bg-background border-dashed",
                       )}
                     >
                       <div className="flex flex-wrap items-start gap-4">
@@ -357,14 +380,19 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
                         {/* Pet + feeding info */}
                         <div className="min-w-0 flex-1 space-y-1.5">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-semibold">{guest.petName}</span>
+                            <span className="font-semibold">
+                              {guest.petName}
+                            </span>
                             <span className="text-muted-foreground text-sm">
                               {guest.petBreed}
                             </span>
                             <Badge variant="outline" className="text-xs">
                               {guest.kennelName}
                             </Badge>
-                            <Badge variant="secondary" className="text-xs capitalize">
+                            <Badge
+                              variant="secondary"
+                              className="text-xs capitalize"
+                            >
                               {guest.petSize} · {guest.petWeight} lbs
                             </Badge>
                             {!isScheduled && (
@@ -377,7 +405,10 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
                             )}
                             {state === "done" && (
                               <span className="text-xs font-medium text-green-600 dark:text-green-400">
-                                {OUTCOME_OPTIONS.find((o) => o.value === completion!.outcome)?.label ?? "Fed"} · {completion!.at} · {completion!.initials}
+                                {OUTCOME_OPTIONS.find(
+                                  (o) => o.value === completion!.outcome,
+                                )?.label ?? "Fed"}{" "}
+                                · {completion!.at} · {completion!.initials}
                               </span>
                             )}
                             {state === "skipped" && (
@@ -389,7 +420,9 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
 
                           {/* Feeding details */}
                           <p className="text-sm">
-                            <span className="font-medium">{guest.feedingAmount}</span>
+                            <span className="font-medium">
+                              {guest.feedingAmount}
+                            </span>
                             <span className="text-muted-foreground">
                               {" "}
                               {guest.foodBrand}
@@ -403,7 +436,8 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
                           </p>
 
                           {/* Allergy + med pills */}
-                          {(guest.allergies.length > 0 || medsDue.length > 0) && (
+                          {(guest.allergies.length > 0 ||
+                            medsDue.length > 0) && (
                             <div className="flex flex-wrap gap-1.5">
                               {guest.allergies.map((a) => (
                                 <span

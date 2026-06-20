@@ -55,12 +55,13 @@ function parseIso(iso: string): Date | null {
   return new Date(y, m - 1, d);
 }
 
-export function WeekPicker({ value, onValueChange, className }: WeekPickerProps) {
+export function WeekPicker({
+  value,
+  onValueChange,
+  className,
+}: WeekPickerProps) {
   const [open, setOpen] = useState(false);
-  const initialDate = useMemo(
-    () => parseIso(value) ?? new Date(),
-    [value],
-  );
+  const initialDate = useMemo(() => parseIso(value) ?? new Date(), [value]);
   const [viewMonth, setViewMonth] = useState(
     () => new Date(initialDate.getFullYear(), initialDate.getMonth(), 1),
   );
@@ -229,7 +230,7 @@ export function WeekPicker({ value, onValueChange, className }: WeekPickerProps)
                   onMouseEnter={() => setHoveredWeekStart(weekStartIso)}
                   onMouseLeave={() => setHoveredWeekStart(null)}
                   className={cn(
-                    "grid w-full grid-cols-7 rounded-full outline-none transition-colors",
+                    "grid w-full grid-cols-7 rounded-full transition-colors outline-none",
                     isSelected
                       ? "bg-primary text-primary-foreground"
                       : isHovered

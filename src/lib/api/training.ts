@@ -7,10 +7,7 @@ import {
   progressRecords,
   trainingPackages,
 } from "@/data/training";
-import {
-  seriesEnrollments,
-  trainingSeriesList,
-} from "@/data/training-series";
+import { seriesEnrollments, trainingSeriesList } from "@/data/training-series";
 import { defaultTrainingDisciplines } from "@/data/training-disciplines";
 import {
   defaultTrainingCourseTypes,
@@ -141,8 +138,7 @@ export const trainingQueries = {
   }),
   disciplines: () => ({
     queryKey: ["training", "disciplines"] as const,
-    queryFn: async () =>
-      defaultTrainingDisciplines.filter((d) => d.isActive),
+    queryFn: async () => defaultTrainingDisciplines.filter((d) => d.isActive),
   }),
   /** Unfiltered discipline list — used by Settings → Training so staff can
    *  toggle inactive disciplines back on. */
@@ -242,7 +238,8 @@ export const trainingQueries = {
   }),
   clientTrainingPackagesForPet: (petId: number) => ({
     queryKey: ["training", "client-packages", "pet", petId] as const,
-    queryFn: async () => clientTrainingPackages.filter((p) => p.petId === petId),
+    queryFn: async () =>
+      clientTrainingPackages.filter((p) => p.petId === petId),
   }),
   clientTrainingPackagesForClient: (clientId: number) => ({
     queryKey: ["training", "client-packages", "client", clientId] as const,

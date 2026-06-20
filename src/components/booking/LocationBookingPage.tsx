@@ -9,28 +9,31 @@ import {
 } from "lucide-react";
 import type { Location } from "@/types/location";
 
-const SERVICE_LABELS: Record<string, { label: string; sub: string; emoji: string }> = {
-  daycare:  { label: "Daycare",  sub: "Full or half day care",     emoji: "☀️" },
-  boarding: { label: "Boarding", sub: "Overnight stays",             emoji: "🌙" },
-  grooming: { label: "Grooming", sub: "Bath, full groom, more",      emoji: "✂️" },
-  training: { label: "Training", sub: "Group classes & 1-on-1",      emoji: "🎓" },
-  transport:{ label: "Transport",sub: "Pick-up & drop-off",          emoji: "🚐" },
-  spa:      { label: "Spa",      sub: "Premium pampering",           emoji: "💆" },
+const SERVICE_LABELS: Record<
+  string,
+  { label: string; sub: string; emoji: string }
+> = {
+  daycare: { label: "Daycare", sub: "Full or half day care", emoji: "☀️" },
+  boarding: { label: "Boarding", sub: "Overnight stays", emoji: "🌙" },
+  grooming: { label: "Grooming", sub: "Bath, full groom, more", emoji: "✂️" },
+  training: { label: "Training", sub: "Group classes & 1-on-1", emoji: "🎓" },
+  transport: { label: "Transport", sub: "Pick-up & drop-off", emoji: "🚐" },
+  spa: { label: "Spa", sub: "Premium pampering", emoji: "💆" },
 };
 
 const DAY_LABELS: { key: keyof Location["hours"]; label: string }[] = [
-  { key: "monday",    label: "Mon" },
-  { key: "tuesday",   label: "Tue" },
+  { key: "monday", label: "Mon" },
+  { key: "tuesday", label: "Tue" },
   { key: "wednesday", label: "Wed" },
-  { key: "thursday",  label: "Thu" },
-  { key: "friday",    label: "Fri" },
-  { key: "saturday",  label: "Sat" },
-  { key: "sunday",    label: "Sun" },
+  { key: "thursday", label: "Thu" },
+  { key: "friday", label: "Fri" },
+  { key: "saturday", label: "Sat" },
+  { key: "sunday", label: "Sun" },
 ];
 
 export function LocationBookingPage({ location }: { location: Location }) {
   return (
-    <div className="min-h-screen bg-muted/20">
+    <div className="bg-muted/20 min-h-screen">
       {/* Hero header — branded with location color */}
       <div
         className="relative overflow-hidden"
@@ -73,7 +76,7 @@ export function LocationBookingPage({ location }: { location: Location }) {
 
       <div className="container mx-auto grid gap-6 px-6 py-10 md:grid-cols-3">
         {/* Services */}
-        <div className="md:col-span-2 space-y-4">
+        <div className="space-y-4 md:col-span-2">
           <div>
             <h2 className="text-2xl font-bold">Choose a service</h2>
             <p className="text-muted-foreground text-sm">
@@ -92,7 +95,7 @@ export function LocationBookingPage({ location }: { location: Location }) {
               return (
                 <button
                   key={svc}
-                  className="group flex items-start gap-3 rounded-xl border bg-background p-4 text-left transition-all hover:shadow-md"
+                  className="group bg-background flex items-start gap-3 rounded-xl border p-4 text-left transition-all hover:shadow-md"
                   style={{
                     borderColor: `${location.color}33`,
                   }}
@@ -103,11 +106,14 @@ export function LocationBookingPage({ location }: { location: Location }) {
                   >
                     {meta.emoji}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="font-semibold">{meta.label}</p>
                     <p className="text-muted-foreground text-xs">{meta.sub}</p>
                     {cap !== undefined && (
-                      <p className="mt-1 text-[11px]" style={{ color: location.color }}>
+                      <p
+                        className="mt-1 text-[11px]"
+                        style={{ color: location.color }}
+                      >
                         Capacity {cap}/day
                       </p>
                     )}
@@ -137,8 +143,11 @@ export function LocationBookingPage({ location }: { location: Location }) {
 
         {/* Sidebar — hours + branding card */}
         <aside className="space-y-4">
-          <div className="overflow-hidden rounded-xl border bg-background shadow-sm">
-            <div className="border-b p-4" style={{ backgroundColor: `${location.color}10` }}>
+          <div className="bg-background overflow-hidden rounded-xl border shadow-sm">
+            <div
+              className="border-b p-4"
+              style={{ backgroundColor: `${location.color}10` }}
+            >
               <div className="flex items-center gap-2">
                 <Clock className="size-4" style={{ color: location.color }} />
                 <p className="text-sm font-semibold">Hours</p>
@@ -167,7 +176,7 @@ export function LocationBookingPage({ location }: { location: Location }) {
             </div>
           </div>
 
-          <div className="rounded-xl border bg-background p-4">
+          <div className="bg-background rounded-xl border p-4">
             <div className="flex items-center gap-2">
               <Calendar className="text-muted-foreground size-4" />
               <p className="text-sm font-semibold">About this booking page</p>
@@ -182,7 +191,7 @@ export function LocationBookingPage({ location }: { location: Location }) {
         </aside>
       </div>
 
-      <footer className="border-t bg-background py-6 text-center text-xs text-muted-foreground">
+      <footer className="bg-background text-muted-foreground border-t py-6 text-center text-xs">
         Booking with {location.name} · powered by Yipyy
       </footer>
     </div>

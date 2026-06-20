@@ -56,7 +56,8 @@ const TYPE_INFO: Record<string, { label: string; class: string }> = {
   },
   bereavement: {
     label: "Bereavement",
-    class: "bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300",
+    class:
+      "bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300",
   },
   parental: {
     label: "Parental",
@@ -146,7 +147,7 @@ function RequestRow({
     <>
       <tr
         className={cn(
-          "border-t transition-colors hover:bg-muted/30",
+          "hover:bg-muted/30 border-t transition-colors",
           expanded && "bg-muted/20",
         )}
       >
@@ -410,11 +411,7 @@ export default function TimeOffPage() {
     );
   }, [requests, tab, query]);
 
-  const decide = (
-    id: string,
-    status: "approved" | "denied",
-    notes: string,
-  ) => {
+  const decide = (id: string, status: "approved" | "denied", notes: string) => {
     setRequests((prev) =>
       prev.map((r) =>
         r.id === id

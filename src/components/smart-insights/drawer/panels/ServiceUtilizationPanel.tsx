@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Archive, DollarSign, Megaphone, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  Archive,
+  DollarSign,
+  Megaphone,
+  ExternalLink,
+} from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,7 +48,7 @@ export function ServiceUtilizationPanel({
         <div className="rounded-lg border bg-slate-50 p-3 text-sm">
           <Link
             href={insightLinks.rates("grooming")}
-            className="text-muted-foreground hover:text-primary mb-1 inline-flex items-center gap-1 text-xs uppercase tracking-wide hover:underline"
+            className="text-muted-foreground hover:text-primary mb-1 inline-flex items-center gap-1 text-xs tracking-wide uppercase hover:underline"
           >
             {SERVICE.module}
             <ExternalLink className="size-3" />
@@ -87,16 +93,25 @@ export function ServiceUtilizationPanel({
 
   if (mode === "promote") {
     return (
-      <PromoteFlow onBack={() => setMode("menu")} onComplete={() => onComplete()} />
+      <PromoteFlow
+        onBack={() => setMode("menu")}
+        onComplete={() => onComplete()}
+      />
     );
   }
   if (mode === "reprice") {
     return (
-      <RepriceFlow onBack={() => setMode("menu")} onComplete={() => onComplete()} />
+      <RepriceFlow
+        onBack={() => setMode("menu")}
+        onComplete={() => onComplete()}
+      />
     );
   }
   return (
-    <ArchiveFlow onBack={() => setMode("menu")} onComplete={() => onComplete()} />
+    <ArchiveFlow
+      onBack={() => setMode("menu")}
+      onComplete={() => onComplete()}
+    />
   );
 }
 
@@ -128,7 +143,9 @@ function Option({
       </span>
       <span className="flex-1">
         <span className="block font-semibold">{label}</span>
-        <span className="text-muted-foreground mt-0.5 block text-xs">{description}</span>
+        <span className="text-muted-foreground mt-0.5 block text-xs">
+          {description}
+        </span>
       </span>
     </button>
   );
@@ -139,7 +156,7 @@ function BackHeader({ onBack, label }: { onBack: () => void; label: string }) {
     <button
       type="button"
       onClick={onBack}
-      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs uppercase tracking-wide transition-colors"
+      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs tracking-wide uppercase transition-colors"
     >
       <ArrowLeft className="size-3.5" />
       {label}
@@ -147,9 +164,17 @@ function BackHeader({ onBack, label }: { onBack: () => void; label: string }) {
   );
 }
 
-function PromoteFlow({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+function PromoteFlow({
+  onBack,
+  onComplete,
+}: {
+  onBack: () => void;
+  onComplete: () => void;
+}) {
   const [step, setStep] = useState<"compose" | "preview">("compose");
-  const [subject, setSubject] = useState(`Try our ${SERVICE.name} — limited time`);
+  const [subject, setSubject] = useState(
+    `Try our ${SERVICE.name} — limited time`,
+  );
   const [body, setBody] = useState(
     `Hi {{firstName}},\n\nOur ${SERVICE.name} hasn't gotten the love it deserves lately — so we're running a short promo: 20% off any ${SERVICE.name} booking made in the next 14 days.\n\nBook here: doggieville.ca/book\n\nHope to see ${"{{petName}}"} soon,\nThe Doggieville team`,
   );
@@ -160,7 +185,11 @@ function PromoteFlow({ onBack, onComplete }: { onBack: () => void; onComplete: (
         <BackHeader onBack={onBack} label="Promotional campaign" />
         <div className="space-y-2">
           <Label htmlFor="promo-subject">Subject</Label>
-          <Input id="promo-subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
+          <Input
+            id="promo-subject"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="promo-body">Message</Label>
@@ -192,8 +221,13 @@ function PromoteFlow({ onBack, onComplete }: { onBack: () => void; onComplete: (
         channel="email"
         recipients={["All active clients · 612"]}
         subject={subject}
-        body={body.replaceAll("{{firstName}}", "[First name]").replaceAll("{{petName}}", "[Pet name]")}
-        meta={[{ label: "Discount", value: "20% off" }, { label: "Expires", value: "14 days" }]}
+        body={body
+          .replaceAll("{{firstName}}", "[First name]")
+          .replaceAll("{{petName}}", "[Pet name]")}
+        meta={[
+          { label: "Discount", value: "20% off" },
+          { label: "Expires", value: "14 days" },
+        ]}
       />
       <div className="mt-auto">
         <DrawerFooter
@@ -207,7 +241,13 @@ function PromoteFlow({ onBack, onComplete }: { onBack: () => void; onComplete: (
   );
 }
 
-function RepriceFlow({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+function RepriceFlow({
+  onBack,
+  onComplete,
+}: {
+  onBack: () => void;
+  onComplete: () => void;
+}) {
   const [step, setStep] = useState<"form" | "confirm">("form");
   const [newPrice, setNewPrice] = useState<number>(35);
 
@@ -227,7 +267,7 @@ function RepriceFlow({ onBack, onComplete }: { onBack: () => void; onComplete: (
           <div className="space-y-2">
             <Label htmlFor="re-price">New price</Label>
             <div className="relative">
-              <span className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 text-sm">
+              <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
                 $
               </span>
               <Input
@@ -261,7 +301,11 @@ function RepriceFlow({ onBack, onComplete }: { onBack: () => void; onComplete: (
         title="Update service price"
         changes={[
           { field: "Service", to: `${SERVICE.module} · ${SERVICE.name}` },
-          { field: "Price", from: `$${SERVICE.currentPrice.toFixed(2)}`, to: `$${newPrice.toFixed(2)}` },
+          {
+            field: "Price",
+            from: `$${SERVICE.currentPrice.toFixed(2)}`,
+            to: `$${newPrice.toFixed(2)}`,
+          },
         ]}
         note="The new rate applies to bookings created after this change. Existing bookings keep their original price."
       />
@@ -277,7 +321,13 @@ function RepriceFlow({ onBack, onComplete }: { onBack: () => void; onComplete: (
   );
 }
 
-function ArchiveFlow({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+function ArchiveFlow({
+  onBack,
+  onComplete,
+}: {
+  onBack: () => void;
+  onComplete: () => void;
+}) {
   return (
     <div className="flex h-full flex-col gap-5 px-1">
       <BackHeader onBack={onBack} label="Archive service" />
@@ -287,7 +337,10 @@ function ArchiveFlow({ onBack, onComplete }: { onBack: () => void; onComplete: (
           { field: "Service", to: `${SERVICE.module} · ${SERVICE.name}` },
           { field: "Status", from: "Active", to: "Archived" },
           { field: "Booking flow", to: "Hidden from new bookings" },
-          { field: "Existing bookings", to: `${SERVICE.bookings} kept on schedule` },
+          {
+            field: "Existing bookings",
+            to: `${SERVICE.bookings} kept on schedule`,
+          },
         ]}
         note="You can restore the service at any time from the Services tab."
       />

@@ -106,7 +106,11 @@ export const ALL_PLATFORMS: ReputationPublicPlatform[] = [
   "tripadvisor",
 ];
 
-const DEFAULT_ADDED: ReputationPublicPlatform[] = ["google", "facebook", "yelp"];
+const DEFAULT_ADDED: ReputationPublicPlatform[] = [
+  "google",
+  "facebook",
+  "yelp",
+];
 
 /** Display metadata for every supported public channel. */
 export const PLATFORM_META: Record<
@@ -167,7 +171,8 @@ export function orderedEnabledPlatforms(
   settings: ReputationSettings,
 ): ReputationPublicPlatform[] {
   return orderedPlatforms(settings).filter(
-    (p) => settings.reviewPlatforms[p].enabled && settings.reviewPlatforms[p].url,
+    (p) =>
+      settings.reviewPlatforms[p].enabled && settings.reviewPlatforms[p].url,
   );
 }
 
@@ -333,7 +338,10 @@ export function updateRatingOverlay(
   if (typeof window === "undefined") return;
   const all = loadRatingOverlays();
   const existing = all[token];
-  all[token] = { ...(existing ?? { source: "micro_survey" }), ...patch } as RatingOverlay;
+  all[token] = {
+    ...(existing ?? { source: "micro_survey" }),
+    ...patch,
+  } as RatingOverlay;
   window.localStorage.setItem(REPUTATION_RATINGS_KEY, JSON.stringify(all));
 }
 

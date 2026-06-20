@@ -6,7 +6,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
-import { DataTable, type ColumnDef, type FilterDef } from "@/components/ui/DataTable";
+import {
+  DataTable,
+  type ColumnDef,
+  type FilterDef,
+} from "@/components/ui/DataTable";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -118,10 +122,7 @@ function vaccineLabel(row: TrainingStudentRow): string {
 
 export function StudentsList() {
   const router = useRouter();
-  const todayISO = useMemo(
-    () => new Date().toISOString().split("T")[0],
-    [],
-  );
+  const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   const { data: enrollments = [] } = useQuery(
     trainingQueries.allSeriesEnrollments(),
@@ -169,7 +170,7 @@ export function StudentsList() {
       sortable: true,
       render: (row) => (
         <div className="flex items-center gap-2.5">
-          <div className="bg-muted relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-white shadow-sm">
+          <div className="bg-muted relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full shadow-sm ring-2 ring-white">
             {row.petImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -186,7 +187,7 @@ export function StudentsList() {
             {row.hasVaccineWarning && (
               <span
                 title={vaccineLabel(row)}
-                className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-rose-500 text-white shadow-sm ring-2 ring-white"
+                className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-rose-500 text-white shadow-sm ring-2 ring-white"
               >
                 <ShieldAlert className="size-2.5" />
               </span>
@@ -284,10 +285,7 @@ export function StudentsList() {
         row.paymentStatus ? (
           <Badge
             variant="outline"
-            className={cn(
-              "gap-1 border",
-              PAYMENT_META[row.paymentStatus].cls,
-            )}
+            className={cn("gap-1 border", PAYMENT_META[row.paymentStatus].cls)}
           >
             <CircleDollarSign className="size-3" />
             {PAYMENT_META[row.paymentStatus].label}
@@ -361,8 +359,7 @@ export function StudentsList() {
         { value: "refunded", label: "Refunded" },
         { value: "comped", label: "Comped" },
       ],
-      filterFn: (row: TrainingStudentRow, v: string) =>
-        row.paymentStatus === v,
+      filterFn: (row: TrainingStudentRow, v: string) => row.paymentStatus === v,
     },
     {
       key: "vaccineWarning",

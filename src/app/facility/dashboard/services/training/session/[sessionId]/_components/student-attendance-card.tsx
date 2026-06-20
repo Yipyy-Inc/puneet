@@ -142,7 +142,7 @@ export function StudentAttendanceCard({
         )}
         style={{ opacity: dragDx > 0 ? swipeProgress : 0 }}
       >
-        <span className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-wider">
+        <span className="inline-flex items-center gap-1.5 text-sm font-bold tracking-wider uppercase">
           <Check className="size-4" />
           Present
         </span>
@@ -155,176 +155,176 @@ export function StudentAttendanceCard({
         )}
         style={{ opacity: dragDx < 0 ? swipeProgress : 0 }}
       >
-        <span className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-wider">
+        <span className="inline-flex items-center gap-1.5 text-sm font-bold tracking-wider uppercase">
           <X className="size-4" />
           Absent
         </span>
       </div>
-    <Card
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerEnd}
-      onPointerCancel={handlePointerEnd}
-      style={{
-        transform: dragDx !== 0 ? `translateX(${dragDx}px)` : undefined,
-        // Snap-back animation runs only when we're not actively dragging.
-        // `dragDx === 0` reliably means "released" because every pointer-up
-        // resets it.
-        transition: dragDx === 0 ? "transform 180ms ease" : "none",
-        touchAction: "pan-y",
-      }}
-      className={cn(
-        "relative z-10 flex select-none flex-col gap-3 border p-3 transition-colors",
-        mark && STATUS_BORDER[mark.status],
-      )}
-    >
-      <div className="flex items-start gap-3">
-        {/* Photo */}
-        <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
-          {row.petImageUrl ? (
-            <Image
-              src={row.petImageUrl}
-              alt={row.petName}
-              fill
-              sizes="56px"
-              className="object-cover"
-              unoptimized
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <PawPrint className="text-muted-foreground size-5" />
-            </div>
-          )}
-        </div>
-
-        {/* Identity */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <p className="truncate text-sm font-semibold leading-tight">
-              {row.petName}
-            </p>
-            {isDropIn && (
-              <span
-                className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-sky-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-sky-700"
-                title="Guest from outside this series — single-session drop-in"
-              >
-                <Ticket className="size-2.5" />
-                Drop-in
-              </span>
-            )}
-          </div>
-          <p className="text-muted-foreground truncate text-xs">
-            {row.petBreed}
-          </p>
-          <p className="mt-1 truncate text-xs">
-            <span className="text-muted-foreground">Owner: </span>
-            <span className="font-medium">{row.ownerName}</span>
-          </p>
-          {ownerPhone && (
-            <a
-              href={`tel:${ownerPhone}`}
-              className="text-muted-foreground hover:text-foreground mt-0.5 inline-flex items-center gap-1 text-xs"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Phone className="size-3" />
-              {ownerPhone}
-            </a>
-          )}
-        </div>
-
-        {/* Timestamp pill (after a mark) */}
-        {mark && (
-          <span
-            className={cn(
-              "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-              mark.status === "present" && "bg-emerald-100 text-emerald-700",
-              mark.status === "absent" && "bg-red-100 text-red-700",
-              mark.status === "late" && "bg-amber-100 text-amber-700",
-            )}
-            title={`Marked at ${new Date(mark.markedAtISO).toLocaleString()}`}
-          >
-            {mark.status} · {formatTimestamp(mark.markedAtISO)}
-          </span>
+      <Card
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        style={{
+          transform: dragDx !== 0 ? `translateX(${dragDx}px)` : undefined,
+          // Snap-back animation runs only when we're not actively dragging.
+          // `dragDx === 0` reliably means "released" because every pointer-up
+          // resets it.
+          transition: dragDx === 0 ? "transform 180ms ease" : "none",
+          touchAction: "pan-y",
+        }}
+        className={cn(
+          "relative z-10 flex flex-col gap-3 border p-3 transition-colors select-none",
+          mark && STATUS_BORDER[mark.status],
         )}
-      </div>
-
-      {/* Attendance buttons */}
-      <div data-no-swipe className="grid grid-cols-3 gap-2">
-        <AttendanceButton
-          status="present"
-          active={mark?.status === "present"}
-          onClick={() => onMark("present")}
-          icon={Check}
-          label="Present"
-        />
-        <AttendanceButton
-          status="absent"
-          active={mark?.status === "absent"}
-          onClick={() => onMark("absent")}
-          icon={X}
-          label="Absent"
-        />
-        <AttendanceButton
-          status="late"
-          active={mark?.status === "late"}
-          onClick={() => onMark("late")}
-          icon={Clock3}
-          label="Late"
-        />
-      </div>
-
-      {/* Alerts — red box surfaces behavioral notes + care flags */}
-      {alerts.length > 0 && (
-        <div
-          data-no-swipe
-          className="rounded-lg border border-red-200 bg-red-50 p-2.5 dark:border-red-900/50 dark:bg-red-950/30"
-        >
-          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-red-700 dark:text-red-300">
-            <AlertTriangle className="size-3.5" />
-            Heads-up
+      >
+        <div className="flex items-start gap-3">
+          {/* Photo */}
+          <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
+            {row.petImageUrl ? (
+              <Image
+                src={row.petImageUrl}
+                alt={row.petName}
+                fill
+                sizes="56px"
+                className="object-cover"
+                unoptimized
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <PawPrint className="text-muted-foreground size-5" />
+              </div>
+            )}
           </div>
-          <ul className="mt-1 space-y-1 text-xs text-red-800 dark:text-red-200">
-            {alerts.map((a, i) => (
-              <li key={i} className="flex items-start gap-1.5">
-                <a.Icon className="mt-0.5 size-3 shrink-0" />
-                <span>{a.text}</span>
-              </li>
-            ))}
-          </ul>
-          {/* One-tap follow-up on the vaccine alert — message the owner for an
+
+          {/* Identity */}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <p className="truncate text-sm leading-tight font-semibold">
+                {row.petName}
+              </p>
+              {isDropIn && (
+                <span
+                  className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-sky-100 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-sky-700 uppercase"
+                  title="Guest from outside this series — single-session drop-in"
+                >
+                  <Ticket className="size-2.5" />
+                  Drop-in
+                </span>
+              )}
+            </div>
+            <p className="text-muted-foreground truncate text-xs">
+              {row.petBreed}
+            </p>
+            <p className="mt-1 truncate text-xs">
+              <span className="text-muted-foreground">Owner: </span>
+              <span className="font-medium">{row.ownerName}</span>
+            </p>
+            {ownerPhone && (
+              <a
+                href={`tel:${ownerPhone}`}
+                className="text-muted-foreground hover:text-foreground mt-0.5 inline-flex items-center gap-1 text-xs"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Phone className="size-3" />
+                {ownerPhone}
+              </a>
+            )}
+          </div>
+
+          {/* Timestamp pill (after a mark) */}
+          {mark && (
+            <span
+              className={cn(
+                "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase",
+                mark.status === "present" && "bg-emerald-100 text-emerald-700",
+                mark.status === "absent" && "bg-red-100 text-red-700",
+                mark.status === "late" && "bg-amber-100 text-amber-700",
+              )}
+              title={`Marked at ${new Date(mark.markedAtISO).toLocaleString()}`}
+            >
+              {mark.status} · {formatTimestamp(mark.markedAtISO)}
+            </span>
+          )}
+        </div>
+
+        {/* Attendance buttons */}
+        <div data-no-swipe className="grid grid-cols-3 gap-2">
+          <AttendanceButton
+            status="present"
+            active={mark?.status === "present"}
+            onClick={() => onMark("present")}
+            icon={Check}
+            label="Present"
+          />
+          <AttendanceButton
+            status="absent"
+            active={mark?.status === "absent"}
+            onClick={() => onMark("absent")}
+            icon={X}
+            label="Absent"
+          />
+          <AttendanceButton
+            status="late"
+            active={mark?.status === "late"}
+            onClick={() => onMark("late")}
+            icon={Clock3}
+            label="Late"
+          />
+        </div>
+
+        {/* Alerts — red box surfaces behavioral notes + care flags */}
+        {alerts.length > 0 && (
+          <div
+            data-no-swipe
+            className="rounded-lg border border-red-200 bg-red-50 p-2.5 dark:border-red-900/50 dark:bg-red-950/30"
+          >
+            <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-red-700 uppercase dark:text-red-300">
+              <AlertTriangle className="size-3.5" />
+              Heads-up
+            </div>
+            <ul className="mt-1 space-y-1 text-xs text-red-800 dark:text-red-200">
+              {alerts.map((a, i) => (
+                <li key={i} className="flex items-start gap-1.5">
+                  <a.Icon className="mt-0.5 size-3 shrink-0" />
+                  <span>{a.text}</span>
+                </li>
+              ))}
+            </ul>
+            {/* One-tap follow-up on the vaccine alert — message the owner for an
               updated certificate without leaving the session. Only for vaccine
               warnings, and only when the owner is set up in the Messaging
               module (and not blocked). */}
-          {row.vaccineWarning.hasWarning &&
-            enrollment &&
-            hasMessagingProfile(enrollment.ownerId) &&
-            !isClientBlocked(enrollment.ownerId) && (
-              <RequestRecordsButton
-                ownerName={enrollment.ownerName}
-                ownerEmail={enrollment.ownerEmail || undefined}
-                ownerPhone={enrollment.ownerPhone || undefined}
-                petName={row.petName}
-                vaccineName={row.vaccineWarning.soonestName}
-                expired={
-                  row.vaccineWarning.soonestDays !== null &&
-                  row.vaccineWarning.soonestDays < 0
-                }
-              />
-            )}
-        </div>
-      )}
+            {row.vaccineWarning.hasWarning &&
+              enrollment &&
+              hasMessagingProfile(enrollment.ownerId) &&
+              !isClientBlocked(enrollment.ownerId) && (
+                <RequestRecordsButton
+                  ownerName={enrollment.ownerName}
+                  ownerEmail={enrollment.ownerEmail || undefined}
+                  ownerPhone={enrollment.ownerPhone || undefined}
+                  petName={row.petName}
+                  vaccineName={row.vaccineWarning.soonestName}
+                  expired={
+                    row.vaccineWarning.soonestDays !== null &&
+                    row.vaccineWarning.soonestDays < 0
+                  }
+                />
+              )}
+          </div>
+        )}
 
-      {/* Mobile hint — fades out after the first mark. Tapping the buttons
+        {/* Mobile hint — fades out after the first mark. Tapping the buttons
           above still works, but swiping is the faster gesture. */}
-      {!mark && (
-        <p
-          aria-hidden
-          className="text-muted-foreground -mb-1 text-center text-[10px] italic sm:hidden"
-        >
-          Swipe right for Present · left for Absent
-        </p>
-      )}
-    </Card>
+        {!mark && (
+          <p
+            aria-hidden
+            className="text-muted-foreground -mb-1 text-center text-[10px] italic sm:hidden"
+          >
+            Swipe right for Present · left for Absent
+          </p>
+        )}
+      </Card>
     </div>
   );
 }

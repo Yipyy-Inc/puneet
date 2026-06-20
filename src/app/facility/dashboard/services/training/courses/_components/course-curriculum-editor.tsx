@@ -134,7 +134,9 @@ export function CourseCurriculumEditor({
   // effects, never during render).
   const uidRef = useRef(0);
 
-  const [rows, setRows] = useState<SessionRow[]>(() => toRows(value, weekCount));
+  const [rows, setRows] = useState<SessionRow[]>(() =>
+    toRows(value, weekCount),
+  );
   const [previewOpen, setPreviewOpen] = useState(false);
 
   // Grow/shrink the row list when the course duration changes, preserving the
@@ -181,7 +183,10 @@ export function CourseCurriculumEditor({
     commit(
       rows.map((r) =>
         r.uid === uid
-          ? { ...r, exerciseIds: r.exerciseIds.filter((id) => id !== exerciseId) }
+          ? {
+              ...r,
+              exerciseIds: r.exerciseIds.filter((id) => id !== exerciseId),
+            }
           : r,
       ),
     );
@@ -227,7 +232,8 @@ export function CourseCurriculumEditor({
     commit(arrayMove(rows, oldIndex, newIndex));
   }
 
-  const showCopyOption = weekCount > 1 && (rows[0]?.exerciseIds.length ?? 0) > 0;
+  const showCopyOption =
+    weekCount > 1 && (rows[0]?.exerciseIds.length ?? 0) > 0;
   const hasAnyContent = rows.some(
     (r) => r.theme.trim().length > 0 || r.exerciseIds.length > 0,
   );
@@ -255,7 +261,9 @@ export function CourseCurriculumEditor({
                 onToggleExercise={(exId) => toggleExercise(row.uid, exId)}
                 onRemoveExercise={(exId) => removeExercise(row.uid, exId)}
                 copySlot={
-                  index === 0 && showCopyOption ? copyFirstToRemaining : undefined
+                  index === 0 && showCopyOption
+                    ? copyFirstToRemaining
+                    : undefined
                 }
               />
             ))}
@@ -316,8 +324,14 @@ function SortableSessionRow({
    *  "Copy to all remaining sessions" affordance under this row. */
   copySlot?: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: row.uid });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: row.uid });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -329,7 +343,7 @@ function SortableSessionRow({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "space-y-2 rounded-lg border bg-card p-3",
+        "bg-card space-y-2 rounded-lg border p-3",
         isDragging && "opacity-60 shadow-lg",
       )}
     >
@@ -343,7 +357,7 @@ function SortableSessionRow({
         >
           <GripVertical className="size-4" />
         </button>
-        <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-indigo-100 text-[11px] font-bold tabular-nums text-indigo-700">
+        <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-indigo-100 text-[11px] font-bold text-indigo-700 tabular-nums">
           {sessionNumber}
         </span>
         <Input
@@ -491,13 +505,13 @@ function ExerciseMultiPicker({
                 return (
                   <div key={discId} className="pb-1">
                     {!disciplineId && (
-                      <div className="text-muted-foreground px-2 py-1 text-[10px] font-bold uppercase tracking-wider">
+                      <div className="text-muted-foreground px-2 py-1 text-[10px] font-bold tracking-wider uppercase">
                         {disciplineName(discId)}
                       </div>
                     )}
                     {tierBlocks.map(({ level, list }) => (
                       <div key={level}>
-                        <div className="text-muted-foreground/70 px-2 pt-1 text-[9px] font-bold uppercase tracking-wider">
+                        <div className="text-muted-foreground/70 px-2 pt-1 text-[9px] font-bold tracking-wider uppercase">
                           {DIFFICULTY_LABELS[level]}
                         </div>
                         {list.map((e) => {

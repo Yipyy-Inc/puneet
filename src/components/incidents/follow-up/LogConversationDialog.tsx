@@ -68,11 +68,36 @@ const SENTIMENTS: {
   icon: typeof Smile;
   color: string;
 }[] = [
-  { value: "positive", label: "Positive", icon: ThumbsUp, color: "text-green-600 border-green-300 bg-green-50" },
-  { value: "neutral", label: "Neutral", icon: Meh, color: "text-slate-600 border-slate-300 bg-slate-50" },
-  { value: "concerned", label: "Concerned", icon: Frown, color: "text-amber-600 border-amber-300 bg-amber-50" },
-  { value: "upset", label: "Upset", icon: ThumbsDown, color: "text-red-600 border-red-300 bg-red-50" },
-  { value: "unreachable", label: "Couldn't reach", icon: PhoneOff, color: "text-slate-500 border-slate-300 bg-slate-50" },
+  {
+    value: "positive",
+    label: "Positive",
+    icon: ThumbsUp,
+    color: "text-green-600 border-green-300 bg-green-50",
+  },
+  {
+    value: "neutral",
+    label: "Neutral",
+    icon: Meh,
+    color: "text-slate-600 border-slate-300 bg-slate-50",
+  },
+  {
+    value: "concerned",
+    label: "Concerned",
+    icon: Frown,
+    color: "text-amber-600 border-amber-300 bg-amber-50",
+  },
+  {
+    value: "upset",
+    label: "Upset",
+    icon: ThumbsDown,
+    color: "text-red-600 border-red-300 bg-red-50",
+  },
+  {
+    value: "unreachable",
+    label: "Couldn't reach",
+    icon: PhoneOff,
+    color: "text-slate-500 border-slate-300 bg-slate-50",
+  },
 ];
 
 export function LogConversationDialog({
@@ -165,7 +190,7 @@ export function LogConversationDialog({
         {/* Task context */}
         <Card className="border-blue-200 bg-blue-50/40 dark:border-blue-900 dark:bg-blue-900/10">
           <CardContent className="py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">
+            <p className="text-xs font-semibold tracking-wide text-blue-700 uppercase dark:text-blue-400">
               {task.protocolName ?? "Follow-Up Task"}
               {task.stepOrder ? ` · Step ${task.stepOrder}` : ""}
             </p>
@@ -180,10 +205,10 @@ export function LogConversationDialog({
         {priorEntries.length > 0 && (
           <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-900/10">
             <CardContent className="space-y-2.5 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+              <p className="text-xs font-semibold tracking-wide text-amber-800 uppercase dark:text-amber-300">
                 Read first — what was already said
               </p>
-              <p className="text-amber-800 text-[11px] dark:text-amber-300">
+              <p className="text-[11px] text-amber-800 dark:text-amber-300">
                 {priorEntries.length} prior conversation
                 {priorEntries.length === 1 ? "" : "s"} from earlier follow-up
                 steps. Reference these so you don&apos;t repeat questions or
@@ -198,7 +223,7 @@ export function LogConversationDialog({
                       className="bg-background rounded-md border border-amber-100 p-2.5 dark:border-amber-900/50"
                     >
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
-                        <span className="bg-amber-100 text-amber-900 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold dark:bg-amber-900/50 dark:text-amber-200">
+                        <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-900 dark:bg-amber-900/50 dark:text-amber-200">
                           {idx + 1}
                         </span>
                         <Badge
@@ -230,13 +255,13 @@ export function LogConversationDialog({
                         {entry.summary}
                       </p>
                       {entry.customerStatement && (
-                        <p className="text-muted-foreground mt-1 text-[11px] line-clamp-3 whitespace-pre-wrap">
+                        <p className="text-muted-foreground mt-1 line-clamp-3 text-[11px] whitespace-pre-wrap">
                           <span className="font-semibold">Customer:</span>{" "}
                           {entry.customerStatement}
                         </p>
                       )}
                       {entry.nextSteps && (
-                        <p className="text-purple-700 mt-1 text-[11px] dark:text-purple-300">
+                        <p className="mt-1 text-[11px] text-purple-700 dark:text-purple-300">
                           <span className="font-semibold">We promised:</span>{" "}
                           {entry.nextSteps}
                         </p>
@@ -271,7 +296,7 @@ export function LogConversationDialog({
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-semibold">Outcome</Label>
-            <div className="flex h-9 items-center gap-2 rounded-md border bg-background px-3">
+            <div className="bg-background flex h-9 items-center gap-2 rounded-md border px-3">
               <Checkbox
                 checked={reachedClient}
                 onCheckedChange={(v) => setReachedClient(Boolean(v))}

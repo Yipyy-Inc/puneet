@@ -7,7 +7,9 @@ import { DailyRegisterClient } from "@/components/billing/cash-drawer/DailyRegis
 
 export default function DailyRegisterPage() {
   const facilityId = 11;
-  const location = locations.find((l) => l.facilityId === facilityId && l.isPrimary)!;
+  const location = locations.find(
+    (l) => l.facilityId === facilityId && l.isPrimary,
+  )!;
   const currency = location.country === "CA" ? "CAD" : "USD";
   const staffName =
     location.staffAssignments.find((s) => s.role === "front_desk")?.staffName ??
@@ -33,7 +35,9 @@ export default function DailyRegisterPage() {
               <Vault className="size-5" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">Daily Register</h2>
+              <h2 className="text-2xl font-bold tracking-tight">
+                Daily Register
+              </h2>
               <p className="text-muted-foreground text-sm">
                 {location.name} · open / close the day, track cash sales,
                 reconcile the drawer

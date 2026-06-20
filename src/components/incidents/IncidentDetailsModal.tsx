@@ -204,9 +204,7 @@ export function IncidentDetailsModal({
             <TabsTrigger value="photos">
               Photos ({incident.photos.length})
             </TabsTrigger>
-            <TabsTrigger value="tasks">
-              Follow-Up ({tasks.length})
-            </TabsTrigger>
+            <TabsTrigger value="tasks">Follow-Up ({tasks.length})</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}

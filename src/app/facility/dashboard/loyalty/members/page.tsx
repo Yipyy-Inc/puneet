@@ -1,12 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { LoyaltyMembersTable } from "@/components/loyalty/LoyaltyMembersTable";
 import { loyaltyQueries } from "@/lib/api/loyalty";

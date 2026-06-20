@@ -3,13 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
-import {
-  Cat,
-  CreditCard,
-  Dog,
-  Heart,
-  Receipt,
-} from "lucide-react";
+import { Cat, CreditCard, Dog, Heart, Receipt } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -85,7 +79,8 @@ export function PastBookingCard({
                       </h3>
                     </div>
                     <p className="text-muted-foreground text-sm">
-                      {pet?.name || "Pet"} · {formatDate(booking.startDate, isMounted)}
+                      {pet?.name || "Pet"} ·{" "}
+                      {formatDate(booking.startDate, isMounted)}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-1.5">
@@ -98,8 +93,8 @@ export function PastBookingCard({
                   {booking.checkInTime && <span>{booking.checkInTime}</span>}
                   {existingTip > 0 && (
                     <span className="text-primary inline-flex items-center gap-1 font-medium">
-                      <Heart className="size-3 fill-current" />
-                      ${existingTip.toFixed(2)} tipped
+                      <Heart className="size-3 fill-current" />$
+                      {existingTip.toFixed(2)} tipped
                     </span>
                   )}
                 </div>
@@ -160,7 +155,7 @@ export function PastBookingCard({
               100% goes to the staff · takes 10 seconds
             </p>
           </div>
-          <Badge className="bg-primary text-primary-foreground rounded-full px-3 py-1.5 text-[11px] font-semibold group-hover:scale-105 transition-transform">
+          <Badge className="bg-primary text-primary-foreground rounded-full px-3 py-1.5 text-[11px] font-semibold transition-transform group-hover:scale-105">
             Tip now
           </Badge>
         </button>

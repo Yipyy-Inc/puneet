@@ -24,30 +24,74 @@ interface OvertimeRow {
 }
 
 const OT_ROWS: OvertimeRow[] = [
-  { staffId: "staff-1", staffName: "Marie Tremblay", role: "Manager", otHours: 12, otCost: 540, weeklyHours: 52 },
-  { staffId: "staff-2", staffName: "J-F Roy", role: "Groomer", otHours: 9, otCost: 360, weeklyHours: 49 },
-  { staffId: "staff-3", staffName: "Sophie Côté", role: "Kennel Tech", otHours: 7, otCost: 245, weeklyHours: 47 },
-  { staffId: "staff-4", staffName: "Lucas Martin", role: "Groomer", otHours: 5, otCost: 200, weeklyHours: 45 },
-  { staffId: "staff-5", staffName: "Amélie Dubois", role: "Front Desk", otHours: 3, otCost: 105, weeklyHours: 43 },
+  {
+    staffId: "staff-1",
+    staffName: "Marie Tremblay",
+    role: "Manager",
+    otHours: 12,
+    otCost: 540,
+    weeklyHours: 52,
+  },
+  {
+    staffId: "staff-2",
+    staffName: "J-F Roy",
+    role: "Groomer",
+    otHours: 9,
+    otCost: 360,
+    weeklyHours: 49,
+  },
+  {
+    staffId: "staff-3",
+    staffName: "Sophie Côté",
+    role: "Kennel Tech",
+    otHours: 7,
+    otCost: 245,
+    weeklyHours: 47,
+  },
+  {
+    staffId: "staff-4",
+    staffName: "Lucas Martin",
+    role: "Groomer",
+    otHours: 5,
+    otCost: 200,
+    weeklyHours: 45,
+  },
+  {
+    staffId: "staff-5",
+    staffName: "Amélie Dubois",
+    role: "Front Desk",
+    otHours: 3,
+    otCost: 105,
+    weeklyHours: 43,
+  },
 ];
 
 const TOTAL_OT_COST = OT_ROWS.reduce((s, r) => s + r.otCost, 0);
 
 type Mode = "report" | "redistribute";
 
-export function OvertimeReportPanel({ onComplete, onCancel }: InsightPanelProps) {
+export function OvertimeReportPanel({
+  onComplete,
+  onCancel,
+}: InsightPanelProps) {
   const [mode, setMode] = useState<Mode>("report");
 
   if (mode === "report") {
     return (
       <div className="flex h-full flex-col gap-5 px-1">
         <div className="rounded-lg border bg-red-50 p-3 text-sm">
-          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-red-900">
+          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-red-900 uppercase">
             <ClockAlert className="size-3.5" />
             $1,420 over budget · 78 OT hours total
           </div>
           <p className="text-red-900">
-            Top 3 staff account for {(((OT_ROWS[0].otHours + OT_ROWS[1].otHours + OT_ROWS[2].otHours) / 78) * 100).toFixed(0)}% of all overtime.
+            Top 3 staff account for{" "}
+            {(
+              ((OT_ROWS[0].otHours + OT_ROWS[1].otHours + OT_ROWS[2].otHours) /
+                78) *
+              100
+            ).toFixed(0)}
+            % of all overtime.
           </p>
         </div>
 
@@ -60,7 +104,7 @@ export function OvertimeReportPanel({ onComplete, onCancel }: InsightPanelProps)
               <div className="min-w-0 flex-1">
                 <Link
                   href={insightLinks.staff(r.staffId)}
-                  className="font-semibold hover:text-primary hover:underline"
+                  className="hover:text-primary font-semibold hover:underline"
                 >
                   {r.staffName}
                 </Link>
@@ -85,7 +129,9 @@ export function OvertimeReportPanel({ onComplete, onCancel }: InsightPanelProps)
             <Users className="size-5" />
           </span>
           <span className="flex-1">
-            <span className="block font-semibold">Review schedule efficiency</span>
+            <span className="block font-semibold">
+              Review schedule efficiency
+            </span>
             <span className="text-muted-foreground mt-0.5 block text-xs">
               Opens next week&#39;s schedule to redistribute hours away from
               high-OT staff
@@ -94,7 +140,7 @@ export function OvertimeReportPanel({ onComplete, onCancel }: InsightPanelProps)
         </button>
 
         <div className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
-          <div className="mb-1 flex items-center gap-1.5 font-semibold uppercase tracking-wide">
+          <div className="mb-1 flex items-center gap-1.5 font-semibold tracking-wide uppercase">
             <Info className="size-3.5" />
             Informational
           </div>
@@ -116,20 +162,36 @@ export function OvertimeReportPanel({ onComplete, onCancel }: InsightPanelProps)
   }
 
   return (
-    <RedistributeFlow onBack={() => setMode("report")} onComplete={() => onComplete()} />
+    <RedistributeFlow
+      onBack={() => setMode("report")}
+      onComplete={() => onComplete()}
+    />
   );
 }
 
-function RedistributeFlow({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+function RedistributeFlow({
+  onBack,
+  onComplete,
+}: {
+  onBack: () => void;
+  onComplete: () => void;
+}) {
   return (
     <div className="flex h-full flex-col gap-5 px-1">
       <BackHeader onBack={onBack} label="Redistribute next week" />
       <div className="rounded-lg border bg-slate-50 p-3 text-sm">
         <p className="font-semibold">Suggested redistributions for next week</p>
         <ul className="text-muted-foreground mt-2 list-disc space-y-1 pl-5 text-xs">
-          <li>Move 6h from Marie Tremblay (manager) → Amélie Dubois (front desk)</li>
-          <li>Move 4h from J-F Roy → Lucas Martin (both groomers, even out load)</li>
-          <li>Cap Sophie Côté at 40h next week — shift her overflow to Tom Anderson</li>
+          <li>
+            Move 6h from Marie Tremblay (manager) → Amélie Dubois (front desk)
+          </li>
+          <li>
+            Move 4h from J-F Roy → Lucas Martin (both groomers, even out load)
+          </li>
+          <li>
+            Cap Sophie Côté at 40h next week — shift her overflow to Tom
+            Anderson
+          </li>
         </ul>
       </div>
 
@@ -163,7 +225,7 @@ function BackHeader({ onBack, label }: { onBack: () => void; label: string }) {
     <button
       type="button"
       onClick={onBack}
-      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs uppercase tracking-wide transition-colors"
+      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs tracking-wide uppercase transition-colors"
     >
       <ArrowLeft className="size-3.5" />
       {label}

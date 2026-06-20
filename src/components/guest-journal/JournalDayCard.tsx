@@ -48,9 +48,7 @@ export function JournalDayCard({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-sm font-semibold">
-              {dateLabel}
-            </CardTitle>
+            <CardTitle className="text-sm font-semibold">{dateLabel}</CardTitle>
             <p className="text-muted-foreground mt-0.5 text-xs">{dayLabel}</p>
           </div>
           <Badge
@@ -80,7 +78,7 @@ export function JournalDayCard({
               <div
                 key={task.id}
                 data-logged={isLogged}
-                className="flex items-start gap-2.5 rounded-md border bg-card px-2.5 py-2 transition-colors data-[logged=true]:bg-muted/30"
+                className="bg-card data-[logged=true]:bg-muted/30 flex items-start gap-2.5 rounded-md border px-2.5 py-2 transition-colors"
               >
                 <div
                   className={`flex size-7 shrink-0 items-center justify-center rounded-md ${meta.bg}`}
@@ -128,7 +126,7 @@ export function JournalDayCard({
                         {format12h(exec.executedAt)} · {exec.staffInitials}
                       </span>
                       {exec.notes && (
-                        <span className="text-muted-foreground italic text-[10px]">
+                        <span className="text-muted-foreground text-[10px] italic">
                           &ldquo;{exec.notes}&rdquo;
                         </span>
                       )}
@@ -142,7 +140,7 @@ export function JournalDayCard({
                       variant="ghost"
                       size="sm"
                       onClick={() => onLog(task, exec)}
-                      className="h-6 gap-1 text-[10px] text-muted-foreground"
+                      className="text-muted-foreground h-6 gap-1 text-[10px]"
                     >
                       <Pencil className="size-3" />
                     </Button>

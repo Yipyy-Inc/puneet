@@ -120,7 +120,9 @@ export function TimeBlockDialog({
       notes: notes.trim() || undefined,
     };
     onSave(block);
-    toast.success(`Blocked ${stylistName}'s ${reason} (${startTime}–${endTime})`);
+    toast.success(
+      `Blocked ${stylistName}'s ${reason} (${startTime}–${endTime})`,
+    );
     onOpenChange(false);
   }
 
@@ -136,20 +138,21 @@ export function TimeBlockDialog({
 
         <div className="flex flex-col gap-4">
           {/* Slot summary */}
-          <div className="rounded-lg border bg-muted/40 px-3 py-2.5">
+          <div className="bg-muted/40 rounded-lg border px-3 py-2.5">
             <div className="flex flex-col gap-1.5 text-sm">
               <div className="flex items-center gap-2">
-                <User className="size-3.5 text-muted-foreground" />
+                <User className="text-muted-foreground size-3.5" />
                 <span className="font-medium">{stylistName}</span>
               </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="text-muted-foreground flex items-center gap-2">
                 <CalendarIcon className="size-3.5" />
                 <span>{formatDateLong(date)}</span>
               </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="text-muted-foreground flex items-center gap-2">
                 <Clock className="size-3.5" />
                 <span>
-                  Starts at <strong className="text-foreground">{startTime}</strong>
+                  Starts at{" "}
+                  <strong className="text-foreground">{startTime}</strong>
                 </span>
               </div>
             </div>
@@ -192,7 +195,7 @@ export function TimeBlockDialog({
                 ))}
               </SelectContent>
             </Select>
-            <p className="mt-1 text-[10px] text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-[10px]">
               Ends at {addMinutes(startTime, Number(durationMin))}
             </p>
           </div>

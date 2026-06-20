@@ -33,7 +33,7 @@ export function ConfirmBeforeModify({ title, changes, note }: Props) {
             key={`${row.field}-${idx}`}
             className="flex flex-wrap items-baseline gap-2"
           >
-            <span className="text-muted-foreground w-24 shrink-0 text-xs uppercase tracking-wide">
+            <span className="text-muted-foreground w-24 shrink-0 text-xs tracking-wide uppercase">
               {row.field}
             </span>
             {row.from !== undefined && (

@@ -22,7 +22,10 @@ import { cn } from "@/lib/utils";
 import { messagingAnalytics } from "@/data/messaging";
 
 const ChartsBundle = dynamic(
-  () => import("./MessagingAnalyticsCharts").then((m) => m.MessagingAnalyticsCharts),
+  () =>
+    import("./MessagingAnalyticsCharts").then(
+      (m) => m.MessagingAnalyticsCharts,
+    ),
   { ssr: false },
 );
 
@@ -88,7 +91,12 @@ function KpiCard({
     <Card className="overflow-hidden">
       <CardContent className="pt-5">
         <div className="flex items-start justify-between gap-2">
-          <div className={cn("flex size-9 items-center justify-center rounded-xl", palette.ring)}>
+          <div
+            className={cn(
+              "flex size-9 items-center justify-center rounded-xl",
+              palette.ring,
+            )}
+          >
             <Icon className={cn("size-4", palette.text)} />
           </div>
           {delta && (
@@ -109,10 +117,14 @@ function KpiCard({
             </span>
           )}
         </div>
-        <p className="mt-3 text-[11px] font-semibold tracking-wider uppercase text-slate-400">
+        <p className="mt-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
           {label}
         </p>
-        <p className={cn("mt-0.5 text-2xl font-bold tabular-nums text-slate-800")}>
+        <p
+          className={cn(
+            "mt-0.5 text-2xl font-bold text-slate-800 tabular-nums",
+          )}
+        >
           {value}
         </p>
         {sub && <p className="mt-0.5 text-[11px] text-slate-400">{sub}</p>}
@@ -183,7 +195,9 @@ export function MessagingAnalyticsView() {
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Messaging Analytics</h2>
+          <h2 className="text-2xl font-bold text-slate-900">
+            Messaging Analytics
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
             {rangeLabel} · all locations · all channels
           </p>
@@ -303,7 +317,9 @@ export function MessagingAnalyticsView() {
             <p className="text-3xl font-bold text-slate-800">
               {data.smsSent.toLocaleString()}
             </p>
-            <p className="mt-1 text-[11px] text-slate-400">Delivered this period</p>
+            <p className="mt-1 text-[11px] text-slate-400">
+              Delivered this period
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -333,7 +349,9 @@ export function MessagingAnalyticsView() {
             <p className="text-3xl font-bold text-slate-800">
               {data.chatMessages.toLocaleString()}
             </p>
-            <p className="mt-1 text-[11px] text-slate-400">In-app chat messages</p>
+            <p className="mt-1 text-[11px] text-slate-400">
+              In-app chat messages
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -394,7 +412,9 @@ export function MessagingAnalyticsView() {
                     </div>
                     <div className="flex gap-4 text-[11px] text-slate-400">
                       <span>
-                        <strong className="text-slate-700">{staff.replied}</strong>{" "}
+                        <strong className="text-slate-700">
+                          {staff.replied}
+                        </strong>{" "}
                         replied
                       </span>
                       <span>
@@ -404,7 +424,9 @@ export function MessagingAnalyticsView() {
                         avg
                       </span>
                       <span>
-                        <strong className="text-slate-700">{staff.resolved}</strong>{" "}
+                        <strong className="text-slate-700">
+                          {staff.resolved}
+                        </strong>{" "}
                         resolved
                       </span>
                     </div>

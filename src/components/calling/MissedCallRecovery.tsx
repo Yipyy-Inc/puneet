@@ -30,13 +30,17 @@ function rateColor(rate: number | null): string {
 
 function TrendChart({ weeks }: { weeks: RecoveryWeek[] }) {
   const n = weeks.length;
-  const x = (i: number) => PAD.left + (n <= 1 ? PLOT_W / 2 : (i / (n - 1)) * PLOT_W);
+  const x = (i: number) =>
+    PAD.left + (n <= 1 ? PLOT_W / 2 : (i / (n - 1)) * PLOT_W);
   const y = (rate: number) => PAD.top + (1 - rate / 100) * PLOT_H;
 
   // Points that actually have data (weeks with missed calls).
   const pts = weeks
     .map((w, i) => (w.rate === null ? null : { i, cx: x(i), cy: y(w.rate), w }))
-    .filter((p): p is { i: number; cx: number; cy: number; w: RecoveryWeek } => p !== null);
+    .filter(
+      (p): p is { i: number; cx: number; cy: number; w: RecoveryWeek } =>
+        p !== null,
+    );
 
   const line = pts.map((p) => `${p.cx},${p.cy}`).join(" ");
   const area =
@@ -45,7 +49,12 @@ function TrendChart({ weeks }: { weeks: RecoveryWeek[] }) {
       : "";
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="h-44 w-full" role="img" aria-label="Weekly recovery rate trend">
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="h-44 w-full"
+      role="img"
+      aria-label="Weekly recovery rate trend"
+    >
       <defs>
         <linearGradient id="recoveryArea" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="rgb(16 185 129)" stopOpacity="0.22" />
@@ -65,7 +74,12 @@ function TrendChart({ weeks }: { weeks: RecoveryWeek[] }) {
             strokeWidth={1}
             strokeDasharray="2 3"
           />
-          <text x={PAD.left - 6} y={y(g) + 3} textAnchor="end" className="fill-muted-foreground text-[9px]">
+          <text
+            x={PAD.left - 6}
+            y={y(g) + 3}
+            textAnchor="end"
+            className="fill-muted-foreground text-[9px]"
+          >
             {g}%
           </text>
         </g>
@@ -138,9 +152,11 @@ export function MissedCallRecovery({
     xs.reduce((s, w) => s + (w.rate ?? 0), 0) / xs.length;
   const direction =
     withData.length >= 2
-      ? avgRate(withData.slice(withData.length - half)) - avgRate(withData.slice(0, half))
+      ? avgRate(withData.slice(withData.length - half)) -
+        avgRate(withData.slice(0, half))
       : 0;
-  const DirIcon = direction > 0 ? TrendingUp : direction < 0 ? TrendingDown : Minus;
+  const DirIcon =
+    direction > 0 ? TrendingUp : direction < 0 ? TrendingDown : Minus;
 
   return (
     <Card className="border-2 border-emerald-500/30 bg-linear-to-br from-emerald-50/60 to-transparent dark:from-emerald-950/20">
@@ -151,16 +167,27 @@ export function MissedCallRecovery({
               <PhoneForwarded className="size-6" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-muted-foreground">
+              <p className="text-muted-foreground text-sm font-semibold">
                 Missed Call Recovery Rate
               </p>
-              <p className={cn("text-5xl/tight font-bold tabular-nums", rateColor(stats.rate))}>
+              <p
+                className={cn(
+                  "text-5xl/tight font-bold tabular-nums",
+                  rateColor(stats.rate),
+                )}
+              >
                 {stats.rate === null ? "—" : `${Math.round(stats.rate)}%`}
               </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">{stats.recovered}</span> of{" "}
-                <span className="font-semibold text-foreground">{stats.totalMissed}</span> missed
-                calls called back &amp; converted to a booking · {periodLabel}
+              <p className="text-muted-foreground mt-1 text-sm">
+                <span className="text-foreground font-semibold">
+                  {stats.recovered}
+                </span>{" "}
+                of{" "}
+                <span className="text-foreground font-semibold">
+                  {stats.totalMissed}
+                </span>{" "}
+                missed calls called back &amp; converted to a booking ·{" "}
+                {periodLabel}
               </p>
             </div>
           </div>
@@ -177,13 +204,17 @@ export function MissedCallRecovery({
               )}
             >
               <DirIcon className="size-3.5" />
-              {direction > 0 ? "Improving" : direction < 0 ? "Declining" : "Flat"}
+              {direction > 0
+                ? "Improving"
+                : direction < 0
+                  ? "Declining"
+                  : "Flat"}
             </Badge>
           )}
         </div>
 
         <div className="mt-4 border-t pt-3">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
             Weekly recovery trend · last {TREND_WEEKS} weeks
           </p>
           <TrendChart weeks={weeks} />

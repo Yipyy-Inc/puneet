@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ShieldAlert, MessageSquare, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  ShieldAlert,
+  MessageSquare,
+  ExternalLink,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -21,12 +26,48 @@ import type { InsightPanelProps } from "../panel-types";
  */
 
 const NO_SHOW_CLIENTS = [
-  { id: "c-1201", name: "Pierre Lavoie", petName: "Otis", upcomingDate: "May 22", noShows: 3 },
-  { id: "c-1202", name: "Hannah Patel", petName: "Layla", upcomingDate: "May 23", noShows: 2 },
-  { id: "c-1203", name: "Marcus Wright", petName: "Diesel", upcomingDate: "Jun 02", noShows: 4 },
-  { id: "c-1204", name: "Étienne Roy", petName: "Biscuit", upcomingDate: "May 28", noShows: 2 },
-  { id: "c-1205", name: "Yuki Tanaka", petName: "Kuma", upcomingDate: "May 30", noShows: 2 },
-  { id: "c-1206", name: "Sara Mahmoud", petName: "Theo", upcomingDate: "Jun 04", noShows: 2 },
+  {
+    id: "c-1201",
+    name: "Pierre Lavoie",
+    petName: "Otis",
+    upcomingDate: "May 22",
+    noShows: 3,
+  },
+  {
+    id: "c-1202",
+    name: "Hannah Patel",
+    petName: "Layla",
+    upcomingDate: "May 23",
+    noShows: 2,
+  },
+  {
+    id: "c-1203",
+    name: "Marcus Wright",
+    petName: "Diesel",
+    upcomingDate: "Jun 02",
+    noShows: 4,
+  },
+  {
+    id: "c-1204",
+    name: "Étienne Roy",
+    petName: "Biscuit",
+    upcomingDate: "May 28",
+    noShows: 2,
+  },
+  {
+    id: "c-1205",
+    name: "Yuki Tanaka",
+    petName: "Kuma",
+    upcomingDate: "May 30",
+    noShows: 2,
+  },
+  {
+    id: "c-1206",
+    name: "Sara Mahmoud",
+    petName: "Theo",
+    upcomingDate: "Jun 04",
+    noShows: 2,
+  },
 ];
 
 type Mode = "menu" | "fee" | "reminder";
@@ -60,15 +101,22 @@ export function NoShowPolicyPanel({ onComplete, onCancel }: InsightPanelProps) {
   }
 
   if (mode === "fee") {
-    return <FeeFlow onBack={() => setMode("menu")} onComplete={() => onComplete()} />;
+    return (
+      <FeeFlow onBack={() => setMode("menu")} onComplete={() => onComplete()} />
+    );
   }
-  return <ReminderFlow onBack={() => setMode("menu")} onComplete={() => onComplete()} />;
+  return (
+    <ReminderFlow
+      onBack={() => setMode("menu")}
+      onComplete={() => onComplete()}
+    />
+  );
 }
 
 function ClientsList() {
   return (
     <div className="rounded-lg border bg-slate-50 p-3">
-      <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+      <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs tracking-wide uppercase">
         <ShieldAlert className="size-3.5" />
         {NO_SHOW_CLIENTS.length} flagged clients with upcoming bookings
       </div>
@@ -87,7 +135,10 @@ function ClientsList() {
                 {c.upcomingDate}
               </span>
             </span>
-            <Badge variant="outline" className="border-red-200 bg-red-50 text-red-800">
+            <Badge
+              variant="outline"
+              className="border-red-200 bg-red-50 text-red-800"
+            >
               {c.noShows} no-shows
             </Badge>
           </li>
@@ -119,13 +170,21 @@ function Option({
       </span>
       <span className="flex-1">
         <span className="block font-semibold">{label}</span>
-        <span className="text-muted-foreground mt-0.5 block text-xs">{description}</span>
+        <span className="text-muted-foreground mt-0.5 block text-xs">
+          {description}
+        </span>
       </span>
     </button>
   );
 }
 
-function FeeFlow({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+function FeeFlow({
+  onBack,
+  onComplete,
+}: {
+  onBack: () => void;
+  onComplete: () => void;
+}) {
   return (
     <div className="flex h-full flex-col gap-5 px-1">
       <BackHeader onBack={onBack} label="Enable no-show fee" />
@@ -158,7 +217,13 @@ function FeeFlow({ onBack, onComplete }: { onBack: () => void; onComplete: () =>
   );
 }
 
-function ReminderFlow({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+function ReminderFlow({
+  onBack,
+  onComplete,
+}: {
+  onBack: () => void;
+  onComplete: () => void;
+}) {
   const [step, setStep] = useState<"compose" | "preview">("compose");
   const [template, setTemplate] = useState(
     `Hi {{firstName}}, this is Doggieville reminding you about {{petName}}'s appointment on {{date}}. To confirm, reply YES. To cancel, please give us 24 hours notice. Otherwise a no-show fee will apply. Thanks!`,
@@ -177,8 +242,8 @@ function ReminderFlow({ onBack, onComplete }: { onBack: () => void; onComplete: 
             onChange={(e) => setTemplate(e.target.value)}
           />
           <p className="text-muted-foreground text-xs">
-            Tokens: <code>{"{{firstName}}"}</code>, <code>{"{{petName}}"}</code>,{" "}
-            <code>{"{{date}}"}</code>
+            Tokens: <code>{"{{firstName}}"}</code>, <code>{"{{petName}}"}</code>
+            , <code>{"{{date}}"}</code>
           </p>
         </div>
         <div className="mt-auto">
@@ -224,7 +289,7 @@ function BackHeader({ onBack, label }: { onBack: () => void; label: string }) {
     <button
       type="button"
       onClick={onBack}
-      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs uppercase tracking-wide transition-colors"
+      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-xs tracking-wide uppercase transition-colors"
     >
       <ArrowLeft className="size-3.5" />
       {label}

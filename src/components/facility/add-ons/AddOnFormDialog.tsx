@@ -350,7 +350,11 @@ export function AddOnFormDialog({
     }>
   >(
     editing?.sizePricing?.map((r) => ({ ...r, size: r.size as SizeKey })) ??
-      SIZE_KEYS.map((s) => ({ size: s, priceModifier: 0, modifierType: "flat" })),
+      SIZE_KEYS.map((s) => ({
+        size: s,
+        priceModifier: 0,
+        modifierType: "flat",
+      })),
   );
 
   function f<K extends keyof AddOnFormValues>(key: K, val: AddOnFormValues[K]) {
@@ -363,7 +367,10 @@ export function AddOnFormDialog({
   ) {
     setForm((p) => ({
       ...p,
-      scheduleConfig: { ...(p.scheduleConfig ?? { schedulableBy: "staff_only" }), [key]: val },
+      scheduleConfig: {
+        ...(p.scheduleConfig ?? { schedulableBy: "staff_only" }),
+        [key]: val,
+      },
     }));
   }
 
@@ -377,7 +384,8 @@ export function AddOnFormDialog({
   }
 
   const needsScheduling =
-    form.schedulingType === "time_slot" || form.schedulingType === "grooming_linked";
+    form.schedulingType === "time_slot" ||
+    form.schedulingType === "grooming_linked";
 
   function handleSave() {
     onSave({
@@ -394,7 +402,12 @@ export function AddOnFormDialog({
   const isPercentage = form.pricingType === "percentage_of_booking";
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent className="max-w-2xl gap-0 overflow-hidden p-0">
         <DialogHeader className="border-b bg-linear-to-r from-slate-50 to-white px-6 pt-6 pb-4">
           <DialogTitle className="text-xl font-bold tracking-tight">
@@ -407,7 +420,6 @@ export function AddOnFormDialog({
 
         <ScrollArea className="max-h-[70vh]">
           <div className="space-y-4 px-6 py-5">
-
             {/* ── 1. Basic Info ── */}
             <Section title="Basic Information">
               <div className="space-y-1.5">
@@ -435,7 +447,9 @@ export function AddOnFormDialog({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-muted-foreground text-xs">Category</Label>
+                  <Label className="text-muted-foreground text-xs">
+                    Category
+                  </Label>
                   <Select
                     value={form.category ?? ""}
                     onValueChange={(v) => f("category", v)}
@@ -449,7 +463,9 @@ export function AddOnFormDialog({
                           <div className="flex items-center gap-2">
                             <span
                               className="size-2 rounded-full"
-                              style={{ backgroundColor: c.colorCode ?? "#64748b" }}
+                              style={{
+                                backgroundColor: c.colorCode ?? "#64748b",
+                              }}
                             />
                             {c.name}
                           </div>
@@ -459,7 +475,9 @@ export function AddOnFormDialog({
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-muted-foreground text-xs">Image URL</Label>
+                  <Label className="text-muted-foreground text-xs">
+                    Image URL
+                  </Label>
                   <Input
                     value={form.image ?? ""}
                     onChange={(e) => f("image", e.target.value)}
@@ -509,7 +527,9 @@ export function AddOnFormDialog({
                       step={isPercentage ? 1 : 0.01}
                       max={isPercentage ? 100 : undefined}
                       value={form.price}
-                      onChange={(e) => f("price", parseFloat(e.target.value) || 0)}
+                      onChange={(e) =>
+                        f("price", parseFloat(e.target.value) || 0)
+                      }
                       className="h-9 pl-7 text-sm"
                     />
                   </div>
@@ -524,7 +544,9 @@ export function AddOnFormDialog({
                   form.pricingType === "per_hour" ||
                   form.pricingType === "per_item") && (
                   <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">Unit Label</Label>
+                    <Label className="text-muted-foreground text-xs">
+                      Unit Label
+                    </Label>
                     <Input
                       value={form.unitLabel ?? ""}
                       onChange={(e) => f("unitLabel", e.target.value)}
@@ -552,7 +574,10 @@ export function AddOnFormDialog({
                     min={0}
                     value={form.duration ?? ""}
                     onChange={(e) =>
-                      f("duration", e.target.value ? parseInt(e.target.value) : undefined)
+                      f(
+                        "duration",
+                        e.target.value ? parseInt(e.target.value) : undefined,
+                      )
                     }
                     placeholder="Optional"
                     className="h-9 text-sm"
@@ -560,13 +585,18 @@ export function AddOnFormDialog({
                 </div>
                 {form.pricingType === "per_item" && (
                   <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">Max Quantity</Label>
+                    <Label className="text-muted-foreground text-xs">
+                      Max Quantity
+                    </Label>
                     <Input
                       type="number"
                       min={1}
                       value={form.maxQuantity ?? ""}
                       onChange={(e) =>
-                        f("maxQuantity", e.target.value ? parseInt(e.target.value) : undefined)
+                        f(
+                          "maxQuantity",
+                          e.target.value ? parseInt(e.target.value) : undefined,
+                        )
                       }
                       placeholder="No limit"
                       className="h-9 text-sm"
@@ -597,7 +627,12 @@ export function AddOnFormDialog({
                       step={0.01}
                       value={form.taxRate ?? ""}
                       onChange={(e) =>
-                        f("taxRate", e.target.value ? parseFloat(e.target.value) : undefined)
+                        f(
+                          "taxRate",
+                          e.target.value
+                            ? parseFloat(e.target.value)
+                            : undefined,
+                        )
                       }
                       placeholder="Leave blank to use facility default"
                       className="h-9 text-sm"
@@ -612,7 +647,10 @@ export function AddOnFormDialog({
                   label="Size-based pricing"
                   hint="Add a price modifier for each pet size"
                 >
-                  <Switch checked={sizePricingOn} onCheckedChange={setSizePricingOn} />
+                  <Switch
+                    checked={sizePricingOn}
+                    onCheckedChange={setSizePricingOn}
+                  />
                 </FieldRow>
                 {sizePricingOn && (
                   <div className="rounded-lg border">
@@ -636,7 +674,11 @@ export function AddOnFormDialog({
                             setSizeRows((prev) =>
                               prev.map((r, idx) =>
                                 idx === i
-                                  ? { ...r, priceModifier: parseFloat(e.target.value) || 0 }
+                                  ? {
+                                      ...r,
+                                      priceModifier:
+                                        parseFloat(e.target.value) || 0,
+                                    }
                                   : r,
                               ),
                             )
@@ -649,7 +691,10 @@ export function AddOnFormDialog({
                             setSizeRows((prev) =>
                               prev.map((r, idx) =>
                                 idx === i
-                                  ? { ...r, modifierType: v as "flat" | "percentage" }
+                                  ? {
+                                      ...r,
+                                      modifierType: v as "flat" | "percentage",
+                                    }
                                   : r,
                               ),
                             )
@@ -725,13 +770,18 @@ export function AddOnFormDialog({
               {/* Quantity cap for quantity-only mode */}
               {form.schedulingType === "quantity" && (
                 <div className="space-y-1.5">
-                  <Label className="text-muted-foreground text-xs">Max Quantity per booking</Label>
+                  <Label className="text-muted-foreground text-xs">
+                    Max Quantity per booking
+                  </Label>
                   <Input
                     type="number"
                     min={1}
                     value={form.maxQuantity ?? ""}
                     onChange={(e) =>
-                      f("maxQuantity", e.target.value ? parseInt(e.target.value) : undefined)
+                      f(
+                        "maxQuantity",
+                        e.target.value ? parseInt(e.target.value) : undefined,
+                      )
                     }
                     placeholder="No limit"
                     className="h-9 text-sm"
@@ -757,7 +807,10 @@ export function AddOnFormDialog({
                     <Select
                       value={form.scheduleConfig?.schedulableBy ?? "staff_only"}
                       onValueChange={(v) =>
-                        sc("schedulableBy", v as "staff_only" | "customer_and_staff")
+                        sc(
+                          "schedulableBy",
+                          v as "staff_only" | "customer_and_staff",
+                        )
                       }
                     >
                       <SelectTrigger className="h-8 text-xs">
@@ -765,7 +818,9 @@ export function AddOnFormDialog({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="staff_only">Staff only</SelectItem>
-                        <SelectItem value="customer_and_staff">Customer & staff</SelectItem>
+                        <SelectItem value="customer_and_staff">
+                          Customer & staff
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </FieldRow>
@@ -818,7 +873,9 @@ export function AddOnFormDialog({
                         onChange={(e) =>
                           sc(
                             "maxPerDay",
-                            e.target.value ? parseInt(e.target.value) : undefined,
+                            e.target.value
+                              ? parseInt(e.target.value)
+                              : undefined,
                           )
                         }
                         placeholder="Unlimited"
@@ -836,7 +893,9 @@ export function AddOnFormDialog({
                         onChange={(e) =>
                           sc(
                             "bufferMinutes",
-                            e.target.value ? parseInt(e.target.value) : undefined,
+                            e.target.value
+                              ? parseInt(e.target.value)
+                              : undefined,
                           )
                         }
                         placeholder="0"
@@ -864,7 +923,8 @@ export function AddOnFormDialog({
                       className="h-8 text-xs"
                     />
                     <p className="text-muted-foreground text-[11px]">
-                      How many slots this add-on consumes per quantity selected (e.g. a walk-pair = 2)
+                      How many slots this add-on consumes per quantity selected
+                      (e.g. a walk-pair = 2)
                     </p>
                   </div>
                 </div>
@@ -901,7 +961,10 @@ export function AddOnFormDialog({
             </Section>
 
             {/* ── 6. Applicable Services ── */}
-            <Section title="Applicable Services" subtitle="Which services can include this add-on">
+            <Section
+              title="Applicable Services"
+              subtitle="Which services can include this add-on"
+            >
               <div className="mb-3 flex gap-2">
                 {(
                   [
@@ -987,7 +1050,9 @@ export function AddOnFormDialog({
               </FieldRow>
               {form.generatesTask && (
                 <div className="space-y-1.5">
-                  <Label className="text-muted-foreground text-xs">Task Category</Label>
+                  <Label className="text-muted-foreground text-xs">
+                    Task Category
+                  </Label>
                   <Input
                     value={form.taskCategory ?? ""}
                     onChange={(e) => f("taskCategory", e.target.value)}
@@ -1018,7 +1083,6 @@ export function AddOnFormDialog({
                 </div>
               </FieldRow>
             </Section>
-
           </div>
         </ScrollArea>
 

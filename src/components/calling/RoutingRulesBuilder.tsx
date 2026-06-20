@@ -51,7 +51,11 @@ const ACTIVE_STAFF = staffMembers.filter((s) => s.isActive);
 const staffName = (id?: string) =>
   staffMembers.find((s) => s.id === id)?.name ?? undefined;
 
-export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] }) {
+export function RoutingRulesBuilder({
+  rules: seed,
+}: {
+  rules: CallRoutingRule[];
+}) {
   const [rules, setRules] = useState<CallRoutingRule[]>(() =>
     [...seed].sort((a, b) => a.priority - b.priority),
   );
@@ -81,10 +85,7 @@ export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] 
 
   const addRule = () => {
     const id = `route-${Date.now()}`;
-    setRules((prev) => [
-      ...prev,
-      makeDefaultRoutingRule(id, prev.length + 1),
-    ]);
+    setRules((prev) => [...prev, makeDefaultRoutingRule(id, prev.length + 1)]);
     setEditingId(id);
   };
 
@@ -121,7 +122,7 @@ export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] 
               <PhoneForwarded className="size-4 text-indigo-600" />
               Smart Routing Rules
             </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-sm">
               Priority-based call routing from live CRM data
             </p>
           </div>
@@ -144,7 +145,7 @@ export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] 
         </div>
 
         {rules.length === 0 && (
-          <div className="rounded-xl border border-dashed py-10 text-center text-muted-foreground">
+          <div className="text-muted-foreground rounded-xl border border-dashed py-10 text-center">
             <PhoneForwarded className="mx-auto mb-2 size-8 opacity-30" />
             <p className="text-sm">
               No routing rules yet. Add one to send the right calls to the right
@@ -187,7 +188,7 @@ export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] 
                       setDragOverId(null);
                     }}
                     aria-label="Drag to reorder"
-                    className="cursor-grab touch-none text-muted-foreground/40 hover:text-muted-foreground active:cursor-grabbing"
+                    className="text-muted-foreground/40 hover:text-muted-foreground cursor-grab touch-none active:cursor-grabbing"
                   >
                     <GripVertical className="size-4" />
                   </button>
@@ -202,18 +203,18 @@ export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] 
 
                   <button
                     type="button"
-                    onClick={() =>
-                      setEditingId(isEditing ? null : rule.id)
-                    }
+                    onClick={() => setEditingId(isEditing ? null : rule.id)}
                     className="min-w-0 flex-1 text-left"
                   >
-                    <p className="truncate text-sm font-semibold">{rule.name}</p>
-                    <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                    <p className="truncate text-sm font-semibold">
+                      {rule.name}
+                    </p>
+                    <p className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
                       <span className="truncate">
                         {describeCondition(rule.condition)}
                       </span>
                       <ArrowRight className="size-3 shrink-0" />
-                      <span className="truncate font-medium text-foreground">
+                      <span className="text-foreground truncate font-medium">
                         {describeAction(
                           rule.action,
                           staffName(rule.action.staffId),
@@ -238,7 +239,7 @@ export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] 
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-7 text-muted-foreground/60"
+                    className="text-muted-foreground/60 size-7"
                     onClick={() => setEditingId(isEditing ? null : rule.id)}
                     aria-label="Edit rule"
                   >
@@ -252,7 +253,7 @@ export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] 
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-7 text-muted-foreground/50 hover:text-destructive"
+                    className="text-muted-foreground/50 hover:text-destructive size-7"
                     onClick={() => removeRule(rule.id)}
                     aria-label="Delete rule"
                   >
@@ -262,7 +263,7 @@ export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] 
 
                 {/* Expanded editor */}
                 {isEditing && (
-                  <div className="space-y-4 border-t px-3 pb-4 pt-3">
+                  <div className="space-y-4 border-t px-3 pt-3 pb-4">
                     <div>
                       <Label className="mb-1 block text-xs">Rule name</Label>
                       <Input
@@ -275,8 +276,8 @@ export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] 
                     </div>
 
                     {/* IF — condition */}
-                    <div className="rounded-lg border bg-muted/30 p-3">
-                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <div className="bg-muted/30 rounded-lg border p-3">
+                      <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-wide uppercase">
                         If the caller…
                       </p>
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -309,7 +310,8 @@ export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] 
                             value={rule.condition.operator}
                             onValueChange={(v) =>
                               patchCondition(rule.id, {
-                                operator: v as CallRoutingRule["condition"]["operator"],
+                                operator:
+                                  v as CallRoutingRule["condition"]["operator"],
                               })
                             }
                           >
@@ -328,7 +330,7 @@ export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] 
                         <div>
                           <Label className="mb-1 block text-xs">Value</Label>
                           {meta.valueType === "none" ? (
-                            <div className="flex h-8 items-center text-xs text-muted-foreground">
+                            <div className="text-muted-foreground flex h-8 items-center text-xs">
                               No value needed
                             </div>
                           ) : meta.valueType === "tag" ? (
@@ -369,7 +371,7 @@ export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] 
                             </Select>
                           ) : (
                             <div className="relative">
-                              <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                              <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-xs">
                                 $
                               </span>
                               <Input
@@ -390,13 +392,15 @@ export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] 
                     </div>
 
                     {/* THEN — action */}
-                    <div className="rounded-lg border bg-muted/30 p-3">
-                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <div className="bg-muted/30 rounded-lg border p-3">
+                      <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-wide uppercase">
                         Then route the call to…
                       </p>
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <div>
-                          <Label className="mb-1 block text-xs">Destination</Label>
+                          <Label className="mb-1 block text-xs">
+                            Destination
+                          </Label>
                           <Select
                             value={rule.action.routeTo}
                             onValueChange={(v) =>
@@ -410,7 +414,9 @@ export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] 
                             </SelectTrigger>
                             <SelectContent>
                               {(
-                                Object.keys(ROUTING_TARGET_LABEL) as RoutingTarget[]
+                                Object.keys(
+                                  ROUTING_TARGET_LABEL,
+                                ) as RoutingTarget[]
                               ).map((t) => (
                                 <SelectItem key={t} value={t}>
                                   {ROUTING_TARGET_LABEL[t]}
@@ -491,14 +497,17 @@ export function RoutingRulesBuilder({ rules: seed }: { rules: CallRoutingRule[] 
                     </div>
 
                     {/* Plain-language summary */}
-                    <div className="rounded-lg bg-background p-3 text-sm">
+                    <div className="bg-background rounded-lg p-3 text-sm">
                       <span className="font-semibold text-indigo-600">If </span>
                       {describeCondition(rule.condition)}
                       <span className="font-semibold text-indigo-600">
                         {" "}
                         → then{" "}
                       </span>
-                      {describeAction(rule.action, staffName(rule.action.staffId))}
+                      {describeAction(
+                        rule.action,
+                        staffName(rule.action.staffId),
+                      )}
                       {rule.action.routeTo === "staff_group" && (
                         <span className="text-muted-foreground">
                           {" "}

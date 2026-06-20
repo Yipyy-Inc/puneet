@@ -65,25 +65,26 @@ export function SignedAgreementsCard({
       fileUrl: doc.fileUrl,
     }));
 
-    const fromSignatures: NormalizedAgreement[] = waiverSignatures.map((sig) => {
-      const waiver = digitalWaivers.find((w) => w.id === sig.waiverId);
-      const services = waiver
-        ? getWaiverServices(waiver).map((s) => SERVICE_LABEL[s])
-        : undefined;
-      return {
-        key: `sig-${sig.id}`,
-        name: sig.waiverName,
-        signedAt: sig.signedAt,
-        source: "digital",
-        signatureType: "digital",
-        serviceTags: services,
-        version: waiver?.version,
-      };
-    });
+    const fromSignatures: NormalizedAgreement[] = waiverSignatures.map(
+      (sig) => {
+        const waiver = digitalWaivers.find((w) => w.id === sig.waiverId);
+        const services = waiver
+          ? getWaiverServices(waiver).map((s) => SERVICE_LABEL[s])
+          : undefined;
+        return {
+          key: `sig-${sig.id}`,
+          name: sig.waiverName,
+          signedAt: sig.signedAt,
+          source: "digital",
+          signatureType: "digital",
+          serviceTags: services,
+          version: waiver?.version,
+        };
+      },
+    );
 
     return [...fromDocs, ...fromSignatures].sort(
-      (a, b) =>
-        new Date(b.signedAt).getTime() - new Date(a.signedAt).getTime(),
+      (a, b) => new Date(b.signedAt).getTime() - new Date(a.signedAt).getTime(),
     );
   }, [agreementDocs, waiverSignatures]);
 
@@ -130,7 +131,8 @@ export function SignedAgreementsCard({
                   {item.serviceTags && item.serviceTags.length > 0 && (
                     <div className="flex flex-wrap gap-1 pt-0.5">
                       {item.serviceTags.map((tag) => {
-                        const tagKey = tag.toLowerCase() as keyof typeof SERVICE_BADGE;
+                        const tagKey =
+                          tag.toLowerCase() as keyof typeof SERVICE_BADGE;
                         const className = SERVICE_BADGE[tagKey];
                         return (
                           <span

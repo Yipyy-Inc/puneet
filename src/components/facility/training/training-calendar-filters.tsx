@@ -273,7 +273,7 @@ export function TrainingCalendarFilters({
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-80 max-h-[70vh] overflow-y-auto p-0"
+        className="max-h-[70vh] w-80 overflow-y-auto p-0"
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
           <p className="text-sm font-bold text-slate-800">Filters</p>
@@ -318,9 +318,7 @@ export function TrainingCalendarFilters({
                         toggleArrayValue("classTypes", opt.value)
                       }
                     />
-                    <span className="truncate text-slate-700">
-                      {opt.label}
-                    </span>
+                    <span className="truncate text-slate-700">{opt.label}</span>
                   </label>
                 );
               })}
@@ -339,9 +337,7 @@ export function TrainingCalendarFilters({
                     onChange({ ...filters, hasDropIns: !filters.hasDropIns })
                   }
                 />
-                <span className="truncate text-slate-700">
-                  Drop-in only
-                </span>
+                <span className="truncate text-slate-700">Drop-in only</span>
               </label>
             </div>
           </div>

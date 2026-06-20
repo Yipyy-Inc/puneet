@@ -307,7 +307,7 @@ export function ClientFileSidebar({
             <Button
               variant="outline"
               size="sm"
-              className="h-9 flex-1 cursor-not-allowed text-muted-foreground"
+              className="text-muted-foreground h-9 flex-1 cursor-not-allowed"
               disabled
               title="Messaging is disabled for blocked clients"
             >

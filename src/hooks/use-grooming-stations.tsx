@@ -9,10 +9,7 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
-import type {
-  GroomingStation,
-  GroomingStationStatus,
-} from "@/types/rooms";
+import type { GroomingStation, GroomingStationStatus } from "@/types/rooms";
 import { groomingStations as defaultGroomingStations } from "@/data/rooms";
 
 interface GroomingStationsContextValue {

@@ -7,7 +7,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
-import { DataTable, type ColumnDef, type FilterDef } from "@/components/ui/DataTable";
+import {
+  DataTable,
+  type ColumnDef,
+  type FilterDef,
+} from "@/components/ui/DataTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,7 +40,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trainingQueries } from "@/lib/api/training";
-import { getDayName, type TrainingSeries, type SeriesStatus } from "@/lib/training-series";
+import {
+  getDayName,
+  type TrainingSeries,
+  type SeriesStatus,
+} from "@/lib/training-series";
 import {
   distinctEnrolledForSeries,
   getKnownSeriesCourseTypes,
@@ -170,9 +178,7 @@ export function SeriesList() {
 
   function handleSave(next: TrainingSeries) {
     setLocalOverrides((prev) => ({ ...prev, [next.id]: next }));
-    toast.success(
-      editingSeries ? "Series updated" : "Series created",
-    );
+    toast.success(editingSeries ? "Series updated" : "Series created");
     // Refresh any consumers of the series query — sessions on the calendar,
     // customer enrollment views, etc.
     queryClient.invalidateQueries({ queryKey: ["training", "series"] });
@@ -196,7 +202,8 @@ export function SeriesList() {
         <div className="flex flex-col">
           <span className="font-semibold text-slate-800">{s.seriesName}</span>
           <span className="text-muted-foreground text-[11px]">
-            {s.numberOfWeeks} week{s.numberOfWeeks === 1 ? "" : "s"} · {s.duration} min
+            {s.numberOfWeeks} week{s.numberOfWeeks === 1 ? "" : "s"} ·{" "}
+            {s.duration} min
           </span>
         </div>
       ),
@@ -239,7 +246,8 @@ export function SeriesList() {
       label: "Capacity",
       icon: Users,
       sortable: true,
-      sortValue: (s) => distinctEnrolledForSeries(s) / Math.max(s.maxCapacity, 1),
+      sortValue: (s) =>
+        distinctEnrolledForSeries(s) / Math.max(s.maxCapacity, 1),
       render: (s) => {
         const enrolled = distinctEnrolledForSeries(s);
         const full = enrolled >= s.maxCapacity;
@@ -282,14 +290,8 @@ export function SeriesList() {
     },
   ];
 
-  const courseTypeOptions = useMemo(
-    () => getKnownSeriesCourseTypes(),
-    [],
-  );
-  const instructorOptions = useMemo(
-    () => getKnownSeriesInstructors(),
-    [],
-  );
+  const courseTypeOptions = useMemo(() => getKnownSeriesCourseTypes(), []);
+  const instructorOptions = useMemo(() => getKnownSeriesInstructors(), []);
   const locationOptions = useMemo(() => getKnownSeriesLocations(), []);
 
   const filters: FilterDef[] = [
@@ -383,12 +385,9 @@ export function SeriesList() {
         filters={filters}
         searchPlaceholder="Search series, course type, instructor, location…"
         getSearchValue={(s) =>
-          [
-            s.seriesName,
-            s.courseTypeName,
-            s.instructorName,
-            s.location,
-          ].join(" ")
+          [s.seriesName, s.courseTypeName, s.instructorName, s.location].join(
+            " ",
+          )
         }
         itemsPerPage={10}
         onRowClick={(s) =>

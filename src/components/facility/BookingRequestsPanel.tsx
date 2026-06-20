@@ -73,8 +73,7 @@ export function BookingRequestsPanel({
     [facilityId],
   );
   const facilityClients = React.useMemo<Client[]>(
-    () =>
-      (allClients as Client[]).filter((c) => c.facility === facility?.name),
+    () => (allClients as Client[]).filter((c) => c.facility === facility?.name),
     [facility],
   );
 
@@ -117,9 +116,7 @@ export function BookingRequestsPanel({
 
     const handleCreateBooking = (booking: NewBooking) => {
       setRequests((prev) =>
-        prev.map((r) =>
-          r.id === req.id ? { ...r, status: "scheduled" } : r,
-        ),
+        prev.map((r) => (r.id === req.id ? { ...r, status: "scheduled" } : r)),
       );
 
       const notifyBits: string[] = [];
@@ -290,7 +287,7 @@ export function BookingRequestsPanel({
           <Button
             size="sm"
             onClick={() => schedule(r)}
-            className="bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600/30 shadow-sm"
+            className="bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 focus-visible:ring-emerald-600/30"
           >
             <CheckCircle2 className="size-4" />
             Schedule

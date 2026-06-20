@@ -134,14 +134,10 @@ export function FacilityTrainingReportCards() {
   const [editingCard, setEditingCard] = useState<TrainingReportCard | null>(
     null,
   );
-  const [sendDialogCard, setSendDialogCard] = useState<TrainingReportCard | null>(
-    null,
-  );
+  const [sendDialogCard, setSendDialogCard] =
+    useState<TrainingReportCard | null>(null);
 
-  const todayISO = useMemo(
-    () => new Date().toISOString().split("T")[0]!,
-    [],
-  );
+  const todayISO = useMemo(() => new Date().toISOString().split("T")[0]!, []);
 
   // Counts by bucket — feeds the filter pills.
   const counts = useMemo(() => {
@@ -173,7 +169,8 @@ export function FacilityTrainingReportCards() {
       if (statusFilter === "scheduled" && status !== "scheduled") return false;
       if (statusFilter === "sent" && status !== "sent" && status !== "viewed")
         return false;
-      if (trainerFilter !== "all" && c.createdBy !== trainerFilter) return false;
+      if (trainerFilter !== "all" && c.createdBy !== trainerFilter)
+        return false;
       if (q) {
         const hay =
           `${c.petName} ${c.courseName} ${c.seriesName}`.toLowerCase();
@@ -219,7 +216,7 @@ export function FacilityTrainingReportCards() {
           </p>
         </div>
         <div className="relative w-full sm:w-72">
-          <Search className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -352,7 +349,7 @@ function FilterPill({
       )}
     >
       {label}
-      <span className="text-muted-foreground tabular-nums text-[11px]">
+      <span className="text-muted-foreground text-[11px] tabular-nums">
         {count}
       </span>
     </button>
@@ -374,15 +371,12 @@ function ReportCardPhotoSection({
   heroPhotoUrl?: string;
   beforePhotoUrl?: string;
   afterPhotoUrl?: string;
-  onTogglePhotoSlot: (
-    slot: "hero" | "before" | "after",
-    url: string,
-  ) => void;
+  onTogglePhotoSlot: (slot: "hero" | "before" | "after", url: string) => void;
 }) {
   const beforeAfterReady = !!(beforePhotoUrl && afterPhotoUrl);
   return (
     <div className="space-y-1.5">
-      <Label className="text-[12px] font-bold uppercase tracking-wider">
+      <Label className="text-[12px] font-bold tracking-wider uppercase">
         Photos
       </Label>
       <p className="text-muted-foreground text-[11px]">
@@ -414,12 +408,8 @@ function ReportCardPhotoSection({
                   unoptimized
                 />
                 {(isHero || isBefore || isAfter) && (
-                  <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur">
-                    {isHero
-                      ? "Hero"
-                      : isBefore
-                        ? "Before"
-                        : "After"}
+                  <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-white uppercase backdrop-blur">
+                    {isHero ? "Hero" : isBefore ? "Before" : "After"}
                   </span>
                 )}
               </div>
@@ -439,7 +429,7 @@ function ReportCardPhotoSection({
                     "py-1 text-[10px] font-medium transition-colors",
                     isHero
                       ? "bg-indigo-100 text-indigo-700"
-                      : "bg-white hover:bg-indigo-50 text-slate-600",
+                      : "bg-white text-slate-600 hover:bg-indigo-50",
                   )}
                   title="Use as the hero image"
                 >
@@ -452,7 +442,7 @@ function ReportCardPhotoSection({
                     "py-1 text-[10px] font-medium transition-colors",
                     isBefore
                       ? "bg-sky-100 text-sky-700"
-                      : "bg-white hover:bg-sky-50 text-slate-600",
+                      : "bg-white text-slate-600 hover:bg-sky-50",
                   )}
                 >
                   Before
@@ -464,7 +454,7 @@ function ReportCardPhotoSection({
                     "py-1 text-[10px] font-medium transition-colors",
                     isAfter
                       ? "bg-emerald-100 text-emerald-700"
-                      : "bg-white hover:bg-emerald-50 text-slate-600",
+                      : "bg-white text-slate-600 hover:bg-emerald-50",
                   )}
                 >
                   After
@@ -475,7 +465,7 @@ function ReportCardPhotoSection({
         })}
       </ul>
       {beforeAfterReady && (
-        <p className="text-emerald-700 inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-medium dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200">
+        <p className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200">
           <ImageIcon className="size-3" />
           Before/after layout will render side-by-side on the card.
         </p>
@@ -488,23 +478,19 @@ function ReportCardPhotoSection({
 // Graduation card extras — exercise progression + next-program pitch
 // ============================================================================
 
-function GraduationProgressionSection({
-  card,
-}: {
-  card: TrainingReportCard;
-}) {
+function GraduationProgressionSection({ card }: { card: TrainingReportCard }) {
   const progression = card.exerciseProgression ?? [];
   return (
     <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/50 p-3 shadow-sm dark:border-amber-900/40 dark:bg-amber-950/20">
       <div className="flex items-center gap-2">
-        <div className="bg-amber-500 text-white flex size-8 items-center justify-center rounded-xl shadow-sm">
+        <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500 text-white shadow-sm">
           <PartyPopper className="size-4" />
         </div>
         <div>
           <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
             Graduation card
           </p>
-          <p className="text-amber-800/80 dark:text-amber-200/80 text-[11px]">
+          <p className="text-[11px] text-amber-800/80 dark:text-amber-200/80">
             Congratulations message + journey summary the owner will see.
           </p>
         </div>
@@ -512,7 +498,7 @@ function GraduationProgressionSection({
 
       {progression.length > 0 ? (
         <div className="space-y-1.5">
-          <p className="text-amber-900 dark:text-amber-100 text-[10px] font-bold uppercase tracking-wider">
+          <p className="text-[10px] font-bold tracking-wider text-amber-900 uppercase dark:text-amber-100">
             Start → final per exercise
           </p>
           <ul className="space-y-1.5">
@@ -549,7 +535,7 @@ function GraduationProgressionSection({
                     {row.endRating} · {EXERCISE_RATING_LABELS[row.endRating]}
                   </Badge>
                   {delta > 0 && (
-                    <span className="text-emerald-700 inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 text-[10px] font-bold">
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 text-[10px] font-bold text-emerald-700">
                       <TrendingUp className="size-3" />+{delta}
                     </span>
                   )}
@@ -567,7 +553,7 @@ function GraduationProgressionSection({
 
       {card.recommendedNextProgram ? (
         <div className="rounded-lg border border-indigo-200 bg-white p-2.5 shadow-sm dark:border-indigo-900/40 dark:bg-slate-900/60">
-          <p className="text-indigo-700 dark:text-indigo-200 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+          <p className="inline-flex items-center gap-1 text-[10px] font-bold tracking-wider text-indigo-700 uppercase dark:text-indigo-200">
             <Award className="size-3" />
             Graduate into
           </p>
@@ -582,9 +568,9 @@ function GraduationProgressionSection({
         </div>
       ) : (
         <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-[11px]">
-          No &quot;Graduate into&quot; course configured for {card.courseName}. Owners
-          won&#39;t see a next-step recommendation on this card. Set one up via
-          Settings → Programs.
+          No &quot;Graduate into&quot; course configured for {card.courseName}.
+          Owners won&#39;t see a next-step recommendation on this card. Set one
+          up via Settings → Programs.
         </p>
       )}
     </div>
@@ -610,7 +596,7 @@ function ReportCardRow({
       <button
         type="button"
         onClick={onOpen}
-        className="bg-card w-full overflow-hidden rounded-xl border shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="bg-card focus-visible:ring-ring w-full overflow-hidden rounded-xl border shadow-sm transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:outline-none"
       >
         <div
           className={cn(
@@ -638,7 +624,7 @@ function ReportCardRow({
             )}
             <span
               className={cn(
-                "absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full text-white shadow-sm ring-2 ring-white",
+                "absolute -right-1 -bottom-1 flex size-5 items-center justify-center rounded-full text-white shadow-sm ring-2 ring-white",
                 isGraduation ? "bg-amber-500" : "bg-indigo-500",
               )}
             >
@@ -655,7 +641,9 @@ function ReportCardRow({
                 {card.petName}
               </p>
               <span className="text-muted-foreground text-[12px]">
-                {isGraduation ? "Graduation card" : `Session ${card.throughSessionNumber}`}
+                {isGraduation
+                  ? "Graduation card"
+                  : `Session ${card.throughSessionNumber}`}
               </span>
             </div>
             <p className="text-muted-foreground truncate text-[12px]">
@@ -735,13 +723,15 @@ function ReportCardEditorSheet({
   const [sessionSummary, setSessionSummary] = useState(
     card?.sessionSummary ?? "",
   );
-  const [theme, setTheme] = useState<ReportCardTheme>(card?.theme ?? "everyday");
+  const [theme, setTheme] = useState<ReportCardTheme>(
+    card?.theme ?? "everyday",
+  );
   const [personalizedMessage, setPersonalizedMessage] = useState(
     card?.personalizedMessage ?? "",
   );
-  const [behaviorTags, setBehaviorTags] = useState<TrainingReportCardBehaviorTag[]>(
-    card?.behaviorTags ?? [],
-  );
+  const [behaviorTags, setBehaviorTags] = useState<
+    TrainingReportCardBehaviorTag[]
+  >(card?.behaviorTags ?? []);
   const [ratingOverrides, setRatingOverrides] = useState<
     Record<string, 1 | 2 | 3 | 4 | 5>
   >(card?.exerciseRatingOverrides ?? {});
@@ -890,10 +880,7 @@ function ReportCardEditorSheet({
     });
   }
 
-  function togglePhotoSlot(
-    slot: "hero" | "before" | "after",
-    url: string,
-  ) {
+  function togglePhotoSlot(slot: "hero" | "before" | "after", url: string) {
     if (slot === "hero") {
       setHeroPhotoUrl((curr) => (curr === url ? undefined : url));
       return;
@@ -940,7 +927,9 @@ function ReportCardEditorSheet({
               </SheetTitle>
               <SheetDescription className="text-[12px]">
                 {card.seriesName}{" "}
-                <span className="text-muted-foreground">· {card.courseName}</span>
+                <span className="text-muted-foreground">
+                  · {card.courseName}
+                </span>
               </SheetDescription>
               <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px]">
                 <span className="inline-flex items-center gap-1">
@@ -982,13 +971,13 @@ function ReportCardEditorSheet({
           <div className="space-y-1.5">
             <Label
               htmlFor="rc-overall"
-              className="text-[12px] font-bold uppercase tracking-wider"
+              className="text-[12px] font-bold tracking-wider uppercase"
             >
               Overall assessment
             </Label>
             <p className="text-muted-foreground text-[11px]">
-              Your 1–2 sentence take on how {card.petName} is doing — the
-              owner sees this on top of the card.
+              Your 1–2 sentence take on how {card.petName} is doing — the owner
+              sees this on top of the card.
             </p>
             <Textarea
               id="rc-overall"
@@ -1003,10 +992,10 @@ function ReportCardEditorSheet({
           <div className="space-y-1.5">
             <Label
               htmlFor="rc-personalized"
-              className="text-[12px] font-bold uppercase tracking-wider"
+              className="text-[12px] font-bold tracking-wider uppercase"
             >
               Personalized message{" "}
-              <span className="text-muted-foreground font-normal normal-case tracking-normal">
+              <span className="text-muted-foreground font-normal tracking-normal normal-case">
                 (optional)
               </span>
             </Label>
@@ -1025,12 +1014,12 @@ function ReportCardEditorSheet({
 
           {/* Behavior tags — multi-select chips the parent sees ─────────── */}
           <div className="space-y-1.5">
-            <Label className="text-[12px] font-bold uppercase tracking-wider">
+            <Label className="text-[12px] font-bold tracking-wider uppercase">
               Mood / behavior tags
             </Label>
             <p className="text-muted-foreground text-[11px]">
-              Pick any that describe today&#39;s session. They render as chips on
-              the parent&#39;s report card.
+              Pick any that describe today&#39;s session. They render as chips
+              on the parent&#39;s report card.
             </p>
             <div className="flex flex-wrap gap-1.5">
               {TRAINING_REPORT_CARD_BEHAVIOR_TAGS.map((tag) => {
@@ -1081,7 +1070,7 @@ function ReportCardEditorSheet({
           {/* Exercises covered — per-exercise star + label override ────── */}
           {card.exercisesCovered.length > 0 && (
             <div className="space-y-1.5">
-              <Label className="text-[12px] font-bold uppercase tracking-wider">
+              <Label className="text-[12px] font-bold tracking-wider uppercase">
                 Exercises covered
               </Label>
               <p className="text-muted-foreground text-[11px]">
@@ -1174,7 +1163,7 @@ function ReportCardEditorSheet({
 
           {/* Training level ─────────────────────────────────────────────── */}
           <div className="space-y-1.5">
-            <Label className="text-[12px] font-bold uppercase tracking-wider">
+            <Label className="text-[12px] font-bold tracking-wider uppercase">
               Training level
             </Label>
             <Select
@@ -1201,7 +1190,7 @@ function ReportCardEditorSheet({
 
           {/* Theme picker ─────────────────────────────────────────────── */}
           <div className="space-y-1.5">
-            <Label className="text-[12px] font-bold uppercase tracking-wider">
+            <Label className="text-[12px] font-bold tracking-wider uppercase">
               Theme
             </Label>
             <p className="text-muted-foreground text-[11px]">
@@ -1239,7 +1228,7 @@ function ReportCardEditorSheet({
           <div className="space-y-1.5">
             <Label
               htmlFor="rc-narrative"
-              className="text-[12px] font-bold uppercase tracking-wider"
+              className="text-[12px] font-bold tracking-wider uppercase"
             >
               Progress narrative
             </Label>
@@ -1259,7 +1248,7 @@ function ReportCardEditorSheet({
           <div className="space-y-1.5">
             <Label
               htmlFor="rc-summary"
-              className="text-[12px] font-bold uppercase tracking-wider"
+              className="text-[12px] font-bold tracking-wider uppercase"
             >
               Session summary
             </Label>
@@ -1279,7 +1268,7 @@ function ReportCardEditorSheet({
               Full editing lives on the per-pet profile; this editor is for
               the trainer-narrated fields. */}
           <div className="space-y-1.5 rounded-lg border bg-slate-50/40 px-3 py-2 text-[12px] dark:bg-slate-900/40">
-            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+            <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
               <Sparkles className="size-3" />
               Auto-included on the card
             </p>
@@ -1287,8 +1276,8 @@ function ReportCardEditorSheet({
               <li>
                 {card.exercisesCovered.length} exercise
                 {card.exercisesCovered.length === 1 ? "" : "s"} tracked ·{" "}
-                {card.topExercises.length} top · {card.needsWorkExercises.length}{" "}
-                needs work
+                {card.topExercises.length} top ·{" "}
+                {card.needsWorkExercises.length} needs work
               </li>
               <li>
                 {card.assignedHomework.length} homework item
@@ -1302,7 +1291,7 @@ function ReportCardEditorSheet({
           </div>
         </div>
 
-        <SheetFooter className="flex-col gap-3 border-t bg-slate-50/40 pt-3 dark:bg-slate-950/40 sm:flex-row sm:items-center sm:justify-between">
+        <SheetFooter className="flex-col gap-3 border-t bg-slate-50/40 pt-3 sm:flex-row sm:items-center sm:justify-between dark:bg-slate-950/40">
           <div className="flex w-full items-start gap-3 sm:max-w-[280px]">
             <Switch
               id="rc-send-toggle"

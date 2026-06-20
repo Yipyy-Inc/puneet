@@ -56,7 +56,7 @@ export function StaffAttendanceRecordPanel({
       <div className="rounded-lg border bg-slate-50 p-3 text-sm">
         <Link
           href={insightLinks.staff(STAFF.id)}
-          className="inline-flex items-center gap-1 font-semibold hover:text-primary hover:underline"
+          className="hover:text-primary inline-flex items-center gap-1 font-semibold hover:underline"
         >
           {STAFF.name}
           <ExternalLink className="size-3" />
@@ -94,11 +94,17 @@ export function StaffAttendanceRecordPanel({
               </span>
             </div>
             {r.minutesLate > 5 ? (
-              <Badge variant="outline" className="border-red-300 bg-red-50 text-red-800">
+              <Badge
+                variant="outline"
+                className="border-red-300 bg-red-50 text-red-800"
+              >
                 +{r.minutesLate}m
               </Badge>
             ) : (
-              <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-emerald-800">
+              <Badge
+                variant="outline"
+                className="border-emerald-300 bg-emerald-50 text-emerald-800"
+              >
                 On time
               </Badge>
             )}
@@ -107,7 +113,7 @@ export function StaffAttendanceRecordPanel({
       </ul>
 
       <div className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
-        <div className="mb-1 flex items-center gap-1.5 font-semibold uppercase tracking-wide">
+        <div className="mb-1 flex items-center gap-1.5 font-semibold tracking-wide uppercase">
           <AlertCircle className="size-3.5" />
           Smart Insights does not auto-act here
         </div>

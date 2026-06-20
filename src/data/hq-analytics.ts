@@ -5,15 +5,30 @@ export const hqOverviewMetrics: HQOverviewMetrics = {
   period: "2026-04",
   totalRevenue: 113060,
   revenueByLocation: [
-    { locationId: "loc-dv-main",  locationName: "Plateau", revenue: 48720, percentage: 43.1 },
-    { locationId: "loc-dv-ouest", locationName: "NDG",     revenue: 29450, percentage: 26.1 },
-    { locationId: "loc-dv-laval", locationName: "Laval",   revenue: 34890, percentage: 30.8 },
+    {
+      locationId: "loc-dv-main",
+      locationName: "Plateau",
+      revenue: 48720,
+      percentage: 43.1,
+    },
+    {
+      locationId: "loc-dv-ouest",
+      locationName: "NDG",
+      revenue: 29450,
+      percentage: 26.1,
+    },
+    {
+      locationId: "loc-dv-laval",
+      locationName: "Laval",
+      revenue: 34890,
+      percentage: 30.8,
+    },
   ],
   totalBookings: 751,
   bookingsByLocation: [
-    { locationId: "loc-dv-main",  locationName: "Plateau", count: 312 },
-    { locationId: "loc-dv-ouest", locationName: "NDG",     count: 198 },
-    { locationId: "loc-dv-laval", locationName: "Laval",   count: 241 },
+    { locationId: "loc-dv-main", locationName: "Plateau", count: 312 },
+    { locationId: "loc-dv-ouest", locationName: "NDG", count: 198 },
+    { locationId: "loc-dv-laval", locationName: "Laval", count: 241 },
   ],
   totalNewCustomers: 113,
   totalReturningCustomers: 638,
@@ -21,16 +36,56 @@ export const hqOverviewMetrics: HQOverviewMetrics = {
   topPerformingLocation: "loc-dv-main",
   revenueGrowth: 20.1,
   revenueTrend: [
-    { date: "2026-01", "loc-dv-main": 38200, "loc-dv-ouest": 21300, "loc-dv-laval": 18900 },
-    { date: "2026-02", "loc-dv-main": 41500, "loc-dv-ouest": 23800, "loc-dv-laval": 23100 },
-    { date: "2026-03", "loc-dv-main": 44100, "loc-dv-ouest": 26200, "loc-dv-laval": 29400 },
-    { date: "2026-04", "loc-dv-main": 48720, "loc-dv-ouest": 29450, "loc-dv-laval": 34890 },
+    {
+      date: "2026-01",
+      "loc-dv-main": 38200,
+      "loc-dv-ouest": 21300,
+      "loc-dv-laval": 18900,
+    },
+    {
+      date: "2026-02",
+      "loc-dv-main": 41500,
+      "loc-dv-ouest": 23800,
+      "loc-dv-laval": 23100,
+    },
+    {
+      date: "2026-03",
+      "loc-dv-main": 44100,
+      "loc-dv-ouest": 26200,
+      "loc-dv-laval": 29400,
+    },
+    {
+      date: "2026-04",
+      "loc-dv-main": 48720,
+      "loc-dv-ouest": 29450,
+      "loc-dv-laval": 34890,
+    },
   ],
   occupancyTrend: [
-    { date: "2026-01", "loc-dv-main": 74, "loc-dv-ouest": 62, "loc-dv-laval": 58 },
-    { date: "2026-02", "loc-dv-main": 79, "loc-dv-ouest": 68, "loc-dv-laval": 66 },
-    { date: "2026-03", "loc-dv-main": 83, "loc-dv-ouest": 74, "loc-dv-laval": 75 },
-    { date: "2026-04", "loc-dv-main": 87, "loc-dv-ouest": 78, "loc-dv-laval": 82 },
+    {
+      date: "2026-01",
+      "loc-dv-main": 74,
+      "loc-dv-ouest": 62,
+      "loc-dv-laval": 58,
+    },
+    {
+      date: "2026-02",
+      "loc-dv-main": 79,
+      "loc-dv-ouest": 68,
+      "loc-dv-laval": 66,
+    },
+    {
+      date: "2026-03",
+      "loc-dv-main": 83,
+      "loc-dv-ouest": 74,
+      "loc-dv-laval": 75,
+    },
+    {
+      date: "2026-04",
+      "loc-dv-main": 87,
+      "loc-dv-ouest": 78,
+      "loc-dv-laval": 82,
+    },
   ],
 };
 
@@ -117,18 +172,78 @@ export const revenueTrend12Months: {
   "loc-dv-ouest": number;
   "loc-dv-laval": number;
 }[] = [
-  { month: "May 2025",  "loc-dv-main": 36500, "loc-dv-ouest": 18200, "loc-dv-laval": 14200 },
-  { month: "Jun 2025",  "loc-dv-main": 39800, "loc-dv-ouest": 19500, "loc-dv-laval": 15800 },
-  { month: "Jul 2025",  "loc-dv-main": 44200, "loc-dv-ouest": 21000, "loc-dv-laval": 17600 },
-  { month: "Aug 2025",  "loc-dv-main": 46800, "loc-dv-ouest": 22500, "loc-dv-laval": 19400 },
-  { month: "Sep 2025",  "loc-dv-main": 41200, "loc-dv-ouest": 19800, "loc-dv-laval": 18900 },
-  { month: "Oct 2025",  "loc-dv-main": 39600, "loc-dv-ouest": 20100, "loc-dv-laval": 19500 },
-  { month: "Nov 2025",  "loc-dv-main": 40800, "loc-dv-ouest": 21800, "loc-dv-laval": 20800 },
-  { month: "Dec 2025",  "loc-dv-main": 47500, "loc-dv-ouest": 24200, "loc-dv-laval": 24600 },
-  { month: "Jan 2026",  "loc-dv-main": 38200, "loc-dv-ouest": 21300, "loc-dv-laval": 18900 },
-  { month: "Feb 2026",  "loc-dv-main": 41500, "loc-dv-ouest": 23800, "loc-dv-laval": 23100 },
-  { month: "Mar 2026",  "loc-dv-main": 44100, "loc-dv-ouest": 26200, "loc-dv-laval": 29400 },
-  { month: "Apr 2026",  "loc-dv-main": 48720, "loc-dv-ouest": 29450, "loc-dv-laval": 34890 },
+  {
+    month: "May 2025",
+    "loc-dv-main": 36500,
+    "loc-dv-ouest": 18200,
+    "loc-dv-laval": 14200,
+  },
+  {
+    month: "Jun 2025",
+    "loc-dv-main": 39800,
+    "loc-dv-ouest": 19500,
+    "loc-dv-laval": 15800,
+  },
+  {
+    month: "Jul 2025",
+    "loc-dv-main": 44200,
+    "loc-dv-ouest": 21000,
+    "loc-dv-laval": 17600,
+  },
+  {
+    month: "Aug 2025",
+    "loc-dv-main": 46800,
+    "loc-dv-ouest": 22500,
+    "loc-dv-laval": 19400,
+  },
+  {
+    month: "Sep 2025",
+    "loc-dv-main": 41200,
+    "loc-dv-ouest": 19800,
+    "loc-dv-laval": 18900,
+  },
+  {
+    month: "Oct 2025",
+    "loc-dv-main": 39600,
+    "loc-dv-ouest": 20100,
+    "loc-dv-laval": 19500,
+  },
+  {
+    month: "Nov 2025",
+    "loc-dv-main": 40800,
+    "loc-dv-ouest": 21800,
+    "loc-dv-laval": 20800,
+  },
+  {
+    month: "Dec 2025",
+    "loc-dv-main": 47500,
+    "loc-dv-ouest": 24200,
+    "loc-dv-laval": 24600,
+  },
+  {
+    month: "Jan 2026",
+    "loc-dv-main": 38200,
+    "loc-dv-ouest": 21300,
+    "loc-dv-laval": 18900,
+  },
+  {
+    month: "Feb 2026",
+    "loc-dv-main": 41500,
+    "loc-dv-ouest": 23800,
+    "loc-dv-laval": 23100,
+  },
+  {
+    month: "Mar 2026",
+    "loc-dv-main": 44100,
+    "loc-dv-ouest": 26200,
+    "loc-dv-laval": 29400,
+  },
+  {
+    month: "Apr 2026",
+    "loc-dv-main": 48720,
+    "loc-dv-ouest": 29450,
+    "loc-dv-laval": 34890,
+  },
 ];
 
 // ── Weekly occupancy (last 4 weeks, split by capacity model) ─────────────
@@ -141,29 +256,35 @@ export interface WeeklyOccupancyRow {
 export const weeklyOccupancy: WeeklyOccupancyRow[] = [
   {
     week: "W14 · Apr 1–7",
-    daycare:  { "loc-dv-main": 79, "loc-dv-ouest": 71, "loc-dv-laval": 75 },
-    boarding: { "loc-dv-main": 81, "loc-dv-ouest": 0,  "loc-dv-laval": 76 },
+    daycare: { "loc-dv-main": 79, "loc-dv-ouest": 71, "loc-dv-laval": 75 },
+    boarding: { "loc-dv-main": 81, "loc-dv-ouest": 0, "loc-dv-laval": 76 },
   },
   {
     week: "W15 · Apr 8–14",
-    daycare:  { "loc-dv-main": 84, "loc-dv-ouest": 76, "loc-dv-laval": 79 },
-    boarding: { "loc-dv-main": 86, "loc-dv-ouest": 0,  "loc-dv-laval": 80 },
+    daycare: { "loc-dv-main": 84, "loc-dv-ouest": 76, "loc-dv-laval": 79 },
+    boarding: { "loc-dv-main": 86, "loc-dv-ouest": 0, "loc-dv-laval": 80 },
   },
   {
     week: "W16 · Apr 15–21",
-    daycare:  { "loc-dv-main": 88, "loc-dv-ouest": 79, "loc-dv-laval": 82 },
-    boarding: { "loc-dv-main": 89, "loc-dv-ouest": 0,  "loc-dv-laval": 84 },
+    daycare: { "loc-dv-main": 88, "loc-dv-ouest": 79, "loc-dv-laval": 82 },
+    boarding: { "loc-dv-main": 89, "loc-dv-ouest": 0, "loc-dv-laval": 84 },
   },
   {
     week: "W17 · Apr 22–28",
-    daycare:  { "loc-dv-main": 91, "loc-dv-ouest": 81, "loc-dv-laval": 85 },
-    boarding: { "loc-dv-main": 92, "loc-dv-ouest": 0,  "loc-dv-laval": 87 },
+    daycare: { "loc-dv-main": 91, "loc-dv-ouest": 81, "loc-dv-laval": 85 },
+    boarding: { "loc-dv-main": 92, "loc-dv-ouest": 0, "loc-dv-laval": 87 },
   },
 ];
 
 // ── Service mix (revenue by service type, broken out by location) ────────
 export interface ServiceMixRow {
-  service: "Boarding" | "Daycare" | "Grooming" | "Training" | "Add-ons" | "Retail";
+  service:
+    | "Boarding"
+    | "Daycare"
+    | "Grooming"
+    | "Training"
+    | "Add-ons"
+    | "Retail";
   total: number;
   byLocation: { [locationId: string]: number };
   color: string;
@@ -173,37 +294,61 @@ export const serviceMix: ServiceMixRow[] = [
   {
     service: "Boarding",
     total: 38240,
-    byLocation: { "loc-dv-main": 21800, "loc-dv-ouest": 0, "loc-dv-laval": 16440 },
+    byLocation: {
+      "loc-dv-main": 21800,
+      "loc-dv-ouest": 0,
+      "loc-dv-laval": 16440,
+    },
     color: "#0ea5e9",
   },
   {
     service: "Daycare",
     total: 32890,
-    byLocation: { "loc-dv-main": 14200, "loc-dv-ouest": 12100, "loc-dv-laval": 6590 },
+    byLocation: {
+      "loc-dv-main": 14200,
+      "loc-dv-ouest": 12100,
+      "loc-dv-laval": 6590,
+    },
     color: "#8b5cf6",
   },
   {
     service: "Grooming",
     total: 17820,
-    byLocation: { "loc-dv-main": 7600, "loc-dv-ouest": 10220, "loc-dv-laval": 0 },
+    byLocation: {
+      "loc-dv-main": 7600,
+      "loc-dv-ouest": 10220,
+      "loc-dv-laval": 0,
+    },
     color: "#22c55e",
   },
   {
     service: "Training",
     total: 13680,
-    byLocation: { "loc-dv-main": 3120, "loc-dv-ouest": 0, "loc-dv-laval": 10560 },
+    byLocation: {
+      "loc-dv-main": 3120,
+      "loc-dv-ouest": 0,
+      "loc-dv-laval": 10560,
+    },
     color: "#f59e0b",
   },
   {
     service: "Add-ons",
     total: 6240,
-    byLocation: { "loc-dv-main": 1800, "loc-dv-ouest": 1700, "loc-dv-laval": 2740 },
+    byLocation: {
+      "loc-dv-main": 1800,
+      "loc-dv-ouest": 1700,
+      "loc-dv-laval": 2740,
+    },
     color: "#ec4899",
   },
   {
     service: "Retail",
     total: 4190,
-    byLocation: { "loc-dv-main": 200, "loc-dv-ouest": 5430, "loc-dv-laval": -1440 },
+    byLocation: {
+      "loc-dv-main": 200,
+      "loc-dv-ouest": 5430,
+      "loc-dv-laval": -1440,
+    },
     color: "#64748b",
   },
 ];
@@ -228,8 +373,8 @@ export const crossLocationClients: CrossLocationClient[] = [
     clientName: "Alexandre Côté",
     petNames: ["Milou", "Bibi"],
     locationsVisited: [
-      { locationId: "loc-dv-main",  visits: 18, spend: 2840 },
-      { locationId: "loc-dv-ouest", visits: 7,  spend: 945 },
+      { locationId: "loc-dv-main", visits: 18, spend: 2840 },
+      { locationId: "loc-dv-ouest", visits: 7, spend: 945 },
     ],
     totalVisits: 25,
     totalSpend: 3785,
@@ -243,7 +388,7 @@ export const crossLocationClients: CrossLocationClient[] = [
     clientName: "Émilie Lavoie",
     petNames: ["Mocha"],
     locationsVisited: [
-      { locationId: "loc-dv-main",  visits: 12, spend: 2120 },
+      { locationId: "loc-dv-main", visits: 12, spend: 2120 },
       { locationId: "loc-dv-laval", visits: 14, spend: 2360 },
     ],
     totalVisits: 26,
@@ -259,7 +404,7 @@ export const crossLocationClients: CrossLocationClient[] = [
     petNames: ["Loki", "Freya"],
     locationsVisited: [
       { locationId: "loc-dv-ouest", visits: 22, spend: 1980 },
-      { locationId: "loc-dv-laval", visits: 5,  spend: 740 },
+      { locationId: "loc-dv-laval", visits: 5, spend: 740 },
     ],
     totalVisits: 27,
     totalSpend: 2720,
@@ -273,7 +418,7 @@ export const crossLocationClients: CrossLocationClient[] = [
     clientName: "Sarah Hamilton",
     petNames: ["Daisy"],
     locationsVisited: [
-      { locationId: "loc-dv-main",  visits: 9, spend: 1485 },
+      { locationId: "loc-dv-main", visits: 9, spend: 1485 },
       { locationId: "loc-dv-ouest", visits: 4, spend: 380 },
       { locationId: "loc-dv-laval", visits: 3, spend: 525 },
     ],
@@ -289,7 +434,7 @@ export const crossLocationClients: CrossLocationClient[] = [
     clientName: "Jean-Philippe Tremblay",
     petNames: ["Otto"],
     locationsVisited: [
-      { locationId: "loc-dv-main",  visits: 6, spend: 920 },
+      { locationId: "loc-dv-main", visits: 6, spend: 920 },
       { locationId: "loc-dv-laval", visits: 11, spend: 1685 },
     ],
     totalVisits: 17,
@@ -377,8 +522,18 @@ export const sharedStaffPool = [
     hoursThisWeek: 40,
     utilizationRate: 95,
     upcomingShifts: [
-      { locationId: "loc-dv-main", date: "2026-04-25", start: "08:00", end: "17:00" },
-      { locationId: "loc-dv-main", date: "2026-04-26", start: "08:00", end: "17:00" },
+      {
+        locationId: "loc-dv-main",
+        date: "2026-04-25",
+        start: "08:00",
+        end: "17:00",
+      },
+      {
+        locationId: "loc-dv-main",
+        date: "2026-04-26",
+        start: "08:00",
+        end: "17:00",
+      },
     ],
   },
   {
@@ -392,9 +547,24 @@ export const sharedStaffPool = [
     hoursThisWeek: 36,
     utilizationRate: 88,
     upcomingShifts: [
-      { locationId: "loc-dv-main",  date: "2026-04-25", start: "09:00", end: "17:00" },
-      { locationId: "loc-dv-ouest", date: "2026-04-26", start: "10:00", end: "16:00" },
-      { locationId: "loc-dv-main",  date: "2026-04-28", start: "09:00", end: "17:00" },
+      {
+        locationId: "loc-dv-main",
+        date: "2026-04-25",
+        start: "09:00",
+        end: "17:00",
+      },
+      {
+        locationId: "loc-dv-ouest",
+        date: "2026-04-26",
+        start: "10:00",
+        end: "16:00",
+      },
+      {
+        locationId: "loc-dv-main",
+        date: "2026-04-28",
+        start: "09:00",
+        end: "17:00",
+      },
     ],
   },
   {
@@ -408,7 +578,12 @@ export const sharedStaffPool = [
     hoursThisWeek: 40,
     utilizationRate: 82,
     upcomingShifts: [
-      { locationId: "loc-dv-main", date: "2026-04-25", start: "07:00", end: "15:00" },
+      {
+        locationId: "loc-dv-main",
+        date: "2026-04-25",
+        start: "07:00",
+        end: "15:00",
+      },
     ],
   },
   {
@@ -422,8 +597,18 @@ export const sharedStaffPool = [
     hoursThisWeek: 38,
     utilizationRate: 90,
     upcomingShifts: [
-      { locationId: "loc-dv-main",  date: "2026-04-25", start: "10:00", end: "16:00" },
-      { locationId: "loc-dv-laval", date: "2026-04-27", start: "09:00", end: "17:00" },
+      {
+        locationId: "loc-dv-main",
+        date: "2026-04-25",
+        start: "10:00",
+        end: "16:00",
+      },
+      {
+        locationId: "loc-dv-laval",
+        date: "2026-04-27",
+        start: "09:00",
+        end: "17:00",
+      },
     ],
   },
   {
@@ -437,7 +622,12 @@ export const sharedStaffPool = [
     hoursThisWeek: 35,
     utilizationRate: 78,
     upcomingShifts: [
-      { locationId: "loc-dv-main", date: "2026-04-25", start: "08:00", end: "16:00" },
+      {
+        locationId: "loc-dv-main",
+        date: "2026-04-25",
+        start: "08:00",
+        end: "16:00",
+      },
     ],
   },
   {
@@ -451,7 +641,12 @@ export const sharedStaffPool = [
     hoursThisWeek: 40,
     utilizationRate: 86,
     upcomingShifts: [
-      { locationId: "loc-dv-ouest", date: "2026-04-25", start: "08:00", end: "17:00" },
+      {
+        locationId: "loc-dv-ouest",
+        date: "2026-04-25",
+        start: "08:00",
+        end: "17:00",
+      },
     ],
   },
   {
@@ -465,7 +660,12 @@ export const sharedStaffPool = [
     hoursThisWeek: 32,
     utilizationRate: 75,
     upcomingShifts: [
-      { locationId: "loc-dv-ouest", date: "2026-04-25", start: "09:00", end: "15:00" },
+      {
+        locationId: "loc-dv-ouest",
+        date: "2026-04-25",
+        start: "09:00",
+        end: "15:00",
+      },
     ],
   },
   {
@@ -479,7 +679,12 @@ export const sharedStaffPool = [
     hoursThisWeek: 40,
     utilizationRate: 84,
     upcomingShifts: [
-      { locationId: "loc-dv-laval", date: "2026-04-25", start: "08:00", end: "17:00" },
+      {
+        locationId: "loc-dv-laval",
+        date: "2026-04-25",
+        start: "08:00",
+        end: "17:00",
+      },
     ],
   },
   {
@@ -493,7 +698,12 @@ export const sharedStaffPool = [
     hoursThisWeek: 38,
     utilizationRate: 80,
     upcomingShifts: [
-      { locationId: "loc-dv-laval", date: "2026-04-25", start: "09:00", end: "17:00" },
+      {
+        locationId: "loc-dv-laval",
+        date: "2026-04-25",
+        start: "09:00",
+        end: "17:00",
+      },
     ],
   },
   {
@@ -507,7 +717,12 @@ export const sharedStaffPool = [
     hoursThisWeek: 40,
     utilizationRate: 77,
     upcomingShifts: [
-      { locationId: "loc-dv-laval", date: "2026-04-26", start: "07:00", end: "15:00" },
+      {
+        locationId: "loc-dv-laval",
+        date: "2026-04-26",
+        start: "07:00",
+        end: "15:00",
+      },
     ],
   },
 ];

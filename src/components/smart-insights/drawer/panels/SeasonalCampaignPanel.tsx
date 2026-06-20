@@ -31,7 +31,10 @@ The Doggieville team`;
 
 const ACTIVE_CLIENT_COUNT = 612;
 
-export function SeasonalCampaignPanel({ onComplete, onCancel }: InsightPanelProps) {
+export function SeasonalCampaignPanel({
+  onComplete,
+  onCancel,
+}: InsightPanelProps) {
   const [step, setStep] = useState<"compose" | "preview">("compose");
   const [subject, setSubject] = useState(DEFAULT_SUBJECT);
   const [body, setBody] = useState(DEFAULT_BODY);
@@ -40,7 +43,7 @@ export function SeasonalCampaignPanel({ onComplete, onCancel }: InsightPanelProp
     return (
       <div className="flex h-full flex-col gap-5 px-1">
         <div className="rounded-lg border bg-amber-50 p-3 text-sm">
-          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-900">
+          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-amber-900 uppercase">
             <Sun className="size-3.5" />
             Forecast peak: July 13 – 26
           </div>
@@ -51,7 +54,7 @@ export function SeasonalCampaignPanel({ onComplete, onCancel }: InsightPanelProp
         </div>
 
         <div className="rounded-lg border bg-slate-50 p-3 text-sm">
-          <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+          <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs tracking-wide uppercase">
             <Users className="size-3.5" />
             Default recipients
           </div>
@@ -97,9 +100,7 @@ export function SeasonalCampaignPanel({ onComplete, onCancel }: InsightPanelProp
     <div className="flex h-full flex-col gap-5 px-1">
       <PreviewBeforeSend
         channel="email"
-        recipients={[
-          `${ACTIVE_CLIENT_COUNT} active clients (past 12 months)`,
-        ]}
+        recipients={[`${ACTIVE_CLIENT_COUNT} active clients (past 12 months)`]}
         subject={subject}
         body={body
           .replaceAll("{{firstName}}", "[First name]")

@@ -73,12 +73,36 @@ const STATUS_CONFIG: Record<
   ConversationStatus,
   { label: string; color: string; icon: typeof CheckCircle2 }
 > = {
-  open: { label: "Open", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
-  pending_client: { label: "Pending Client", color: "bg-amber-100 text-amber-700 border-amber-200", icon: Clock },
-  pending_staff: { label: "Pending Staff", color: "bg-blue-100 text-blue-700 border-blue-200", icon: Clock },
-  follow_up: { label: "Follow-up", color: "bg-violet-100 text-violet-700 border-violet-200", icon: AlertCircle },
-  resolved: { label: "Resolved", color: "bg-slate-100 text-slate-600 border-slate-200", icon: CheckCircle2 },
-  archived: { label: "Archived", color: "bg-slate-100 text-slate-500 border-slate-200", icon: Archive },
+  open: {
+    label: "Open",
+    color: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    icon: CheckCircle2,
+  },
+  pending_client: {
+    label: "Pending Client",
+    color: "bg-amber-100 text-amber-700 border-amber-200",
+    icon: Clock,
+  },
+  pending_staff: {
+    label: "Pending Staff",
+    color: "bg-blue-100 text-blue-700 border-blue-200",
+    icon: Clock,
+  },
+  follow_up: {
+    label: "Follow-up",
+    color: "bg-violet-100 text-violet-700 border-violet-200",
+    icon: AlertCircle,
+  },
+  resolved: {
+    label: "Resolved",
+    color: "bg-slate-100 text-slate-600 border-slate-200",
+    icon: CheckCircle2,
+  },
+  archived: {
+    label: "Archived",
+    color: "bg-slate-100 text-slate-500 border-slate-200",
+    icon: Archive,
+  },
 };
 
 const CHANNEL_LABELS = {
@@ -109,12 +133,18 @@ export function ConversationThread({
   const isCustomerMode = mode === "customer";
   const conversationState = useConversationState();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [tabsByThreadId, setTabsByThreadId] = useState<Record<string, ReminderTab>>({});
-  const [statusByThreadId, setStatusByThreadId] = useState<Record<string, ConversationStatus>>(
-    () =>
-      Object.fromEntries(
-        defaultThreadMeta.map((m) => [m.threadId, m.status as ConversationStatus]),
-      ),
+  const [tabsByThreadId, setTabsByThreadId] = useState<
+    Record<string, ReminderTab>
+  >({});
+  const [statusByThreadId, setStatusByThreadId] = useState<
+    Record<string, ConversationStatus>
+  >(() =>
+    Object.fromEntries(
+      defaultThreadMeta.map((m) => [
+        m.threadId,
+        m.status as ConversationStatus,
+      ]),
+    ),
   );
   const [activeChannel, setActiveChannel] = useState<ActiveChannel>("sms");
 
@@ -122,7 +152,10 @@ export function ConversationThread({
     if (!threadId) return [];
     return messages
       .filter((message) => (message.threadId ?? message.id) === threadId)
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      .sort(
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      );
   }, [threadId, messages]);
 
   const threadFacilityId = useMemo(() => {
@@ -131,11 +164,18 @@ export function ConversationThread({
     return match ? Number(match[1]) : null;
   }, [isCustomerMode, threadId]);
 
-  const counterpartyId = threadMessages[0]?.clientId ?? threadFacilityId ?? undefined;
-  const client = counterpartyId ? clients.find((c) => c.id === counterpartyId) : null;
-  const facility = counterpartyId ? facilities.find((f) => f.id === counterpartyId) : null;
+  const counterpartyId =
+    threadMessages[0]?.clientId ?? threadFacilityId ?? undefined;
+  const client = counterpartyId
+    ? clients.find((c) => c.id === counterpartyId)
+    : null;
+  const facility = counterpartyId
+    ? facilities.find((f) => f.id === counterpartyId)
+    : null;
 
-  const facilityLogo = (facility as Record<string, unknown>)?.logo as string | undefined;
+  const facilityLogo = (facility as Record<string, unknown>)?.logo as
+    | string
+    | undefined;
   const counterpartyName = isCustomerMode
     ? (facility?.name ?? threadMessages[0]?.from ?? "Facility")
     : (client?.name ?? threadMessages[0]?.from ?? "Unknown");
@@ -147,8 +187,12 @@ export function ConversationThread({
     : null;
 
   const contactLine = isCustomerMode
-    ? ((counterpartyContact as Record<string, unknown>)?.phone as string | undefined) ||
-      ((counterpartyContact as Record<string, unknown>)?.email as string | undefined) ||
+    ? ((counterpartyContact as Record<string, unknown>)?.phone as
+        | string
+        | undefined) ||
+      ((counterpartyContact as Record<string, unknown>)?.email as
+        | string
+        | undefined) ||
       "Typically responds within 2 hours"
     : (client?.phone ?? client?.email ?? "Active now");
   const preferredLanguageLabel =
@@ -156,9 +200,14 @@ export function ConversationThread({
       ? getCustomerLanguageLabel(client.preferredLanguage)
       : null;
 
-  const channels = [...new Set(threadMessages.map((m) => m.type))] as ActiveChannel[];
-  const defaultChannel: ActiveChannel =
-    channels.includes("sms") ? "sms" : channels.includes("email") ? "email" : "in-app";
+  const channels = [
+    ...new Set(threadMessages.map((m) => m.type)),
+  ] as ActiveChannel[];
+  const defaultChannel: ActiveChannel = channels.includes("sms")
+    ? "sms"
+    : channels.includes("email")
+      ? "email"
+      : "in-app";
 
   useEffect(() => {
     setActiveChannel(defaultChannel);
@@ -179,16 +228,25 @@ export function ConversationThread({
   );
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
   }, [chatMessages.length]);
 
   const reminderHistory = useMemo(
     () =>
-      getReminderHistoryForCustomer({ messages, counterpartyId, isCustomerMode }),
+      getReminderHistoryForCustomer({
+        messages,
+        counterpartyId,
+        isCustomerMode,
+      }),
     [counterpartyId, isCustomerMode, messages],
   );
 
-  const activeTab = threadId ? (tabsByThreadId[threadId] ?? "conversation") : "conversation";
+  const activeTab = threadId
+    ? (tabsByThreadId[threadId] ?? "conversation")
+    : "conversation";
   const currentStatus: ConversationStatus =
     (threadId ? statusByThreadId[threadId] : null) ?? "open";
   const statusCfg = STATUS_CONFIG[currentStatus];
@@ -220,7 +278,9 @@ export function ConversationThread({
     );
   }
 
-  const grouped: Array<{ type: "date"; date: string } | { type: "msg"; msg: Message }> = [];
+  const grouped: Array<
+    { type: "date"; date: string } | { type: "msg"; msg: Message }
+  > = [];
   let lastDate = "";
 
   for (const message of chatMessages) {
@@ -240,7 +300,7 @@ export function ConversationThread({
     channels.length === 0
       ? "No history"
       : channels.length === 1
-        ? CHANNEL_LABELS[channels[0]] ?? channels[0]
+        ? (CHANNEL_LABELS[channels[0]] ?? channels[0])
         : `${channels.length} channels`;
 
   const conversationPanel = (
@@ -249,7 +309,8 @@ export function ConversationThread({
         ref={scrollRef}
         className="flex-1 overflow-y-auto"
         style={{
-          background: "linear-gradient(180deg, rgb(248 250 252 / 0.5) 0%, rgb(241 245 249 / 0.3) 100%)",
+          background:
+            "linear-gradient(180deg, rgb(248 250 252 / 0.5) 0%, rgb(241 245 249 / 0.3) 100%)",
         }}
       >
         <div className="mx-auto max-w-2xl px-6 py-5">
@@ -271,17 +332,24 @@ export function ConversationThread({
                   {initials(counterpartyName)}
                 </div>
               )}
-              <p className="mt-2 text-sm font-semibold text-slate-700">{counterpartyName}</p>
+              <p className="mt-2 text-sm font-semibold text-slate-700">
+                {counterpartyName}
+              </p>
               <p className="text-[11px] text-slate-400">
                 {isCustomerMode
-                  ? (((counterpartyContact as Record<string, unknown>)?.email as string | undefined) ?? "")
+                  ? (((counterpartyContact as Record<string, unknown>)
+                      ?.email as string | undefined) ?? "")
                   : (client?.email ?? "")}{" "}
-                {(isCustomerMode
-                  ? ((counterpartyContact as Record<string, unknown>)?.phone as string | undefined)
-                  : client?.phone)
+                {(
+                  isCustomerMode
+                    ? ((counterpartyContact as Record<string, unknown>)
+                        ?.phone as string | undefined)
+                    : client?.phone
+                )
                   ? `- ${
                       isCustomerMode
-                        ? ((counterpartyContact as Record<string, unknown>)?.phone as string)
+                        ? ((counterpartyContact as Record<string, unknown>)
+                            ?.phone as string)
                         : client?.phone
                     }`
                   : ""}
@@ -289,11 +357,14 @@ export function ConversationThread({
               <p className="mt-1 text-[10px] text-slate-300">
                 Conversation started{" "}
                 {chatMessages[0]
-                  ? new Date(chatMessages[0].timestamp).toLocaleDateString("en-US", {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    })
+                  ? new Date(chatMessages[0].timestamp).toLocaleDateString(
+                      "en-US",
+                      {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      },
+                    )
                   : ""}
               </p>
             </div>
@@ -354,10 +425,10 @@ export function ConversationThread({
           onChannelChange={setActiveChannel}
           recipientEmail={
             isCustomerMode
-              ? ((counterpartyContact as Record<string, unknown>)?.email as
+              ? (((counterpartyContact as Record<string, unknown>)?.email as
                   | string
-                  | undefined) ?? null
-              : client?.email ?? null
+                  | undefined) ?? null)
+              : (client?.email ?? null)
           }
           senderName={isCustomerMode ? undefined : "PawCare Facility"}
           prefillKey={composePrefill?.key}
@@ -391,7 +462,9 @@ export function ConversationThread({
 
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-800">{counterpartyName}</h3>
+              <h3 className="text-sm font-bold text-slate-800">
+                {counterpartyName}
+              </h3>
               {!isCustomerMode && client?.isBlocked && (
                 <Badge
                   variant="outline"
@@ -488,7 +561,7 @@ export function ConversationThread({
                 align="end"
                 className="w-56 rounded-xl p-1 shadow-lg"
               >
-                <p className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <p className="px-2 py-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
                   Assign conversation
                 </p>
                 {conversationState.staff.map((s) => {
@@ -558,29 +631,35 @@ export function ConversationThread({
                   <ChevronDown className="size-3" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-52 rounded-xl p-1 shadow-lg">
-                {(Object.entries(STATUS_CONFIG) as [ConversationStatus, typeof statusCfg][]).map(
-                  ([key, cfg]) => {
-                    const Icon = cfg.icon;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setStatus(key)}
-                        className={cn(
-                          "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-slate-50",
-                          currentStatus === key && "bg-slate-50",
-                        )}
-                      >
-                        <Icon className="size-3.5" />
-                        {cfg.label}
-                        {currentStatus === key && (
-                          <CheckCircle2 className="ml-auto size-3 text-emerald-500" />
-                        )}
-                      </button>
-                    );
-                  },
-                )}
+              <PopoverContent
+                align="end"
+                className="w-52 rounded-xl p-1 shadow-lg"
+              >
+                {(
+                  Object.entries(STATUS_CONFIG) as [
+                    ConversationStatus,
+                    typeof statusCfg,
+                  ][]
+                ).map(([key, cfg]) => {
+                  const Icon = cfg.icon;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setStatus(key)}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-slate-50",
+                        currentStatus === key && "bg-slate-50",
+                      )}
+                    >
+                      <Icon className="size-3.5" />
+                      {cfg.label}
+                      {currentStatus === key && (
+                        <CheckCircle2 className="ml-auto size-3 text-emerald-500" />
+                      )}
+                    </button>
+                  );
+                })}
               </PopoverContent>
             </Popover>
           )}
@@ -631,7 +710,9 @@ export function ConversationThread({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem>
-                {isCustomerMode ? "View facility profile" : "View client profile"}
+                {isCustomerMode
+                  ? "View facility profile"
+                  : "View client profile"}
               </DropdownMenuItem>
               <DropdownMenuItem>
                 {isCustomerMode ? "My booking history" : "Booking history"}
@@ -639,7 +720,10 @@ export function ConversationThread({
               <DropdownMenuSeparator />
               <DropdownMenuItem>Pin conversation</DropdownMenuItem>
               <DropdownMenuItem>Mark as unread</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatus("archived")} className="text-red-500">
+              <DropdownMenuItem
+                onClick={() => setStatus("archived")}
+                className="text-red-500"
+              >
                 Archive
               </DropdownMenuItem>
             </DropdownMenuContent>

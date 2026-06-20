@@ -123,16 +123,12 @@ export function WaiverEditorDialog({
       );
     } else if (initialFromTemplate) {
       setName(initialFromTemplate.name);
-      setServices(
-        initialFromTemplate.services ?? [initialFromTemplate.type],
-      );
+      setServices(initialFromTemplate.services ?? [initialFromTemplate.type]);
       setCategoryId(initialFromTemplate.categoryId ?? "");
       setContent(initialFromTemplate.content);
       setIsActive(true);
       setRequiresSignature(initialFromTemplate.requiresSignature);
-      setRequireDigitalSignature(
-        initialFromTemplate.requireDigitalSignature,
-      );
+      setRequireDigitalSignature(initialFromTemplate.requireDigitalSignature);
       setRequiresWitness(initialFromTemplate.requiresWitness);
       setExpiryDays(
         initialFromTemplate.expiryDays !== undefined
@@ -184,9 +180,7 @@ export function WaiverEditorDialog({
   };
 
   const canSave =
-    name.trim().length > 0 &&
-    services.length > 0 &&
-    content.trim().length > 0;
+    name.trim().length > 0 && services.length > 0 && content.trim().length > 0;
 
   const handleSave = () => {
     if (!canSave) return;
@@ -239,9 +233,7 @@ export function WaiverEditorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col p-0">
         <DialogHeader className="border-b px-6 py-4">
-          <DialogTitle>
-            {isEdit ? "Edit Waiver" : "Create Waiver"}
-          </DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Waiver" : "Create Waiver"}</DialogTitle>
         </DialogHeader>
 
         <ScrollArea className="flex-1">
@@ -345,7 +337,7 @@ export function WaiverEditorDialog({
             <Separator />
 
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
                 Settings
               </p>
 

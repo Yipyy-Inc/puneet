@@ -50,11 +50,12 @@ function QaScorePanel({
   const [score, setScore] = useState(rec.qaScore ?? 0);
   const [note, setNote] = useState(rec.managerNote ?? "");
   const [saved, setSaved] = useState(false);
-  const dirty = score !== (rec.qaScore ?? 0) || note !== (rec.managerNote ?? "");
+  const dirty =
+    score !== (rec.qaScore ?? 0) || note !== (rec.managerNote ?? "");
 
   return (
-    <div className="space-y-2 rounded-lg border bg-muted/20 px-3 py-2">
-      <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className="bg-muted/20 space-y-2 rounded-lg border px-3 py-2">
+      <p className="text-muted-foreground flex items-center gap-1 text-[10px] font-semibold tracking-wide uppercase">
         <ClipboardCheck className="size-3" />
         QA Score · manager only
       </p>
@@ -78,7 +79,7 @@ function QaScorePanel({
             <Star className={cn("size-3.5", score >= n && "fill-amber-400")} />
           </button>
         ))}
-        <span className="ml-1 text-xs text-muted-foreground">
+        <span className="text-muted-foreground ml-1 text-xs">
           {score ? `${score}/5` : "Not scored"}
         </span>
       </div>
@@ -93,7 +94,9 @@ function QaScorePanel({
         className="resize-none text-xs"
       />
       <div className="flex items-center justify-end gap-2">
-        {saved && <span className="text-[11px] font-medium text-green-600">Saved</span>}
+        {saved && (
+          <span className="text-[11px] font-medium text-green-600">Saved</span>
+        )}
         <Button
           size="sm"
           variant="secondary"
@@ -129,7 +132,10 @@ export function RecordingsList({
   const [qaOnly, setQaOnly] = useState(false);
 
   const handlers = useMemo(
-    () => [...new Set(recordings.map((r) => r.handledBy).filter(Boolean))] as string[],
+    () =>
+      [
+        ...new Set(recordings.map((r) => r.handledBy).filter(Boolean)),
+      ] as string[],
     [recordings],
   );
 
@@ -152,11 +158,15 @@ export function RecordingsList({
     () =>
       [...recordings]
         .filter((r) => r.flagged)
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+        .sort(
+          (a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+        ),
     [recordings],
   );
 
-  const filtersActive = handledBy !== ALL_STAFF || dateRange !== "all" || qaOnly;
+  const filtersActive =
+    handledBy !== ALL_STAFF || dateRange !== "all" || qaOnly;
   const clearFilters = () => {
     setHandledBy(ALL_STAFF);
     setDateRange("all");
@@ -185,20 +195,23 @@ export function RecordingsList({
               return (
                 <div
                   key={rec.id}
-                  className="flex items-center gap-3 rounded-lg border border-amber-200/70 bg-card px-3 py-2 dark:border-amber-900/40"
+                  className="bg-card flex items-center gap-3 rounded-lg border border-amber-200/70 px-3 py-2 dark:border-amber-900/40"
                 >
                   <Flag className="size-3.5 shrink-0 text-amber-500" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">
                       {rec.clientName || "Unknown Caller"}{" "}
-                      <span className="font-mono text-[11px] font-normal text-muted-foreground">
+                      <span className="text-muted-foreground font-mono text-[11px] font-normal">
                         {rec.from}
                       </span>
                     </p>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-muted-foreground text-[11px]">
                       {reason}
                       {rec.handledBy && <> · {rec.handledBy}</>} ·{" "}
-                      {d.toLocaleDateString([], { month: "short", day: "numeric" })}
+                      {d.toLocaleDateString([], {
+                        month: "short",
+                        day: "numeric",
+                      })}
                     </p>
                   </div>
                   {onClearFlag && (
@@ -222,7 +235,7 @@ export function RecordingsList({
       <div className="flex flex-wrap items-center gap-2">
         <Select value={handledBy} onValueChange={setHandledBy}>
           <SelectTrigger className="w-48 gap-1.5">
-            <Headphones className="size-3.5 text-muted-foreground" />
+            <Headphones className="text-muted-foreground size-3.5" />
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -261,17 +274,22 @@ export function RecordingsList({
         )}
 
         {filtersActive && (
-          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={clearFilters}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground gap-1.5"
+            onClick={clearFilters}
+          >
             <X className="size-3.5" /> Clear
           </Button>
         )}
-        <span className="ml-auto text-xs text-muted-foreground">
+        <span className="text-muted-foreground ml-auto text-xs">
           {filtered.length} recording{filtered.length !== 1 ? "s" : ""}
         </span>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed py-12 text-center text-muted-foreground">
+        <div className="text-muted-foreground rounded-xl border border-dashed py-12 text-center">
           <Play className="mx-auto mb-3 size-8 opacity-30" />
           <p className="text-sm">No recordings match these filters</p>
         </div>
@@ -281,7 +299,7 @@ export function RecordingsList({
             const isExpanded = expanded === rec.id;
             const d = new Date(rec.timestamp);
             return (
-              <div key={rec.id} className="rounded-xl border bg-card">
+              <div key={rec.id} className="bg-card rounded-xl border">
                 {/* Row (click anywhere to expand the transcript + AI summary) */}
                 <div
                   className="flex cursor-pointer items-center gap-3 px-3 py-2.5"
@@ -289,14 +307,14 @@ export function RecordingsList({
                 >
                   <ChevronDown
                     className={cn(
-                      "size-4 shrink-0 text-muted-foreground transition-transform",
+                      "text-muted-foreground size-4 shrink-0 transition-transform",
                       isExpanded && "rotate-180",
                     )}
                   />
 
                   {/* Contact */}
                   <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <div className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-full">
                       <User className="size-3.5" />
                     </div>
                     <div className="min-w-0">
@@ -304,23 +322,27 @@ export function RecordingsList({
                         <Link
                           href={`/facility/dashboard/clients/${rec.clientId}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="group flex items-center gap-1 hover:text-primary"
+                          className="group hover:text-primary flex items-center gap-1"
                         >
-                          <span className="truncate text-sm font-semibold leading-tight group-hover:underline">
+                          <span className="truncate text-sm leading-tight font-semibold group-hover:underline">
                             {rec.clientName || "Unknown Caller"}
                           </span>
-                          <ExternalLink className="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                          <ExternalLink className="text-muted-foreground size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
                         </Link>
                       ) : (
-                        <span className="truncate text-sm font-semibold text-muted-foreground">
+                        <span className="text-muted-foreground truncate text-sm font-semibold">
                           {rec.clientName || "Unknown Caller"}
                         </span>
                       )}
-                      <div className="font-mono text-[11px] text-muted-foreground">{rec.from}</div>
+                      <div className="text-muted-foreground font-mono text-[11px]">
+                        {rec.from}
+                      </div>
                       {rec.handledBy && (
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="text-muted-foreground text-[11px]">
                           Handled by{" "}
-                          <span className="font-medium text-foreground">{rec.handledBy}</span>
+                          <span className="text-foreground font-medium">
+                            {rec.handledBy}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -344,26 +366,38 @@ export function RecordingsList({
 
                   {/* Duration */}
                   <div className="hidden shrink-0 items-center gap-1.5 text-sm md:flex">
-                    <Clock className="size-3.5 text-muted-foreground" />
-                    <span className="font-mono tabular-nums">{fmtDuration(rec.duration)}</span>
+                    <Clock className="text-muted-foreground size-3.5" />
+                    <span className="font-mono tabular-nums">
+                      {fmtDuration(rec.duration)}
+                    </span>
                   </div>
 
                   {/* Recorded */}
                   <div className="hidden shrink-0 text-right text-sm lg:block">
                     <div className="font-medium">
-                      {d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
+                      {d.toLocaleDateString([], {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    <div className="text-muted-foreground text-xs">
+                      {d.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="flex shrink-0 items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <button
                       onClick={() => alert("Playing…")}
                       title="Play recording"
-                      className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="border-border text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors"
                     >
                       <Play className="size-3.5" />
                       Play
@@ -371,7 +405,7 @@ export function RecordingsList({
                     <button
                       onClick={() => alert("Downloading…")}
                       title="Download"
-                      className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="text-muted-foreground hover:bg-muted hover:text-foreground flex size-7 items-center justify-center rounded-lg transition-colors"
                     >
                       <Download className="size-3.5" />
                     </button>
@@ -380,9 +414,14 @@ export function RecordingsList({
 
                 {/* Expanded: transcription + AI summary (+ QA scoring for managers) */}
                 {isExpanded && (
-                  <div className="space-y-2 border-t px-3 pb-3 pt-2.5">
-                    <CallTranscriptSummary callId={rec.id} transcription={rec.transcription} />
-                    {canScore && onScore && <QaScorePanel key={rec.id} rec={rec} onScore={onScore} />}
+                  <div className="space-y-2 border-t px-3 pt-2.5 pb-3">
+                    <CallTranscriptSummary
+                      callId={rec.id}
+                      transcription={rec.transcription}
+                    />
+                    {canScore && onScore && (
+                      <QaScorePanel key={rec.id} rec={rec} onScore={onScore} />
+                    )}
                   </div>
                 )}
               </div>

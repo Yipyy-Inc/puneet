@@ -12,9 +12,15 @@ interface SavedRepliesContextValue {
   incrementUse: (id: string) => void;
 }
 
-const SavedRepliesContext = createContext<SavedRepliesContextValue | null>(null);
+const SavedRepliesContext = createContext<SavedRepliesContextValue | null>(
+  null,
+);
 
-export function SavedRepliesProvider({ children }: { children: React.ReactNode }) {
+export function SavedRepliesProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [replies, setReplies] = useState<SavedReply[]>(defaultSavedReplies);
 
   const add = useCallback((reply: SavedReply) => {
@@ -22,9 +28,7 @@ export function SavedRepliesProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const update = useCallback((reply: SavedReply) => {
-    setReplies((prev) =>
-      prev.map((r) => (r.id === reply.id ? reply : r)),
-    );
+    setReplies((prev) => prev.map((r) => (r.id === reply.id ? reply : r)));
   }, []);
 
   const remove = useCallback((id: string) => {
@@ -33,14 +37,14 @@ export function SavedRepliesProvider({ children }: { children: React.ReactNode }
 
   const incrementUse = useCallback((id: string) => {
     setReplies((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, useCount: r.useCount + 1 } : r,
-      ),
+      prev.map((r) => (r.id === id ? { ...r, useCount: r.useCount + 1 } : r)),
     );
   }, []);
 
   return (
-    <SavedRepliesContext.Provider value={{ replies, add, update, remove, incrementUse }}>
+    <SavedRepliesContext.Provider
+      value={{ replies, add, update, remove, incrementUse }}
+    >
       {children}
     </SavedRepliesContext.Provider>
   );

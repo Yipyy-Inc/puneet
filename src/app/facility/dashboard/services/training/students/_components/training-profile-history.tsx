@@ -304,8 +304,7 @@ export function TrainingProfileHistory({
   const presentCount = allRows.filter(
     (r) => r.attendance.status === "present" || r.attendance.status === "late",
   ).length;
-  const filtersActive =
-    !!fromDate || !!toDate || courseFilter !== ANY_COURSE;
+  const filtersActive = !!fromDate || !!toDate || courseFilter !== ANY_COURSE;
 
   function clearFilters() {
     setFromDate("");
@@ -350,7 +349,7 @@ export function TrainingProfileHistory({
       <div className="bg-card flex flex-wrap items-end gap-3 rounded-xl border px-4 py-3">
         <div className="flex flex-1 flex-wrap items-end gap-3">
           <div className="space-y-1">
-            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <Label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
               <CalendarRange className="mr-1 inline size-3 align-text-bottom" />
               From
             </Label>
@@ -365,7 +364,7 @@ export function TrainingProfileHistory({
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <Label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
               <CalendarRange className="mr-1 inline size-3 align-text-bottom" />
               To
             </Label>
@@ -380,7 +379,7 @@ export function TrainingProfileHistory({
             />
           </div>
           <div className="min-w-[200px] flex-1 space-y-1">
-            <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <Label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
               <BookOpen className="mr-1 inline size-3 align-text-bottom" />
               Course
             </Label>
@@ -498,7 +497,7 @@ export function TrainingProfileHistory({
                     (attendance.conditions.weather.length > 0 ||
                       !!attendance.conditions.distractionLevel) && (
                       <div>
-                        <p className="text-muted-foreground mb-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+                        <p className="text-muted-foreground mb-1.5 flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                           <Cloud className="size-3" />
                           Conditions
                         </p>
@@ -516,40 +515,39 @@ export function TrainingProfileHistory({
                     )}
 
                   {/* Exercises with ratings */}
-                  {attendance.exercises &&
-                    attendance.exercises.length > 0 && (
-                      <div>
-                        <p className="text-muted-foreground mb-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
-                          <Target className="size-3" />
-                          Exercises covered
-                        </p>
-                        <ul className="divide-y divide-slate-100 rounded-lg border border-slate-100">
-                          {attendance.exercises.map((ex, idx) => (
-                            <li
-                              key={`${attendance.id}-ex-${idx}`}
-                              className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5"
-                            >
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium text-slate-800">
-                                  {ex.exerciseName}
+                  {attendance.exercises && attendance.exercises.length > 0 && (
+                    <div>
+                      <p className="text-muted-foreground mb-1.5 flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
+                        <Target className="size-3" />
+                        Exercises covered
+                      </p>
+                      <ul className="divide-y divide-slate-100 rounded-lg border border-slate-100">
+                        {attendance.exercises.map((ex, idx) => (
+                          <li
+                            key={`${attendance.id}-ex-${idx}`}
+                            className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-slate-800">
+                                {ex.exerciseName}
+                              </p>
+                              {ex.notes && (
+                                <p className="text-muted-foreground mt-0.5 text-[11px]">
+                                  {ex.notes}
                                 </p>
-                                {ex.notes && (
-                                  <p className="text-muted-foreground mt-0.5 text-[11px]">
-                                    {ex.notes}
-                                  </p>
-                                )}
-                              </div>
-                              <RatingDots rating={ex.rating} />
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                              )}
+                            </div>
+                            <RatingDots rating={ex.rating} />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                   {/* Session summary */}
                   {attendance.trainerNotes && (
                     <div>
-                      <p className="text-muted-foreground mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+                      <p className="text-muted-foreground mb-1 flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                         <StickyNote className="size-3" />
                         Session summary
                       </p>
@@ -562,7 +560,7 @@ export function TrainingProfileHistory({
                   {/* Homework assigned */}
                   {homework.length > 0 && (
                     <div>
-                      <p className="text-muted-foreground mb-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+                      <p className="text-muted-foreground mb-1.5 flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                         <Sparkles className="size-3" />
                         Homework assigned
                       </p>

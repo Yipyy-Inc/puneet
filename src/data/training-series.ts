@@ -42,10 +42,7 @@ interface Seed {
   enrollmentRules: TrainingSeries["enrollmentRules"];
 }
 
-function buildSessions(
-  seed: Seed,
-  seriesId: string,
-): TrainingSeriesSession[] {
+function buildSessions(seed: Seed, seriesId: string): TrainingSeriesSession[] {
   const base = generateSeriesSessions({
     courseTypeId: seed.courseTypeId,
     courseTypeName: seed.courseTypeName,
@@ -82,8 +79,7 @@ function buildSessions(
       ...s,
       seriesId,
       status: sessionStatus,
-      enrolledCount:
-        seed.status === "draft" ? 0 : seed.enrolledCount,
+      enrolledCount: seed.status === "draft" ? 0 : seed.enrolledCount,
     };
   });
 }
@@ -913,7 +909,9 @@ export const seriesEnrollments: TrainingEnrollment[] =
     return seeds.map((seed, idx) => buildSeriesEnrollment(series, seed, idx));
   });
 
-export function getEnrollmentsForSeries(seriesId: string): TrainingEnrollment[] {
+export function getEnrollmentsForSeries(
+  seriesId: string,
+): TrainingEnrollment[] {
   return seriesEnrollments.filter((e) => e.seriesId === seriesId);
 }
 

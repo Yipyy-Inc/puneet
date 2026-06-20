@@ -64,7 +64,8 @@ This warning serves as an official record of the incident and your acknowledgmen
         label: "Incident Description",
         type: "textarea",
         required: true,
-        placeholder: "Describe what happened and how the protocol was breached…",
+        placeholder:
+          "Describe what happened and how the protocol was breached…",
       },
     ],
     requiresSignature: true,
@@ -91,7 +92,8 @@ Failure to maintain professional conduct standards may result in further discipl
         label: "Description of Conduct",
         type: "textarea",
         required: true,
-        placeholder: "Describe the behavior, where it occurred, and who was involved…",
+        placeholder:
+          "Describe the behavior, where it occurred, and who was involved…",
       },
     ],
     requiresSignature: true,
@@ -221,7 +223,8 @@ export const issuedWarnings: IssuedWarning[] = [
       behavior_description:
         "Used demeaning language toward a junior staff member in front of other employees in the boarding area.",
     },
-    managerNotes: "First conduct-related warning. Issued after a team complaint.",
+    managerNotes:
+      "First conduct-related warning. Issued after a team complaint.",
     issuedBy: "fs-mgr-01",
     issuedByName: "Nathalie Côté",
     issuedAt: "2026-03-15T11:00:00Z",
@@ -241,7 +244,8 @@ export const issuedWarnings: IssuedWarning[] = [
     employeeId: "fs-groom-02",
     employeeName: "Julien Roy",
     type: "final",
-    reason: "Continued attendance violations after written warning — final notice",
+    reason:
+      "Continued attendance violations after written warning — final notice",
     body: warningTemplates[0].body,
     fieldValues: {
       incident_dates: "Mar 2, Mar 9, Mar 19",
@@ -291,7 +295,8 @@ export const issuedWarnings: IssuedWarning[] = [
     employeeId: "fs-board-02",
     employeeName: "Amira Saleh",
     type: "verbal",
-    reason: "Complaint from client about rough handling of their dog during boarding intake",
+    reason:
+      "Complaint from client about rough handling of their dog during boarding intake",
     body: warningTemplates[2].body,
     fieldValues: {
       behavior_description:
@@ -319,7 +324,8 @@ export const issuedWarnings: IssuedWarning[] = [
     employeeId: "fs-sani-01",
     employeeName: "Philippe Dubois",
     type: "written",
-    reason: "Failure to complete required sanitation checklist for 4 consecutive shifts",
+    reason:
+      "Failure to complete required sanitation checklist for 4 consecutive shifts",
     body: warningTemplates[1].body,
     fieldValues: {
       protocol_violated: "Daily kennel sanitation and disinfection checklist",
@@ -348,7 +354,8 @@ export const issuedWarnings: IssuedWarning[] = [
     employeeId: "fs-train-02",
     employeeName: "Noémie Fortin",
     type: "verbal",
-    reason: "Dismissive communication with a client during a training consultation",
+    reason:
+      "Dismissive communication with a client during a training consultation",
     body: warningTemplates[2].body,
     fieldValues: {
       behavior_description:

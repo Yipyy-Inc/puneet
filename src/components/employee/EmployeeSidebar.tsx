@@ -153,7 +153,8 @@ export function EmployeeSidebar({ staffId }: { staffId: string }) {
               const isActive =
                 item.url === "/employee"
                   ? pathname === "/employee"
-                  : pathname === item.url || pathname.startsWith(item.url + "/");
+                  : pathname === item.url ||
+                    pathname.startsWith(item.url + "/");
               return (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild isActive={isActive}>

@@ -35,15 +35,39 @@ import type { IVRConfig, IVRNode, IVRAction } from "@/types/calling";
 
 const actionConfig: Record<
   IVRAction,
-  { label: string; icon: React.ComponentType<{ className?: string }>; color: string }
+  {
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    color: string;
+  }
 > = {
   route_staff: { label: "Route to Staff", icon: Users, color: "text-blue-600" },
-  route_department: { label: "Route to Department", icon: Phone, color: "text-purple-600" },
-  route_voicemail: { label: "Send to Voicemail", icon: Voicemail, color: "text-gray-600" },
-  play_recording: { label: "Play Recording", icon: Play, color: "text-green-600" },
-  send_sms: { label: "Send SMS Link", icon: MessageSquare, color: "text-teal-600" },
+  route_department: {
+    label: "Route to Department",
+    icon: Phone,
+    color: "text-purple-600",
+  },
+  route_voicemail: {
+    label: "Send to Voicemail",
+    icon: Voicemail,
+    color: "text-gray-600",
+  },
+  play_recording: {
+    label: "Play Recording",
+    icon: Play,
+    color: "text-green-600",
+  },
+  send_sms: {
+    label: "Send SMS Link",
+    icon: MessageSquare,
+    color: "text-teal-600",
+  },
   submenu: { label: "Sub-Menu", icon: ChevronRight, color: "text-amber-600" },
-  route_operator: { label: "Route to Operator", icon: Hash, color: "text-red-600" },
+  route_operator: {
+    label: "Route to Operator",
+    icon: Hash,
+    color: "text-red-600",
+  },
 };
 
 interface IVRBuilderProps {
@@ -73,7 +97,9 @@ export function IVRBuilder({ config: initialConfig }: IVRBuilderProps) {
   const addNode = () => {
     const usedKeys = new Set(config.nodes.map((n) => n.key));
     const nextKey =
-      ["1","2","3","4","5","6","7","8","9","0","*","#"].find((k) => !usedKeys.has(k)) ?? "?";
+      ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "*", "#"].find(
+        (k) => !usedKeys.has(k),
+      ) ?? "?";
     const newNode: IVRNode = {
       id: `node-${Date.now()}`,
       key: nextKey,
@@ -94,16 +120,37 @@ export function IVRBuilder({ config: initialConfig }: IVRBuilderProps) {
   };
 
   const sortedNodes = [...config.nodes].sort((a, b) => {
-    const order = ["1","2","3","4","5","6","7","8","9","8","9","0","*","#","?"];
+    const order = [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "8",
+      "9",
+      "0",
+      "*",
+      "#",
+      "?",
+    ];
     return order.indexOf(a.key) - order.indexOf(b.key);
   });
 
   return (
     <div className="space-y-6">
       {/* IVR Status Bar */}
-      <div className="flex items-center justify-between rounded-xl border bg-muted/30 px-5 py-3">
+      <div className="bg-muted/30 flex items-center justify-between rounded-xl border px-5 py-3">
         <div className="flex items-center gap-3">
-          <div className={cn("size-2.5 rounded-full", config.enabled ? "bg-green-500" : "bg-muted-foreground")} />
+          <div
+            className={cn(
+              "size-2.5 rounded-full",
+              config.enabled ? "bg-green-500" : "bg-muted-foreground",
+            )}
+          />
           <span className="font-semibold">IVR Auto-Attendant</span>
           <Badge variant={config.enabled ? "default" : "secondary"}>
             {config.enabled ? "Active" : "Disabled"}
@@ -133,7 +180,7 @@ export function IVRBuilder({ config: initialConfig }: IVRBuilderProps) {
                 placeholder="Enter the greeting callers hear when they call…"
                 className="text-sm"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {config.greeting.length} characters · approx.{" "}
                 {Math.ceil(config.greeting.split(" ").length / 2)}s read time
               </p>
@@ -200,9 +247,11 @@ export function IVRBuilder({ config: initialConfig }: IVRBuilderProps) {
           </div>
 
           {sortedNodes.length === 0 && (
-            <div className="rounded-xl border border-dashed py-10 text-center text-muted-foreground">
+            <div className="text-muted-foreground rounded-xl border border-dashed py-10 text-center">
               <Phone className="mx-auto mb-2 size-8 opacity-30" />
-              <p className="text-sm">No menu options yet. Add one to get started.</p>
+              <p className="text-sm">
+                No menu options yet. Add one to get started.
+              </p>
             </div>
           )}
 
@@ -217,23 +266,30 @@ export function IVRBuilder({ config: initialConfig }: IVRBuilderProps) {
                   key={node.id}
                   className={cn(
                     "rounded-xl border transition-all",
-                    isEditing ? "border-primary/40 bg-primary/5 shadow-sm" : "bg-card",
+                    isEditing
+                      ? "border-primary/40 bg-primary/5 shadow-sm"
+                      : "bg-card",
                   )}
                 >
                   {/* Collapsed row */}
                   <div
                     className="flex cursor-pointer items-center gap-3 p-3"
-                    onClick={() =>
-                      setEditingNode(isEditing ? null : node.id)
-                    }
+                    onClick={() => setEditingNode(isEditing ? null : node.id)}
                   >
-                    <GripVertical className="size-4 shrink-0 text-muted-foreground/40" />
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-background font-bold text-base">
+                    <GripVertical className="text-muted-foreground/40 size-4 shrink-0" />
+                    <div className="bg-background flex size-8 shrink-0 items-center justify-center rounded-lg border text-base font-bold">
                       {node.key}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{node.label}</p>
-                      <p className={cn("flex items-center gap-1 text-xs", cfg.color)}>
+                      <p className="truncate text-sm font-semibold">
+                        {node.label}
+                      </p>
+                      <p
+                        className={cn(
+                          "flex items-center gap-1 text-xs",
+                          cfg.color,
+                        )}
+                      >
                         <Icon className="size-3" />
                         {cfg.label}
                         {node.destination && ` → ${node.destination}`}
@@ -242,7 +298,7 @@ export function IVRBuilder({ config: initialConfig }: IVRBuilderProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-7 text-muted-foreground/50 hover:text-destructive"
+                      className="text-muted-foreground/50 hover:text-destructive size-7"
                       onClick={(e) => {
                         e.stopPropagation();
                         removeNode(node.id);
@@ -254,20 +310,37 @@ export function IVRBuilder({ config: initialConfig }: IVRBuilderProps) {
 
                   {/* Expanded editor */}
                   {isEditing && (
-                    <div className="space-y-3 border-t px-3 pb-3 pt-3">
+                    <div className="space-y-3 border-t px-3 pt-3 pb-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <Label className="mb-1 block text-xs">Key</Label>
                           <Select
                             value={node.key}
-                            onValueChange={(v) => updateNode(node.id, { key: v })}
+                            onValueChange={(v) =>
+                              updateNode(node.id, { key: v })
+                            }
                           >
                             <SelectTrigger className="h-8 text-sm">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {["1","2","3","4","5","6","7","8","9","0","*","#"].map((k) => (
-                                <SelectItem key={k} value={k}>Press {k}</SelectItem>
+                              {[
+                                "1",
+                                "2",
+                                "3",
+                                "4",
+                                "5",
+                                "6",
+                                "7",
+                                "8",
+                                "9",
+                                "0",
+                                "*",
+                                "#",
+                              ].map((k) => (
+                                <SelectItem key={k} value={k}>
+                                  Press {k}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -284,54 +357,76 @@ export function IVRBuilder({ config: initialConfig }: IVRBuilderProps) {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {(Object.keys(actionConfig) as IVRAction[]).map((a) => (
-                                <SelectItem key={a} value={a}>
-                                  {actionConfig[a].label}
-                                </SelectItem>
-                              ))}
+                              {(Object.keys(actionConfig) as IVRAction[]).map(
+                                (a) => (
+                                  <SelectItem key={a} value={a}>
+                                    {actionConfig[a].label}
+                                  </SelectItem>
+                                ),
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
                       <div>
-                        <Label className="mb-1 block text-xs">Label (spoken description)</Label>
+                        <Label className="mb-1 block text-xs">
+                          Label (spoken description)
+                        </Label>
                         <Input
                           className="h-8 text-sm"
                           value={node.label}
-                          onChange={(e) => updateNode(node.id, { label: e.target.value })}
+                          onChange={(e) =>
+                            updateNode(node.id, { label: e.target.value })
+                          }
                         />
                       </div>
-                      {(node.action === "route_staff" || node.action === "route_department" || node.action === "route_operator") && (
+                      {(node.action === "route_staff" ||
+                        node.action === "route_department" ||
+                        node.action === "route_operator") && (
                         <div>
-                          <Label className="mb-1 block text-xs">Destination</Label>
+                          <Label className="mb-1 block text-xs">
+                            Destination
+                          </Label>
                           <Input
                             className="h-8 text-sm"
                             placeholder="e.g. Reception Team, Manager – Sophie R."
                             value={node.destination ?? ""}
-                            onChange={(e) => updateNode(node.id, { destination: e.target.value })}
+                            onChange={(e) =>
+                              updateNode(node.id, {
+                                destination: e.target.value,
+                              })
+                            }
                           />
                         </div>
                       )}
                       {node.action === "play_recording" && (
                         <div>
-                          <Label className="mb-1 block text-xs">Message to play</Label>
+                          <Label className="mb-1 block text-xs">
+                            Message to play
+                          </Label>
                           <Textarea
                             rows={2}
                             className="text-sm"
                             placeholder="Text that will be read aloud…"
                             value={node.message ?? ""}
-                            onChange={(e) => updateNode(node.id, { message: e.target.value })}
+                            onChange={(e) =>
+                              updateNode(node.id, { message: e.target.value })
+                            }
                           />
                         </div>
                       )}
                       {node.action === "send_sms" && (
                         <div>
-                          <Label className="mb-1 block text-xs">SMS message text</Label>
+                          <Label className="mb-1 block text-xs">
+                            SMS message text
+                          </Label>
                           <Input
                             className="h-8 text-sm"
                             placeholder="Hi! Book here: https://…"
                             value={node.smsText ?? ""}
-                            onChange={(e) => updateNode(node.id, { smsText: e.target.value })}
+                            onChange={(e) =>
+                              updateNode(node.id, { smsText: e.target.value })
+                            }
                           />
                         </div>
                       )}

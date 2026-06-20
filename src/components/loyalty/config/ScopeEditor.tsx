@@ -30,7 +30,8 @@ function toOptionalNumber(raw: string): number | undefined {
 }
 
 export function ScopeEditor({ value, onChange }: ScopeEditorProps) {
-  const showServices = value.scope === "services_only" || value.scope === "both";
+  const showServices =
+    value.scope === "services_only" || value.scope === "both";
   const showRetail = value.scope === "retail_only" || value.scope === "both";
 
   const serviceTypes = value.services?.serviceTypes ?? [];
@@ -222,7 +223,9 @@ export function ScopeEditor({ value, onChange }: ScopeEditorProps) {
                   setExclusion("discountedItems", checked)
                 }
               />
-              <Label htmlFor="exclude-discounted">Exclude Discounted Items</Label>
+              <Label htmlFor="exclude-discounted">
+                Exclude Discounted Items
+              </Label>
             </div>
             <div className="flex items-center space-x-2">
               <Switch
@@ -238,9 +241,7 @@ export function ScopeEditor({ value, onChange }: ScopeEditorProps) {
               <Switch
                 id="exclude-packages"
                 checked={value.exclusions?.packages ?? false}
-                onCheckedChange={(checked) =>
-                  setExclusion("packages", checked)
-                }
+                onCheckedChange={(checked) => setExclusion("packages", checked)}
               />
               <Label htmlFor="exclude-packages">Exclude Packages</Label>
             </div>

@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
@@ -71,10 +66,7 @@ export function LiveTrackingPage() {
   const [nowIso, setNowIso] = useState(() => new Date().toISOString());
   useEffect(() => {
     setNowIso(new Date().toISOString());
-    const id = setInterval(
-      () => setNowIso(new Date().toISOString()),
-      60_000,
-    );
+    const id = setInterval(() => setNowIso(new Date().toISOString()), 60_000);
     return () => clearInterval(id);
   }, []);
 
@@ -110,8 +102,7 @@ export function LiveTrackingPage() {
       const dayAppointments = appointments.filter(
         (a) =>
           a.date === today &&
-          (stylistsInVan.length === 0 ||
-            stylistsInVan.includes(a.stylistId)) &&
+          (stylistsInVan.length === 0 || stylistsInVan.includes(a.stylistId)) &&
           a.status !== "cancelled" &&
           a.status !== "no-show",
       );
@@ -231,9 +222,9 @@ export function LiveTrackingPage() {
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-          <Truck className="size-10 text-muted-foreground" />
+          <Truck className="text-muted-foreground size-10" />
           <p className="font-medium">Mobile grooming isn&apos;t enabled</p>
-          <p className="max-w-sm text-sm text-muted-foreground">
+          <p className="text-muted-foreground max-w-sm text-sm">
             Live tracking is only available for mobile grooming vans. Enable
             mobile grooming in settings to start tracking staff in the field.
           </p>
@@ -251,16 +242,15 @@ export function LiveTrackingPage() {
             <Activity className="size-6 text-sky-600" />
             Live Tracking
           </h1>
-          <p className="mt-0.5 max-w-2xl text-sm text-muted-foreground">
-            Real-time location of mobile grooming vans during the working
-            day. Tracking is active only during scheduled hours and{" "}
-            <strong>all location data is deleted after the day ends</strong>{" "}
-            — operationally useful without storing personal movement
-            histories.
+          <p className="text-muted-foreground mt-0.5 max-w-2xl text-sm">
+            Real-time location of mobile grooming vans during the working day.
+            Tracking is active only during scheduled hours and{" "}
+            <strong>all location data is deleted after the day ends</strong> —
+            operationally useful without storing personal movement histories.
           </p>
         </div>
-        <div className="rounded-lg border bg-card px-3 py-2 text-right">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+        <div className="bg-card rounded-lg border px-3 py-2 text-right">
+          <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
             Right now
           </p>
           <p className="font-mono text-sm font-semibold tabular-nums">
@@ -280,10 +270,9 @@ export function LiveTrackingPage() {
                 {activeDelayCount === 1 ? "van" : "vans"}
               </p>
               <p className="text-xs">
-                A van has been at a stop more than{" "}
-                {DELAY_FLAG_GRACE_MIN} minutes past the scheduled appointment
-                duration. Check the affected van card below — this is a heads
-                up, not an alarm.
+                A van has been at a stop more than {DELAY_FLAG_GRACE_MIN}{" "}
+                minutes past the scheduled appointment duration. Check the
+                affected van card below — this is a heads up, not an alarm.
               </p>
             </div>
           </CardContent>
@@ -295,9 +284,9 @@ export function LiveTrackingPage() {
         {summaries.length === 0 && (
           <Card className="md:col-span-2">
             <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
-              <Truck className="size-8 text-muted-foreground" />
+              <Truck className="text-muted-foreground size-8" />
               <p className="text-sm font-medium">No vans configured</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Add a van in Mobile Grooming Settings to start tracking.
               </p>
             </CardContent>
@@ -326,11 +315,8 @@ export function LiveTrackingPage() {
               key={van.id}
               className={cn(
                 "border",
-                summary.delay
-                  ? "border-amber-300 dark:border-amber-900"
-                  : "",
-                flags?.noDataAlert &&
-                  "border-red-300 dark:border-red-900",
+                summary.delay ? "border-amber-300 dark:border-amber-900" : "",
+                flags?.noDataAlert && "border-red-300 dark:border-red-900",
               )}
             >
               <CardHeader className="pb-3">
@@ -345,21 +331,13 @@ export function LiveTrackingPage() {
                       · {van.licensePlate}
                     </span>
                   </CardTitle>
-                  <Badge
-                    className={cn(
-                      "gap-1.5 border-0",
-                      meta.bg,
-                      meta.text,
-                    )}
-                  >
-                    <span
-                      className={cn("size-1.5 rounded-full", meta.dot)}
-                    />
+                  <Badge className={cn("gap-1.5 border-0", meta.bg, meta.text)}>
+                    <span className={cn("size-1.5 rounded-full", meta.dot)} />
                     {meta.label}
                   </Badge>
                 </div>
                 <div className="mt-0.5 flex items-center gap-2">
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     Driver: <strong>{driverName}</strong>
                   </p>
                   {noDriverAssigned && (
@@ -404,9 +382,7 @@ export function LiveTrackingPage() {
                     <Row
                       icon={MapPin}
                       label="At stop"
-                      value={
-                        summary.latestPing.address ?? "Location withheld"
-                      }
+                      value={summary.latestPing.address ?? "Location withheld"}
                     />
                     <Row
                       icon={Clock}
@@ -450,16 +426,16 @@ export function LiveTrackingPage() {
 
                 {summary.status === "no-data-all-day" && (
                   <div className="space-y-2">
-                    <p className="rounded-md border border-dashed bg-muted/20 px-3 py-2 text-center text-muted-foreground italic">
+                    <p className="bg-muted/20 text-muted-foreground rounded-md border border-dashed px-3 py-2 text-center italic">
                       No tracking data received today. Confirm the driver has
                       tracking enabled in the mobile app.
                     </p>
                     {flags?.noDataAlert && (
                       <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 dark:border-red-900 dark:bg-red-950/30">
-                        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-red-800 dark:text-red-200">
+                        <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-red-800 uppercase dark:text-red-200">
                           <AlertTriangle className="size-3 animate-pulse" />
-                          Manager alert · {flags.minutesPastFirstStop} min
-                          past first stop
+                          Manager alert · {flags.minutesPastFirstStop} min past
+                          first stop
                         </p>
                         <p className="mt-0.5 text-[12px] text-red-900 dark:text-red-100">
                           {van.name} has scheduled mobile bookings today and
@@ -498,14 +474,12 @@ export function LiveTrackingPage() {
                 {/* Delay heads-up */}
                 {summary.delay && (
                   <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-900 dark:bg-amber-950/30">
-                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-amber-800 uppercase dark:text-amber-200">
                       <AlertTriangle className="size-3" />
                       Running long
                     </p>
                     <p className="mt-0.5 text-[12px] text-amber-900 dark:text-amber-100">
-                      {driverName !== "—"
-                        ? driverName.split(" ")[0]
-                        : van.name}{" "}
+                      {driverName !== "—" ? driverName.split(" ")[0] : van.name}{" "}
                       has been at{" "}
                       <strong>
                         {summary.latestPing?.address ?? "this stop"}
@@ -519,7 +493,7 @@ export function LiveTrackingPage() {
                 )}
 
                 {/* Pings count footer — confirms the privacy contract */}
-                <p className="flex items-center gap-1 border-t pt-2 text-[10px] text-muted-foreground">
+                <p className="text-muted-foreground flex items-center gap-1 border-t pt-2 text-[10px]">
                   <ShieldCheck className="size-3" />
                   Today&apos;s data only · auto-deletes overnight
                 </p>
@@ -543,9 +517,9 @@ function Row({
 }) {
   return (
     <div className="flex items-start gap-2">
-      <Icon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+      <Icon className="text-muted-foreground mt-0.5 size-3.5 shrink-0" />
       <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+        <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
           {label}
         </p>
         <p className="text-xs">{value}</p>

@@ -1566,9 +1566,7 @@ function VaccinationRequirementsCard() {
   };
 
   const updateRequired = (id: string, required: boolean) => {
-    setRules((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, required } : r)),
-    );
+    setRules((prev) => prev.map((r) => (r.id === id ? { ...r, required } : r)));
   };
 
   const updateExpiry = (id: string, days: number) => {
@@ -1674,9 +1672,7 @@ function VaccinationRequirementsCard() {
                                 <button
                                   key={service}
                                   type="button"
-                                  onClick={() =>
-                                    toggleService(vax.id, service)
-                                  }
+                                  onClick={() => toggleService(vax.id, service)}
                                   className={
                                     active
                                       ? "bg-primary text-primary-foreground rounded-full px-3 py-1 text-xs capitalize"
@@ -1727,7 +1723,11 @@ function VaccinationRequirementsCard() {
                       className="h-9"
                     />
                   </div>
-                  <Button size="sm" onClick={addVaccine} disabled={!newName.trim()}>
+                  <Button
+                    size="sm"
+                    onClick={addVaccine}
+                    disabled={!newName.trim()}
+                  >
                     <Plus className="mr-1 size-3.5" />
                     Add vaccine
                   </Button>
@@ -4459,7 +4459,6 @@ export default function SettingsPage() {
               {/* Vaccination Rules */}
               <VaccinationRequirementsCard />
 
-
               <ReportCardSettingsCard />
             </div>
           )}
@@ -5274,7 +5273,7 @@ export default function SettingsPage() {
                 aria-label="Training settings sections"
                 className="bg-card flex flex-wrap items-center gap-1.5 rounded-xl border px-3 py-2 shadow-sm"
               >
-                <span className="text-muted-foreground mr-1 text-[10px] font-bold uppercase tracking-wider">
+                <span className="text-muted-foreground mr-1 text-[10px] font-bold tracking-wider uppercase">
                   Jump to
                 </span>
                 <a

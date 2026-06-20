@@ -11,8 +11,8 @@ export default function SeriesNotFound() {
       <div>
         <h2 className="text-xl font-bold tracking-tight">Series not found</h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          That series ID doesn&apos;t exist, was deleted, or you don&apos;t
-          have access to it.
+          That series ID doesn&apos;t exist, was deleted, or you don&apos;t have
+          access to it.
         </p>
       </div>
       <Button asChild variant="outline">

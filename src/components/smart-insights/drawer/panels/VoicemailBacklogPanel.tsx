@@ -26,14 +26,80 @@ interface VoicemailRow {
 }
 
 const VOICEMAILS: VoicemailRow[] = [
-  { id: "VM-1", caller: "+1 514-555-0211", matchedClient: "Hannah Patel", matchedClientId: "c-1202", receivedAt: "2 days ago", ageHours: 61, durationSec: 42, transcriptPreview: "Hi, wanted to reschedule Layla's grooming…" },
-  { id: "VM-2", caller: "+1 438-555-0344", receivedAt: "2 days ago", ageHours: 53, durationSec: 28, transcriptPreview: "Looking for boarding rates for July long weekend…" },
-  { id: "VM-3", caller: "+1 514-555-0703", matchedClient: "Owen Park", matchedClientId: "c-811", receivedAt: "Yesterday", ageHours: 33, durationSec: 51, transcriptPreview: "My number is on file, just need to confirm Luna's…" },
-  { id: "VM-4", caller: "+1 514-555-0824", matchedClient: "Sara Khan", matchedClientId: "c-1104", receivedAt: "Yesterday", ageHours: 24, durationSec: 19, transcriptPreview: "Can you call me back when you have a moment…" },
-  { id: "VM-5", caller: "+1 514-555-0911", receivedAt: "12h ago", ageHours: 12, durationSec: 34, transcriptPreview: "First-time caller, looking to start daycare for my…" },
-  { id: "VM-6", caller: "+1 514-555-1042", matchedClient: "Mike Cho", matchedClientId: "c-1109", receivedAt: "8h ago", ageHours: 8, durationSec: 22, transcriptPreview: "Hey, quick question about the training package…" },
-  { id: "VM-7", caller: "+1 438-555-1158", receivedAt: "4h ago", ageHours: 4, durationSec: 47, transcriptPreview: "Calling about your boarding waiver requirements…" },
-  { id: "VM-8", caller: "+1 514-555-1231", matchedClient: "Iris Khoury", matchedClientId: "c-1013", receivedAt: "2h ago", ageHours: 2, durationSec: 31, transcriptPreview: "Hi, I think I left my keys at pickup yesterday…" },
+  {
+    id: "VM-1",
+    caller: "+1 514-555-0211",
+    matchedClient: "Hannah Patel",
+    matchedClientId: "c-1202",
+    receivedAt: "2 days ago",
+    ageHours: 61,
+    durationSec: 42,
+    transcriptPreview: "Hi, wanted to reschedule Layla's grooming…",
+  },
+  {
+    id: "VM-2",
+    caller: "+1 438-555-0344",
+    receivedAt: "2 days ago",
+    ageHours: 53,
+    durationSec: 28,
+    transcriptPreview: "Looking for boarding rates for July long weekend…",
+  },
+  {
+    id: "VM-3",
+    caller: "+1 514-555-0703",
+    matchedClient: "Owen Park",
+    matchedClientId: "c-811",
+    receivedAt: "Yesterday",
+    ageHours: 33,
+    durationSec: 51,
+    transcriptPreview: "My number is on file, just need to confirm Luna's…",
+  },
+  {
+    id: "VM-4",
+    caller: "+1 514-555-0824",
+    matchedClient: "Sara Khan",
+    matchedClientId: "c-1104",
+    receivedAt: "Yesterday",
+    ageHours: 24,
+    durationSec: 19,
+    transcriptPreview: "Can you call me back when you have a moment…",
+  },
+  {
+    id: "VM-5",
+    caller: "+1 514-555-0911",
+    receivedAt: "12h ago",
+    ageHours: 12,
+    durationSec: 34,
+    transcriptPreview: "First-time caller, looking to start daycare for my…",
+  },
+  {
+    id: "VM-6",
+    caller: "+1 514-555-1042",
+    matchedClient: "Mike Cho",
+    matchedClientId: "c-1109",
+    receivedAt: "8h ago",
+    ageHours: 8,
+    durationSec: 22,
+    transcriptPreview: "Hey, quick question about the training package…",
+  },
+  {
+    id: "VM-7",
+    caller: "+1 438-555-1158",
+    receivedAt: "4h ago",
+    ageHours: 4,
+    durationSec: 47,
+    transcriptPreview: "Calling about your boarding waiver requirements…",
+  },
+  {
+    id: "VM-8",
+    caller: "+1 514-555-1231",
+    matchedClient: "Iris Khoury",
+    matchedClientId: "c-1013",
+    receivedAt: "2h ago",
+    ageHours: 2,
+    durationSec: 31,
+    transcriptPreview: "Hi, I think I left my keys at pickup yesterday…",
+  },
 ];
 
 export function VoicemailBacklogPanel({
@@ -53,7 +119,7 @@ export function VoicemailBacklogPanel({
   return (
     <div className="flex h-full flex-col gap-5 px-1">
       <div className="rounded-lg border bg-red-50 p-3 text-sm">
-        <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-red-900">
+        <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-red-900 uppercase">
           <Voicemail className="size-3.5" />
           {VOICEMAILS.length} unlistened voicemails
         </div>

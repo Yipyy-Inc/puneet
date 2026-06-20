@@ -12,8 +12,8 @@ export function FutureChangesNotice() {
         <span className="font-medium">
           Changes apply to future transactions only.
         </span>{" "}
-        Editing a rule archives the old version and starts a new one — historical
-        point totals are never recalculated.
+        Editing a rule archives the old version and starts a new one —
+        historical point totals are never recalculated.
       </span>
     </div>
   );

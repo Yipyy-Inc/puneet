@@ -43,7 +43,8 @@ const CONVERSATIONS: Conversation[] = [
     petName: "Luna",
     lastInboundAt: "Yesterday",
     hoursOpen: 31,
-    preview: "Hi, is Luna OK to come in even though her bordetella expired last week?",
+    preview:
+      "Hi, is Luna OK to come in even though her bordetella expired last week?",
     channel: "email",
   },
   {
@@ -74,13 +75,13 @@ export function SlowReplyInboxPanel({
   return (
     <div className="flex h-full flex-col gap-5 px-1">
       <div className="rounded-lg border bg-amber-50/60 p-3 text-sm">
-        <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-900">
+        <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-amber-900 uppercase">
           <MessageSquare className="size-3.5" />
           {CONVERSATIONS.length} conversations open over 24 hours
         </div>
         <p className="text-amber-900">
-          Average response time has slipped to 5.2 hours — these are the
-          oldest threads pulling the average up.
+          Average response time has slipped to 5.2 hours — these are the oldest
+          threads pulling the average up.
         </p>
       </div>
 
@@ -125,7 +126,10 @@ export function SlowReplyInboxPanel({
                     &quot;{c.preview}&quot;
                   </p>
                 </div>
-                <Badge variant="outline" className="border-red-300 bg-red-50 text-red-800">
+                <Badge
+                  variant="outline"
+                  className="border-red-300 bg-red-50 text-red-800"
+                >
                   {c.hoursOpen}h
                 </Badge>
               </div>

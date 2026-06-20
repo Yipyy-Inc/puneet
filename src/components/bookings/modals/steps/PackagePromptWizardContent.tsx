@@ -26,7 +26,8 @@ export function PackagePromptWizardContent({
       <div className="space-y-2">
         <h3 className="text-lg font-semibold">Active Packages Detected</h3>
         <p className="text-muted-foreground text-sm">
-          This client has active packages that cover the selected service. Would you like to redeem a pass?
+          This client has active packages that cover the selected service. Would
+          you like to redeem a pass?
         </p>
       </div>
 
@@ -46,9 +47,9 @@ export function PackagePromptWizardContent({
                     </p>
                   </div>
                 </div>
-                <Button 
+                <Button
                   onClick={() => onApply(pkg.id)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="bg-emerald-600 text-white hover:bg-emerald-700"
                 >
                   Apply Pass
                 </Button>

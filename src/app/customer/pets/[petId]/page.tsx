@@ -730,7 +730,11 @@ export default function CustomerPetDetailPage({
       label: "Status",
       render: (vaccination) => {
         if (vaccination.status === "approved") {
-          return <Badge className="bg-emerald-600 hover:bg-emerald-700">Approved</Badge>;
+          return (
+            <Badge className="bg-emerald-600 hover:bg-emerald-700">
+              Approved
+            </Badge>
+          );
         }
         if (!vaccination.status || vaccination.status === "pending_review") {
           return <Badge variant="secondary">Pending Review</Badge>;

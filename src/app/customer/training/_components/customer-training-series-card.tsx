@@ -4,12 +4,7 @@ import { useMemo } from "react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
@@ -78,7 +73,10 @@ export function CustomerTrainingSeriesCard({
   // Pull the canonical trainer record by id so we can show a real photo
   // rather than the denormalized name string the series carries. Fall back
   // to series.instructorName when the lookup misses.
-  const trainerById = useMemo(() => new Map(trainers.map((t) => [t.id, t])), []);
+  const trainerById = useMemo(
+    () => new Map(trainers.map((t) => [t.id, t])),
+    [],
+  );
   const trainer = trainerById.get(series.instructorId);
   const displayName = trainer?.name ?? series.instructorName;
   const photoUrl = trainer?.photoUrl;
@@ -136,7 +134,7 @@ export function CustomerTrainingSeriesCard({
               initials={initials}
             />
             <span className="min-w-0">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <span className="block text-[10px] font-bold tracking-wider text-slate-500 uppercase">
                 Instructor
               </span>
               <span className="block truncate text-sm font-medium text-slate-800">
@@ -149,10 +147,7 @@ export function CustomerTrainingSeriesCard({
 
       <CardContent className="flex flex-1 flex-col justify-end space-y-3 pt-0">
         <div>
-          <Badge
-            variant="outline"
-            className={cn("gap-1 border", spotsCls)}
-          >
+          <Badge variant="outline" className={cn("gap-1 border", spotsCls)}>
             <Users className="size-3" />
             {isFull
               ? `Full — ${series.maxCapacity} of ${series.maxCapacity} enrolled`
@@ -173,11 +168,7 @@ export function CustomerTrainingSeriesCard({
 
         <div className="space-y-1.5">
           {isFull ? (
-            <Button
-              className="w-full"
-              variant="outline"
-              onClick={onWaitlist}
-            >
+            <Button className="w-full" variant="outline" onClick={onWaitlist}>
               <Clock className="mr-2 size-4" />
               Join Waitlist
             </Button>
@@ -224,7 +215,7 @@ function InstructorAvatar({
 }) {
   if (photoUrl) {
     return (
-      <div className="size-9 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-2 ring-white shadow-sm">
+      <div className="size-9 shrink-0 overflow-hidden rounded-full bg-slate-100 shadow-sm ring-2 ring-white">
         <Image
           src={photoUrl}
           alt={name}
@@ -237,7 +228,7 @@ function InstructorAvatar({
     );
   }
   return (
-    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold text-indigo-700 ring-2 ring-white shadow-sm">
+    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold text-indigo-700 shadow-sm ring-2 ring-white">
       {initials || <User className="size-4" />}
     </div>
   );

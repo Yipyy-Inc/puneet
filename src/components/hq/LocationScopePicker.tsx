@@ -40,7 +40,7 @@ export function LocationScopePicker({
     <div
       className={cn(
         "flex flex-wrap items-center gap-1.5",
-        compact ? "" : "rounded-lg border bg-muted/20 p-2",
+        compact ? "" : "bg-muted/20 rounded-lg border p-2",
         className,
       )}
     >

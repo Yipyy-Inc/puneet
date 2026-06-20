@@ -59,7 +59,7 @@ export function BookingDepositPrompt({
           </div>
           <p className="mt-0.5 text-[11px] text-emerald-800/80">
             Per facility rules, this booking needs a{" "}
-            <span className="font-semibold font-[tabular-nums]">
+            <span className="font-[tabular-nums] font-semibold">
               ${required.toFixed(2)}
             </span>{" "}
             deposit before it can be confirmed.
@@ -154,7 +154,7 @@ export function BookingDepositPrompt({
                     className={cn(
                       "flex flex-col items-center gap-1 rounded-lg border bg-white px-2 py-2 text-[11px] font-medium transition-all",
                       value.method === m
-                        ? "border-emerald-500 ring-1 ring-emerald-500 text-emerald-800"
+                        ? "border-emerald-500 text-emerald-800 ring-1 ring-emerald-500"
                         : "border-emerald-200/70 text-emerald-900/70 hover:bg-emerald-50",
                     )}
                   >

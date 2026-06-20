@@ -29,10 +29,7 @@ import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { cn } from "@/lib/utils";
-import {
-  getPetImage,
-  type UnifiedBooking,
-} from "@/hooks/use-unified-bookings";
+import { getPetImage, type UnifiedBooking } from "@/hooks/use-unified-bookings";
 import { useSettings } from "@/hooks/use-settings";
 import type {
   EarlyCheckoutPolicy,
@@ -97,15 +94,7 @@ function toIsoDateString(date: Date): string {
 function combineDateTime(isoDate: string, time: string): string {
   const [y, mo, d] = isoDate.split("-").map(Number);
   const [h, mi] = time.split(":").map(Number);
-  const dt = new Date(
-    y ?? 1970,
-    (mo ?? 1) - 1,
-    d ?? 1,
-    h ?? 0,
-    mi ?? 0,
-    0,
-    0,
-  );
+  const dt = new Date(y ?? 1970, (mo ?? 1) - 1, d ?? 1, h ?? 0, mi ?? 0, 0, 0);
   return dt.toISOString();
 }
 
@@ -154,8 +143,7 @@ function computeAdjustment(
 
   const totalNights = booking.totalNights ?? 0;
   const totalPrice = booking.price ?? 0;
-  const nightlyRate =
-    totalNights > 0 ? totalPrice / totalNights : totalPrice;
+  const nightlyRate = totalNights > 0 ? totalPrice / totalNights : totalPrice;
   const unusedNights = daysBefore;
   const unusedValue = nightlyRate * unusedNights;
 
@@ -294,9 +282,9 @@ export function CheckOutDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex items-center gap-3 rounded-2xl border bg-muted/30 p-3">
+        <div className="bg-muted/30 flex items-center gap-3 rounded-2xl border p-3">
           {petImage ? (
-            <div className="size-14 overflow-hidden rounded-2xl ring-2 ring-background">
+            <div className="ring-background size-14 overflow-hidden rounded-2xl ring-2">
               <Image
                 src={petImage}
                 alt={booking.petName}
@@ -306,13 +294,13 @@ export function CheckOutDialog({
               />
             </div>
           ) : (
-            <div className="bg-muted text-muted-foreground flex size-14 items-center justify-center rounded-2xl ring-2 ring-background">
+            <div className="bg-muted text-muted-foreground ring-background flex size-14 items-center justify-center rounded-2xl ring-2">
               <PawPrint className="size-6" />
             </div>
           )}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
-              <p className="text-sm font-semibold leading-none">
+              <p className="text-sm leading-none font-semibold">
                 {booking.petName}
               </p>
               <span
@@ -388,7 +376,10 @@ export function CheckOutDialog({
 
           {isEarlyCheckout && (
             <div className="grid gap-2">
-              <Label htmlFor="early-checkout-reason" className="text-sm font-medium">
+              <Label
+                htmlFor="early-checkout-reason"
+                className="text-sm font-medium"
+              >
                 Reason
               </Label>
               <Textarea
@@ -415,7 +406,9 @@ export function CheckOutDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={!!earlyCheckoutDisabled || (isEarlyCheckout && !reason.trim())}
+            disabled={
+              !!earlyCheckoutDisabled || (isEarlyCheckout && !reason.trim())
+            }
             className={cn(
               "gap-1",
               isEarlyCheckout
@@ -517,7 +510,7 @@ function EarlyCheckoutSummary({
             )}
           </div>
           {customerNote && (
-            <p className="text-[11px] italic leading-snug text-amber-900/80 dark:text-amber-200/80">
+            <p className="text-[11px] leading-snug text-amber-900/80 italic dark:text-amber-200/80">
               {customerNote}
             </p>
           )}

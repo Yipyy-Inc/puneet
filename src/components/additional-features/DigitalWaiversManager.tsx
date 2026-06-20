@@ -12,12 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -67,10 +62,7 @@ import { WaiverEditorDialog } from "./waivers/WaiverEditorDialog";
 import { TemplateEditorDialog } from "./waivers/TemplateEditorDialog";
 import { CategoryManagerDialog } from "./waivers/CategoryManagerDialog";
 import { WaiverContentRenderer } from "./waivers/WaiverContentRenderer";
-import {
-  bucketByCategory,
-  resolveCategories,
-} from "./waivers/categories";
+import { bucketByCategory, resolveCategories } from "./waivers/categories";
 
 const SERVICE_LABEL: Record<WaiverServiceTag, string> = {
   boarding: "Boarding",
@@ -112,11 +104,9 @@ export function DigitalWaiversManager() {
   const facilityName = brandingSettings.platformName;
 
   const [waivers, setWaivers] = useState<DigitalWaiver[]>(digitalWaivers);
-  const [templates, setTemplates] =
-    useState<WaiverTemplate[]>(seedTemplates);
-  const [customCategories, setCustomCategories] = useState<WaiverCategory[]>(
-    seedCustomCategories,
-  );
+  const [templates, setTemplates] = useState<WaiverTemplate[]>(seedTemplates);
+  const [customCategories, setCustomCategories] =
+    useState<WaiverCategory[]>(seedCustomCategories);
 
   const [tab, setTab] = useState<"waivers" | "templates">("waivers");
   const [showEmpty, setShowEmpty] = useState(false);
@@ -454,11 +444,7 @@ export function DigitalWaiversManager() {
           <div className="flex flex-wrap items-center gap-2">
             {previewWaiver &&
               getServices(previewWaiver).map((s) => (
-                <Badge
-                  key={s}
-                  variant="outline"
-                  className={SERVICE_BADGE[s]}
-                >
+                <Badge key={s} variant="outline" className={SERVICE_BADGE[s]}>
                   {SERVICE_LABEL[s]}
                 </Badge>
               ))}
@@ -512,11 +498,7 @@ export function DigitalWaiversManager() {
           <div className="flex flex-wrap items-center gap-2">
             {previewTemplate &&
               getServices(previewTemplate).map((s) => (
-                <Badge
-                  key={s}
-                  variant="outline"
-                  className={SERVICE_BADGE[s]}
-                >
+                <Badge key={s} variant="outline" className={SERVICE_BADGE[s]}>
                   {SERVICE_LABEL[s]}
                 </Badge>
               ))}
@@ -818,9 +800,7 @@ function TemplateRows({
                 )}
               </TableCell>
               <TableCell>
-                {template.expiryDays
-                  ? `${template.expiryDays} days`
-                  : "Never"}
+                {template.expiryDays ? `${template.expiryDays} days` : "Never"}
               </TableCell>
               <TableCell className="text-muted-foreground text-sm">
                 {new Date(template.updatedAt).toLocaleDateString()}
@@ -948,4 +928,3 @@ function SharedWaiversBanner() {
     </div>
   );
 }
-

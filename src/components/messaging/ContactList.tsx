@@ -43,7 +43,9 @@ const credits = (facility as Record<string, unknown>)?.smsCredits as
       autoReloadAmount: number;
     }
   | undefined;
-const smsTotal = credits ? credits.monthlyAllowance + (credits.purchased ?? 0) : 0;
+const smsTotal = credits
+  ? credits.monthlyAllowance + (credits.purchased ?? 0)
+  : 0;
 const smsRemaining = credits ? smsTotal - credits.used : 0;
 
 const SMS_PACKAGES = [
@@ -132,14 +134,18 @@ export function ContactList({
   const isCustomerMode = mode === "customer";
   const { role } = useFacilityRole();
   const { locations } = useLocationContext();
-  const canPurchase = !isCustomerMode && (role === "owner" || role === "manager");
+  const canPurchase =
+    !isCustomerMode && (role === "owner" || role === "manager");
   const conversationState = useConversationState();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [compose, setCompose] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
   const [starredIds, setStarredIds] = useState<Set<string>>(
-    () => new Set(defaultThreadMeta.filter((m) => m.starred).map((m) => m.threadId)),
+    () =>
+      new Set(
+        defaultThreadMeta.filter((m) => m.starred).map((m) => m.threadId),
+      ),
   );
   const [priorityIds, setPriorityIds] = useState<Set<string>>(
     () =>
@@ -154,7 +160,8 @@ export function ContactList({
       new Set(
         defaultThreadMeta
           .filter(
-            (m) => m.status === "follow_up" || m.tags.includes("needs_follow_up"),
+            (m) =>
+              m.status === "follow_up" || m.tags.includes("needs_follow_up"),
           )
           .map((m) => m.threadId),
       ),
@@ -177,8 +184,12 @@ export function ContactList({
       const tid = msg.threadId ?? msg.id;
       const existing = map.get(tid);
 
-      const customer = msg.clientId ? clients.find((c) => c.id === msg.clientId) : null;
-      const facilityItem = msg.clientId ? facilities.find((f) => f.id === msg.clientId) : null;
+      const customer = msg.clientId
+        ? clients.find((c) => c.id === msg.clientId)
+        : null;
+      const facilityItem = msg.clientId
+        ? facilities.find((f) => f.id === msg.clientId)
+        : null;
       const counterpartyName = isCustomerMode
         ? (facilityItem?.name ?? msg.from)
         : (customer?.name ?? msg.from);
@@ -188,7 +199,10 @@ export function ContactList({
 
       const meta = defaultThreadMeta.find((m) => m.threadId === tid);
 
-      if (!existing || new Date(msg.timestamp) > new Date(existing.lastMessage.timestamp)) {
+      if (
+        !existing ||
+        new Date(msg.timestamp) > new Date(existing.lastMessage.timestamp)
+      ) {
         const ch = new Set(existing?.channels ?? []);
         ch.add(msg.type);
         map.set(tid, {
@@ -197,9 +211,12 @@ export function ContactList({
           clientName: counterpartyName,
           clientImage: isCustomerMode
             ? undefined
-            : ((customer as Record<string, unknown>)?.imageUrl as string | undefined),
+            : ((customer as Record<string, unknown>)?.imageUrl as
+                | string
+                | undefined),
           lastMessage: msg,
-          unreadCount: (existing?.unreadCount ?? 0) + (shouldCountUnread ? 1 : 0),
+          unreadCount:
+            (existing?.unreadCount ?? 0) + (shouldCountUnread ? 1 : 0),
           channels: [...ch],
           isPlaceholder: false,
           meta,
@@ -210,13 +227,21 @@ export function ContactList({
       }
     }
 
-    if (isCustomerMode && customerFacilityIds && customerFacilityIds.length > 0) {
-      const existingFacilityIds = new Set([...map.values()].map((thread) => thread.clientId));
+    if (
+      isCustomerMode &&
+      customerFacilityIds &&
+      customerFacilityIds.length > 0
+    ) {
+      const existingFacilityIds = new Set(
+        [...map.values()].map((thread) => thread.clientId),
+      );
 
       for (const facilityId of customerFacilityIds) {
         if (existingFacilityIds.has(facilityId)) continue;
 
-        const facilityItem = facilities.find((entry) => entry.id === facilityId);
+        const facilityItem = facilities.find(
+          (entry) => entry.id === facilityId,
+        );
         if (!facilityItem) continue;
 
         map.set(`facility-${facilityId}`, {
@@ -250,8 +275,12 @@ export function ContactList({
         const bPriority = priorityIds.has(b.threadId) ? 1 : 0;
         if (aPriority !== bPriority) return bPriority - aPriority;
       }
-      const aTime = a.isPlaceholder ? 0 : new Date(a.lastMessage.timestamp).getTime();
-      const bTime = b.isPlaceholder ? 0 : new Date(b.lastMessage.timestamp).getTime();
+      const aTime = a.isPlaceholder
+        ? 0
+        : new Date(a.lastMessage.timestamp).getTime();
+      const bTime = b.isPlaceholder
+        ? 0
+        : new Date(b.lastMessage.timestamp).getTime();
       if (bTime !== aTime) return bTime - aTime;
       return a.clientName.localeCompare(b.clientName);
     });
@@ -269,16 +298,20 @@ export function ContactList({
       list = list.filter((t) => conversationState.closed.has(t.threadId));
     if (filter === "unread") list = list.filter((t) => t.unreadCount > 0);
     if (filter === "sms") list = list.filter((t) => t.channels.includes("sms"));
-    if (filter === "email") list = list.filter((t) => t.channels.includes("email"));
-    if (filter === "chat") list = list.filter((t) => t.channels.includes("in-app"));
-    if (filter === "starred") list = list.filter((t) => starredIds.has(t.threadId));
+    if (filter === "email")
+      list = list.filter((t) => t.channels.includes("email"));
+    if (filter === "chat")
+      list = list.filter((t) => t.channels.includes("in-app"));
+    if (filter === "starred")
+      list = list.filter((t) => starredIds.has(t.threadId));
     if (filter === "high_priority")
       list = list.filter((t) => priorityIds.has(t.threadId));
     if (filter === "follow_up")
       list = list.filter((t) => followUpIds.has(t.threadId));
     if (filter === "assigned_me")
       list = list.filter(
-        (t) => conversationState.assignments[t.threadId] === CURRENT_USER_STAFF_ID,
+        (t) =>
+          conversationState.assignments[t.threadId] === CURRENT_USER_STAFF_ID,
       );
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -403,7 +436,9 @@ export function ContactList({
               <Smartphone className="size-3.5 text-slate-400" />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-medium text-slate-500">SMS Credits</span>
+                  <span className="text-[10px] font-medium text-slate-500">
+                    SMS Credits
+                  </span>
                   <span
                     className={cn(
                       "text-[10px] font-bold tabular-nums",
@@ -421,23 +456,38 @@ export function ContactList({
                   <div
                     className={cn(
                       "h-full rounded-full transition-all",
-                      smsRemaining > 500 ? "bg-blue-500" : smsRemaining > 100 ? "bg-amber-500" : "bg-red-500",
+                      smsRemaining > 500
+                        ? "bg-blue-500"
+                        : smsRemaining > 100
+                          ? "bg-amber-500"
+                          : "bg-red-500",
                     )}
-                    style={{ width: `${Math.min(100, (smsRemaining / smsTotal) * 100)}%` }}
+                    style={{
+                      width: `${Math.min(100, (smsRemaining / smsTotal) * 100)}%`,
+                    }}
                   />
                 </div>
               </div>
               <ChevronRight className="size-3 text-slate-300" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-64 rounded-xl border-slate-200 p-0 shadow-lg">
+          <PopoverContent
+            align="start"
+            className="w-64 rounded-xl border-slate-200 p-0 shadow-lg"
+          >
             <div className="px-4 pt-3.5 pb-3">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-500">SMS Balance</span>
+                <span className="text-[11px] font-semibold text-slate-500">
+                  SMS Balance
+                </span>
                 <span
                   className={cn(
                     "text-lg leading-none font-bold tabular-nums",
-                    smsRemaining > 500 ? "text-blue-600" : smsRemaining > 100 ? "text-amber-600" : "text-red-500",
+                    smsRemaining > 500
+                      ? "text-blue-600"
+                      : smsRemaining > 100
+                        ? "text-amber-600"
+                        : "text-red-500",
                   )}
                 >
                   {smsRemaining.toLocaleString()}
@@ -447,9 +497,15 @@ export function ContactList({
                 <div
                   className={cn(
                     "h-full rounded-full",
-                    smsRemaining > 500 ? "bg-blue-500" : smsRemaining > 100 ? "bg-amber-500" : "bg-red-500",
+                    smsRemaining > 500
+                      ? "bg-blue-500"
+                      : smsRemaining > 100
+                        ? "bg-amber-500"
+                        : "bg-red-500",
                   )}
-                  style={{ width: `${Math.min(100, (smsRemaining / smsTotal) * 100)}%` }}
+                  style={{
+                    width: `${Math.min(100, (smsRemaining / smsTotal) * 100)}%`,
+                  }}
                 />
               </div>
               <div className="mt-1.5 flex gap-3 text-[10px] text-slate-400">
@@ -462,14 +518,18 @@ export function ContactList({
               {credits.autoReload && (
                 <div className="mt-2 flex items-center gap-1.5">
                   <RefreshCw className="size-2.5 text-blue-400" />
-                  <span className="text-[10px] text-blue-500">Auto-reload on</span>
+                  <span className="text-[10px] text-blue-500">
+                    Auto-reload on
+                  </span>
                 </div>
               )}
             </div>
 
             {canPurchase && (
               <div className="border-t border-slate-100 px-4 pt-2.5 pb-3">
-                <p className="mb-2 text-[11px] font-semibold text-slate-500">Buy More Credits</p>
+                <p className="mb-2 text-[11px] font-semibold text-slate-500">
+                  Buy More Credits
+                </p>
                 <div className="grid grid-cols-2 gap-1.5">
                   {SMS_PACKAGES.map((pkg) => {
                     const perSms = ((pkg.price / pkg.amount) * 100).toFixed(1);
@@ -478,18 +538,26 @@ export function ContactList({
                         key={pkg.amount}
                         type="button"
                         onClick={() =>
-                          toast.success(`${pkg.amount.toLocaleString()} credits purchased — $${pkg.price}`)
+                          toast.success(
+                            `${pkg.amount.toLocaleString()} credits purchased — $${pkg.price}`,
+                          )
                         }
                         className="group flex flex-col items-center rounded-lg border border-slate-100 bg-slate-50/50 px-2 py-2 transition-all hover:border-blue-200 hover:bg-blue-50"
                       >
                         <span className="text-sm font-bold text-slate-700 group-hover:text-blue-600">
-                          {pkg.amount >= 1000 ? `${pkg.amount / 1000}K` : pkg.amount}
+                          {pkg.amount >= 1000
+                            ? `${pkg.amount / 1000}K`
+                            : pkg.amount}
                         </span>
-                        <span className="text-[9px] text-slate-400">credits</span>
+                        <span className="text-[9px] text-slate-400">
+                          credits
+                        </span>
                         <span className="mt-1 rounded-full bg-blue-50 px-2 py-px text-[10px] font-semibold text-blue-600 group-hover:bg-blue-100">
                           ${pkg.price}
                         </span>
-                        <span className="mt-0.5 text-[9px] text-slate-400">{perSms}¢/sms</span>
+                        <span className="mt-0.5 text-[9px] text-slate-400">
+                          {perSms}¢/sms
+                        </span>
                       </button>
                     );
                   })}
@@ -514,7 +582,11 @@ export function ContactList({
                     : "Search by name, phone, email..."
               }
               value={compose ? clientSearch : search}
-              onChange={(e) => (compose ? setClientSearch(e.target.value) : setSearch(e.target.value))}
+              onChange={(e) =>
+                compose
+                  ? setClientSearch(e.target.value)
+                  : setSearch(e.target.value)
+              }
               className="h-9 rounded-full border-slate-200 bg-slate-50 pl-9 text-sm"
               autoFocus={compose}
             />
@@ -524,7 +596,7 @@ export function ContactList({
 
       {/* Filters */}
       {showFilters && (
-        <div className="flex gap-1 overflow-x-auto px-4 pb-2 scrollbar-none">
+        <div className="scrollbar-none flex gap-1 overflow-x-auto px-4 pb-2">
           {FILTER_ITEMS.map((f) => (
             <button
               key={f.key}
@@ -547,7 +619,7 @@ export function ContactList({
         <div className="flex-1 overflow-y-auto">
           {clientResults.length === 0 && clientSearch.trim() ? (
             <div className="px-5 py-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
                 No matching client
               </p>
               <button
@@ -571,7 +643,8 @@ export function ContactList({
                     Start new contact
                   </p>
                   <p className="truncate text-xs text-blue-500/80">
-                    Send to “{clientSearch.trim()}” — we&#39;ll create a profile.
+                    Send to “{clientSearch.trim()}” — we&#39;ll create a
+                    profile.
                   </p>
                 </div>
               </button>
@@ -585,7 +658,9 @@ export function ContactList({
               <button
                 key={client.id}
                 onClick={() => {
-                  const existing = threads.find((t) => t.clientId === client.id);
+                  const existing = threads.find(
+                    (t) => t.clientId === client.id,
+                  );
                   onSelectThread(
                     existing ? existing.threadId : `new-${client.id}`,
                   );
@@ -602,8 +677,12 @@ export function ContactList({
                   {initials(client.name)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-800">{client.name}</p>
-                  <p className="truncate text-xs text-slate-400">{client.email}</p>
+                  <p className="text-sm font-semibold text-slate-800">
+                    {client.name}
+                  </p>
+                  <p className="truncate text-xs text-slate-400">
+                    {client.email}
+                  </p>
                 </div>
               </button>
             ))

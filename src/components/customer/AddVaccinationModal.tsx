@@ -13,14 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
-import {
-  Upload,
-  Loader2,
-  X,
-  Syringe,
-  FileImage,
-  Check,
-} from "lucide-react";
+import { Upload, Loader2, X, Syringe, FileImage, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getVaccinationRules } from "@/data/vaccination-rules";
@@ -45,9 +38,7 @@ interface AddVaccinationModalProps {
   petSpecies: string;
   initialStatus?: "pending_review" | "approved";
   submitLabel?: string;
-  onSave: (
-    vaccinations: Array<Omit<VaccinationRecord, "id">>,
-  ) => Promise<void>;
+  onSave: (vaccinations: Array<Omit<VaccinationRecord, "id">>) => Promise<void>;
 }
 
 const PROOF_ACCEPTED_TYPES = [
@@ -84,7 +75,11 @@ export function AddVaccinationModal({
     if (!open) return;
     const required = getVaccinationRules()
       .filter((r) => r.species.toLowerCase() === petSpecies.toLowerCase())
-      .map((r) => ({ name: r.vaccineName, expiryDate: "", required: r.required }));
+      .map((r) => ({
+        name: r.vaccineName,
+        expiryDate: "",
+        required: r.required,
+      }));
     setVaccines(required);
     setProofs([]);
     setNotes("");
@@ -152,17 +147,15 @@ export function AddVaccinationModal({
       );
       const primaryDocumentUrl = documentUrls[0];
 
-      const records: Array<Omit<VaccinationRecord, "id">> = filled.map(
-        (v) => ({
-          petId,
-          vaccineName: v.name,
-          administeredDate: "",
-          expiryDate: v.expiryDate,
-          documentUrl: primaryDocumentUrl,
-          notes: notes || undefined,
-          status: initialStatus,
-        }),
-      );
+      const records: Array<Omit<VaccinationRecord, "id">> = filled.map((v) => ({
+        petId,
+        vaccineName: v.name,
+        administeredDate: "",
+        expiryDate: v.expiryDate,
+        documentUrl: primaryDocumentUrl,
+        notes: notes || undefined,
+        status: initialStatus,
+      }));
 
       await onSave(records);
       toast.success(
@@ -186,8 +179,8 @@ export function AddVaccinationModal({
         <DialogHeader>
           <DialogTitle>Upload Vaccination Records</DialogTitle>
           <DialogDescription>
-            Enter expiry dates for {petName}&apos;s required vaccines and
-            upload proof. The facility will review and approve each record.
+            Enter expiry dates for {petName}&apos;s required vaccines and upload
+            proof. The facility will review and approve each record.
           </DialogDescription>
         </DialogHeader>
 
@@ -236,8 +229,8 @@ export function AddVaccinationModal({
               Proof of Vaccination
             </Label>
             <p className="text-muted-foreground mb-2 text-[11px]">
-              Upload one or more pages covering all vaccines above. JPG, PNG,
-              or PDF — max 10MB per file.
+              Upload one or more pages covering all vaccines above. JPG, PNG, or
+              PDF — max 10MB per file.
             </p>
 
             <label
@@ -313,8 +306,8 @@ export function AddVaccinationModal({
                 <div className="col-span-full flex items-center gap-1.5">
                   <Check className="size-3 text-emerald-600" />
                   <p className="text-muted-foreground text-[11px]">
-                    {proofs.length} file{proofs.length === 1 ? "" : "s"}{" "}
-                    ready — pending staff verification
+                    {proofs.length} file{proofs.length === 1 ? "" : "s"} ready —
+                    pending staff verification
                   </p>
                 </div>
               </div>
@@ -341,10 +334,7 @@ export function AddVaccinationModal({
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={isSaving || vaccines.length === 0}
-            >
+            <Button type="submit" disabled={isSaving || vaccines.length === 0}>
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />

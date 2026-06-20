@@ -103,8 +103,9 @@ export function PrivacyConsentCard({
           Privacy & Consent
         </CardTitle>
         <CardDescription>
-          Control how your data and your pet&apos;s photos may be used. Your facility
-          honors these preferences across all communications and marketing.
+          Control how your data and your pet&apos;s photos may be used. Your
+          facility honors these preferences across all communications and
+          marketing.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -156,8 +157,10 @@ export function PrivacyConsentCard({
 
         {/* Granular toggles */}
         <div className="space-y-3">
-          <Label className="text-base font-semibold">Visibility & sharing</Label>
-          <div className="divide-border/70 overflow-hidden rounded-xl border divide-y">
+          <Label className="text-base font-semibold">
+            Visibility & sharing
+          </Label>
+          <div className="divide-border/70 divide-y overflow-hidden rounded-xl border">
             <PrivacyToggleRow
               icon={Share2}
               iconClass="bg-pink-50 text-pink-600"
@@ -287,7 +290,7 @@ function PrivacyToggleRow({
   disabled,
 }: PrivacyToggleRowProps) {
   return (
-    <div className="flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-muted/20">
+    <div className="hover:bg-muted/20 flex items-start gap-3 px-4 py-3.5 transition-colors">
       <span
         className={cn(
           "flex size-8 shrink-0 items-center justify-center rounded-lg",

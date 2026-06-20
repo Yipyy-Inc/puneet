@@ -24,12 +24,18 @@ import { boardingRates } from "@/data/boarding";
 
 function getAddonPriceLabel(addon: ServiceAddOn): string {
   switch (addon.pricingType) {
-    case "flat": return `$${addon.price}`;
-    case "per_day": return `$${addon.price}/day`;
-    case "per_session": return `$${addon.price}/${addon.unitLabel || "session"}`;
-    case "per_hour": return `$${addon.price}/${addon.unitLabel || "hr"}`;
-    case "per_item": return `$${addon.price}/${addon.unitLabel || "item"}`;
-    case "percentage_of_booking": return `${addon.price}% of booking`;
+    case "flat":
+      return `$${addon.price}`;
+    case "per_day":
+      return `$${addon.price}/day`;
+    case "per_session":
+      return `$${addon.price}/${addon.unitLabel || "session"}`;
+    case "per_hour":
+      return `$${addon.price}/${addon.unitLabel || "hr"}`;
+    case "per_item":
+      return `$${addon.price}/${addon.unitLabel || "item"}`;
+    case "percentage_of_booking":
+      return `${addon.price}% of booking`;
   }
 }
 
@@ -657,7 +663,7 @@ function BoardingRoomSelectionStep({
                         ? "cursor-not-allowed"
                         : "",
                     isDragOver && canDrop
-                      ? "border-primary/70 shadow-lg scale-[1.02]"
+                      ? "border-primary/70 scale-[1.02] shadow-lg"
                       : petsHere.length > 0
                         ? "border-primary/70 shadow-md"
                         : "border-border hover:border-primary/30 hover:shadow-sm",
@@ -811,14 +817,20 @@ function BoardingAddOnsSubStep({
   // Auto-inject included add-ons from the selected boarding rate on first render
   const injectedRef = useRef(false);
   useEffect(() => {
-    if (injectedRef.current || !isStepAccessible(2) || selectedPets.length === 0) return;
+    if (
+      injectedRef.current ||
+      !isStepAccessible(2) ||
+      selectedPets.length === 0
+    )
+      return;
     injectedRef.current = true;
 
     // Match the rate by category keyword in name (standard/deluxe/vip/premium/luxury)
     const needle = serviceType.toLowerCase();
-    const matchingRate = boardingRates.find(
-      (r) => r.isActive && r.name.toLowerCase().includes(needle),
-    ) ?? boardingRates.find((r) => r.isActive);
+    const matchingRate =
+      boardingRates.find(
+        (r) => r.isActive && r.name.toLowerCase().includes(needle),
+      ) ?? boardingRates.find((r) => r.isActive);
 
     const includedIds: string[] = matchingRate?.includedAddOnIds ?? [];
     if (includedIds.length === 0) return;
@@ -826,10 +838,14 @@ function BoardingAddOnsSubStep({
     const toInject = selectedPets.flatMap((pet) =>
       includedIds.map((id) => ({ serviceId: id, quantity: 0, petId: pet.id })),
     );
-    const existing = new Set(extraServices.map((es) => `${es.serviceId}:${es.petId}`));
-    const novel = toInject.filter((e) => !existing.has(`${e.serviceId}:${e.petId}`));
+    const existing = new Set(
+      extraServices.map((es) => `${es.serviceId}:${es.petId}`),
+    );
+    const novel = toInject.filter(
+      (e) => !existing.has(`${e.serviceId}:${e.petId}`),
+    );
     if (novel.length > 0) setExtraServices([...extraServices, ...novel]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isStepAccessible, selectedPets.length]);
 
   const boardingAddOns = getStoredAddOns().filter((a) => {
@@ -874,7 +890,7 @@ function BoardingAddOnsSubStep({
           }, 0);
           return (
             subtotal > 0 && (
-              <div className="flex items-center justify-between rounded-xl border bg-muted/40 px-4 py-2.5">
+              <div className="bg-muted/40 flex items-center justify-between rounded-xl border px-4 py-2.5">
                 <span className="text-sm font-medium">Add-ons subtotal</span>
                 <span className="text-base font-bold tabular-nums">
                   ${subtotal.toFixed(2)}
@@ -906,7 +922,7 @@ function BoardingAddOnsSubStep({
                   isIncludedFree
                     ? "border-emerald-400 bg-emerald-50/60 shadow-md"
                     : isAdded
-                      ? "border-transparent bg-primary/5 shadow-md"
+                      ? "bg-primary/5 border-transparent shadow-md"
                       : "border-border hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-lg",
                 )}
               >
@@ -942,11 +958,13 @@ function BoardingAddOnsSubStep({
                         Required
                       </div>
                     )}
-                    {service.isDefault && !service.isRequired && !isIncludedFree && (
-                      <div className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-bold text-white">
-                        Default
-                      </div>
-                    )}
+                    {service.isDefault &&
+                      !service.isRequired &&
+                      !isIncludedFree && (
+                        <div className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-bold text-white">
+                          Default
+                        </div>
+                      )}
                     {service.duration && (
                       <div className="rounded-lg bg-white/90 px-2 py-1 text-xs font-medium text-slate-700 backdrop-blur-sm">
                         {service.duration}min
@@ -985,77 +1003,122 @@ function BoardingAddOnsSubStep({
                         </span>
                       </div>
                     ) : (
-                    selectedPets.map((pet) => {
-                      const petService = extraServices.find(
-                        (es) =>
-                          es.serviceId === service.id && es.petId === pet.id && es.quantity > 0,
-                      );
-                      const quantity = petService?.quantity || 0;
+                      selectedPets.map((pet) => {
+                        const petService = extraServices.find(
+                          (es) =>
+                            es.serviceId === service.id &&
+                            es.petId === pet.id &&
+                            es.quantity > 0,
+                        );
+                        const quantity = petService?.quantity || 0;
 
-                      return (
-                        <div
-                          key={pet.id}
-                          className="flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <span className="bg-primary/10 text-primary flex size-4 items-center justify-center rounded-full text-[9px] font-bold">
-                              {pet.name[0]}
-                            </span>
-                            <span className="text-xs font-medium">
-                              {pet.name}
-                            </span>
-                          </div>
-
-                          {hasUnits ? (
+                        return (
+                          <div
+                            key={pet.id}
+                            className="flex items-center justify-between"
+                          >
                             <div className="flex items-center gap-1.5">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  if (service.isRequired && quantity <= 1) return;
-                                  if (quantity > 0) {
-                                    const updated = extraServices
-                                      .map((es) =>
+                              <span className="bg-primary/10 text-primary flex size-4 items-center justify-center rounded-full text-[9px] font-bold">
+                                {pet.name[0]}
+                              </span>
+                              <span className="text-xs font-medium">
+                                {pet.name}
+                              </span>
+                            </div>
+
+                            {hasUnits ? (
+                              <div className="flex items-center gap-1.5">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (service.isRequired && quantity <= 1)
+                                      return;
+                                    if (quantity > 0) {
+                                      const updated = extraServices
+                                        .map((es) =>
+                                          es.serviceId === service.id &&
+                                          es.petId === pet.id
+                                            ? {
+                                                ...es,
+                                                quantity: es.quantity - 1,
+                                              }
+                                            : es,
+                                        )
+                                        .filter((es) => es.quantity > 0);
+                                      setExtraServices(updated);
+                                    }
+                                  }}
+                                  disabled={
+                                    quantity === 0 ||
+                                    (service.isRequired === true &&
+                                      quantity <= 1)
+                                  }
+                                  className="size-6 p-0 text-xs"
+                                >
+                                  -
+                                </Button>
+                                <span className="min-w-[2ch] text-center font-[tabular-nums] text-xs font-semibold">
+                                  {quantity}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (petService) {
+                                      const updated = extraServices.map((es) =>
                                         es.serviceId === service.id &&
                                         es.petId === pet.id
                                           ? {
                                               ...es,
-                                              quantity: es.quantity - 1,
+                                              quantity: es.quantity + 1,
                                             }
                                           : es,
-                                      )
-                                      .filter((es) => es.quantity > 0);
-                                    setExtraServices(updated);
+                                      );
+                                      setExtraServices(updated);
+                                    } else {
+                                      setExtraServices([
+                                        ...extraServices,
+                                        {
+                                          serviceId: service.id,
+                                          quantity: 1,
+                                          petId: pet.id,
+                                        },
+                                      ]);
+                                    }
+                                  }}
+                                  disabled={
+                                    service.maxQuantity !== undefined &&
+                                    quantity >= service.maxQuantity
                                   }
-                                }}
-                                disabled={
-                                  quantity === 0 ||
-                                  (service.isRequired === true && quantity <= 1)
-                                }
-                                className="size-6 p-0 text-xs"
-                              >
-                                -
-                              </Button>
-                              <span className="min-w-[2ch] text-center font-[tabular-nums] text-xs font-semibold">
-                                {quantity}
+                                  className="size-6 p-0 text-xs"
+                                >
+                                  +
+                                </Button>
+                              </div>
+                            ) : service.isRequired ? (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-800">
+                                <Lock className="size-3" />
+                                Included
                               </span>
+                            ) : (
                               <Button
                                 type="button"
-                                variant="outline"
+                                variant={quantity > 0 ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => {
-                                  if (petService) {
-                                    const updated = extraServices.map((es) =>
-                                      es.serviceId === service.id &&
-                                      es.petId === pet.id
-                                        ? {
-                                            ...es,
-                                            quantity: es.quantity + 1,
-                                          }
-                                        : es,
+                                  if (quantity > 0) {
+                                    setExtraServices(
+                                      extraServices.filter(
+                                        (es) =>
+                                          !(
+                                            es.serviceId === service.id &&
+                                            es.petId === pet.id
+                                          ),
+                                      ),
                                     );
-                                    setExtraServices(updated);
                                   } else {
                                     setExtraServices([
                                       ...extraServices,
@@ -1067,62 +1130,21 @@ function BoardingAddOnsSubStep({
                                     ]);
                                   }
                                 }}
-                                disabled={
-                                  service.maxQuantity !== undefined &&
-                                  quantity >= service.maxQuantity
-                                }
-                                className="size-6 p-0 text-xs"
+                                className="h-6 gap-1 px-2.5 text-[11px]"
                               >
-                                +
+                                {quantity > 0 ? (
+                                  <>
+                                    <Check className="size-3" />
+                                    Added
+                                  </>
+                                ) : (
+                                  "Add"
+                                )}
                               </Button>
-                            </div>
-                          ) : service.isRequired ? (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-800">
-                              <Lock className="size-3" />
-                              Included
-                            </span>
-                          ) : (
-                            <Button
-                              type="button"
-                              variant={quantity > 0 ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => {
-                                if (quantity > 0) {
-                                  setExtraServices(
-                                    extraServices.filter(
-                                      (es) =>
-                                        !(
-                                          es.serviceId === service.id &&
-                                          es.petId === pet.id
-                                        ),
-                                    ),
-                                  );
-                                } else {
-                                  setExtraServices([
-                                    ...extraServices,
-                                    {
-                                      serviceId: service.id,
-                                      quantity: 1,
-                                      petId: pet.id,
-                                    },
-                                  ]);
-                                }
-                              }}
-                              className="h-6 gap-1 px-2.5 text-[11px]"
-                            >
-                              {quantity > 0 ? (
-                                <>
-                                  <Check className="size-3" />
-                                  Added
-                                </>
-                              ) : (
-                                "Add"
-                              )}
-                            </Button>
-                          )}
-                        </div>
-                      );
-                    })
+                            )}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 </div>

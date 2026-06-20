@@ -63,7 +63,8 @@ export function applyCalendarFilters(
     return appointments;
   }
   return appointments.filter((a) => {
-    if (groomerIds.length > 0 && !groomerIds.includes(a.stylistId)) return false;
+    if (groomerIds.length > 0 && !groomerIds.includes(a.stylistId))
+      return false;
     if (serviceNames.length > 0 && !serviceNames.includes(a.packageName))
       return false;
     if (statuses.length > 0 && !statuses.includes(a.status)) return false;
@@ -188,7 +189,7 @@ export function CalendarFilters({
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-80 max-h-[70vh] overflow-y-auto p-0"
+        className="max-h-[70vh] w-80 overflow-y-auto p-0"
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
           <p className="text-sm font-bold text-slate-800">Filters</p>

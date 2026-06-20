@@ -206,9 +206,7 @@ export function BulkActionsDialog({
       toast.success(
         `Cancelled ${affected.length} appointment${
           affected.length === 1 ? "" : "s"
-        }${
-          notifyClients ? " · notifications queued to each client" : ""
-        }`,
+        }${notifyClients ? " · notifications queued to each client" : ""}`,
       );
     }
 
@@ -220,7 +218,7 @@ export function BulkActionsDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
-            <meta.icon className="size-4 text-muted-foreground" />
+            <meta.icon className="text-muted-foreground size-4" />
             {meta.title}
             <span className="text-muted-foreground ml-1 text-xs font-normal">
               · {sourceStylist.name} · {date}
@@ -230,9 +228,9 @@ export function BulkActionsDialog({
 
         <div className="space-y-4 py-1">
           {/* Affected preview */}
-          <section className="rounded-lg border bg-muted/30 p-3">
+          <section className="bg-muted/30 rounded-lg border p-3">
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                 Affected appointments
               </p>
               <Badge variant="secondary" className="text-[10px]">
@@ -240,7 +238,7 @@ export function BulkActionsDialog({
               </Badge>
             </div>
             {affected.length === 0 ? (
-              <p className="rounded-md border border-dashed bg-card/30 px-3 py-3 text-center text-xs text-muted-foreground">
+              <p className="bg-card/30 text-muted-foreground rounded-md border border-dashed px-3 py-3 text-center text-xs">
                 Nothing to apply — all {appointments.length} appointment
                 {appointments.length === 1 ? " is" : "s are"} already finished.
               </p>
@@ -251,9 +249,9 @@ export function BulkActionsDialog({
                   .map((a) => (
                     <li
                       key={a.id}
-                      className="flex items-center justify-between gap-2 rounded-md bg-card px-2 py-1"
+                      className="bg-card flex items-center justify-between gap-2 rounded-md px-2 py-1"
                     >
-                      <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                      <span className="text-muted-foreground font-mono text-[11px] tabular-nums">
                         {a.startTime}
                       </span>
                       <span className="min-w-0 flex-1 truncate">
@@ -273,7 +271,7 @@ export function BulkActionsDialog({
               </ul>
             )}
             {skipped > 0 && (
-              <p className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground">
+              <p className="text-muted-foreground mt-2 flex items-center gap-1 text-[10px]">
                 <AlertTriangle className="size-3" />
                 Skipping {skipped} finished appointment
                 {skipped === 1 ? "" : "s"} — bulk actions don&apos;t touch
@@ -355,7 +353,7 @@ export function BulkActionsDialog({
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-muted-foreground text-[10px]">
                 Same client, same pet, same service, same groomer — new date.
                 Workflow history and ticket comments are cleared on the new
                 bookings.
@@ -365,14 +363,14 @@ export function BulkActionsDialog({
 
           {mode === "cancel" && (
             <section className="space-y-2">
-              <label className="flex items-start gap-2 rounded-md border bg-card px-3 py-2 text-xs">
+              <label className="bg-card flex items-start gap-2 rounded-md border px-3 py-2 text-xs">
                 <Checkbox
                   checked={notifyClients}
                   onCheckedChange={(v) => setNotifyClients(v === true)}
                 />
                 <div>
                   <p className="font-medium">Notify each client</p>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-muted-foreground text-[10px]">
                     Send a cancellation email/SMS to every affected owner.
                   </p>
                 </div>
@@ -394,7 +392,7 @@ export function BulkActionsDialog({
             onClick={handleConfirm}
             className={meta.ctaClassName}
           >
-            <meta.icon className="size-4 mr-1.5" />
+            <meta.icon className="mr-1.5 size-4" />
             {meta.cta} ({affected.length})
           </Button>
         </DialogFooter>

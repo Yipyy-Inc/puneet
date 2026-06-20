@@ -212,7 +212,8 @@ function BadgeRow({ row }: { row: BadgeAchievementRow }) {
               </span>
             </span>
             <span className="text-muted-foreground text-xs tabular-nums">
-              {currency(row.monthlySpendBefore)} → {currency(row.monthlySpendAfter)}
+              {currency(row.monthlySpendBefore)} →{" "}
+              {currency(row.monthlySpendAfter)}
             </span>
           </div>
         )}

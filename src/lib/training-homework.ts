@@ -126,7 +126,10 @@ export function aggregateHomeworkBoard(
       instructorName: trainer?.name,
       status,
       isOverdue: status === "overdue",
-      isDueToday: !!hw.nextDueDate && diffDays(input.today, hw.nextDueDate) === 0 && !hw.completed,
+      isDueToday:
+        !!hw.nextDueDate &&
+        diffDays(input.today, hw.nextDueDate) === 0 &&
+        !hw.completed,
       isDueThisWeek:
         !!hw.nextDueDate &&
         !hw.completed &&
@@ -147,12 +150,11 @@ export function bumpNextDueDate(
   fromIso: string,
 ): string {
   const frequency = (homework.frequency ?? "").toLowerCase();
-  const days =
-    /daily|every day|each day|every walk/.test(frequency)
-      ? 1
-      : /3x.*week|three times.*week/.test(frequency)
-        ? 2
-        : 7;
+  const days = /daily|every day|each day|every walk/.test(frequency)
+    ? 1
+    : /3x.*week|three times.*week/.test(frequency)
+      ? 2
+      : 7;
   const d = new Date(`${fromIso.slice(0, 10)}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
@@ -314,10 +316,7 @@ function toIsoDate(d: Date): string {
  *  should receive the given record. The `allHomework` cache is unscoped;
  *  per-enrollment caches only accept records whose enrollmentId is in their
  *  scope. */
-function scopeAcceptsRecord(
-  scope: unknown,
-  record: TrainingHomework,
-): boolean {
+function scopeAcceptsRecord(scope: unknown, record: TrainingHomework): boolean {
   if (scope === "all") return true;
   if (Array.isArray(scope)) {
     return scope.includes(record.enrollmentId);

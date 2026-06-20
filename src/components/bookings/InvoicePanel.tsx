@@ -282,7 +282,7 @@ export function InvoicePanel({
                         </div>
                       ) : !isClosed && isItemBase(item.type) ? (
                         <button
-                          className="text-muted-foreground hover:text-amber-600 flex size-5 items-center justify-center rounded-sm opacity-0 transition-opacity group-hover:opacity-100"
+                          className="text-muted-foreground flex size-5 items-center justify-center rounded-sm opacity-0 transition-opacity group-hover:opacity-100 hover:text-amber-600"
                           onClick={() => grantOverride(i, item.name)}
                           title="Locked — click for manager override"
                         >
@@ -458,7 +458,7 @@ export function InvoicePanel({
         {/* Deposit section */}
         {((invoice.depositRequired ?? 0) > 0 ||
           invoice.depositCollected > 0) && (
-          <div className="rounded-lg border border-border/70 bg-muted/30 px-3.5 py-3">
+          <div className="border-border/70 bg-muted/30 rounded-lg border px-3.5 py-3">
             <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
               Deposit
             </p>

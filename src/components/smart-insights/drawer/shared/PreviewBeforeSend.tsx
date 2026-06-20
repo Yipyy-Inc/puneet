@@ -39,7 +39,7 @@ export function PreviewBeforeSend({
 
   return (
     <div className="space-y-3 rounded-lg border bg-slate-50 p-4">
-      <div className="text-muted-foreground flex items-center gap-2 text-xs uppercase tracking-wide">
+      <div className="text-muted-foreground flex items-center gap-2 text-xs tracking-wide uppercase">
         <Eye className="size-3.5" />
         {CHANNEL_LABEL[channel]}
       </div>
@@ -66,9 +66,7 @@ export function PreviewBeforeSend({
         )}
 
         <div className="border-t pt-2">
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">
-            {body}
-          </p>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{body}</p>
         </div>
 
         {meta && meta.length > 0 && (

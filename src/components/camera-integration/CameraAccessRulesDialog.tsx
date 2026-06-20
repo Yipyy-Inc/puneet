@@ -54,14 +54,23 @@ interface CameraAccessRulesDialogProps {
   onSave: (config: PetCamAccessConfig) => void;
 }
 
-const SERVICE_OPTIONS: { value: CameraServiceType; label: string; icon: React.ElementType }[] = [
+const SERVICE_OPTIONS: {
+  value: CameraServiceType;
+  label: string;
+  icon: React.ElementType;
+}[] = [
   { value: "boarding", label: "Boarding", icon: Bed },
   { value: "daycare", label: "Daycare", icon: Sun },
   { value: "grooming", label: "Grooming", icon: Scissors },
   { value: "training", label: "Training", icon: GraduationCap },
 ];
 
-type RuleKey = "active_stay" | "operation_hours" | "membership" | "package" | "service_customer";
+type RuleKey =
+  | "active_stay"
+  | "operation_hours"
+  | "membership"
+  | "package"
+  | "service_customer";
 
 interface RuleState {
   active_stay: { enabled: boolean; services: CameraServiceType[] };
@@ -106,13 +115,22 @@ function stateToRuleSet(state: RuleState, logic: "any" | "all"): CameraRuleSet {
     rules.push({ type: "operation_hours" });
   }
   if (state.membership.enabled && state.membership.planIds.length > 0) {
-    rules.push({ type: "membership", membershipPlanIds: state.membership.planIds });
+    rules.push({
+      type: "membership",
+      membershipPlanIds: state.membership.planIds,
+    });
   }
   if (state.package.enabled && state.package.packageIds.length > 0) {
     rules.push({ type: "package", packageIds: state.package.packageIds });
   }
-  if (state.service_customer.enabled && state.service_customer.services.length > 0) {
-    rules.push({ type: "service_customer", services: state.service_customer.services });
+  if (
+    state.service_customer.enabled &&
+    state.service_customer.services.length > 0
+  ) {
+    rules.push({
+      type: "service_customer",
+      services: state.service_customer.services,
+    });
   }
   return { enabled: rules.length > 0, logic, rules };
 }
@@ -127,16 +145,29 @@ interface RulePanelProps {
   children?: React.ReactNode;
 }
 
-function RulePanel({ title, description, icon: Icon, iconColor, enabled, onToggle, children }: RulePanelProps) {
+function RulePanel({
+  title,
+  description,
+  icon: Icon,
+  iconColor,
+  enabled,
+  onToggle,
+  children,
+}: RulePanelProps) {
   const [expanded, setExpanded] = useState(false);
 
   return (
     <div
       data-enabled={enabled}
-      className="border-border rounded-xl border bg-card transition-all data-[enabled=true]:border-primary/30 data-[enabled=true]:bg-primary/5"
+      className="border-border bg-card data-[enabled=true]:border-primary/30 data-[enabled=true]:bg-primary/5 rounded-xl border transition-all"
     >
       <div className="flex items-center gap-4 p-4">
-        <div className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", iconColor)}>
+        <div
+          className={cn(
+            "flex size-9 shrink-0 items-center justify-center rounded-lg",
+            iconColor,
+          )}
+        >
           <Icon className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
@@ -150,14 +181,18 @@ function RulePanel({ title, description, icon: Icon, iconColor, enabled, onToggl
               onClick={() => setExpanded((v) => !v)}
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
-              {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+              {expanded ? (
+                <ChevronUp className="size-4" />
+              ) : (
+                <ChevronDown className="size-4" />
+              )}
             </button>
           )}
           <Switch checked={enabled} onCheckedChange={onToggle} />
         </div>
       </div>
       {enabled && children && expanded && (
-        <div className="border-border border-t px-4 pb-4 pt-3">{children}</div>
+        <div className="border-border border-t px-4 pt-3 pb-4">{children}</div>
       )}
     </div>
   );
@@ -175,10 +210,18 @@ export function CameraAccessRulesDialog({
     ? globalRuleSet
     : accessConfig.customRuleSet;
 
-  const [isCustomerVisible, setIsCustomerVisible] = useState(accessConfig.isCustomerVisible);
-  const [cameraType, setCameraType] = useState<"public" | "private">(accessConfig.cameraType);
-  const [useGlobalRules, setUseGlobalRules] = useState(accessConfig.useGlobalRules);
-  const [logic, setLogic] = useState<"any" | "all">(sourceRuleSet?.logic ?? "any");
+  const [isCustomerVisible, setIsCustomerVisible] = useState(
+    accessConfig.isCustomerVisible,
+  );
+  const [cameraType, setCameraType] = useState<"public" | "private">(
+    accessConfig.cameraType,
+  );
+  const [useGlobalRules, setUseGlobalRules] = useState(
+    accessConfig.useGlobalRules,
+  );
+  const [logic, setLogic] = useState<"any" | "all">(
+    sourceRuleSet?.logic ?? "any",
+  );
   const [rules, setRules] = useState<RuleState>(ruleSetToState(sourceRuleSet));
 
   const activePlans = membershipPlans.filter((p) => p.isActive);
@@ -249,7 +292,9 @@ export function CameraAccessRulesDialog({
             <div className="grid grid-cols-2 gap-3">
               <div className="border-border rounded-xl border p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <Label className="text-sm font-medium">Customer Visible</Label>
+                  <Label className="text-sm font-medium">
+                    Customer Visible
+                  </Label>
                   <Switch
                     checked={isCustomerVisible}
                     onCheckedChange={setIsCustomerVisible}
@@ -260,17 +305,23 @@ export function CameraAccessRulesDialog({
                 </p>
               </div>
               <div className="border-border rounded-xl border p-4">
-                <Label className="mb-3 block text-sm font-medium">Camera Type</Label>
+                <Label className="mb-3 block text-sm font-medium">
+                  Camera Type
+                </Label>
                 <Select
                   value={cameraType}
-                  onValueChange={(v) => setCameraType(v as "public" | "private")}
+                  onValueChange={(v) =>
+                    setCameraType(v as "public" | "private")
+                  }
                 >
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="public">Public Area</SelectItem>
-                    <SelectItem value="private">Private Suite / Kennel</SelectItem>
+                    <SelectItem value="private">
+                      Private Suite / Kennel
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-muted-foreground mt-2 text-xs">
@@ -288,21 +339,24 @@ export function CameraAccessRulesDialog({
               <h3 className="text-sm font-semibold">Access Rules</h3>
               {!useGlobalRules && enabledRuleCount > 0 && (
                 <Badge variant="secondary" className="text-xs">
-                  {enabledRuleCount} rule{enabledRuleCount > 1 ? "s" : ""} active
+                  {enabledRuleCount} rule{enabledRuleCount > 1 ? "s" : ""}{" "}
+                  active
                 </Badge>
               )}
             </div>
 
             <div
               data-enabled={useGlobalRules}
-              className="border-border flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all data-[enabled=true]:border-primary/30 data-[enabled=true]:bg-primary/5"
+              className="border-border data-[enabled=true]:border-primary/30 data-[enabled=true]:bg-primary/5 flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all"
               onClick={() => setUseGlobalRules((v) => !v)}
             >
               <div className="flex size-8 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/30">
                 <Info className="size-4 text-violet-600 dark:text-violet-400" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium">Use Facility-Wide Default Rules</p>
+                <p className="text-sm font-medium">
+                  Use Facility-Wide Default Rules
+                </p>
                 <p className="text-muted-foreground text-xs">
                   Inherit the global access policy configured for all cameras
                 </p>
@@ -317,9 +371,14 @@ export function CameraAccessRulesDialog({
             {!useGlobalRules && (
               <div className="space-y-3">
                 {/* Logic selector */}
-                <div className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2">
-                  <span className="text-muted-foreground text-xs">Grant access when customer meets</span>
-                  <Select value={logic} onValueChange={(v) => setLogic(v as "any" | "all")}>
+                <div className="bg-muted/50 flex items-center gap-3 rounded-lg px-3 py-2">
+                  <span className="text-muted-foreground text-xs">
+                    Grant access when customer meets
+                  </span>
+                  <Select
+                    value={logic}
+                    onValueChange={(v) => setLogic(v as "any" | "all")}
+                  >
                     <SelectTrigger className="h-7 w-[100px] text-xs">
                       <SelectValue />
                     </SelectTrigger>
@@ -338,20 +397,29 @@ export function CameraAccessRulesDialog({
                   icon={CalendarCheck}
                   iconColor="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
                   enabled={rules.active_stay.enabled}
-                  onToggle={(v) => setRules((p) => ({ ...p, active_stay: { ...p.active_stay, enabled: v } }))}
+                  onToggle={(v) =>
+                    setRules((p) => ({
+                      ...p,
+                      active_stay: { ...p.active_stay, enabled: v },
+                    }))
+                  }
                 >
-                  <p className="text-muted-foreground mb-2 text-xs font-medium">Qualify for which services:</p>
+                  <p className="text-muted-foreground mb-2 text-xs font-medium">
+                    Qualify for which services:
+                  </p>
                   <div className="grid grid-cols-2 gap-2">
                     {SERVICE_OPTIONS.map(({ value, label, icon: Icon }) => (
                       <label
                         key={value}
-                        className="flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-sm transition-colors hover:bg-muted/50"
+                        className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-sm transition-colors"
                       >
                         <Checkbox
                           checked={rules.active_stay.services.includes(value)}
-                          onCheckedChange={() => toggleService("active_stay", value)}
+                          onCheckedChange={() =>
+                            toggleService("active_stay", value)
+                          }
                         />
-                        <Icon className="size-3.5 text-muted-foreground" />
+                        <Icon className="text-muted-foreground size-3.5" />
                         {label}
                       </label>
                     ))}
@@ -365,7 +433,9 @@ export function CameraAccessRulesDialog({
                   icon={Clock}
                   iconColor="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
                   enabled={rules.operation_hours.enabled}
-                  onToggle={(v) => setRules((p) => ({ ...p, operation_hours: { enabled: v } }))}
+                  onToggle={(v) =>
+                    setRules((p) => ({ ...p, operation_hours: { enabled: v } }))
+                  }
                 />
 
                 {/* Rule 3: Membership */}
@@ -375,14 +445,21 @@ export function CameraAccessRulesDialog({
                   icon={Crown}
                   iconColor="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
                   enabled={rules.membership.enabled}
-                  onToggle={(v) => setRules((p) => ({ ...p, membership: { ...p.membership, enabled: v } }))}
+                  onToggle={(v) =>
+                    setRules((p) => ({
+                      ...p,
+                      membership: { ...p.membership, enabled: v },
+                    }))
+                  }
                 >
-                  <p className="text-muted-foreground mb-2 text-xs font-medium">Select qualifying membership plans:</p>
+                  <p className="text-muted-foreground mb-2 text-xs font-medium">
+                    Select qualifying membership plans:
+                  </p>
                   <div className="space-y-1.5">
                     {activePlans.map((plan) => (
                       <label
                         key={plan.id}
-                        className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-muted/50"
+                        className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
                       >
                         <Checkbox
                           checked={rules.membership.planIds.includes(plan.id)}
@@ -393,7 +470,10 @@ export function CameraAccessRulesDialog({
                           <Badge
                             variant="outline"
                             className="text-xs"
-                            style={{ borderColor: plan.badgeColor, color: plan.badgeColor }}
+                            style={{
+                              borderColor: plan.badgeColor,
+                              color: plan.badgeColor,
+                            }}
                           >
                             {plan.tierLabel}
                           </Badge>
@@ -413,14 +493,21 @@ export function CameraAccessRulesDialog({
                   icon={Package}
                   iconColor="bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
                   enabled={rules.package.enabled}
-                  onToggle={(v) => setRules((p) => ({ ...p, package: { ...p.package, enabled: v } }))}
+                  onToggle={(v) =>
+                    setRules((p) => ({
+                      ...p,
+                      package: { ...p.package, enabled: v },
+                    }))
+                  }
                 >
-                  <p className="text-muted-foreground mb-2 text-xs font-medium">Select qualifying packages:</p>
+                  <p className="text-muted-foreground mb-2 text-xs font-medium">
+                    Select qualifying packages:
+                  </p>
                   <div className="space-y-1.5">
                     {activePackages.map((pkg) => (
                       <label
                         key={pkg.id}
-                        className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-muted/50"
+                        className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
                       >
                         <Checkbox
                           checked={rules.package.packageIds.includes(pkg.id)}
@@ -442,20 +529,31 @@ export function CameraAccessRulesDialog({
                   icon={Users}
                   iconColor="bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400"
                   enabled={rules.service_customer.enabled}
-                  onToggle={(v) => setRules((p) => ({ ...p, service_customer: { ...p.service_customer, enabled: v } }))}
+                  onToggle={(v) =>
+                    setRules((p) => ({
+                      ...p,
+                      service_customer: { ...p.service_customer, enabled: v },
+                    }))
+                  }
                 >
-                  <p className="text-muted-foreground mb-2 text-xs font-medium">Qualify for customers of:</p>
+                  <p className="text-muted-foreground mb-2 text-xs font-medium">
+                    Qualify for customers of:
+                  </p>
                   <div className="grid grid-cols-2 gap-2">
                     {SERVICE_OPTIONS.map(({ value, label, icon: Icon }) => (
                       <label
                         key={value}
-                        className="flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-sm transition-colors hover:bg-muted/50"
+                        className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-sm transition-colors"
                       >
                         <Checkbox
-                          checked={rules.service_customer.services.includes(value)}
-                          onCheckedChange={() => toggleService("service_customer", value)}
+                          checked={rules.service_customer.services.includes(
+                            value,
+                          )}
+                          onCheckedChange={() =>
+                            toggleService("service_customer", value)
+                          }
                         />
-                        <Icon className="size-3.5 text-muted-foreground" />
+                        <Icon className="text-muted-foreground size-3.5" />
                         {label}
                       </label>
                     ))}

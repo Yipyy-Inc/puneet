@@ -18,7 +18,9 @@ export function touchpointKey(index: number): string {
 }
 
 export function touchpointLabel(index: number): string {
-  return index === 0 ? "Initial Outreach Request" : `Follow-Up Reminder ${index}`;
+  return index === 0
+    ? "Initial Outreach Request"
+    : `Follow-Up Reminder ${index}`;
 }
 
 /** Compile live settings into the stored ReputationTemplate JSON object. */

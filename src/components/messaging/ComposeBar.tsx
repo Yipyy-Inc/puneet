@@ -31,7 +31,9 @@ const SMS_SEGMENT_CHARS_WITH_EMOJI = 70;
 
 function countSegments(text: string): number {
   const hasEmoji = /\p{Emoji}/u.test(text);
-  const charsPerSegment = hasEmoji ? SMS_SEGMENT_CHARS_WITH_EMOJI : SMS_SEGMENT_CHARS;
+  const charsPerSegment = hasEmoji
+    ? SMS_SEGMENT_CHARS_WITH_EMOJI
+    : SMS_SEGMENT_CHARS;
   if (text.length === 0) return 0;
   return Math.ceil(text.length / charsPerSegment);
 }
@@ -72,7 +74,11 @@ export function ComposeBar({
   prefillKey,
   prefillText,
 }: {
-  onSend?: (message: string, channel: ActiveChannel, meta?: { subject?: string }) => void;
+  onSend?: (
+    message: string,
+    channel: ActiveChannel,
+    meta?: { subject?: string },
+  ) => void;
   clientName?: string;
   lastMessage?: string;
   preferredLanguageLabel?: string;
@@ -128,8 +134,10 @@ export function ComposeBar({
   );
   const hasEmoji = /\p{Emoji}/u.test(text);
   const charLimit = hasEmoji ? SMS_SEGMENT_CHARS_WITH_EMOJI : SMS_SEGMENT_CHARS;
-  const charsInCurrentSegment = text.length % charLimit || (text.length > 0 ? charLimit : 0);
-  const charsLeft = segments > 0 ? charLimit - charsInCurrentSegment : charLimit;
+  const charsInCurrentSegment =
+    text.length % charLimit || (text.length > 0 ? charLimit : 0);
+  const charsLeft =
+    segments > 0 ? charLimit - charsInCurrentSegment : charLimit;
 
   const linkContext: QuickLinkContext = useMemo(
     () => ({
@@ -213,7 +221,9 @@ export function ComposeBar({
     }
   };
 
-  const handlePickSavedReply = (reply: import("@/types/saved-replies").SavedReply) => {
+  const handlePickSavedReply = (
+    reply: import("@/types/saved-replies").SavedReply,
+  ) => {
     const body = applyTokens(reply.body, linkContext);
     setText(body);
     savedReplies.incrementUse(reply.id);
@@ -376,7 +386,7 @@ export function ComposeBar({
           {isEmail && (
             <div className="flex flex-col border-b border-slate-200/80 bg-white/60 px-4 py-1.5 text-[12px]">
               <div className="flex items-center gap-2 border-b border-slate-100 py-1">
-                <span className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                <span className="w-12 shrink-0 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
                   To
                 </span>
                 <span className="truncate text-slate-700">
@@ -391,7 +401,7 @@ export function ComposeBar({
               <div className="flex items-center gap-2 py-1">
                 <label
                   htmlFor="email-subject"
-                  className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-slate-400"
+                  className="w-12 shrink-0 text-[10px] font-semibold tracking-wider text-slate-400 uppercase"
                 >
                   Subject
                 </label>
@@ -431,7 +441,7 @@ export function ComposeBar({
           />
 
           {isEmail && senderName && (
-            <p className="px-4 pb-1 text-[10px] italic text-slate-400">
+            <p className="px-4 pb-1 text-[10px] text-slate-400 italic">
               — {senderName} will appear as the sender
             </p>
           )}
@@ -464,12 +474,21 @@ export function ComposeBar({
               <div
                 className={cn(
                   "flex items-center gap-1.5 text-[10px] tabular-nums",
-                  charsLeft < 20 ? "text-red-500" : charsLeft < 40 ? "text-amber-500" : "text-slate-400",
+                  charsLeft < 20
+                    ? "text-red-500"
+                    : charsLeft < 40
+                      ? "text-amber-500"
+                      : "text-slate-400",
                 )}
               >
                 <span>{text.length} chars</span>
                 <span className="text-slate-300">·</span>
-                <span className={cn("font-semibold", segments > 1 ? "text-amber-600" : "text-slate-500")}>
+                <span
+                  className={cn(
+                    "font-semibold",
+                    segments > 1 ? "text-amber-600" : "text-slate-500",
+                  )}
+                >
                   {segments} SMS segment{segments !== 1 ? "s" : ""}
                 </span>
                 {segments > 1 && (
@@ -478,7 +497,9 @@ export function ComposeBar({
               </div>
             )}
             {activeChannel === "email" && text.length > 0 && (
-              <span className="text-[10px] text-slate-400">{text.length} chars</span>
+              <span className="text-[10px] text-slate-400">
+                {text.length} chars
+              </span>
             )}
           </div>
         </div>

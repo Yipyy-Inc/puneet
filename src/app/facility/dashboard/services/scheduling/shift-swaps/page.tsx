@@ -125,13 +125,13 @@ function SwapRow({
     <>
       <tr
         className={cn(
-          "border-t cursor-pointer transition-colors hover:bg-muted/30",
+          "hover:bg-muted/30 cursor-pointer border-t transition-colors",
           expanded && "bg-muted/20",
         )}
         onClick={onToggle}
       >
         {/* Swap participants */}
-        <td className="py-3 pl-5 pr-3">
+        <td className="py-3 pr-3 pl-5">
           <div className="flex items-center gap-2">
             <EmployeeChip
               id={swap.requestingEmployeeId}
@@ -155,10 +155,7 @@ function SwapRow({
 
         {/* Target shift */}
         <td className="px-3 py-3">
-          <ShiftCell
-            date={swap.targetShiftDate}
-            time={swap.targetShiftTime}
-          />
+          <ShiftCell date={swap.targetShiftDate} time={swap.targetShiftTime} />
         </td>
 
         {/* Department */}
@@ -189,7 +186,7 @@ function SwapRow({
         </td>
 
         {/* Actions */}
-        <td className="py-3 pl-3 pr-5">
+        <td className="py-3 pr-5 pl-3">
           <div className="flex items-center justify-end gap-1">
             {isPending && (
               <>
@@ -228,15 +225,15 @@ function SwapRow({
             <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
               <div className="space-y-3">
                 <div>
-                  <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
                     Reason
                   </p>
                   <p className="text-foreground mt-1 text-sm italic">
                     &quot;{swap.reason}&quot;
                   </p>
                 </div>
-                <div className="rounded-lg border bg-background p-3">
-                  <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                <div className="bg-background rounded-lg border p-3">
+                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
                     Swap summary
                   </p>
                   <div className="mt-2 space-y-2 text-xs">
@@ -266,7 +263,7 @@ function SwapRow({
                 {isPending ? (
                   <>
                     <div>
-                      <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                      <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
                         Review note
                       </p>
                       <Textarea
@@ -358,11 +355,7 @@ export default function ShiftSwapsPage() {
     );
   }, [swaps, tab, query]);
 
-  const decide = (
-    id: string,
-    status: "approved" | "denied",
-    notes: string,
-  ) => {
+  const decide = (id: string, status: "approved" | "denied", notes: string) => {
     setSwaps((prev) =>
       prev.map((s) =>
         s.id === id
@@ -464,19 +457,19 @@ export default function ShiftSwapsPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="bg-card overflow-hidden rounded-xl border">
         {filtered.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px]">
               <thead className="bg-muted/30">
-                <tr className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
-                  <th className="py-3 pl-5 pr-3 text-left">Swap</th>
+                <tr className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                  <th className="py-3 pr-3 pl-5 text-left">Swap</th>
                   <th className="px-3 py-3 text-left">Requester Shift</th>
                   <th className="px-3 py-3 text-left">Target Shift</th>
                   <th className="px-3 py-3 text-left">Department</th>
                   <th className="px-3 py-3 text-left">Requested</th>
                   <th className="px-3 py-3 text-left">Status</th>
-                  <th className="py-3 pl-3 pr-5 text-right"></th>
+                  <th className="py-3 pr-5 pl-3 text-right"></th>
                 </tr>
               </thead>
               <tbody>

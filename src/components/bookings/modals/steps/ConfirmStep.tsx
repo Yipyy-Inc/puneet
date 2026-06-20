@@ -60,12 +60,18 @@ function formatAddonPrice(addon: ServiceAddOn, qty: number): string {
 
 function formatAddonUnit(addon: ServiceAddOn): string {
   switch (addon.pricingType) {
-    case "flat": return "";
-    case "per_day": return `/${addon.unitLabel || "day"}`;
-    case "per_session": return `/${addon.unitLabel || "session"}`;
-    case "per_hour": return `/${addon.unitLabel || "hr"}`;
-    case "per_item": return `/${addon.unitLabel || "item"}`;
-    case "percentage_of_booking": return "% of booking";
+    case "flat":
+      return "";
+    case "per_day":
+      return `/${addon.unitLabel || "day"}`;
+    case "per_session":
+      return `/${addon.unitLabel || "session"}`;
+    case "per_hour":
+      return `/${addon.unitLabel || "hr"}`;
+    case "per_item":
+      return `/${addon.unitLabel || "item"}`;
+    case "percentage_of_booking":
+      return "% of booking";
   }
 }
 import type { Pet } from "@/types/pet";
@@ -431,7 +437,7 @@ export function ConfirmStep({
                   alt={selectedPets[0].name}
                   width={40}
                   height={40}
-                  className="size-10 shrink-0 rounded-xl object-cover ring-2 ring-background"
+                  className="ring-background size-10 shrink-0 rounded-xl object-cover ring-2"
                 />
               ) : (
                 <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl">
@@ -439,7 +445,7 @@ export function ConfirmStep({
                 </div>
               )}
               <div>
-                <p className="text-sm font-semibold leading-none">
+                <p className="text-sm leading-none font-semibold">
                   {selectedPets[0].name}
                 </p>
                 <p className="text-muted-foreground mt-0.5 text-[11px]">
@@ -452,7 +458,7 @@ export function ConfirmStep({
               {selectedPets.map((pet) => (
                 <div
                   key={pet.id}
-                  className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 p-2.5"
+                  className="border-border/60 bg-muted/30 flex items-center gap-3 rounded-xl border p-2.5"
                 >
                   {pet.imageUrl ? (
                     <Image
@@ -460,15 +466,15 @@ export function ConfirmStep({
                       alt={pet.name}
                       width={40}
                       height={40}
-                      className="size-10 shrink-0 rounded-xl object-cover ring-2 ring-background"
+                      className="ring-background size-10 shrink-0 rounded-xl object-cover ring-2"
                     />
                   ) : (
-                    <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl ring-2 ring-background">
+                    <div className="bg-primary/10 text-primary ring-background flex size-10 shrink-0 items-center justify-center rounded-xl ring-2">
                       <PawPrint className="size-4" />
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold leading-none">
+                    <p className="text-sm leading-none font-semibold">
                       {pet.name}
                     </p>
                     <p className="text-muted-foreground mt-0.5 text-[11px]">
@@ -514,14 +520,13 @@ export function ConfirmStep({
       {/* ── Package Redemption ──────────────────────────────────── */}
       {(() => {
         const matchingPackages = (selectedClient?.packages ?? []).filter(
-          (p) =>
-            p.remainingCredits > 0 && p.moduleId === selectedService,
+          (p) => p.remainingCredits > 0 && p.moduleId === selectedService,
         );
         if (matchingPackages.length === 0) return null;
         return (
           <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4 dark:border-emerald-900 dark:bg-emerald-950/20">
             <div className="flex items-center gap-2">
-              <div className="bg-emerald-500 text-white flex size-7 shrink-0 items-center justify-center rounded-lg">
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500 text-white">
                 <Gift className="size-4" />
               </div>
               <div className="min-w-0 flex-1">
@@ -540,15 +545,13 @@ export function ConfirmStep({
                   <div
                     key={pkg.id}
                     className={cn(
-                      "flex items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2",
+                      "bg-card flex items-center justify-between gap-3 rounded-lg border px-3 py-2",
                       applied &&
                         "border-emerald-300 ring-1 ring-emerald-300 dark:border-emerald-700 dark:ring-emerald-700",
                     )}
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {pkg.name}
-                      </p>
+                      <p className="truncate text-sm font-medium">{pkg.name}</p>
                       <p className="text-muted-foreground text-[11px]">
                         {pkg.remainingCredits} session
                         {pkg.remainingCredits === 1 ? "" : "s"} remaining
@@ -631,8 +634,8 @@ export function ConfirmStep({
             <SectionHeader icon={Users} label={`${roleLabel} Assignment`} />
             <p className="text-muted-foreground mb-3 text-[11px]">
               Choose who&rsquo;s responsible — the appointment will land in
-              their calendar column. Leave unassigned to drop into the
-              shared queue.
+              their calendar column. Leave unassigned to drop into the shared
+              queue.
             </p>
             <div className="flex flex-wrap gap-1.5">
               <button
@@ -1094,12 +1097,12 @@ export function ConfirmStep({
               onCheckedChange={setNotificationSMS}
             />
           </div>
-          <div className="flex items-start justify-between gap-4 rounded-lg border border-dashed bg-muted/30 px-3 py-2">
+          <div className="bg-muted/30 flex items-start justify-between gap-4 rounded-lg border border-dashed px-3 py-2">
             <Label
               htmlFor="confirm-express-checkin"
               className="flex cursor-pointer items-start gap-2"
             >
-              <Send className="text-sky-600 mt-0.5 size-3.5 shrink-0" />
+              <Send className="mt-0.5 size-3.5 shrink-0 text-sky-600" />
               <div>
                 <p className="text-sm font-medium">
                   Send Express Check-In form
@@ -1122,7 +1125,7 @@ export function ConfirmStep({
 
       {/* Tip amount summary — shown when a tip was added in the tip step */}
       {tipConfig.enabled && tipAmount > 0 && (
-        <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+        <div className="border-primary/20 bg-primary/5 flex items-center gap-3 rounded-2xl border p-4">
           <div className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
             <Heart className="size-5 fill-current" />
           </div>
@@ -1298,7 +1301,12 @@ export function ConfirmStep({
                 <span className="text-muted-foreground">
                   {adjustment.label}
                 </span>
-                <span className={cn("font-[tabular-nums] font-medium", adjustment.amount < 0 && "text-emerald-600")}>
+                <span
+                  className={cn(
+                    "font-[tabular-nums] font-medium",
+                    adjustment.amount < 0 && "text-emerald-600",
+                  )}
+                >
                   {adjustment.amount < 0 ? "-" : "+"}$
                   {Math.abs(adjustment.amount).toFixed(2)}
                 </span>
@@ -1317,41 +1325,39 @@ export function ConfirmStep({
               </div>
             ))}
           {(calculatePrice.taxAmount ?? 0) > 0 &&
-            (facilityTaxes && facilityTaxes.length > 0
-              ? facilityTaxes.map((tax, i) => {
-                  const base =
-                    calculatePrice.subtotal ??
-                    calculatePrice.total - (calculatePrice.taxAmount ?? 0);
-                  const taxAmt = base * tax.rate;
-                  const pct = parseFloat((tax.rate * 100).toFixed(4));
-                  return (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span className="text-muted-foreground">
-                        {tax.name} ({pct}%)
-                      </span>
-                      <span className="font-[tabular-nums] font-medium">
-                        +${taxAmt.toFixed(2)}
-                      </span>
-                    </div>
-                  );
-                })
-              : (
-                  <div className="flex items-center justify-between text-sm">
+            (facilityTaxes && facilityTaxes.length > 0 ? (
+              facilityTaxes.map((tax, i) => {
+                const base =
+                  calculatePrice.subtotal ??
+                  calculatePrice.total - (calculatePrice.taxAmount ?? 0);
+                const taxAmt = base * tax.rate;
+                const pct = parseFloat((tax.rate * 100).toFixed(4));
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between text-sm"
+                  >
                     <span className="text-muted-foreground">
-                      Tax (
-                      {parseFloat(
-                        ((calculatePrice.taxRate ?? 0) * 100).toFixed(4),
-                      )}
-                      %)
+                      {tax.name} ({pct}%)
                     </span>
                     <span className="font-[tabular-nums] font-medium">
-                      +${(calculatePrice.taxAmount ?? 0).toFixed(2)}
+                      +${taxAmt.toFixed(2)}
                     </span>
                   </div>
-                ))}
+                );
+              })
+            ) : (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Tax (
+                  {parseFloat(((calculatePrice.taxRate ?? 0) * 100).toFixed(4))}
+                  %)
+                </span>
+                <span className="font-[tabular-nums] font-medium">
+                  +${(calculatePrice.taxAmount ?? 0).toFixed(2)}
+                </span>
+              </div>
+            ))}
           {tipAmount > 0 && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground flex items-center gap-1">
@@ -1371,8 +1377,10 @@ export function ConfirmStep({
             <span className="text-sm font-bold">Total</span>
           </div>
           <span className="text-primary font-[tabular-nums] text-xl font-bold">
-            {redeemedPackageId && (calculatePrice.total + tipAmount) === 0 ? (
-              <span className="text-emerald-600 text-sm">Package pass applied</span>
+            {redeemedPackageId && calculatePrice.total + tipAmount === 0 ? (
+              <span className="text-sm text-emerald-600">
+                Package pass applied
+              </span>
             ) : (
               `$${(calculatePrice.total + tipAmount).toFixed(2)}`
             )}

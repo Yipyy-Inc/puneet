@@ -107,15 +107,12 @@ export function PaymentPreferencesCard({
                 onChange={(e) =>
                   setPaymentPreferences({
                     ...paymentPreferences,
-                    value:
-                      e.target.value === "" ? 0 : Number(e.target.value),
+                    value: e.target.value === "" ? 0 : Number(e.target.value),
                   })
                 }
                 disabled={!isEditing || !paymentPreferences.enabled}
                 className={cn(
-                  paymentPreferences.type === "fixed"
-                    ? "pl-9 pr-12"
-                    : "pr-9",
+                  paymentPreferences.type === "fixed" ? "pr-12 pl-9" : "pr-9",
                 )}
               />
               <span className="text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2 text-sm">

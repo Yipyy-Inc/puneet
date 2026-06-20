@@ -22,7 +22,8 @@ export const REPUTATION_VARIABLES: ReputationVar[] = [
   {
     token: "{{pet.names}}",
     label: "Pet name(s)",
-    description: "Comma-separated list of pets checked out (e.g. “Nala & Buddy”).",
+    description:
+      "Comma-separated list of pets checked out (e.g. “Nala & Buddy”).",
     sample: "Nala & Buddy",
   },
   {
@@ -143,20 +144,31 @@ export function renderStepMessage(
 
   if (step.channel === "sms") {
     return locales
-      .map((l) => renderTemplate(localeContent(step, l).sms, buildMessageOverrides(ctx, l)))
+      .map((l) =>
+        renderTemplate(
+          localeContent(step, l).sms,
+          buildMessageOverrides(ctx, l),
+        ),
+      )
       .filter(Boolean)
       .join(`\n${STACK_DIVIDER}\n`);
   }
 
   const subject = locales
     .map((l) =>
-      renderTemplate(localeContent(step, l).subject, buildMessageOverrides(ctx, l)),
+      renderTemplate(
+        localeContent(step, l).subject,
+        buildMessageOverrides(ctx, l),
+      ),
     )
     .filter(Boolean)
     .join(" / ");
   const body = locales
     .map((l) =>
-      renderTemplate(localeContent(step, l).body, buildMessageOverrides(ctx, l)),
+      renderTemplate(
+        localeContent(step, l).body,
+        buildMessageOverrides(ctx, l),
+      ),
     )
     .filter(Boolean)
     .join(`\n${STACK_DIVIDER}\n`);

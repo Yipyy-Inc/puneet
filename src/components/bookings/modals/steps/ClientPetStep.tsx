@@ -278,7 +278,8 @@ export function ClientPetStep({
   const canSelectForProgramPrereq = React.useCallback(
     (pet: Pet) => {
       if (!lockedProgram) return true;
-      if ((lockedProgram.prerequisitePackageIds?.length ?? 0) === 0) return true;
+      if ((lockedProgram.prerequisitePackageIds?.length ?? 0) === 0)
+        return true;
       // The current prereq helper checks against dogs; cats can't enroll in
       // a training program anyway, so we just gate on dogs here.
       if (pet.type !== "Dog") return false;
@@ -288,7 +289,8 @@ export function ClientPetStep({
   );
 
   const prereqResultsByPet = React.useMemo(() => {
-    if (!lockedProgram) return new Map<number, ReturnType<typeof checkPrerequisitesForPet>>();
+    if (!lockedProgram)
+      return new Map<number, ReturnType<typeof checkPrerequisitesForPet>>();
     const map = new Map<number, ReturnType<typeof checkPrerequisitesForPet>>();
     if (!selectedClient) return map;
     for (const pet of selectedClient.pets) {
@@ -734,7 +736,7 @@ export function ClientPetStep({
                   <button
                     type="button"
                     onClick={handleCancelNewClient}
-                    className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted"
+                    className="text-muted-foreground hover:bg-muted flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px]"
                   >
                     <ArrowLeft className="size-3" />
                     Search instead
@@ -847,7 +849,7 @@ export function ClientPetStep({
                           className={cn(
                             "cursor-pointer rounded-lg p-3 transition-all",
                             isSelected
-                              ? "border-transparent bg-primary/10 row-span-2 shadow-sm"
+                              ? "bg-primary/10 row-span-2 border-transparent shadow-sm"
                               : "hover:bg-muted border-2 border-transparent",
                           )}
                           onClick={() => {
@@ -997,7 +999,7 @@ export function ClientPetStep({
                     <button
                       type="button"
                       onClick={handleCancelNewPet}
-                      className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted"
+                      className="text-muted-foreground hover:bg-muted flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px]"
                     >
                       <ArrowLeft className="size-3" />
                       Cancel
@@ -1142,9 +1144,7 @@ export function ClientPetStep({
                       type="button"
                       size="sm"
                       onClick={handleSubmitNewPet}
-                      disabled={
-                        !newPetDraft.name.trim() || !newPetDraft.size
-                      }
+                      disabled={!newPetDraft.name.trim() || !newPetDraft.size}
                     >
                       Add pet
                     </Button>
@@ -1162,11 +1162,12 @@ export function ClientPetStep({
                       const canSelect = canSelectEval && canSelectPrereq;
                       const isDisabled = !canSelect;
                       const evalBadge = renderEvalBadge(pet);
-                      const missingPrereqs = canSelectEval && !canSelectPrereq
-                        ? (prereqResultsByPet.get(pet.id) ?? [])
-                            .filter((r) => !r.satisfied)
-                            .map((r) => r.programName)
-                        : [];
+                      const missingPrereqs =
+                        canSelectEval && !canSelectPrereq
+                          ? (prereqResultsByPet.get(pet.id) ?? [])
+                              .filter((r) => !r.satisfied)
+                              .map((r) => r.programName)
+                          : [];
 
                       return (
                         <div
@@ -1193,7 +1194,7 @@ export function ClientPetStep({
                             isDisabled
                               ? "bg-muted cursor-not-allowed opacity-50"
                               : isSelected
-                                ? "border-transparent bg-primary/5 cursor-pointer shadow-sm"
+                                ? "bg-primary/5 cursor-pointer border-transparent shadow-sm"
                                 : "hover:border-primary/50 cursor-pointer",
                           )}
                           onClick={() => {

@@ -84,8 +84,8 @@ export function RedeemPointsDialog({
             Redeem Points for Credit
           </DialogTitle>
           <DialogDescription>
-            {rate.toLocaleString()} points = $1.00 account credit. Credit applies
-            automatically to your next booking.
+            {rate.toLocaleString()} points = $1.00 account credit. Credit
+            applies automatically to your next booking.
           </DialogDescription>
         </DialogHeader>
 
@@ -150,7 +150,7 @@ export function RedeemPointsDialog({
               <DollarSign className="size-4" />
               Credit you&apos;ll receive
             </span>
-            <span className="font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+            <span className="font-bold text-emerald-700 tabular-nums dark:text-emerald-300">
               ${creditPreview.toFixed(2)}
             </span>
           </div>

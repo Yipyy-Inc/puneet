@@ -26,7 +26,7 @@ export function LoyaltyPortalHeaderPreview({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-2xl border bg-background shadow-sm",
+        "bg-background overflow-hidden rounded-2xl border shadow-sm",
         className,
       )}
     >

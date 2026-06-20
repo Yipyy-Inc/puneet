@@ -218,15 +218,13 @@ export function MobileGroomingProvider({ children }: { children: ReactNode }) {
   const [arrivalWindowMinutes, setArrivalWindowMinutesState] = useState<number>(
     DEFAULT_ARRIVAL_WINDOW_MINUTES,
   );
-  const [certainAreaEnabled, setCertainAreaEnabledState] = useState<boolean>(
-    true,
-  );
+  const [certainAreaEnabled, setCertainAreaEnabledState] =
+    useState<boolean>(true);
   const [staffSchedules, setStaffSchedules] = useState<
     StaffServiceAreaSchedule[]
   >(DEFAULT_STAFF_SCHEDULES);
-  const [travelZones, setTravelZones] = useState<TravelZone[]>(
-    DEFAULT_TRAVEL_ZONES,
-  );
+  const [travelZones, setTravelZones] =
+    useState<TravelZone[]>(DEFAULT_TRAVEL_ZONES);
   const [zipTaxRates, setZipTaxRates] = useState<ZipTaxRate[]>(
     DEFAULT_ZIP_TAX_RATES,
   );
@@ -508,11 +506,7 @@ export function MobileGroomingProvider({ children }: { children: ReactNode }) {
   );
 
   const setStaffDateOverride = useCallback(
-    (
-      staffId: string,
-      dateStr: string,
-      areaId: string | null | undefined,
-    ) =>
+    (staffId: string, dateStr: string, areaId: string | null | undefined) =>
       persistSchedules((prev) => {
         const existing = prev.find((s) => s.staffId === staffId);
         if (existing) {
@@ -548,7 +542,7 @@ export function MobileGroomingProvider({ children }: { children: ReactNode }) {
       v.assignedStaffIds.length === 0 ? { ...v, active: false } : v,
     );
     const hasActiveVans = resolvedVans.some((v) => v.active);
-    return ({
+    return {
       enabled,
       vans: resolvedVans,
       hasActiveVans,
@@ -576,37 +570,35 @@ export function MobileGroomingProvider({ children }: { children: ReactNode }) {
       upsertZipTaxRate,
       deleteZipTaxRate,
       setDefaultZipTaxRate,
-    });
-  },
-    [
-      enabled,
-      vans,
-      serviceAreas,
-      arrivalWindowMinutes,
-      certainAreaEnabled,
-      staffSchedules,
-      travelZones,
-      zipTaxRates,
-      persistEnabled,
-      setArrivalWindowMinutes,
-      setCertainAreaEnabled,
-      addVan,
-      updateVan,
-      deleteVan,
-      toggleVanActive,
-      addServiceArea,
-      updateServiceArea,
-      deleteServiceArea,
-      toggleServiceAreaActive,
-      setStaffWeeklyDay,
-      setStaffDateOverride,
-      upsertTravelZone,
-      deleteTravelZone,
-      upsertZipTaxRate,
-      deleteZipTaxRate,
-      setDefaultZipTaxRate,
-    ],
-  );
+    };
+  }, [
+    enabled,
+    vans,
+    serviceAreas,
+    arrivalWindowMinutes,
+    certainAreaEnabled,
+    staffSchedules,
+    travelZones,
+    zipTaxRates,
+    persistEnabled,
+    setArrivalWindowMinutes,
+    setCertainAreaEnabled,
+    addVan,
+    updateVan,
+    deleteVan,
+    toggleVanActive,
+    addServiceArea,
+    updateServiceArea,
+    deleteServiceArea,
+    toggleServiceAreaActive,
+    setStaffWeeklyDay,
+    setStaffDateOverride,
+    upsertTravelZone,
+    deleteTravelZone,
+    upsertZipTaxRate,
+    deleteZipTaxRate,
+    setDefaultZipTaxRate,
+  ]);
 
   return (
     <MobileGroomingContext.Provider value={value}>

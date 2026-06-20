@@ -160,7 +160,9 @@ export function FollowUpTaskCard({
       attemptCount,
       status: nextStatus,
       completedDate:
-        nextStatus === "completed" ? new Date().toISOString() : task.completedDate,
+        nextStatus === "completed"
+          ? new Date().toISOString()
+          : task.completedDate,
       completedBy:
         nextStatus === "completed" ? entry.loggedBy : task.completedBy,
       escalated:
@@ -328,11 +330,7 @@ export function FollowUpTaskCard({
                     Start
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleMarkComplete}
-                >
+                <Button size="sm" variant="ghost" onClick={handleMarkComplete}>
                   <CheckCircle2 className="mr-1.5 size-3.5" />
                   Mark Complete
                 </Button>
@@ -350,7 +348,7 @@ export function FollowUpTaskCard({
                     className="flex w-full items-center gap-2 px-3 py-2 text-left"
                   >
                     <History className="size-4 text-amber-700 dark:text-amber-400" />
-                    <p className="flex-1 text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+                    <p className="flex-1 text-xs font-semibold tracking-wide text-amber-800 uppercase dark:text-amber-300">
                       Previous Conversations
                     </p>
                     <Badge
@@ -374,7 +372,7 @@ export function FollowUpTaskCard({
                   </button>
                   {historyOpen && (
                     <div className="space-y-2 border-t border-amber-200 px-3 py-3 dark:border-amber-900">
-                      <p className="text-amber-800 text-[11px] dark:text-amber-300">
+                      <p className="text-[11px] text-amber-800 dark:text-amber-300">
                         Read this before calling — what was already said, by
                         whom, and on what date.
                       </p>
@@ -394,7 +392,7 @@ export function FollowUpTaskCard({
               {/* Instructions */}
               {task.instructions && (
                 <div className="bg-muted/40 rounded-lg p-3">
-                  <p className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase tracking-wide">
+                  <p className="text-muted-foreground mb-1 text-[10px] font-semibold tracking-wide uppercase">
                     Procedure
                   </p>
                   <p className="text-sm whitespace-pre-wrap">
@@ -423,7 +421,7 @@ export function FollowUpTaskCard({
               {/* Conversation log */}
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
                     Conversation History
                   </p>
                   {task.status !== "completed" && (
@@ -440,8 +438,8 @@ export function FollowUpTaskCard({
                 </div>
                 {conversations.length === 0 ? (
                   <div className="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-xs">
-                    No conversation logged yet. Click &ldquo;Log Conversation&rdquo;
-                    after talking with the customer.
+                    No conversation logged yet. Click &ldquo;Log
+                    Conversation&rdquo; after talking with the customer.
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -449,10 +447,7 @@ export function FollowUpTaskCard({
                       .slice()
                       .reverse()
                       .map((entry) => (
-                        <ConversationEntryCard
-                          key={entry.id}
-                          entry={entry}
-                        />
+                        <ConversationEntryCard key={entry.id} entry={entry} />
                       ))}
                   </div>
                 )}
@@ -510,7 +505,7 @@ function PriorConversationItem({
     <div className="bg-background space-y-2 rounded-md border border-amber-100 p-2.5 dark:border-amber-900/50">
       {/* Step + when + who */}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
-        <span className="bg-amber-100 text-amber-900 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold dark:bg-amber-900/50 dark:text-amber-200">
+        <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-900 dark:bg-amber-900/50 dark:text-amber-200">
           {index}
         </span>
         <Badge variant="outline" className="border-amber-300 text-[10px]">
@@ -567,7 +562,7 @@ function PriorConversationItem({
           <p className="text-muted-foreground mb-0.5 font-semibold">
             Customer said
           </p>
-          <p className="whitespace-pre-wrap leading-relaxed">
+          <p className="leading-relaxed whitespace-pre-wrap">
             {entry.customerStatement}
           </p>
         </div>
@@ -577,7 +572,7 @@ function PriorConversationItem({
           <p className="text-muted-foreground mb-0.5 font-semibold">
             We told them
           </p>
-          <p className="whitespace-pre-wrap leading-relaxed">
+          <p className="leading-relaxed whitespace-pre-wrap">
             {entry.staffResponse}
           </p>
         </div>
@@ -587,7 +582,7 @@ function PriorConversationItem({
       {(entry.customerRequests || entry.nextSteps) && (
         <div className="grid gap-1.5 sm:grid-cols-2">
           {entry.customerRequests && (
-            <div className="bg-amber-50 rounded-md p-1.5 text-[11px] dark:bg-amber-900/30">
+            <div className="rounded-md bg-amber-50 p-1.5 text-[11px] dark:bg-amber-900/30">
               <p className="text-muted-foreground mb-0.5 font-semibold">
                 They asked us to
               </p>
@@ -595,7 +590,7 @@ function PriorConversationItem({
             </div>
           )}
           {entry.nextSteps && (
-            <div className="bg-purple-50 rounded-md p-1.5 text-[11px] dark:bg-purple-900/30">
+            <div className="rounded-md bg-purple-50 p-1.5 text-[11px] dark:bg-purple-900/30">
               <p className="text-muted-foreground mb-0.5 font-semibold">
                 We promised
               </p>
@@ -629,10 +624,7 @@ function ConversationEntryCard({
             {entry.contactMethod.replace("_", " ")}
           </span>
         </span>
-        <Badge
-          variant="outline"
-          className={`gap-1 ${sentimentMeta.color}`}
-        >
+        <Badge variant="outline" className={`gap-1 ${sentimentMeta.color}`}>
           <SentimentIcon className="size-3" />
           {sentimentMeta.label}
         </Badge>
@@ -685,7 +677,7 @@ function ConversationEntryCard({
       {(entry.customerRequests || entry.nextSteps) && (
         <div className="grid gap-2 sm:grid-cols-2">
           {entry.customerRequests && (
-            <div className="bg-amber-50 rounded-md p-2 text-xs dark:bg-amber-900/20">
+            <div className="rounded-md bg-amber-50 p-2 text-xs dark:bg-amber-900/20">
               <p className="text-muted-foreground mb-0.5 font-semibold">
                 Customer requested
               </p>
@@ -693,7 +685,7 @@ function ConversationEntryCard({
             </div>
           )}
           {entry.nextSteps && (
-            <div className="bg-purple-50 rounded-md p-2 text-xs dark:bg-purple-900/20">
+            <div className="rounded-md bg-purple-50 p-2 text-xs dark:bg-purple-900/20">
               <p className="text-muted-foreground mb-0.5 font-semibold">
                 We committed to
               </p>

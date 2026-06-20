@@ -38,7 +38,7 @@ import type {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="from-amber-50 via-background to-background flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center bg-linear-to-b px-4 py-10 dark:from-amber-950/20">
+    <div className="via-background to-background flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center bg-linear-to-b from-amber-50 px-4 py-10 dark:from-amber-950/20">
       <div className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center text-center">
           <div className="mb-3 flex size-14 items-center justify-center rounded-2xl bg-linear-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/20">
@@ -56,7 +56,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 function Panel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-3xl border bg-card p-6 shadow-xl shadow-black/5 sm:p-8">
+    <div className="bg-card rounded-3xl border p-6 shadow-xl shadow-black/5 sm:p-8">
       {children}
     </div>
   );
@@ -97,7 +97,7 @@ function StarRating({
               "size-10 transition-colors duration-100 sm:size-11",
               n <= active
                 ? "fill-amber-400 text-amber-400"
-                : "fill-transparent text-muted-foreground/30",
+                : "text-muted-foreground/30 fill-transparent",
             )}
           />
         </button>
@@ -116,7 +116,7 @@ function StarRow({ value }: { value: number }) {
             "size-6",
             n <= value
               ? "fill-amber-400 text-amber-400"
-              : "fill-transparent text-muted-foreground/30",
+              : "text-muted-foreground/30 fill-transparent",
           )}
         />
       ))}
@@ -242,7 +242,9 @@ export function ReviewSurvey({ token }: { token: string }) {
   function submitPrivate() {
     updateRatingOverlay(token, {
       feedbackText: comment.trim() || undefined,
-      ...(isLow ? { escalated: true, escalatedAt: new Date().toISOString() } : {}),
+      ...(isLow
+        ? { escalated: true, escalatedAt: new Date().toISOString() }
+        : {}),
     });
     setPhase(isLow ? "escalated" : "shared");
   }
@@ -311,7 +313,10 @@ export function ReviewSurvey({ token }: { token: string }) {
           <Textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder={fill(isLow ? S.negPlaceholder : S.positivePlaceholder, V)}
+            placeholder={fill(
+              isLow ? S.negPlaceholder : S.positivePlaceholder,
+              V,
+            )}
             className="mt-5 min-h-28 resize-none text-sm"
             autoFocus
           />
@@ -420,7 +425,9 @@ export function ReviewSurvey({ token }: { token: string }) {
                   <span
                     className={cn(
                       "flex size-5 items-center justify-center rounded-full text-xs font-bold",
-                      i === 0 ? "bg-white/20 text-white" : PLATFORM_META[p].badgeCls,
+                      i === 0
+                        ? "bg-white/20 text-white"
+                        : PLATFORM_META[p].badgeCls,
                     )}
                   >
                     {PLATFORM_META[p].badge}
@@ -484,7 +491,9 @@ export function ReviewSurvey({ token }: { token: string }) {
         <Panel>
           <div className="text-center">
             <StarRow value={selected} />
-            <h1 className="mt-3 text-xl font-bold tracking-tight">{S.negTitle}</h1>
+            <h1 className="mt-3 text-xl font-bold tracking-tight">
+              {S.negTitle}
+            </h1>
             <p className="text-muted-foreground mt-2 text-sm">{S.negSub}</p>
           </div>
 
@@ -560,9 +569,7 @@ export function ReviewSurvey({ token }: { token: string }) {
           <p
             className={cn(
               "mt-3 h-5 text-center text-sm font-medium transition-colors",
-              hover
-                ? "text-amber-600 dark:text-amber-400"
-                : "text-transparent",
+              hover ? "text-amber-600 dark:text-amber-400" : "text-transparent",
             )}
           >
             {hover ? S.labels[hover as 1 | 2 | 3 | 4 | 5] : " "}
@@ -584,7 +591,11 @@ function ShareModal({
   strings,
   onClose,
 }: {
-  modal: { open: boolean; platform: ReputationPublicPlatform | null; url: string };
+  modal: {
+    open: boolean;
+    platform: ReputationPublicPlatform | null;
+    url: string;
+  };
   strings: SurveyStrings;
   onClose: () => void;
 }) {
@@ -599,7 +610,9 @@ function ShareModal({
           <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-950/40">
             <Check className="size-6" />
           </div>
-          <DialogTitle className="text-center">{strings.modalTitle}</DialogTitle>
+          <DialogTitle className="text-center">
+            {strings.modalTitle}
+          </DialogTitle>
           <DialogDescription className="text-center">
             {fill(strings.modalBody, { platform: platformLabel })}
           </DialogDescription>

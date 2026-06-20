@@ -43,7 +43,7 @@ function Stars({ value }: { value: number }) {
             "size-3.5",
             n <= value
               ? "fill-amber-400 text-amber-400"
-              : "fill-transparent text-muted-foreground/30",
+              : "text-muted-foreground/30 fill-transparent",
           )}
         />
       ))}
@@ -78,9 +78,7 @@ function TicketCard({
   return (
     <Card
       className={cn(
-        resolved
-          ? "opacity-80"
-          : "border-rose-200 dark:border-rose-900/50",
+        resolved ? "opacity-80" : "border-rose-200 dark:border-rose-900/50",
       )}
     >
       <CardContent className="space-y-3 p-4">
@@ -101,7 +99,7 @@ function TicketCard({
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold leading-none">
+              <p className="text-sm leading-none font-semibold">
                 {req.clientName}
                 <span className="text-muted-foreground font-normal">
                   {" "}
@@ -157,10 +155,13 @@ function TicketCard({
           )}
           {req.apologyCreditAmount != null && (
             <span className="inline-flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
-              <Gift className="size-3" /> ${req.apologyCreditAmount} credit issued
+              <Gift className="size-3" /> ${req.apologyCreditAmount} credit
+              issued
             </span>
           )}
-          {resolved && req.resolvedAt && <span>Resolved {fmt(req.resolvedAt)}</span>}
+          {resolved && req.resolvedAt && (
+            <span>Resolved {fmt(req.resolvedAt)}</span>
+          )}
         </div>
 
         {!resolved && (
@@ -199,7 +200,8 @@ function TicketCard({
 
 export function ReputationEscalationsTab() {
   const router = useRouter();
-  const { requests, settings, resolveEscalation, grantApology } = useReputation();
+  const { requests, settings, resolveEscalation, grantApology } =
+    useReputation();
 
   const routedTo = (req: ReputationRequest) =>
     resolveEscalationAssignees(settings, req.service)
@@ -248,7 +250,8 @@ export function ReputationEscalationsTab() {
           <p className="text-sm font-semibold">Internal Escalation Ledger</p>
           <p className="text-muted-foreground mt-0.5 text-sm">
             Negative reviews are intercepted before they reach public platforms.
-            Each one alerts the manager and opens a ticket here with quick service-recovery actions.
+            Each one alerts the manager and opens a ticket here with quick
+            service-recovery actions.
           </p>
         </div>
       </div>
@@ -256,10 +259,10 @@ export function ReputationEscalationsTab() {
       {/* Open tickets */}
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <h2 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
             Open tickets
           </h2>
-          <span className="bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold">
+          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-100 px-1.5 text-xs font-bold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
             {open.length}
           </span>
         </div>
@@ -283,7 +286,9 @@ export function ReputationEscalationsTab() {
           <div className="text-muted-foreground flex flex-col items-center rounded-xl border border-dashed py-12 text-center">
             <ShieldCheck className="mb-2 size-8 opacity-30" />
             <p className="text-sm font-medium">No open escalations</p>
-            <p className="text-xs">Negative reviews will appear here for follow-up.</p>
+            <p className="text-xs">
+              Negative reviews will appear here for follow-up.
+            </p>
           </div>
         )}
       </section>
@@ -291,7 +296,7 @@ export function ReputationEscalationsTab() {
       {/* Resolved */}
       {resolved.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <h2 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
             Resolved ({resolved.length})
           </h2>
           <div className="grid gap-3">
@@ -320,7 +325,8 @@ export function ReputationEscalationsTab() {
               <Gift className="size-4" /> Send apology credit
             </DialogTitle>
             <DialogDescription>
-              Issue store credit to {apologyFor?.clientName} as a goodwill gesture.
+              Issue store credit to {apologyFor?.clientName} as a goodwill
+              gesture.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">

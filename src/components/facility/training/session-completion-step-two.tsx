@@ -183,7 +183,7 @@ function ExerciseRow({
   return (
     <div className="bg-card grid grid-cols-1 gap-2 rounded-lg border px-3 py-2 sm:grid-cols-[1fr_auto_auto]">
       <div className="min-w-0">
-        <Label className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+        <Label className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
           Exercise
         </Label>
         <Select
@@ -219,7 +219,7 @@ function ExerciseRow({
               if (nonEmptyTiers.length === 0) return null;
               return (
                 <SelectGroup key={discId}>
-                  <SelectLabel className="text-[10px] uppercase tracking-wider">
+                  <SelectLabel className="text-[10px] tracking-wider uppercase">
                     {disciplineLabel(discId)}
                     {discId === preferredDisciplineId && (
                       <span className="ml-1.5 rounded-full bg-indigo-100 px-1 py-0.5 text-[9px] font-bold text-indigo-700">
@@ -229,7 +229,7 @@ function ExerciseRow({
                   </SelectLabel>
                   {nonEmptyTiers.map((level) => (
                     <Fragment key={level}>
-                      <div className="text-muted-foreground/80 px-2 pb-0.5 pt-1.5 text-[9px] font-bold uppercase tracking-wider">
+                      <div className="text-muted-foreground/80 px-2 pt-1.5 pb-0.5 text-[9px] font-bold tracking-wider uppercase">
                         {DIFFICULTY_LABELS[level]}
                       </div>
                       {tiers[level]!.map((e) => (
@@ -246,7 +246,7 @@ function ExerciseRow({
         </Select>
       </div>
       <div>
-        <Label className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+        <Label className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
           Rating
         </Label>
         <div className="flex h-8 items-center">
@@ -269,7 +269,7 @@ function ExerciseRow({
         </Button>
       </div>
       <div className="sm:col-span-3">
-        <Label className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+        <Label className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
           Note (optional)
         </Label>
         <Input
@@ -340,8 +340,7 @@ export function SessionCompletionStepTwo({
   if (students.length === 0) {
     return (
       <div className="text-muted-foreground rounded-xl border border-dashed py-12 text-center text-sm">
-        No present students to log exercises for. (Everyone was marked
-        absent.)
+        No present students to log exercises for. (Everyone was marked absent.)
       </div>
     );
   }
@@ -431,8 +430,8 @@ export function SessionCompletionStepTwo({
               Per dog · optional
             </Badge>
             <span className="text-muted-foreground ml-auto text-[11px]">
-              Faster than 8 separate sessions, still captures the
-              dog-specific story.
+              Faster than 8 separate sessions, still captures the dog-specific
+              story.
             </span>
           </div>
           <ul className="divide-y divide-slate-100">
@@ -446,7 +445,7 @@ export function SessionCompletionStepTwo({
                   <div className="flex items-center gap-2 sm:w-44">
                     <div className="relative shrink-0">
                       {student.petPhotoUrl ? (
-                        <div className="size-9 overflow-hidden rounded-xl ring-2 ring-white shadow-sm">
+                        <div className="size-9 overflow-hidden rounded-xl shadow-sm ring-2 ring-white">
                           <Image
                             src={student.petPhotoUrl}
                             alt={student.petName}
@@ -456,7 +455,7 @@ export function SessionCompletionStepTwo({
                           />
                         </div>
                       ) : (
-                        <div className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-xl ring-2 ring-white shadow-sm">
+                        <div className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-xl shadow-sm ring-2 ring-white">
                           <PawPrint className="size-4" />
                         </div>
                       )}

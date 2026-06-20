@@ -54,7 +54,11 @@ const BUDDY_SERIES_001: SessionSeed[] = [
       "Strong first session — Buddy was excited but settled with food rewards. Owner caught on to clicker timing quickly.",
     exercises: [
       { exerciseName: "Sit on cue", rating: 3 },
-      { exerciseName: "Down on cue", rating: 2, notes: "Slow to lure into position." },
+      {
+        exerciseName: "Down on cue",
+        rating: 2,
+        notes: "Slow to lure into position.",
+      },
       { exerciseName: "Name recognition", rating: 4 },
     ],
     homework: {
@@ -98,12 +102,17 @@ const BUDDY_SERIES_001: SessionSeed[] = [
       "Buddy arrived 15 min late but quickly caught up. Loose-leash walking is the main gap right now.",
     exercises: [
       { exerciseName: "Stay (10s)", rating: 3 },
-      { exerciseName: "Loose-leash walking", rating: 2, notes: "Pulls toward distractions." },
+      {
+        exerciseName: "Loose-leash walking",
+        rating: 2,
+        notes: "Pulls toward distractions.",
+      },
       { exerciseName: "Polite greeting", rating: 3 },
     ],
     homework: {
       title: "U-turns on a loose leash",
-      description: "Reverse direction whenever Buddy pulls. Reward the catch-up.",
+      description:
+        "Reverse direction whenever Buddy pulls. Reward the catch-up.",
       instructions: [
         "Carry treats in your left hand at the seam.",
         "Pivot away the moment leash goes tight.",
@@ -245,7 +254,11 @@ const BUDDY_SERIES_005: SessionSeed[] = [
       "Buddy arrived 20 min late after a vet appointment. Worked on Place and emergency stop only.",
     exercises: [
       { exerciseName: "Place on cot", rating: 4 },
-      { exerciseName: "Emergency stop", rating: 3, notes: "Stops on cue but doesn't always look back." },
+      {
+        exerciseName: "Emergency stop",
+        rating: 3,
+        notes: "Stops on cue but doesn't always look back.",
+      },
     ],
   },
   {
@@ -675,13 +688,11 @@ const enrollmentById = new Map(seriesEnrollments.map((e) => [e.id, e]));
 const trainerById = new Map(trainers.map((t) => [t.id, t]));
 // Built once after homework records exist so report cards can reference real
 // homework by id without re-deriving from scratch.
-const homeworkById = new Map(
-  trainingHomeworkRecords.map((h) => [h.id, h]),
-);
+const homeworkById = new Map(trainingHomeworkRecords.map((h) => [h.id, h]));
 const petsById = new Map(clients.flatMap((c) => c.pets).map((p) => [p.id, p]));
 
-export const trainingReportCardRecords: TrainingReportCard[] = REPORT_CARD_SEEDS
-  .map((seed) => {
+export const trainingReportCardRecords: TrainingReportCard[] =
+  REPORT_CARD_SEEDS.map((seed) => {
     const enrollment = enrollmentById.get(seed.enrollmentId);
     if (!enrollment) return null;
     const trainer = trainerById.get(seed.trainerId);
@@ -714,8 +725,7 @@ export const trainingReportCardRecords: TrainingReportCard[] = REPORT_CARD_SEEDS
       sentAt: seed.sentAt,
       viewedByOwner: seed.viewedByOwner,
     };
-  })
-  .filter((c): c is TrainingReportCard => c !== null);
+  }).filter((c): c is TrainingReportCard => c !== null);
 
 /** Per-pet helper — used by the Report Cards tab on a pet's profile. */
 export function getReportCardsForPet(petId: number): TrainingReportCard[] {

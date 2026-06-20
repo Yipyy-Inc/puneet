@@ -142,7 +142,7 @@ export function SeriesSessionsTab({ series }: { series: TrainingSeries }) {
 
   if (series.sessions.length === 0) {
     return (
-      <div className="text-muted-foreground rounded-xl border bg-card px-4 py-10 text-center text-sm">
+      <div className="text-muted-foreground bg-card rounded-xl border px-4 py-10 text-center text-sm">
         No sessions are scheduled for this series yet.
       </div>
     );
@@ -160,7 +160,7 @@ export function SeriesSessionsTab({ series }: { series: TrainingSeries }) {
           <li
             key={session.id}
             className={cn(
-              "flex flex-col gap-3 rounded-xl border bg-card px-4 py-3 shadow-sm",
+              "bg-card flex flex-col gap-3 rounded-xl border px-4 py-3 shadow-sm",
               "md:flex-row md:items-center",
               session.status === "completed" && "opacity-90",
               session.status === "cancelled" && "opacity-70",
@@ -170,7 +170,7 @@ export function SeriesSessionsTab({ series }: { series: TrainingSeries }) {
               {session.sessionNumber}
             </div>
 
-            <div className="min-w-0 flex-1 grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid min-w-0 flex-1 gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
               <div className="flex items-center gap-1.5 text-sm">
                 <CalendarDays className="text-muted-foreground size-3.5" />
                 <span className="font-semibold text-slate-800">
@@ -206,7 +206,8 @@ export function SeriesSessionsTab({ series }: { series: TrainingSeries }) {
               <span
                 className={cn(
                   "inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 tabular-nums",
-                  session.status === "completed" && "bg-emerald-100 text-emerald-700",
+                  session.status === "completed" &&
+                    "bg-emerald-100 text-emerald-700",
                 )}
                 title={`Enrolled: ${session.enrolledCount} of ${series.maxCapacity} max`}
               >

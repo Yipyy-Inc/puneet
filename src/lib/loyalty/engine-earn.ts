@@ -88,10 +88,14 @@ export function matchesSchedule(rule: EarnRule, occurredAt: string): boolean {
 
 /** Service-vs-retail scope gate from the facility's points-scope config. Only
  *  spend/booking/service earnings are scoped; lifecycle bonuses are not. */
-function eventInScope(config: FacilityLoyaltyConfig, event: LoyaltyEvent): boolean {
+function eventInScope(
+  config: FacilityLoyaltyConfig,
+  event: LoyaltyEvent,
+): boolean {
   const scope = config.pointsScope;
   if (!scope?.enabled) return true;
-  if (scope.scope === "services_only" && event.isService === false) return false;
+  if (scope.scope === "services_only" && event.isService === false)
+    return false;
   if (scope.scope === "retail_only" && event.isService) return false;
   return true;
 }
@@ -124,7 +128,9 @@ function eventMatchesTrigger(
         ctx.visitNumber === rule.triggerValue
       );
     case "first_booking":
-      return event.type === "booking_completed" && event.isFirstBooking === true;
+      return (
+        event.type === "booking_completed" && event.isFirstBooking === true
+      );
     case "referral_completed":
       return event.type === "referral_completed";
     case "review_submitted":
@@ -142,7 +148,8 @@ function eventMatchesTrigger(
 function baseRewardValue(rule: EarnRule, event: LoyaltyEvent): number {
   if (rule.triggerType === "spend_amount") {
     const amt = event.amount ?? 0;
-    const unit = rule.triggerValue && rule.triggerValue > 0 ? rule.triggerValue : 1;
+    const unit =
+      rule.triggerValue && rule.triggerValue > 0 ? rule.triggerValue : 1;
     const units = Math.floor(amt / unit);
     return units * rule.rewardValue;
   }

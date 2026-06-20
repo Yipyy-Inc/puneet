@@ -58,7 +58,10 @@ export function RewardTypeBreakdown() {
     return <div className="bg-muted/30 h-80 animate-pulse rounded-xl border" />;
   }
 
-  const fastest = timeToRedeem.reduce<{ bucket: string; avgDays: number } | null>(
+  const fastest = timeToRedeem.reduce<{
+    bucket: string;
+    avgDays: number;
+  } | null>(
     (best, r) => (best === null || r.avgDays < best.avgDays ? r : best),
     null,
   );
@@ -93,7 +96,9 @@ export function RewardTypeBreakdown() {
       </div>
 
       <div>
-        <div className="text-sm font-semibold">Time from issuance to redemption</div>
+        <div className="text-sm font-semibold">
+          Time from issuance to redemption
+        </div>
         <p className="text-muted-foreground text-xs">
           How quickly each reward type drives a redemption — faster is more
           attractive.

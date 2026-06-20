@@ -309,7 +309,9 @@ function ReferralProgramFields({
                   })
                 }
                 placeholder={
-                  triggerType === "after_total_reaches" ? "e.g., 100" : "e.g., 3"
+                  triggerType === "after_total_reaches"
+                    ? "e.g., 100"
+                    : "e.g., 3"
                 }
               />
             </div>

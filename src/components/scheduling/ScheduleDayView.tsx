@@ -157,8 +157,7 @@ export function ScheduleDayView({
   }, [dayShifts]);
 
   const totalScheduledHours = dayShifts.reduce(
-    (sum, s) =>
-      sum + computeShiftHours(s.startTime, s.endTime, s.breakMinutes),
+    (sum, s) => sum + computeShiftHours(s.startTime, s.endTime, s.breakMinutes),
     0,
   );
   const workingCount = new Set(
@@ -221,9 +220,7 @@ export function ScheduleDayView({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold tracking-tight">
-                {dayName}
-              </h2>
+              <h2 className="text-xl font-bold tracking-tight">{dayName}</h2>
               {todayFlag && (
                 <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-white uppercase shadow-sm shadow-indigo-500/30">
                   Today
@@ -237,7 +234,7 @@ export function ScheduleDayView({
                       {holiday.name}
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent className="bg-popover text-popover-foreground border shadow-md text-xs">
+                  <TooltipContent className="bg-popover text-popover-foreground border text-xs shadow-md">
                     ×{holiday.multiplier} pay rate
                   </TooltipContent>
                 </Tooltip>
@@ -274,10 +271,10 @@ export function ScheduleDayView({
       </div>
 
       {/* ─── Timeline ─────────────────────────────────────────────── */}
-      <div className="bg-muted/10 dark:bg-slate-950/40 flex-1 overflow-y-auto">
+      <div className="bg-muted/10 flex-1 overflow-y-auto dark:bg-slate-950/40">
         {/* Hours scale row */}
         <div
-          className="border-border/60 sticky top-0 z-20 grid border-b bg-background/95 backdrop-blur-md"
+          className="border-border/60 bg-background/95 sticky top-0 z-20 grid border-b backdrop-blur-md"
           style={{ gridTemplateColumns: timelineGridTemplate }}
         >
           <div className="border-border/60 flex items-center border-r px-6 py-3">
@@ -333,11 +330,11 @@ export function ScheduleDayView({
             return (
               <div
                 key={employee.id}
-                className="group/row border-border/40 hover:bg-muted/30 dark:hover:bg-slate-900/30 grid border-b transition-colors"
+                className="group/row border-border/40 hover:bg-muted/30 grid border-b transition-colors dark:hover:bg-slate-900/30"
                 style={{ gridTemplateColumns: timelineGridTemplate }}
               >
                 <div className="border-border/40 bg-background flex items-center gap-3 border-r px-6 py-4">
-                  <Avatar className="ring-background size-11 shrink-0 ring-2 shadow-sm">
+                  <Avatar className="ring-background size-11 shrink-0 shadow-sm ring-2">
                     <AvatarImage src={employee.avatar} alt={employee.name} />
                     <AvatarFallback className="bg-linear-to-br from-indigo-100 via-slate-100 to-slate-50 text-[12px] font-semibold text-slate-700 dark:from-indigo-900/30 dark:via-slate-900 dark:to-slate-950 dark:text-slate-200">
                       {employee.initials}
@@ -358,9 +355,7 @@ export function ScheduleDayView({
                   )}
                 </div>
                 {empTimeOff ? (
-                  <TimeOffBar
-                    timeOff={empTimeOff}
-                  />
+                  <TimeOffBar timeOff={empTimeOff} />
                 ) : (
                   <TimelineRow
                     shifts={empShifts}
@@ -581,7 +576,9 @@ function ShiftBar({
           {/* Left color accent bar */}
           <div
             className="absolute top-0 bottom-0 left-0 w-1"
-            style={{ backgroundColor: isDraft ? color : "rgba(255,255,255,0.9)" }}
+            style={{
+              backgroundColor: isDraft ? color : "rgba(255,255,255,0.9)",
+            }}
           />
 
           <div className="flex h-full items-center gap-2 px-3 pl-4">
@@ -618,7 +615,10 @@ function ShiftBar({
           </div>
         </div>
       </TooltipTrigger>
-      <TooltipContent side="top" className="bg-popover text-popover-foreground border shadow-md text-xs">
+      <TooltipContent
+        side="top"
+        className="bg-popover text-popover-foreground border text-xs shadow-md"
+      >
         <p className="font-medium">{position?.name}</p>
         <p>
           {shift.startTime} – {shift.endTime}
@@ -643,11 +643,7 @@ function ShiftBar({
 
 // ─── TimeOffBar (full-row gradient bar like reference image) ────────────────
 
-function TimeOffBar({
-  timeOff,
-}: {
-  timeOff: EnhancedTimeOffRequest;
-}) {
+function TimeOffBar({ timeOff }: { timeOff: EnhancedTimeOffRequest }) {
   const meta = timeOffMeta[timeOff.type] ?? timeOffMeta.other;
   const Icon = meta.icon;
   const isPending = timeOff.status === "pending";
@@ -685,4 +681,3 @@ function TimeOffBar({
     </div>
   );
 }
-

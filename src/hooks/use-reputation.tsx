@@ -78,9 +78,7 @@ interface ReputationContextValue {
   /** Grant apology store credit to the client behind an escalation. */
   grantApology: (requestId: string, amount: number) => void;
   /** Outcome of the most recent recordCheckout call. */
-  lastResult:
-    | (CheckoutEvaluation & { request?: ReputationRequest })
-    | null;
+  lastResult: (CheckoutEvaluation & { request?: ReputationRequest }) | null;
 }
 
 const ReputationContext = createContext<ReputationContextValue | null>(null);
@@ -105,7 +103,10 @@ export function ReputationProvider({ children }: { children: ReactNode }) {
 
   const persistSettings = useCallback((next: ReputationSettings) => {
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(REPUTATION_SETTINGS_KEY, JSON.stringify(next));
+      window.localStorage.setItem(
+        REPUTATION_SETTINGS_KEY,
+        JSON.stringify(next),
+      );
     }
   }, []);
 
@@ -326,7 +327,11 @@ export function ReputationProvider({ children }: { children: ReactNode }) {
 
   // ─── Happy-but-silent nudge: one gentle reminder to share publicly ────────
   useEffect(() => {
-    const nudges = findHappyNudges(requests, loadReputationSettings(), new Date());
+    const nudges = findHappyNudges(
+      requests,
+      loadReputationSettings(),
+      new Date(),
+    );
     if (nudges.length === 0) return;
     const at = new Date().toISOString();
     for (const id of nudges) {

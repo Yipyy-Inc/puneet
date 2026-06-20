@@ -68,10 +68,7 @@ export function AdditionalContactsManager({
   heading = "Additional Contacts",
   description = "Add people who can be contacted for emergencies, pickup, or drop-off.",
 }: AdditionalContactsManagerProps) {
-  const updateContact = (
-    id: string,
-    patch: Partial<AdditionalContact>,
-  ) => {
+  const updateContact = (id: string, patch: Partial<AdditionalContact>) => {
     onChange(value.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   };
 
@@ -84,7 +81,9 @@ export function AdditionalContactsManager({
     if (!contact) return;
     const has = contact.tags.includes(tag);
     updateContact(id, {
-      tags: has ? contact.tags.filter((t) => t !== tag) : [...contact.tags, tag],
+      tags: has
+        ? contact.tags.filter((t) => t !== tag)
+        : [...contact.tags, tag],
     });
   };
 

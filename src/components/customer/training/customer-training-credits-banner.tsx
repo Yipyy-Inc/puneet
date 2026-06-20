@@ -7,12 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import {
-  AlertTriangle,
-  ArrowRight,
-  Package,
-  Sparkles,
-} from "lucide-react";
+import { AlertTriangle, ArrowRight, Package, Sparkles } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
 import {
   aggregateActivePackagesForClient,
@@ -82,7 +77,7 @@ export function CustomerTrainingCreditsBanner({
               <Package className="size-5" />
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <p className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
                 Training credits
               </p>
               <p className="text-lg/tight font-bold text-slate-900">

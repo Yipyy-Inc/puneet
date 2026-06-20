@@ -26,7 +26,8 @@ export const reputationQueries = {
   }),
   stats: () => ({
     queryKey: ["reputation", "stats"],
-    queryFn: async (): Promise<ReputationDashboardStats> => reputationDashboardStats,
+    queryFn: async (): Promise<ReputationDashboardStats> =>
+      reputationDashboardStats,
   }),
   staffStats: () => ({
     queryKey: ["reputation", "staff-stats"],
@@ -34,7 +35,8 @@ export const reputationQueries = {
   }),
   serviceStats: () => ({
     queryKey: ["reputation", "service-stats"],
-    queryFn: async (): Promise<ReputationServiceStat[]> => reputationServiceStats,
+    queryFn: async (): Promise<ReputationServiceStat[]> =>
+      reputationServiceStats,
   }),
   /** The consolidated multilingual template object for a facility entity. */
   template: (facilityId: number) => ({

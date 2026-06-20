@@ -46,15 +46,15 @@ export default function IncidentsPage() {
   >(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterSeverity, setFilterSeverity] = useState<string>("all");
-  const [taskFilter, setTaskFilter] = useState<"all" | "today" | "overdue" | "upcoming">("all");
+  const [taskFilter, setTaskFilter] = useState<
+    "all" | "today" | "overdue" | "upcoming"
+  >("all");
   const [tasks, setTasks] = useState<FollowUpTask[]>(getPendingFollowUpTasks());
 
   const stats = getIncidentStats();
   const pendingTasks = tasks;
   const handleTaskUpdate = (updated: FollowUpTask) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === updated.id ? updated : t)),
-    );
+    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
   };
 
   // Filter follow-up tasks by date scope

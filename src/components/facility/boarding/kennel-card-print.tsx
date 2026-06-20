@@ -102,31 +102,42 @@ export const DEFAULT_FACILITY_INFO: FacilityInfo = {
 
 // ── Tag pill helper (print-safe, no Tailwind dark variants) ───────────────────
 
-const PRINT_TAG_COLORS: Record<string, { bg: string; color: string; border: string }> = {
-  "Bite Risk":         { bg: "#fee2e2", color: "#991b1b", border: "#f87171" },
-  "Food Aggressive":   { bg: "#fee2e2", color: "#b91c1c", border: "#fca5a5" },
-  "Resource Guarder":  { bg: "#ffedd5", color: "#c2410c", border: "#fdba74" },
-  "Dog Selective":     { bg: "#ffedd5", color: "#c2410c", border: "#fdba74" },
-  Jumper:              { bg: "#fef9c3", color: "#a16207", border: "#fde047" },
-  "Escape Artist":     { bg: "#fef3c7", color: "#92400e", border: "#fcd34d" },
-  "No Jumping":        { bg: "#ffedd5", color: "#9a3412", border: "#fdba74" },
-  "No Stairs":         { bg: "#ffedd5", color: "#9a3412", border: "#fdba74" },
-  "Needs Slow Introduction": { bg: "#dbeafe", color: "#1d4ed8", border: "#93c5fd" },
-  Barker:              { bg: "#dbeafe", color: "#1e40af", border: "#93c5fd" },
-  "High Energy":       { bg: "#dcfce7", color: "#15803d", border: "#86efac" },
-  Anxiety:             { bg: "#ede9fe", color: "#6d28d9", border: "#c4b5fd" },
-  Nervous:             { bg: "#e0e7ff", color: "#3730a3", border: "#a5b4fc" },
-  Friendly:            { bg: "#d1fae5", color: "#065f46", border: "#6ee7b7" },
-  "Loves Staff":       { bg: "#fce7f3", color: "#9d174d", border: "#f9a8d4" },
-  Puppy:               { bg: "#ecfccb", color: "#3f6212", border: "#bef264" },
-  Senior:              { bg: "#f1f5f9", color: "#475569", border: "#cbd5e1" },
-  "Needs Blanket":     { bg: "#e0f2fe", color: "#0369a1", border: "#7dd3fc" },
-  "Special Diet":      { bg: "#ffedd5", color: "#c2410c", border: "#fdba74" },
+const PRINT_TAG_COLORS: Record<
+  string,
+  { bg: string; color: string; border: string }
+> = {
+  "Bite Risk": { bg: "#fee2e2", color: "#991b1b", border: "#f87171" },
+  "Food Aggressive": { bg: "#fee2e2", color: "#b91c1c", border: "#fca5a5" },
+  "Resource Guarder": { bg: "#ffedd5", color: "#c2410c", border: "#fdba74" },
+  "Dog Selective": { bg: "#ffedd5", color: "#c2410c", border: "#fdba74" },
+  Jumper: { bg: "#fef9c3", color: "#a16207", border: "#fde047" },
+  "Escape Artist": { bg: "#fef3c7", color: "#92400e", border: "#fcd34d" },
+  "No Jumping": { bg: "#ffedd5", color: "#9a3412", border: "#fdba74" },
+  "No Stairs": { bg: "#ffedd5", color: "#9a3412", border: "#fdba74" },
+  "Needs Slow Introduction": {
+    bg: "#dbeafe",
+    color: "#1d4ed8",
+    border: "#93c5fd",
+  },
+  Barker: { bg: "#dbeafe", color: "#1e40af", border: "#93c5fd" },
+  "High Energy": { bg: "#dcfce7", color: "#15803d", border: "#86efac" },
+  Anxiety: { bg: "#ede9fe", color: "#6d28d9", border: "#c4b5fd" },
+  Nervous: { bg: "#e0e7ff", color: "#3730a3", border: "#a5b4fc" },
+  Friendly: { bg: "#d1fae5", color: "#065f46", border: "#6ee7b7" },
+  "Loves Staff": { bg: "#fce7f3", color: "#9d174d", border: "#f9a8d4" },
+  Puppy: { bg: "#ecfccb", color: "#3f6212", border: "#bef264" },
+  Senior: { bg: "#f1f5f9", color: "#475569", border: "#cbd5e1" },
+  "Needs Blanket": { bg: "#e0f2fe", color: "#0369a1", border: "#7dd3fc" },
+  "Special Diet": { bg: "#ffedd5", color: "#c2410c", border: "#fdba74" },
   "Medical Condition": { bg: "#fef3c7", color: "#92400e", border: "#fcd34d" },
 };
 
 function PrintTag({ tag }: { tag: string }) {
-  const c = PRINT_TAG_COLORS[tag] ?? { bg: "#f3f4f6", color: "#374151", border: "#d1d5db" };
+  const c = PRINT_TAG_COLORS[tag] ?? {
+    bg: "#f3f4f6",
+    color: "#374151",
+    border: "#d1d5db",
+  };
   return (
     <span
       style={{
@@ -165,8 +176,8 @@ export function KennelCardTemplate({
         <div className="flex size-28 shrink-0 items-center justify-center rounded-xl bg-gray-100">
           <PawPrint className="size-14 text-gray-400" />
         </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-3xl font-black leading-tight tracking-tight">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-3xl leading-tight font-black tracking-tight">
             {guest.petName}{" "}
             <span className="text-2xl font-semibold text-gray-400">
               {guest.ownerName.split(" ").pop()}
@@ -185,10 +196,10 @@ export function KennelCardTemplate({
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
           <div className="rounded-lg bg-gray-900 px-3 py-1.5 text-center text-white">
-            <p className="text-[9px] font-semibold uppercase tracking-widest text-gray-400">
+            <p className="text-[9px] font-semibold tracking-widest text-gray-400 uppercase">
               Kennel
             </p>
-            <p className="text-lg font-black leading-tight">
+            <p className="text-lg leading-tight font-black">
               {guest.kennelName.split(" - ")[0]}
             </p>
           </div>
@@ -231,14 +242,14 @@ export function KennelCardTemplate({
       {/* Dates */}
       <div className="mt-3 grid grid-cols-2 gap-3">
         <div className="rounded-lg border-2 border-green-400 bg-green-50 p-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-green-700">
+          <p className="text-[10px] font-bold tracking-wide text-green-700 uppercase">
             Check-In
           </p>
           <p className="text-base font-black">{fmtDate(guest.checkInDate)}</p>
           <p className="text-xs text-green-600">{guest.packageType}</p>
         </div>
         <div className="rounded-lg border-2 border-orange-400 bg-orange-50 p-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-orange-700">
+          <p className="text-[10px] font-bold tracking-wide text-orange-700 uppercase">
             Check-Out
           </p>
           <p className="text-base font-black">{fmtDate(guest.checkOutDate)}</p>
@@ -251,7 +262,7 @@ export function KennelCardTemplate({
         <div className="mt-3 rounded-lg border-2 border-red-500 bg-red-50 p-3">
           <div className="flex items-center gap-1.5">
             <AlertTriangle className="size-4 text-red-600" />
-            <span className="text-sm font-black uppercase tracking-wide text-red-700">
+            <span className="text-sm font-black tracking-wide text-red-700 uppercase">
               ⚠ Allergies / Dietary Restrictions
             </span>
           </div>
@@ -276,7 +287,10 @@ export function KennelCardTemplate({
                 </span>
                 <span className="text-gray-500"> — {med.frequency}</span>
                 {med.times.length > 0 && (
-                  <span className="text-gray-400"> @ {med.times.join(", ")}</span>
+                  <span className="text-gray-400">
+                    {" "}
+                    @ {med.times.join(", ")}
+                  </span>
                 )}
                 {med.instructions && (
                   <span className="text-purple-600"> · {med.instructions}</span>
@@ -335,7 +349,8 @@ export function KennelCardTemplate({
                 🌡 Heat Cycle (Day {guest.heatCycle.dayNumber}):
               </span>{" "}
               <span className="text-amber-700">
-                {guest.heatCycle.notes ?? "Monitor, keep separated from intact males."}
+                {guest.heatCycle.notes ??
+                  "Monitor, keep separated from intact males."}
               </span>
             </p>
           )}
@@ -345,7 +360,7 @@ export function KennelCardTemplate({
       {/* Notes */}
       {options.showNotes && guest.notes && (
         <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+          <p className="text-[10px] font-bold tracking-wide text-gray-400 uppercase">
             Notes
           </p>
           <p className="mt-0.5 text-sm text-gray-700">{guest.notes}</p>
@@ -353,7 +368,10 @@ export function KennelCardTemplate({
       )}
 
       {/* Footer */}
-      <div suppressHydrationWarning className="mt-4 border-t pt-2 text-center text-[10px] text-gray-400">
+      <div
+        suppressHydrationWarning
+        className="mt-4 border-t pt-2 text-center text-[10px] text-gray-400"
+      >
         Doggieville MTL · Generated {new Date().toLocaleString()}
       </div>
     </div>
@@ -379,14 +397,14 @@ export function DoorCardTemplate({
       <div className="grid grid-cols-[170px_1fr]">
         {/* Left rail — kennel + QR */}
         <div className="flex flex-col items-center gap-3 bg-gray-900 p-4 text-white">
-          <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-400">
+          <p className="text-[9px] font-bold tracking-[0.2em] text-gray-400 uppercase">
             Kennel
           </p>
-          <p className="text-center text-[28px] font-black leading-none tracking-tight">
+          <p className="text-center text-[28px] leading-none font-black tracking-tight">
             {kennelLabel}
           </p>
           {kennelType && (
-            <p className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-gray-200">
+            <p className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-semibold tracking-widest text-gray-200 uppercase">
               {kennelType}
             </p>
           )}
@@ -400,7 +418,7 @@ export function DoorCardTemplate({
         <div className="flex flex-col gap-2 p-4">
           {/* Pet identity */}
           <div>
-            <h1 className="text-3xl font-black leading-none tracking-tight">
+            <h1 className="text-3xl leading-none font-black tracking-tight">
               {guest.petName}
               <span className="ml-2 text-xl font-semibold text-gray-400">
                 {guest.ownerName.split(" ").pop()}
@@ -411,7 +429,8 @@ export function DoorCardTemplate({
               {options.showWeight && (
                 <span className="text-gray-400">
                   {" · "}
-                  {guest.petSize.charAt(0).toUpperCase() + guest.petSize.slice(1)}
+                  {guest.petSize.charAt(0).toUpperCase() +
+                    guest.petSize.slice(1)}
                   {" · "}
                   {guest.petWeight} lbs · {guest.petColor}
                 </span>
@@ -425,7 +444,7 @@ export function DoorCardTemplate({
             <span className="font-semibold">{fmtDate(guest.checkInDate)}</span>
             <span className="text-gray-400">→</span>
             <span className="font-semibold">{fmtDate(guest.checkOutDate)}</span>
-            <span className="ml-auto rounded-md bg-gray-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+            <span className="ml-auto rounded-md bg-gray-900 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">
               {guest.totalNights} nights
             </span>
           </div>
@@ -434,7 +453,7 @@ export function DoorCardTemplate({
           {guest.allergies.length > 0 && (
             <div className="flex items-center gap-2 rounded-lg border-2 border-red-500 bg-red-50 px-3 py-1.5">
               <AlertTriangle className="size-4 shrink-0 text-red-600" />
-              <span className="text-[10px] font-black uppercase tracking-wide text-red-700">
+              <span className="text-[10px] font-black tracking-wide text-red-700 uppercase">
                 Allergies
               </span>
               <span className="truncate text-xs font-bold text-red-800">
@@ -448,14 +467,13 @@ export function DoorCardTemplate({
             <div className="flex items-start gap-2 rounded-lg border border-purple-300 bg-purple-50 px-3 py-1.5">
               <Pill className="mt-0.5 size-3.5 shrink-0 text-purple-600" />
               <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-black uppercase tracking-wide text-purple-700">
+                <span className="text-[10px] font-black tracking-wide text-purple-700 uppercase">
                   Meds:{" "}
                 </span>
                 <span className="text-xs text-purple-900">
                   {guest.medications
                     .map(
-                      (m) =>
-                        `${m.medicationName} ${m.dosage} (${m.frequency})`,
+                      (m) => `${m.medicationName} ${m.dosage} (${m.frequency})`,
                     )
                     .join("; ")}
                 </span>
@@ -467,7 +485,7 @@ export function DoorCardTemplate({
           <div className="flex items-start gap-2 rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5">
             <Utensils className="mt-0.5 size-3.5 shrink-0 text-blue-600" />
             <div className="min-w-0 flex-1">
-              <span className="text-[10px] font-black uppercase tracking-wide text-blue-700">
+              <span className="text-[10px] font-black tracking-wide text-blue-700 uppercase">
                 Feeding:{" "}
               </span>
               <span className="text-xs text-blue-900">
@@ -477,7 +495,7 @@ export function DoorCardTemplate({
                 )}
               </span>
               {guest.feedingInstructions && (
-                <p className="text-[11px] italic text-blue-700">
+                <p className="text-[11px] text-blue-700 italic">
                   {guest.feedingInstructions}
                 </p>
               )}
@@ -488,12 +506,12 @@ export function DoorCardTemplate({
           {(guest.postSurgery || guest.heatCycle) && (
             <div className="flex flex-wrap gap-1.5">
               {guest.postSurgery && (
-                <span className="rounded-full border border-orange-300 bg-orange-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-orange-700">
+                <span className="rounded-full border border-orange-300 bg-orange-100 px-2.5 py-1 text-[10px] font-bold tracking-wide text-orange-700 uppercase">
                   Post-surgery · {guest.postSurgery.procedureType}
                 </span>
               )}
               {guest.heatCycle && (
-                <span className="rounded-full border border-pink-300 bg-pink-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-pink-700">
+                <span className="rounded-full border border-pink-300 bg-pink-100 px-2.5 py-1 text-[10px] font-bold tracking-wide text-pink-700 uppercase">
                   Heat cycle · day {guest.heatCycle.dayNumber}
                 </span>
               )}
@@ -559,8 +577,7 @@ export function CollarLabelTemplate({
   const ownerParts: string[] = [];
   if (fields.clientName && guest.ownerName)
     ownerParts.push(`Owner: ${guest.ownerName}`);
-  if (fields.lodging && guest.kennelName)
-    ownerParts.push(guest.kennelName);
+  if (fields.lodging && guest.kennelName) ownerParts.push(guest.kennelName);
   if (fields.playgroup && playgroup) ownerParts.push(playgroup);
 
   const showIfFound =
@@ -729,12 +746,12 @@ type OptionToggle = {
 };
 
 const OPTION_TOGGLES: OptionToggle[] = [
-  { key: "showOwnerName",    label: "Owner name" },
-  { key: "showPhone",        label: "Phone number" },
+  { key: "showOwnerName", label: "Owner name" },
+  { key: "showPhone", label: "Phone number" },
   { key: "showEmergencyVet", label: "Emergency vet" },
   { key: "showBehaviorTags", label: "Behavior tags" },
-  { key: "showWeight",       label: "Weight & size" },
-  { key: "showNotes",        label: "Staff notes" },
+  { key: "showWeight", label: "Weight & size" },
+  { key: "showNotes", label: "Staff notes" },
 ];
 
 function CustomizePanel({
@@ -753,13 +770,13 @@ function CustomizePanel({
             key={key}
             onClick={() => onChange({ ...options, [key]: !on })}
             data-on={on}
-            className="flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm transition-all data-[on=true]:border-primary data-[on=true]:bg-primary/5 data-[on=false]:border-border data-[on=false]:text-muted-foreground data-[on=false]:hover:bg-muted/40"
+            className="data-[on=true]:border-primary data-[on=true]:bg-primary/5 data-[on=false]:border-border data-[on=false]:text-muted-foreground data-[on=false]:hover:bg-muted/40 flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm transition-all"
           >
             <span
               data-on={on}
-              className="flex size-4 shrink-0 items-center justify-center rounded data-[on=true]:bg-primary data-[on=false]:bg-muted"
+              className="data-[on=true]:bg-primary data-[on=false]:bg-muted flex size-4 shrink-0 items-center justify-center rounded"
             >
-              {on && <Check className="size-3 text-primary-foreground" />}
+              {on && <Check className="text-primary-foreground size-3" />}
             </span>
             {label}
           </button>
@@ -772,19 +789,19 @@ function CustomizePanel({
 // ── Collar fields panel ───────────────────────────────────────────────────────
 
 const COLLAR_PET_TOGGLES: { key: keyof CollarFields; label: string }[] = [
-  { key: "petName",    label: "Pet name" },
-  { key: "breed",      label: "Breed" },
-  { key: "age",        label: "Age" },
+  { key: "petName", label: "Pet name" },
+  { key: "breed", label: "Breed" },
+  { key: "age", label: "Age" },
   { key: "clientName", label: "Owner name" },
-  { key: "lodging",    label: "Lodging" },
-  { key: "playgroup",  label: "Playgroup" },
+  { key: "lodging", label: "Lodging" },
+  { key: "playgroup", label: "Playgroup" },
 ];
 
 const COLLAR_FACILITY_TOGGLES: { key: keyof CollarFields; label: string }[] = [
-  { key: "ifFound",          label: "If-found banner" },
-  { key: "facilityName",     label: "Facility name" },
-  { key: "facilityPhone",    label: "Phone" },
-  { key: "facilityAddress",  label: "Address" },
+  { key: "ifFound", label: "If-found banner" },
+  { key: "facilityName", label: "Facility name" },
+  { key: "facilityPhone", label: "Phone" },
+  { key: "facilityAddress", label: "Address" },
 ];
 
 function ToggleChip({
@@ -800,13 +817,13 @@ function ToggleChip({
     <button
       onClick={onClick}
       data-on={on}
-      className="flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm transition-all data-[on=true]:border-primary data-[on=true]:bg-primary/5 data-[on=false]:border-border data-[on=false]:text-muted-foreground data-[on=false]:hover:bg-muted/40"
+      className="data-[on=true]:border-primary data-[on=true]:bg-primary/5 data-[on=false]:border-border data-[on=false]:text-muted-foreground data-[on=false]:hover:bg-muted/40 flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm transition-all"
     >
       <span
         data-on={on}
-        className="flex size-4 shrink-0 items-center justify-center rounded data-[on=true]:bg-primary data-[on=false]:bg-muted"
+        className="data-[on=true]:bg-primary data-[on=false]:bg-muted flex size-4 shrink-0 items-center justify-center rounded"
       >
-        {on && <Check className="size-3 text-primary-foreground" />}
+        {on && <Check className="text-primary-foreground size-3" />}
       </span>
       {label}
     </button>
@@ -827,7 +844,7 @@ function CollarFieldsPanel({
   return (
     <div className="space-y-4">
       <div>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-wide uppercase">
           Pet info
         </p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -843,7 +860,7 @@ function CollarFieldsPanel({
       </div>
 
       <div>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-wide uppercase">
           If found — facility contact
         </p>
         <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -937,8 +954,7 @@ export function PrintKennelCardsModal({
           <div
             key={guest.id}
             style={{
-              pageBreakAfter:
-                i < guestsToRender.length - 1 ? "always" : "auto",
+              pageBreakAfter: i < guestsToRender.length - 1 ? "always" : "auto",
             }}
           >
             {format === "kennel" ? (
@@ -997,7 +1013,7 @@ export function PrintKennelCardsModal({
                 <button
                   data-active={format === "kennel"}
                   onClick={() => setFormat("kennel")}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm transition-all data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                  className="data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5 flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm transition-all"
                 >
                   <CreditCard className="size-4" />
                   Boarding Sheet
@@ -1005,7 +1021,7 @@ export function PrintKennelCardsModal({
                 <button
                   data-active={format === "door"}
                   onClick={() => setFormat("door")}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm transition-all data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                  className="data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5 flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm transition-all"
                 >
                   <Tag className="size-4" />
                   Bin Label
@@ -1013,7 +1029,7 @@ export function PrintKennelCardsModal({
                 <button
                   data-active={format === "collar"}
                   onClick={() => setFormat("collar")}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm transition-all data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                  className="data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5 flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm transition-all"
                 >
                   <Dog className="size-4" />
                   Collar Label
@@ -1027,7 +1043,7 @@ export function PrintKennelCardsModal({
                 <button
                   data-active={colorMode === "color"}
                   onClick={() => setColorMode("color")}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm transition-all data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                  className="data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5 flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm transition-all"
                 >
                   <Palette className="size-4" />
                   Color
@@ -1035,7 +1051,7 @@ export function PrintKennelCardsModal({
                 <button
                   data-active={colorMode === "bw"}
                   onClick={() => setColorMode("bw")}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm transition-all data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                  className="data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5 flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm transition-all"
                 >
                   <Contrast className="size-4" />
                   B&W
@@ -1049,7 +1065,7 @@ export function PrintKennelCardsModal({
                 <button
                   data-active={scope === "all"}
                   onClick={() => setScope("all")}
-                  className="cursor-pointer rounded-lg border-2 px-3 py-2 text-sm transition-all data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                  className="data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5 cursor-pointer rounded-lg border-2 px-3 py-2 text-sm transition-all"
                 >
                   All ({guests.length})
                 </button>
@@ -1058,7 +1074,7 @@ export function PrintKennelCardsModal({
                     key={g.id}
                     data-active={scope === g.id}
                     onClick={() => setScope(g.id)}
-                    className="flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm transition-all data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
+                    className="data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5 flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm transition-all"
                   >
                     <PawPrint className="size-3.5" />
                     {g.petName}
@@ -1075,19 +1091,19 @@ export function PrintKennelCardsModal({
               className="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-sm font-medium"
             >
               <span className="flex items-center gap-2">
-                <Settings className="size-4 text-muted-foreground" />
+                <Settings className="text-muted-foreground size-4" />
                 {format === "collar"
                   ? "Fields to include"
                   : "Customize sections"}
               </span>
               {showCustomize ? (
-                <ChevronUp className="size-4 text-muted-foreground" />
+                <ChevronUp className="text-muted-foreground size-4" />
               ) : (
-                <ChevronDown className="size-4 text-muted-foreground" />
+                <ChevronDown className="text-muted-foreground size-4" />
               )}
             </button>
             {showCustomize && (
-              <div className="border-t px-4 pb-4 pt-3">
+              <div className="border-t px-4 pt-3 pb-4">
                 {format === "collar" ? (
                   <CollarFieldsPanel
                     fields={collarFields}
@@ -1118,10 +1134,10 @@ export function PrintKennelCardsModal({
                     <DoorCardTemplate guest={guest} options={options} />
                   ) : (
                     <CollarLabelTemplate
-                guest={guest}
-                fields={collarFields}
-                facility={facilityInfo}
-              />
+                      guest={guest}
+                      fields={collarFields}
+                      facility={facilityInfo}
+                    />
                   )}
                 </div>
               ))}

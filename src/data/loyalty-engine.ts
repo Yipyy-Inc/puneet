@@ -184,7 +184,8 @@ function fireWelcomeIfFirst(
   const tierName =
     tiers.find((t) => t.id === result.account.currentTierId)?.name ?? "valued";
   const client = getClientById(customerId);
-  const customTemplate = config.notificationSettings?.templates?.program_welcome;
+  const customTemplate =
+    config.notificationSettings?.templates?.program_welcome;
   const message = buildWelcomeMessage(
     {
       programName: config.programName ?? "our loyalty program",
@@ -239,7 +240,9 @@ function fireTierUpgradeEmail(
 ): void {
   const change = result.tierChange;
   if (change?.direction !== "upgrade" || !hadPriorTransactions) return;
-  if (!notificationChannels(config.notificationSettings, "tier_upgrade").email) {
+  if (
+    !notificationChannels(config.notificationSettings, "tier_upgrade").email
+  ) {
     return;
   }
 
@@ -282,7 +285,9 @@ function fireBadgeEarnedEmails(
   now: string,
 ): void {
   if (result.unlockedBadges.length === 0) return;
-  if (!notificationChannels(config.notificationSettings, "badge_unlocked").email) {
+  if (
+    !notificationChannels(config.notificationSettings, "badge_unlocked").email
+  ) {
     return;
   }
   const { facilityId, customerId } = result.account;

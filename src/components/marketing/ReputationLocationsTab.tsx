@@ -74,20 +74,34 @@ export function ReputationLocationsTab() {
         loc,
         metrics: LOCATION_METRICS[loc.id] ?? null,
       }))
-      .filter((r): r is { loc: typeof r.loc; metrics: NonNullable<typeof r.metrics> } => r.metrics !== null)
+      .filter(
+        (
+          r,
+        ): r is { loc: typeof r.loc; metrics: NonNullable<typeof r.metrics> } =>
+          r.metrics !== null,
+      )
       .sort((a, b) => b.metrics.avgRating - a.metrics.avgRating);
   }, [locations]);
 
   const networkAvg =
-    ranked.reduce((sum, r) => sum + r.metrics.avgRating * r.metrics.totalReviews, 0) /
+    ranked.reduce(
+      (sum, r) => sum + r.metrics.avgRating * r.metrics.totalReviews,
+      0,
+    ) /
     Math.max(
       ranked.reduce((sum, r) => sum + r.metrics.totalReviews, 0),
       1,
     );
 
-  const totalReviews = ranked.reduce((sum, r) => sum + r.metrics.totalReviews, 0);
+  const totalReviews = ranked.reduce(
+    (sum, r) => sum + r.metrics.totalReviews,
+    0,
+  );
   const totalFiveStar = ranked.reduce((sum, r) => sum + r.metrics.fiveStar, 0);
-  const totalFlagged = ranked.reduce((sum, r) => sum + r.metrics.flaggedNegative, 0);
+  const totalFlagged = ranked.reduce(
+    (sum, r) => sum + r.metrics.flaggedNegative,
+    0,
+  );
 
   if (!isMultiLocation) {
     return (
@@ -96,7 +110,8 @@ export function ReputationLocationsTab() {
           <MapPin className="mx-auto mb-3 size-10 opacity-30" />
           <p className="font-medium">Single location</p>
           <p className="text-sm">
-            Multi-location reputation comparison appears once you have 2+ branches.
+            Multi-location reputation comparison appears once you have 2+
+            branches.
           </p>
         </CardContent>
       </Card>
@@ -151,13 +166,14 @@ export function ReputationLocationsTab() {
               const m = row.metrics;
               const isTop = idx === 0;
               const isBottom = idx === ranked.length - 1 && ranked.length > 1;
-              const conversionRate = (m.requestsConverted / m.requestsSent) * 100;
+              const conversionRate =
+                (m.requestsConverted / m.requestsSent) * 100;
 
               return (
                 <div
                   key={row.loc.id}
                   className={cn(
-                    "flex flex-wrap items-center gap-4 px-5 py-4 transition-colors hover:bg-muted/30",
+                    "hover:bg-muted/30 flex flex-wrap items-center gap-4 px-5 py-4 transition-colors",
                     isTop && "bg-amber-50/40 dark:bg-amber-900/10",
                     isBottom && "bg-rose-50/40 dark:bg-rose-900/10",
                   )}
@@ -195,8 +211,9 @@ export function ReputationLocationsTab() {
                       )}
                     </div>
                     <p className="text-muted-foreground text-[11px]">
-                      {m.totalReviews} review{m.totalReviews === 1 ? "" : "s"} ·
-                      {" "}{m.requestsSent} requests sent · {conversionRate.toFixed(0)}% conversion
+                      {m.totalReviews} review{m.totalReviews === 1 ? "" : "s"} ·{" "}
+                      {m.requestsSent} requests sent ·{" "}
+                      {conversionRate.toFixed(0)}% conversion
                     </p>
                   </div>
 
@@ -232,7 +249,7 @@ export function ReputationLocationsTab() {
                               style={{ width: `${pct}%` }}
                             />
                           </div>
-                          <span className="text-muted-foreground tabular-nums w-6 text-right">
+                          <span className="text-muted-foreground w-6 text-right tabular-nums">
                             {s.count}
                           </span>
                         </div>
@@ -281,11 +298,16 @@ function SummaryTile({
   return (
     <Card>
       <CardContent className="flex items-center gap-3 py-4">
-        <div className={cn("flex size-10 items-center justify-center rounded-lg", accent)}>
+        <div
+          className={cn(
+            "flex size-10 items-center justify-center rounded-lg",
+            accent,
+          )}
+        >
           <Icon className="size-5" />
         </div>
         <div>
-          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+          <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
             {label}
           </p>
           <p className="text-xl font-bold tabular-nums">{value}</p>

@@ -24,14 +24,70 @@ interface MissedTaskRow {
 }
 
 const MISSED: MissedTaskRow[] = [
-  { id: "T-1", task: "Photo for report card", groomer: "Lucas Martin", groomerId: "staff-4", date: "May 18", appointment: "Daisy · Spaniel cut" },
-  { id: "T-2", task: "Photo for report card", groomer: "Sophie Côté", groomerId: "staff-3", date: "May 18", appointment: "Mango · Bath & brush" },
-  { id: "T-3", task: "Brush teeth", groomer: "Lucas Martin", groomerId: "staff-4", date: "May 17", appointment: "Otis · Senior groom" },
-  { id: "T-4", task: "Photo for report card", groomer: "Lucas Martin", groomerId: "staff-4", date: "May 17", appointment: "Pepper · Full" },
-  { id: "T-5", task: "Express anal glands", groomer: "Sophie Côté", groomerId: "staff-3", date: "May 16", appointment: "Hazel · Spa" },
-  { id: "T-6", task: "Photo for report card", groomer: "Sophie Côté", groomerId: "staff-3", date: "May 16", appointment: "Cooper · Full" },
-  { id: "T-7", task: "Photo for report card", groomer: "J-F Roy", groomerId: "staff-2", date: "May 15", appointment: "Bella · Bath & brush" },
-  { id: "T-8", task: "Trim sanitary area", groomer: "Lucas Martin", groomerId: "staff-4", date: "May 14", appointment: "Luna · Full" },
+  {
+    id: "T-1",
+    task: "Photo for report card",
+    groomer: "Lucas Martin",
+    groomerId: "staff-4",
+    date: "May 18",
+    appointment: "Daisy · Spaniel cut",
+  },
+  {
+    id: "T-2",
+    task: "Photo for report card",
+    groomer: "Sophie Côté",
+    groomerId: "staff-3",
+    date: "May 18",
+    appointment: "Mango · Bath & brush",
+  },
+  {
+    id: "T-3",
+    task: "Brush teeth",
+    groomer: "Lucas Martin",
+    groomerId: "staff-4",
+    date: "May 17",
+    appointment: "Otis · Senior groom",
+  },
+  {
+    id: "T-4",
+    task: "Photo for report card",
+    groomer: "Lucas Martin",
+    groomerId: "staff-4",
+    date: "May 17",
+    appointment: "Pepper · Full",
+  },
+  {
+    id: "T-5",
+    task: "Express anal glands",
+    groomer: "Sophie Côté",
+    groomerId: "staff-3",
+    date: "May 16",
+    appointment: "Hazel · Spa",
+  },
+  {
+    id: "T-6",
+    task: "Photo for report card",
+    groomer: "Sophie Côté",
+    groomerId: "staff-3",
+    date: "May 16",
+    appointment: "Cooper · Full",
+  },
+  {
+    id: "T-7",
+    task: "Photo for report card",
+    groomer: "J-F Roy",
+    groomerId: "staff-2",
+    date: "May 15",
+    appointment: "Bella · Bath & brush",
+  },
+  {
+    id: "T-8",
+    task: "Trim sanitary area",
+    groomer: "Lucas Martin",
+    groomerId: "staff-4",
+    date: "May 14",
+    appointment: "Luna · Full",
+  },
 ];
 
 const BY_TASK = MISSED.reduce<Record<string, number>>((acc, m) => {
@@ -51,7 +107,7 @@ export function MissedTasksReviewPanel({
   return (
     <div className="flex h-full flex-col gap-5 px-1">
       <div className="rounded-lg border bg-slate-50 p-3 text-sm">
-        <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+        <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs tracking-wide uppercase">
           <ClipboardX className="size-3.5" />
           Missed tasks · last 30 days
         </div>
@@ -62,7 +118,10 @@ export function MissedTasksReviewPanel({
               {Object.entries(BY_TASK)
                 .sort((a, b) => b[1] - a[1])
                 .map(([task, count]) => (
-                  <li key={task} className="flex items-center justify-between gap-1">
+                  <li
+                    key={task}
+                    className="flex items-center justify-between gap-1"
+                  >
                     <span className="truncate">{task}</span>
                     <Badge variant="outline">{count}</Badge>
                   </li>
@@ -75,7 +134,10 @@ export function MissedTasksReviewPanel({
               {Object.entries(BY_GROOMER)
                 .sort((a, b) => b[1] - a[1])
                 .map(([groomer, count]) => (
-                  <li key={groomer} className="flex items-center justify-between gap-1">
+                  <li
+                    key={groomer}
+                    className="flex items-center justify-between gap-1"
+                  >
                     <span className="truncate">{groomer}</span>
                     <Badge variant="outline">{count}</Badge>
                   </li>
@@ -104,7 +166,10 @@ export function MissedTasksReviewPanel({
                 · {t.date}
               </p>
             </div>
-            <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-900">
+            <Badge
+              variant="outline"
+              className="border-amber-300 bg-amber-50 text-amber-900"
+            >
               Missed
             </Badge>
           </li>

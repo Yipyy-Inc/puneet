@@ -59,10 +59,14 @@ function loadGroomingAddOns(): ServiceAddOn[] {
   if (typeof window === "undefined") return defaultServiceAddOns;
   try {
     const raw = localStorage.getItem("settings-service-addons");
-    const all = raw ? (JSON.parse(raw) as ServiceAddOn[]) : defaultServiceAddOns;
+    const all = raw
+      ? (JSON.parse(raw) as ServiceAddOn[])
+      : defaultServiceAddOns;
     return all.filter((a) => a.applicableServices.includes("grooming"));
   } catch {
-    return defaultServiceAddOns.filter((a) => a.applicableServices.includes("grooming"));
+    return defaultServiceAddOns.filter((a) =>
+      a.applicableServices.includes("grooming"),
+    );
   }
 }
 
@@ -169,11 +173,17 @@ function ServiceCard({
                 </Badge>
               )}
               {!pkg.isActive ? (
-                <Badge variant="secondary" className="text-[10px] bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-0">
+                <Badge
+                  variant="secondary"
+                  className="border-0 bg-slate-100 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                >
                   Draft
                 </Badge>
               ) : (
-                <Badge variant="secondary" className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0">
+                <Badge
+                  variant="secondary"
+                  className="border-0 bg-emerald-100 text-[10px] text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                >
                   Live
                 </Badge>
               )}
@@ -256,7 +266,10 @@ function ChargeEditorDialog({
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editing: ServiceCharge | null;
-  onSave: (form: Omit<ServiceCharge, "id">, editing: ServiceCharge | null) => void;
+  onSave: (
+    form: Omit<ServiceCharge, "id">,
+    editing: ServiceCharge | null,
+  ) => void;
 }) {
   const [form, setForm] = useState<Omit<ServiceCharge, "id">>(() =>
     editing
@@ -395,7 +408,9 @@ export function GroomingRates() {
     INITIAL_SERVICE_CHARGES,
   );
   const [chargeDialogOpen, setChargeDialogOpen] = useState(false);
-  const [editingCharge, setEditingCharge] = useState<ServiceCharge | null>(null);
+  const [editingCharge, setEditingCharge] = useState<ServiceCharge | null>(
+    null,
+  );
   const [deletingCharge, setDeletingCharge] = useState<ServiceCharge | null>(
     null,
   );
@@ -624,7 +639,9 @@ export function GroomingRates() {
                     <div className="flex shrink-0 items-center gap-3">
                       <div className="text-right">
                         <p className="text-sm font-semibold">
-                          {sc.type === "percent" ? `${sc.amount}%` : `$${sc.amount}`}
+                          {sc.type === "percent"
+                            ? `${sc.amount}%`
+                            : `$${sc.amount}`}
                         </p>
                         <p className="text-muted-foreground text-[10px]">
                           {SERVICE_CHARGE_TYPE_LABELS[sc.type]}

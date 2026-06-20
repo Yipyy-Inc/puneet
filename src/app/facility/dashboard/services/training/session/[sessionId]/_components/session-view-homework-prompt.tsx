@@ -222,7 +222,9 @@ export function SessionHomeworkPromptDialog({
     // and show the regular editable layout.
     setAutoLoaded(false);
     setReviewing(true);
-    toast.success(`Loaded "${template.name}" — ${template.items.length} item${template.items.length === 1 ? "" : "s"} pre-filled.`);
+    toast.success(
+      `Loaded "${template.name}" — ${template.items.length} item${template.items.length === 1 ? "" : "s"} pre-filled.`,
+    );
   }
 
   function handleSaveTemplate() {
@@ -333,8 +335,8 @@ export function SessionHomeworkPromptDialog({
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
             One or more exercises go out to every present student in{" "}
-            <span className="font-medium">{className}</span>. Owners see them
-            on their portal Homework tab. You can skip any student below.
+            <span className="font-medium">{className}</span>. Owners see them on
+            their portal Homework tab. You can skip any student below.
           </DialogDescription>
         </DialogHeader>
 
@@ -361,7 +363,7 @@ export function SessionHomeworkPromptDialog({
               </PopoverTrigger>
               <PopoverContent align="start" className="w-80 p-0">
                 <div className="border-b p-2.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <p className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
                     Saved templates · {className}
                   </p>
                   <p className="text-muted-foreground mt-0.5 text-[11px]">
@@ -438,17 +440,15 @@ export function SessionHomeworkPromptDialog({
           {autoLoaded && !reviewing && (
             <section className="rounded-xl border-2 border-emerald-300 bg-emerald-50/60 p-3 shadow-sm">
               <div className="flex items-start gap-2.5">
-                <div className="bg-emerald-600 text-white flex size-9 shrink-0 items-center justify-center rounded-xl">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
                   <Sparkles className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-emerald-900 text-[11px] font-bold uppercase tracking-wider">
+                  <p className="text-[11px] font-bold tracking-wider text-emerald-900 uppercase">
                     Template loaded · ready to send
                   </p>
-                  <p className="text-emerald-900 mt-0.5 text-[13px]/relaxed">
-                    <span className="font-semibold">
-                      {loadedTemplateName}
-                    </span>{" "}
+                  <p className="mt-0.5 text-[13px]/relaxed text-emerald-900">
+                    <span className="font-semibold">{loadedTemplateName}</span>{" "}
                     will assign{" "}
                     <span className="font-semibold">
                       {items.filter((it) => it.exerciseId).length} item
@@ -505,197 +505,201 @@ export function SessionHomeworkPromptDialog({
             </section>
           )}
           {(!autoLoaded || reviewing) && (
-          <>
-          <ol className="space-y-3">
-            {items.map((item, idx) => (
-              <li
-                key={item.localId}
-                className="rounded-xl border bg-slate-50/40 p-3 shadow-sm"
-              >
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    Item {idx + 1}
-                  </p>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeItem(item.localId)}
-                    disabled={items.length <= 1}
-                    className="size-7 text-rose-600 hover:bg-rose-50"
-                    title={
-                      items.length <= 1
-                        ? "Keep at least one item"
-                        : "Remove this item"
-                    }
+            <>
+              <ol className="space-y-3">
+                {items.map((item, idx) => (
+                  <li
+                    key={item.localId}
+                    className="rounded-xl border bg-slate-50/40 p-3 shadow-sm"
                   >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+                        Item {idx + 1}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeItem(item.localId)}
+                        disabled={items.length <= 1}
+                        className="size-7 text-rose-600 hover:bg-rose-50"
+                        title={
+                          items.length <= 1
+                            ? "Keep at least one item"
+                            : "Remove this item"
+                        }
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
 
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Exercise
-                    </Label>
-                    <ExercisePicker
-                      value={item.exerciseId}
-                      onSelect={(ex) =>
-                        patchItem(item.localId, {
-                          exerciseId: ex?.id ?? "",
-                          exerciseName: ex?.name ?? "",
-                        })
-                      }
-                      preferredDisciplineId={preferredDisciplineId}
-                      triggerClassName="h-11 text-sm"
-                      placeholder="Pick the exercise to practice…"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Frequency
-                    </Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {FREQUENCY_PRESETS.map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() =>
-                            patchItem(item.localId, { frequency: preset })
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+                          Exercise
+                        </Label>
+                        <ExercisePicker
+                          value={item.exerciseId}
+                          onSelect={(ex) =>
+                            patchItem(item.localId, {
+                              exerciseId: ex?.id ?? "",
+                              exerciseName: ex?.name ?? "",
+                            })
                           }
+                          preferredDisciplineId={preferredDisciplineId}
+                          triggerClassName="h-11 text-sm"
+                          placeholder="Pick the exercise to practice…"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+                          Frequency
+                        </Label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {FREQUENCY_PRESETS.map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() =>
+                                patchItem(item.localId, { frequency: preset })
+                              }
+                              className={cn(
+                                "inline-flex h-9 items-center rounded-full border px-3 text-[12.5px] font-medium transition-colors",
+                                item.frequency === preset
+                                  ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                              )}
+                            >
+                              {preset}
+                            </button>
+                          ))}
+                        </div>
+                        <Input
+                          value={item.frequency}
+                          onChange={(e) =>
+                            patchItem(item.localId, {
+                              frequency: e.target.value,
+                            })
+                          }
+                          placeholder="Or type a custom cadence…"
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+                          Instructions{" "}
+                          <span className="font-normal">(one per line)</span>
+                        </Label>
+                        <Textarea
+                          value={item.instructions}
+                          onChange={(e) =>
+                            patchItem(item.localId, {
+                              instructions: e.target.value,
+                            })
+                          }
+                          placeholder={`Start with a 30-second sit\nReward eye contact`}
+                          className="min-h-[72px] text-sm leading-relaxed"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+                            Video / resource links{" "}
+                            <span className="font-normal">(one per line)</span>
+                          </Label>
+                          <Textarea
+                            value={item.resources}
+                            onChange={(e) =>
+                              patchItem(item.localId, {
+                                resources: e.target.value,
+                              })
+                            }
+                            placeholder="https://…"
+                            className="min-h-[56px] text-[12.5px] leading-relaxed"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+                            Due in (days)
+                          </Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={30}
+                            value={item.dueDayOffset}
+                            onChange={(e) =>
+                              patchItem(item.localId, {
+                                dueDayOffset: Math.max(
+                                  1,
+                                  Math.min(30, Number(e.target.value) || 7),
+                                ),
+                              })
+                            }
+                            className="h-9 max-w-32"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addItem}
+                className="w-full gap-1.5"
+              >
+                <Plus className="size-4" />
+                Add another exercise
+              </Button>
+
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+                  Sends to {recipients.length} of {presentStudents.length}{" "}
+                  present student{presentStudents.length === 1 ? "" : "s"}
+                </Label>
+                <ul className="grid gap-1.5 sm:grid-cols-2">
+                  {presentStudents.map((student) => {
+                    const isSkipped = skipped.has(student.classEnrollmentId);
+                    const noSeries = !student.seriesEnrollment;
+                    return (
+                      <li key={student.classEnrollmentId}>
+                        <button
+                          type="button"
+                          onClick={() => toggleSkip(student.classEnrollmentId)}
+                          disabled={noSeries}
                           className={cn(
-                            "inline-flex h-9 items-center rounded-full border px-3 text-[12.5px] font-medium transition-colors",
-                            item.frequency === preset
-                              ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                            "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors",
+                            isSkipped || noSeries
+                              ? "border-slate-200 bg-slate-50 text-slate-400 line-through"
+                              : "border-indigo-200 bg-indigo-50/50 text-indigo-800",
                           )}
                         >
-                          {preset}
+                          <span className="truncate font-medium">
+                            {student.petName}
+                          </span>
+                          {noSeries ? (
+                            <span className="text-[10px] tracking-wide uppercase">
+                              No series
+                            </span>
+                          ) : isSkipped ? (
+                            <span className="text-[10px] tracking-wide uppercase">
+                              Skipped
+                            </span>
+                          ) : (
+                            <span className="text-[10px] tracking-wide uppercase">
+                              Will receive
+                            </span>
+                          )}
                         </button>
-                      ))}
-                    </div>
-                    <Input
-                      value={item.frequency}
-                      onChange={(e) =>
-                        patchItem(item.localId, { frequency: e.target.value })
-                      }
-                      placeholder="Or type a custom cadence…"
-                      className="h-9"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Instructions{" "}
-                      <span className="font-normal">(one per line)</span>
-                    </Label>
-                    <Textarea
-                      value={item.instructions}
-                      onChange={(e) =>
-                        patchItem(item.localId, {
-                          instructions: e.target.value,
-                        })
-                      }
-                      placeholder={`Start with a 30-second sit\nReward eye contact`}
-                      className="min-h-[72px] text-sm leading-relaxed"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                        Video / resource links{" "}
-                        <span className="font-normal">(one per line)</span>
-                      </Label>
-                      <Textarea
-                        value={item.resources}
-                        onChange={(e) =>
-                          patchItem(item.localId, { resources: e.target.value })
-                        }
-                        placeholder="https://…"
-                        className="min-h-[56px] text-[12.5px] leading-relaxed"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                        Due in (days)
-                      </Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={30}
-                        value={item.dueDayOffset}
-                        onChange={(e) =>
-                          patchItem(item.localId, {
-                            dueDayOffset: Math.max(
-                              1,
-                              Math.min(30, Number(e.target.value) || 7),
-                            ),
-                          })
-                        }
-                        className="h-9 max-w-32"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ol>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addItem}
-            className="w-full gap-1.5"
-          >
-            <Plus className="size-4" />
-            Add another exercise
-          </Button>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Sends to {recipients.length} of {presentStudents.length} present
-              student{presentStudents.length === 1 ? "" : "s"}
-            </Label>
-            <ul className="grid gap-1.5 sm:grid-cols-2">
-              {presentStudents.map((student) => {
-                const isSkipped = skipped.has(student.classEnrollmentId);
-                const noSeries = !student.seriesEnrollment;
-                return (
-                  <li key={student.classEnrollmentId}>
-                    <button
-                      type="button"
-                      onClick={() => toggleSkip(student.classEnrollmentId)}
-                      disabled={noSeries}
-                      className={cn(
-                        "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors",
-                        isSkipped || noSeries
-                          ? "border-slate-200 bg-slate-50 text-slate-400 line-through"
-                          : "border-indigo-200 bg-indigo-50/50 text-indigo-800",
-                      )}
-                    >
-                      <span className="truncate font-medium">
-                        {student.petName}
-                      </span>
-                      {noSeries ? (
-                        <span className="text-[10px] uppercase tracking-wide">
-                          No series
-                        </span>
-                      ) : isSkipped ? (
-                        <span className="text-[10px] uppercase tracking-wide">
-                          Skipped
-                        </span>
-                      ) : (
-                        <span className="text-[10px] uppercase tracking-wide">
-                          Will receive
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-          </>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </>
           )}
         </div>
 
@@ -704,7 +708,7 @@ export function SessionHomeworkPromptDialog({
             type="button"
             variant="ghost"
             onClick={handleSkipAll}
-            className="h-11 w-full text-muted-foreground sm:w-auto"
+            className="text-muted-foreground h-11 w-full sm:w-auto"
           >
             Skip for now
           </Button>
@@ -745,7 +749,8 @@ export function SessionHomeworkPromptDialog({
                 />
                 {sessionNumber !== undefined && (
                   <p className="text-muted-foreground text-[11px]">
-                    Tagged as <span className="font-medium">Week {sessionNumber}</span>{" "}
+                    Tagged as{" "}
+                    <span className="font-medium">Week {sessionNumber}</span>{" "}
                     automatically — future Week {sessionNumber} sessions will
                     auto-load this template.
                   </p>

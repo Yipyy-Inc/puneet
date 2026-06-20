@@ -169,7 +169,7 @@ export const ServiceAreaMap = forwardRef<
   return (
     <div
       className={cn(
-        "relative h-full w-full overflow-hidden rounded-lg border bg-muted",
+        "bg-muted relative h-full w-full overflow-hidden rounded-lg border",
         className,
       )}
     >
@@ -280,23 +280,21 @@ export const ServiceAreaMap = forwardRef<
 
       {/* Hint chip — only when drawing and no vertex yet */}
       {drawing && drawingPolygon.length === 0 && (
-        <div className="pointer-events-none absolute left-1/2 top-3 z-[400] -translate-x-1/2 rounded-full bg-slate-900/85 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
+        <div className="pointer-events-none absolute top-3 left-1/2 z-[400] -translate-x-1/2 rounded-full bg-slate-900/85 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
           Click on the map to drop the first point
         </div>
       )}
       {drawing && drawingPolygon.length > 0 && drawingPolygon.length < 3 && (
-        <div className="pointer-events-none absolute left-1/2 top-3 z-[400] -translate-x-1/2 rounded-full bg-slate-900/85 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
+        <div className="pointer-events-none absolute top-3 left-1/2 z-[400] -translate-x-1/2 rounded-full bg-slate-900/85 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
           Add at least {3 - drawingPolygon.length} more point
           {3 - drawingPolygon.length === 1 ? "" : "s"} to close the shape
         </div>
       )}
-      {drawing &&
-        drawingPolygon.length >= 3 &&
-        firstVertex && (
-          <div className="pointer-events-none absolute left-1/2 top-3 z-[400] -translate-x-1/2 rounded-full bg-emerald-600/95 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
-            Click the green point to close the shape
-          </div>
-        )}
+      {drawing && drawingPolygon.length >= 3 && firstVertex && (
+        <div className="pointer-events-none absolute top-3 left-1/2 z-[400] -translate-x-1/2 rounded-full bg-emerald-600/95 px-3 py-1.5 text-xs font-medium text-white shadow-lg">
+          Click the green point to close the shape
+        </div>
+      )}
     </div>
   );
 });

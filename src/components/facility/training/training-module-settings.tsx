@@ -81,10 +81,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { TrainingPackage } from "@/types/training";
-import {
-  MILESTONE_LABELS,
-  MILESTONE_ORDER,
-} from "@/lib/pet-milestones";
+import { MILESTONE_LABELS, MILESTONE_ORDER } from "@/lib/pet-milestones";
 import { MILESTONE_VISUAL } from "@/components/training/milestone-visuals";
 
 // Module-level seed for newly-created location ids — keeps writes pure for
@@ -124,14 +121,14 @@ export function TrainingModuleSettings() {
   const [pathwaysSaved, setPathwaysSaved] =
     useState<TrainingPathway[]>(persistedPathways);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<TrainingLocation | null>(
-    null,
-  );
+  const [editingLocation, setEditingLocation] =
+    useState<TrainingLocation | null>(null);
   const [deletingLocation, setDeletingLocation] =
     useState<TrainingLocation | null>(null);
   const [pathwayDialogOpen, setPathwayDialogOpen] = useState(false);
-  const [editingPathway, setEditingPathway] =
-    useState<TrainingPathway | null>(null);
+  const [editingPathway, setEditingPathway] = useState<TrainingPathway | null>(
+    null,
+  );
   const [deletingPathway, setDeletingPathway] =
     useState<TrainingPathway | null>(null);
 
@@ -163,10 +160,7 @@ export function TrainingModuleSettings() {
     setPathwaysSaved(pathwaysDraft);
     // Write through to the shared cache so consumers (e.g. customer Homework
     // tab) react immediately. Persistence to a real backend lands later.
-    queryClient.setQueryData(
-      trainingQueries.moduleSettings().queryKey,
-      draft,
-    );
+    queryClient.setQueryData(trainingQueries.moduleSettings().queryKey, draft);
     queryClient.setQueryData(
       trainingQueries.allTrainingPathways().queryKey,
       pathwaysDraft,
@@ -256,8 +250,8 @@ export function TrainingModuleSettings() {
               Training module
             </CardTitle>
             <p className="text-muted-foreground text-sm">
-              Master switches for the whole module. Turn off to hide
-              training everywhere — staff and customer portal both.
+              Master switches for the whole module. Turn off to hide training
+              everywhere — staff and customer portal both.
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -286,8 +280,8 @@ export function TrainingModuleSettings() {
                 Training locations
               </CardTitle>
               <p className="text-muted-foreground mt-1 text-sm">
-                Physical rooms and outdoor areas where training happens. Used
-                as the picker on the Series Create dialog.
+                Physical rooms and outdoor areas where training happens. Used as
+                the picker on the Series Create dialog.
               </p>
             </div>
             <Button onClick={openAddLocation} size="sm">
@@ -298,8 +292,7 @@ export function TrainingModuleSettings() {
           <CardContent>
             {draft.locations.length === 0 ? (
               <div className="text-muted-foreground rounded-xl border border-dashed py-8 text-center text-sm">
-                No training locations yet — add one to start scheduling
-                series.
+                No training locations yet — add one to start scheduling series.
               </div>
             ) : (
               <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
@@ -307,7 +300,7 @@ export function TrainingModuleSettings() {
                   <li
                     key={location.id}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm",
+                      "bg-card flex items-center gap-3 rounded-xl border p-3 shadow-sm",
                       !location.isActive && "opacity-70",
                     )}
                   >
@@ -405,8 +398,8 @@ export function TrainingModuleSettings() {
           <CardContent>
             {pathwaysDraft.length === 0 ? (
               <div className="text-muted-foreground rounded-xl border border-dashed py-8 text-center text-sm">
-                No pathways yet — create one to give clients a visual map of
-                the training journey.
+                No pathways yet — create one to give clients a visual map of the
+                training journey.
               </div>
             ) : (
               <ul className="space-y-2">
@@ -432,8 +425,8 @@ export function TrainingModuleSettings() {
               Session defaults
             </CardTitle>
             <p className="text-muted-foreground text-sm">
-              Prefilled values when staff create a new series. They can
-              still override per-series.
+              Prefilled values when staff create a new series. They can still
+              override per-series.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -465,7 +458,10 @@ export function TrainingModuleSettings() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm font-semibold" htmlFor="default-class-size">
+              <Label
+                className="text-sm font-semibold"
+                htmlFor="default-class-size"
+              >
                 Default group class size
               </Label>
               <Input
@@ -497,8 +493,8 @@ export function TrainingModuleSettings() {
               Enrollment
             </CardTitle>
             <p className="text-muted-foreground text-sm">
-              How customers join. Each series can still override these via
-              its own `enrollmentRules`.
+              How customers join. Each series can still override these via its
+              own `enrollmentRules`.
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -523,7 +519,10 @@ export function TrainingModuleSettings() {
               }
             />
             <div className="space-y-1.5 pt-2">
-              <Label className="text-sm font-semibold" htmlFor="default-message">
+              <Label
+                className="text-sm font-semibold"
+                htmlFor="default-message"
+              >
                 Default enrollment message
               </Label>
               <Textarea
@@ -551,9 +550,9 @@ export function TrainingModuleSettings() {
               Waiver requirements
             </CardTitle>
             <p className="text-muted-foreground text-sm">
-              Toggle which waivers customers must sign before enrolling in
-              any training class. Each card flips between Required and
-              Optional independently.
+              Toggle which waivers customers must sign before enrolling in any
+              training class. Each card flips between Required and Optional
+              independently.
             </p>
           </CardHeader>
           <CardContent>
@@ -568,7 +567,7 @@ export function TrainingModuleSettings() {
                   <li
                     key={waiver.id}
                     className={cn(
-                      "rounded-xl border bg-card p-3 shadow-sm",
+                      "bg-card rounded-xl border p-3 shadow-sm",
                       required && "border-rose-200/70 bg-rose-50/30",
                     )}
                   >
@@ -607,7 +606,9 @@ export function TrainingModuleSettings() {
                         checked={required}
                         onCheckedChange={(next) =>
                           setDraft((prev) => {
-                            const overrides = { ...prev.waiverRequiredOverrides };
+                            const overrides = {
+                              ...prev.waiverRequiredOverrides,
+                            };
                             if (next === waiver.required) {
                               // Back to catalog default — clear the override.
                               delete overrides[waiver.id];
@@ -651,9 +652,7 @@ export function TrainingModuleSettings() {
               }
             />
             <div className="space-y-1.5">
-              <Label className="text-sm font-semibold">
-                Send to owner
-              </Label>
+              <Label className="text-sm font-semibold">Send to owner</Label>
               <RadioGroup
                 value={draft.reportCardSendMode}
                 onValueChange={(v) =>
@@ -661,34 +660,36 @@ export function TrainingModuleSettings() {
                 }
                 className="grid grid-cols-1 gap-2 md:grid-cols-3"
               >
-                {(Object.keys(REPORT_CARD_SEND_MODE_LABELS) as ReportCardSendMode[]).map(
-                  (mode) => (
-                    <label
-                      key={mode}
-                      htmlFor={`mode-${mode}`}
-                      className={cn(
-                        "flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 transition-colors",
-                        draft.reportCardSendMode === mode
-                          ? "border-slate-900 bg-slate-50"
-                          : "hover:bg-slate-50/60",
-                      )}
-                    >
-                      <RadioGroupItem
-                        value={mode}
-                        id={`mode-${mode}`}
-                        className="mt-0.5"
-                      />
-                      <div>
-                        <p className="text-sm font-medium">
-                          {REPORT_CARD_SEND_MODE_LABELS[mode]}
-                        </p>
-                        <p className="text-muted-foreground text-[11px]/relaxed">
-                          {REPORT_CARD_SEND_MODE_HELP[mode]}
-                        </p>
-                      </div>
-                    </label>
-                  ),
-                )}
+                {(
+                  Object.keys(
+                    REPORT_CARD_SEND_MODE_LABELS,
+                  ) as ReportCardSendMode[]
+                ).map((mode) => (
+                  <label
+                    key={mode}
+                    htmlFor={`mode-${mode}`}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 transition-colors",
+                      draft.reportCardSendMode === mode
+                        ? "border-slate-900 bg-slate-50"
+                        : "hover:bg-slate-50/60",
+                    )}
+                  >
+                    <RadioGroupItem
+                      value={mode}
+                      id={`mode-${mode}`}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="text-sm font-medium">
+                        {REPORT_CARD_SEND_MODE_LABELS[mode]}
+                      </p>
+                      <p className="text-muted-foreground text-[11px]/relaxed">
+                        {REPORT_CARD_SEND_MODE_HELP[mode]}
+                      </p>
+                    </div>
+                  </label>
+                ))}
               </RadioGroup>
             </div>
           </CardContent>
@@ -727,8 +728,8 @@ export function TrainingModuleSettings() {
             </CardTitle>
             <p className="text-muted-foreground text-sm">
               If a graduating client hasn&apos;t enrolled in the recommended
-              next program after the configured delay, the system sends them
-              an automated nudge with the enrollment link.
+              next program after the configured delay, the system sends them an
+              automated nudge with the enrollment link.
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -737,9 +738,7 @@ export function TrainingModuleSettings() {
               description="When off, no follow-up fires regardless of timing."
               icon={Bell}
               checked={draft.graduationFollowUpEnabled}
-              onCheckedChange={(v) =>
-                update("graduationFollowUpEnabled", v)
-              }
+              onCheckedChange={(v) => update("graduationFollowUpEnabled", v)}
             />
             <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
               <Label
@@ -789,8 +788,10 @@ export function TrainingModuleSettings() {
                 className="min-h-[60px] text-sm leading-relaxed"
               />
               <p className="text-muted-foreground text-[11px]">
-                Use <code className="rounded bg-slate-100 px-1">{`{petName}`}</code>{" "}
-                and <code className="rounded bg-slate-100 px-1">{`{programName}`}</code>{" "}
+                Use{" "}
+                <code className="rounded bg-slate-100 px-1">{`{petName}`}</code>{" "}
+                and{" "}
+                <code className="rounded bg-slate-100 px-1">{`{programName}`}</code>{" "}
                 — substituted at send time.
               </p>
             </div>
@@ -822,7 +823,7 @@ export function TrainingModuleSettings() {
                 return (
                   <li
                     key={kind}
-                    className="flex items-start justify-between gap-3 rounded-lg border bg-card px-3 py-2"
+                    className="bg-card flex items-start justify-between gap-3 rounded-lg border px-3 py-2"
                   >
                     <div className="flex min-w-0 flex-1 items-start gap-2.5">
                       <div
@@ -895,14 +896,17 @@ export function TrainingModuleSettings() {
                   onChange={(e) => {
                     const next = Number(e.target.value);
                     if (Number.isFinite(next) && next >= 1) {
-                      update("waitlistHoldHours", Math.min(168, Math.round(next)));
+                      update(
+                        "waitlistHoldHours",
+                        Math.min(168, Math.round(next)),
+                      );
                     }
                   }}
                   className="h-9 w-24"
                 />
                 <span className="text-muted-foreground text-sm">
                   hours · reminder fires at{" "}
-                  <span className="font-semibold tabular-nums text-slate-700">
+                  <span className="font-semibold text-slate-700 tabular-nums">
                     {Math.max(1, Math.round(draft.waitlistHoldHours / 2))}h
                   </span>
                 </span>
@@ -919,8 +923,8 @@ export function TrainingModuleSettings() {
               Notifications
             </CardTitle>
             <p className="text-muted-foreground text-sm">
-              Customer-facing reminders about sessions, homework, and
-              report cards.
+              Customer-facing reminders about sessions, homework, and report
+              cards.
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -941,10 +945,7 @@ export function TrainingModuleSettings() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label
-                className="text-sm font-semibold"
-                htmlFor="reminder-lead"
-              >
+              <Label className="text-sm font-semibold" htmlFor="reminder-lead">
                 Reminder lead time
               </Label>
               <div className="flex items-center gap-2">
@@ -968,7 +969,7 @@ export function TrainingModuleSettings() {
               </div>
             </div>
             <div className="space-y-2 border-t pt-3">
-              <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+              <p className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
                 Event triggers
               </p>
               <ToggleRow
@@ -1078,9 +1079,9 @@ export function TrainingModuleSettings() {
               Delete &quot;{deletingLocation?.name}&quot;?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Series currently scheduled at this location will keep their
-              text label, but staff won&apos;t be able to pick it again on
-              new series.
+              Series currently scheduled at this location will keep their text
+              label, but staff won&apos;t be able to pick it again on new
+              series.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1189,9 +1190,7 @@ function LocationDialog({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-sm font-semibold">
-              Capacity (optional)
-            </Label>
+            <Label className="text-sm font-semibold">Capacity (optional)</Label>
             <Input
               type="number"
               min={1}
@@ -1202,16 +1201,15 @@ function LocationDialog({
               className="max-w-32"
             />
             <p className="text-muted-foreground text-[11px]">
-              Surfaces as &quot;max N dogs&quot; on the series creation
-              picker.
+              Surfaces as &quot;max N dogs&quot; on the series creation picker.
             </p>
           </div>
           <div className="flex items-center justify-between rounded-lg border px-3 py-2">
             <div>
               <p className="text-sm font-medium">Active</p>
               <p className="text-muted-foreground text-xs">
-                Hidden locations don&apos;t appear in the series-create
-                picker but stay in this list for history.
+                Hidden locations don&apos;t appear in the series-create picker
+                but stay in this list for history.
               </p>
             </div>
             <Switch checked={isActive} onCheckedChange={setIsActive} />
@@ -1288,7 +1286,7 @@ function PathwayRow({ pathway, programs, onEdit, onDelete }: PathwayRowProps) {
   return (
     <li
       className={cn(
-        "rounded-xl border bg-card p-3 shadow-sm",
+        "bg-card rounded-xl border p-3 shadow-sm",
         !pathway.isActive && "opacity-70",
       )}
     >
@@ -1486,8 +1484,8 @@ function PathwayDialog({
             {editing ? "Edit pathway" : "Create pathway"}
           </DialogTitle>
           <DialogDescription>
-            Arrange courses in the order a dog typically progresses. Clients
-            see this on their portal as the journey map.
+            Arrange courses in the order a dog typically progresses. Clients see
+            this on their portal as the journey map.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
@@ -1614,7 +1612,7 @@ function PathwayDialog({
 
             {availablePrograms.length > 0 && (
               <div className="space-y-1.5">
-                <Label className="text-muted-foreground text-[11px] font-medium uppercase tracking-wider">
+                <Label className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
                   Add a program
                 </Label>
                 <Select onValueChange={addStep} value="">

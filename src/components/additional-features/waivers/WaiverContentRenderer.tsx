@@ -30,7 +30,10 @@ const COLOR_CLASS: Record<WaiverBlockColor, string> = {
 
 const TOKEN_PATTERN = /\{\{\s*([a-zA-Z_]+)\s*\}\}/g;
 
-export function applyMergeTokens(text: string, ctx: WaiverMergeContext): string {
+export function applyMergeTokens(
+  text: string,
+  ctx: WaiverMergeContext,
+): string {
   const date =
     ctx.date ??
     new Date().toLocaleDateString(undefined, {
@@ -58,10 +61,7 @@ function renderText(text: string, ctx: WaiverMergeContext) {
   return resolved;
 }
 
-function blockClasses(
-  block: WaiverBlock,
-  base: string,
-): string {
+function blockClasses(block: WaiverBlock, base: string): string {
   return cn(
     base,
     block.bold && "font-semibold",
@@ -95,10 +95,7 @@ export function WaiverContentRenderer({
                 className="ml-5 list-disc space-y-1.5 marker:text-slate-400"
               >
                 {group.map((b) => (
-                  <li
-                    key={b.id}
-                    className={blockClasses(b, "text-sm/relaxed")}
-                  >
+                  <li key={b.id} className={blockClasses(b, "text-sm/relaxed")}>
                     {renderText(b.text, context)}
                   </li>
                 ))}

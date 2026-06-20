@@ -60,7 +60,10 @@ const CATEGORIES: SavedReplyCategory[] = [
   "general",
 ];
 
-const DEFAULT_HOURS: Record<string, { open: string; close: string; closed: boolean }> = {
+const DEFAULT_HOURS: Record<
+  string,
+  { open: string; close: string; closed: boolean }
+> = {
   Monday: { open: "07:00", close: "19:00", closed: false },
   Tuesday: { open: "07:00", close: "19:00", closed: false },
   Wednesday: { open: "07:00", close: "19:00", closed: false },
@@ -122,7 +125,10 @@ function SavedReplyEditor({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Category</Label>
-          <Select value={category} onValueChange={(v) => setCategory(v as SavedReplyCategory)}>
+          <Select
+            value={category}
+            onValueChange={(v) => setCategory(v as SavedReplyCategory)}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -147,7 +153,10 @@ function SavedReplyEditor({
           placeholder="boarding-rates"
         />
         <p className="text-[10px] text-slate-400">
-          Staff types <code className="rounded bg-slate-100 px-1">/{shortcut || "shortcut"}</code>{" "}
+          Staff types{" "}
+          <code className="rounded bg-slate-100 px-1">
+            /{shortcut || "shortcut"}
+          </code>{" "}
           to insert this reply.
         </p>
       </div>
@@ -162,7 +171,8 @@ function SavedReplyEditor({
           placeholder="Hi {ClientName}, …"
         />
         <p className="text-[10px] text-slate-400">
-          Use <code className="rounded bg-slate-100 px-1">{`{ClientName}`}</code>{" "}
+          Use{" "}
+          <code className="rounded bg-slate-100 px-1">{`{ClientName}`}</code>{" "}
           and <code className="rounded bg-slate-100 px-1">{`{PetName}`}</code>{" "}
           to personalize.
         </p>
@@ -226,9 +236,9 @@ export function MessagingSettingsView() {
   // Saved replies UI state
   const [editingReply, setEditingReply] = useState<SavedReply | null>(null);
   const [showEditor, setShowEditor] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState<SavedReplyCategory | "all">(
-    "all",
-  );
+  const [categoryFilter, setCategoryFilter] = useState<
+    SavedReplyCategory | "all"
+  >("all");
 
   const filteredReplies =
     categoryFilter === "all"
@@ -245,10 +255,12 @@ export function MessagingSettingsView() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900">Messaging Settings</h2>
+        <h2 className="text-2xl font-bold text-slate-900">
+          Messaging Settings
+        </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Business identity, auto-reply, opt-out handling, and saved replies — all
-          in one place.
+          Business identity, auto-reply, opt-out handling, and saved replies —
+          all in one place.
         </p>
       </div>
 
@@ -327,8 +339,8 @@ export function MessagingSettingsView() {
             />
             <p className="text-[10px] text-slate-400">
               {autoReplyMessage.length} chars ·{" "}
-              {Math.ceil(autoReplyMessage.length / 160) || 0} SMS segments · sends
-              once per client per closed period
+              {Math.ceil(autoReplyMessage.length / 160) || 0} SMS segments ·
+              sends once per client per closed period
             </p>
           </div>
           <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
@@ -370,22 +382,30 @@ export function MessagingSettingsView() {
                     cfg.closed && "bg-slate-50",
                   )}
                 >
-                  <span className="w-28 font-semibold text-slate-700">{day}</span>
+                  <span className="w-28 font-semibold text-slate-700">
+                    {day}
+                  </span>
                   {cfg.closed ? (
-                    <span className="flex-1 text-xs text-slate-400">Closed</span>
+                    <span className="flex-1 text-xs text-slate-400">
+                      Closed
+                    </span>
                   ) : (
                     <>
                       <Input
                         type="time"
                         value={cfg.open}
-                        onChange={(e) => updateHours(day, { open: e.target.value })}
+                        onChange={(e) =>
+                          updateHours(day, { open: e.target.value })
+                        }
                         className="h-8 w-28 text-xs"
                       />
                       <span className="text-slate-400">–</span>
                       <Input
                         type="time"
                         value={cfg.close}
-                        onChange={(e) => updateHours(day, { close: e.target.value })}
+                        onChange={(e) =>
+                          updateHours(day, { close: e.target.value })
+                        }
                         className="h-8 w-28 text-xs"
                       />
                     </>
@@ -396,7 +416,9 @@ export function MessagingSettingsView() {
                     </span>
                     <Switch
                       checked={!cfg.closed}
-                      onCheckedChange={(checked) => updateHours(day, { closed: !checked })}
+                      onCheckedChange={(checked) =>
+                        updateHours(day, { closed: !checked })
+                      }
                     />
                   </div>
                 </div>
@@ -429,12 +451,13 @@ export function MessagingSettingsView() {
         </CardHeader>
         <CardContent>
           <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-700">
-            Tip: staff type <code className="rounded bg-blue-100 px-1 font-semibold">/</code>{" "}
-            in the compose box to bring up this menu instantly. They can also
+            Tip: staff type{" "}
+            <code className="rounded bg-blue-100 px-1 font-semibold">/</code> in
+            the compose box to bring up this menu instantly. They can also
             &quot;Save as reply&quot; from any message they&#39;ve drafted.
           </div>
 
-          <div className="mb-3 flex gap-1.5 flex-wrap">
+          <div className="mb-3 flex flex-wrap gap-1.5">
             <button
               type="button"
               onClick={() => setCategoryFilter("all")}
@@ -448,7 +471,9 @@ export function MessagingSettingsView() {
               All ({savedRepliesCtx.replies.length})
             </button>
             {CATEGORIES.map((c) => {
-              const count = savedRepliesCtx.replies.filter((r) => r.category === c).length;
+              const count = savedRepliesCtx.replies.filter(
+                (r) => r.category === c,
+              ).length;
               return (
                 <button
                   key={c}
@@ -478,7 +503,7 @@ export function MessagingSettingsView() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={cn(
-                          "rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
+                          "rounded-full border px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase",
                           SAVED_REPLY_CATEGORY_COLORS[reply.category],
                         )}
                       >
@@ -601,7 +626,7 @@ export function MessagingSettingsView() {
               {STOP_KEYWORDS.map((kw) => (
                 <span
                   key={kw}
-                  className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-mono font-semibold text-slate-600"
+                  className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] font-semibold text-slate-600"
                 >
                   {kw}
                 </span>
@@ -691,8 +716,8 @@ export function MessagingSettingsView() {
         </CardHeader>
         <CardContent className="space-y-2 text-xs text-slate-600">
           <p>
-            <strong>Auto-reload</strong> will purchase 500 credits ($20) when your
-            balance drops below 100. Toggle this in Billing.
+            <strong>Auto-reload</strong> will purchase 500 credits ($20) when
+            your balance drops below 100. Toggle this in Billing.
           </p>
           <p>
             <strong>Send failures</strong> are surfaced as red badges on the

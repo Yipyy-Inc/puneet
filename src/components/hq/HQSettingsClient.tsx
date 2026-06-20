@@ -67,12 +67,19 @@ function ToggleSetting({
   return (
     <div className="flex items-start justify-between gap-4 py-4">
       <div className="flex items-start gap-3">
-        <div className={cn("mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg", s.bgSoft)}>
+        <div
+          className={cn(
+            "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
+            s.bgSoft,
+          )}
+        >
           <Icon className={cn("size-4", s.text)} />
         </div>
         <div>
           <p className="text-sm font-semibold">{label}</p>
-          <p className="text-muted-foreground mt-0.5 text-xs/relaxed">{description}</p>
+          <p className="text-muted-foreground mt-0.5 text-xs/relaxed">
+            {description}
+          </p>
         </div>
       </div>
       <button
@@ -117,12 +124,19 @@ function ScopeSetting({
   return (
     <div className="flex items-start justify-between gap-4 py-4">
       <div className="flex items-start gap-3">
-        <div className={cn("mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg", s.bgSoft)}>
+        <div
+          className={cn(
+            "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
+            s.bgSoft,
+          )}
+        >
           <Icon className={cn("size-4", s.text)} />
         </div>
         <div>
           <p className="text-sm font-semibold">{label}</p>
-          <p className="text-muted-foreground mt-0.5 text-xs/relaxed">{description}</p>
+          <p className="text-muted-foreground mt-0.5 text-xs/relaxed">
+            {description}
+          </p>
         </div>
       </div>
       <div className="bg-muted/40 flex shrink-0 gap-1 rounded-lg p-0.5">
@@ -172,7 +186,9 @@ function ChoiceCard({
         <div
           className={cn(
             "flex size-8 items-center justify-center rounded-lg transition-colors",
-            active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+            active
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground",
           )}
         >
           <Icon className="size-4" />
@@ -184,12 +200,17 @@ function ChoiceCard({
         )}
       </div>
       <span className="text-sm font-semibold">{title}</span>
-      <span className="text-muted-foreground text-xs/relaxed">{description}</span>
+      <span className="text-muted-foreground text-xs/relaxed">
+        {description}
+      </span>
     </button>
   );
 }
 
-export function HQSettingsClient({ settings, locations: initialLocations }: Props) {
+export function HQSettingsClient({
+  settings,
+  locations: initialLocations,
+}: Props) {
   const [s, setS] = useState(settings);
   const [dirty, setDirty] = useState(false);
   const [locations, setLocations] = useState(initialLocations);
@@ -231,7 +252,10 @@ export function HQSettingsClient({ settings, locations: initialLocations }: Prop
           </Link>
           <div>
             <div className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium">
-              <Link href="/facility/hq/overview" className="hover:text-foreground transition-colors">
+              <Link
+                href="/facility/hq/overview"
+                className="hover:text-foreground transition-colors"
+              >
                 HQ
               </Link>
               <ChevronRight className="size-3" />
@@ -265,7 +289,9 @@ export function HQSettingsClient({ settings, locations: initialLocations }: Prop
                 <Building2 className="size-4" />
                 Active Locations
               </CardTitle>
-              <CardDescription>{locations.length} branches in this network</CardDescription>
+              <CardDescription>
+                {locations.length} branches in this network
+              </CardDescription>
             </div>
             <Button
               variant="outline"
@@ -301,7 +327,9 @@ export function HQSettingsClient({ settings, locations: initialLocations }: Prop
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <p className="truncate text-sm font-semibold">{loc.name}</p>
+                      <p className="truncate text-sm font-semibold">
+                        {loc.name}
+                      </p>
                       {loc.isPrimary && (
                         <span className="rounded-sm bg-sky-100 px-1 py-px text-[9px] font-bold text-sky-700 dark:bg-sky-950 dark:text-sky-300">
                           Primary
@@ -334,7 +362,10 @@ export function HQSettingsClient({ settings, locations: initialLocations }: Prop
                   {loc.services.map((svc) => (
                     <span
                       key={svc}
-                      className={cn("rounded-md px-1.5 py-0.5 text-[10px] capitalize", ls.badge)}
+                      className={cn(
+                        "rounded-md px-1.5 py-0.5 text-[10px] capitalize",
+                        ls.badge,
+                      )}
                     >
                       {svc}
                     </span>
@@ -353,7 +384,9 @@ export function HQSettingsClient({ settings, locations: initialLocations }: Prop
             <Shield className="size-4" />
             Data Sharing
           </CardTitle>
-          <CardDescription>Control what data is shared across all locations</CardDescription>
+          <CardDescription>
+            Control what data is shared across all locations
+          </CardDescription>
         </CardHeader>
         <CardContent className="divide-y">
           <ToggleSetting
@@ -381,7 +414,9 @@ export function HQSettingsClient({ settings, locations: initialLocations }: Prop
               { value: "global", label: "Global" },
               { value: "per_location", label: "Per location" },
             ]}
-            onChange={(v) => update({ agreementsScope: v as typeof s.agreementsScope })}
+            onChange={(v) =>
+              update({ agreementsScope: v as typeof s.agreementsScope })
+            }
             tone="emerald"
           />
           <ScopeSetting
@@ -405,7 +440,9 @@ export function HQSettingsClient({ settings, locations: initialLocations }: Prop
               { value: "global", label: "Global" },
               { value: "per_location", label: "Per location" },
             ]}
-            onChange={(v) => update({ paymentMethodsScope: v as typeof s.paymentMethodsScope })}
+            onChange={(v) =>
+              update({ paymentMethodsScope: v as typeof s.paymentMethodsScope })
+            }
             tone="rose"
           />
           <ScopeSetting
@@ -417,7 +454,9 @@ export function HQSettingsClient({ settings, locations: initialLocations }: Prop
               { value: "global", label: "Shared" },
               { value: "per_location", label: "Private" },
             ]}
-            onChange={(v) => update({ internalNotesScope: v as typeof s.internalNotesScope })}
+            onChange={(v) =>
+              update({ internalNotesScope: v as typeof s.internalNotesScope })
+            }
             tone="sky"
           />
         </CardContent>
@@ -430,7 +469,9 @@ export function HQSettingsClient({ settings, locations: initialLocations }: Prop
             <DollarSign className="size-4" />
             Pricing Model
           </CardTitle>
-          <CardDescription>How service pricing is managed across your locations</CardDescription>
+          <CardDescription>
+            How service pricing is managed across your locations
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -459,7 +500,9 @@ export function HQSettingsClient({ settings, locations: initialLocations }: Prop
             <ArrowLeftRight className="size-4" />
             Booking Transfer Policy
           </CardTitle>
-          <CardDescription>Rules for moving bookings between locations</CardDescription>
+          <CardDescription>
+            Rules for moving bookings between locations
+          </CardDescription>
         </CardHeader>
         <CardContent className="divide-y">
           <ToggleSetting
@@ -478,16 +521,31 @@ export function HQSettingsClient({ settings, locations: initialLocations }: Prop
               <div>
                 <p className="text-sm font-semibold">Transfer Pricing</p>
                 <p className="text-muted-foreground text-xs">
-                  What happens to pricing when a booking is transferred between locations
+                  What happens to pricing when a booking is transferred between
+                  locations
                 </p>
               </div>
             </div>
             <div className="ml-11 grid gap-2 sm:grid-cols-3">
-              {([
-                { value: "keep_original", label: "Keep original", desc: "Price doesn't change" },
-                { value: "apply_destination", label: "Apply new price", desc: "Use destination pricing" },
-                { value: "staff_choice", label: "Staff decides", desc: "Prompt staff each time" },
-              ] as const).map((opt) => (
+              {(
+                [
+                  {
+                    value: "keep_original",
+                    label: "Keep original",
+                    desc: "Price doesn't change",
+                  },
+                  {
+                    value: "apply_destination",
+                    label: "Apply new price",
+                    desc: "Use destination pricing",
+                  },
+                  {
+                    value: "staff_choice",
+                    label: "Staff decides",
+                    desc: "Prompt staff each time",
+                  },
+                ] as const
+              ).map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => update({ transferPricingPolicy: opt.value })}
@@ -519,7 +577,9 @@ export function HQSettingsClient({ settings, locations: initialLocations }: Prop
             <MessageSquare className="size-4" />
             Communications & Automations
           </CardTitle>
-          <CardDescription>Template and automation sharing across locations</CardDescription>
+          <CardDescription>
+            Template and automation sharing across locations
+          </CardDescription>
         </CardHeader>
         <CardContent className="divide-y">
           <ToggleSetting
@@ -572,7 +632,7 @@ export function HQSettingsClient({ settings, locations: initialLocations }: Prop
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-muted-foreground hover:underline text-xs font-mono"
+                    className="text-muted-foreground font-mono text-xs hover:underline"
                   >
                     yipyy.com{url}
                   </a>
@@ -610,7 +670,8 @@ export function HQSettingsClient({ settings, locations: initialLocations }: Prop
             Cross-Location Features
           </CardTitle>
           <CardDescription>
-            Toggle which features bridge across all locations. Off = each location operates in isolation.
+            Toggle which features bridge across all locations. Off = each
+            location operates in isolation.
           </CardDescription>
         </CardHeader>
         <CardContent className="divide-y">

@@ -4,10 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Check, Pencil } from "lucide-react";
-import {
-  outcomeBadgeClass,
-  getOutcomeOption,
-} from "./outcome-meta";
+import { outcomeBadgeClass, getOutcomeOption } from "./outcome-meta";
 import type { ScheduledTask, TaskExecution } from "@/types/care-log";
 
 const ALERT_TONE: Record<string, string> = {
@@ -43,7 +40,7 @@ export function PetRow({ task, execution, onLog }: Props) {
   return (
     <div
       data-logged={isLogged}
-      className="group flex items-center gap-3 rounded-md border bg-card px-3 py-2 transition-colors data-[logged=true]:bg-muted/30"
+      className="group bg-card data-[logged=true]:bg-muted/30 flex items-center gap-3 rounded-md border px-3 py-2 transition-colors"
     >
       <Avatar className="size-9 shrink-0">
         {task.petPhotoUrl && (
@@ -56,7 +53,7 @@ export function PetRow({ task, execution, onLog }: Props) {
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="font-medium text-sm leading-none">
+          <span className="text-sm leading-none font-medium">
             {task.petName}
           </span>
           <span className="text-muted-foreground text-xs">
@@ -92,7 +89,7 @@ export function PetRow({ task, execution, onLog }: Props) {
               {execution.executedAt} · {execution.staffInitials}
             </span>
             {execution.notes && (
-              <span className="text-muted-foreground italic truncate">
+              <span className="text-muted-foreground truncate italic">
                 &ldquo;{execution.notes}&rdquo;
               </span>
             )}
@@ -106,7 +103,7 @@ export function PetRow({ task, execution, onLog }: Props) {
             variant="ghost"
             size="sm"
             onClick={onLog}
-            className="h-7 gap-1 text-xs text-muted-foreground"
+            className="text-muted-foreground h-7 gap-1 text-xs"
           >
             <Pencil className="size-3" />
             Edit

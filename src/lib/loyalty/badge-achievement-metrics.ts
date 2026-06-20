@@ -81,7 +81,8 @@ export function computeBadgeAchievement(input: {
     for (const earn of earners) {
       const events = eventsByCustomer.get(earn.customerId);
       const earnedMs = new Date(earn.earnedAt).getTime();
-      if (!events || events.length === 0 || !Number.isFinite(earnedMs)) continue;
+      if (!events || events.length === 0 || !Number.isFinite(earnedMs))
+        continue;
 
       const firstMs = events[0].ms;
       if (earnedMs >= firstMs) {

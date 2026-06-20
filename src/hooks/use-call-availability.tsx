@@ -27,7 +27,9 @@ interface CallAvailabilityValue {
   resetToAvailable: () => void;
 }
 
-const CallAvailabilityContext = createContext<CallAvailabilityValue | null>(null);
+const CallAvailabilityContext = createContext<CallAvailabilityValue | null>(
+  null,
+);
 
 interface Persisted {
   status: CallAvailability;
@@ -35,13 +37,19 @@ interface Persisted {
   since: number | null; // epoch ms when busy/away was set
 }
 
-export function CallAvailabilityProvider({ children }: { children: ReactNode }) {
+export function CallAvailabilityProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [status, setStatusState] = useState<CallAvailability>("available");
   const [timeoutMinutes, setTimeoutMinutesState] = useState(
     DEFAULT_AVAILABILITY_TIMEOUT_MIN,
   );
   const [since, setSince] = useState<number | null>(null);
-  const [secondsUntilReset, setSecondsUntilReset] = useState<number | null>(null);
+  const [secondsUntilReset, setSecondsUntilReset] = useState<number | null>(
+    null,
+  );
   const hydrated = useRef(false);
 
   // Restore from localStorage on mount (and auto-reset if already elapsed).
@@ -54,7 +62,12 @@ export function CallAvailabilityProvider({ children }: { children: ReactNode }) 
         setTimeoutMinutesState(mins);
         const elapsed =
           p.since != null && Date.now() - p.since >= mins * 60_000;
-        if (p.status && p.status !== "available" && p.since != null && !elapsed) {
+        if (
+          p.status &&
+          p.status !== "available" &&
+          p.since != null &&
+          !elapsed
+        ) {
           setStatusState(p.status);
           setSince(p.since);
         }

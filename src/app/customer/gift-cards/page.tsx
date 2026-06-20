@@ -9,8 +9,8 @@ export default function CustomerGiftCardsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Gift Cards</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Give the gift of happy pets — beautiful digital gift cards sent straight
-          to the inbox
+          Give the gift of happy pets — beautiful digital gift cards sent
+          straight to the inbox
         </p>
       </div>
       <BuyGiftCardFlow facilityId={FACILITY_ID} />

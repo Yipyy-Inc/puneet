@@ -15,10 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from "@/components/ui/radio-group";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { cn } from "@/lib/utils";
@@ -219,8 +216,8 @@ export function ReportCardSendDialog({
             Send report card
           </DialogTitle>
           <DialogDescription>
-            Pick a theme, choose whether to send now or schedule for later,
-            and preview what the owner will see before it goes out.
+            Pick a theme, choose whether to send now or schedule for later, and
+            preview what the owner will see before it goes out.
           </DialogDescription>
         </DialogHeader>
 
@@ -320,7 +317,7 @@ export function ReportCardSendDialog({
             {mode === "custom" && (
               <div className="grid grid-cols-1 gap-3 rounded-lg border bg-slate-50/40 px-3 py-2.5 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                  <Label className="text-[10px] font-bold tracking-wider text-slate-600 uppercase">
                     Send date
                   </Label>
                   <DatePicker
@@ -331,7 +328,7 @@ export function ReportCardSendDialog({
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                  <Label className="text-[10px] font-bold tracking-wider text-slate-600 uppercase">
                     Send time
                   </Label>
                   <TimePickerLux
@@ -341,7 +338,7 @@ export function ReportCardSendDialog({
                   />
                 </div>
                 {scheduleISO && !scheduleInFuture && (
-                  <p className="text-rose-600 sm:col-span-2 text-[11px]">
+                  <p className="text-[11px] text-rose-600 sm:col-span-2">
                     Pick a future date and time — scheduling in the past
                     isn&apos;t supported.
                   </p>
@@ -455,7 +452,7 @@ function ReportCardPreview({
             )}
             <span
               className={cn(
-                "absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full ring-2 ring-white shadow-sm",
+                "absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full shadow-sm ring-2 ring-white",
                 isGraduation
                   ? "bg-amber-500 text-white"
                   : "bg-indigo-500 text-white",

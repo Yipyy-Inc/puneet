@@ -73,7 +73,10 @@ function flattenWeekly(
   }));
 }
 
-export function HQAnalyticsPanel({ locations, monthlyRevenueByLocation }: Props) {
+export function HQAnalyticsPanel({
+  locations,
+  monthlyRevenueByLocation,
+}: Props) {
   // Underperformer detection: > 1 standard deviation below mean revenue.
   const revenues = monthlyRevenueByLocation.map((r) => r.revenue);
   const mean = revenues.reduce((a, b) => a + b, 0) / revenues.length;
@@ -85,10 +88,9 @@ export function HQAnalyticsPanel({ locations, monthlyRevenueByLocation }: Props)
   const underperformers = monthlyRevenueByLocation
     .filter((r) => r.revenue < mean - sd * 0.6)
     .map((r) => r.locationId);
-  const topPerformerId =
-    monthlyRevenueByLocation.reduce((top, r) =>
-      r.revenue > top.revenue ? r : top,
-    ).locationId;
+  const topPerformerId = monthlyRevenueByLocation.reduce((top, r) =>
+    r.revenue > top.revenue ? r : top,
+  ).locationId;
 
   // Month-over-month delta on the network
   const trend = revenueTrend12Months as unknown as {
@@ -97,12 +99,14 @@ export function HQAnalyticsPanel({ locations, monthlyRevenueByLocation }: Props)
   }[];
   const totalsByMonth = trend.map((row) =>
     locations.reduce(
-      (sum, l) => sum + (typeof row[l.id] === "number" ? (row[l.id] as number) : 0),
+      (sum, l) =>
+        sum + (typeof row[l.id] === "number" ? (row[l.id] as number) : 0),
       0,
     ),
   );
   const lastMonthTotal = totalsByMonth[totalsByMonth.length - 1];
-  const previousMonthTotal = totalsByMonth[totalsByMonth.length - 2] ?? lastMonthTotal;
+  const previousMonthTotal =
+    totalsByMonth[totalsByMonth.length - 2] ?? lastMonthTotal;
   const monthlyDelta =
     previousMonthTotal === 0
       ? 0
@@ -188,7 +192,9 @@ export function HQAnalyticsPanel({ locations, monthlyRevenueByLocation }: Props)
                 {topPerformerId && (
                   <Badge className="gap-1 bg-amber-500 text-[11px] text-white hover:bg-amber-500">
                     <Trophy className="size-3" />
-                    {locations.find((l) => l.id === topPerformerId)?.shortCode}{" "}
+                    {
+                      locations.find((l) => l.id === topPerformerId)?.shortCode
+                    }{" "}
                     leading
                   </Badge>
                 )}
@@ -261,7 +267,9 @@ export function HQAnalyticsPanel({ locations, monthlyRevenueByLocation }: Props)
           <CardContent>
             <WeeklyOccupancyChart
               data={flattenWeekly(weeklyOccupancy, "boarding")}
-              locations={locations.filter((l) => l.services.includes("boarding"))}
+              locations={locations.filter((l) =>
+                l.services.includes("boarding"),
+              )}
             />
           </CardContent>
         </Card>

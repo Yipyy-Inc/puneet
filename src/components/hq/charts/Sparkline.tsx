@@ -61,7 +61,10 @@ export function Sparkline({
             cx={p.x}
             cy={p.y}
             r="1.5"
-            className={cn("stroke-background stroke-1", strokeClassName.replace("stroke-", "fill-"))}
+            className={cn(
+              "stroke-background stroke-1",
+              strokeClassName.replace("stroke-", "fill-"),
+            )}
           />
         ))}
     </svg>

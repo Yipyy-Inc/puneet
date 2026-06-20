@@ -8,7 +8,10 @@ import type { ReputationRequest } from "@/types/reputation";
  */
 export function buildReputationEscalationTask(
   req: ReputationRequest,
-  assignee: { id: string; name: string } = { id: "staff-006", name: "Manager One" },
+  assignee: { id: string; name: string } = {
+    id: "staff-006",
+    name: "Manager One",
+  },
 ): StandaloneTask {
   const now = new Date();
   const rating = req.rating ?? 0;

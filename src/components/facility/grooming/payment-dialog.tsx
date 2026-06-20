@@ -77,14 +77,16 @@ const TIP_PRESETS = [0, 15, 18, 20];
 
 function brandLabel(brand: string): string {
   return (
-    {
-      visa: "Visa",
-      mastercard: "Mastercard",
-      amex: "Amex",
-      discover: "Discover",
-      other: "Card",
-    } as Record<string, string>
-  )[brand] ?? "Card";
+    (
+      {
+        visa: "Visa",
+        mastercard: "Mastercard",
+        amex: "Amex",
+        discover: "Discover",
+        other: "Card",
+      } as Record<string, string>
+    )[brand] ?? "Card"
+  );
 }
 
 export function PaymentDialog({
@@ -121,9 +123,7 @@ export function PaymentDialog({
     setApplyPackagePassId("");
     setStoreCreditApplied(0);
     setTipPercent(lockedTipAmount !== undefined ? -1 : 15);
-    setCustomTip(
-      lockedTipAmount !== undefined ? String(lockedTipAmount) : "",
-    );
+    setCustomTip(lockedTipAmount !== undefined ? String(lockedTipAmount) : "");
     setReceiptSms(true);
     setReceiptEmail(true);
   }, [open, apt?.id, defaultCard, lockedTipAmount]);
@@ -177,10 +177,7 @@ export function PaymentDialog({
   );
   const maxStoreCredit = Math.min(storeCreditBalance, postPassTotal);
   const effectiveStoreCredit = Math.min(storeCreditApplied, maxStoreCredit);
-  const amountCharged = Math.max(
-    0,
-    postPassTotal - effectiveStoreCredit,
-  );
+  const amountCharged = Math.max(0, postPassTotal - effectiveStoreCredit);
 
   // When the pass/credit zeroes out the bill, force the method to whichever
   // one is being used so we don't try to also charge a card for $0.
@@ -206,7 +203,8 @@ export function PaymentDialog({
 
   const canConfirm = (() => {
     if (effectiveMethod === "package-pass" && !selectedPackage) return false;
-    if (effectiveMethod === "card-on-file" && !selectedSavedCardId) return false;
+    if (effectiveMethod === "card-on-file" && !selectedSavedCardId)
+      return false;
     if (effectiveMethod === "cash" && cashShort) return false;
     if (!receiptSms && !receiptEmail) return false;
     return true;
@@ -222,8 +220,7 @@ export function PaymentDialog({
       method: effectiveMethod,
       savedCardId:
         effectiveMethod === "card-on-file" ? selectedSavedCardId : undefined,
-      cashReceived:
-        effectiveMethod === "cash" ? cashReceivedNum : undefined,
+      cashReceived: effectiveMethod === "cash" ? cashReceivedNum : undefined,
       appliedPackagePassId: selectedPackage?.id,
       appliedStoreCredit: effectiveStoreCredit,
       tipAmount,
@@ -235,7 +232,7 @@ export function PaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Receipt className="size-4 text-emerald-600" />
@@ -248,7 +245,7 @@ export function PaymentDialog({
 
         {/* 1 · Itemized total */}
         <Section icon={Receipt} title="Itemized total">
-          <div className="space-y-1 rounded-lg border bg-muted/30 px-3 py-2.5 text-sm">
+          <div className="bg-muted/30 space-y-1 rounded-lg border px-3 py-2.5 text-sm">
             <Row label={apt.packageName} value={baseService} />
             {apt.priceAdjustments.map((a) => (
               <Row key={a.id} label={a.description} value={a.amount} muted />
@@ -294,7 +291,9 @@ export function PaymentDialog({
             )}
             <Separator className="my-1.5" />
             <div className="flex items-center justify-between text-base font-bold">
-              <span>{amountCharged === 0 ? "Charged today" : "Amount to charge"}</span>
+              <span>
+                {amountCharged === 0 ? "Charged today" : "Amount to charge"}
+              </span>
               <span className="text-emerald-700 tabular-nums dark:text-emerald-400">
                 ${amountCharged.toFixed(2)}
               </span>
@@ -330,7 +329,7 @@ export function PaymentDialog({
                         <p className="truncate text-sm font-medium">
                           {p.packageName}
                         </p>
-                        <p className="truncate text-[11px] text-muted-foreground">
+                        <p className="text-muted-foreground truncate text-[11px]">
                           {left} of {p.passesTotal} passes remaining
                         </p>
                       </div>
@@ -359,7 +358,7 @@ export function PaymentDialog({
         {storeCreditBalance > 0 && (
           <>
             <Section icon={Gift} title="Store credit">
-              <div className="rounded-lg border bg-muted/30 px-3 py-2.5">
+              <div className="bg-muted/30 rounded-lg border px-3 py-2.5">
                 <div className="flex items-center justify-between text-sm">
                   <span>
                     Available balance:{" "}
@@ -528,7 +527,7 @@ export function PaymentDialog({
               >
                 {method === "cash" && (
                   <div className="mt-2">
-                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <Label className="text-muted-foreground text-[10px] tracking-wide uppercase">
                       Amount received
                     </Label>
                     <Input
@@ -579,7 +578,7 @@ export function PaymentDialog({
               Email
             </label>
             {!receiptSms && !receiptEmail && (
-              <span className="text-[11px] text-destructive">
+              <span className="text-destructive text-[11px]">
                 Pick at least one channel.
               </span>
             )}
@@ -657,10 +656,10 @@ function MethodCard({
       )}
     >
       <div className="flex items-start gap-2.5">
-        <Icon className="mt-0.5 size-4 text-muted-foreground" />
+        <Icon className="text-muted-foreground mt-0.5 size-4" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">{label}</p>
-          <p className="truncate text-[11px] text-muted-foreground">{sub}</p>
+          <p className="text-muted-foreground truncate text-[11px]">{sub}</p>
         </div>
         {selected && (
           <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />

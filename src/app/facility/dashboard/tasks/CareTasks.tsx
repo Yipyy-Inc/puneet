@@ -165,7 +165,9 @@ export function CareTasks() {
   }, [dateStr, statusFilter, staffFilter, deptFilter, currentStaffName]);
 
   const totalTasks = dayTasks.length;
-  const completedTasks = dayTasks.filter((t) => t.status === "completed").length;
+  const completedTasks = dayTasks.filter(
+    (t) => t.status === "completed",
+  ).length;
   const overdueTasks = dayTasks.filter((t) => t.isOverdue).length;
   const pendingTasks = totalTasks - completedTasks;
 
@@ -293,7 +295,9 @@ export function CareTasks() {
           value={totalTasks}
           subtitle="All tasks"
           icon={ListChecks}
-          onClick={() => setStatusFilter(statusFilter === "all" ? "all" : "all")}
+          onClick={() =>
+            setStatusFilter(statusFilter === "all" ? "all" : "all")
+          }
           isActive={statusFilter === "all"}
         />
         <ClickableStatCard
@@ -517,7 +521,9 @@ export function CareTasks() {
         {grouped.map(([groupKey, tasks]) => {
           const shiftDef = shifts.find((s) => s.id === groupKey);
           const ShiftIcon = shiftIcons[groupKey] ?? Clock;
-          const groupDone = tasks.filter((t) => t.status === "completed").length;
+          const groupDone = tasks.filter(
+            (t) => t.status === "completed",
+          ).length;
 
           const onShift =
             viewMode === "time" && shiftDef

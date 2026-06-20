@@ -290,7 +290,9 @@ export function ClientContextPanel({
   const [activeTab, setActiveTab] = useState<"client" | "notes">("client");
   const [allRemindersOpen, setAllRemindersOpen] = useState(false);
   const conversationState = useConversationState();
-  const assignee = threadId ? conversationState.getAssignee(threadId) : undefined;
+  const assignee = threadId
+    ? conversationState.getAssignee(threadId)
+    : undefined;
 
   const threadEntityId = useMemo(() => {
     if (!threadId) return null;
@@ -517,64 +519,86 @@ export function ClientContextPanel({
       )}
 
       {(isCustomerMode || activeTab === "client") && (
-      <div className="flex-1 overflow-y-auto">
-        {/* ── Client profile ── */}
-        <div className="flex flex-col items-center border-b px-5 pt-5 pb-4">
-          {profileImage ? (
-            <img
-              src={profileImage}
-              alt=""
-              className="size-18 rounded-full object-cover ring-4 ring-slate-100"
-            />
-          ) : (
-            <div
-              className={cn(
-                "flex size-18 items-center justify-center rounded-full text-2xl font-bold text-white",
-                avatarColor(profileName),
+        <div className="flex-1 overflow-y-auto">
+          {/* ── Client profile ── */}
+          <div className="flex flex-col items-center border-b px-5 pt-5 pb-4">
+            {profileImage ? (
+              <img
+                src={profileImage}
+                alt=""
+                className="size-18 rounded-full object-cover ring-4 ring-slate-100"
+              />
+            ) : (
+              <div
+                className={cn(
+                  "flex size-18 items-center justify-center rounded-full text-2xl font-bold text-white",
+                  avatarColor(profileName),
+                )}
+              >
+                {initials(profileName)}
+              </div>
+            )}
+            <h3 className="mt-3 text-base font-bold text-slate-800">
+              {profileName}
+            </h3>
+            {preferredLanguageLabel && (
+              <Badge
+                variant="outline"
+                className="mt-2 border-indigo-200 bg-indigo-50 text-[10px] font-semibold text-indigo-700"
+              >
+                {preferredLanguageLabel}
+              </Badge>
+            )}
+
+            {/* Contact row */}
+            <div className="mt-2 flex flex-col items-center gap-1 text-xs text-slate-400">
+              {profilePhone && (
+                <a
+                  href={`tel:${profilePhone}`}
+                  className="flex items-center gap-1.5 hover:text-slate-600"
+                >
+                  <Phone className="size-3.5" />
+                  {profilePhone}
+                </a>
               )}
-            >
-              {initials(profileName)}
+              {profileEmail && (
+                <a
+                  href={`mailto:${profileEmail}`}
+                  className="flex items-center gap-1.5 truncate hover:text-slate-600"
+                >
+                  <Mail className="size-3.5" />
+                  {profileEmail}
+                </a>
+              )}
             </div>
-          )}
-          <h3 className="mt-3 text-base font-bold text-slate-800">
-            {profileName}
-          </h3>
-          {preferredLanguageLabel && (
-            <Badge
-              variant="outline"
-              className="mt-2 border-indigo-200 bg-indigo-50 text-[10px] font-semibold text-indigo-700"
-            >
-              {preferredLanguageLabel}
-            </Badge>
-          )}
 
-          {/* Contact row */}
-          <div className="mt-2 flex flex-col items-center gap-1 text-xs text-slate-400">
-            {profilePhone && (
-              <a
-                href={`tel:${profilePhone}`}
-                className="flex items-center gap-1.5 hover:text-slate-600"
-              >
-                <Phone className="size-3.5" />
-                {profilePhone}
-              </a>
-            )}
-            {profileEmail && (
-              <a
-                href={`mailto:${profileEmail}`}
-                className="flex items-center gap-1.5 truncate hover:text-slate-600"
-              >
-                <Mail className="size-3.5" />
-                {profileEmail}
-              </a>
-            )}
-          </div>
-
-          {/* Quick actions */}
-          <div className="mt-3 flex gap-2">
-            {isCustomerMode ? (
-              facilityWebsite ? (
-                <a href={facilityWebsite} target="_blank" rel="noreferrer">
+            {/* Quick actions */}
+            <div className="mt-3 flex gap-2">
+              {isCustomerMode ? (
+                facilityWebsite ? (
+                  <a href={facilityWebsite} target="_blank" rel="noreferrer">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5 rounded-full text-xs"
+                    >
+                      <ExternalLink className="size-3.5" />
+                      {profileButtonLabel}
+                    </Button>
+                  </a>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 rounded-full text-xs"
+                    disabled
+                  >
+                    <ExternalLink className="size-3.5" />
+                    {profileButtonLabel}
+                  </Button>
+                )
+              ) : (
+                <Link href={`/facility/dashboard/clients/${client?.id}`}>
                   <Button
                     variant="outline"
                     size="sm"
@@ -583,425 +607,414 @@ export function ClientContextPanel({
                     <ExternalLink className="size-3.5" />
                     {profileButtonLabel}
                   </Button>
-                </a>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 rounded-full text-xs"
-                  disabled
-                >
-                  <ExternalLink className="size-3.5" />
-                  {profileButtonLabel}
-                </Button>
-              )
-            ) : (
-              <Link href={`/facility/dashboard/clients/${client?.id}`}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 rounded-full text-xs"
-                >
-                  <ExternalLink className="size-3.5" />
-                  {profileButtonLabel}
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
-
-        {/* ── Stats ── */}
-        <div
-          className={cn(
-            "grid border-b py-4",
-            isCustomerMode ? "grid-cols-2" : "grid-cols-3",
-          )}
-        >
-          {stats.map((s) => (
-            <div key={s.label} className="text-center">
-              <p className="text-xl font-bold text-slate-800 tabular-nums">
-                {s.n}
-              </p>
-              <p className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-                {s.label}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Quick Actions ── */}
-        {!isCustomerMode && (
-          <div className="grid grid-cols-2 gap-2 border-b px-5 py-3">
-            <a
-              href={profilePhone ? `tel:${profilePhone}` : undefined}
-              aria-disabled={!profilePhone}
-              className={cn(
-                "flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50",
-                !profilePhone && "pointer-events-none opacity-50",
+                </Link>
               )}
-            >
-              <Phone className="size-3.5 text-emerald-600" />
-              Call
-            </a>
-            <Link
-              href={`/facility/dashboard/bookings/new${client?.id ? `?clientId=${client.id}` : ""}`}
-              className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-            >
-              <CalendarPlus className="size-3.5 text-blue-600" />
-              New Booking
-            </Link>
-            <Link
-              href={`/facility/dashboard/estimates${client?.id ? `?clientId=${client.id}` : ""}`}
-              className="col-span-2 flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-            >
-              <FileSignature className="size-3.5 text-violet-600" />
-              Send Estimate
-            </Link>
-          </div>
-        )}
-
-        {/* ── Active Booking ── */}
-        {!isCustomerMode && activeBooking && (() => {
-          const pet = pets.find((p) => p.id === activeBooking.petId);
-          const sameDay = activeBooking.endDate
-            ? activeBooking.startDate === activeBooking.endDate
-            : true;
-          return (
-            <div className="border-b px-5 py-3">
-              <Link
-                href={`/facility/dashboard/bookings/${activeBooking.id}`}
-                className="block rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 transition-colors hover:bg-emerald-50"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <Badge className="bg-emerald-100 text-[10px] capitalize text-emerald-800">
-                    {activeBooking.service}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className="border-emerald-300 bg-white text-[10px] capitalize text-emerald-700"
-                  >
-                    {activeBooking.status.replace(/_/g, " ")}
-                  </Badge>
-                </div>
-                <p className="mt-2 text-xs font-semibold text-slate-700">
-                  {pet?.name ?? "Pet"}
-                  {pet?.breed && (
-                    <span className="font-normal text-slate-400">
-                      {" "}· {pet.breed}
-                    </span>
-                  )}
-                </p>
-                <p className="mt-0.5 text-[11px] text-slate-500">
-                  {formatDate(activeBooking.startDate)}
-                  {!sameDay &&
-                    activeBooking.endDate &&
-                    ` → ${formatDate(activeBooking.endDate)}`}
-                  {activeBooking.checkInTime &&
-                    ` · ${activeBooking.checkInTime}`}
-                </p>
-              </Link>
             </div>
-          );
-        })()}
+          </div>
 
-        {/* ── Assigned staff ── */}
-        {!isCustomerMode && (
-          <Section title="Assigned Staff" icon={User}>
-            {assignee ? (
-              <div className="flex items-center gap-2 rounded-xl bg-slate-50 p-2">
-                <span
-                  className={cn(
-                    "flex size-8 items-center justify-center rounded-full text-[11px] font-bold text-white",
-                    assignee.color,
-                  )}
-                >
-                  {assignee.initials}
-                </span>
-                <div>
-                  <p className="text-xs font-semibold text-slate-700">
-                    {assignee.name}
-                  </p>
-                  <p className="text-[10px] text-slate-400">{assignee.role}</p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs italic text-slate-400">
-                Not assigned yet — use the header to assign someone.
-              </p>
+          {/* ── Stats ── */}
+          <div
+            className={cn(
+              "grid border-b py-4",
+              isCustomerMode ? "grid-cols-2" : "grid-cols-3",
             )}
-          </Section>
-        )}
-
-        {/* ── Pets ── */}
-        <Section title={isCustomerMode ? "My Pets" : "Pets"} icon={PawPrint}>
-          <div className="space-y-1">
-            {pets.map((pet) => (
-              <Link
-                key={pet.id}
-                href={
-                  isCustomerMode
-                    ? "/customer/pets"
-                    : `/facility/dashboard/clients/${client?.id}/pets/${pet.id}`
-                }
-                className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-slate-50"
-              >
-                {pet.imageUrl ? (
-                  <img
-                    src={pet.imageUrl}
-                    alt=""
-                    className="size-8 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="flex size-8 items-center justify-center rounded-full bg-slate-100">
-                    <PawPrint className="size-3.5 text-slate-400" />
-                  </div>
-                )}
-                <div>
-                  <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-                    {pet.name}
-                    {flaggedPetIds.has(pet.id) && (
-                      <span
-                        className="size-1.5 rounded-full bg-amber-500"
-                        title="Has medication, allergy, or behavior alert"
-                      />
-                    )}
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    {pet.breed} · {pet.type}
-                  </p>
-                </div>
-              </Link>
+          >
+            {stats.map((s) => (
+              <div key={s.label} className="text-center">
+                <p className="text-xl font-bold text-slate-800 tabular-nums">
+                  {s.n}
+                </p>
+                <p className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
+                  {s.label}
+                </p>
+              </div>
             ))}
           </div>
-        </Section>
 
-        {/* ── Pet care alerts ── */}
-        {!isCustomerMode && pets.length > 0 && (() => {
-          const alerts = petCareAlerts.filter((a) =>
-            pets.some((p) => p.id === a.petId),
-          );
-          if (alerts.length === 0) return null;
-          return (
-            <Section title="Care Alerts" icon={AlertTriangle}>
-              <div className="space-y-1.5">
-                {alerts.map((a, idx) => {
-                  const pet = pets.find((p) => p.id === a.petId);
-                  const tone =
-                    a.type === "medication"
-                      ? "border-blue-200 bg-blue-50 text-blue-700"
-                      : a.type === "allergy"
-                        ? "border-red-200 bg-red-50 text-red-700"
-                        : "border-amber-200 bg-amber-50 text-amber-700";
-                  const Icon =
-                    a.type === "medication"
-                      ? Pill
-                      : a.type === "allergy"
-                        ? AlertTriangle
-                        : AlertTriangle;
-                  return (
-                    <div
-                      key={`${a.petId}-${idx}`}
-                      className={cn(
-                        "flex items-start gap-2 rounded-lg border px-2.5 py-2 text-[11px]",
-                        tone,
-                      )}
-                    >
-                      <Icon className="mt-0.5 size-3 shrink-0" />
-                      <div>
-                        <p className="font-semibold">
-                          {pet?.name ?? "Pet"} ·{" "}
-                          <span className="font-normal capitalize">{a.type}</span>
-                        </p>
-                        <p className="mt-0.5 text-[11px] opacity-90">{a.text}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </Section>
-          );
-        })()}
-
-        {/* ── Next Appointment ── */}
-        <Section title="Next Appointment" icon={Calendar}>
-          {nextUpcomingBooking ? (
-            <Link
-              href={nextAppointmentHref}
-              className="block rounded-xl bg-slate-50 p-2.5 transition-colors hover:bg-slate-100"
-            >
-              <div className="flex items-center justify-between">
-                <Badge className="bg-blue-100 text-[10px] text-blue-700 capitalize">
-                  {nextUpcomingBooking.service}
-                </Badge>
-                <span className="text-xs font-bold text-slate-700 tabular-nums">
-                  ${nextUpcomingBooking.totalCost}
-                </span>
-              </div>
-              <p className="mt-1.5 text-xs text-slate-500">
-                {formatDate(nextUpcomingBooking.startDate)}
-                {nextUpcomingBooking.checkInTime &&
-                  ` · ${nextUpcomingBooking.checkInTime}`}
-              </p>
-            </Link>
-          ) : (
-            <p className="text-xs text-slate-400 italic">
-              No upcoming bookings
-            </p>
-          )}
-        </Section>
-
-        {/* ── Conversation Notes ── */}
-        {!isCustomerMode && (
-          <Section title="Conversation Notes" icon={StickyNote}>
-            <Textarea
-              value={conversationNote}
-              onChange={(e) => setConversationNote(e.target.value)}
-              placeholder="Add a quick note about this client or conversation…"
-              className="min-h-[70px] resize-none border-slate-200 bg-slate-50 text-xs"
-            />
-            <div className="mt-1.5 flex items-center justify-between">
-              <span className="text-[10px] text-slate-400">
-                {savedNote
-                  ? `Last saved · ${new Date().toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}`
-                  : "Not saved yet"}
-              </span>
-              <Button
-                size="sm"
-                variant={
-                  conversationNote && conversationNote !== savedNote
-                    ? "default"
-                    : "outline"
-                }
-                disabled={!conversationNote || conversationNote === savedNote}
-                className="h-7 gap-1 rounded-full text-[11px]"
-                onClick={() => {
-                  setSavedNote(conversationNote);
-                  toast.success("Note saved");
-                }}
+          {/* ── Quick Actions ── */}
+          {!isCustomerMode && (
+            <div className="grid grid-cols-2 gap-2 border-b px-5 py-3">
+              <a
+                href={profilePhone ? `tel:${profilePhone}` : undefined}
+                aria-disabled={!profilePhone}
+                className={cn(
+                  "flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50",
+                  !profilePhone && "pointer-events-none opacity-50",
+                )}
               >
-                <Save className="size-3" />
-                Save
-              </Button>
+                <Phone className="size-3.5 text-emerald-600" />
+                Call
+              </a>
+              <Link
+                href={`/facility/dashboard/bookings/new${client?.id ? `?clientId=${client.id}` : ""}`}
+                className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                <CalendarPlus className="size-3.5 text-blue-600" />
+                New Booking
+              </Link>
+              <Link
+                href={`/facility/dashboard/estimates${client?.id ? `?clientId=${client.id}` : ""}`}
+                className="col-span-2 flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                <FileSignature className="size-3.5 text-violet-600" />
+                Send Estimate
+              </Link>
             </div>
-          </Section>
-        )}
+          )}
 
-        {/* ── Quick Links ── */}
-        <Section
-          title={isCustomerMode ? "Quick Links" : "Quick Send"}
-          icon={Send}
-          defaultOpen
-        >
-          <div className="space-y-1">
-            {quickLinks.map((link) => {
-              const content = (
-                <>
-                  <div
+          {/* ── Active Booking ── */}
+          {!isCustomerMode &&
+            activeBooking &&
+            (() => {
+              const pet = pets.find((p) => p.id === activeBooking.petId);
+              const sameDay = activeBooking.endDate
+                ? activeBooking.startDate === activeBooking.endDate
+                : true;
+              return (
+                <div className="border-b px-5 py-3">
+                  <Link
+                    href={`/facility/dashboard/bookings/${activeBooking.id}`}
+                    className="block rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 transition-colors hover:bg-emerald-50"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge className="bg-emerald-100 text-[10px] text-emerald-800 capitalize">
+                        {activeBooking.service}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className="border-emerald-300 bg-white text-[10px] text-emerald-700 capitalize"
+                      >
+                        {activeBooking.status.replace(/_/g, " ")}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 text-xs font-semibold text-slate-700">
+                      {pet?.name ?? "Pet"}
+                      {pet?.breed && (
+                        <span className="font-normal text-slate-400">
+                          {" "}
+                          · {pet.breed}
+                        </span>
+                      )}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                      {formatDate(activeBooking.startDate)}
+                      {!sameDay &&
+                        activeBooking.endDate &&
+                        ` → ${formatDate(activeBooking.endDate)}`}
+                      {activeBooking.checkInTime &&
+                        ` · ${activeBooking.checkInTime}`}
+                    </p>
+                  </Link>
+                </div>
+              );
+            })()}
+
+          {/* ── Assigned staff ── */}
+          {!isCustomerMode && (
+            <Section title="Assigned Staff" icon={User}>
+              {assignee ? (
+                <div className="flex items-center gap-2 rounded-xl bg-slate-50 p-2">
+                  <span
                     className={cn(
-                      "flex size-7 shrink-0 items-center justify-center rounded-lg",
-                      link.color,
+                      "flex size-8 items-center justify-center rounded-full text-[11px] font-bold text-white",
+                      assignee.color,
                     )}
                   >
-                    <link.icon className="size-3.5" />
-                  </div>
-                  <span className="flex-1 text-xs font-medium text-slate-600">
-                    {link.label}
+                    {assignee.initials}
                   </span>
-                  {link.href ? (
-                    <ExternalLink className="size-3 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100" />
-                  ) : (
-                    <Copy className="size-3 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100" />
-                  )}
-                </>
-              );
+                  <div>
+                    <p className="text-xs font-semibold text-slate-700">
+                      {assignee.name}
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      {assignee.role}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 italic">
+                  Not assigned yet — use the header to assign someone.
+                </p>
+              )}
+            </Section>
+          )}
 
-              if (link.href) {
+          {/* ── Pets ── */}
+          <Section title={isCustomerMode ? "My Pets" : "Pets"} icon={PawPrint}>
+            <div className="space-y-1">
+              {pets.map((pet) => (
+                <Link
+                  key={pet.id}
+                  href={
+                    isCustomerMode
+                      ? "/customer/pets"
+                      : `/facility/dashboard/clients/${client?.id}/pets/${pet.id}`
+                  }
+                  className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-slate-50"
+                >
+                  {pet.imageUrl ? (
+                    <img
+                      src={pet.imageUrl}
+                      alt=""
+                      className="size-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex size-8 items-center justify-center rounded-full bg-slate-100">
+                      <PawPrint className="size-3.5 text-slate-400" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                      {pet.name}
+                      {flaggedPetIds.has(pet.id) && (
+                        <span
+                          className="size-1.5 rounded-full bg-amber-500"
+                          title="Has medication, allergy, or behavior alert"
+                        />
+                      )}
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      {pet.breed} · {pet.type}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </Section>
+
+          {/* ── Pet care alerts ── */}
+          {!isCustomerMode &&
+            pets.length > 0 &&
+            (() => {
+              const alerts = petCareAlerts.filter((a) =>
+                pets.some((p) => p.id === a.petId),
+              );
+              if (alerts.length === 0) return null;
+              return (
+                <Section title="Care Alerts" icon={AlertTriangle}>
+                  <div className="space-y-1.5">
+                    {alerts.map((a, idx) => {
+                      const pet = pets.find((p) => p.id === a.petId);
+                      const tone =
+                        a.type === "medication"
+                          ? "border-blue-200 bg-blue-50 text-blue-700"
+                          : a.type === "allergy"
+                            ? "border-red-200 bg-red-50 text-red-700"
+                            : "border-amber-200 bg-amber-50 text-amber-700";
+                      const Icon =
+                        a.type === "medication"
+                          ? Pill
+                          : a.type === "allergy"
+                            ? AlertTriangle
+                            : AlertTriangle;
+                      return (
+                        <div
+                          key={`${a.petId}-${idx}`}
+                          className={cn(
+                            "flex items-start gap-2 rounded-lg border px-2.5 py-2 text-[11px]",
+                            tone,
+                          )}
+                        >
+                          <Icon className="mt-0.5 size-3 shrink-0" />
+                          <div>
+                            <p className="font-semibold">
+                              {pet?.name ?? "Pet"} ·{" "}
+                              <span className="font-normal capitalize">
+                                {a.type}
+                              </span>
+                            </p>
+                            <p className="mt-0.5 text-[11px] opacity-90">
+                              {a.text}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Section>
+              );
+            })()}
+
+          {/* ── Next Appointment ── */}
+          <Section title="Next Appointment" icon={Calendar}>
+            {nextUpcomingBooking ? (
+              <Link
+                href={nextAppointmentHref}
+                className="block rounded-xl bg-slate-50 p-2.5 transition-colors hover:bg-slate-100"
+              >
+                <div className="flex items-center justify-between">
+                  <Badge className="bg-blue-100 text-[10px] text-blue-700 capitalize">
+                    {nextUpcomingBooking.service}
+                  </Badge>
+                  <span className="text-xs font-bold text-slate-700 tabular-nums">
+                    ${nextUpcomingBooking.totalCost}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs text-slate-500">
+                  {formatDate(nextUpcomingBooking.startDate)}
+                  {nextUpcomingBooking.checkInTime &&
+                    ` · ${nextUpcomingBooking.checkInTime}`}
+                </p>
+              </Link>
+            ) : (
+              <p className="text-xs text-slate-400 italic">
+                No upcoming bookings
+              </p>
+            )}
+          </Section>
+
+          {/* ── Conversation Notes ── */}
+          {!isCustomerMode && (
+            <Section title="Conversation Notes" icon={StickyNote}>
+              <Textarea
+                value={conversationNote}
+                onChange={(e) => setConversationNote(e.target.value)}
+                placeholder="Add a quick note about this client or conversation…"
+                className="min-h-[70px] resize-none border-slate-200 bg-slate-50 text-xs"
+              />
+              <div className="mt-1.5 flex items-center justify-between">
+                <span className="text-[10px] text-slate-400">
+                  {savedNote
+                    ? `Last saved · ${new Date().toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}`
+                    : "Not saved yet"}
+                </span>
+                <Button
+                  size="sm"
+                  variant={
+                    conversationNote && conversationNote !== savedNote
+                      ? "default"
+                      : "outline"
+                  }
+                  disabled={!conversationNote || conversationNote === savedNote}
+                  className="h-7 gap-1 rounded-full text-[11px]"
+                  onClick={() => {
+                    setSavedNote(conversationNote);
+                    toast.success("Note saved");
+                  }}
+                >
+                  <Save className="size-3" />
+                  Save
+                </Button>
+              </div>
+            </Section>
+          )}
+
+          {/* ── Quick Links ── */}
+          <Section
+            title={isCustomerMode ? "Quick Links" : "Quick Send"}
+            icon={Send}
+            defaultOpen
+          >
+            <div className="space-y-1">
+              {quickLinks.map((link) => {
+                const content = (
+                  <>
+                    <div
+                      className={cn(
+                        "flex size-7 shrink-0 items-center justify-center rounded-lg",
+                        link.color,
+                      )}
+                    >
+                      <link.icon className="size-3.5" />
+                    </div>
+                    <span className="flex-1 text-xs font-medium text-slate-600">
+                      {link.label}
+                    </span>
+                    {link.href ? (
+                      <ExternalLink className="size-3 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100" />
+                    ) : (
+                      <Copy className="size-3 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100" />
+                    )}
+                  </>
+                );
+
+                if (link.href) {
+                  return (
+                    <Link
+                      key={link.id}
+                      href={link.href}
+                      className="group flex w-full items-center gap-2 rounded-lg p-1.5 text-left transition-colors hover:bg-slate-50"
+                    >
+                      {content}
+                    </Link>
+                  );
+                }
+
                 return (
-                  <Link
+                  <button
                     key={link.id}
-                    href={link.href}
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(link.url ?? "");
+                      toast.success(
+                        `"${link.label}" link copied — paste in chat`,
+                      );
+                    }}
                     className="group flex w-full items-center gap-2 rounded-lg p-1.5 text-left transition-colors hover:bg-slate-50"
                   >
                     {content}
-                  </Link>
+                  </button>
                 );
-              }
-
-              return (
-                <button
-                  key={link.id}
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(link.url ?? "");
-                    toast.success(
-                      `"${link.label}" link copied — paste in chat`,
-                    );
-                  }}
-                  className="group flex w-full items-center gap-2 rounded-lg p-1.5 text-left transition-colors hover:bg-slate-50"
-                >
-                  {content}
-                </button>
-              );
-            })}
-          </div>
-        </Section>
-
-        {/* ── Shared Photos ── */}
-        <Section title="Shared Photos" icon={ImageIcon} defaultOpen={false}>
-          <div className="grid grid-cols-3 gap-[2px] overflow-hidden rounded-lg">
-            {DEMO_MEDIA.map((item) => (
-              <button
-                key={item.id}
-                className="group relative aspect-square overflow-hidden bg-slate-100"
-                onClick={() => setSelectedImage(item.url)}
-              >
-                <img
-                  src={item.thumbnail ?? item.url}
-                  alt=""
-                  className="size-full object-cover transition-transform group-hover:scale-110"
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
-                  <Eye className="size-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
-                </div>
-              </button>
-            ))}
-          </div>
-        </Section>
-
-        {/* ── Reminder History ── */}
-        <Section title="Reminder History" icon={Clock3} defaultOpen>
-          <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-3">
-            <div className="flex items-baseline justify-between">
-              <div>
-                <p className="text-base font-bold text-amber-900 tabular-nums">
-                  {reminderHistory.length}
-                </p>
-                <p className="text-[10px] font-semibold tracking-wider text-amber-700/80 uppercase">
-                  {isCustomerMode ? "Received" : "Sent"}
-                </p>
-              </div>
-              {lastReminderAt && (
-                <p className="text-[10px] text-amber-700/80">
-                  Last · {formatDate(lastReminderAt)}
-                </p>
-              )}
+              })}
             </div>
-            <button
-              type="button"
-              disabled={reminderHistory.length === 0}
-              onClick={() => setAllRemindersOpen(true)}
-              className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 hover:text-amber-900 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              View all reminders
-              <ArrowRight className="size-3" />
-            </button>
-          </div>
-        </Section>
-      </div>
+          </Section>
+
+          {/* ── Shared Photos ── */}
+          <Section title="Shared Photos" icon={ImageIcon} defaultOpen={false}>
+            <div className="grid grid-cols-3 gap-[2px] overflow-hidden rounded-lg">
+              {DEMO_MEDIA.map((item) => (
+                <button
+                  key={item.id}
+                  className="group relative aspect-square overflow-hidden bg-slate-100"
+                  onClick={() => setSelectedImage(item.url)}
+                >
+                  <img
+                    src={item.thumbnail ?? item.url}
+                    alt=""
+                    className="size-full object-cover transition-transform group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                    <Eye className="size-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </Section>
+
+          {/* ── Reminder History ── */}
+          <Section title="Reminder History" icon={Clock3} defaultOpen>
+            <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-3">
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <p className="text-base font-bold text-amber-900 tabular-nums">
+                    {reminderHistory.length}
+                  </p>
+                  <p className="text-[10px] font-semibold tracking-wider text-amber-700/80 uppercase">
+                    {isCustomerMode ? "Received" : "Sent"}
+                  </p>
+                </div>
+                {lastReminderAt && (
+                  <p className="text-[10px] text-amber-700/80">
+                    Last · {formatDate(lastReminderAt)}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                disabled={reminderHistory.length === 0}
+                onClick={() => setAllRemindersOpen(true)}
+                className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 hover:text-amber-900 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                View all reminders
+                <ArrowRight className="size-3" />
+              </button>
+            </div>
+          </Section>
+        </div>
       )}
 
       <Sheet open={allRemindersOpen} onOpenChange={setAllRemindersOpen}>

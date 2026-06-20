@@ -126,18 +126,17 @@ export function BlockTimeDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
-            <Ban className="text-rose-600 size-5" />
+            <Ban className="size-5 text-rose-600" />
             Block this time
           </DialogTitle>
           <DialogDescription>
-            Marks the slot unavailable on the training calendar — new
-            sessions can&apos;t be scheduled into it. Shows as a striped gray
-            block.
+            Marks the slot unavailable on the training calendar — new sessions
+            can&apos;t be scheduled into it. Shows as a striped gray block.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
           <div className="rounded-lg border bg-slate-50/40 px-3 py-2 text-[12.5px]">
-            <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+            <p className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
               When
             </p>
             <p className="mt-0.5 font-semibold text-slate-800">
@@ -204,8 +203,8 @@ export function BlockTimeDialog({
                   Scope to {trainerName ?? "this trainer"}
                 </p>
                 <p className="text-muted-foreground text-[11px]">
-                  Off: blocks the slot across every trainer column on the
-                  day view (facility-wide closure).
+                  Off: blocks the slot across every trainer column on the day
+                  view (facility-wide closure).
                 </p>
               </div>
               <Switch

@@ -225,17 +225,31 @@ function TaskRow({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{task.title}</p>
         <div className="mt-0.5 flex items-center gap-2">
-          <Badge className={cn("px-1.5 py-0 text-[10px]", CATEGORY_COLORS[task.category])} variant="secondary">
+          <Badge
+            className={cn(
+              "px-1.5 py-0 text-[10px]",
+              CATEGORY_COLORS[task.category],
+            )}
+            variant="secondary"
+          >
             {task.category}
           </Badge>
-          <Badge className={cn("px-1.5 py-0 text-[10px]", PRIORITY_COLORS[task.priority])} variant="secondary">
+          <Badge
+            className={cn(
+              "px-1.5 py-0 text-[10px]",
+              PRIORITY_COLORS[task.priority],
+            )}
+            variant="secondary"
+          >
             {task.priority}
           </Badge>
           <span className="text-muted-foreground flex items-center gap-1 text-[10px]">
             <Clock className="size-3" />
             {task.estimatedMinutes}m
           </span>
-          {task.requiresPhoto && <Camera className="text-muted-foreground size-3" />}
+          {task.requiresPhoto && (
+            <Camera className="text-muted-foreground size-3" />
+          )}
         </div>
       </div>
       <button
@@ -309,8 +323,12 @@ function Step1({
           </div>
           <div>
             <p className="font-semibold">{title}</p>
-            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">{desc}</p>
-            <p className="text-muted-foreground/60 mt-2 text-[10px] italic">{example}</p>
+            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              {desc}
+            </p>
+            <p className="text-muted-foreground/60 mt-2 text-[10px] italic">
+              {example}
+            </p>
           </div>
           {value === type && (
             <CheckCircle2 className="text-primary absolute top-3 right-3 size-4" />
@@ -376,7 +394,9 @@ function Step2({
         </div>
         <div className="max-h-72 space-y-1.5 overflow-y-auto pr-1">
           {filtered.length === 0 && (
-            <p className="text-muted-foreground py-6 text-center text-sm">No matching tasks</p>
+            <p className="text-muted-foreground py-6 text-center text-sm">
+              No matching tasks
+            </p>
           )}
           {filtered.map((t) => (
             <button
@@ -388,10 +408,18 @@ function Step2({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{t.title}</p>
                 <div className="mt-0.5 flex items-center gap-2">
-                  <Badge className={cn("px-1.5 py-0 text-[10px]", CATEGORY_COLORS[t.category])} variant="secondary">
+                  <Badge
+                    className={cn(
+                      "px-1.5 py-0 text-[10px]",
+                      CATEGORY_COLORS[t.category],
+                    )}
+                    variant="secondary"
+                  >
                     {t.category}
                   </Badge>
-                  <span className="text-muted-foreground text-[10px]">{t.estimatedMinutes}m</span>
+                  <span className="text-muted-foreground text-[10px]">
+                    {t.estimatedMinutes}m
+                  </span>
                 </div>
               </div>
             </button>
@@ -415,7 +443,9 @@ function Step2({
               placeholder="Task title *"
               value={state.newTask.title}
               onChange={(e) =>
-                onChange({ newTask: { ...state.newTask, title: e.target.value } })
+                onChange({
+                  newTask: { ...state.newTask, title: e.target.value },
+                })
               }
             />
             <Textarea
@@ -423,7 +453,9 @@ function Step2({
               rows={2}
               value={state.newTask.description ?? ""}
               onChange={(e) =>
-                onChange({ newTask: { ...state.newTask, description: e.target.value } })
+                onChange({
+                  newTask: { ...state.newTask, description: e.target.value },
+                })
               }
             />
             <div className="grid grid-cols-2 gap-2">
@@ -438,7 +470,9 @@ function Step2({
                 </SelectTrigger>
                 <SelectContent>
                   {CATEGORY_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -481,7 +515,9 @@ function Step2({
                 <Checkbox
                   checked={state.newTask.requiresPhoto}
                   onCheckedChange={(c) =>
-                    onChange({ newTask: { ...state.newTask, requiresPhoto: !!c } })
+                    onChange({
+                      newTask: { ...state.newTask, requiresPhoto: !!c },
+                    })
                   }
                 />
                 Photo
@@ -490,20 +526,29 @@ function Step2({
                 <Checkbox
                   checked={state.newTask.requiresSignoff}
                   onCheckedChange={(c) =>
-                    onChange({ newTask: { ...state.newTask, requiresSignoff: !!c } })
+                    onChange({
+                      newTask: { ...state.newTask, requiresSignoff: !!c },
+                    })
                   }
                 />
                 Sign-off
               </label>
             </div>
             <div className="flex gap-2">
-              <Button size="sm" className="flex-1" onClick={saveNewTask} disabled={!state.newTask.title.trim()}>
+              <Button
+                size="sm"
+                className="flex-1"
+                onClick={saveNewTask}
+                disabled={!state.newTask.title.trim()}
+              >
                 Add Task
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => onChange({ showNewTask: false, newTask: DEFAULT_NEW_TASK })}
+                onClick={() =>
+                  onChange({ showNewTask: false, newTask: DEFAULT_NEW_TASK })
+                }
               >
                 Cancel
               </Button>
@@ -517,14 +562,19 @@ function Step2({
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold">Selected Tasks</p>
           <Badge variant="secondary" className="text-xs">
-            {state.selectedTasks.length} task{state.selectedTasks.length !== 1 ? "s" : ""}
+            {state.selectedTasks.length} task
+            {state.selectedTasks.length !== 1 ? "s" : ""}
           </Badge>
         </div>
         {state.selectedTasks.length === 0 ? (
           <div className="border-border flex h-40 flex-col items-center justify-center rounded-xl border-2 border-dashed">
             <ClipboardList className="text-muted-foreground/30 size-8" />
-            <p className="text-muted-foreground mt-2 text-sm">No tasks added yet</p>
-            <p className="text-muted-foreground/60 text-xs">Pick from the library or create new</p>
+            <p className="text-muted-foreground mt-2 text-sm">
+              No tasks added yet
+            </p>
+            <p className="text-muted-foreground/60 text-xs">
+              Pick from the library or create new
+            </p>
           </div>
         ) : (
           <div className="max-h-[340px] space-y-2 overflow-y-auto pr-1">
@@ -538,12 +588,18 @@ function Step2({
             <span>
               Total:{" "}
               <strong>
-                {state.selectedTasks.reduce((s, t) => s + t.estimatedMinutes, 0)} min
+                {state.selectedTasks.reduce(
+                  (s, t) => s + t.estimatedMinutes,
+                  0,
+                )}{" "}
+                min
               </strong>
             </span>
             <span>
               Photo required:{" "}
-              <strong>{state.selectedTasks.filter((t) => t.requiresPhoto).length}</strong>
+              <strong>
+                {state.selectedTasks.filter((t) => t.requiresPhoto).length}
+              </strong>
             </span>
           </div>
         )}
@@ -576,7 +632,9 @@ function Step3({
           <Input
             placeholder="e.g. Morning Opening Checklist"
             value={cfg.name}
-            onChange={(e) => onChange({ shiftCfg: { ...cfg, name: e.target.value } })}
+            onChange={(e) =>
+              onChange({ shiftCfg: { ...cfg, name: e.target.value } })
+            }
           />
         </div>
         <div className="space-y-2">
@@ -585,7 +643,9 @@ function Step3({
             rows={2}
             placeholder="What should staff expect from this task group?"
             value={cfg.description}
-            onChange={(e) => onChange({ shiftCfg: { ...cfg, description: e.target.value } })}
+            onChange={(e) =>
+              onChange({ shiftCfg: { ...cfg, description: e.target.value } })
+            }
           />
         </div>
         <div className="space-y-2">
@@ -594,7 +654,9 @@ function Step3({
             {shifts.map((s) => (
               <button
                 key={s.id}
-                onClick={() => onChange({ shiftCfg: { ...cfg, shiftId: s.id } })}
+                onClick={() =>
+                  onChange({ shiftCfg: { ...cfg, shiftId: s.id } })
+                }
                 className={cn(
                   "flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-all",
                   cfg.shiftId === s.id
@@ -617,10 +679,12 @@ function Step3({
               <button
                 key={opt}
                 onClick={() =>
-                  onChange({ shiftCfg: { ...cfg, isRecurring: opt === "recurring" } })
+                  onChange({
+                    shiftCfg: { ...cfg, isRecurring: opt === "recurring" },
+                  })
                 }
                 className={cn(
-                  "flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all capitalize",
+                  "flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium capitalize transition-all",
                   (cfg.isRecurring ? "recurring" : "one-time") === opt
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border hover:border-primary/30",
@@ -652,7 +716,9 @@ function Step3({
                 ))}
               </div>
               {cfg.daysOfWeek.length === 0 && (
-                <p className="text-muted-foreground text-[11px]">Applies every day</p>
+                <p className="text-muted-foreground text-[11px]">
+                  Applies every day
+                </p>
               )}
             </div>
           ) : (
@@ -663,7 +729,9 @@ function Step3({
                 type="date"
                 value={cfg.specificDate}
                 onChange={(e) =>
-                  onChange({ shiftCfg: { ...cfg, specificDate: e.target.value } })
+                  onChange({
+                    shiftCfg: { ...cfg, specificDate: e.target.value },
+                  })
                 }
               />
             </div>
@@ -682,7 +750,9 @@ function Step3({
           <Input
             placeholder="e.g. Front of House Daily Tasks"
             value={cfg.name}
-            onChange={(e) => onChange({ positionCfg: { ...cfg, name: e.target.value } })}
+            onChange={(e) =>
+              onChange({ positionCfg: { ...cfg, name: e.target.value } })
+            }
           />
         </div>
         <div className="space-y-2">
@@ -691,7 +761,9 @@ function Step3({
             rows={2}
             placeholder="Describe when and why these tasks apply to this position."
             value={cfg.description}
-            onChange={(e) => onChange({ positionCfg: { ...cfg, description: e.target.value } })}
+            onChange={(e) =>
+              onChange({ positionCfg: { ...cfg, description: e.target.value } })
+            }
           />
         </div>
         <div className="space-y-2">
@@ -719,7 +791,9 @@ function Step3({
                 <div>
                   <p className="text-sm font-medium">{dept.name}</p>
                   {dept.description && (
-                    <p className="text-muted-foreground text-[10px]">{dept.description}</p>
+                    <p className="text-muted-foreground text-[10px]">
+                      {dept.description}
+                    </p>
                   )}
                 </div>
                 {cfg.departmentId === dept.id && (
@@ -770,7 +844,9 @@ function Step3({
           <Input
             type="date"
             value={cfg.dueDate}
-            onChange={(e) => onChange({ standaloneCfg: { ...cfg, dueDate: e.target.value } })}
+            onChange={(e) =>
+              onChange({ standaloneCfg: { ...cfg, dueDate: e.target.value } })
+            }
           />
         </div>
         <div className="space-y-2">
@@ -778,7 +854,9 @@ function Step3({
           <Input
             type="time"
             value={cfg.dueTime}
-            onChange={(e) => onChange({ standaloneCfg: { ...cfg, dueTime: e.target.value } })}
+            onChange={(e) =>
+              onChange({ standaloneCfg: { ...cfg, dueTime: e.target.value } })
+            }
           />
         </div>
       </div>
@@ -807,7 +885,9 @@ function Step3({
           rows={3}
           placeholder="Any context or special instructions…"
           value={cfg.notes}
-          onChange={(e) => onChange({ standaloneCfg: { ...cfg, notes: e.target.value } })}
+          onChange={(e) =>
+            onChange({ standaloneCfg: { ...cfg, notes: e.target.value } })
+          }
         />
       </div>
     </div>
@@ -840,7 +920,10 @@ function Step4({ state }: { state: WizardState }) {
     summaryLines.push({ label: "Department", value: dept?.name ?? "—" });
   } else {
     const st = state.standaloneCfg;
-    summaryLines.push({ label: "Assigned to", value: st.assignedToName || "—" });
+    summaryLines.push({
+      label: "Assigned to",
+      value: st.assignedToName || "—",
+    });
     summaryLines.push({ label: "Due", value: `${st.dueDate} ${st.dueTime}` });
     summaryLines.push({ label: "Priority", value: st.priority });
     if (st.notes) summaryLines.push({ label: "Notes", value: st.notes });
@@ -850,14 +933,20 @@ function Step4({ state }: { state: WizardState }) {
     <div className="space-y-5">
       <div className="bg-muted/30 space-y-3 rounded-xl border p-4">
         <div className="flex items-center gap-2">
-          {type === "shift" && <CalendarClock className="text-amber-600 size-5" />}
+          {type === "shift" && (
+            <CalendarClock className="size-5 text-amber-600" />
+          )}
           {type === "position" && <Users className="size-5 text-blue-600" />}
-          {type === "standalone" && <UserCheck className="size-5 text-emerald-600" />}
+          {type === "standalone" && (
+            <UserCheck className="size-5 text-emerald-600" />
+          )}
           <p className="font-semibold capitalize">{type} Task Group</p>
         </div>
         {summaryLines.map((l) => (
           <div key={l.label} className="flex items-start gap-2 text-sm">
-            <span className="text-muted-foreground w-28 shrink-0">{l.label}</span>
+            <span className="text-muted-foreground w-28 shrink-0">
+              {l.label}
+            </span>
             <span className="font-medium">{l.value}</span>
           </div>
         ))}
@@ -869,16 +958,29 @@ function Step4({ state }: { state: WizardState }) {
         </p>
         <div className="max-h-52 space-y-1.5 overflow-y-auto">
           {state.selectedTasks.map((t, i) => (
-            <div key={t.id} className="flex items-center gap-3 rounded-lg border px-3 py-2">
-              <span className="text-muted-foreground w-5 text-center text-[11px]">{i + 1}</span>
+            <div
+              key={t.id}
+              className="flex items-center gap-3 rounded-lg border px-3 py-2"
+            >
+              <span className="text-muted-foreground w-5 text-center text-[11px]">
+                {i + 1}
+              </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{t.title}</p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <Badge className={cn("px-1.5 py-0 text-[10px]", PRIORITY_COLORS[t.priority])} variant="secondary">
+              <div className="flex shrink-0 items-center gap-2">
+                <Badge
+                  className={cn(
+                    "px-1.5 py-0 text-[10px]",
+                    PRIORITY_COLORS[t.priority],
+                  )}
+                  variant="secondary"
+                >
                   {t.priority}
                 </Badge>
-                <span className="text-muted-foreground text-[10px]">{t.estimatedMinutes}m</span>
+                <span className="text-muted-foreground text-[10px]">
+                  {t.estimatedMinutes}m
+                </span>
               </div>
             </div>
           ))}
@@ -887,7 +989,8 @@ function Step4({ state }: { state: WizardState }) {
           <span>
             Total time:{" "}
             <strong className="text-foreground">
-              {state.selectedTasks.reduce((s, t) => s + t.estimatedMinutes, 0)} min
+              {state.selectedTasks.reduce((s, t) => s + t.estimatedMinutes, 0)}{" "}
+              min
             </strong>
           </span>
         </div>
@@ -913,7 +1016,8 @@ export function TaskWizard({
     step: defaultType ? 2 : 1,
   });
 
-  const patch = (p: Partial<WizardState>) => setState((prev) => ({ ...prev, ...p }));
+  const patch = (p: Partial<WizardState>) =>
+    setState((prev) => ({ ...prev, ...p }));
 
   const canAdvance = () => {
     if (state.step === 1) return !!state.assignmentType;
@@ -922,7 +1026,9 @@ export function TaskWizard({
       if (state.assignmentType === "shift") return !!state.shiftCfg.name;
       if (state.assignmentType === "position")
         return !!state.positionCfg.name && !!state.positionCfg.departmentId;
-      return !!state.standaloneCfg.assignedToId && !!state.standaloneCfg.dueDate;
+      return (
+        !!state.standaloneCfg.assignedToId && !!state.standaloneCfg.dueDate
+      );
     }
     return true;
   };
@@ -942,13 +1048,20 @@ export function TaskWizard({
     setTimeout(() => setState({ ...DEFAULT_STATE }), 300);
   };
 
-  const titles = ["Choose Assignment Type", "Build Task List", "Configure Assignment", "Review & Confirm"];
+  const titles = [
+    "Choose Assignment Type",
+    "Build Task List",
+    "Configure Assignment",
+    "Review & Confirm",
+  ];
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="text-lg">{titles[state.step - 1]}</DialogTitle>
+          <DialogTitle className="text-lg">
+            {titles[state.step - 1]}
+          </DialogTitle>
           <div className="mt-3 flex justify-center">
             <StepIndicator current={state.step} />
           </div>
@@ -956,7 +1069,10 @@ export function TaskWizard({
 
         <div className="py-4">
           {state.step === 1 && (
-            <Step1 value={state.assignmentType} onChange={(t) => patch({ assignmentType: t })} />
+            <Step1
+              value={state.assignmentType}
+              onChange={(t) => patch({ assignmentType: t })}
+            />
           )}
           {state.step === 2 && <Step2 state={state} onChange={patch} />}
           {state.step === 3 && <Step3 state={state} onChange={patch} />}
@@ -966,7 +1082,11 @@ export function TaskWizard({
         <div className="flex items-center justify-between border-t pt-4">
           <Button
             variant="outline"
-            onClick={() => (state.step === 1 ? handleClose() : patch({ step: (state.step - 1) as 1 | 2 | 3 | 4 }))}
+            onClick={() =>
+              state.step === 1
+                ? handleClose()
+                : patch({ step: (state.step - 1) as 1 | 2 | 3 | 4 })
+            }
             className="gap-2"
           >
             <ChevronLeft className="size-4" />

@@ -56,7 +56,10 @@ const BEHAVIOR_TO_MOOD_PRIORITY: BehaviorTag[] = [
   "calm",
 ];
 
-const BEHAVIOR_TO_MOOD: Record<BehaviorTag, "happy" | "content" | "shy" | "tired"> = {
+const BEHAVIOR_TO_MOOD: Record<
+  BehaviorTag,
+  "happy" | "content" | "shy" | "tired"
+> = {
   calm: "content",
   happy: "happy",
   anxious: "shy",
@@ -88,8 +91,9 @@ export function getGroomingPhotoRequirements(): {
   requireAfterPhotos: boolean;
 } {
   // Lazy require to avoid a hard cycle through the data layer at module init.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { facilities } = require("@/data/facilities") as typeof import("@/data/facilities");
+  const { facilities } =
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require("@/data/facilities") as typeof import("@/data/facilities");
   const f = facilities.find((x) => x.id === 11) as
     | { groomingPhotoPolicy?: GroomingPhotoPolicyConfig }
     | undefined;
@@ -224,7 +228,9 @@ export const groomingQueries = {
     queryFn: async () =>
       (clientId === undefined
         ? []
-        : mockCustomerPackages.filter((p) => p.customerId === clientId)) as CustomerPackageRecord[],
+        : mockCustomerPackages.filter(
+            (p) => p.customerId === clientId,
+          )) as CustomerPackageRecord[],
   }),
   products: () => ({
     queryKey: ["grooming", "products"] as const,
@@ -246,7 +252,9 @@ export const groomingQueries = {
   petNotes: (petId: number) => ({
     queryKey: ["pet-notes", "pet", petId] as const,
     queryFn: async () =>
-      petNotes.filter((n) => n.scope === "pet" && n.petId === petId) as PetNote[],
+      petNotes.filter(
+        (n) => n.scope === "pet" && n.petId === petId,
+      ) as PetNote[],
   }),
   clientNotes: (clientId: number) => ({
     queryKey: ["pet-notes", "client", clientId] as const,
@@ -355,10 +363,7 @@ export type EffectivePricing = {
  * True when the pet's age (in months) falls inside the rule's range. An
  * undefined bound is treated as "open" on that side.
  */
-function ageInRange(
-  rule: AgeGroupPricingRule,
-  petAgeMonths: number,
-): boolean {
+function ageInRange(rule: AgeGroupPricingRule, petAgeMonths: number): boolean {
   if (rule.minMonths !== undefined && petAgeMonths < rule.minMonths) {
     return false;
   }

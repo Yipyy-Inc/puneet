@@ -27,9 +27,15 @@ import {
 } from "@/components/ui/generic-sidebar";
 import { petCams, mobileAppSettings } from "@/data/additional-features";
 import { bookings } from "@/data/bookings";
-import { cameraIntegrationConfig, petCamAccessConfigs } from "@/data/camera-integration";
+import {
+  cameraIntegrationConfig,
+  petCamAccessConfigs,
+} from "@/data/camera-integration";
 import { memberships, customerPackagePurchases } from "@/data/services-pricing";
-import type { CameraRuleSet, CameraServiceType } from "@/types/camera-integration";
+import type {
+  CameraRuleSet,
+  CameraServiceType,
+} from "@/types/camera-integration";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -65,8 +71,7 @@ export function CustomerSidebar() {
     const membershipPlanIds = memberships
       .filter(
         (m) =>
-          m.customerId === String(MOCK_CUSTOMER_ID) &&
-          m.status === "active",
+          m.customerId === String(MOCK_CUSTOMER_ID) && m.status === "active",
       )
       .map((m) => m.planId);
 
@@ -94,8 +99,13 @@ export function CustomerSidebar() {
 
     const now = new Date();
     const dayKey = [
-      "sunday", "monday", "tuesday", "wednesday",
-      "thursday", "friday", "saturday",
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
     ][now.getDay()];
     // Operating hours check is intentionally permissive in sidebar — just show the nav item
     const isWithinOperatingHours = true;
@@ -110,24 +120,36 @@ export function CustomerSidebar() {
   }, [isMounted, selectedFacility]);
 
   function passesRuleSet(ruleSet: CameraRuleSet): boolean {
-    if (!accessContext || !ruleSet.enabled || ruleSet.rules.length === 0) return false;
+    if (!accessContext || !ruleSet.enabled || ruleSet.rules.length === 0)
+      return false;
     const results = ruleSet.rules.map((rule) => {
       if (rule.type === "active_stay") {
-        return rule.services.some((s) => accessContext.activeStayServices.includes(s));
+        return rule.services.some((s) =>
+          accessContext.activeStayServices.includes(s),
+        );
       }
-      if (rule.type === "operation_hours") return accessContext.isWithinOperatingHours;
+      if (rule.type === "operation_hours")
+        return accessContext.isWithinOperatingHours;
       if (rule.type === "membership") {
-        return rule.membershipPlanIds.some((id) => accessContext.membershipPlanIds.includes(id));
+        return rule.membershipPlanIds.some((id) =>
+          accessContext.membershipPlanIds.includes(id),
+        );
       }
       if (rule.type === "package") {
-        return rule.packageIds.some((id) => accessContext.purchasedPackageIds.includes(id));
+        return rule.packageIds.some((id) =>
+          accessContext.purchasedPackageIds.includes(id),
+        );
       }
       if (rule.type === "service_customer") {
-        return rule.services.some((s) => accessContext.customerServiceTypes.includes(s));
+        return rule.services.some((s) =>
+          accessContext.customerServiceTypes.includes(s),
+        );
       }
       return false;
     });
-    return ruleSet.logic === "any" ? results.some(Boolean) : results.every(Boolean);
+    return ruleSet.logic === "any"
+      ? results.some(Boolean)
+      : results.every(Boolean);
   }
 
   // Check if cameras are enabled for customers (only on client)
@@ -144,7 +166,7 @@ export function CustomerSidebar() {
         : cfg.customRuleSet;
       return ruleSet ? passesRuleSet(ruleSet) : false;
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted, accessContext]);
 
   const menuSections: MenuSection[] = useMemo(() => {

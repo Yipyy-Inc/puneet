@@ -31,8 +31,10 @@ const PRIORITY_CLASSES: Record<InsightPriority, string> = {
 };
 
 function TrendIcon({ trend }: { trend: InsightTrend }) {
-  if (trend === "up") return <TrendingUp className="size-3.5 text-emerald-600" />;
-  if (trend === "down") return <TrendingDown className="size-3.5 text-red-600" />;
+  if (trend === "up")
+    return <TrendingUp className="size-3.5 text-emerald-600" />;
+  if (trend === "down")
+    return <TrendingDown className="size-3.5 text-red-600" />;
   return <Minus className="size-3.5 text-gray-500" />;
 }
 
@@ -51,7 +53,7 @@ export function InsightCardCompact({
   return (
     <div
       data-priority={insight.priority}
-      className="space-y-1 rounded-xl border-2 border-border/80 bg-card p-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_-2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:-translate-y-0.5 hover:border-border hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.08),0_10px_20px_-4px_rgba(0,0,0,0.06)]"
+      className="border-border/80 bg-card hover:border-border space-y-1 rounded-xl border-2 p-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_-2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.08),0_10px_20px_-4px_rgba(0,0,0,0.06)]"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
@@ -71,7 +73,7 @@ export function InsightCardCompact({
         </div>
       </div>
 
-      <h4 className="text-sm font-semibold leading-tight">{insight.title}</h4>
+      <h4 className="text-sm leading-tight font-semibold">{insight.title}</h4>
       <p className="text-muted-foreground line-clamp-1 text-xs">
         {insight.description}
       </p>

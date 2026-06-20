@@ -84,8 +84,8 @@ export function PickupDropoffCard({
           </div>
         </div>
         <p className="text-muted-foreground text-xs">
-          Staff will use this information at check-in and pick-up. Make sure
-          the people you list bring a valid ID when picking up your pet.
+          Staff will use this information at check-in and pick-up. Make sure the
+          people you list bring a valid ID when picking up your pet.
         </p>
       </CardContent>
     </Card>

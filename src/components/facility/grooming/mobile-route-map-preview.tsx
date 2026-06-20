@@ -50,7 +50,7 @@ export function MobileRouteMapPreview({
   return (
     <div className="space-y-1">
       {caption && (
-        <p className="text-[10px] font-medium text-muted-foreground">
+        <p className="text-muted-foreground text-[10px] font-medium">
           {caption}
         </p>
       )}

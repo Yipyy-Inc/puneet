@@ -372,10 +372,7 @@ function TierCard({
             value={tier.color}
             onChange={(color) => onPatch({ color })}
           />
-          <IconField
-            value={tier.icon}
-            onChange={(icon) => onPatch({ icon })}
-          />
+          <IconField value={tier.icon} onChange={(icon) => onPatch({ icon })} />
         </div>
 
         {/* Benefits */}
@@ -419,7 +416,8 @@ function BenefitRow({
     typeof benefit.value === "string" && benefit.value
       ? benefit.value
       : BOOKABLE_SERVICE_TYPES[0];
-  const scopeService = benefit.appliesToServiceTypes?.[0] ?? BOOKABLE_SERVICE_TYPES[0];
+  const scopeService =
+    benefit.appliesToServiceTypes?.[0] ?? BOOKABLE_SERVICE_TYPES[0];
 
   return (
     <div className="bg-muted/20 flex flex-wrap items-end gap-2 rounded-lg border p-2.5">

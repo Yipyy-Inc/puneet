@@ -86,7 +86,9 @@ export const campaignAudienceFilterSchema = z.enum([
   "membership_holders",
   "custom",
 ]);
-export type CampaignAudienceFilter = z.infer<typeof campaignAudienceFilterSchema>;
+export type CampaignAudienceFilter = z.infer<
+  typeof campaignAudienceFilterSchema
+>;
 
 export const campaignSchema = z.object({
   id: z.string(),
@@ -155,16 +157,20 @@ export const messagingAnalyticsSchema = z.object({
   revenueInfluenced: z.number(),
   missedChats: z.number(),
   hourlyVolume: z.array(z.object({ hour: z.number(), messages: z.number() })),
-  channelBreakdown: z.array(z.object({ channel: z.string(), count: z.number(), pct: z.number() })),
+  channelBreakdown: z.array(
+    z.object({ channel: z.string(), count: z.number(), pct: z.number() }),
+  ),
   topThreadTags: z.array(z.object({ tag: z.string(), count: z.number() })),
   statusBreakdown: z.array(z.object({ status: z.string(), count: z.number() })),
-  staffPerformance: z.array(z.object({
-    name: z.string(),
-    replied: z.number(),
-    avgResponseMin: z.number(),
-    resolved: z.number(),
-    csat: z.number().optional(),
-  })),
+  staffPerformance: z.array(
+    z.object({
+      name: z.string(),
+      replied: z.number(),
+      avgResponseMin: z.number(),
+      resolved: z.number(),
+      csat: z.number().optional(),
+    }),
+  ),
 });
 export type MessagingAnalytics = z.infer<typeof messagingAnalyticsSchema>;
 

@@ -5,7 +5,10 @@ import { useSearchParams } from "next/navigation";
 import { ContactList } from "./ContactList";
 import { ConversationThread } from "./ConversationThread";
 import { ClientContextPanel } from "./ClientContextPanel";
-import { messages as facilityMessages, callLogs } from "@/data/communications-hub";
+import {
+  messages as facilityMessages,
+  callLogs,
+} from "@/data/communications-hub";
 import { clientCommunications } from "@/data/communications";
 import { facilities } from "@/data/facilities";
 import { clients } from "@/data/clients";
@@ -90,7 +93,10 @@ const phoneDigits = (s: string | undefined | null) =>
 
 // Find an existing facility conversation thread for a call-log follow-up,
 // by the call's linked client, falling back to the caller's phone number.
-function findThreadForCall(source: string, toPhone: string | null): string | null {
+function findThreadForCall(
+  source: string,
+  toPhone: string | null,
+): string | null {
   const call = callLogs.find((c) => c.id === source);
   if (call?.clientId != null) {
     const m = facilityMessages.find((msg) => msg.clientId === call.clientId);

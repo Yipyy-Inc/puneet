@@ -4,12 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Wallet,
   Gift,
@@ -140,7 +135,7 @@ export function WalletView() {
   if (!wallet) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="flex size-16 items-center justify-center rounded-full bg-muted">
+        <div className="bg-muted flex size-16 items-center justify-center rounded-full">
           <Wallet className="text-muted-foreground size-8" />
         </div>
         <p className="mt-4 font-semibold">No wallet yet</p>
@@ -161,7 +156,7 @@ export function WalletView() {
     <div className="space-y-5">
       {/* Balance hero */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-6 text-white shadow-xl">
-        <div className="absolute -right-8 -top-8 size-36 rounded-full bg-white/10" />
+        <div className="absolute -top-8 -right-8 size-36 rounded-full bg-white/10" />
         <div className="absolute -bottom-6 -left-6 size-28 rounded-full bg-white/10" />
         <div className="relative">
           <div className="flex items-start justify-between">
@@ -176,7 +171,7 @@ export function WalletView() {
               <p className="mt-1 text-sm opacity-70">Available balance</p>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <Badge className="bg-white/20 text-white hover:bg-white/30 text-xs">
+              <Badge className="bg-white/20 text-xs text-white hover:bg-white/30">
                 Active
               </Badge>
             </div>
@@ -197,13 +192,21 @@ export function WalletView() {
 
       {/* Quick actions */}
       <div className="grid grid-cols-2 gap-3">
-        <Button variant="outline" asChild className="h-auto flex-col gap-1.5 py-3">
+        <Button
+          variant="outline"
+          asChild
+          className="h-auto flex-col gap-1.5 py-3"
+        >
           <Link href="/customer/gift-cards/redeem">
             <Gift className="size-5 text-violet-600" />
             <span className="text-xs font-medium">Redeem Gift Card</span>
           </Link>
         </Button>
-        <Button variant="outline" asChild className="h-auto flex-col gap-1.5 py-3">
+        <Button
+          variant="outline"
+          asChild
+          className="h-auto flex-col gap-1.5 py-3"
+        >
           <Link href="/customer/gift-cards">
             <Sparkles className="size-5 text-amber-600" />
             <span className="text-xs font-medium">Buy Gift Card</span>
@@ -243,14 +246,22 @@ export function WalletView() {
                   <p className="font-bold text-green-600">
                     ${gc.currentBalance.toFixed(2)}
                   </p>
-                  <Badge variant="outline" className="mt-0.5 text-xs capitalize">
+                  <Badge
+                    variant="outline"
+                    className="mt-0.5 text-xs capitalize"
+                  >
                     {gc.type}
                   </Badge>
                 </div>
               </div>
             ))}
           </div>
-          <Button variant="ghost" size="sm" asChild className="mt-1 w-full text-xs">
+          <Button
+            variant="ghost"
+            size="sm"
+            asChild
+            className="mt-1 w-full text-xs"
+          >
             <Link href="/customer/gift-cards/redeem">
               + Redeem another card
             </Link>
@@ -297,7 +308,9 @@ export function WalletView() {
                       <Icon className={cn("size-4", cfg.color)} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{cfg.label}</p>
+                      <p className="truncate text-sm font-medium">
+                        {cfg.label}
+                      </p>
                       <p className="text-muted-foreground truncate text-xs">
                         {tx.description}
                       </p>
@@ -327,7 +340,7 @@ export function WalletView() {
 
       {/* Usage note */}
       <Card className="border-dashed">
-        <CardHeader className="pb-2 pt-4">
+        <CardHeader className="pt-4 pb-2">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">
             <Sparkles className="text-primary size-4" />
             Where can I use my wallet?
@@ -343,15 +356,18 @@ export function WalletView() {
               { icon: Package, label: "Packages" },
               { icon: Plus, label: "Add-Ons" },
             ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-1.5 text-muted-foreground">
+              <div
+                key={label}
+                className="text-muted-foreground flex items-center gap-1.5"
+              >
                 <Icon className="size-3.5" />
                 <span>{label}</span>
               </div>
             ))}
           </div>
           <p className="text-muted-foreground mt-3 text-xs">
-            Simply select &quot;Pay with Wallet&quot; at checkout — your balance will be
-            applied automatically.
+            Simply select &quot;Pay with Wallet&quot; at checkout — your balance
+            will be applied automatically.
           </p>
         </CardContent>
       </Card>

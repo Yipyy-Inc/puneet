@@ -108,7 +108,7 @@ export function ReorderPanel({ onComplete, onCancel }: InsightPanelProps) {
   return (
     <div className="flex h-full flex-col gap-5 px-1">
       <div className="rounded-lg border bg-slate-50 p-3 text-sm">
-        <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+        <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs tracking-wide uppercase">
           <Package className="size-3.5" />
           {LOW_STOCK.length} items below reorder threshold
         </div>
@@ -134,7 +134,7 @@ export function ReorderPanel({ onComplete, onCancel }: InsightPanelProps) {
                   <div className="flex items-center gap-2">
                     <Link
                       href={insightLinks.inventory(item.id)}
-                      className="text-sm font-semibold hover:text-primary hover:underline"
+                      className="hover:text-primary text-sm font-semibold hover:underline"
                     >
                       {item.name}
                     </Link>
@@ -149,7 +149,8 @@ export function ReorderPanel({ onComplete, onCancel }: InsightPanelProps) {
                     )}
                   </div>
                   <p className="text-muted-foreground mt-0.5 text-xs">
-                    Supplier: <span className="font-medium">{item.supplierName}</span>
+                    Supplier:{" "}
+                    <span className="font-medium">{item.supplierName}</span>
                   </p>
                 </div>
                 <div className="text-right text-xs">

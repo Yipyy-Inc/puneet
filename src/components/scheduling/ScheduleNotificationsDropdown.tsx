@@ -34,7 +34,9 @@ type ScheduleNotif = {
 function buildNotifications(): ScheduleNotif[] {
   const notifs: ScheduleNotif[] = [];
 
-  for (const req of enhancedTimeOffRequests.filter((r) => r.status === "pending")) {
+  for (const req of enhancedTimeOffRequests.filter(
+    (r) => r.status === "pending",
+  )) {
     notifs.push({
       id: req.id,
       title: "Time-off request",
@@ -100,8 +102,7 @@ export function ScheduleNotificationsDropdown() {
   const unreadCount = INITIAL_NOTIFS.filter((n) => !readIds.has(n.id)).length;
   const hasUnread = unreadCount > 0;
 
-  const markRead = (id: string) =>
-    setReadIds((prev) => new Set([...prev, id]));
+  const markRead = (id: string) => setReadIds((prev) => new Set([...prev, id]));
 
   const markAllRead = () =>
     setReadIds(new Set(INITIAL_NOTIFS.map((n) => n.id)));
@@ -119,7 +120,7 @@ export function ScheduleNotificationsDropdown() {
                 className="group relative size-10 rounded-xl"
                 aria-label="Schedule alerts"
               >
-                <AlarmClock className="text-muted-foreground size-5 transition-colors group-hover:text-foreground" />
+                <AlarmClock className="text-muted-foreground group-hover:text-foreground size-5 transition-colors" />
                 {hasUnread && (
                   <span className="bg-primary text-primary-foreground absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full text-[10px] font-medium">
                     {unreadCount > 9 ? "9+" : unreadCount}

@@ -51,21 +51,102 @@ const CATALOG: ReportCategory[] = [
     tier: "Essential",
     Icon: DollarSign,
     reports: [
-      { id: "payment-summary", name: "Payment Summary", description: "By method, date, status", implemented: false },
-      { id: "payment-transaction", name: "Payment Transaction", description: "Detailed per-transaction view", implemented: false },
-      { id: "sales-invoice", name: "Sales Invoice", description: "All issued invoices", implemented: false },
-      { id: "outstanding-balances", name: "Outstanding Balances", description: "Unpaid & overdue", implemented: false },
-      { id: "total-revenue", name: "Total Revenue", description: "By date range & location", implemented: true },
-      { id: "revenue-by-service", name: "Revenue by Service", description: "Daycare, boarding, grooming, etc.", implemented: true },
-      { id: "sales-summary", name: "Sales Summary", description: "Gross, net, discounts, refunds", implemented: false },
-      { id: "retail-pos-sales", name: "Retail / POS Sales", description: "Product sales & item breakdown", implemented: false },
-      { id: "revenue-by-line-item", name: "Revenue by Line Item", description: "Add-ons, packages, services", implemented: false },
-      { id: "retail-inventory-value", name: "Retail Inventory Value", description: "Current stock valuation", tier: "Beneficial", implemented: false },
-      { id: "retail-inventory-changes", name: "Retail Inventory Changes", description: "Restock, shrinkage, adjustments", tier: "Beneficial", implemented: false },
-      { id: "customers-with-credit", name: "Customers with Credit", description: "Account credit balances", tier: "Beneficial", implemented: false },
-      { id: "prepaid-package-purchases", name: "Prepaid Package Purchases", description: "Packages sold & usage", tier: "Beneficial", implemented: false },
-      { id: "promo-code-performance", name: "Promo Code Performance", description: "Redemptions & revenue impact", tier: "Beneficial", implemented: false },
-      { id: "tips-report", name: "Tips Report", description: "Tips collected per staff/service", tier: "Beneficial", implemented: false },
+      {
+        id: "payment-summary",
+        name: "Payment Summary",
+        description: "By method, date, status",
+        implemented: false,
+      },
+      {
+        id: "payment-transaction",
+        name: "Payment Transaction",
+        description: "Detailed per-transaction view",
+        implemented: false,
+      },
+      {
+        id: "sales-invoice",
+        name: "Sales Invoice",
+        description: "All issued invoices",
+        implemented: false,
+      },
+      {
+        id: "outstanding-balances",
+        name: "Outstanding Balances",
+        description: "Unpaid & overdue",
+        implemented: false,
+      },
+      {
+        id: "total-revenue",
+        name: "Total Revenue",
+        description: "By date range & location",
+        implemented: true,
+      },
+      {
+        id: "revenue-by-service",
+        name: "Revenue by Service",
+        description: "Daycare, boarding, grooming, etc.",
+        implemented: true,
+      },
+      {
+        id: "sales-summary",
+        name: "Sales Summary",
+        description: "Gross, net, discounts, refunds",
+        implemented: false,
+      },
+      {
+        id: "retail-pos-sales",
+        name: "Retail / POS Sales",
+        description: "Product sales & item breakdown",
+        implemented: false,
+      },
+      {
+        id: "revenue-by-line-item",
+        name: "Revenue by Line Item",
+        description: "Add-ons, packages, services",
+        implemented: false,
+      },
+      {
+        id: "retail-inventory-value",
+        name: "Retail Inventory Value",
+        description: "Current stock valuation",
+        tier: "Beneficial",
+        implemented: false,
+      },
+      {
+        id: "retail-inventory-changes",
+        name: "Retail Inventory Changes",
+        description: "Restock, shrinkage, adjustments",
+        tier: "Beneficial",
+        implemented: false,
+      },
+      {
+        id: "customers-with-credit",
+        name: "Customers with Credit",
+        description: "Account credit balances",
+        tier: "Beneficial",
+        implemented: false,
+      },
+      {
+        id: "prepaid-package-purchases",
+        name: "Prepaid Package Purchases",
+        description: "Packages sold & usage",
+        tier: "Beneficial",
+        implemented: false,
+      },
+      {
+        id: "promo-code-performance",
+        name: "Promo Code Performance",
+        description: "Redemptions & revenue impact",
+        tier: "Beneficial",
+        implemented: false,
+      },
+      {
+        id: "tips-report",
+        name: "Tips Report",
+        description: "Tips collected per staff/service",
+        tier: "Beneficial",
+        implemented: false,
+      },
     ],
   },
   {
@@ -74,21 +155,101 @@ const CATALOG: ReportCategory[] = [
     tier: "Essential",
     Icon: Calendar,
     reports: [
-      { id: "grooming-appointment-summary", name: "Grooming Appointment Summary", description: "By source, status, payment", implemented: false },
-      { id: "grooming-appointment-list", name: "Grooming Appointment List", description: "Detailed schedule view", implemented: false },
-      { id: "boarding-appointment-list", name: "Boarding Appointment List", description: "All boarding schedules", implemented: false },
-      { id: "daycare-appointment-list", name: "Daycare Appointment List", description: "All daycare schedules", implemented: false },
-      { id: "training-appointment-list", name: "Training Appointment List", description: "Classes & enrollments", implemented: false },
-      { id: "occupancy-report", name: "Occupancy Report", description: "Daycare & boarding fill rates", implemented: true },
-      { id: "check-in-checkout-log", name: "Check-in / Check-out Log", description: "Daily arrivals & departures", implemented: false },
-      { id: "booking-requests", name: "Booking Requests", description: "Pending, approved, declined", implemented: false },
-      { id: "cancelled-bookings", name: "Cancelled Bookings", description: "Cancellations & no-shows", implemented: true },
-      { id: "custom-service-appointment-list", name: "Custom Service Appointment List", description: "Splash, transport, etc.", tier: "Beneficial", implemented: false },
-      { id: "pending-bookings", name: "Pending Bookings", description: "Awaiting confirmation", tier: "Beneficial", implemented: false },
-      { id: "daycare-availability-calendar", name: "Daycare Availability Calendar", description: "Capacity by date", tier: "Beneficial", implemented: false },
-      { id: "daycare-occupancy-by-time", name: "Daycare Occupancy by Time of Day", description: "Peak hours analysis", tier: "Beneficial", implemented: false },
-      { id: "no-shows", name: "No-Shows", description: "Missed appointments tracking", implemented: true },
-      { id: "transport-route-report", name: "Transport Route Report", description: "Paws Express stops & revenue", tier: "Beneficial", implemented: false },
+      {
+        id: "grooming-appointment-summary",
+        name: "Grooming Appointment Summary",
+        description: "By source, status, payment",
+        implemented: false,
+      },
+      {
+        id: "grooming-appointment-list",
+        name: "Grooming Appointment List",
+        description: "Detailed schedule view",
+        implemented: false,
+      },
+      {
+        id: "boarding-appointment-list",
+        name: "Boarding Appointment List",
+        description: "All boarding schedules",
+        implemented: false,
+      },
+      {
+        id: "daycare-appointment-list",
+        name: "Daycare Appointment List",
+        description: "All daycare schedules",
+        implemented: false,
+      },
+      {
+        id: "training-appointment-list",
+        name: "Training Appointment List",
+        description: "Classes & enrollments",
+        implemented: false,
+      },
+      {
+        id: "occupancy-report",
+        name: "Occupancy Report",
+        description: "Daycare & boarding fill rates",
+        implemented: true,
+      },
+      {
+        id: "check-in-checkout-log",
+        name: "Check-in / Check-out Log",
+        description: "Daily arrivals & departures",
+        implemented: false,
+      },
+      {
+        id: "booking-requests",
+        name: "Booking Requests",
+        description: "Pending, approved, declined",
+        implemented: false,
+      },
+      {
+        id: "cancelled-bookings",
+        name: "Cancelled Bookings",
+        description: "Cancellations & no-shows",
+        implemented: true,
+      },
+      {
+        id: "custom-service-appointment-list",
+        name: "Custom Service Appointment List",
+        description: "Splash, transport, etc.",
+        tier: "Beneficial",
+        implemented: false,
+      },
+      {
+        id: "pending-bookings",
+        name: "Pending Bookings",
+        description: "Awaiting confirmation",
+        tier: "Beneficial",
+        implemented: false,
+      },
+      {
+        id: "daycare-availability-calendar",
+        name: "Daycare Availability Calendar",
+        description: "Capacity by date",
+        tier: "Beneficial",
+        implemented: false,
+      },
+      {
+        id: "daycare-occupancy-by-time",
+        name: "Daycare Occupancy by Time of Day",
+        description: "Peak hours analysis",
+        tier: "Beneficial",
+        implemented: false,
+      },
+      {
+        id: "no-shows",
+        name: "No-Shows",
+        description: "Missed appointments tracking",
+        implemented: true,
+      },
+      {
+        id: "transport-route-report",
+        name: "Transport Route Report",
+        description: "Paws Express stops & revenue",
+        tier: "Beneficial",
+        implemented: false,
+      },
     ],
   },
   {
@@ -97,16 +258,68 @@ const CATALOG: ReportCategory[] = [
     tier: "Essential",
     Icon: Users,
     reports: [
-      { id: "client-pet-summary", name: "Client & Pet Summary", description: "Demographics & distribution", implemented: false },
-      { id: "new-clients", name: "New Clients", description: "Acquired by date range", implemented: false },
-      { id: "vaccinations-due", name: "Vaccinations Due / Expiring", description: "Compliance tracking", implemented: false },
-      { id: "customer-value", name: "Customer Value", description: "LTV, spend, booking frequency", implemented: true },
-      { id: "pets-by-breed", name: "Pets by Breed", description: "Breed distribution", implemented: false },
-      { id: "pet-status-report", name: "Pet Status Report", description: "Active, inactive, flagged", implemented: false },
-      { id: "boarded-daycare-usage", name: "Boarded & Daycare Usage by Pet", description: "Per-pet service history", tier: "Beneficial", implemented: false },
-      { id: "evaluation-status", name: "Evaluation Status", description: "Pending, approved, expired", implemented: false },
-      { id: "signed-agreements", name: "Signed Agreements / Waivers", description: "Compliance per client", implemented: false },
-      { id: "feeding-medication-log", name: "Feeding & Medication Log", description: "Care instruction adherence", tier: "Beneficial", implemented: false },
+      {
+        id: "client-pet-summary",
+        name: "Client & Pet Summary",
+        description: "Demographics & distribution",
+        implemented: false,
+      },
+      {
+        id: "new-clients",
+        name: "New Clients",
+        description: "Acquired by date range",
+        implemented: false,
+      },
+      {
+        id: "vaccinations-due",
+        name: "Vaccinations Due / Expiring",
+        description: "Compliance tracking",
+        implemented: false,
+      },
+      {
+        id: "customer-value",
+        name: "Customer Value",
+        description: "LTV, spend, booking frequency",
+        implemented: true,
+      },
+      {
+        id: "pets-by-breed",
+        name: "Pets by Breed",
+        description: "Breed distribution",
+        implemented: false,
+      },
+      {
+        id: "pet-status-report",
+        name: "Pet Status Report",
+        description: "Active, inactive, flagged",
+        implemented: false,
+      },
+      {
+        id: "boarded-daycare-usage",
+        name: "Boarded & Daycare Usage by Pet",
+        description: "Per-pet service history",
+        tier: "Beneficial",
+        implemented: false,
+      },
+      {
+        id: "evaluation-status",
+        name: "Evaluation Status",
+        description: "Pending, approved, expired",
+        implemented: false,
+      },
+      {
+        id: "signed-agreements",
+        name: "Signed Agreements / Waivers",
+        description: "Compliance per client",
+        implemented: false,
+      },
+      {
+        id: "feeding-medication-log",
+        name: "Feeding & Medication Log",
+        description: "Care instruction adherence",
+        tier: "Beneficial",
+        implemented: false,
+      },
     ],
   },
   {
@@ -115,12 +328,42 @@ const CATALOG: ReportCategory[] = [
     tier: "Essential",
     Icon: Clock,
     reports: [
-      { id: "staff-performance", name: "Staff Performance", description: "Sales, satisfaction, utilization", implemented: false },
-      { id: "payroll", name: "Payroll", description: "By date range & location", implemented: false },
-      { id: "attendance", name: "Attendance", description: "Clock-in/out, absences", implemented: false },
-      { id: "commission-report", name: "Commission Report", description: "Groomer & trainer earnings", implemented: false },
-      { id: "total-service-hours", name: "Total Daycare / Service Hours", description: "Labor hours by department", implemented: false },
-      { id: "shift-schedule-summary", name: "Shift Schedule Summary", description: "Scheduled vs. actual hours", implemented: false },
+      {
+        id: "staff-performance",
+        name: "Staff Performance",
+        description: "Sales, satisfaction, utilization",
+        implemented: false,
+      },
+      {
+        id: "payroll",
+        name: "Payroll",
+        description: "By date range & location",
+        implemented: false,
+      },
+      {
+        id: "attendance",
+        name: "Attendance",
+        description: "Clock-in/out, absences",
+        implemented: false,
+      },
+      {
+        id: "commission-report",
+        name: "Commission Report",
+        description: "Groomer & trainer earnings",
+        implemented: false,
+      },
+      {
+        id: "total-service-hours",
+        name: "Total Daycare / Service Hours",
+        description: "Labor hours by department",
+        implemented: false,
+      },
+      {
+        id: "shift-schedule-summary",
+        name: "Shift Schedule Summary",
+        description: "Scheduled vs. actual hours",
+        implemented: false,
+      },
     ],
   },
   {
@@ -129,12 +372,42 @@ const CATALOG: ReportCategory[] = [
     tier: "Beneficial",
     Icon: Star,
     reports: [
-      { id: "loyalty-program-report", name: "Loyalty Program Report", description: "Points issued, redeemed, balance", implemented: false },
-      { id: "referral-analytics", name: "Referral Analytics", description: "Conversion, revenue from referrals", implemented: false },
-      { id: "email-campaign-performance", name: "Email Campaign Performance", description: "Open rate, click rate, sent", implemented: false },
-      { id: "sms-campaign-performance", name: "SMS Campaign Performance", description: "Delivery, engagement rates", implemented: false },
-      { id: "bounced-emails", name: "Bounced Emails", description: "Invalid contact cleanup", implemented: false },
-      { id: "playdate-alert-performance", name: "Playdate Alert Performance", description: "Alerts sent & bookings triggered", implemented: false },
+      {
+        id: "loyalty-program-report",
+        name: "Loyalty Program Report",
+        description: "Points issued, redeemed, balance",
+        implemented: false,
+      },
+      {
+        id: "referral-analytics",
+        name: "Referral Analytics",
+        description: "Conversion, revenue from referrals",
+        implemented: false,
+      },
+      {
+        id: "email-campaign-performance",
+        name: "Email Campaign Performance",
+        description: "Open rate, click rate, sent",
+        implemented: false,
+      },
+      {
+        id: "sms-campaign-performance",
+        name: "SMS Campaign Performance",
+        description: "Delivery, engagement rates",
+        implemented: false,
+      },
+      {
+        id: "bounced-emails",
+        name: "Bounced Emails",
+        description: "Invalid contact cleanup",
+        implemented: false,
+      },
+      {
+        id: "playdate-alert-performance",
+        name: "Playdate Alert Performance",
+        description: "Alerts sent & bookings triggered",
+        implemented: false,
+      },
     ],
   },
   {
@@ -143,10 +416,30 @@ const CATALOG: ReportCategory[] = [
     tier: "Beneficial",
     Icon: MapPin,
     reports: [
-      { id: "hq-overview", name: "HQ Overview", description: "Revenue, bookings, occupancy across all locations", implemented: false },
-      { id: "location-comparison", name: "Location Comparison", description: "Side-by-side financial & operational", implemented: false },
-      { id: "staff-pool-utilization", name: "Staff Pool Utilization", description: "Cross-location staffing efficiency", implemented: false },
-      { id: "transfer-history", name: "Transfer History", description: "Inter-location booking transfers", implemented: false },
+      {
+        id: "hq-overview",
+        name: "HQ Overview",
+        description: "Revenue, bookings, occupancy across all locations",
+        implemented: false,
+      },
+      {
+        id: "location-comparison",
+        name: "Location Comparison",
+        description: "Side-by-side financial & operational",
+        implemented: false,
+      },
+      {
+        id: "staff-pool-utilization",
+        name: "Staff Pool Utilization",
+        description: "Cross-location staffing efficiency",
+        implemented: false,
+      },
+      {
+        id: "transfer-history",
+        name: "Transfer History",
+        description: "Inter-location booking transfers",
+        implemented: false,
+      },
     ],
   },
   {
@@ -155,10 +448,30 @@ const CATALOG: ReportCategory[] = [
     tier: "Essential",
     Icon: Shield,
     reports: [
-      { id: "incident-report", name: "Incident Report", description: "Injuries, illness, behavioral", implemented: false },
-      { id: "waiver-agreement-status", name: "Waiver & Agreement Status", description: "Valid, expired, missing", implemented: false },
-      { id: "report-cards", name: "Report Cards", description: "Grooming, daycare, boarding notes", implemented: false },
-      { id: "user-activity-log", name: "User Activity Log", description: "Staff actions & system changes", implemented: false },
+      {
+        id: "incident-report",
+        name: "Incident Report",
+        description: "Injuries, illness, behavioral",
+        implemented: false,
+      },
+      {
+        id: "waiver-agreement-status",
+        name: "Waiver & Agreement Status",
+        description: "Valid, expired, missing",
+        implemented: false,
+      },
+      {
+        id: "report-cards",
+        name: "Report Cards",
+        description: "Grooming, daycare, boarding notes",
+        implemented: false,
+      },
+      {
+        id: "user-activity-log",
+        name: "User Activity Log",
+        description: "Staff actions & system changes",
+        implemented: false,
+      },
     ],
   },
 ];
@@ -180,12 +493,12 @@ function KpiTile({
   sub: string;
 }) {
   return (
-    <div className="rounded-xl border bg-card p-4 space-y-1 shadow-sm">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+    <div className="bg-card space-y-1 rounded-xl border p-4 shadow-sm">
+      <p className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
         {label}
       </p>
-      <p className="text-2xl font-bold tabular-nums leading-none">{value}</p>
-      <p className="text-xs text-muted-foreground">{sub}</p>
+      <p className="text-2xl leading-none font-bold tabular-nums">{value}</p>
+      <p className="text-muted-foreground text-xs">{sub}</p>
     </div>
   );
 }
@@ -203,7 +516,7 @@ function ReportCard({
   return (
     <button
       onClick={onClick}
-      className="group relative flex items-start gap-3 rounded-xl border bg-card p-4 text-left transition-all duration-150 hover:border-primary/40 hover:shadow-md hover:shadow-black/5 hover:-translate-y-px active:translate-y-0"
+      className="group bg-card hover:border-primary/40 relative flex items-start gap-3 rounded-xl border p-4 text-left transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:shadow-black/5 active:translate-y-0"
     >
       <span
         className={cn(
@@ -212,14 +525,14 @@ function ReportCard({
         )}
       />
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold leading-snug group-hover:text-primary transition-colors">
+        <span className="group-hover:text-primary block text-sm leading-snug font-semibold transition-colors">
           {report.name}
         </span>
-        <span className="mt-0.5 block text-xs text-muted-foreground leading-relaxed">
+        <span className="text-muted-foreground mt-0.5 block text-xs leading-relaxed">
           {report.description}
         </span>
       </span>
-      <ChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground/0 group-hover:text-muted-foreground transition-all -translate-x-1 group-hover:translate-x-0" />
+      <ChevronRight className="text-muted-foreground/0 group-hover:text-muted-foreground mt-0.5 size-4 shrink-0 -translate-x-1 transition-all group-hover:translate-x-0" />
     </button>
   );
 }
@@ -235,8 +548,8 @@ function CategorySection({
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-3">
-        <Icon className="size-4 text-muted-foreground" />
-        <h2 className="text-sm font-bold uppercase tracking-widest">
+        <Icon className="text-muted-foreground size-4" />
+        <h2 className="text-sm font-bold tracking-widest uppercase">
           {category.label}
         </h2>
         <Badge
@@ -301,7 +614,7 @@ export function ReportsHub({
   );
 
   const openReport = openReportId
-    ? ALL_REPORTS.find((r) => r.id === openReportId) ?? null
+    ? (ALL_REPORTS.find((r) => r.id === openReportId) ?? null)
     : null;
 
   return (
@@ -311,7 +624,7 @@ export function ReportsHub({
         <h1 className="text-3xl font-bold tracking-tight">
           Reports &amp; Analytics
         </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground max-w-2xl">
+        <p className="text-muted-foreground mt-1.5 max-w-2xl text-sm">
           Reports curated for Yipyy — pet care facilities running daycare,
           boarding, grooming, training, and custom services.
         </p>
@@ -353,11 +666,11 @@ export function ReportsHub({
 
       {/* ── Tier legend ── */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b pb-6 text-sm">
-        <span className="font-semibold text-muted-foreground">
+        <span className="text-muted-foreground font-semibold">
           Report Tiers:
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full bg-emerald-500 inline-block" />
+          <span className="inline-block size-2.5 rounded-full bg-emerald-500" />
           <span className="font-semibold text-emerald-700 dark:text-emerald-400">
             Essential
           </span>
@@ -366,7 +679,7 @@ export function ReportsHub({
           </span>
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full bg-blue-500 inline-block" />
+          <span className="inline-block size-2.5 rounded-full bg-blue-500" />
           <span className="font-semibold text-blue-700 dark:text-blue-400">
             Beneficial
           </span>
@@ -377,7 +690,7 @@ export function ReportsHub({
       {/* ── Search + filter ── */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             placeholder="Search reports..."
             value={search}
@@ -401,14 +714,14 @@ export function ReportsHub({
             </button>
           ))}
         </div>
-        <span className="ml-auto text-sm text-muted-foreground">
+        <span className="text-muted-foreground ml-auto text-sm">
           {totalReports} report{totalReports !== 1 ? "s" : ""}
         </span>
       </div>
 
       {/* ── Catalog ── */}
       {filtered.length === 0 ? (
-        <div className="py-16 text-center text-muted-foreground">
+        <div className="text-muted-foreground py-16 text-center">
           <Search className="mx-auto mb-3 size-8 opacity-30" />
           <p className="font-medium">No reports match your search.</p>
         </div>

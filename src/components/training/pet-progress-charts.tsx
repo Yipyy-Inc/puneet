@@ -18,10 +18,7 @@ import { trainingQueries } from "@/lib/api/training";
 import type { TrainingEnrollment } from "@/lib/training-enrollment";
 import type { TrainingSeries } from "@/lib/training-series";
 import type { ExerciseProgressPoint } from "@/components/training/exercise-progress-chart";
-import {
-  computePetMilestones,
-  type Milestone,
-} from "@/lib/pet-milestones";
+import { computePetMilestones, type Milestone } from "@/lib/pet-milestones";
 import { MilestoneCard } from "@/components/training/milestone-visuals";
 
 // Recharts is heavy — load it on demand so this tab doesn't pay the cost
@@ -140,8 +137,7 @@ function DeltaBadge({ delta }: { delta: number }) {
   }
   return (
     <span className="inline-flex items-center gap-0.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600">
-      <Equal className="size-3" />
-      0
+      <Equal className="size-3" />0
     </span>
   );
 }
@@ -194,10 +190,7 @@ export function PetProgressCharts({
     return rows;
   }, [attendances, enrollments, seriesById]);
 
-  const tracks = useMemo(
-    () => buildExerciseTracks(ratingRows),
-    [ratingRows],
-  );
+  const tracks = useMemo(() => buildExerciseTracks(ratingRows), [ratingRows]);
 
   const milestones = useMemo(
     () =>
@@ -257,7 +250,7 @@ export function PetProgressCharts({
       <div className="rounded-xl border bg-linear-to-br from-indigo-50 via-white to-emerald-50 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">
+            <p className="text-[10px] font-bold tracking-wider text-indigo-600 uppercase">
               {petName}&apos;s progress journey
             </p>
             <p className="mt-1 text-lg font-bold text-slate-900">
@@ -315,10 +308,7 @@ export function PetProgressCharts({
           const color = TIER_COLOR[t.latestRating];
           const singlePoint = t.points.length === 1;
           return (
-            <div
-              key={t.name}
-              className="bg-card rounded-xl border shadow-sm"
-            >
+            <div key={t.name} className="bg-card rounded-xl border shadow-sm">
               <div className="flex items-start justify-between gap-2 border-b px-4 py-2.5">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-800">
@@ -394,7 +384,7 @@ function MilestonesSection({
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2">
-        <Trophy className="text-amber-500 size-4" />
+        <Trophy className="size-4 text-amber-500" />
         <h3 className="text-sm font-semibold text-slate-800">
           {petName}&apos;s milestones
         </h3>

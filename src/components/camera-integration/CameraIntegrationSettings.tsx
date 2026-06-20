@@ -198,9 +198,8 @@ function AccessRuleSummary({ config }: { config: PetCamAccessConfig }) {
 
 export function CameraIntegrationSettings() {
   const [config, setConfig] = useState<CameraIntegrationConfig>(initialConfig);
-  const [accessConfigs, setAccessConfigs] = useState<
-    Record<string, PetCamAccessConfig>
-  >(initialAccessConfigs);
+  const [accessConfigs, setAccessConfigs] =
+    useState<Record<string, PetCamAccessConfig>>(initialAccessConfigs);
   const [credentials, setCredentials] = useState({
     idogcam: {
       kennelId: initialConfig.credentials.idogcam?.kennelId ?? "",
@@ -296,9 +295,7 @@ export function CameraIntegrationSettings() {
               <div>
                 <p className="text-muted-foreground text-xs">Provider</p>
                 <p className="text-sm font-medium">
-                  {config.provider
-                    ? PROVIDER_META[config.provider].name
-                    : "—"}
+                  {config.provider ? PROVIDER_META[config.provider].name : "—"}
                 </p>
               </div>
               <div>
@@ -426,11 +423,7 @@ export function CameraIntegrationSettings() {
                   )}
                 </div>
 
-                <Button
-                  onClick={handleConnect}
-                  disabled={connecting}
-                  size="sm"
-                >
+                <Button onClick={handleConnect} disabled={connecting} size="sm">
                   {connecting ? (
                     <>
                       <Loader2 className="mr-2 size-3.5 animate-spin" />

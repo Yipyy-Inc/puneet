@@ -125,7 +125,7 @@ export function CustomerHeader() {
 
       <div className="flex items-center gap-2">
         {/* Buy Packages / Memberships */}
-        <Button variant="outline" className="gap-2 hidden sm:flex" asChild>
+        <Button variant="outline" className="hidden gap-2 sm:flex" asChild>
           <Link href="/customer/packages">
             <Package className="size-4" />
             <span>Packages</span>

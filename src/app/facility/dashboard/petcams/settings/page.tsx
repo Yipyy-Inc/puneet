@@ -17,7 +17,9 @@ export default function PetCamSettingsPage() {
         </Button>
       </div>
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Live Pet Cam Settings</h2>
+        <h2 className="text-3xl font-bold tracking-tight">
+          Live Pet Cam Settings
+        </h2>
         <p className="text-muted-foreground">
           Configure your camera provider, credentials, and access rules.
         </p>

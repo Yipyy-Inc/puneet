@@ -114,7 +114,8 @@ export function toWalletReward(
     servicesText: servicesTextFor(record.appliesToServiceTypes),
     expiresAt,
     expiresInDays,
-    isExpiringSoon: expiresInDays != null && expiresInDays <= EXPIRING_SOON_DAYS,
+    isExpiringSoon:
+      expiresInDays != null && expiresInDays <= EXPIRING_SOON_DAYS,
   };
 }
 

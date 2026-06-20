@@ -335,8 +335,6 @@ const SERVICE_VARIANTS: Record<string, ServiceVariant[]> = {
 // (see groomingAddOns memo inside the component). Add-ons created in the
 // grooming rates page Add-ons tab automatically appear here.
 
-
-
 export function GroomingBookingFlow({
   open,
   onOpenChange,
@@ -405,7 +403,7 @@ export function GroomingBookingFlow({
     message: string;
     nextAvailableDate: Date | null;
   } | null>(null);
-  
+
   const activeStaffedVans = useMemo(() => {
     return vans.filter((v) => v.active && v.assignedStaffIds.length > 0);
   }, [vans]);
@@ -1074,7 +1072,12 @@ export function GroomingBookingFlow({
     }
 
     return null;
-  }, [selectedServiceCategory, selectedAddOns, totalDurationWithAddOns, groomingAddOns]);
+  }, [
+    selectedServiceCategory,
+    selectedAddOns,
+    totalDurationWithAddOns,
+    groomingAddOns,
+  ]);
 
   const handleAddOnToggle = (addOnId: string) => {
     setSelectedAddOns((prev) => {
@@ -1236,17 +1239,22 @@ export function GroomingBookingFlow({
     // Check today as a baseline or maybe we shouldn't validate the day until a date is picked?
     // Wait, the original mock logic checked the neighborhood against zones.
     // If we want to know if it's broadly valid for ANY day:
-    const activeAreas = serviceAreas.filter(a => a.active);
+    const activeAreas = serviceAreas.filter((a) => a.active);
     let matchedArea: ServiceArea | null = null;
     let fallbackReview = false;
 
     for (const area of activeAreas) {
       if (area.type === "postal" && area.postalCodes) {
-        if (area.postalCodes.some(pc => {
-          const clientCode = mobileAddress.toUpperCase().replace(/\s+/g, "");
-          const areaCode = pc.toUpperCase().replace(/\s+/g, "");
-          return clientCode === areaCode || (areaCode.length >= 3 && clientCode.startsWith(areaCode));
-        })) {
+        if (
+          area.postalCodes.some((pc) => {
+            const clientCode = mobileAddress.toUpperCase().replace(/\s+/g, "");
+            const areaCode = pc.toUpperCase().replace(/\s+/g, "");
+            return (
+              clientCode === areaCode ||
+              (areaCode.length >= 3 && clientCode.startsWith(areaCode))
+            );
+          })
+        ) {
           matchedArea = area;
           break;
         }
@@ -1254,7 +1262,7 @@ export function GroomingBookingFlow({
         // Radius/Draw requires human review or geocoding in a real system.
         // We consider it conditionally valid so the booking flow isn't blocked.
         fallbackReview = true;
-        matchedArea = area; 
+        matchedArea = area;
       }
     }
 
@@ -1269,7 +1277,9 @@ export function GroomingBookingFlow({
     return {
       isValid: true,
       area: matchedArea,
-      message: fallbackReview ? "This address requires manual review to confirm it is within our radius." : null,
+      message: fallbackReview
+        ? "This address requires manual review to confirm it is within our radius."
+        : null,
     };
   }, [mobileAddress, serviceLocation, serviceAreas]);
 
@@ -2338,7 +2348,7 @@ export function GroomingBookingFlow({
                         key={pet.id}
                         className={`cursor-pointer transition-all ${
                           isSelected
-                            ? "border-transparent bg-primary/5"
+                            ? "bg-primary/5 border-transparent"
                             : "hover:border-primary/50"
                         } ${hasVaccinationIssues ? "border-destructive/50" : ""} `}
                         onClick={() => handlePetSelect(pet.id)}
@@ -2612,7 +2622,7 @@ export function GroomingBookingFlow({
                 return (
                   <Card
                     key={category.id}
-                    className={`hover:border-primary/50 cursor-pointer transition-all ${isSelected ? "border-transparent bg-primary/5" : ""} `}
+                    className={`hover:border-primary/50 cursor-pointer transition-all ${isSelected ? "bg-primary/5 border-transparent" : ""} `}
                     onClick={() => handleServiceSelect(category.id)}
                   >
                     <CardContent className="p-6">
@@ -2717,7 +2727,7 @@ export function GroomingBookingFlow({
                       <Card
                         key={variant.id}
                         className={`hover:border-primary/50 cursor-pointer transition-all ${
-                          isSelected ? "border-transparent bg-primary/5" : ""
+                          isSelected ? "bg-primary/5 border-transparent" : ""
                         } `}
                         onClick={() => handleVariantSelect(variant.id)}
                       >
@@ -3000,7 +3010,7 @@ export function GroomingBookingFlow({
                     <Card
                       key={addon.id}
                       className={`hover:border-primary/50 cursor-pointer transition-all ${
-                        isSelected ? "border-transparent bg-primary/5" : ""
+                        isSelected ? "bg-primary/5 border-transparent" : ""
                       } ${isSuggested ? "border-primary/20 bg-primary/5" : ""} `}
                       onClick={() => handleAddOnToggle(addon.id)}
                     >
@@ -3092,7 +3102,7 @@ export function GroomingBookingFlow({
                       <Card
                         key={tier.id}
                         className={`hover:border-primary/50 cursor-pointer transition-all ${
-                          isSelected ? "border-transparent bg-primary/5" : ""
+                          isSelected ? "bg-primary/5 border-transparent" : ""
                         } `}
                         onClick={() => handleTierSelect(tier.id)}
                       >
@@ -3132,7 +3142,7 @@ export function GroomingBookingFlow({
                   <Card
                     className={`hover:border-primary/50 cursor-pointer transition-all ${
                       !selectedGroomerTier
-                        ? "border-transparent bg-primary/5"
+                        ? "bg-primary/5 border-transparent"
                         : ""
                     } `}
                     onClick={() => handleTierSelect("no-preference")}
@@ -3191,7 +3201,7 @@ export function GroomingBookingFlow({
                       <Card
                         key={groomer.id}
                         className={`cursor-pointer transition-all ${
-                          isSelected ? "border-transparent bg-primary/5" : ""
+                          isSelected ? "bg-primary/5 border-transparent" : ""
                         } ${
                           !isQualified
                             ? "cursor-not-allowed opacity-50"
@@ -3298,7 +3308,7 @@ export function GroomingBookingFlow({
                   <Card
                     className={`hover:border-primary/50 cursor-pointer transition-all ${
                       !selectedGroomerId && !selectedGroomerTier
-                        ? "border-transparent bg-primary/5"
+                        ? "bg-primary/5 border-transparent"
                         : ""
                     } `}
                     onClick={() => {
@@ -3385,7 +3395,7 @@ export function GroomingBookingFlow({
                     <Card
                       className={`cursor-pointer transition-all ${
                         serviceLocation === "salon"
-                          ? "border-transparent bg-primary/5"
+                          ? "bg-primary/5 border-transparent"
                           : "hover:border-primary/50"
                       } `}
                       onClick={() => setServiceLocation("salon")}
@@ -3417,7 +3427,7 @@ export function GroomingBookingFlow({
                     <Card
                       className={`cursor-pointer transition-all ${
                         serviceLocation === "mobile"
-                          ? "border-transparent bg-primary/5"
+                          ? "bg-primary/5 border-transparent"
                           : "hover:border-primary/50"
                       } `}
                       onClick={() => setServiceLocation("mobile")}
@@ -3651,7 +3661,7 @@ export function GroomingBookingFlow({
                       <Card
                         className={`cursor-pointer transition-all ${
                           dropOffPreference === "wait"
-                            ? "border-transparent bg-primary/5"
+                            ? "bg-primary/5 border-transparent"
                             : "hover:border-primary/50"
                         } `}
                         onClick={() => setDropOffPreference("wait")}
@@ -3680,7 +3690,7 @@ export function GroomingBookingFlow({
                       <Card
                         className={`cursor-pointer transition-all ${
                           dropOffPreference === "drop-off"
-                            ? "border-transparent bg-primary/5"
+                            ? "bg-primary/5 border-transparent"
                             : "hover:border-primary/50"
                         } `}
                         onClick={() => setDropOffPreference("drop-off")}
@@ -3708,7 +3718,7 @@ export function GroomingBookingFlow({
                       <Card
                         className={`cursor-pointer transition-all ${
                           dropOffPreference === "curbside"
-                            ? "border-transparent bg-primary/5"
+                            ? "bg-primary/5 border-transparent"
                             : "hover:border-primary/50"
                         } `}
                         onClick={() => setDropOffPreference("curbside")}
@@ -4011,7 +4021,7 @@ export function GroomingBookingFlow({
                             className={cn(
                               "cursor-pointer transition-all",
                               selectedTimeSlot === slot.time
-                                ? "border-transparent bg-primary/5"
+                                ? "bg-primary/5 border-transparent"
                                 : "hover:border-primary/50",
                             )}
                             onClick={() =>
@@ -4390,7 +4400,10 @@ export function GroomingBookingFlow({
                           <div className="flex items-center gap-2">
                             <p className="font-medium">{pkg.name}</p>
                             {pkg.isPopular && (
-                              <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300">
+                              <Badge
+                                variant="secondary"
+                                className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300"
+                              >
                                 Popular
                               </Badge>
                             )}
@@ -5076,7 +5089,7 @@ export function GroomingBookingFlow({
                         key={method.id}
                         className={`cursor-pointer transition-all ${
                           depositPaymentMethod === method.id
-                            ? "border-transparent bg-primary/5"
+                            ? "bg-primary/5 border-transparent"
                             : "hover:border-primary/50"
                         } `}
                         onClick={() => setDepositPaymentMethod(method.id)}

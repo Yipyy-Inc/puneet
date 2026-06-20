@@ -776,11 +776,13 @@ export const callLogs: CallLog[] = [
       "Hi! I'm calling about boarding availability for Easter. Biscuit needs a spot from April 18 through the 22nd. He takes Apoquel twice daily — I'll bring the supply. Also wondering about the premium suite upgrade.",
     aiHandled: false,
     outcome: "booking_created",
-    notes: "Confirmed Easter boarding, premium suite reserved. Medication noted.",
+    notes:
+      "Confirmed Easter boarding, premium suite reserved. Medication noted.",
     inquiryTag: "boarding",
     handledBy: "Sarah M.",
     qaScore: 5,
-    managerNote: "Excellent handling — proactive on medication and offered the suite upgrade.",
+    managerNote:
+      "Excellent handling — proactive on medication and offered the suite upgrade.",
     followUpStatus: "completed",
   },
   {
@@ -809,7 +811,8 @@ export const callLogs: CallLog[] = [
     timestamp: "2026-06-02T16:05:00Z",
     queueWaitSeconds: 8,
     recordingUrl: "/recordings/call-003.mp3",
-    transcription: "I need to reschedule Coco's grooming from Thursday — something came up at work. Can we move it to Friday afternoon?",
+    transcription:
+      "I need to reschedule Coco's grooming from Thursday — something came up at work. Can we move it to Friday afternoon?",
     aiHandled: true,
     outcome: "booking_created",
     notes: "AI rescheduled grooming to Friday Apr 29 at 3 PM.",
@@ -833,7 +836,8 @@ export const callLogs: CallLog[] = [
     outcome: "question_answered",
     handledBy: "James K.",
     qaScore: 4,
-    managerNote: "Clear, efficient confirmation call. Good documentation follow-through.",
+    managerNote:
+      "Clear, efficient confirmation call. Good documentation follow-through.",
     followUpStatus: "scheduled",
   },
   {
@@ -869,7 +873,8 @@ export const callLogs: CallLog[] = [
     timestamp: "2026-05-28T17:48:00Z",
     queueWaitSeconds: 55,
     aiHandled: false,
-    notes: "Missed after hours. Auto-SMS sent. Called back next morning — booked a grooming visit.",
+    notes:
+      "Missed after hours. Auto-SMS sent. Called back next morning — booked a grooming visit.",
     inquiryTag: "reception",
     followUpStatus: "completed",
     outcome: "booking_created",
@@ -887,14 +892,16 @@ export const callLogs: CallLog[] = [
     timestamp: "2026-05-24T14:22:00Z",
     queueWaitSeconds: 21,
     recordingUrl: "/recordings/call-007.mp3",
-    transcription: "I want to file a complaint about the charge from last week's grooming — honestly I'm pretty upset, the price was different than what I was quoted. I'd like a manager to call me back.",
+    transcription:
+      "I want to file a complaint about the charge from last week's grooming — honestly I'm pretty upset, the price was different than what I was quoted. I'd like a manager to call me back.",
     aiHandled: false,
     outcome: "complaint_logged",
     notes: "Billing dispute logged; transferred to Sophie R. for resolution.",
     inquiryTag: "billing",
     handledBy: "Priya N.",
     qaScore: 4,
-    managerNote: "Stayed calm on the dispute; could de-escalate a little faster next time.",
+    managerNote:
+      "Stayed calm on the dispute; could de-escalate a little faster next time.",
     followUpStatus: "completed",
   },
   {
@@ -909,7 +916,8 @@ export const callLogs: CallLog[] = [
     status: "completed",
     timestamp: "2026-05-19T15:05:00Z",
     aiHandled: false,
-    notes: "Follow-up call re: rescheduling grooming appointment from last Tuesday.",
+    notes:
+      "Follow-up call re: rescheduling grooming appointment from last Tuesday.",
     outcome: "transferred_to_staff",
     handledBy: "James K.",
     followUpStatus: "completed",
@@ -925,7 +933,8 @@ export const callLogs: CallLog[] = [
     timestamp: "2026-05-12T14:11:00Z",
     queueWaitSeconds: 41,
     aiHandled: false,
-    notes: "Missed during lunch. Auto-SMS sent. Reached client, rebooked grooming.",
+    notes:
+      "Missed during lunch. Auto-SMS sent. Reached client, rebooked grooming.",
     inquiryTag: "grooming",
     followUpStatus: "completed",
     outcome: "booking_created",
@@ -943,10 +952,12 @@ export const callLogs: CallLog[] = [
     timestamp: "2026-05-21T14:33:00Z",
     queueWaitSeconds: 15,
     recordingUrl: "/recordings/call-010.mp3",
-    transcription: "Hi, I wanted to ask about your training packages. My puppy just turned 6 months and I'm interested in the basic obedience course. Also, do you offer group sessions?",
+    transcription:
+      "Hi, I wanted to ask about your training packages. My puppy just turned 6 months and I'm interested in the basic obedience course. Also, do you offer group sessions?",
     aiHandled: true,
     outcome: "estimate_sent",
-    notes: "AI sent puppy training package pricing and booked a free assessment call.",
+    notes:
+      "AI sent puppy training package pricing and booked a free assessment call.",
     inquiryTag: "training",
     handledBy: "AI Assistant",
   },

@@ -27,25 +27,152 @@ const FREQUENT_BUYERS: {
   bestPackage: string;
   savings: number;
 }[] = [
-  { id: "c-801", firstName: "Brooke", lastName: "Mason", petName: "Atlas", email: "bmason@example.com", visitsPast90: 6, bestPackage: "Grooming 5-pack", savings: 65 },
-  { id: "c-802", firstName: "Tyler", lastName: "Yates", petName: "Cleo", email: "tyates@example.com", visitsPast90: 5, bestPackage: "Daycare 10-pack", savings: 120 },
-  { id: "c-803", firstName: "Naomi", lastName: "Reyes", petName: "Pepper", email: "nreyes@example.com", visitsPast90: 4, bestPackage: "Grooming 5-pack", savings: 65 },
-  { id: "c-804", firstName: "Felix", lastName: "Owen", petName: "Theo", email: "fowen@example.com", visitsPast90: 5, bestPackage: "Grooming 5-pack", savings: 65 },
-  { id: "c-805", firstName: "Iris", lastName: "Hwang", petName: "Mango", email: "ihwang@example.com", visitsPast90: 6, bestPackage: "Daycare 10-pack", savings: 120 },
-  { id: "c-806", firstName: "Quinn", lastName: "Adler", petName: "Bo", email: "qadler@example.com", visitsPast90: 4, bestPackage: "Grooming 5-pack", savings: 65 },
-  { id: "c-807", firstName: "Roman", lastName: "Doyle", petName: "Echo", email: "rdoyle@example.com", visitsPast90: 4, bestPackage: "Grooming 5-pack", savings: 65 },
-  { id: "c-808", firstName: "Beatrice", lastName: "Klein", petName: "Olive", email: "bklein@example.com", visitsPast90: 5, bestPackage: "Daycare 10-pack", savings: 120 },
-  { id: "c-809", firstName: "Daniel", lastName: "Cho", petName: "Juno", email: "dcho@example.com", visitsPast90: 6, bestPackage: "Grooming 5-pack", savings: 65 },
-  { id: "c-810", firstName: "Sarah", lastName: "Whitman", petName: "Ziggy", email: "swhitman@example.com", visitsPast90: 4, bestPackage: "Daycare 10-pack", savings: 120 },
-  { id: "c-811", firstName: "Owen", lastName: "Park", petName: "Rumi", email: "opark@example.com", visitsPast90: 4, bestPackage: "Grooming 5-pack", savings: 65 },
-  { id: "c-812", firstName: "Yara", lastName: "Boudreau", petName: "Hazel", email: "yboudreau@example.com", visitsPast90: 5, bestPackage: "Grooming 5-pack", savings: 65 },
-  { id: "c-813", firstName: "Linus", lastName: "Brodeur", petName: "Sage", email: "lbrodeur@example.com", visitsPast90: 4, bestPackage: "Daycare 10-pack", savings: 120 },
-  { id: "c-814", firstName: "Greta", lastName: "Vance", petName: "Otis", email: "gvance@example.com", visitsPast90: 4, bestPackage: "Grooming 5-pack", savings: 65 },
+  {
+    id: "c-801",
+    firstName: "Brooke",
+    lastName: "Mason",
+    petName: "Atlas",
+    email: "bmason@example.com",
+    visitsPast90: 6,
+    bestPackage: "Grooming 5-pack",
+    savings: 65,
+  },
+  {
+    id: "c-802",
+    firstName: "Tyler",
+    lastName: "Yates",
+    petName: "Cleo",
+    email: "tyates@example.com",
+    visitsPast90: 5,
+    bestPackage: "Daycare 10-pack",
+    savings: 120,
+  },
+  {
+    id: "c-803",
+    firstName: "Naomi",
+    lastName: "Reyes",
+    petName: "Pepper",
+    email: "nreyes@example.com",
+    visitsPast90: 4,
+    bestPackage: "Grooming 5-pack",
+    savings: 65,
+  },
+  {
+    id: "c-804",
+    firstName: "Felix",
+    lastName: "Owen",
+    petName: "Theo",
+    email: "fowen@example.com",
+    visitsPast90: 5,
+    bestPackage: "Grooming 5-pack",
+    savings: 65,
+  },
+  {
+    id: "c-805",
+    firstName: "Iris",
+    lastName: "Hwang",
+    petName: "Mango",
+    email: "ihwang@example.com",
+    visitsPast90: 6,
+    bestPackage: "Daycare 10-pack",
+    savings: 120,
+  },
+  {
+    id: "c-806",
+    firstName: "Quinn",
+    lastName: "Adler",
+    petName: "Bo",
+    email: "qadler@example.com",
+    visitsPast90: 4,
+    bestPackage: "Grooming 5-pack",
+    savings: 65,
+  },
+  {
+    id: "c-807",
+    firstName: "Roman",
+    lastName: "Doyle",
+    petName: "Echo",
+    email: "rdoyle@example.com",
+    visitsPast90: 4,
+    bestPackage: "Grooming 5-pack",
+    savings: 65,
+  },
+  {
+    id: "c-808",
+    firstName: "Beatrice",
+    lastName: "Klein",
+    petName: "Olive",
+    email: "bklein@example.com",
+    visitsPast90: 5,
+    bestPackage: "Daycare 10-pack",
+    savings: 120,
+  },
+  {
+    id: "c-809",
+    firstName: "Daniel",
+    lastName: "Cho",
+    petName: "Juno",
+    email: "dcho@example.com",
+    visitsPast90: 6,
+    bestPackage: "Grooming 5-pack",
+    savings: 65,
+  },
+  {
+    id: "c-810",
+    firstName: "Sarah",
+    lastName: "Whitman",
+    petName: "Ziggy",
+    email: "swhitman@example.com",
+    visitsPast90: 4,
+    bestPackage: "Daycare 10-pack",
+    savings: 120,
+  },
+  {
+    id: "c-811",
+    firstName: "Owen",
+    lastName: "Park",
+    petName: "Rumi",
+    email: "opark@example.com",
+    visitsPast90: 4,
+    bestPackage: "Grooming 5-pack",
+    savings: 65,
+  },
+  {
+    id: "c-812",
+    firstName: "Yara",
+    lastName: "Boudreau",
+    petName: "Hazel",
+    email: "yboudreau@example.com",
+    visitsPast90: 5,
+    bestPackage: "Grooming 5-pack",
+    savings: 65,
+  },
+  {
+    id: "c-813",
+    firstName: "Linus",
+    lastName: "Brodeur",
+    petName: "Sage",
+    email: "lbrodeur@example.com",
+    visitsPast90: 4,
+    bestPackage: "Daycare 10-pack",
+    savings: 120,
+  },
+  {
+    id: "c-814",
+    firstName: "Greta",
+    lastName: "Vance",
+    petName: "Otis",
+    email: "gvance@example.com",
+    visitsPast90: 4,
+    bestPackage: "Grooming 5-pack",
+    savings: 65,
+  },
 ];
 
 const TOTAL_SAVINGS = FREQUENT_BUYERS.reduce((s, c) => s + c.savings, 0);
 
-const DEFAULT_SUBJECT = "You've visited us {{visitsPast90}} times — save with a package";
+const DEFAULT_SUBJECT =
+  "You've visited us {{visitsPast90}} times — save with a package";
 const DEFAULT_BODY = `Hi {{firstName}},
 
 We've loved seeing {{petName}} so often — {{visitsPast90}} visits in the past 90 days! That's the kind of frequency where a package starts making real sense.
@@ -59,7 +186,10 @@ No pressure — just thought you should know it's there.
 Cheers,
 The Doggieville team`;
 
-export function PackageCampaignPanel({ onComplete, onCancel }: InsightPanelProps) {
+export function PackageCampaignPanel({
+  onComplete,
+  onCancel,
+}: InsightPanelProps) {
   const [step, setStep] = useState<"compose" | "preview">("compose");
   const [subject, setSubject] = useState(DEFAULT_SUBJECT);
   const [body, setBody] = useState(DEFAULT_BODY);
@@ -68,7 +198,7 @@ export function PackageCampaignPanel({ onComplete, onCancel }: InsightPanelProps
     return (
       <div className="flex h-full flex-col gap-5 px-1">
         <div className="rounded-lg border bg-slate-50 p-3">
-          <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+          <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs tracking-wide uppercase">
             <Users className="size-3.5" />
             Recipients · {FREQUENT_BUYERS.length} frequent buyers
           </div>
@@ -83,7 +213,7 @@ export function PackageCampaignPanel({ onComplete, onCancel }: InsightPanelProps
               <Link
                 key={c.id}
                 href={insightLinks.client(c.id)}
-                className="inline-flex items-center rounded-md border bg-white px-2 py-0.5 text-xs hover:border-primary/40 hover:bg-primary/5"
+                className="hover:border-primary/40 hover:bg-primary/5 inline-flex items-center rounded-md border bg-white px-2 py-0.5 text-xs"
               >
                 <Package className="mr-1 size-3" />
                 {c.firstName} · {c.visitsPast90}× visits
@@ -91,7 +221,7 @@ export function PackageCampaignPanel({ onComplete, onCancel }: InsightPanelProps
             ))}
             <Link
               href={insightLinks.client()}
-              className="inline-flex items-center rounded-md border bg-white px-2 py-0.5 text-xs text-muted-foreground hover:border-primary/40"
+              className="text-muted-foreground hover:border-primary/40 inline-flex items-center rounded-md border bg-white px-2 py-0.5 text-xs"
             >
               +{FREQUENT_BUYERS.length - 6} more
             </Link>
@@ -116,8 +246,8 @@ export function PackageCampaignPanel({ onComplete, onCancel }: InsightPanelProps
             className="font-mono text-sm"
           />
           <p className="text-muted-foreground text-xs">
-            Tokens: <code>{"{{firstName}}"}</code>,{" "}
-            <code>{"{{petName}}"}</code>, <code>{"{{visitsPast90}}"}</code>,{" "}
+            Tokens: <code>{"{{firstName}}"}</code>, <code>{"{{petName}}"}</code>
+            , <code>{"{{visitsPast90}}"}</code>,{" "}
             <code>{"{{bestPackage}}"}</code>, <code>{"{{savings}}"}</code>
           </p>
         </div>

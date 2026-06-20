@@ -70,8 +70,8 @@ export function PointsLiabilityReport() {
           <div className="mb-3">
             <div className="text-sm font-semibold">Redemption forecast</div>
             <p className="text-muted-foreground text-xs">
-              Projected points (and dollar value) redeemed at the current average
-              daily rate.
+              Projected points (and dollar value) redeemed at the current
+              average daily rate.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

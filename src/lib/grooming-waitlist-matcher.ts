@@ -43,7 +43,9 @@ function minToTime(min: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-function periodForStartMin(startMin: number): "morning" | "afternoon" | "evening" {
+function periodForStartMin(
+  startMin: number,
+): "morning" | "afternoon" | "evening" {
   if (startMin < 12 * 60) return "morning";
   if (startMin < 17 * 60) return "afternoon";
   return "evening";
@@ -191,8 +193,7 @@ export function stylistMatchesPreference(
  * so the UI shows plausible numbers in the demo.
  */
 function postalDistanceMinutes(a: string, b: string): number {
-  const norm = (s: string) =>
-    s.toUpperCase().replace(/\s+/g, "").slice(0, 3);
+  const norm = (s: string) => s.toUpperCase().replace(/\s+/g, "").slice(0, 3);
   const fa = norm(a);
   const fb = norm(b);
   if (fa === fb) return 4;
@@ -283,8 +284,7 @@ export function findAvailableMatches({
   daysAhead = 7,
   todayISO,
 }: FindAvailableMatchesOptions): WaitlistMatch[] {
-  const today =
-    todayISO ?? new Date().toISOString().split("T")[0];
+  const today = todayISO ?? new Date().toISOString().split("T")[0];
 
   // Filter out expired entries and non-waiting statuses up front.
   const candidates = entries.filter((e) => {
@@ -314,18 +314,24 @@ export function findAvailableMatches({
     let found: WaitlistMatch | null = null;
 
     for (const date of dates) {
-      if (
-        !dateMatchesPreference(date, entry.expectedDate, entry.date, today)
-      ) {
+      if (!dateMatchesPreference(date, entry.expectedDate, entry.date, today)) {
         continue;
       }
       const slots = findOpenSlotsForDay(date, stylists, appointments);
       for (const slot of slots) {
         if (slot.durationMin < requiredDuration) continue;
-        if (!timeMatchesPreference(slot.startTime, entry.expectedTime, entry.preferredTimeWindow)) {
+        if (
+          !timeMatchesPreference(
+            slot.startTime,
+            entry.expectedTime,
+            entry.preferredTimeWindow,
+          )
+        ) {
           continue;
         }
-        if (!stylistMatchesPreference(slot.stylistId, slot.stylistName, entry)) {
+        if (
+          !stylistMatchesPreference(slot.stylistId, slot.stylistName, entry)
+        ) {
           continue;
         }
         // Mobile coverage check — when the entry has a postal code AND mobile
@@ -346,8 +352,7 @@ export function findAvailableMatches({
             );
             if (!area) continue;
             if (area.type === "postal" && area.postalCodes) {
-              const norm = (s: string) =>
-                s.toUpperCase().replace(/\s+/g, "");
+              const norm = (s: string) => s.toUpperCase().replace(/\s+/g, "");
               const code = norm(entry.postalCode);
               const covered = area.postalCodes.some((pc) =>
                 code.startsWith(norm(pc)),
@@ -364,7 +369,8 @@ export function findAvailableMatches({
           durationMin: requiredDuration,
         };
         const isMobile =
-          mobileEnabled && (entry.postalCode || entry.source === "online-booking");
+          mobileEnabled &&
+          (entry.postalCode || entry.source === "online-booking");
         const extraDrivingMinutes = isMobile
           ? estimateExtraDrivingMinutes(
               entry.postalCode,
@@ -391,7 +397,5 @@ export function findAvailableMatches({
   }
 
   // FIFO ranking: oldest waiting entry first.
-  return matches.sort((a, b) =>
-    a.entry.addedAt.localeCompare(b.entry.addedAt),
-  );
+  return matches.sort((a, b) => a.entry.addedAt.localeCompare(b.entry.addedAt));
 }

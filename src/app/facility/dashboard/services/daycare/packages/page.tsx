@@ -310,394 +310,383 @@ export default function DaycarePackagesPage() {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="bg-primary/10 rounded-lg p-2">
-                    <Package className="text-primary size-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{packages.length}</p>
-                    <p className="text-muted-foreground text-sm">
-                      Total Packages
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="bg-success/10 rounded-lg p-2">
-                    <Package className="text-success size-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{activePackages}</p>
-                    <p className="text-muted-foreground text-sm">Active</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="bg-warning/10 rounded-lg p-2">
-                    <Star className="text-warning size-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{popularPackages}</p>
-                    <p className="text-muted-foreground text-sm">Featured</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="bg-info/10 rounded-lg p-2">
-                    <TrendingUp className="text-info size-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">${totalSavings}</p>
-                    <p className="text-muted-foreground text-sm">
-                      Total Savings
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/10 rounded-lg p-2">
+                <Package className="text-primary size-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{packages.length}</p>
+                <p className="text-muted-foreground text-sm">Total Packages</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-success/10 rounded-lg p-2">
+                <Package className="text-success size-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{activePackages}</p>
+                <p className="text-muted-foreground text-sm">Active</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-warning/10 rounded-lg p-2">
+                <Star className="text-warning size-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{popularPackages}</p>
+                <p className="text-muted-foreground text-sm">Featured</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-info/10 rounded-lg p-2">
+                <TrendingUp className="text-info size-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">${totalSavings}</p>
+                <p className="text-muted-foreground text-sm">Total Savings</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-          {/* Package Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {packages
-              .filter((p) => p.isActive)
-              .map((pkg) => (
-                <Card
-                  key={pkg.id}
-                  className={`relative overflow-hidden transition-shadow hover:shadow-md ${pkg.popular ? "ring-warning ring-2" : ""} `}
-                >
-                  {pkg.popular && (
-                    <div className="absolute top-3 right-3">
-                      <Badge variant="warning">
-                        <Star className="mr-1 size-3" />
-                        Popular
+      {/* Package Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {packages
+          .filter((p) => p.isActive)
+          .map((pkg) => (
+            <Card
+              key={pkg.id}
+              className={`relative overflow-hidden transition-shadow hover:shadow-md ${pkg.popular ? "ring-warning ring-2" : ""} `}
+            >
+              {pkg.popular && (
+                <div className="absolute top-3 right-3">
+                  <Badge variant="warning">
+                    <Star className="mr-1 size-3" />
+                    Popular
+                  </Badge>
+                </div>
+              )}
+              <div
+                className={`absolute top-0 right-0 left-0 h-1 ${
+                  pkg.rateType === "full-day"
+                    ? "bg-primary"
+                    : pkg.rateType === "half-day"
+                      ? "bg-secondary"
+                      : "bg-muted-foreground"
+                } `}
+              />
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">{pkg.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold">${pkg.price}</span>
+                    <Badge variant="success" className="text-xs">
+                      Save ${pkg.savings}
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground text-sm">
+                    {pkg.description}
+                  </p>
+                  <div className="space-y-2 border-t pt-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Includes:</span>
+                      <span className="font-medium">
+                        {pkg.quantity}{" "}
+                        {pkg.rateType === "hourly" ? "hours" : "days"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Valid for:</span>
+                      <span className="font-medium">
+                        {pkg.validityDays} days
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Rate type:</span>
+                      <Badge variant="outline" className="capitalize">
+                        {pkg.rateType.replace("-", " ")}
                       </Badge>
                     </div>
-                  )}
-                  <div
-                    className={`absolute top-0 right-0 left-0 h-1 ${
-                      pkg.rateType === "full-day"
-                        ? "bg-primary"
-                        : pkg.rateType === "half-day"
-                          ? "bg-secondary"
-                          : "bg-muted-foreground"
-                    } `}
-                  />
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">{pkg.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold">${pkg.price}</span>
-                        <Badge variant="success" className="text-xs">
-                          Save ${pkg.savings}
-                        </Badge>
-                      </div>
-                      <p className="text-muted-foreground text-sm">
-                        {pkg.description}
-                      </p>
-                      <div className="space-y-2 border-t pt-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            Includes:
-                          </span>
-                          <span className="font-medium">
-                            {pkg.quantity}{" "}
-                            {pkg.rateType === "hourly" ? "hours" : "days"}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            Valid for:
-                          </span>
-                          <span className="font-medium">
-                            {pkg.validityDays} days
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            Rate type:
-                          </span>
-                          <Badge variant="outline" className="capitalize">
-                            {pkg.rateType.replace("-", " ")}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => handleEdit(pkg)}
-                        >
-                          <Edit className="mr-1 size-4" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleTogglePopular(pkg.id)}
-                        >
-                          <Star
-                            className={`size-4 ${pkg.popular ? `fill-warning text-warning` : ""} `}
-                          />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleEdit(pkg)}
+                    >
+                      <Edit className="mr-1 size-4" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleTogglePopular(pkg.id)}
+                    >
+                      <Star
+                        className={`size-4 ${pkg.popular ? `fill-warning text-warning` : ""} `}
+                      />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+      </div>
+
+      {/* Packages Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>All Packages</CardTitle>
+            <Button onClick={handleAddNew}>
+              <Plus className="mr-2 size-4" />
+              Add Package
+            </Button>
           </div>
-
-          {/* Packages Table */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>All Packages</CardTitle>
-                <Button onClick={handleAddNew}>
-                  <Plus className="mr-2 size-4" />
-                  Add Package
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                data={packages}
-                columns={columns}
-                searchKey="name"
-                searchPlaceholder="Search packages..."
-                actions={(item) => (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(item)}
-                    >
-                      <Edit className="size-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteClick(item)}
-                    >
-                      <Trash2 className="text-destructive size-4" />
-                    </Button>
-                  </div>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Add/Edit Modal */}
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingPackage ? "Edit Package" : "Add New Package"}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Package Name</Label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    placeholder="e.g., 10-Day Pass"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    placeholder="Describe what's included..."
-                    rows={2}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Rate Type</Label>
-                    <Select
-                      value={formData.rateType}
-                      onValueChange={(
-                        value: "hourly" | "half-day" | "full-day",
-                      ) => setFormData({ ...formData, rateType: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="hourly">Hourly</SelectItem>
-                        <SelectItem value="half-day">Half-Day</SelectItem>
-                        <SelectItem value="full-day">Full-Day</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>
-                      Quantity (
-                      {formData.rateType === "hourly" ? "hours" : "days"})
-                    </Label>
-                    <Input
-                      type="number"
-                      value={formData.quantity}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          quantity: parseInt(e.target.value) || 1,
-                        })
-                      }
-                      placeholder="5"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Package Price ($)</Label>
-                    <Input
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          price: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Savings Amount ($)</Label>
-                    <Input
-                      type="number"
-                      value={formData.savings}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          savings: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Validity (days)</Label>
-                  <Input
-                    type="number"
-                    value={formData.validityDays}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        validityDays: parseInt(e.target.value) || 30,
-                      })
-                    }
-                    placeholder="60"
-                  />
-                </div>
-
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={formData.isActive}
-                      onCheckedChange={(checked) =>
-                        setFormData({ ...formData, isActive: checked })
-                      }
-                    />
-                    <Label>Active</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={formData.popular}
-                      onCheckedChange={(checked) =>
-                        setFormData({ ...formData, popular: checked })
-                      }
-                    />
-                    <Label>Mark as Popular</Label>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                  <X className="mr-2 size-4" />
-                  Cancel
-                </Button>
-                <Button onClick={handleSave} disabled={!formData.name}>
-                  <Save className="mr-2 size-4" />
-                  {editingPackage ? "Save Changes" : "Add Package"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Delete Modal */}
-          <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Delete Package</DialogTitle>
-              </DialogHeader>
-              <p>
-                Are you sure you want to delete{" "}
-                <span className="font-semibold">{deletingPackage?.name}</span>?
-                This action cannot be undone.
-              </p>
-              <DialogFooter>
+        </CardHeader>
+        <CardContent>
+          <DataTable
+            data={packages}
+            columns={columns}
+            searchKey="name"
+            searchPlaceholder="Search packages..."
+            actions={(item) => (
+              <div className="flex items-center gap-2">
                 <Button
-                  variant="outline"
-                  onClick={() => setIsDeleteModalOpen(false)}
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleEdit(item)}
                 >
-                  Cancel
+                  <Edit className="size-4" />
                 </Button>
-                <Button variant="destructive" onClick={handleDeleteConfirm}>
-                  <Trash2 className="mr-2 size-4" />
-                  Delete
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDeleteClick(item)}
+                >
+                  <Trash2 className="text-destructive size-4" />
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </div>
+            )}
+          />
+        </CardContent>
+      </Card>
 
-          {propagationPrompt && (
-            <ApplyToUpcomingPrompt
-              open={!!propagationPrompt}
-              onOpenChange={(o) => {
-                if (!o) setPropagationPrompt(null);
-              }}
-              serviceName={propagationPrompt.next.name}
-              serviceKind="daycare package"
-              changes={propagationPrompt.changes}
-              affected={propagationPrompt.affected.map<ApplyToUpcomingAffected>(
-                (c) => ({
-                  id: c.id,
-                  primary: c.petName,
-                  secondary: c.ownerName,
-                  date: c.checkInTime.slice(0, 10),
-                }),
-              )}
-              onApply={applyPropagation}
-              onSkip={skipPropagation}
-              footerNote="Matched by rate type. Only scheduled daycare check-ins dated today or later are affected."
-            />
+      {/* Add/Edit Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingPackage ? "Edit Package" : "Add New Package"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Package Name</Label>
+              <Input
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                placeholder="e.g., 10-Day Pass"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                placeholder="Describe what's included..."
+                rows={2}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Rate Type</Label>
+                <Select
+                  value={formData.rateType}
+                  onValueChange={(value: "hourly" | "half-day" | "full-day") =>
+                    setFormData({ ...formData, rateType: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hourly">Hourly</SelectItem>
+                    <SelectItem value="half-day">Half-Day</SelectItem>
+                    <SelectItem value="full-day">Full-Day</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>
+                  Quantity ({formData.rateType === "hourly" ? "hours" : "days"})
+                </Label>
+                <Input
+                  type="number"
+                  value={formData.quantity}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      quantity: parseInt(e.target.value) || 1,
+                    })
+                  }
+                  placeholder="5"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Package Price ($)</Label>
+                <Input
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      price: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Savings Amount ($)</Label>
+                <Input
+                  type="number"
+                  value={formData.savings}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      savings: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Validity (days)</Label>
+              <Input
+                type="number"
+                value={formData.validityDays}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    validityDays: parseInt(e.target.value) || 30,
+                  })
+                }
+                placeholder="60"
+              />
+            </div>
+
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={formData.isActive}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, isActive: checked })
+                  }
+                />
+                <Label>Active</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={formData.popular}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, popular: checked })
+                  }
+                />
+                <Label>Mark as Popular</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+              <X className="mr-2 size-4" />
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={!formData.name}>
+              <Save className="mr-2 size-4" />
+              {editingPackage ? "Save Changes" : "Add Package"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Modal */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Package</DialogTitle>
+          </DialogHeader>
+          <p>
+            Are you sure you want to delete{" "}
+            <span className="font-semibold">{deletingPackage?.name}</span>? This
+            action cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              <Trash2 className="mr-2 size-4" />
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {propagationPrompt && (
+        <ApplyToUpcomingPrompt
+          open={!!propagationPrompt}
+          onOpenChange={(o) => {
+            if (!o) setPropagationPrompt(null);
+          }}
+          serviceName={propagationPrompt.next.name}
+          serviceKind="daycare package"
+          changes={propagationPrompt.changes}
+          affected={propagationPrompt.affected.map<ApplyToUpcomingAffected>(
+            (c) => ({
+              id: c.id,
+              primary: c.petName,
+              secondary: c.ownerName,
+              date: c.checkInTime.slice(0, 10),
+            }),
           )}
+          onApply={applyPropagation}
+          onSkip={skipPropagation}
+          footerNote="Matched by rate type. Only scheduled daycare check-ins dated today or later are affected."
+        />
+      )}
     </div>
   );
 }

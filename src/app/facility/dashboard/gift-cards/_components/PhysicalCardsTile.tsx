@@ -33,13 +33,13 @@ export function PhysicalCardsTile({
     >
       {/* Status badge — low-stock warning takes priority over the snapshot marker */}
       {lowStock ? (
-        <span className="absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+        <span className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-amber-700 uppercase dark:bg-amber-900/50 dark:text-amber-300">
           <AlertTriangle className="size-3" />
           Low Stock
         </span>
       ) : (
         <span
-          className="text-muted-foreground/80 absolute right-2 top-2 z-10 rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide dark:bg-black/30"
+          className="text-muted-foreground/80 absolute top-2 right-2 z-10 rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase dark:bg-black/30"
           title="Point-in-time stock count — not affected by the date range"
         >
           Current

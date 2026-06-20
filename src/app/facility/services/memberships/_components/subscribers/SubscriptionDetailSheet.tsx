@@ -171,7 +171,12 @@ export function SubscriptionDetailSheet({
                       className="flex size-full items-center justify-center text-xs font-semibold text-white"
                       style={{ backgroundColor: plan?.badgeColor ?? "#D4AF37" }}
                     >
-                      {membership.customerName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
+                      {membership.customerName
+                        .split(" ")
+                        .map((n) => n[0])
+                        .slice(0, 2)
+                        .join("")
+                        .toUpperCase()}
                     </div>
                   )}
                 </div>

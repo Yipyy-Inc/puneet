@@ -26,12 +26,16 @@ function fmt12(t: string): string {
 }
 
 export function FeedingRoundSettings() {
-  const [config, setConfig] = useState<FacilityFeedingConfig>(facilityFeedingConfig);
+  const [config, setConfig] = useState<FacilityFeedingConfig>(
+    facilityFeedingConfig,
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newTime, setNewTime] = useState("");
 
-  const sortedSlots = [...config.slots].sort((a, b) => a.sortOrder - b.sortOrder);
+  const sortedSlots = [...config.slots].sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
 
   function updateSlot(id: string, patch: Partial<FeedingSlot>) {
     setConfig((prev) => ({
@@ -103,7 +107,11 @@ export function FeedingRoundSettings() {
               </Button>
             </div>
           ) : (
-            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditing(true)}
+            >
               <Edit className="mr-1 size-4" />
               Edit
             </Button>

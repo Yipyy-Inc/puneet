@@ -27,11 +27,7 @@ import {
   Hash,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -184,9 +180,7 @@ interface EditorState {
   isActive: boolean;
 }
 
-function templateToEditor(
-  tmpl: EmployeeDocumentTemplate | null,
-): EditorState {
+function templateToEditor(tmpl: EmployeeDocumentTemplate | null): EditorState {
   if (!tmpl) {
     return {
       title: "",
@@ -524,7 +518,8 @@ function TemplateEditor({
                 </Badge>
                 {initialTemplate && (
                   <Badge variant="outline" className="text-[10px]">
-                    <Hash className="mr-0.5 size-2.5" />v{initialTemplate.version}
+                    <Hash className="mr-0.5 size-2.5" />v
+                    {initialTemplate.version}
                   </Badge>
                 )}
               </div>
@@ -662,10 +657,7 @@ function TemplateEditor({
                   </div>
                 )}
                 {state.fields.map((field, i) => (
-                  <div
-                    key={field.id}
-                    className="bg-card rounded-xl border p-4"
-                  >
+                  <div key={field.id} className="bg-card rounded-xl border p-4">
                     <div className="flex items-center gap-2">
                       <span className="bg-muted text-muted-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
                         {i + 1}
@@ -727,7 +719,7 @@ function TemplateEditor({
                     </div>
                     {field.type === "select" && (
                       <div className="mt-2">
-                        <Label className="text-muted-foreground text-[10px] uppercase tracking-wide">
+                        <Label className="text-muted-foreground text-[10px] tracking-wide uppercase">
                           Options (one per line)
                         </Label>
                         <Textarea
@@ -761,7 +753,7 @@ function TemplateEditor({
             {/* Settings tab */}
             <TabsContent value="settings" className="mt-0 space-y-5 p-6">
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-[10px] uppercase tracking-wide">
+                <Label className="text-muted-foreground text-[10px] tracking-wide uppercase">
                   Document type
                 </Label>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -838,7 +830,7 @@ function TemplateEditor({
           </div>
 
           {/* Footer */}
-          <div className="flex shrink-0 items-center justify-between gap-2 border-t bg-muted/30 px-6 py-3">
+          <div className="bg-muted/30 flex shrink-0 items-center justify-between gap-2 border-t px-6 py-3">
             <p className="text-muted-foreground text-xs">
               {initialTemplate
                 ? "Saving bumps the version automatically."
@@ -912,7 +904,7 @@ function DocumentPreview({ state }: { state: EditorState }) {
 
           {state.fields.length > 0 && (
             <div className="border-t pt-5">
-              <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wider">
+              <p className="text-muted-foreground mb-3 text-[10px] font-semibold tracking-wider uppercase">
                 Fields to fill
               </p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -920,9 +912,7 @@ function DocumentPreview({ state }: { state: EditorState }) {
                   <div key={f.id}>
                     <Label className="text-xs">
                       {f.label}
-                      {f.required && (
-                        <span className="text-rose-500"> *</span>
-                      )}
+                      {f.required && <span className="text-rose-500"> *</span>}
                     </Label>
                     <div className="bg-muted/40 mt-1 h-9 rounded-md border border-dashed" />
                   </div>
@@ -933,11 +923,11 @@ function DocumentPreview({ state }: { state: EditorState }) {
 
           {state.requiresSignature && (
             <div className="border-t pt-5">
-              <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wider">
+              <p className="text-muted-foreground mb-3 text-[10px] font-semibold tracking-wider uppercase">
                 Signature block
               </p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr]">
-                <div className="flex h-24 items-end rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                <div className="text-muted-foreground flex h-24 items-end rounded-md border border-dashed p-2 text-xs">
                   <span>Drawn or typed signature</span>
                 </div>
                 <div className="text-muted-foreground space-y-1 text-[11px]">
@@ -1025,7 +1015,7 @@ function TemplateViewer({
             Edit
           </Button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto bg-muted/20 p-6">
+        <div className="bg-muted/20 min-h-0 flex-1 overflow-y-auto p-6">
           <DocumentPreview state={state} />
         </div>
       </DialogContent>
@@ -1046,14 +1036,13 @@ export function DocumentTemplatesManager({
   const [typeFilter, setTypeFilter] = useState<EmployeeDocTemplateType | "all">(
     "all",
   );
-  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">(
-    "all",
-  );
+  const [activeFilter, setActiveFilter] = useState<
+    "all" | "active" | "inactive"
+  >("all");
 
   const [editorOpen, setEditorOpen] = useState(false);
-  const [editingTmpl, setEditingTmpl] = useState<EmployeeDocumentTemplate | null>(
-    null,
-  );
+  const [editingTmpl, setEditingTmpl] =
+    useState<EmployeeDocumentTemplate | null>(null);
   const [viewerTmpl, setViewerTmpl] = useState<EmployeeDocumentTemplate | null>(
     null,
   );

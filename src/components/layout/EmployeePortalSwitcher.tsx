@@ -138,7 +138,7 @@ export function EmployeePortalSwitcher({ standalone = true }: Props) {
                 {group.members.length > 1 && (
                   <Badge
                     variant="secondary"
-                    className="ml-auto mr-2 px-1.5 py-0 text-xs"
+                    className="mr-2 ml-auto px-1.5 py-0 text-xs"
                   >
                     {group.members.length}
                   </Badge>
@@ -159,7 +159,10 @@ export function EmployeePortalSwitcher({ standalone = true }: Props) {
                       <AvatarImage src={staff.avatarUrl} />
                       <AvatarFallback
                         className="text-xs"
-                        style={{ backgroundColor: staff.colorHex + "33", color: staff.colorHex }}
+                        style={{
+                          backgroundColor: staff.colorHex + "33",
+                          color: staff.colorHex,
+                        }}
                       >
                         {getInitials(staff.firstName, staff.lastName)}
                       </AvatarFallback>

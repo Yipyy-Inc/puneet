@@ -16,7 +16,10 @@ export const DEFAULT_FOLLOWUP_ASSIGNEE = { id: "reception", name: "Reception" };
  * Due target for a follow-up call-back task: same day 5pm if it's a weekday
  * before 5pm, otherwise the next business morning at 9am.
  */
-export function followUpDue(now = new Date()): { dueDate: string; dueTime: string } {
+export function followUpDue(now = new Date()): {
+  dueDate: string;
+  dueTime: string;
+} {
   const isWeekend = (x: Date) => x.getDay() === 0 || x.getDay() === 6;
   const toISO = (x: Date) =>
     `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;

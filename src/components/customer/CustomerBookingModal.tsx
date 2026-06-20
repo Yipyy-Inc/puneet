@@ -1424,7 +1424,7 @@ export function CustomerBookingModal({
                           key={pet.id}
                           className={`cursor-pointer transition-all ${
                             selectedPetIds.includes(pet.id)
-                              ? "border-transparent bg-primary/5"
+                              ? "bg-primary/5 border-transparent"
                               : "hover:border-primary/50"
                           } ${
                             isBlocked
@@ -1638,7 +1638,7 @@ export function CustomerBookingModal({
                               : "cursor-pointer"
                           } ${
                             selectedService === service.id && !isDisabled
-                              ? `border-transparent bg-primary/5 shadow-sm`
+                              ? `bg-primary/5 border-transparent shadow-sm`
                               : !isDisabled
                                 ? "hover:border-primary/50 hover:shadow-sm"
                                 : ""
@@ -1656,7 +1656,7 @@ export function CustomerBookingModal({
                           )}
                           <div className="bg-muted relative h-28 w-full shrink-0">
                             {selectedService === service.id && !isDisabled && (
-                              <div className="absolute top-2.5 right-2.5 z-10 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
+                              <div className="bg-primary text-primary-foreground absolute top-2.5 right-2.5 z-10 flex size-7 items-center justify-center rounded-full shadow-md">
                                 <Check className="size-4" strokeWidth={3} />
                               </div>
                             )}
@@ -2093,7 +2093,7 @@ export function CustomerBookingModal({
                                         }
                                         className={`rounded-xl border-2 p-3 text-center transition-all ${
                                           customDurationMinutes === opt.minutes
-                                            ? "border-transparent bg-primary/5 shadow-sm"
+                                            ? "bg-primary/5 border-transparent shadow-sm"
                                             : "border-border hover:border-border/80 hover:bg-accent/30"
                                         }`}
                                       >
@@ -2150,7 +2150,7 @@ export function CustomerBookingModal({
                                       }
                                       className={`flex w-full items-center gap-3 rounded-xl border-2 p-4 text-left transition-all ${
                                         customSelectedResourceId === res.id
-                                          ? "border-transparent bg-primary/5 shadow-sm"
+                                          ? "bg-primary/5 border-transparent shadow-sm"
                                           : "border-border hover:border-border/80 hover:bg-accent/30"
                                       }`}
                                     >
@@ -2584,7 +2584,7 @@ export function CustomerBookingModal({
                                             }}
                                             className={`flex min-h-[220px] cursor-pointer flex-col overflow-hidden rounded-lg border-2 transition-all ${
                                               isSelected
-                                                ? "border-transparent bg-primary/5"
+                                                ? "bg-primary/5 border-transparent"
                                                 : `border-border hover:border-primary/50`
                                             } ${
                                               available === 0
@@ -2707,7 +2707,7 @@ export function CustomerBookingModal({
                                   key={room.id}
                                   className={`flex min-h-[260px] cursor-pointer flex-col overflow-hidden rounded-lg border-2 transition-all ${
                                     isSelected
-                                      ? `border-transparent bg-primary/5`
+                                      ? `bg-primary/5 border-transparent`
                                       : `border-border hover:border-primary/50`
                                   } ${
                                     available === 0
@@ -3123,7 +3123,7 @@ export function CustomerBookingModal({
                                 key={pkg.id}
                                 className={`flex min-h-[260px] cursor-pointer flex-col overflow-hidden rounded-lg border-2 transition-all ${
                                   isSelected
-                                    ? `border-transparent bg-primary/5`
+                                    ? `bg-primary/5 border-transparent`
                                     : `border-border hover:border-primary/50`
                                 } `}
                                 onClick={() =>
@@ -3225,7 +3225,7 @@ export function CustomerBookingModal({
                                 key={addon.id}
                                 className={`flex min-h-[200px] cursor-pointer flex-col overflow-hidden rounded-lg border-2 transition-all ${
                                   isSelected
-                                    ? `border-transparent bg-primary/5`
+                                    ? `bg-primary/5 border-transparent`
                                     : `border-border hover:border-primary/50`
                                 } `}
                                 onClick={() => {

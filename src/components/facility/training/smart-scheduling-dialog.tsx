@@ -65,11 +65,7 @@ function eachDayInRange(fromISO: string, toISO: string): string[] {
   const end = new Date(toISO + "T00:00:00");
   if (end < start) return [];
   const out: string[] = [];
-  for (
-    let d = new Date(start);
-    d <= end;
-    d.setDate(d.getDate() + 1)
-  ) {
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     out.push(formatISODate(d));
   }
   return out;

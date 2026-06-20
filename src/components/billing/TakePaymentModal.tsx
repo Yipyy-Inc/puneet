@@ -135,8 +135,9 @@ export function TakePaymentModal({
   onSuccess,
 }: TakePaymentModalProps) {
   const [step, setStep] = useState<"method" | "details">("method");
-  const [selectedMethod, setSelectedMethod] =
-    useState<PaymentMethodKey | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethodKey | null>(
+    null,
+  );
 
   // Details form
   const [selectedClient, setSelectedClient] = useState(prefilledClient || 0);
@@ -206,7 +207,9 @@ export function TakePaymentModal({
     if (gc) {
       setSelectedGiftCard(gc);
       if (gc.currentBalance < total) {
-        alert(`Gift card balance ($${gc.currentBalance.toFixed(2)}) is less than total`);
+        alert(
+          `Gift card balance ($${gc.currentBalance.toFixed(2)}) is less than total`,
+        );
       }
     } else {
       alert("Gift card not found or inactive");
@@ -324,7 +327,9 @@ export function TakePaymentModal({
       : cleaned;
   };
 
-  const activeMethodOption = METHOD_OPTIONS.find((m) => m.key === selectedMethod);
+  const activeMethodOption = METHOD_OPTIONS.find(
+    (m) => m.key === selectedMethod,
+  );
 
   return (
     <Dialog
@@ -346,7 +351,9 @@ export function TakePaymentModal({
               </button>
             )}
             <DollarSign className="size-4" />
-            {step === "method" ? "Take Payment" : `Pay via ${activeMethodOption?.label}`}
+            {step === "method"
+              ? "Take Payment"
+              : `Pay via ${activeMethodOption?.label}`}
           </DialogTitle>
         </DialogHeader>
 
@@ -366,11 +373,14 @@ export function TakePaymentModal({
                   <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-md">
                     <Icon className="size-4" />
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{label}</span>
                       {badge && (
-                        <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                        <Badge
+                          variant="secondary"
+                          className="px-1.5 py-0 text-xs"
+                        >
                           {badge}
                         </Badge>
                       )}
@@ -559,7 +569,7 @@ export function TakePaymentModal({
                           setCardNumber(e.target.value.replace(/\s/g, ""))
                         }
                         maxLength={19}
-                        className="h-8 text-sm font-mono"
+                        className="h-8 font-mono text-sm"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2.5">
@@ -572,7 +582,7 @@ export function TakePaymentModal({
                             setCardExpiry(e.target.value.replace(/\D/g, ""))
                           }
                           maxLength={5}
-                          className="h-8 text-sm font-mono"
+                          className="h-8 font-mono text-sm"
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -585,7 +595,7 @@ export function TakePaymentModal({
                           }
                           maxLength={4}
                           type="password"
-                          className="h-8 text-sm font-mono"
+                          className="h-8 font-mono text-sm"
                         />
                       </div>
                     </div>
@@ -650,15 +660,17 @@ export function TakePaymentModal({
                 {selectedGiftCard && (
                   <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950/30">
                     <CheckCircle className="size-4 shrink-0 text-green-600" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{selectedGiftCard.code}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">
+                        {selectedGiftCard.code}
+                      </p>
                       {selectedGiftCard.recipientName && (
                         <p className="text-muted-foreground text-xs">
                           {selectedGiftCard.recipientName}
                         </p>
                       )}
                     </div>
-                    <p className="price-value text-sm font-semibold text-green-600 shrink-0">
+                    <p className="price-value shrink-0 text-sm font-semibold text-green-600">
                       ${selectedGiftCard.currentBalance.toFixed(2)}
                     </p>
                   </div>
@@ -691,7 +703,9 @@ export function TakePaymentModal({
                   variant="outline"
                   size="sm"
                   className="h-8 text-xs"
-                  onClick={() => setTipAmount(parseFloat((amount * 0.15).toFixed(2)))}
+                  onClick={() =>
+                    setTipAmount(parseFloat((amount * 0.15).toFixed(2)))
+                  }
                 >
                   15%
                 </Button>
@@ -700,7 +714,9 @@ export function TakePaymentModal({
                   variant="outline"
                   size="sm"
                   className="h-8 text-xs"
-                  onClick={() => setTipAmount(parseFloat((amount * 0.18).toFixed(2)))}
+                  onClick={() =>
+                    setTipAmount(parseFloat((amount * 0.18).toFixed(2)))
+                  }
                 >
                   18%
                 </Button>
@@ -709,7 +725,9 @@ export function TakePaymentModal({
                   variant="outline"
                   size="sm"
                   className="h-8 text-xs"
-                  onClick={() => setTipAmount(parseFloat((amount * 0.2).toFixed(2)))}
+                  onClick={() =>
+                    setTipAmount(parseFloat((amount * 0.2).toFixed(2)))
+                  }
                 >
                   20%
                 </Button>
@@ -753,7 +771,7 @@ export function TakePaymentModal({
             </div>
 
             {/* Total summary */}
-            <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-1.5">
+            <div className="bg-muted/30 space-y-1.5 rounded-lg border px-4 py-3">
               {subtotal > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>

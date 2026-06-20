@@ -53,9 +53,7 @@ export function buildTodayTasks(templates: TaskTemplate[]): TodayTask[] {
                 : t.timing.type === "after_end"
                   ? "05:30 PM"
                   : "All day",
-      status: (
-        ["pending", "in_progress", "completed"] as const
-      )[i % 3],
+      status: (["pending", "in_progress", "completed"] as const)[i % 3],
       isRequired: t.isRequired,
       bookingLabel: BOOKING_LABEL_POOL[i % BOOKING_LABEL_POOL.length],
     }));
@@ -81,7 +79,10 @@ export function parseScheduledTime(scheduledAt: string): number | null {
  * True when the scheduled time is in the past relative to `now`. "All day"
  * (and any unparseable value) returns false — those never auto-miss.
  */
-export function isTaskPastDue(scheduledAt: string, now: Date = new Date()): boolean {
+export function isTaskPastDue(
+  scheduledAt: string,
+  now: Date = new Date(),
+): boolean {
   const target = parseScheduledTime(scheduledAt);
   if (target === null) return false;
   const nowMin = now.getHours() * 60 + now.getMinutes();

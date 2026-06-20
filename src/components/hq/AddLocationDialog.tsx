@@ -42,13 +42,13 @@ const COLOR_OPTIONS = [
 ];
 
 const DEFAULT_HOURS = {
-  monday:    { open: "07:00", close: "19:00" },
-  tuesday:   { open: "07:00", close: "19:00" },
+  monday: { open: "07:00", close: "19:00" },
+  tuesday: { open: "07:00", close: "19:00" },
   wednesday: { open: "07:00", close: "19:00" },
-  thursday:  { open: "07:00", close: "19:00" },
-  friday:    { open: "07:00", close: "18:00" },
-  saturday:  { open: "08:00", close: "17:00" },
-  sunday:    { open: "09:00", close: "15:00", closed: false },
+  thursday: { open: "07:00", close: "19:00" },
+  friday: { open: "07:00", close: "18:00" },
+  saturday: { open: "08:00", close: "17:00" },
+  sunday: { open: "09:00", close: "15:00", closed: false },
 };
 
 export function AddLocationDialog({ open, onOpenChange, onCreate }: Props) {
@@ -125,7 +125,9 @@ export function AddLocationDialog({ open, onOpenChange, onCreate }: Props) {
       createdAt: new Date().toISOString().split("T")[0],
     };
     onCreate(loc);
-    toast.success(`${loc.name} added — booking page live at /book/${bookingSlug || shortCode.toLowerCase()}`);
+    toast.success(
+      `${loc.name} added — booking page live at /book/${bookingSlug || shortCode.toLowerCase()}`,
+    );
     reset();
     onOpenChange(false);
   };
@@ -160,7 +162,9 @@ export function AddLocationDialog({ open, onOpenChange, onCreate }: Props) {
                 <Label className="text-xs font-semibold">Short code *</Label>
                 <Input
                   value={shortCode}
-                  onChange={(e) => setShortCode(e.target.value.toUpperCase().slice(0, 4))}
+                  onChange={(e) =>
+                    setShortCode(e.target.value.toUpperCase().slice(0, 4))
+                  }
                   placeholder="VRD"
                   className="uppercase"
                   maxLength={4}
@@ -192,14 +196,16 @@ export function AddLocationDialog({ open, onOpenChange, onCreate }: Props) {
                 <Label className="text-xs font-semibold">
                   Booking page URL slug
                 </Label>
-                <div className="flex h-9 items-center overflow-hidden rounded-md border bg-background">
-                  <span className="text-muted-foreground border-r bg-muted/40 px-2 py-1 text-[11px]">
+                <div className="bg-background flex h-9 items-center overflow-hidden rounded-md border">
+                  <span className="text-muted-foreground bg-muted/40 border-r px-2 py-1 text-[11px]">
                     /book/
                   </span>
                   <input
                     value={bookingSlug}
                     onChange={(e) =>
-                      setBookingSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
+                      setBookingSlug(
+                        e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""),
+                      )
                     }
                     placeholder={shortCode.toLowerCase() || "verdun"}
                     className="flex-1 bg-transparent px-2 text-sm outline-none"
@@ -210,7 +216,7 @@ export function AddLocationDialog({ open, onOpenChange, onCreate }: Props) {
           </section>
 
           {/* Address & contact */}
-          <section className="space-y-3 rounded-xl border bg-muted/20 p-3">
+          <section className="bg-muted/20 space-y-3 rounded-xl border p-3">
             <div className="flex items-center gap-2">
               <MapPin className="text-muted-foreground size-4" />
               <p className="text-sm font-semibold">Address & Contact</p>
@@ -293,7 +299,7 @@ export function AddLocationDialog({ open, onOpenChange, onCreate }: Props) {
           </section>
 
           {/* Operating hours preview */}
-          <section className="space-y-2 rounded-xl border bg-muted/20 p-3">
+          <section className="bg-muted/20 space-y-2 rounded-xl border p-3">
             <div className="flex items-center gap-2">
               <Clock className="text-muted-foreground size-4" />
               <p className="text-sm font-semibold">Operating hours</p>
@@ -302,26 +308,32 @@ export function AddLocationDialog({ open, onOpenChange, onCreate }: Props) {
               </Badge>
             </div>
             <p className="text-muted-foreground text-[11px]">
-              Mon–Thu 7:00–19:00 · Fri 7:00–18:00 · Sat 8:00–17:00 · Sun 9:00–15:00
+              Mon–Thu 7:00–19:00 · Fri 7:00–18:00 · Sat 8:00–17:00 · Sun
+              9:00–15:00
             </p>
           </section>
 
           {/* Flags */}
           <section className="space-y-3">
-            <label className="flex cursor-pointer items-center justify-between rounded-lg border bg-background p-3">
+            <label className="bg-background flex cursor-pointer items-center justify-between rounded-lg border p-3">
               <div>
                 <p className="text-sm font-semibold">Activate on launch</p>
                 <p className="text-muted-foreground text-xs">
                   Visible to clients and ready for bookings immediately
                 </p>
               </div>
-              <Switch checked={activeOnLaunch} onCheckedChange={setActiveOnLaunch} />
+              <Switch
+                checked={activeOnLaunch}
+                onCheckedChange={setActiveOnLaunch}
+              />
             </label>
-            <label className="flex cursor-pointer items-center justify-between rounded-lg border bg-background p-3">
+            <label className="bg-background flex cursor-pointer items-center justify-between rounded-lg border p-3">
               <div className="flex items-center gap-2">
                 <Globe className="text-muted-foreground size-4" />
                 <div>
-                  <p className="text-sm font-semibold">Make this the primary location</p>
+                  <p className="text-sm font-semibold">
+                    Make this the primary location
+                  </p>
                   <p className="text-muted-foreground text-xs">
                     Some settings cascade from primary unless overridden
                   </p>

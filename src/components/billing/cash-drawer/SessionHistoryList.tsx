@@ -72,7 +72,9 @@ export function SessionHistoryList({
   const fmtSigned = (n: number) =>
     n === 0 ? `±${currencySymbol}0.00` : `${n > 0 ? "+" : "-"}${fmt(n)}`;
 
-  const selected = openId ? closed.find((s) => s.id === openId) ?? null : null;
+  const selected = openId
+    ? (closed.find((s) => s.id === openId) ?? null)
+    : null;
 
   const columns: ColumnDef<RegisterSession>[] = [
     {
@@ -90,7 +92,7 @@ export function SessionHistoryList({
               { weekday: "short", month: "short", day: "numeric" },
             )}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Locked{" "}
             {s.lockedAt
               ? new Date(s.lockedAt).toLocaleTimeString("en-CA", {
@@ -113,7 +115,7 @@ export function SessionHistoryList({
       label: "Float",
       defaultVisible: true,
       render: (s) => (
-        <span className="tabular-nums text-sm">
+        <span className="text-sm tabular-nums">
           {fmt(s.opening.floatTotal)}
         </span>
       ),
@@ -125,7 +127,7 @@ export function SessionHistoryList({
       sortable: true,
       sortValue: (s) => s.cashCaptured,
       render: (s) => (
-        <span className="font-medium tabular-nums text-emerald-700">
+        <span className="font-medium text-emerald-700 tabular-nums">
           {fmt(s.cashCaptured)}
         </span>
       ),
@@ -135,7 +137,7 @@ export function SessionHistoryList({
       label: "Drawer count",
       defaultVisible: true,
       render: (s) => (
-        <span className="tabular-nums text-sm">
+        <span className="text-sm tabular-nums">
           {s.closing ? fmt(s.closing.drawerTotal) : "—"}
         </span>
       ),
@@ -151,9 +153,7 @@ export function SessionHistoryList({
         return (
           <Badge variant="outline" className={cn("gap-1", v.className)}>
             <Icon className="size-3" />
-            {s.varianceStatus === "balanced"
-              ? v.label
-              : fmtSigned(s.variance)}
+            {s.varianceStatus === "balanced" ? v.label : fmtSigned(s.variance)}
           </Badge>
         );
       },
@@ -163,8 +163,9 @@ export function SessionHistoryList({
       label: "Note",
       defaultVisible: true,
       render: (s) => (
-        <span className="line-clamp-1 max-w-[180px] text-xs text-muted-foreground">
-          {s.managerNote || (s.varianceStatus !== "balanced" ? "Add note…" : "—")}
+        <span className="text-muted-foreground line-clamp-1 max-w-[180px] text-xs">
+          {s.managerNote ||
+            (s.varianceStatus !== "balanced" ? "Add note…" : "—")}
         </span>
       ),
     },
@@ -172,7 +173,7 @@ export function SessionHistoryList({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         {closed.length} closed session{closed.length === 1 ? "" : "s"}. Click a
         row for the full breakdown — manager notes can be edited even after
         lock.
@@ -251,7 +252,8 @@ export function SessionHistoryList({
                   label="Movements"
                   value={fmtSigned(
                     selected.movements.reduce(
-                      (s, m) => s + (m.direction === "in" ? m.amount : -m.amount),
+                      (s, m) =>
+                        s + (m.direction === "in" ? m.amount : -m.amount),
                       0,
                     ),
                   )}
@@ -259,18 +261,20 @@ export function SessionHistoryList({
                 />
                 <Cell
                   label="Drawer count"
-                  value={selected.closing ? fmt(selected.closing.drawerTotal) : "—"}
+                  value={
+                    selected.closing ? fmt(selected.closing.drawerTotal) : "—"
+                  }
                 />
               </div>
 
               {/* Cash transactions */}
               <div className="mt-5">
-                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <h4 className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
                   Cash transactions
                 </h4>
                 <div className="rounded-md border">
                   {selected.capturedTxns.length === 0 ? (
-                    <p className="p-4 text-sm text-muted-foreground">
+                    <p className="text-muted-foreground p-4 text-sm">
                       No cash transactions captured this day.
                     </p>
                   ) : (
@@ -284,7 +288,7 @@ export function SessionHistoryList({
                             <p className="truncate font-medium">
                               {t.description}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               {new Date(t.capturedAt).toLocaleTimeString(
                                 "en-CA",
                                 { hour: "2-digit", minute: "2-digit" },
@@ -295,7 +299,7 @@ export function SessionHistoryList({
                                   {" · "}
                                   <Link
                                     href={`/facility/dashboard/bookings/${t.bookingId}`}
-                                    className="inline-flex items-center gap-0.5 text-primary hover:underline"
+                                    className="text-primary inline-flex items-center gap-0.5 hover:underline"
                                   >
                                     Booking #{t.bookingId}
                                     <ExternalLink className="size-2.5" />
@@ -304,7 +308,7 @@ export function SessionHistoryList({
                               )}
                             </p>
                           </div>
-                          <span className="ml-3 shrink-0 font-semibold tabular-nums text-emerald-700">
+                          <span className="ml-3 shrink-0 font-semibold text-emerald-700 tabular-nums">
                             +{fmt(t.amount)}
                           </span>
                         </li>
@@ -317,7 +321,7 @@ export function SessionHistoryList({
               {/* Movements */}
               {selected.movements.length > 0 && (
                 <div className="mt-5">
-                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <h4 className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
                     Cash movements
                   </h4>
                   <ul className="space-y-1">
@@ -331,14 +335,14 @@ export function SessionHistoryList({
                             {ADJUSTMENT_REASON_LABELS[m.reason]}
                           </p>
                           {m.note && (
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               {m.note} · {m.staffName}
                             </p>
                           )}
                         </div>
                         <span
                           className={cn(
-                            "tabular-nums font-medium",
+                            "font-medium tabular-nums",
                             m.direction === "in"
                               ? "text-emerald-700"
                               : "text-rose-700",
@@ -355,7 +359,7 @@ export function SessionHistoryList({
 
               {/* Manager note — editable */}
               <div className="mt-5">
-                <h4 className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <h4 className="text-muted-foreground mb-2 flex items-center justify-between text-xs font-semibold tracking-wide uppercase">
                   Manager note
                   {editingId !== selected.id && (
                     <Button
@@ -400,7 +404,7 @@ export function SessionHistoryList({
                     </div>
                   </div>
                 ) : (
-                  <p className="rounded-md bg-muted/40 px-3 py-2 text-sm italic text-muted-foreground">
+                  <p className="bg-muted/40 text-muted-foreground rounded-md px-3 py-2 text-sm italic">
                     {selected.managerNote || "No note recorded."}
                   </p>
                 )}
@@ -424,11 +428,11 @@ function Cell({
 }) {
   return (
     <div className="rounded-md border px-3 py-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
         {label}
       </p>
       <p className="text-base font-semibold tabular-nums">{value}</p>
-      {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-muted-foreground text-[10px]">{hint}</p>}
     </div>
   );
 }

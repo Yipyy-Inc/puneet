@@ -24,7 +24,10 @@ function oneLine(text: string): string {
 
 // ─── Delay (Δt) resolution ───────────────────────────────────────────────────
 
-const FIXED_DELAY_MINUTES: Record<Exclude<ReputationDelay, "custom">, number> = {
+const FIXED_DELAY_MINUTES: Record<
+  Exclude<ReputationDelay, "custom">,
+  number
+> = {
   immediate: 0,
   "30min": 30,
   "1hour": 60,
@@ -86,7 +89,9 @@ export function findTrigger(settings: ReputationSettings, event: string) {
 // ─── Outreach sequence ───────────────────────────────────────────────────────
 
 /** The configured multi-step sequence, or a single legacy step as fallback. */
-export function getSequence(settings: ReputationSettings): ReputationSequenceStep[] {
+export function getSequence(
+  settings: ReputationSettings,
+): ReputationSequenceStep[] {
   const seq = settings.outreachSequence;
   if (seq && seq.length > 0) return seq;
   return [
@@ -100,13 +105,17 @@ export function getSequence(settings: ReputationSettings): ReputationSequenceSte
 }
 
 /** The initial (non-backup) send step. */
-export function initialStep(settings: ReputationSettings): ReputationSequenceStep {
+export function initialStep(
+  settings: ReputationSettings,
+): ReputationSequenceStep {
   const seq = getSequence(settings);
   return seq.find((s) => !s.onlyIfNoResponse) ?? seq[0];
 }
 
 /** Backup steps (only-if-no-response), ordered by delay. */
-export function backupSteps(settings: ReputationSettings): ReputationSequenceStep[] {
+export function backupSteps(
+  settings: ReputationSettings,
+): ReputationSequenceStep[] {
   return getSequence(settings)
     .filter((s) => s.onlyIfNoResponse)
     .sort((a, b) => a.delayMinutes - b.delayMinutes);
@@ -170,11 +179,17 @@ export function evaluateCheckout(params: {
     };
   }
   if (!trigger.enabled) {
-    return { allowed: false, reason: `Trigger "${trigger.label}" is turned off` };
+    return {
+      allowed: false,
+      reason: `Trigger "${trigger.label}" is turned off`,
+    };
   }
 
   if (event.clientOptedOut && settings.protectionRules.blockOnOptOut) {
-    return { allowed: false, reason: "Client has opted out of review requests" };
+    return {
+      allowed: false,
+      reason: "Client has opted out of review requests",
+    };
   }
 
   if (!resolveChannel(settings, event.channelPref)) {
@@ -248,11 +263,14 @@ export function buildScheduledRequest(params: {
   // The sequence step's channel is authoritative; only honor an explicit
   // channelPref when it's actually an enabled channel (never smuggle a disabled one).
   const channel =
-    event.channelPref && resolveChannel(settings, event.channelPref) === event.channelPref
+    event.channelPref &&
+    resolveChannel(settings, event.channelPref) === event.channelPref
       ? event.channelPref
       : step.channel;
   const delayMin = Math.max(0, step.delayMinutes);
-  const scheduledSendAt = new Date(now.getTime() + delayMin * 60_000).toISOString();
+  const scheduledSendAt = new Date(
+    now.getTime() + delayMin * 60_000,
+  ).toISOString();
   const id = `rr-live-${event.bookingId}-${now.getTime()}`;
   const sendLabel = new Date(scheduledSendAt).toLocaleString("en-CA", {
     dateStyle: "medium",
@@ -465,7 +483,8 @@ export function findHappyNudges(
   const nowMs = now.getTime();
   return requests
     .filter((req) => {
-      if (req.rating == null || req.rating < settings.happyThreshold) return false;
+      if (req.rating == null || req.rating < settings.happyThreshold)
+        return false;
       if (req.publicLinkClicked || req.happyReminderSentAt) return false;
       if (req.status === "closed") return false;
       const ratedMs = new Date(req.ratedAt ?? "").getTime();

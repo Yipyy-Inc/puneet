@@ -92,7 +92,8 @@ export function ClientActivityClient({ clients, locations }: Props) {
             Cross-Location Client Activity
           </h1>
           <p className="text-muted-foreground text-sm">
-            Clients who visit more than one location — your most valuable cohort.
+            Clients who visit more than one location — your most valuable
+            cohort.
           </p>
         </div>
       </div>
@@ -131,7 +132,7 @@ export function ClientActivityClient({ clients, locations }: Props) {
       {/* Filters */}
       <Card>
         <CardContent className="flex flex-wrap items-center gap-3 py-4">
-          <div className="relative flex-1 min-w-[220px]">
+          <div className="relative min-w-[220px] flex-1">
             <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             <Input
               value={search}
@@ -179,7 +180,7 @@ export function ClientActivityClient({ clients, locations }: Props) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                <tr className="text-muted-foreground border-b text-left text-[11px] tracking-wider uppercase">
                   <th className="px-4 py-2 font-semibold">Client</th>
                   <th className="px-4 py-2 font-semibold">Pets</th>
                   <th className="px-4 py-2 text-center font-semibold">
@@ -243,19 +244,15 @@ export function ClientActivityClient({ clients, locations }: Props) {
                                   isPrimary && "text-foreground",
                                 )}
                                 style={
-                                  !isPrimary
-                                    ? { color: loc.color }
-                                    : undefined
+                                  !isPrimary ? { color: loc.color } : undefined
                                 }
                               >
                                 {visit.visits}
                                 {isPrimary && (
-                                  <span className="ml-0.5 text-[9px]">
-                                    ★
-                                  </span>
+                                  <span className="ml-0.5 text-[9px]">★</span>
                                 )}
                               </p>
-                              <p className="text-[10px] text-muted-foreground">
+                              <p className="text-muted-foreground text-[10px]">
                                 ${visit.spend.toLocaleString()}
                               </p>
                             </div>
@@ -265,13 +262,16 @@ export function ClientActivityClient({ clients, locations }: Props) {
                         </td>
                       );
                     })}
-                    <td className="px-4 py-3 text-right tabular-nums font-semibold">
+                    <td className="px-4 py-3 text-right font-semibold tabular-nums">
                       ${c.totalSpend.toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <Badge
                         variant="outline"
-                        className={cn("text-[10px] capitalize", TIER_COLORS[c.loyaltyTier])}
+                        className={cn(
+                          "text-[10px] capitalize",
+                          TIER_COLORS[c.loyaltyTier],
+                        )}
                       >
                         {c.loyaltyTier}
                       </Badge>
@@ -308,11 +308,16 @@ function StatTile({
   return (
     <Card>
       <CardContent className="flex items-center gap-3 py-4">
-        <div className={cn("flex size-10 items-center justify-center rounded-lg", accent)}>
+        <div
+          className={cn(
+            "flex size-10 items-center justify-center rounded-lg",
+            accent,
+          )}
+        >
           <Icon className="size-5" />
         </div>
         <div>
-          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+          <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
             {label}
           </p>
           <p className="text-xl font-bold tabular-nums">{value}</p>

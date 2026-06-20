@@ -426,7 +426,7 @@ export default function ClientVaccinationsPage({
       {petsWithRecords.length > 0 && (
         <Card className="border-dashed">
           <CardHeader className="pb-2">
-            <CardTitle className="text-muted-foreground flex items-center gap-2 text-xs font-medium uppercase tracking-wide">
+            <CardTitle className="text-muted-foreground flex items-center gap-2 text-xs font-medium tracking-wide uppercase">
               <AlertTriangle className="size-3.5" />
               Missing required vaccines
             </CardTitle>

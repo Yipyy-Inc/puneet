@@ -364,9 +364,7 @@ export function TipSettings() {
             {/* ── Post-stay tip reminder ─────────────────────────────── */}
             {(() => {
               const reminder = local.reminder ?? DEFAULT_REMINDER;
-              const updateReminder = (
-                patch: Partial<typeof reminder>,
-              ) =>
+              const updateReminder = (patch: Partial<typeof reminder>) =>
                 setLocal({
                   ...local,
                   reminder: { ...reminder, ...patch },
@@ -438,7 +436,9 @@ export function TipSettings() {
                             type="button"
                             disabled={!isEditing}
                             onClick={() =>
-                              updateChannels({ email: !reminder.channels.email })
+                              updateChannels({
+                                email: !reminder.channels.email,
+                              })
                             }
                             className={cn(
                               "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors",
@@ -541,7 +541,7 @@ export function TipSettings() {
                       </div>
 
                       {/* Attach report card */}
-                      <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+                      <div className="bg-muted/40 flex items-center justify-between rounded-lg px-3 py-2">
                         <div className="flex items-center gap-2">
                           <FileText className="text-muted-foreground size-3.5" />
                           <span className="text-xs font-medium">
@@ -618,7 +618,7 @@ export function TipSettings() {
                           }
                         />
                       </div>
-                      <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+                      <div className="bg-muted/40 flex items-center justify-between rounded-lg px-3 py-2">
                         <span className="text-xs font-medium">
                           Only show on 5-star / happy report cards
                         </span>

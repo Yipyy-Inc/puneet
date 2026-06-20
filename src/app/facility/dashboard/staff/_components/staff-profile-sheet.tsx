@@ -91,9 +91,9 @@ export function StaffProfileSheet({
           data-slot="dialog-content"
           className={cn(
             "bg-background fixed top-[50%] left-[50%] z-50 flex flex-col",
-            "w-full max-w-2xl max-h-[90vh]",
+            "max-h-[90vh] w-full max-w-2xl",
             "-translate-x-1/2 -translate-y-1/2",
-            "rounded-xl border shadow-2xl overflow-hidden",
+            "overflow-hidden rounded-xl border shadow-2xl",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
             "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
             "duration-200",
@@ -101,7 +101,7 @@ export function StaffProfileSheet({
         >
           <Header profile={profile} />
 
-          <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="px-6 pb-6">
               <Tabs defaultValue="overview">
                 <ScrollableTabsBar>
@@ -155,7 +155,7 @@ export function StaffProfileSheet({
             </div>
           </div>
 
-          <div className="bg-background/80 flex items-center justify-between gap-2 border-t px-6 py-4 backdrop-blur-sm shrink-0">
+          <div className="bg-background/80 flex shrink-0 items-center justify-between gap-2 border-t px-6 py-4 backdrop-blur-sm">
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -224,8 +224,10 @@ function ScrollableTabsBar({ children }: { children: React.ReactNode }) {
         aria-label="Scroll tabs left"
         onClick={() => scroll("left")}
         className={cn(
-          "absolute top-1/2 left-1.5 z-10 flex size-6 -translate-y-1/2 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-all duration-200 hover:text-foreground",
-          canLeft ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+          "bg-background text-muted-foreground hover:text-foreground absolute top-1/2 left-1.5 z-10 flex size-6 -translate-y-1/2 items-center justify-center rounded-full border shadow-sm transition-all duration-200",
+          canLeft
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0",
         )}
       >
         <ChevronLeft className="size-3.5" />
@@ -237,8 +239,10 @@ function ScrollableTabsBar({ children }: { children: React.ReactNode }) {
         aria-label="Scroll tabs right"
         onClick={() => scroll("right")}
         className={cn(
-          "absolute top-1/2 right-1.5 z-10 flex size-6 -translate-y-1/2 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-all duration-200 hover:text-foreground",
-          canRight ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+          "bg-background text-muted-foreground hover:text-foreground absolute top-1/2 right-1.5 z-10 flex size-6 -translate-y-1/2 items-center justify-center rounded-full border shadow-sm transition-all duration-200",
+          canRight
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0",
         )}
       >
         <ChevronRight className="size-3.5" />
@@ -248,14 +252,14 @@ function ScrollableTabsBar({ children }: { children: React.ReactNode }) {
       <div
         aria-hidden
         className={cn(
-          "pointer-events-none absolute inset-y-0 left-0 z-[5] w-10 bg-gradient-to-r from-background/90 to-transparent transition-opacity",
+          "from-background/90 pointer-events-none absolute inset-y-0 left-0 z-[5] w-10 bg-gradient-to-r to-transparent transition-opacity",
           canLeft ? "opacity-100" : "opacity-0",
         )}
       />
       <div
         aria-hidden
         className={cn(
-          "pointer-events-none absolute inset-y-0 right-0 z-[5] w-10 bg-gradient-to-l from-background/90 to-transparent transition-opacity",
+          "from-background/90 pointer-events-none absolute inset-y-0 right-0 z-[5] w-10 bg-gradient-to-l to-transparent transition-opacity",
           canRight ? "opacity-100" : "opacity-0",
         )}
       />
@@ -272,7 +276,7 @@ function ScrollableTabsBar({ children }: { children: React.ReactNode }) {
 function Header({ profile }: { profile: StaffProfile }) {
   const meta = ROLE_META[profile.primaryRole];
   return (
-    <div className={cn("relative shrink-0 overflow-hidden p-6 pb-5 border-b")}>
+    <div className={cn("relative shrink-0 overflow-hidden border-b p-6 pb-5")}>
       <div
         className={cn("pointer-events-none absolute inset-0", meta.accent)}
       />
@@ -289,11 +293,13 @@ function Header({ profile }: { profile: StaffProfile }) {
           )}
           <DialogDescription className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
             <Clock className="size-3" />
-            {profile.status === "active" || profile.status === "invited"
-              ? <>Active {formatRelative(profile.lastActive)}</>
-              : <>Last active {formatRelative(profile.lastActive)}</>
-            }
-            {(profile.status === "inactive" || profile.status === "terminated") && (
+            {profile.status === "active" || profile.status === "invited" ? (
+              <>Active {formatRelative(profile.lastActive)}</>
+            ) : (
+              <>Last active {formatRelative(profile.lastActive)}</>
+            )}
+            {(profile.status === "inactive" ||
+              profile.status === "terminated") && (
               <>
                 <span>·</span>
                 <StatusBadge status={profile.status} />
@@ -355,7 +361,8 @@ function OverviewTab({ profile }: { profile: StaffProfile }) {
                   : "text-rose-800 dark:text-rose-300",
               )}
             >
-              {STATUS_REASON_LABELS[profile.statusReason] ?? profile.statusReason}
+              {STATUS_REASON_LABELS[profile.statusReason] ??
+                profile.statusReason}
             </div>
           )}
           {profile.statusNote && (

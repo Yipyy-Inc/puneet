@@ -28,7 +28,9 @@ export function filterTemplatesForCourse(
 ): HomeworkTemplate[] {
   const target = normalizeCourseName(courseTypeName);
   return templates
-    .filter((t) => t.isActive && normalizeCourseName(t.courseTypeName) === target)
+    .filter(
+      (t) => t.isActive && normalizeCourseName(t.courseTypeName) === target,
+    )
     .sort((a, b) => {
       const aSess = a.sessionNumber ?? Number.POSITIVE_INFINITY;
       const bSess = b.sessionNumber ?? Number.POSITIVE_INFINITY;

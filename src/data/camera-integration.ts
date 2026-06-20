@@ -36,7 +36,10 @@ export const petCamAccessConfigs: Record<string, PetCamAccessConfig> = {
       logic: "any",
       rules: [
         { type: "active_stay", services: ["boarding", "daycare"] },
-        { type: "membership", membershipPlanIds: ["plan-001", "plan-002", "plan-003"] },
+        {
+          type: "membership",
+          membershipPlanIds: ["plan-001", "plan-002", "plan-003"],
+        },
         { type: "package", packageIds: ["pkg-001", "pkg-002", "pkg-003"] },
         { type: "service_customer", services: ["daycare"] },
       ],

@@ -14,10 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
-import type {
-  PointsEarningRule,
-  PointsEarningMethod,
-} from "@/types/loyalty";
+import type { PointsEarningRule, PointsEarningMethod } from "@/types/loyalty";
 import { BOOKABLE_SERVICE_TYPES } from "@/data/facility-loyalty-config";
 
 const methodLabels: Record<PointsEarningMethod, string> = {
@@ -65,8 +62,7 @@ export function EarnRulesEditor({
     const next: PointsEarningRule = { ...value, method };
     switch (method) {
       case "per_dollar":
-        if (!next.perDollar)
-          next.perDollar = { enabled: true, basePoints: 1 };
+        if (!next.perDollar) next.perDollar = { enabled: true, basePoints: 1 };
         break;
       case "per_booking":
         if (!next.perBooking)
@@ -155,8 +151,9 @@ type SectionProps = {
 
 function PerDollarSection({ value, onChange }: SectionProps) {
   const pd = value.perDollar ?? { enabled: true, basePoints: 1 };
-  const update = (patch: Partial<NonNullable<PointsEarningRule["perDollar"]>>) =>
-    onChange({ ...value, perDollar: { ...pd, ...patch } });
+  const update = (
+    patch: Partial<NonNullable<PointsEarningRule["perDollar"]>>,
+  ) => onChange({ ...value, perDollar: { ...pd, ...patch } });
 
   return (
     <Card>
@@ -212,10 +209,15 @@ function PerBookingSection({ value, onChange }: SectionProps) {
     serviceTypePoints: [],
   };
   const overrides = pb.serviceTypePoints ?? [];
-  const update = (patch: Partial<NonNullable<PointsEarningRule["perBooking"]>>) =>
-    onChange({ ...value, perBooking: { ...pb, ...patch } });
+  const update = (
+    patch: Partial<NonNullable<PointsEarningRule["perBooking"]>>,
+  ) => onChange({ ...value, perBooking: { ...pb, ...patch } });
 
-  const setOverride = (index: number, key: "serviceType" | "points", v: string) => {
+  const setOverride = (
+    index: number,
+    key: "serviceType" | "points",
+    v: string,
+  ) => {
     const next = overrides.map((o, i) =>
       i === index
         ? {
@@ -451,7 +453,9 @@ function PerVisitCountSection({ value, onChange }: SectionProps) {
                   type="number"
                   placeholder="Visits"
                   value={m.visitCount}
-                  onChange={(e) => setMilestone(i, "visitCount", e.target.value)}
+                  onChange={(e) =>
+                    setMilestone(i, "visitCount", e.target.value)
+                  }
                 />
               </div>
               <div className="w-28">
@@ -585,7 +589,9 @@ function HybridSection({ value, onChange }: SectionProps) {
               type="number"
               className="mt-1"
               value={innerBooking?.perBooking?.basePoints ?? 10}
-              onChange={(e) => setInnerBasePoints("per_booking", e.target.value)}
+              onChange={(e) =>
+                setInnerBasePoints("per_booking", e.target.value)
+              }
             />
           </div>
         </div>

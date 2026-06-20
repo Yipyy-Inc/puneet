@@ -23,8 +23,8 @@ export function DenominationInput({
   const sorted = [...denominations].sort((a, b) => a.value - b.value);
 
   return (
-    <div className="rounded-md border bg-background">
-      <div className="grid grid-cols-[1fr_5rem_5.5rem] gap-2 border-b bg-muted/40 px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="bg-background rounded-md border">
+      <div className="bg-muted/40 text-muted-foreground grid grid-cols-[1fr_5rem_5.5rem] gap-2 border-b px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
         <span>Denomination</span>
         <span className="text-center">Count</span>
         <span className="text-right">Subtotal</span>
@@ -41,7 +41,7 @@ export function DenominationInput({
             >
               <div className="flex items-center gap-2">
                 <span
-                  className="inline-flex size-6 items-center justify-center rounded-full text-[10px] font-semibold uppercase data-[t=coin]:bg-amber-50 data-[t=coin]:text-amber-700 data-[t=bill]:bg-emerald-50 data-[t=bill]:text-emerald-700"
+                  className="inline-flex size-6 items-center justify-center rounded-full text-[10px] font-semibold uppercase data-[t=bill]:bg-emerald-50 data-[t=bill]:text-emerald-700 data-[t=coin]:bg-amber-50 data-[t=coin]:text-amber-700"
                   data-t={d.type}
                 >
                   {d.type === "coin" ? "C" : "B"}
@@ -60,7 +60,7 @@ export function DenominationInput({
                 }}
               />
               <span
-                className={`text-right tabular-nums ${count > 0 ? "font-medium text-foreground" : "text-muted-foreground"}`}
+                className={`text-right tabular-nums ${count > 0 ? "text-foreground font-medium" : "text-muted-foreground"}`}
               >
                 {currencySymbol}
                 {subtotal.toFixed(2)}

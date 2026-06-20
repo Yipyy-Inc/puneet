@@ -22,10 +22,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { facilityStaff } from "@/data/facility-staff";
-import {
-  setUserRole,
-  clearEmployeeStaffId,
-} from "@/lib/role-utils";
+import { setUserRole, clearEmployeeStaffId } from "@/lib/role-utils";
 import type { FacilityStaffRole } from "@/types/facility-staff";
 import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";
 
@@ -42,12 +39,16 @@ const ROLE_LABEL: Record<FacilityStaffRole, string> = {
 
 const ROLE_COLOR: Record<FacilityStaffRole, string> = {
   owner: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  manager: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+  manager:
+    "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
   reception: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
   groomer: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
-  trainer: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-  daycare_attendant: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
-  boarding_attendant: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+  trainer:
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+  daycare_attendant:
+    "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
+  boarding_attendant:
+    "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
   sanitation: "bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300",
 };
 
@@ -82,7 +83,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
     <header className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b px-4 backdrop-blur-sm sm:px-6">
       <div className="flex items-center gap-3">
         <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors md:hidden" />
-        <div className="hidden sm:flex items-center gap-2">
+        <div className="hidden items-center gap-2 sm:flex">
           <span className="text-sm font-semibold">Employee Portal</span>
           <span className="text-muted-foreground text-sm">·</span>
           <Badge className={`text-xs ${ROLE_COLOR[role]}`} variant="secondary">
@@ -96,7 +97,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
         <Button
           variant="ghost"
           size="sm"
-          className="hidden sm:flex gap-1.5 text-xs"
+          className="hidden gap-1.5 text-xs sm:flex"
           asChild
         >
           <Link href="/employee/select">
@@ -108,7 +109,10 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
         {/* User avatar + context menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2 rounded-full px-2 py-1 h-9">
+            <Button
+              variant="ghost"
+              className="h-9 gap-2 rounded-full px-2 py-1"
+            >
               <Avatar className="size-7">
                 <AvatarImage src={staff?.avatarUrl} />
                 <AvatarFallback
@@ -118,9 +122,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
                     color: staff?.colorHex ?? "#666",
                   }}
                 >
-                  {staff
-                    ? getInitials(staff.firstName, staff.lastName)
-                    : "?"}
+                  {staff ? getInitials(staff.firstName, staff.lastName) : "?"}
                 </AvatarFallback>
               </Avatar>
               {staff && (
@@ -147,9 +149,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
               </Avatar>
               <div>
                 <p className="font-medium">
-                  {staff
-                    ? `${staff.firstName} ${staff.lastName}`
-                    : "Employee"}
+                  {staff ? `${staff.firstName} ${staff.lastName}` : "Employee"}
                 </p>
                 <p className="text-muted-foreground text-xs">{staff?.email}</p>
               </div>
@@ -160,15 +160,24 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
               Switch Portal
             </DropdownMenuLabel>
 
-            <DropdownMenuItem onClick={switchToFacility} className="cursor-pointer gap-2">
+            <DropdownMenuItem
+              onClick={switchToFacility}
+              className="cursor-pointer gap-2"
+            >
               <Building2 className="size-4" />
               Facility Admin View
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={switchToCustomer} className="cursor-pointer gap-2">
+            <DropdownMenuItem
+              onClick={switchToCustomer}
+              className="cursor-pointer gap-2"
+            >
               <User className="size-4" />
               Customer Portal
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={switchToAdmin} className="cursor-pointer gap-2">
+            <DropdownMenuItem
+              onClick={switchToAdmin}
+              className="cursor-pointer gap-2"
+            >
               <Shield className="size-4" />
               Super Admin
             </DropdownMenuItem>

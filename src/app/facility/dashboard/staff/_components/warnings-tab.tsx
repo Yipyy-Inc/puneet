@@ -71,7 +71,11 @@ const TYPE_BG: Record<WarningType, string> = {
 
 // ── Signature Pad ─────────────────────────────────────────────────────────────
 
-function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) => void }) {
+function SignaturePad({
+  onChange,
+}: {
+  onChange: (dataUrl: string | null) => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
 
@@ -124,7 +128,9 @@ function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) => void
         style={{ touchAction: "none" }}
       />
       <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-[11px]">Draw your signature above</p>
+        <p className="text-muted-foreground text-[11px]">
+          Draw your signature above
+        </p>
         <button
           type="button"
           onClick={clear}
@@ -222,7 +228,7 @@ function WarningCard({
   return (
     <div
       className={cn(
-        "rounded-xl border border-l-4 overflow-hidden",
+        "overflow-hidden rounded-xl border border-l-4",
         TYPE_BORDER[w.type],
         TYPE_BG[w.type],
         "border-border/50",
@@ -239,13 +245,17 @@ function WarningCard({
         </div>
 
         {/* Reason */}
-        <p className="text-muted-foreground text-[11px] leading-snug">{w.reason}</p>
+        <p className="text-muted-foreground text-[11px] leading-snug">
+          {w.reason}
+        </p>
 
         {/* Meta row */}
         <div className="text-muted-foreground flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[10px]">
           <span className="flex items-center gap-1">
             <Calendar className="size-2.5" />
-            {new Date(w.issuedAt).toLocaleDateString("en-CA", { dateStyle: "medium" })}
+            {new Date(w.issuedAt).toLocaleDateString("en-CA", {
+              dateStyle: "medium",
+            })}
           </span>
           <span className="flex items-center gap-1">
             <User className="size-2.5" />
@@ -347,7 +357,9 @@ export function WarningsTab({ profile }: WarningsTabProps) {
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 
   // Sign dialog state
-  const [signingWarning, setSigningWarning] = useState<IssuedWarning | null>(null);
+  const [signingWarning, setSigningWarning] = useState<IssuedWarning | null>(
+    null,
+  );
   const [signatureData, setSignatureData] = useState<string | null>(null);
 
   const selectedTemplate = useMemo(
@@ -359,18 +371,23 @@ export function WarningsTab({ profile }: WarningsTabProps) {
   if (!isManager && !isOwnProfile) {
     return (
       <div className="flex flex-col items-center rounded-xl border border-dashed p-8 text-center">
-        <div className="mb-3 flex size-11 items-center justify-center rounded-full bg-muted">
-          <LockKeyhole className="size-5 text-muted-foreground" />
+        <div className="bg-muted mb-3 flex size-11 items-center justify-center rounded-full">
+          <LockKeyhole className="text-muted-foreground size-5" />
         </div>
-        <p className="text-sm font-semibold">Disciplinary records are private</p>
+        <p className="text-sm font-semibold">
+          Disciplinary records are private
+        </p>
         <p className="text-muted-foreground mt-1 max-w-xs text-xs">
-          You can only view your own disciplinary history, not a colleague&#39;s.
+          You can only view your own disciplinary history, not a
+          colleague&#39;s.
         </p>
       </div>
     );
   }
 
-  const pending = warnings.filter((w) => w.status === "pending_signature").length;
+  const pending = warnings.filter(
+    (w) => w.status === "pending_signature",
+  ).length;
   const needsEscalation = warnings.length >= 3;
 
   const openIssue = () => {
@@ -506,8 +523,9 @@ export function WarningsTab({ profile }: WarningsTabProps) {
               {warnings.length} warnings on record — review termination protocol
             </p>
             <p className="mt-0.5 text-xs text-red-600/80 dark:text-red-400/70">
-              Policy requires a formal HR review before further action. Consult management
-              before issuing additional warnings or initiating termination.
+              Policy requires a formal HR review before further action. Consult
+              management before issuing additional warnings or initiating
+              termination.
             </p>
           </div>
         </div>
@@ -522,8 +540,9 @@ export function WarningsTab({ profile }: WarningsTabProps) {
               Your disciplinary record
             </p>
             <p className="mt-0.5 text-xs text-sky-600/80 dark:text-sky-400/70">
-              Signing a warning acknowledges receipt — not necessarily agreement. Contact
-              your manager if you believe a record is inaccurate.
+              Signing a warning acknowledges receipt — not necessarily
+              agreement. Contact your manager if you believe a record is
+              inaccurate.
             </p>
           </div>
         </div>
@@ -587,7 +606,10 @@ export function WarningsTab({ profile }: WarningsTabProps) {
       )}
 
       {/* Sign dialog */}
-      <Dialog open={!!signingWarning} onOpenChange={(v) => !v && setSigningWarning(null)}>
+      <Dialog
+        open={!!signingWarning}
+        onOpenChange={(v) => !v && setSigningWarning(null)}
+      >
         <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-xl">
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
@@ -611,17 +633,21 @@ export function WarningsTab({ profile }: WarningsTabProps) {
                       <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                         Incident details
                       </p>
-                      {Object.entries(signingWarning.fieldValues).map(([k, v]) => (
-                        <div
-                          key={k}
-                          className="border-border/60 flex justify-between gap-3 rounded-md border px-3 py-2 text-xs"
-                        >
-                          <span className="text-muted-foreground capitalize">
-                            {k.replace(/_/g, " ")}
-                          </span>
-                          <span className="text-right font-medium">{String(v)}</span>
-                        </div>
-                      ))}
+                      {Object.entries(signingWarning.fieldValues).map(
+                        ([k, v]) => (
+                          <div
+                            key={k}
+                            className="border-border/60 flex justify-between gap-3 rounded-md border px-3 py-2 text-xs"
+                          >
+                            <span className="text-muted-foreground capitalize">
+                              {k.replace(/_/g, " ")}
+                            </span>
+                            <span className="text-right font-medium">
+                              {String(v)}
+                            </span>
+                          </div>
+                        ),
+                      )}
                     </div>
                   )}
                   <div className="space-y-1.5">
@@ -629,15 +655,19 @@ export function WarningsTab({ profile }: WarningsTabProps) {
                       Employee signature
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      By signing below, {signingWarning.employeeName} acknowledges receipt
-                      of this warning. Signing does not necessarily indicate agreement.
+                      By signing below, {signingWarning.employeeName}{" "}
+                      acknowledges receipt of this warning. Signing does not
+                      necessarily indicate agreement.
                     </p>
                     <SignaturePad onChange={setSignatureData} />
                   </div>
                 </div>
               </ScrollArea>
               <DialogFooter className="shrink-0 border-t pt-4">
-                <Button variant="outline" onClick={() => setSigningWarning(null)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setSigningWarning(null)}
+                >
                   Cancel
                 </Button>
                 <Button
@@ -779,13 +809,18 @@ function IssueWarningDialog({
                   <div key={f.id} className="space-y-1.5">
                     <Label>
                       {f.label}
-                      {f.required && <span className="ml-1 text-red-500">*</span>}
+                      {f.required && (
+                        <span className="ml-1 text-red-500">*</span>
+                      )}
                     </Label>
                     {f.type === "textarea" ? (
                       <Textarea
                         value={fieldValues[f.id] ?? ""}
                         onChange={(e) =>
-                          setFieldValues({ ...fieldValues, [f.id]: e.target.value })
+                          setFieldValues({
+                            ...fieldValues,
+                            [f.id]: e.target.value,
+                          })
                         }
                         placeholder={f.placeholder}
                         rows={3}
@@ -794,7 +829,10 @@ function IssueWarningDialog({
                       <Input
                         value={fieldValues[f.id] ?? ""}
                         onChange={(e) =>
-                          setFieldValues({ ...fieldValues, [f.id]: e.target.value })
+                          setFieldValues({
+                            ...fieldValues,
+                            [f.id]: e.target.value,
+                          })
                         }
                         placeholder={f.placeholder}
                         type={f.type === "date" ? "date" : "text"}

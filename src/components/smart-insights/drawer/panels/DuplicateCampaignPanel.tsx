@@ -61,7 +61,7 @@ export function DuplicateCampaignPanel({
         <div className="rounded-lg border bg-amber-50/60 p-3 text-sm">
           <Link
             href={insightLinks.marketing(SOURCE.id)}
-            className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-900 hover:underline"
+            className="mb-1 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-amber-900 uppercase hover:underline"
           >
             <Award className="size-3.5" />
             Source campaign: {SOURCE.name}
@@ -111,7 +111,7 @@ export function DuplicateCampaignPanel({
           />
         </div>
 
-        <Badge variant="outline" className="self-start gap-1.5">
+        <Badge variant="outline" className="gap-1.5 self-start">
           <Copy className="size-3" />
           Tone matches the source so engagement should track close to 48%
         </Badge>

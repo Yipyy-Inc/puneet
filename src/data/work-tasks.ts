@@ -131,7 +131,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-002",
     title: "Check reservation system for today's bookings",
-    description: "Review all check-ins, check-outs, and daycare arrivals expected.",
+    description:
+      "Review all check-ins, check-outs, and daycare arrivals expected.",
     category: "opening",
     priority: "high",
     estimatedMinutes: 15,
@@ -143,7 +144,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-003",
     title: "Safety walkthrough — all areas",
-    description: "Walk entire facility. Check for hazards, unlocked areas, water spills.",
+    description:
+      "Walk entire facility. Check for hazards, unlocked areas, water spills.",
     category: "safety",
     priority: "urgent",
     estimatedMinutes: 20,
@@ -155,7 +157,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-004",
     title: "Set up and stock reception desk",
-    description: "Ensure intake forms, pens, hand sanitiser, and treat jar are stocked.",
+    description:
+      "Ensure intake forms, pens, hand sanitiser, and treat jar are stocked.",
     category: "opening",
     priority: "medium",
     estimatedMinutes: 10,
@@ -168,7 +171,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-005",
     title: "Process end-of-day payments and close registers",
-    description: "Reconcile cash drawer, run credit batch, print summary receipt.",
+    description:
+      "Reconcile cash drawer, run credit batch, print summary receipt.",
     category: "closing",
     priority: "high",
     estimatedMinutes: 20,
@@ -180,7 +184,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-006",
     title: "Send daily summary report to manager",
-    description: "Complete end-of-day report including incidents, revenue, and notes.",
+    description:
+      "Complete end-of-day report including incidents, revenue, and notes.",
     category: "closing",
     priority: "medium",
     estimatedMinutes: 15,
@@ -192,7 +197,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-007",
     title: "Lock all areas and set security alarm",
-    description: "Check all exterior doors, gate locks, and arm the alarm system.",
+    description:
+      "Check all exterior doors, gate locks, and arm the alarm system.",
     category: "closing",
     priority: "urgent",
     estimatedMinutes: 15,
@@ -205,7 +211,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-008",
     title: "Return all missed calls within 1 hour",
-    description: "Check voicemail and missed calls log. Follow up with each caller.",
+    description:
+      "Check voicemail and missed calls log. Follow up with each caller.",
     category: "customer-service",
     priority: "high",
     estimatedMinutes: 30,
@@ -217,7 +224,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-009",
     title: "Respond to email and online inquiries",
-    description: "Check shared inbox and online booking requests. Respond within 2 hours.",
+    description:
+      "Check shared inbox and online booking requests. Respond within 2 hours.",
     category: "customer-service",
     priority: "medium",
     estimatedMinutes: 20,
@@ -229,7 +237,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-010",
     title: "Confirm tomorrow's appointments",
-    description: "Call or text all bookings for the following day as confirmation reminders.",
+    description:
+      "Call or text all bookings for the following day as confirmation reminders.",
     category: "customer-service",
     priority: "medium",
     estimatedMinutes: 25,
@@ -242,7 +251,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-011",
     title: "Mop and sanitize lobby floor",
-    description: "Use approved disinfectant solution. Place wet floor signs during drying.",
+    description:
+      "Use approved disinfectant solution. Place wet floor signs during drying.",
     category: "cleaning",
     priority: "medium",
     estimatedMinutes: 20,
@@ -279,7 +289,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-014",
     title: "Review and update staff attendance log",
-    description: "Confirm all clock-ins match schedule. Flag any discrepancies for manager.",
+    description:
+      "Confirm all clock-ins match schedule. Flag any discrepancies for manager.",
     category: "admin",
     priority: "medium",
     estimatedMinutes: 10,
@@ -291,7 +302,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-015",
     title: "Process incoming supply orders",
-    description: "Check deliveries against purchase orders. Update inventory system.",
+    description:
+      "Check deliveries against purchase orders. Update inventory system.",
     category: "admin",
     priority: "medium",
     estimatedMinutes: 20,
@@ -303,7 +315,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-016",
     title: "Complete incident reports from previous shift",
-    description: "Document any incidents in the system and notify relevant parties.",
+    description:
+      "Document any incidents in the system and notify relevant parties.",
     category: "admin",
     priority: "high",
     estimatedMinutes: 15,
@@ -316,7 +329,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-017",
     title: "Equipment function check",
-    description: "Test grooming tables, dryers, washers, and kennels for proper operation.",
+    description:
+      "Test grooming tables, dryers, washers, and kennels for proper operation.",
     category: "maintenance",
     priority: "medium",
     estimatedMinutes: 20,
@@ -340,7 +354,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-019",
     title: "First aid kit inventory check",
-    description: "Verify all first aid supplies are stocked and within expiry dates.",
+    description:
+      "Verify all first aid supplies are stocked and within expiry dates.",
     category: "safety",
     priority: "medium",
     estimatedMinutes: 10,
@@ -352,7 +367,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-020",
     title: "Staff handoff briefing notes",
-    description: "Write and post notes for the incoming shift about special cases, open issues.",
+    description:
+      "Write and post notes for the incoming shift about special cases, open issues.",
     category: "operations",
     priority: "medium",
     estimatedMinutes: 15,
@@ -364,7 +380,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-021",
     title: "Restock supply closet",
-    description: "Refill cleaning products, gloves, and paper goods from back storage.",
+    description:
+      "Refill cleaning products, gloves, and paper goods from back storage.",
     category: "operations",
     priority: "low",
     estimatedMinutes: 15,
@@ -376,7 +393,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-022",
     title: "Review and post next week's staff schedule",
-    description: "Confirm no coverage gaps, post to schedule board and staff app.",
+    description:
+      "Confirm no coverage gaps, post to schedule board and staff app.",
     category: "admin",
     priority: "high",
     estimatedMinutes: 30,
@@ -388,7 +406,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-023",
     title: "Client follow-up calls — recent services",
-    description: "Call clients whose pets received services in the past 48 hours for satisfaction check.",
+    description:
+      "Call clients whose pets received services in the past 48 hours for satisfaction check.",
     category: "customer-service",
     priority: "low",
     estimatedMinutes: 30,
@@ -400,7 +419,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-024",
     title: "Deep clean grooming station",
-    description: "Full disinfection of tables, tubs, tools, and dryers. Document in cleaning log.",
+    description:
+      "Full disinfection of tables, tubs, tools, and dryers. Document in cleaning log.",
     category: "cleaning",
     priority: "high",
     estimatedMinutes: 45,
@@ -412,7 +432,8 @@ export const workTaskLibrary: WorkTaskDefinition[] = [
   {
     id: "wtl-025",
     title: "Update client records from today",
-    description: "Add service notes, update contact details, flag any flags raised during visit.",
+    description:
+      "Add service notes, update contact details, flag any flags raised during visit.",
     category: "admin",
     priority: "medium",
     estimatedMinutes: 20,
@@ -537,7 +558,8 @@ export const standaloneTasks: StandaloneTask[] = [
   {
     id: "sat-001",
     title: "Order replacement grooming clippers",
-    description: "Two sets of Andis clippers from the approved supplier. Include blades.",
+    description:
+      "Two sets of Andis clippers from the approved supplier. Include blades.",
     category: "admin",
     priority: "high",
     status: "pending",
@@ -554,7 +576,8 @@ export const standaloneTasks: StandaloneTask[] = [
   {
     id: "sat-002",
     title: "Update client waiver forms to 2026 version",
-    description: "Replace printed waiver stack at reception and update the digital form.",
+    description:
+      "Replace printed waiver stack at reception and update the digital form.",
     category: "admin",
     priority: "medium",
     status: "pending",
@@ -570,7 +593,8 @@ export const standaloneTasks: StandaloneTask[] = [
   {
     id: "sat-003",
     title: "Fix broken latch on kennel C-7",
-    description: "Latch is stiff and needs lubrication or replacement. Do not use until fixed.",
+    description:
+      "Latch is stiff and needs lubrication or replacement. Do not use until fixed.",
     category: "maintenance",
     priority: "urgent",
     status: "in_progress",
@@ -587,7 +611,8 @@ export const standaloneTasks: StandaloneTask[] = [
   {
     id: "sat-004",
     title: "Train Sophie on new booking software module",
-    description: "Walkthrough of the new multi-location booking flow. Est. 1 hour.",
+    description:
+      "Walkthrough of the new multi-location booking flow. Est. 1 hour.",
     category: "operations",
     priority: "medium",
     status: "pending",
@@ -621,7 +646,8 @@ export const standaloneTasks: StandaloneTask[] = [
   {
     id: "sat-006",
     title: "Restock first aid supplies",
-    description: "Check inventory against checklist and reorder anything below threshold.",
+    description:
+      "Check inventory against checklist and reorder anything below threshold.",
     category: "safety",
     priority: "high",
     status: "pending",
@@ -691,7 +717,9 @@ standaloneTasks.push(...generateCallFollowUpTasks());
 // reputation provider via addStandaloneTask + hasTaskForReputationRequest.
 
 /** Whether a follow-up task already exists for a review (dedup guard). */
-export function hasTaskForReputationRequest(reputationRequestId: string): boolean {
+export function hasTaskForReputationRequest(
+  reputationRequestId: string,
+): boolean {
   return standaloneTasks.some(
     (t) => t.metadata?.reputationRequestId === reputationRequestId,
   );
@@ -729,10 +757,14 @@ function generateReviewEscalationTasks(): StandaloneTask[] {
   const generated: StandaloneTask[] = [];
   for (const req of reputationRequests) {
     if (!req.escalatedToManager || req.status === "closed") continue;
-    const assignees = resolveEscalationAssignees(reputationSettings, req.service);
+    const assignees = resolveEscalationAssignees(
+      reputationSettings,
+      req.service,
+    );
     for (const a of assignees) {
       if (hasReputationTaskFor(req.id, a.id)) continue;
-      if (generated.some((t) => t.id === `task-rep-${req.id}-${a.id}`)) continue;
+      if (generated.some((t) => t.id === `task-rep-${req.id}-${a.id}`))
+        continue;
       generated.push(buildReputationEscalationTask(req, a));
     }
   }

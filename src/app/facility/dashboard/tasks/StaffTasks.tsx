@@ -91,7 +91,9 @@ export function StaffTasks() {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<StaffTask | null>(null);
-  const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(
+    null,
+  );
   const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
   const [completingTask, setCompletingTask] = useState<StaffTask | null>(null);
 

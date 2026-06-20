@@ -85,7 +85,13 @@ export function classifySource(
   payment: Pick<Payment, "description" | "bookingId">,
 ): CapturedCashTxn["source"] {
   const desc = payment.description.toLowerCase();
-  if (desc.includes("retail") || desc.includes("kibble") || desc.includes("toy") || desc.includes("collar") || desc.includes("food")) {
+  if (
+    desc.includes("retail") ||
+    desc.includes("kibble") ||
+    desc.includes("toy") ||
+    desc.includes("collar") ||
+    desc.includes("food")
+  ) {
     return "retail";
   }
   if (desc.includes("deposit")) return "deposit";
@@ -93,9 +99,7 @@ export function classifySource(
   return "other";
 }
 
-export function paymentToCapturedTxn(
-  payment: Payment,
-): CapturedCashTxn {
+export function paymentToCapturedTxn(payment: Payment): CapturedCashTxn {
   return {
     paymentId: payment.id,
     invoiceId: payment.invoiceId,
@@ -117,10 +121,14 @@ export interface SourceBreakdown {
   total: number;
 }
 
-export function summarizeBySource(
-  txns: CapturedCashTxn[],
-): SourceBreakdown {
-  const out: SourceBreakdown = { service: 0, retail: 0, deposit: 0, other: 0, total: 0 };
+export function summarizeBySource(txns: CapturedCashTxn[]): SourceBreakdown {
+  const out: SourceBreakdown = {
+    service: 0,
+    retail: 0,
+    deposit: 0,
+    other: 0,
+    total: 0,
+  };
   for (const t of txns) {
     out[t.source] += t.amount;
     out.total += t.amount;
@@ -168,13 +176,17 @@ function isoWeekKey(dateStr: string): string {
   const firstThursday = target.valueOf();
   target.setMonth(0, 1);
   if (target.getDay() !== 4) {
-    target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+    target.setMonth(0, 1 + ((4 - target.getDay() + 7) % 7));
   }
   const week = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
   return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
-function weekRange(weekKey: string): { start: string; end: string; label: string } {
+function weekRange(weekKey: string): {
+  start: string;
+  end: string;
+  label: string;
+} {
   // weekKey like "2026-W18"
   const [y, w] = weekKey.split("-W");
   const year = parseInt(y, 10);
@@ -216,7 +228,10 @@ export function aggregateByPeriod(
   const result: PeriodBucket[] = [];
   for (const [key, group] of buckets.entries()) {
     const cashCaptured = group.reduce((s, sess) => s + sess.cashCaptured, 0);
-    const moveNet = group.reduce((s, sess) => s + movementsNet(sess.movements), 0);
+    const moveNet = group.reduce(
+      (s, sess) => s + movementsNet(sess.movements),
+      0,
+    );
     const variance = group.reduce((s, sess) => s + (sess.variance ?? 0), 0);
     const txnCount = group.reduce((s, sess) => s + sess.capturedTxns.length, 0);
 
@@ -225,7 +240,12 @@ export function aggregateByPeriod(
     let rangeEnd = key;
     if (period === "day") {
       const d = new Date(key + "T00:00:00");
-      label = d.toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+      label = d.toLocaleDateString("en-CA", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
       rangeStart = key;
       rangeEnd = key;
     } else if (period === "week") {
@@ -236,7 +256,10 @@ export function aggregateByPeriod(
     } else {
       const [y, m] = key.split("-");
       const monthDate = new Date(parseInt(y), parseInt(m) - 1, 1);
-      label = monthDate.toLocaleDateString("en-CA", { month: "long", year: "numeric" });
+      label = monthDate.toLocaleDateString("en-CA", {
+        month: "long",
+        year: "numeric",
+      });
       rangeStart = `${key}-01`;
       const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate();
       rangeEnd = `${key}-${String(lastDay).padStart(2, "0")}`;
@@ -247,7 +270,9 @@ export function aggregateByPeriod(
       label,
       rangeStart,
       rangeEnd,
-      sessions: group.sort((a, b) => b.businessDate.localeCompare(a.businessDate)),
+      sessions: group.sort((a, b) =>
+        b.businessDate.localeCompare(a.businessDate),
+      ),
       cashCaptured,
       movementsNet: moveNet,
       variance,

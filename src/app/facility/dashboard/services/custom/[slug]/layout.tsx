@@ -12,7 +12,12 @@ import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
-import { DollarSign, Settings, AlertTriangle, ClipboardList } from "lucide-react";
+import {
+  DollarSign,
+  Settings,
+  AlertTriangle,
+  ClipboardList,
+} from "lucide-react";
 
 export default function CustomServiceLayout({
   children,
