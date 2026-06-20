@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, XCircle, MailX } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,8 +71,8 @@ export function CancellationsReviewPanel({
             {CANCELLATIONS.length} cancellations · ${REVENUE_LOST} lost
           </div>
           <p className="text-red-900">
-            {NO_REASON_COUNT} of {CANCELLATIONS.length} marked "client cancelled
-            — no reason given".
+            {NO_REASON_COUNT} of {CANCELLATIONS.length} marked &quot;client cancelled
+            — no reason given&quot;.
           </p>
         </div>
 

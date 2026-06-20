@@ -32,7 +32,6 @@ import {
   MoreHorizontal,
   Package,
   AlertTriangle,
-  DollarSign,
   ShoppingCart,
   BoxesIcon,
   Scissors,

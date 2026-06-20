@@ -197,7 +197,7 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
           {settings.simultaneousCallHandling === "queue_system" && (
             <div className="mt-3 flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
               <Radio className="size-3.5 shrink-0" />
-              Callers will hear: <em>"You are caller #2. Estimated wait: 2 minutes."</em>
+              Callers will hear: <em>&quot;You are caller #2. Estimated wait: 2 minutes.&quot;</em>
             </div>
           )}
         </CardContent>
@@ -374,7 +374,7 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
             <div className="flex items-center justify-between">
               <div>
                 <Label>Compliance Notice</Label>
-                <p className="text-xs text-muted-foreground">Play "This call may be recorded" greeting</p>
+                <p className="text-xs text-muted-foreground">Play &quot;This call may be recorded&quot; greeting</p>
               </div>
               <Switch
                 checked={settings.complianceNotice}

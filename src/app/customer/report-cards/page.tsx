@@ -7,7 +7,7 @@ import { clients } from "@/data/clients";
 import { reportCards } from "@/data/pet-data";
 import { bookings } from "@/data/bookings";
 import { facilities } from "@/data/facilities";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";

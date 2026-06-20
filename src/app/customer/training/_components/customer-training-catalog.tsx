@@ -45,10 +45,8 @@ import {
   type TrainingSeries,
 } from "@/lib/training-series";
 import {
-  checkPrerequisitesForPet,
   checkPrerequisitesWithProgress,
   hasCompletedPrerequisites,
-  lookupPrerequisitePrograms,
   type PrereqDetail,
 } from "@/lib/training-program-prereqs";
 import { hexToRgba } from "@/lib/color-utils";

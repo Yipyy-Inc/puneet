@@ -111,7 +111,7 @@ export function EmployeePortalSwitcher({ standalone = true }: Props) {
 
   const switchToEmployee = (staffId: string) => {
     setEmployeeStaffId(staffId);
-    window.location.href = "/employee";
+    window.location.assign("/employee");
   };
 
   const groups = ROLE_GROUP_CONFIG.map((cfg) => ({

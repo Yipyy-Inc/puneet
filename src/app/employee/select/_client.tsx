@@ -52,7 +52,7 @@ export function EmployeeSelectClient() {
 
   const handleSelect = (staffId: string) => {
     setEmployeeStaffId(staffId);
-    window.location.href = "/employee";
+    window.location.assign("/employee");
   };
 
   return (

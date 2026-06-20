@@ -85,7 +85,7 @@ export function NewCampaignSuggestionsPanel({
             <CalendarRange className="size-3.5" />
             32 days since the last campaign
           </div>
-          <p>Pick a starting point — you can customize once you've chosen.</p>
+          <p>Pick a starting point — you can customize once you&#39;ve chosen.</p>
         </div>
 
         <div className="grid gap-3">

@@ -195,7 +195,7 @@ function StaffRow({
                   key={i}
                   className="text-muted-foreground rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs italic dark:border-emerald-900 dark:bg-emerald-950/30"
                 >
-                  "{c}"
+                  &quot;{c}&quot;
                 </p>
               ))}
             </div>

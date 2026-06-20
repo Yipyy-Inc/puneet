@@ -571,13 +571,13 @@ export function ContactList({
                     Start new contact
                   </p>
                   <p className="truncate text-xs text-blue-500/80">
-                    Send to “{clientSearch.trim()}” — we'll create a profile.
+                    Send to “{clientSearch.trim()}” — we&#39;ll create a profile.
                   </p>
                 </div>
               </button>
               <p className="mt-2 text-[10px] text-slate-400">
                 Works for unknown numbers, walk-ins, and inbound inquiries from
-                channels we haven't matched yet.
+                channels we haven&#39;t matched yet.
               </p>
             </div>
           ) : (

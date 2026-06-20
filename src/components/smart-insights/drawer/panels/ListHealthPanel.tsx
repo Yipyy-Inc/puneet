@@ -46,7 +46,7 @@ export function ListHealthPanel({ onComplete, onCancel }: InsightPanelProps) {
             Last 3 campaigns averaged 11% open · benchmark 15%
           </div>
           <p className="text-red-900">
-            {NON_OPENERS_90D} clients haven't opened any email in 90 days.
+            {NON_OPENERS_90D} clients haven&#39;t opened any email in 90 days.
           </p>
         </div>
         <div className="grid gap-3">

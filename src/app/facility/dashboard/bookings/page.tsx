@@ -24,7 +24,6 @@ import {
   Clock,
   CalendarDays,
   CalendarX,
-  CheckCircle,
   CheckSquare,
   FileText,
   Hash,

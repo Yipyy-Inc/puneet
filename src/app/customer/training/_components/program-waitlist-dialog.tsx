@@ -29,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { trainingQueries } from "@/lib/api/training";
 import { cn } from "@/lib/utils";
 import type { Client } from "@/types/client";
 import type { TrainingPackage } from "@/types/training";

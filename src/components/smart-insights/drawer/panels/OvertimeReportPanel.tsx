@@ -3,8 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ClockAlert, Users, Info } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { DrawerFooter } from "../shared/DrawerFooter";
 import { ConfirmBeforeModify } from "../shared/ConfirmBeforeModify";
 import { insightLinks } from "@/lib/smart-insights/links";
@@ -89,7 +87,7 @@ export function OvertimeReportPanel({ onComplete, onCancel }: InsightPanelProps)
           <span className="flex-1">
             <span className="block font-semibold">Review schedule efficiency</span>
             <span className="text-muted-foreground mt-0.5 block text-xs">
-              Opens next week's schedule to redistribute hours away from
+              Opens next week&#39;s schedule to redistribute hours away from
               high-OT staff
             </span>
           </span>

@@ -14,7 +14,6 @@ import {
   Wallet,
   Gift,
   ArrowUpRight,
-  ArrowDownRight,
   Plus,
   Sparkles,
   ShoppingBag,

@@ -703,7 +703,7 @@ export function EvaluationBookingWizardSettings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground text-xs">
-            Based on your configuration, here's what clients will see when
+            Based on your configuration, here&#39;s what clients will see when
             booking an evaluation.
           </p>
 

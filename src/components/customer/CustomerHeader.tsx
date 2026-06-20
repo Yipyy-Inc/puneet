@@ -19,7 +19,6 @@ import {
   Building2,
   Shield,
   Package,
-  Users,
 } from "lucide-react";
 import { useTransition } from "react";
 import { setUserRole } from "@/lib/role-utils";

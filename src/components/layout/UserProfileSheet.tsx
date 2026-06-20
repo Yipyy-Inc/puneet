@@ -31,7 +31,6 @@ import {
   Settings,
   Building2,
   Shield,
-  Users,
 } from "lucide-react";
 import { getUserRole, setUserRole, type UserRole } from "@/lib/role-utils";
 import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";

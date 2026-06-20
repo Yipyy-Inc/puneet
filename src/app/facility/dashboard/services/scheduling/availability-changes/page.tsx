@@ -373,7 +373,7 @@ function RequestRow({
                     Reason
                   </p>
                   <p className="text-foreground mt-1 text-sm italic">
-                    "{req.reason}"
+                    &quot;{req.reason}&quot;
                   </p>
                 </div>
                 <div>
@@ -432,7 +432,7 @@ function RequestRow({
                       </p>
                       {req.reviewNotes && (
                         <p className="text-foreground mt-1.5 italic">
-                          "{req.reviewNotes}"
+                          &quot;{req.reviewNotes}&quot;
                         </p>
                       )}
                     </div>

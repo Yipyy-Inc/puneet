@@ -59,7 +59,7 @@ export function MissedCallsPanel({ onComplete, onCancel }: InsightPanelProps) {
           </div>
           <p className="text-red-900">
             {NO_VOICEMAIL.length} callers did <b>not</b> leave a voicemail —
-            they're the prime targets for a callback SMS.
+            they&#39;re the prime targets for a callback SMS.
           </p>
         </div>
 
@@ -118,7 +118,7 @@ export function MissedCallsPanel({ onComplete, onCancel }: InsightPanelProps) {
           <span className="flex-1">
             <span className="block font-semibold">Send callback SMS</span>
             <span className="text-muted-foreground mt-0.5 block text-xs">
-              "We missed your call, how can we help?" to {NO_VOICEMAIL.length}{" "}
+              &quot;We missed your call, how can we help?&quot; to {NO_VOICEMAIL.length}{" "}
               callers without a voicemail
             </span>
           </span>

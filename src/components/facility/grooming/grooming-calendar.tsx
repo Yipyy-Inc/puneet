@@ -78,7 +78,6 @@ import {
   CalendarClock,
   CalendarPlus,
   XCircle,
-  PawPrint,
   Eraser,
   DoorOpen,
   BellRing,

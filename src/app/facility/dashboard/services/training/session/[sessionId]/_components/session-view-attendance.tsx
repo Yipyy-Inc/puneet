@@ -39,7 +39,7 @@ export function SessionAttendanceSection({
         <ClipboardList className="text-muted-foreground size-8" />
         <p className="font-medium">No enrolled students for this session.</p>
         <p className="text-muted-foreground text-sm">
-          Once students enroll, they'll appear here for the trainer to mark
+          Once students enroll, they&#39;ll appear here for the trainer to mark
           attendance.
         </p>
       </Card>

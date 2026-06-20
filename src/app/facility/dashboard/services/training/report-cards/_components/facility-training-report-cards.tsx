@@ -582,8 +582,8 @@ function GraduationProgressionSection({
         </div>
       ) : (
         <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-[11px]">
-          No "Graduate into" course configured for {card.courseName}. Owners
-          won't see a next-step recommendation on this card. Set one up via
+          No &quot;Graduate into&quot; course configured for {card.courseName}. Owners
+          won&#39;t see a next-step recommendation on this card. Set one up via
           Settings → Programs.
         </p>
       )}
@@ -1029,8 +1029,8 @@ function ReportCardEditorSheet({
               Mood / behavior tags
             </Label>
             <p className="text-muted-foreground text-[11px]">
-              Pick any that describe today's session. They render as chips on
-              the parent's report card.
+              Pick any that describe today&#39;s session. They render as chips on
+              the parent&#39;s report card.
             </p>
             <div className="flex flex-wrap gap-1.5">
               {TRAINING_REPORT_CARD_BEHAVIOR_TAGS.map((tag) => {

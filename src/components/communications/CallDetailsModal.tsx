@@ -267,7 +267,7 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
             onClick={onClose}
           >
             <User className="size-4 text-muted-foreground" />
-            <span>Open {call.clientName}'s client profile</span>
+            <span>Open {call.clientName}&#39;s client profile</span>
             <ExternalLink className="size-3.5 ml-auto text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
           </Link>
         )}

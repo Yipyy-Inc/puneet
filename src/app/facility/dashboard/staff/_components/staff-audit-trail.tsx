@@ -375,6 +375,18 @@ export function StaffAuditTrail({ staffId }: StaffAuditTrailProps) {
   const { can, viewer } = useFacilityRbac();
   const [filter, setFilter] = useState<StaffAuditAction | "all">("all");
 
+  const entries = useMemo(
+    () =>
+      getStaffAuditLog({
+        subjectId: staffId,
+        action: filter === "all" ? undefined : filter,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [staffId, filter],
+  );
+
+  const grouped = useMemo(() => groupByDay(entries), [entries]);
+
   // Gate: only owner and manager may view audit logs
   const canView =
     viewer.primaryRole === "owner" || viewer.primaryRole === "manager";
@@ -391,18 +403,6 @@ export function StaffAuditTrail({ staffId }: StaffAuditTrailProps) {
       </div>
     );
   }
-
-  const entries = useMemo(
-    () =>
-      getStaffAuditLog({
-        subjectId: staffId,
-        action: filter === "all" ? undefined : filter,
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [staffId, filter],
-  );
-
-  const grouped = useMemo(() => groupByDay(entries), [entries]);
 
   // Suppress unused warning for `can` — kept for potential future use
   void can;

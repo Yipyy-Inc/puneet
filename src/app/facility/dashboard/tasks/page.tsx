@@ -12,11 +12,8 @@ import {
   UserCheck,
   BookOpen,
   Plus,
-  LayoutDashboard,
-  Clock,
   CheckCircle2,
   AlertTriangle,
-  ClipboardList,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { TaskWizard } from "./TaskWizard";

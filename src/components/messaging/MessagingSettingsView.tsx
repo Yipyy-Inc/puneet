@@ -271,7 +271,7 @@ export function MessagingSettingsView() {
               onChange={(e) => setBusinessPhone(e.target.value)}
             />
             <p className="text-[10px] text-slate-400">
-              Shown as "from" on outgoing SMS.
+              Shown as &quot;from&quot; on outgoing SMS.
             </p>
           </div>
           <div className="space-y-1.5">
@@ -291,7 +291,7 @@ export function MessagingSettingsView() {
           <div className="space-y-1.5">
             <Label className="flex items-center gap-1.5 text-xs">
               <Mail className="size-3" />
-              Email "from" address
+              Email &quot;from&quot; address
             </Label>
             <Input
               value={emailFrom}
@@ -431,7 +431,7 @@ export function MessagingSettingsView() {
           <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-700">
             Tip: staff type <code className="rounded bg-blue-100 px-1 font-semibold">/</code>{" "}
             in the compose box to bring up this menu instantly. They can also
-            "Save as reply" from any message they've drafted.
+            &quot;Save as reply&quot; from any message they&#39;ve drafted.
           </div>
 
           <div className="mb-3 flex gap-1.5 flex-wrap">

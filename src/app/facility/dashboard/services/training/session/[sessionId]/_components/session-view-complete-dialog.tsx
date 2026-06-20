@@ -53,7 +53,7 @@ export function SessionCompleteConfirmDialog({
                 </span>{" "}
                 {missingRatingsCount === 1 ? "is" : "are"} still un-rated. You
                 can go back to finish them, or complete the session anyway —
-                un-rated dog-exercise pairs simply won't feed the progress
+                un-rated dog-exercise pairs simply won&#39;t feed the progress
                 chart.
               </>
             ) : (
@@ -62,7 +62,7 @@ export function SessionCompleteConfirmDialog({
                 <span className="font-semibold">
                   {presentCount} present student{presentCount === 1 ? "" : "s"}
                 </span>
-                , and you'll be prompted to assign homework for the week.
+                , and you&#39;ll be prompted to assign homework for the week.
               </>
             )}
           </DialogDescription>

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -26,7 +25,6 @@ import { facilityStaff } from "@/data/facility-staff";
 import {
   setUserRole,
   clearEmployeeStaffId,
-  setEmployeeStaffId,
 } from "@/lib/role-utils";
 import type { FacilityStaffRole } from "@/types/facility-staff";
 import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";

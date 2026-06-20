@@ -111,9 +111,3 @@ export const ACTION_PANEL_REGISTRY: Record<
   reorder: ReorderPanel,
   inventory_item_edit: InventoryItemEditPanel,
 };
-
-export function getPanelForActionType(
-  actionType: InsightActionType,
-): InsightPanelComponent | null {
-  return ACTION_PANEL_REGISTRY[actionType] ?? null;
-}
