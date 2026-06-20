@@ -40,7 +40,6 @@ import { Switch } from "@/components/ui/switch";
 import {
   Avatar,
   AvatarFallback,
-  AvatarImage,
 } from "@/components/ui/avatar";
 import {
   Select,
@@ -89,7 +88,6 @@ import {
   type RebookReminder,
   type ReminderBlockReason,
   type ReminderChannel,
-  type ServiceFrequency,
   type ServiceTypeKey,
 } from "@/data/rebook-reminders";
 import { getBlockedClientIds } from "@/lib/blocked-clients";

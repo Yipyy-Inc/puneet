@@ -545,7 +545,7 @@ export function TipSettings() {
                         <div className="flex items-center gap-2">
                           <FileText className="text-muted-foreground size-3.5" />
                           <span className="text-xs font-medium">
-                            Include the pet's report card
+                            Include the pet&#39;s report card
                           </span>
                         </div>
                         <Switch

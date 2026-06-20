@@ -232,7 +232,7 @@ function SwapRow({
                     Reason
                   </p>
                   <p className="text-foreground mt-1 text-sm italic">
-                    "{swap.reason}"
+                    &quot;{swap.reason}&quot;
                   </p>
                 </div>
                 <div className="rounded-lg border bg-background p-3">
@@ -308,7 +308,7 @@ function SwapRow({
                       </p>
                       {swap.reviewNotes && (
                         <p className="text-foreground mt-1.5 italic">
-                          "{swap.reviewNotes}"
+                          &quot;{swap.reviewNotes}&quot;
                         </p>
                       )}
                     </div>

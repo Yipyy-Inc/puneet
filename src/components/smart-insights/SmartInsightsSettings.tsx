@@ -149,7 +149,7 @@ export function SmartInsightsSettings() {
           Smart Insights Settings
         </h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          Control which insights run, how you're notified, and override the
+          Control which insights run, how you&#39;re notified, and override the
           thresholds that decide when an insight fires.
         </p>
       </div>
@@ -209,8 +209,8 @@ export function SmartInsightsSettings() {
         <CardHeader>
           <CardTitle>Categories</CardTitle>
           <p className="text-muted-foreground text-sm">
-            Disable any category you don't want surfaced. Disabled insights
-            still generate in the background — they just don't appear in lists.
+            Disable any category you don&#39;t want surfaced. Disabled insights
+            still generate in the background — they just don&#39;t appear in lists.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">

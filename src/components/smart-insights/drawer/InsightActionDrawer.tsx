@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { insightMutations } from "@/lib/api/smart-insights";
 import type { Insight, InsightOutcome } from "@/types/smart-insights";
 import { DrawerHeader } from "./shared/DrawerHeader";
-import { getPanelForActionType } from "./actionPanelRegistry";
+import { ACTION_PANEL_REGISTRY } from "./actionPanelRegistry";
 
 interface Props {
   facilityId: number;
@@ -47,7 +47,7 @@ export function InsightActionDrawer({ facilityId, insight, onClose }: Props) {
     );
   };
 
-  const Panel = insight ? getPanelForActionType(insight.actionType) : null;
+  const Panel = insight ? (ACTION_PANEL_REGISTRY[insight.actionType] ?? null) : null;
 
   return (
     <Dialog open={insight !== null} onOpenChange={(open) => !open && onClose()}>

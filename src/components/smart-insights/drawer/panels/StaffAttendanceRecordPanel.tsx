@@ -113,7 +113,7 @@ export function StaffAttendanceRecordPanel({
         </div>
         <p>
           Performance and attendance conversations are a human decision. Use
-          this data to prepare for a one-on-one — Smart Insights won't send
+          this data to prepare for a one-on-one — Smart Insights won&#39;t send
           warnings, write-ups, or notifications on its own.
         </p>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   CheckCircle2,
   XCircle,
@@ -91,7 +91,7 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
   const activeSlot = enabledSlots.find((s) => s.id === activeSlotId);
   const activeGuests = boardingGuests.filter((g) => g.status === "checked-in");
 
-  const entries = useMemo<SlotEntry[]>(() => {
+  const entries: SlotEntry[] = ((): SlotEntry[] => {
     if (!activeSlot) return [];
     return activeGuests
       .map((guest) => {
@@ -115,7 +115,7 @@ export function FeedingChecklist({ config }: { config: FacilityFeedingConfig }) 
         if (a.isScheduled !== b.isScheduled) return a.isScheduled ? -1 : 1;
         return a.guest.petName.localeCompare(b.guest.petName);
       });
-  }, [activeSlot, activeGuests, config]);
+  })();
 
   const doneCount = entries.filter((e) =>
     completions.has(`${e.guest.id}-${activeSlotId}`),

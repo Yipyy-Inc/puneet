@@ -109,3 +109,9 @@ These rules prevent the build-time regressions already present in the codebase (
 - Don't generate assets (SVGs, images) unless explicitly asked
 - Don't create md files unless explicitly asked
 - Don't build the project unless specified
+
+## AI Operating Harness
+
+This file remains the authoritative source for architecture, build-performance, and code-style rules. Layered on top of it is an operating harness (the task loop, docs map, and `.claude/skills/`). Read it next:
+
+@AGENTS.md

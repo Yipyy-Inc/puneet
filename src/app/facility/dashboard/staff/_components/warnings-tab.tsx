@@ -12,8 +12,6 @@ import {
   MessageSquare,
   FileText,
   PenLine,
-  Fingerprint,
-  MapPin,
   Info,
   LockKeyhole,
 } from "lucide-react";
@@ -366,7 +364,7 @@ export function WarningsTab({ profile }: WarningsTabProps) {
         </div>
         <p className="text-sm font-semibold">Disciplinary records are private</p>
         <p className="text-muted-foreground mt-1 max-w-xs text-xs">
-          You can only view your own disciplinary history, not a colleague's.
+          You can only view your own disciplinary history, not a colleague&#39;s.
         </p>
       </div>
     );

@@ -1055,7 +1055,7 @@ export default function StylistsPage() {
                   {formData.calendarColor}
                 </span>
                 <span className="text-muted-foreground text-xs">
-                  Used on the day-view calendar to identify this groomer's blocks.
+                  Used on the day-view calendar to identify this groomer&#39;s blocks.
                 </span>
               </div>
             </div>

@@ -84,7 +84,6 @@ import type { TrainingPackage } from "@/types/training";
 import {
   MILESTONE_LABELS,
   MILESTONE_ORDER,
-  type MilestoneKind,
 } from "@/lib/pet-milestones";
 import { MILESTONE_VISUAL } from "@/components/training/milestone-visuals";
 

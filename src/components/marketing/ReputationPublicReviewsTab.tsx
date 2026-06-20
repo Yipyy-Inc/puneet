@@ -103,7 +103,7 @@ function ReviewCard({
 
       {/* Comment */}
       <p className="text-muted-foreground line-clamp-3 flex-1 text-xs italic leading-relaxed">
-        "{req.clientComment}"
+        &quot;{req.clientComment}&quot;
       </p>
 
       {/* Footer */}
@@ -161,7 +161,7 @@ function ReviewRow({
           {req.publicPlatform && <PlatformBadge platform={req.publicPlatform} />}
         </div>
         <p className="text-muted-foreground mt-0.5 truncate text-[11px] italic">
-          "{req.clientComment}"
+          &quot;{req.clientComment}&quot;
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
@@ -285,7 +285,7 @@ export function ReputationPublicReviewsTab() {
                     </span>
                   </div>
                   <p className="text-muted-foreground mt-0.5 truncate text-[11px] italic">
-                    "{req.clientComment}"
+                    &quot;{req.clientComment}&quot;
                   </p>
                 </div>
                 <Button
@@ -352,7 +352,7 @@ export function ReputationPublicReviewsTab() {
         <div className="py-20 text-center text-muted-foreground">
           <Globe className="h-10 w-10 mx-auto mb-3 opacity-20" />
           <p className="text-sm font-medium">No approved reviews yet</p>
-          <p className="text-xs mt-1">Once clients rate their experience 4 or 5 stars, you'll be able to approve and display them here.</p>
+          <p className="text-xs mt-1">Once clients rate their experience 4 or 5 stars, you&#39;ll be able to approve and display them here.</p>
         </div>
       )}
 
@@ -363,7 +363,7 @@ export function ReputationPublicReviewsTab() {
           <span className="text-foreground font-medium">
             Booking page showcase
           </span>{" "}
-          — Reviews set to "Live" appear on your public booking page. Only
+          — Reviews set to &quot;Live&quot; appear on your public booking page. Only
           reviews with a written comment are eligible.
         </div>
       </div>

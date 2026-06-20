@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { SettingsBlock } from "@/components/ui/settings-block";
 import { Copy, CheckCircle2, XCircle, RefreshCw, Mail, Globe, AlertCircle, RefreshCcw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
@@ -167,7 +166,7 @@ export function CustomEmailDomainSettings() {
                       <Globe className="w-5 h-5" /> Domain Authentication
                     </h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Add the following records to your domain's DNS settings (e.g. GoDaddy, Namecheap, Cloudflare) to verify the domain.
+                      Add the following records to your domain&#39;s DNS settings (e.g. GoDaddy, Namecheap, Cloudflare) to verify the domain.
                     </p>
                   </div>
                   <Badge variant={domainStatus === "verified" ? "default" : domainStatus === "pending" ? "secondary" : "outline"} className="text-sm px-3 py-1">

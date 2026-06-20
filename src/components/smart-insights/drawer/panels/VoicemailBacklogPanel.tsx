@@ -110,7 +110,7 @@ export function VoicemailBacklogPanel({
                     {v.caller} · {v.receivedAt} · {v.durationSec}s
                   </p>
                   <p className="text-muted-foreground mt-1 line-clamp-1 text-xs italic">
-                    "{v.transcriptPreview}"
+                    &quot;{v.transcriptPreview}&quot;
                   </p>
                 </div>
               </div>

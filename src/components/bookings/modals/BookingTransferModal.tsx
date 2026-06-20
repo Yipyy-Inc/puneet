@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   ArrowRight,
   MapPin,
@@ -27,7 +27,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
 import type { Location } from "@/types/location";
 import type { TransferAvailabilityCheck } from "@/types/location";
 import { addTransfer } from "@/data/location-transfers";

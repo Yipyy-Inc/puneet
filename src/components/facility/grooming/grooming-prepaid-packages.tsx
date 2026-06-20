@@ -919,7 +919,7 @@ export function GroomingPrepaidPackages() {
             <DialogTitle>Delete Package</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete{" "}
-              <span className="font-semibold">{deleting?.name}</span>? This won't
+              <span className="font-semibold">{deleting?.name}</span>? This won&#39;t
               affect customers who have already purchased it, but it will be
               hidden from the storefront.
             </DialogDescription>

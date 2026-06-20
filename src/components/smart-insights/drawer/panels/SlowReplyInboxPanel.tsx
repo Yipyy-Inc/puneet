@@ -122,7 +122,7 @@ export function SlowReplyInboxPanel({
                     Last reply needed {c.lastInboundAt}
                   </p>
                   <p className="text-muted-foreground mt-1 italic">
-                    "{c.preview}"
+                    &quot;{c.preview}&quot;
                   </p>
                 </div>
                 <Badge variant="outline" className="border-red-300 bg-red-50 text-red-800">

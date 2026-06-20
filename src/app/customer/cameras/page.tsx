@@ -20,7 +20,6 @@ import {
   Camera,
   Video,
   CircleDot,
-  AlertCircle,
   Clock,
   Volume2,
   Moon,

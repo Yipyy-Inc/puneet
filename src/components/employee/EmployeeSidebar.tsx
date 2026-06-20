@@ -18,7 +18,6 @@ import {
   Calendar,
   Dog,
   ClipboardList,
-  Home,
   Sun,
   Moon,
   Sparkles,

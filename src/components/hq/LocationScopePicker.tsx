@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, MapPin, X } from "lucide-react";
+import { Globe, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Location } from "@/types/location";

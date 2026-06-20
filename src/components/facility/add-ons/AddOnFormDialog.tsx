@@ -48,7 +48,6 @@ import {
   Package,
   CalendarClock,
   Dog,
-  Users,
   Info,
 } from "lucide-react";
 

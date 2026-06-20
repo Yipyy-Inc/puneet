@@ -42,7 +42,6 @@ import {
   Plus,
   Scissors,
   Info,
-  Package,
   Trash2,
   FlaskConical,
   Image as ImageIcon,
@@ -56,7 +55,6 @@ import { toast } from "sonner";
 import type {
   GroomingPackage,
   ProductUsage,
-  MeasurementUnit,
   DefaultAddOnRule,
   DefaultAddOnCondition,
   AgeGroupPricingRule,
@@ -1234,7 +1232,7 @@ export function ServiceDialog({
                   <div className="bg-muted/40 px-4 py-2 border-b flex items-center justify-between border-t mt-2">
                     <div>
                       <p className="text-xs font-semibold">Matted Surcharge</p>
-                      <p className="text-[10px] text-muted-foreground">Default amount suggested when staff toggle "Matted" at check-in</p>
+                      <p className="text-[10px] text-muted-foreground">Default amount suggested when staff toggle &quot;Matted&quot; at check-in</p>
                     </div>
                     <div className="relative w-28">
                       <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">

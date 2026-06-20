@@ -64,7 +64,6 @@ import {
 import { toast } from "sonner";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
-import { checkPostalCodeOnDay, getActiveServiceAreasForDay } from "@/lib/service-areas";
 import type { ServiceArea } from "@/types/grooming";
 
 // Mock customer ID - TODO: Get from auth context
@@ -1761,7 +1760,7 @@ export function GroomingBookingFlow({
 
     if (!area.daysOfWeek.includes(dayOfWeek)) {
       // Find next available day
-      let nextDay = new Date(date);
+      const nextDay = new Date(date);
       for (let i = 1; i <= 7; i++) {
         nextDay.setDate(nextDay.getDate() + 1);
         if (area.daysOfWeek.includes(nextDay.getDay())) {

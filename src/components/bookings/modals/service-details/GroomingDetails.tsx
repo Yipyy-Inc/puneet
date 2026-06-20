@@ -68,7 +68,7 @@ import { cn } from "@/lib/utils";
 import { getPetSize, petsMatchEligibleSizes } from "@/lib/pet-size";
 import type { Pet } from "@/types/pet";
 import type { Client } from "@/types/client";
-import type { AppointmentStage } from "@/types/grooming";
+import { coatTypeEnum, type AppointmentStage } from "@/types/grooming";
 import type { GroomingStationPetSize } from "@/types/rooms";
 import type { ServiceAddOn } from "@/types/facility";
 
@@ -401,8 +401,8 @@ function GroomingPackagePicker({
           if (primaryPet && sizeKnown && coatKnown) {
             const pricing = resolveEffectivePricing({
               petId: primaryPet.id,
-              petSize: getPetSize(primaryPet) as any,
-              petCoatType: primaryPet.coatType as any,
+              petSize: getPetSize(primaryPet),
+              petCoatType: coatTypeEnum.safeParse(primaryPet.coatType).data,
               petBreed: primaryPet.breed,
               stylistId: undefined,
               package: pkg,

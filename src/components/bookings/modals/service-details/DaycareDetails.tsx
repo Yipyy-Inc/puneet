@@ -737,7 +737,7 @@ function DaycareSectionAssignmentStep({
                             {/* Rate restriction badge */}
                             {isOutsideRate && (
                               <p className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-600 ring-1 ring-inset ring-slate-200">
-                                Not in selected rate's rooms
+                                Not in selected rate&#39;s rooms
                               </p>
                             )}
 

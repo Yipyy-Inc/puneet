@@ -415,7 +415,7 @@ export function NewAppointmentDialog({
   // Suggest the next date within 14 days that covers this postal code.
   // When CAfCD is on and a stylist is selected, the suggestion is for that
   // same stylist — otherwise it falls back to any covering area.
-  const suggestedDate = useMemo(() => {
+  const suggestedDate = (() => {
     if (!coverageResult || coverageResult.status !== "not-covered") return null;
     if (!form.clientPostalCode.trim() || !form.date) return null;
     const start = new Date(form.date + "T00:00:00");
@@ -446,15 +446,7 @@ export function NewAppointmentDialog({
       }
     }
     return null;
-  }, [
-    coverageResult,
-    form.clientPostalCode,
-    form.date,
-    serviceAreas,
-    certainAreaEnabled,
-    selectedStaffId,
-    staffSchedules,
-  ]);
+  })();
 
   const activeStylists = useMemo(
     () => stylistsData.filter((s) => s.status === "active"),

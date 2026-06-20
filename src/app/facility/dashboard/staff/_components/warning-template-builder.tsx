@@ -187,7 +187,7 @@ export function WarningTemplateBuilder({ open, onOpenChange, onSave, existing }:
               <div className="border-border/60 rounded-xl border border-dashed p-6 text-center">
                 <p className="text-muted-foreground text-sm">No custom fields yet.</p>
                 <p className="text-muted-foreground text-xs">
-                  Click "Add Field" to collect specific information when issuing this warning.
+                  Click &quot;Add Field&quot; to collect specific information when issuing this warning.
                 </p>
               </div>
             )}

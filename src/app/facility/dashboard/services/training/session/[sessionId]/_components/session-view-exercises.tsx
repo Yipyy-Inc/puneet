@@ -415,7 +415,7 @@ export function SessionExercisesSection({
           <h2 className="text-base font-semibold">Exercises</h2>
           <p className="text-muted-foreground text-xs">
             Each present student is included by default. De-select any dog that
-            didn't work on the exercise. Tap a rating per dog.
+            didn&#39;t work on the exercise. Tap a rating per dog.
           </p>
         </div>
         <span className="text-muted-foreground rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold tabular-nums dark:bg-slate-800">
@@ -901,7 +901,7 @@ function SessionPhotosCard({
             Add a photo from camera or library
           </span>
           <span className="text-[11px]">
-            Photos attach to the session and appear in each student's report
+            Photos attach to the session and appear in each student&#39;s report
             card before/after section.
           </span>
         </button>
@@ -1004,7 +1004,7 @@ function StudentNotePopover({
               Note for {petName}
             </p>
             <p className="text-muted-foreground mt-1 text-[11px]">
-              Trainer-only · saves to the student's Notes tab for this session.
+              Trainer-only · saves to the student&#39;s Notes tab for this session.
             </p>
           </div>
           <Textarea

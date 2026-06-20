@@ -2495,8 +2495,8 @@ export function BookingModal({
       // Lead time is now configured globally per facility (Yipyy → Timing &
       // Reminders → "Initial send time"). Resolve it lazily to avoid pulling
       // the yipyygo-config module into the BookingModal's module graph.
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { getYipyyGoConfig } =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         require("@/data/yipyygo-config") as typeof import("@/data/yipyygo-config");
       const sendBefore =
         getYipyyGoConfig(facilityId)?.timing.initialSendTime;
