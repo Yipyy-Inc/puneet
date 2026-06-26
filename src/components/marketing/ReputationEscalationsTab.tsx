@@ -99,7 +99,7 @@ function TicketCard({
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-sm leading-none font-semibold">
+              <p className="text-sm/none font-semibold">
                 {req.clientName}
                 <span className="text-muted-foreground font-normal">
                   {" "}

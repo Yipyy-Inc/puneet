@@ -90,13 +90,23 @@ export interface SearchInputProps {
   value: string;
   onChangeValue: (next: string) => void;
   onFocus?: () => void;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
+  placeholder?: string;
   showShortcutHint?: boolean;
   className?: string;
 }
 
 export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
   function SearchInput(
-    { value, onChangeValue, onFocus, showShortcutHint = true, className },
+    {
+      value,
+      onChangeValue,
+      onFocus,
+      onKeyDown,
+      placeholder = "Search pets, customers, bookings, estimates, invoices...",
+      showShortcutHint = true,
+      className,
+    },
     ref,
   ) {
     return (
@@ -107,7 +117,8 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
           value={value}
           onChange={(e) => onChangeValue(e.target.value)}
           onFocus={onFocus}
-          placeholder="Search pets, customers, bookings, estimates, invoices..."
+          onKeyDown={onKeyDown}
+          placeholder={placeholder}
           className="pl-9"
           aria-label="Global search"
         />

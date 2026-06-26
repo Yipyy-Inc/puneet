@@ -611,7 +611,7 @@ function TemplateEditorDialog({
                         })
                       }
                       placeholder="Instructions — one per line"
-                      className="min-h-[60px] text-[12.5px] leading-relaxed"
+                      className="min-h-[60px] text-[12.5px]/relaxed"
                     />
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <VideoLinksTextarea
@@ -620,7 +620,7 @@ function TemplateEditorDialog({
                           patchItem(item.id, { resources: next })
                         }
                         placeholder="Video / resource links — one per line"
-                        className="min-h-[60px] text-[12px] leading-relaxed"
+                        className="min-h-[60px] text-[12px]/relaxed"
                       />
                       <div className="space-y-1">
                         <Label className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">

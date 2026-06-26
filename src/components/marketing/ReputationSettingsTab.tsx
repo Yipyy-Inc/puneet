@@ -100,11 +100,11 @@ function Toggle({
           className={`h-5 w-9 rounded-full transition-colors ${checked ? "bg-primary" : "bg-muted"}`}
         />
         <div
-          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : "translate-x-0.5"}`}
+          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${checked ? "translate-x-4" : "translate-x-0.5"}`}
         />
       </div>
       <div>
-        <p className="text-sm leading-none font-medium">{label}</p>
+        <p className="text-sm/none font-medium">{label}</p>
         {description && (
           <p className="text-muted-foreground mt-1 text-xs">{description}</p>
         )}
@@ -589,7 +589,7 @@ export function ReputationSettingsTab() {
               className="flex items-center justify-between gap-3 rounded-xl border p-3"
             >
               <div className="flex items-center gap-2.5">
-                <div className="from-primary/20 to-primary/40 text-primary flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold">
+                <div className="from-primary/20 to-primary/40 text-primary flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br text-xs font-bold">
                   {sn.staffName.charAt(0)}
                 </div>
                 <p className="text-sm font-medium">{sn.staffName}</p>
@@ -757,9 +757,7 @@ function AutomationPipelineCard({
                 <div className="flex items-center gap-2">
                   <step.icon className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                   <div className="min-w-0">
-                    <p className="text-sm leading-none font-medium">
-                      {step.label}
-                    </p>
+                    <p className="text-sm/none font-medium">{step.label}</p>
                     <p className="text-muted-foreground mt-1 truncate text-xs">
                       {step.sub}
                     </p>

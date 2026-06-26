@@ -103,7 +103,7 @@ export function RedeemFlow() {
     <div className="space-y-5">
       {/* Current wallet balance */}
       {wallet && (
-        <Card className="border-none bg-gradient-to-r from-violet-600 to-purple-700 text-white">
+        <Card className="border-none bg-linear-to-r from-violet-600 to-purple-700 text-white">
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -179,7 +179,7 @@ export function RedeemFlow() {
       {/* Step: Amount */}
       {step === "amount" && foundCard && (
         <div className="space-y-4">
-          <div className="rounded-xl border bg-gradient-to-r from-violet-50 to-purple-50 p-4 dark:from-violet-950/30 dark:to-purple-950/30">
+          <div className="rounded-xl border bg-linear-to-r from-violet-50 to-purple-50 p-4 dark:from-violet-950/30 dark:to-purple-950/30">
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2">
@@ -440,7 +440,7 @@ export function RedeemFlow() {
               is now in your wallet and ready to use at checkout.
             </p>
           </div>
-          <div className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-700 px-8 py-4 text-white">
+          <div className="rounded-xl bg-linear-to-r from-violet-600 to-purple-700 px-8 py-4 text-white">
             <p className="text-xs opacity-70">New Wallet Balance</p>
             <p className="text-3xl font-bold">${newWalletBalance.toFixed(2)}</p>
           </div>

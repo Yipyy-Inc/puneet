@@ -172,7 +172,7 @@ export function ChurnWinBackCampaignPanel({
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={12}
-            className="font-mono text-sm leading-relaxed"
+            className="font-mono text-sm/relaxed"
           />
         </div>
 

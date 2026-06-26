@@ -94,7 +94,7 @@ function RouteMap({
     .join(" ");
 
   return (
-    <div className="relative aspect-square w-full overflow-hidden rounded-xl border bg-gradient-to-br from-sky-50/60 via-emerald-50/40 to-violet-50/40 dark:from-sky-950/30 dark:via-emerald-950/20 dark:to-violet-950/20">
+    <div className="relative aspect-square w-full overflow-hidden rounded-xl border bg-linear-to-br from-sky-50/60 via-emerald-50/40 to-violet-50/40 dark:from-sky-950/30 dark:via-emerald-950/20 dark:to-violet-950/20">
       <div
         aria-hidden
         className="absolute inset-0 opacity-30"

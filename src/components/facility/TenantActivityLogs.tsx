@@ -20,13 +20,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
 import {
-  getTenantActivityLogs,
-  getTenantAuditLogs,
-  getTenantLogStatistics,
   type TenantActivityLog,
   type TenantAuditLog,
 } from "@/data/tenant-logs";
+import { facilitiesQueries } from "@/lib/api/facilities";
+import { useSupportInbox } from "@/hooks/use-support-inbox";
+import { buildSupportActivityLogs } from "@/lib/support-logs";
+import { useImpersonationAudit } from "@/lib/impersonation";
 import {
   Activity,
   Shield,
@@ -87,38 +89,66 @@ export function TenantActivityLogs({
   const [showActivityDetails, setShowActivityDetails] = useState(false);
   const [showAuditDetails, setShowAuditDetails] = useState(false);
 
-  const activityLogs = useMemo(
-    () => getTenantActivityLogs(facilityId),
-    [facilityId],
+  const { data: logData, isLoading } = useQuery(
+    facilitiesQueries.logs(facilityId),
   );
-  const auditLogs = useMemo(() => getTenantAuditLogs(facilityId), [facilityId]);
-  const statistics = useMemo(
-    () => getTenantLogStatistics(facilityId),
-    [facilityId],
+
+  // Support-chat messages for this facility are part of its permanent log.
+  const conversations = useSupportInbox();
+  const supportLogs = useMemo(
+    () => buildSupportActivityLogs(facilityId, conversations),
+    [facilityId, conversations],
+  );
+  const activityLogs = useMemo(
+    () =>
+      [...supportLogs, ...(logData?.activity ?? [])].sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      ),
+    [supportLogs, logData],
+  );
+  // Live impersonation actions are merged into the audit trail (cross-tab).
+  const impersonationAudit = useImpersonationAudit();
+  const auditLogs = useMemo(
+    () =>
+      [
+        ...impersonationAudit.filter((e) => e.facilityId === facilityId),
+        ...(logData?.audit ?? []),
+      ].sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      ),
+    [impersonationAudit, logData, facilityId],
   );
 
   const filteredActivityLogs = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
     return activityLogs.filter((log) => {
       const matchesFilter =
         activityFilter === "all" || log.actionType === activityFilter;
+      // Search matches actor name, event type, or any keyword in the
+      // action/description.
       const matchesSearch =
-        searchTerm === "" ||
-        log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.actorName.toLowerCase().includes(searchTerm.toLowerCase());
+        q === "" ||
+        log.action.toLowerCase().includes(q) ||
+        log.description.toLowerCase().includes(q) ||
+        log.actorName.toLowerCase().includes(q) ||
+        log.actionType.toLowerCase().includes(q);
       return matchesFilter && matchesSearch;
     });
   }, [activityLogs, activityFilter, searchTerm]);
 
   const filteredAuditLogs = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
     return auditLogs.filter((log) => {
       const matchesFilter =
         auditFilter === "all" || log.category === auditFilter;
       const matchesSearch =
-        searchTerm === "" ||
-        log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.userName.toLowerCase().includes(searchTerm.toLowerCase());
+        q === "" ||
+        log.action.toLowerCase().includes(q) ||
+        log.description.toLowerCase().includes(q) ||
+        log.userName.toLowerCase().includes(q) ||
+        log.category.toLowerCase().includes(q);
       return matchesFilter && matchesSearch;
     });
   }, [auditLogs, auditFilter, searchTerm]);
@@ -288,6 +318,21 @@ export function TenantActivityLogs({
     "#f97316",
   ];
 
+  if (isLoading || !logData) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-muted h-24 animate-pulse rounded-2xl" />
+          ))}
+        </div>
+        <div className="bg-muted h-80 animate-pulse rounded-2xl" />
+      </div>
+    );
+  }
+
+  const statistics = logData.statistics;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -317,7 +362,9 @@ export function TenantActivityLogs({
                   Activity Logs
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
-                  {statistics.totalActivityLogs.toLocaleString()}
+                  {(
+                    statistics.totalActivityLogs + supportLogs.length
+                  ).toLocaleString()}
                 </h3>
                 <p className="text-muted-foreground mt-0.5 text-xs">
                   {statistics.todayActivityLogs} today

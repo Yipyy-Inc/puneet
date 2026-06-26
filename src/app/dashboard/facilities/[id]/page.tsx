@@ -1,12 +1,18 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   facilities,
   availableModules,
   moduleQuotedPrices,
 } from "@/data/facilities";
+import { bookings } from "@/data/bookings";
+import { clients } from "@/data/clients";
+import {
+  createImpersonationToken,
+  IMPERSONATING_ADMIN,
+} from "@/lib/impersonation";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { FacilityReports } from "@/components/facility/FacilityReports";
 import { TenantActivityLogs } from "@/components/facility/TenantActivityLogs";
@@ -61,35 +67,69 @@ import {
   BillingTab,
   ModulesTab,
 } from "@/components/dashboard/facilities";
+import { FacilitySuspensionBanner } from "./_components/facility-suspension-banner";
 
-// Mock data
-const revenueData = [
-  { month: "Jan", revenue: 4500 },
-  { month: "Feb", revenue: 5200 },
-  { month: "Mar", revenue: 4800 },
-  { month: "Apr", revenue: 6100 },
-  { month: "May", revenue: 5500 },
-  { month: "Jun", revenue: 6700 },
-];
+// Real per-facility module usage. Only modules with a genuine per-facility data
+// source are populated (booking → bookings, customers → client/pet profiles);
+// the rest stay absent so ModulesTab shows a skeleton, never a fabricated count.
+type ModuleUsage = { usage: string; lastUsed: string; actions: number };
 
-// Module usage mock data
-const moduleUsageData: Record<
-  string,
-  { usage: string; lastUsed: string; actions: number }
-> = {
-  booking: { usage: "1,247 bookings", lastUsed: "2 hours ago", actions: 156 },
-  scheduling: { usage: "89 shifts", lastUsed: "1 day ago", actions: 42 },
-  customers: { usage: "432 profiles", lastUsed: "30 min ago", actions: 87 },
-  financial: { usage: "12 reports", lastUsed: "3 days ago", actions: 24 },
-  communication: {
-    usage: "2,891 messages",
-    lastUsed: "1 hour ago",
-    actions: 203,
-  },
-  training: { usage: "15 programs", lastUsed: "1 week ago", actions: 8 },
-  grooming: { usage: "567 appointments", lastUsed: "4 hours ago", actions: 92 },
-  inventory: { usage: "234 items", lastUsed: "2 days ago", actions: 31 },
-};
+function relativeTime(iso: string): string {
+  const days = Math.max(
+    0,
+    Math.floor((Date.now() - new Date(iso).getTime()) / 86400000),
+  );
+  if (days === 0) return "today";
+  if (days === 1) return "1 day ago";
+  if (days < 30) return `${days} days ago`;
+  const months = Math.floor(days / 30);
+  return months <= 1 ? "1 month ago" : `${months} months ago`;
+}
+
+function sameMonth(iso: string, now: Date): boolean {
+  const d = new Date(iso);
+  return (
+    d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+  );
+}
+
+function buildModuleUsage(
+  facilityId: number,
+  facilityName: string,
+): Record<string, ModuleUsage> {
+  const now = new Date();
+  const out: Record<string, ModuleUsage> = {};
+
+  const facBookings = bookings.filter((b) => b.facilityId === facilityId);
+  if (facBookings.length > 0) {
+    const latest = facBookings.reduce((a, b) =>
+      a.startDate > b.startDate ? a : b,
+    ).startDate;
+    out.booking = {
+      usage: `${facBookings.length} bookings`,
+      actions: facBookings.filter((b) => sameMonth(b.startDate, now)).length,
+      lastUsed: relativeTime(latest),
+    };
+  }
+
+  const facClients = clients.filter((c) => c.facility === facilityName);
+  if (facClients.length > 0) {
+    const visits = facClients
+      .map((c) => c.lastVisitDate)
+      .filter((d): d is string => Boolean(d))
+      .sort();
+    const latest = visits.length ? visits[visits.length - 1] : null;
+    out.customers = {
+      usage: `${facClients.length} profiles`,
+      actions: facClients.filter(
+        (c) => c.lastVisitDate && sameMonth(c.lastVisitDate, now),
+      ).length,
+      lastUsed: latest ? relativeTime(latest) : "—",
+    };
+  }
+
+  return out;
+}
 
 const recentActivities = [
   {
@@ -168,13 +208,19 @@ const tabs = [
 export default function FacilityDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const facility = facilities.find((f) => f.id === Number(params.id));
 
   if (!facility) {
     notFound();
   }
 
-  const [activeTab, setActiveTab] = useState("overview");
+  // Allow deep-linking to a specific tab, e.g. ?tab=billing from the
+  // commercial Subscriptions table.
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(
+    tabParam && tabs.some((t) => t.id === tabParam) ? tabParam : "overview",
+  );
   const [currentStatus, setCurrentStatus] = useState(facility.status);
   const [statusChangeModal, setStatusChangeModal] = useState<{
     newStatus: "active" | "inactive" | "suspended" | "archived";
@@ -183,31 +229,34 @@ export default function FacilityDetailPage() {
   const [enabledModules, setEnabledModules] = useState<string[]>(
     facility.enabledModules || [],
   );
+  const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>(
+    () => {
+      const prefix = `${facility.id}-`;
+      const seeded: Record<string, number> = {};
+      for (const [key, price] of Object.entries(moduleQuotedPrices)) {
+        if (key.startsWith(prefix)) seeded[key.slice(prefix.length)] = price;
+      }
+      return seeded;
+    },
+  );
 
-  const activeClients = facility.clients.filter(
-    (c) => c.status === "active",
-  ).length;
+  const moduleUsageData = useMemo(
+    () => buildModuleUsage(facility.id, facility.name),
+    [facility.id, facility.name],
+  );
+
   const services = facility.locationsList.flatMap((l) => l.services);
   const uniqueServices = [...new Set(services)];
 
-  const totalRevenue = useMemo(
-    () => revenueData.reduce((sum, d) => sum + d.revenue, 0),
-    [],
-  );
-
-  // Get the quoted price for a module (custom quote or base price)
+  // Get the price for a module (custom override or base price)
   const getModulePrice = (moduleId: string) => {
-    const quoteKey = `${facility.id}-${moduleId}`;
     const mod = availableModules.find((m) => m.id === moduleId);
     if (!mod) return 0;
-    return moduleQuotedPrices[quoteKey] ?? mod.basePrice;
+    return priceOverrides[moduleId] ?? mod.basePrice;
   };
 
-  // Check if module has a custom quoted price
-  const hasCustomPrice = (moduleId: string) => {
-    const quoteKey = `${facility.id}-${moduleId}`;
-    return quoteKey in moduleQuotedPrices;
-  };
+  // Check if module has a custom price override
+  const hasCustomPrice = (moduleId: string) => moduleId in priceOverrides;
 
   const getServiceIcon = (service: string) => {
     switch (service.toLowerCase()) {
@@ -235,9 +284,19 @@ export default function FacilityDetailPage() {
   };
 
   const handleImpersonate = () => {
-    document.cookie = `user_role=facility_admin; path=/`;
-    document.cookie = `impersonating_facility=${facility.id}; path=/`;
-    router.push("/facility/dashboard");
+    const token = createImpersonationToken({
+      facilityId: facility.id,
+      facilityName: facility.name,
+      primaryAdminEmail: facility.owner?.email ?? facility.contact?.email ?? "",
+      adminName: IMPERSONATING_ADMIN.name,
+    });
+    // Open the facility's own dashboard in a NEW tab with the temporary token.
+    window.open(
+      `/facility/dashboard?impersonate=${encodeURIComponent(token)}`,
+      "_blank",
+      "noopener",
+    );
+    setShowImpersonateDialog(false);
   };
 
   const renderTabContent = () => {
@@ -246,9 +305,10 @@ export default function FacilityDetailPage() {
         return (
           <OverviewTab
             facility={facility}
-            totalRevenue={totalRevenue}
-            activeClients={activeClients}
+            status={currentStatus}
             recentActivities={recentActivities}
+            onNavigate={setActiveTab}
+            onMarkActive={() => handleStatusChange("active")}
             onNavigateToReports={() => setActiveTab("reports")}
             onNavigateToModules={() => setActiveTab("modules")}
             onNavigateToLogs={() => setActiveTab("logs")}
@@ -256,13 +316,32 @@ export default function FacilityDetailPage() {
         );
 
       case "locations":
-        return <LocationsTab locations={facility.locationsList} />;
+        return (
+          <LocationsTab
+            facilityId={facility.id}
+            facilityName={facility.name}
+            facilityPhone={facility.contact?.phone ?? ""}
+            locations={facility.locationsList}
+          />
+        );
 
       case "clients":
-        return <ClientsTab clients={facility.clients} />;
+        return (
+          <ClientsTab
+            facilityName={facility.name}
+            facilityId={facility.id}
+            facilityClients={facility.clients}
+          />
+        );
 
       case "staff":
-        return <StaffTab usersList={facility.usersList} />;
+        return (
+          <StaffTab
+            facilityId={facility.id}
+            facilityName={facility.name}
+            facilityUsersList={facility.usersList}
+          />
+        );
 
       case "billing":
         return <BillingTab facility={facility} />;
@@ -270,12 +349,17 @@ export default function FacilityDetailPage() {
       case "modules":
         return (
           <ModulesTab
+            facilityId={facility.id}
             facilityName={facility.name}
             enabledModules={enabledModules}
+            priceOverrides={priceOverrides}
             moduleUsageData={moduleUsageData}
             getModulePrice={getModulePrice}
             hasCustomPrice={hasCustomPrice}
-            onModulesChange={setEnabledModules}
+            onSave={(config) => {
+              setEnabledModules(config.enabledModules);
+              setPriceOverrides(config.priceOverrides);
+            }}
           />
         );
 
@@ -457,6 +541,13 @@ export default function FacilityDetailPage() {
         </nav>
       </div>
 
+      {/* Suspension flag (Day-14 dunning) */}
+      <FacilitySuspensionBanner
+        facilityId={facility.id}
+        status={currentStatus}
+        onSuspend={() => handleStatusChange("suspended")}
+      />
+
       {/* Tab Content */}
       <div className="flex-1 p-6">{renderTabContent()}</div>
 
@@ -469,9 +560,10 @@ export default function FacilityDetailPage() {
           <DialogHeader>
             <DialogTitle>Impersonate Facility Admin</DialogTitle>
             <DialogDescription>
-              You are about to log in as the admin of{" "}
-              <strong>{facility.name}</strong>. This session will be tracked for
-              audit purposes.
+              You are about to open <strong>{facility.name}</strong>&apos;s
+              dashboard in a new tab as their admin. Every action is logged in
+              the audit trail, and the facility&apos;s primary admin is notified
+              by email.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">

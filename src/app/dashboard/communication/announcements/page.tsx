@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,15 +67,24 @@ type AnnouncementFormData = {
 };
 
 export default function AnnouncementsPage() {
+  // Deep-link: global search navigates here with ?id=<id> to open the viewer.
+  const searchParams = useSearchParams();
+  const deepLinkedId = searchParams.get("id");
+  const deepLinkedAnnouncement = deepLinkedId
+    ? (initialAnnouncements.find((a) => a.id === deepLinkedId) ?? null)
+    : null;
+
   const [announcementsState, setAnnouncementsState] =
     useState(initialAnnouncements);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(
+    Boolean(deepLinkedAnnouncement),
+  );
   const [isEmergencyDialogOpen, setIsEmergencyDialogOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] =
-    useState<Announcement | null>(null);
+    useState<Announcement | null>(deepLinkedAnnouncement);
   const [formData, setFormData] = useState<AnnouncementFormData>({
     title: "",
     content: "",

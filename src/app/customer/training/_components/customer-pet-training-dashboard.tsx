@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -51,16 +50,6 @@ import { EXERCISE_RATING_LABELS } from "@/lib/training-report-cards";
 import { computePetMilestones } from "@/lib/pet-milestones";
 import { useQuery } from "@tanstack/react-query";
 import { trainingQueries } from "@/lib/api/training";
-
-// Recharts pulls a heavy dependency tree — defer it to first paint so the
-// rest of the dashboard renders fast on the customer portal.
-const ExerciseProgressChart = dynamic(
-  () =>
-    import("@/components/training/exercise-progress-chart").then(
-      (m) => m.ExerciseProgressChart,
-    ),
-  { ssr: false, loading: () => <ChartSkeleton /> },
-);
 
 interface Props {
   dashboard: PetTrainingDashboard;
@@ -475,77 +464,6 @@ function SessionHistoryPanel({
   );
 }
 
-/** ──────────── 3 · Progress Charts ─────────────────────────────────── */
-function ProgressChartsPanel({
-  dashboard,
-}: {
-  dashboard: PetTrainingDashboard;
-}) {
-  const { progressCharts, pet } = dashboard;
-  if (progressCharts.charts.length === 0) {
-    return (
-      <Panel icon={LineChart} title="Progress Charts" iconTone="emerald">
-        <p className="text-muted-foreground text-[12.5px]/relaxed">
-          Once {pet.name} has been rated on the same exercise across two or more
-          sessions, you&apos;ll see their improvement chart here.
-        </p>
-      </Panel>
-    );
-  }
-  return (
-    <Panel icon={LineChart} title="Progress Charts" iconTone="emerald">
-      <p className="text-muted-foreground mb-2 text-[11.5px]">
-        Tracking {progressCharts.trackedExerciseCount} exercise
-        {progressCharts.trackedExerciseCount === 1 ? "" : "s"} —
-        {progressCharts.charts.length < progressCharts.trackedExerciseCount
-          ? ` showing the top ${progressCharts.charts.length}`
-          : " showing every one with at least two ratings"}
-        .
-      </p>
-      <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        {progressCharts.charts.map((track) => (
-          <li
-            key={track.exerciseName}
-            className="rounded-lg border bg-slate-50/40 px-3 py-2.5"
-          >
-            <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-2">
-              <p className="text-sm font-semibold text-slate-800">
-                {track.exerciseName}
-              </p>
-              <div className="flex items-center gap-1.5">
-                <StarRow value={track.latestRating} />
-                {track.delta !== 0 && (
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "gap-1 text-[10px]",
-                      track.delta > 0
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : "border-rose-200 bg-rose-50 text-rose-700",
-                    )}
-                  >
-                    {track.delta > 0 ? (
-                      <TrendingUp className="size-3" />
-                    ) : (
-                      <TrendingDown className="size-3" />
-                    )}
-                    {track.delta > 0 ? "+" : ""}
-                    {track.delta} ★
-                  </Badge>
-                )}
-              </div>
-            </div>
-            <ExerciseProgressChart data={track.points} height={140} />
-            <p className="text-muted-foreground mt-1 text-[10.5px]">
-              {track.ratingsCount} ratings across sessions
-            </p>
-          </li>
-        ))}
-      </ul>
-    </Panel>
-  );
-}
-
 /** ──────────── Mini progress (Overview) ───────────────────────────── */
 const RATING_TIER_LABEL: Record<number, string> = {
   1: "Developing",
@@ -950,16 +868,6 @@ function StarRow({ value }: { value: 1 | 2 | 3 | 4 | 5 }) {
         />
       ))}
     </span>
-  );
-}
-
-function ChartSkeleton() {
-  return (
-    <div
-      className="animate-pulse rounded-md bg-slate-100"
-      style={{ height: 140 }}
-      aria-hidden
-    />
   );
 }
 

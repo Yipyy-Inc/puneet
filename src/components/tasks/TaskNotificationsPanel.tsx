@@ -204,7 +204,7 @@ export function TaskNotificationsPanel() {
                         >
                           {notif.title}
                         </p>
-                        <p className="text-muted-foreground mt-0.5 text-[11px] leading-relaxed">
+                        <p className="text-muted-foreground mt-0.5 text-[11px]/relaxed">
                           {notif.message}
                         </p>
                         <div className="text-muted-foreground/60 mt-1 flex items-center gap-2 text-[10px]">

@@ -2670,7 +2670,7 @@ function TimeFeeModal({
               </div>
             </div>
           </div>
-          <p className="text-muted-foreground rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[11px] leading-relaxed">
+          <p className="text-muted-foreground rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[11px]/relaxed">
             If more than one time fee could apply, the most recent matching fee
             is used unless your facility enables fee stacking.
           </p>
@@ -5596,7 +5596,7 @@ function CustomFeeModal({
               </div>
             )}
           </div>
-          <p className="text-muted-foreground rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[11px] leading-relaxed">
+          <p className="text-muted-foreground rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[11px]/relaxed">
             Rules can add fees or apply discounts. Add-on trigger rules can
             waive selected add-on charges automatically.
           </p>

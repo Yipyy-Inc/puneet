@@ -72,7 +72,6 @@ export function RetailSettings() {
 
   // Inline add state
   const [newCat, setNewCat] = useState("");
-  const [newSup, setNewSup] = useState("");
   const [newBrand, setNewBrand] = useState("");
   const [newTag, setNewTag] = useState("");
   const [newTagColor, setNewTagColor] = useState("blue");

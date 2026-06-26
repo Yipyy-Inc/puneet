@@ -771,3 +771,88 @@ export const getTicketStats = () => {
 
   return { total, open, inProgress, escalated, pending, resolved, breached };
 };
+
+export interface SlaPerformance {
+  firstResponseRate: number;
+  firstResponseMet: number;
+  firstResponseTotal: number;
+  resolutionRate: number;
+  resolutionMet: number;
+  resolutionTotal: number;
+  avgResponseMinutes: number;
+  avgResolutionHours: number;
+  responseTargetMinutes: number;
+  resolutionTargetHours: number;
+}
+
+// SLA performance is COMPUTED from the support ticket records (sla flags,
+// first-response message timestamps, resolution timestamps) — never hardcoded.
+export const getSlaPerformance = (): SlaPerformance => {
+  const withSla = supportTickets.filter((t) => t.sla);
+  const firstResponseTotal = withSla.length;
+  const firstResponseMet = withSla.filter(
+    (t) => t.sla?.firstResponseMet === true,
+  ).length;
+
+  const resolved = supportTickets.filter(
+    (t) => (t.status === "Resolved" || t.status === "Closed") && t.sla,
+  );
+  const resolutionTotal = resolved.length;
+  const resolutionMet = resolved.filter((t) => {
+    if (t.sla?.resolutionMet === true) return true;
+    if (t.resolution?.resolvedAt && t.sla?.resolutionDue) {
+      return (
+        new Date(t.resolution.resolvedAt).getTime() <=
+        new Date(t.sla.resolutionDue).getTime()
+      );
+    }
+    return false;
+  }).length;
+
+  const responseMins: number[] = [];
+  for (const t of supportTickets) {
+    const firstAgentMsg = (t.messages ?? []).find(
+      (m) => m.sender !== t.requester && !m.isInternal,
+    );
+    if (!firstAgentMsg) continue;
+    const mins =
+      (new Date(firstAgentMsg.timestamp).getTime() -
+        new Date(t.createdAt).getTime()) /
+      60_000;
+    if (mins >= 0) responseMins.push(mins);
+  }
+  const avgResponseMinutes = responseMins.length
+    ? Math.round(responseMins.reduce((a, b) => a + b, 0) / responseMins.length)
+    : 0;
+
+  const resHours: number[] = [];
+  for (const t of resolved) {
+    if (!t.resolution?.resolvedAt) continue;
+    const hrs =
+      (new Date(t.resolution.resolvedAt).getTime() -
+        new Date(t.createdAt).getTime()) /
+      3_600_000;
+    if (hrs >= 0) resHours.push(hrs);
+  }
+  const avgResolutionHours = resHours.length
+    ? Math.round((resHours.reduce((a, b) => a + b, 0) / resHours.length) * 10) /
+      10
+    : 0;
+
+  return {
+    firstResponseRate: firstResponseTotal
+      ? Math.round((firstResponseMet / firstResponseTotal) * 100)
+      : 0,
+    firstResponseMet,
+    firstResponseTotal,
+    resolutionRate: resolutionTotal
+      ? Math.round((resolutionMet / resolutionTotal) * 100)
+      : 0,
+    resolutionMet,
+    resolutionTotal,
+    avgResponseMinutes,
+    avgResolutionHours,
+    responseTargetMinutes: 60,
+    resolutionTargetHours: 8,
+  };
+};

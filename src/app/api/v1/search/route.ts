@@ -222,7 +222,7 @@ export async function GET(req: NextRequest) {
 
   const paged = sorted.slice(0, limit);
   return NextResponse.json({
-    results: paged.map(({ score, ...result }) => result),
+    results: paged.map(({ score: _score, ...result }) => result),
     hasMore: sorted.length > limit,
   });
 }

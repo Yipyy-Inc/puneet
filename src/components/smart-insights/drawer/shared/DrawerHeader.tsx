@@ -34,7 +34,7 @@ export function DrawerHeader({ insight }: { insight: Insight }) {
           Priority
         </Badge>
       </div>
-      <DialogTitle className="text-left text-lg leading-tight">
+      <DialogTitle className="text-left text-lg/tight">
         {insight.title}
       </DialogTitle>
       <DialogDescription className="text-left text-sm">

@@ -46,15 +46,9 @@ export function ShiftOpportunityNotificationSettingsDialog({
     useState<ShiftOpportunityNotificationSettings>(settings);
 
   const activeEmployees = employees.filter((e) => e.status === "active");
-  const managersExcluded = employees.filter(
-    (e) => e.role === "Manager" || e.role === "Supervisor",
-  );
 
   const isEligible = (empId: string) =>
     form.eligibleEmployeeIds.includes(empId);
-
-  const isExcluded = (empId: string) =>
-    form.excludedEmployeeIds.includes(empId);
 
   const toggleEligible = (empId: string) => {
     setForm((p) => ({
@@ -62,15 +56,6 @@ export function ShiftOpportunityNotificationSettingsDialog({
       eligibleEmployeeIds: isEligible(empId)
         ? p.eligibleEmployeeIds.filter((id) => id !== empId)
         : [...p.eligibleEmployeeIds, empId],
-    }));
-  };
-
-  const toggleExcluded = (empId: string) => {
-    setForm((p) => ({
-      ...p,
-      excludedEmployeeIds: isExcluded(empId)
-        ? p.excludedEmployeeIds.filter((id) => id !== empId)
-        : [...p.excludedEmployeeIds, empId],
     }));
   };
 

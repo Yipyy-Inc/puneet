@@ -125,12 +125,6 @@ export function BoardingDetails({
     dropOffPickUpOverrides,
     holidays,
   } = useSettings();
-  const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
-  const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
-  const [dragOverRoomId, setDragOverRoomId] = React.useState<string | null>(
-    null,
-  );
-
   const scheduleTimeOverridesForBoarding = React.useMemo(() => {
     return scheduleTimeOverrides.filter(
       (o) => !o.services?.length || o.services.includes("boarding"),

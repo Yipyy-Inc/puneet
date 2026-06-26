@@ -84,11 +84,11 @@ export function BookingsBoard() {
       id="bookings-board"
       className="bg-card scroll-mt-24 overflow-hidden border"
     >
-      <CardHeader className="from-card via-card relative space-y-0 overflow-hidden border-b bg-gradient-to-br to-sky-50/40 pb-4 dark:to-sky-950/20">
-        <div className="pointer-events-none absolute -top-10 right-0 h-32 w-32 rounded-full bg-gradient-to-br from-sky-200/40 via-cyan-200/20 to-transparent blur-2xl dark:from-sky-500/15 dark:via-cyan-500/10" />
+      <CardHeader className="from-card via-card relative space-y-0 overflow-hidden border-b bg-linear-to-br to-sky-50/40 pb-4 dark:to-sky-950/20">
+        <div className="pointer-events-none absolute -top-10 right-0 h-32 w-32 rounded-full bg-linear-to-br from-sky-200/40 via-cyan-200/20 to-transparent blur-2xl dark:from-sky-500/15 dark:via-cyan-500/10" />
         <div className="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
-            <span className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 via-sky-500 to-cyan-500 text-white shadow-sm shadow-sky-500/20">
+            <span className="flex size-11 items-center justify-center rounded-2xl bg-linear-to-br from-sky-500 via-sky-500 to-cyan-500 text-white shadow-sm shadow-sky-500/20">
               <PawPrint className="size-5" />
             </span>
             <div>

@@ -408,7 +408,7 @@ function ReportCardPhotoSection({
                   unoptimized
                 />
                 {(isHero || isBefore || isAfter) && (
-                  <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-white uppercase backdrop-blur">
+                  <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-white uppercase backdrop-blur-sm">
                     {isHero ? "Hero" : isBefore ? "Before" : "After"}
                   </span>
                 )}
@@ -984,7 +984,7 @@ function ReportCardEditorSheet({
               value={overallAssessment}
               onChange={(e) => setOverallAssessment(e.target.value)}
               placeholder={`E.g. "${card.petName} nailed loose-leash walking this week. We'll layer in distractions next session."`}
-              className="min-h-[80px] text-[13px] leading-relaxed"
+              className="min-h-[80px] text-[13px]/relaxed"
             />
           </div>
 
@@ -1008,7 +1008,7 @@ function ReportCardEditorSheet({
               value={personalizedMessage}
               onChange={(e) => setPersonalizedMessage(e.target.value)}
               placeholder={`E.g. "${card.petName} was such a sweetheart today — already nailing things faster than his classmates."`}
-              className="min-h-[60px] text-[13px] leading-relaxed"
+              className="min-h-[60px] text-[13px]/relaxed"
             />
           </div>
 
@@ -1240,7 +1240,7 @@ function ReportCardEditorSheet({
               id="rc-narrative"
               value={progressNarrative}
               onChange={(e) => setProgressNarrative(e.target.value)}
-              className="min-h-[80px] text-[13px] leading-relaxed"
+              className="min-h-[80px] text-[13px]/relaxed"
             />
           </div>
 
@@ -1260,7 +1260,7 @@ function ReportCardEditorSheet({
               id="rc-summary"
               value={sessionSummary}
               onChange={(e) => setSessionSummary(e.target.value)}
-              className="min-h-[80px] text-[13px] leading-relaxed"
+              className="min-h-[80px] text-[13px]/relaxed"
             />
           </div>
 

@@ -52,7 +52,6 @@ export function BookingActionBar({
   const { isMultiLocation } = useLocationContext();
   const isActive =
     booking.status === "confirmed" || booking.status === "pending";
-  const isCompleted = booking.status === "completed";
   const isCancelled = booking.status === "cancelled";
   const isPaid = booking.paymentStatus === "paid";
 

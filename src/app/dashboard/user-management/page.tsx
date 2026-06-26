@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { adminUsers, roleDisplayNames, AdminUser } from "@/data/admin-users";
+import { useSearchParams } from "next/navigation";
+import {
+  adminUsers,
+  roleDisplayNames,
+  rolePermissions,
+  AdminUser,
+} from "@/data/admin-users";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -77,7 +83,13 @@ const exportUsersToCSV = (usersData: AdminUser[]) => {
 };
 
 export default function UserManagementPage() {
-  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  // Deep-link: global search navigates here with ?user=<id> to open the modal.
+  const searchParams = useSearchParams();
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(() => {
+    const id = searchParams.get("user");
+    const found = id ? adminUsers.find((u) => String(u.id) === id) : undefined;
+    return found ? (found as unknown as AdminUser) : null;
+  });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const columns: ColumnDef<AdminUser>[] = [
@@ -248,7 +260,9 @@ export default function UserManagementPage() {
             <Key className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
+            <div className="text-2xl font-bold">
+              {Object.keys(rolePermissions).length}
+            </div>
             <p className="text-muted-foreground text-xs">
               With custom permissions
             </p>

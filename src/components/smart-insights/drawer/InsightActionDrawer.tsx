@@ -83,7 +83,7 @@ function ComingSoonPanel({ actionType }: { actionType: string }) {
         <p className="font-semibold">Action panel coming soon</p>
         <p className="text-muted-foreground mt-1 text-sm">
           The drawer for action type{" "}
-          <code className="bg-muted rounded px-1 text-xs">{actionType}</code>{" "}
+          <code className="bg-muted rounded-sm px-1 text-xs">{actionType}</code>{" "}
           arrives in Phase 5.
         </p>
       </div>

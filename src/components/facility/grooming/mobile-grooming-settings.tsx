@@ -496,7 +496,7 @@ export function MobileGroomingSettings() {
                               style={{ backgroundColor: color }}
                             >
                               <TypeIcon className="size-5 text-white drop-shadow-sm" />
-                              <span className="bg-card ring-border absolute -right-1 -bottom-1 flex size-4 items-center justify-center rounded-full opacity-0 shadow ring-1 transition-opacity group-hover:opacity-100">
+                              <span className="bg-card ring-border absolute -right-1 -bottom-1 flex size-4 items-center justify-center rounded-full opacity-0 shadow-sm ring-1 transition-opacity group-hover:opacity-100">
                                 <Palette className="text-muted-foreground size-2.5" />
                               </span>
                             </button>
@@ -529,7 +529,7 @@ export function MobileGroomingSettings() {
                         {/* Status pill */}
                         <span
                           className={cn(
-                            "bg-card/70 inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase backdrop-blur",
+                            "bg-card/70 inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase backdrop-blur-sm",
                             a.active
                               ? "border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300"
                               : "border-border text-muted-foreground",
@@ -550,11 +550,11 @@ export function MobileGroomingSettings() {
                       {/* Stat chips */}
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span
-                          className="bg-card/70 inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs backdrop-blur"
+                          className="bg-card/70 inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs backdrop-blur-sm"
                           style={{ borderColor: `${color}55` }}
                         >
                           <span
-                            className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-md px-1 text-[10px] font-bold text-white"
+                            className="flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-[10px] font-bold text-white"
                             style={{ backgroundColor: color }}
                           >
                             {count}
@@ -563,7 +563,7 @@ export function MobileGroomingSettings() {
                             {countLabel}
                           </span>
                         </span>
-                        <span className="bg-card/70 text-muted-foreground inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] backdrop-blur">
+                        <span className="bg-card/70 text-muted-foreground inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] backdrop-blur-sm">
                           <CalendarDays className="size-3" />
                           {formatDaysOfWeek(a.daysOfWeek)}
                         </span>

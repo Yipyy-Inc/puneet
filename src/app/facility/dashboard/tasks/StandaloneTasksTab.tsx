@@ -189,7 +189,6 @@ function CompleteDialog({
 export function StandaloneTasksTab() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [completeTask, setCompleteTask] = useState<StandaloneTask | null>(null);
-  const [statusFilter, setStatusFilter] = useState("all");
 
   const today = new Date().toISOString().slice(0, 10);
 

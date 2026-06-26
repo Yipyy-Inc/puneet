@@ -495,12 +495,12 @@ export function SessionExercisesSection({
             value={sessionNotes}
             onChange={(e) => setSessionNotes(e.target.value)}
             placeholder="What happened in the class today? Anything notable to remember — weather if you were outdoors, distraction level, energy, group dynamics, anything to follow up on next session…"
-            className="min-h-[120px] resize-y text-sm leading-relaxed"
+            className="min-h-[120px] resize-y text-sm/relaxed"
           />
         </div>
       </Card>
 
-      <div className="sticky bottom-0 -mx-4 mt-6 border-t bg-white/95 px-4 py-3 backdrop-blur dark:bg-slate-950/95">
+      <div className="sticky bottom-0 -mx-4 mt-6 border-t bg-white/95 px-4 py-3 backdrop-blur-sm dark:bg-slate-950/95">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
           <Button variant="outline" onClick={onBack}>
             <ArrowLeft className="mr-1.5 size-4" />
@@ -937,7 +937,7 @@ function SessionPhotosCard({
                   <button
                     type="button"
                     onClick={() => onRemovePhoto(photo.id)}
-                    className="absolute top-1.5 right-1.5 inline-flex size-7 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100 hover:bg-black/80 focus-visible:opacity-100"
+                    className="absolute top-1.5 right-1.5 inline-flex size-7 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:bg-black/80 focus-visible:opacity-100"
                     aria-label="Remove photo"
                     title="Remove photo"
                   >
@@ -1024,7 +1024,7 @@ function StudentNotePopover({
             value={note}
             onChange={(e) => onChange(e.target.value)}
             placeholder={`Anything specific about ${petName} today — what went well, what to work on, behaviour observations…`}
-            className="min-h-[100px] text-sm leading-relaxed"
+            className="min-h-[100px] text-sm/relaxed"
             autoFocus
           />
         </div>

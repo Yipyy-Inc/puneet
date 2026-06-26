@@ -232,7 +232,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
                   ? "bg-[repeating-linear-gradient(135deg,rgba(148,163,184,0.10)_0px,rgba(148,163,184,0.10)_6px,rgba(255,255,255,0.7)_6px,rgba(255,255,255,0.7)_12px)] dark:bg-[repeating-linear-gradient(135deg,rgba(148,163,184,0.10)_0px,rgba(148,163,184,0.10)_6px,rgba(15,23,42,0.7)_6px,rgba(15,23,42,0.7)_12px)]"
                   : "bg-background/95",
                 todayFlag &&
-                  "bg-gradient-to-b from-indigo-50/90 to-indigo-50/40 dark:from-indigo-950/40 dark:to-indigo-950/10",
+                  "bg-linear-to-b from-indigo-50/90 to-indigo-50/40 dark:from-indigo-950/40 dark:to-indigo-950/10",
               )}
             >
               <span
@@ -328,7 +328,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
         {/* ─── Open shifts row (anchored at the bottom) ───── */}
         {hasOpenShifts && (
           <Fragment>
-            <div className="border-border/50 sticky bottom-[52px] z-20 flex items-center gap-3 border-t-2 border-r border-b border-dashed bg-gradient-to-r from-amber-50 via-amber-50/70 to-amber-50/40 px-4 py-3 backdrop-blur-md dark:border-amber-700/40 dark:from-amber-950/40 dark:via-amber-950/20 dark:to-amber-950/10">
+            <div className="border-border/50 sticky bottom-[52px] z-20 flex items-center gap-3 border-t-2 border-r border-b border-dashed bg-linear-to-r from-amber-50 via-amber-50/70 to-amber-50/40 px-4 py-3 backdrop-blur-md dark:border-amber-700/40 dark:from-amber-950/40 dark:via-amber-950/20 dark:to-amber-950/10">
               <div className="flex size-10 items-center justify-center rounded-full border border-dashed border-amber-400 bg-white shadow-sm dark:bg-amber-950/30">
                 <UserX className="size-4 text-amber-600" />
               </div>
@@ -348,7 +348,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
                 <div
                   key={`open-${dateStr}`}
                   className={cn(
-                    "group/open-cell sticky bottom-[52px] z-20 flex min-h-[60px] cursor-pointer flex-col gap-1 border-t-2 border-r border-b border-dashed border-amber-300 bg-gradient-to-b from-amber-50/70 to-amber-50/30 p-1.5 backdrop-blur-md transition-colors hover:from-amber-100/80 hover:to-amber-100/40 dark:border-amber-700/40 dark:from-amber-950/30 dark:to-amber-950/10 dark:hover:from-amber-900/30",
+                    "group/open-cell sticky bottom-[52px] z-20 flex min-h-[60px] cursor-pointer flex-col gap-1 border-t-2 border-r border-b border-dashed border-amber-300 bg-linear-to-b from-amber-50/70 to-amber-50/30 p-1.5 backdrop-blur-md transition-colors hover:from-amber-100/80 hover:to-amber-100/40 dark:border-amber-700/40 dark:from-amber-950/30 dark:to-amber-950/10 dark:hover:from-amber-900/30",
                     isToday(date) &&
                       "from-indigo-50/70 to-amber-50/30 dark:from-indigo-950/30",
                   )}

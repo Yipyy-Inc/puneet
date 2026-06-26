@@ -176,7 +176,7 @@ export function ReservationIncidentPanel({
                   {/* Content */}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                      <span className="text-sm leading-snug font-semibold">
+                      <span className="text-sm/snug font-semibold">
                         {incident.title}
                       </span>
                       <span className="text-muted-foreground font-mono text-[10px]">

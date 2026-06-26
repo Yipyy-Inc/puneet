@@ -177,7 +177,7 @@ export function KennelCardTemplate({
           <PawPrint className="size-14 text-gray-400" />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="text-3xl leading-tight font-black tracking-tight">
+          <h1 className="text-3xl/tight font-black tracking-tight">
             {guest.petName}{" "}
             <span className="text-2xl font-semibold text-gray-400">
               {guest.ownerName.split(" ").pop()}
@@ -199,7 +199,7 @@ export function KennelCardTemplate({
             <p className="text-[9px] font-semibold tracking-widest text-gray-400 uppercase">
               Kennel
             </p>
-            <p className="text-lg leading-tight font-black">
+            <p className="text-lg/tight font-black">
               {guest.kennelName.split(" - ")[0]}
             </p>
           </div>
@@ -774,7 +774,7 @@ function CustomizePanel({
           >
             <span
               data-on={on}
-              className="data-[on=true]:bg-primary data-[on=false]:bg-muted flex size-4 shrink-0 items-center justify-center rounded"
+              className="data-[on=true]:bg-primary data-[on=false]:bg-muted flex size-4 shrink-0 items-center justify-center rounded-sm"
             >
               {on && <Check className="text-primary-foreground size-3" />}
             </span>
@@ -821,7 +821,7 @@ function ToggleChip({
     >
       <span
         data-on={on}
-        className="data-[on=true]:bg-primary data-[on=false]:bg-muted flex size-4 shrink-0 items-center justify-center rounded"
+        className="data-[on=true]:bg-primary data-[on=false]:bg-muted flex size-4 shrink-0 items-center justify-center rounded-sm"
       >
         {on && <Check className="text-primary-foreground size-3" />}
       </span>

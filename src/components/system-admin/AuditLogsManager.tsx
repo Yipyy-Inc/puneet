@@ -13,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/DataTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { auditLogs, auditStatistics } from "@/data/system-administration";
+import { auditStatistics } from "@/data/system-administration";
+import { getAuditLogs } from "@/lib/api/audit-log";
 import {
   Shield,
   AlertTriangle,
@@ -21,6 +22,7 @@ import {
   Eye,
   Download,
   Filter,
+  Lock,
   User,
   FileText,
   Building,
@@ -129,6 +131,10 @@ export function AuditLogsManager() {
     null,
   );
   const [resourceSearch, setResourceSearch] = useState("");
+
+  // Audit Trail is read-only / append-only: read an immutable snapshot via the
+  // sanctioned access path. There is no edit/delete path anywhere in this view.
+  const auditLogs = useMemo(() => getAuditLogs(), []);
 
   // Export audit logs to CSV
   const exportToCSV = () => {
@@ -427,11 +433,22 @@ export function AuditLogsManager() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Audit Logs & Security
-          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-3xl font-bold tracking-tight">
+              Audit Logs & Security
+            </h1>
+            <Badge
+              variant="outline"
+              className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+              title="Audit entries are write-once. No role — including Super Administrator — can edit or delete them."
+            >
+              <Lock className="size-3" />
+              Read-only · Immutable · Append-only
+            </Badge>
+          </div>
           <p className="text-muted-foreground mt-1">
-            Track all admin actions with resource-level indexing
+            Track all admin actions with resource-level indexing. Entries are
+            write-once and read-only — no role can edit, modify, or delete them.
           </p>
         </div>
         <div className="flex gap-2">

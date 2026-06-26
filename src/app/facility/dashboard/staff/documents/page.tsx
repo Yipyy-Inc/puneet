@@ -130,7 +130,7 @@ type EmployeeGroup = {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function StaffDocumentsPage() {
-  const { can, viewer, viewerId } = useFacilityRbac();
+  const { can, viewerId } = useFacilityRbac();
   const isManager = can("manage_staff");
 
   const [search, setSearch] = useState("");

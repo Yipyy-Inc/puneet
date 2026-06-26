@@ -263,7 +263,7 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
               </Button>
             </div>
             <div className="bg-muted/40 border-border/60 rounded-xl border px-4 py-3">
-              <p className="text-muted-foreground text-sm leading-relaxed italic">
+              <p className="text-muted-foreground text-sm/relaxed italic">
                 &ldquo;{call.transcription}&rdquo;
               </p>
             </div>

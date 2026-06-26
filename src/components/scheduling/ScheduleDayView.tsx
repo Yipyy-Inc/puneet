@@ -193,8 +193,8 @@ export function ScheduleDayView({
         className={cn(
           "border-border/60 relative flex items-center justify-between gap-4 border-b px-6 py-5",
           todayFlag
-            ? "bg-gradient-to-r from-indigo-50/80 via-white to-white dark:from-indigo-950/30 dark:via-slate-950 dark:to-slate-950"
-            : "bg-gradient-to-r from-slate-50/60 via-white to-white dark:from-slate-900/40 dark:via-slate-950 dark:to-slate-950",
+            ? "bg-linear-to-r from-indigo-50/80 via-white to-white dark:from-indigo-950/30 dark:via-slate-950 dark:to-slate-950"
+            : "bg-linear-to-r from-slate-50/60 via-white to-white dark:from-slate-900/40 dark:via-slate-950 dark:to-slate-950",
         )}
       >
         <div className="flex items-center gap-4">
@@ -202,7 +202,7 @@ export function ScheduleDayView({
             className={cn(
               "flex size-16 flex-col items-center justify-center rounded-2xl border shadow-sm",
               todayFlag
-                ? "border-indigo-200/70 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-indigo-500/30 dark:border-indigo-700/50"
+                ? "border-indigo-200/70 bg-linear-to-br from-indigo-500 to-indigo-600 text-white shadow-indigo-500/30 dark:border-indigo-700/50"
                 : "border-border/60 bg-card text-foreground",
             )}
           >
@@ -378,7 +378,7 @@ export function ScheduleDayView({
           {/* Open shifts row — anchored at the bottom */}
           {openShifts.length > 0 && (
             <div
-              className="border-border/50 sticky bottom-0 z-20 grid border-t-2 border-b border-dashed bg-gradient-to-r from-amber-50 via-amber-50/70 to-amber-50/30 backdrop-blur-md dark:border-amber-700/40 dark:from-amber-950/40 dark:via-amber-950/20 dark:to-amber-950/10"
+              className="border-border/50 sticky bottom-0 z-20 grid border-t-2 border-b border-dashed bg-linear-to-r from-amber-50 via-amber-50/70 to-amber-50/30 backdrop-blur-md dark:border-amber-700/40 dark:from-amber-950/40 dark:via-amber-950/20 dark:to-amber-950/10"
               style={{ gridTemplateColumns: timelineGridTemplate }}
             >
               <div className="flex items-center gap-3 border-r border-dashed border-amber-300/60 px-6 py-4 dark:border-amber-700/40">
@@ -432,7 +432,7 @@ function DayStat({
       <p className={cn("text-xl font-bold tabular-nums", accentMap[accent])}>
         {value}
       </p>
-      <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.1em] uppercase">
+      <p className="text-muted-foreground text-[10px] font-semibold tracking-widest uppercase">
         {label}
       </p>
     </div>
@@ -652,7 +652,7 @@ function TimeOffBar({ timeOff }: { timeOff: EnhancedTimeOffRequest }) {
     <div className="relative flex h-[68px] items-center px-3">
       <div
         className={cn(
-          "flex h-12 w-full items-center gap-3 rounded-2xl bg-gradient-to-r px-4 shadow-md",
+          "flex h-12 w-full items-center gap-3 rounded-2xl bg-linear-to-r px-4 shadow-md",
           meta.from,
           meta.to,
         )}

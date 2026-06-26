@@ -42,11 +42,6 @@ export function AddOnCategorySheet({
   const [editing, setEditing] = useState<AddOnCategory | null>(null);
   const [form, setForm] = useState(blankCategory());
 
-  function startCreate() {
-    setEditing(null);
-    setForm(blankCategory());
-  }
-
   function startEdit(cat: AddOnCategory) {
     setEditing(cat);
     setForm({

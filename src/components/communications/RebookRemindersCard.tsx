@@ -354,7 +354,7 @@ export function RebookRemindersCard() {
       <div className="space-y-4">
         <RebookAnalyticsRow reminders={reminders} />
 
-        <Card className="border-violet-100 bg-gradient-to-br from-violet-50/40 via-white to-white">
+        <Card className="border-violet-100 bg-linear-to-br from-violet-50/40 via-white to-white">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>

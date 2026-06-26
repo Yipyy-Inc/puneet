@@ -138,7 +138,6 @@ export function SubscribersTab() {
       defaultVisible: true,
       render: (item) => {
         const name = item.customerName as string;
-        const email = item.customerEmail as string;
         const status = item.status as MembershipStatus;
         const avatarUrl = item.customerAvatarUrl as string | undefined;
         return (

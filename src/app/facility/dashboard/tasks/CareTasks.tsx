@@ -691,13 +691,6 @@ export function CareTasks() {
                                     task.assignedToId,
                                   );
                                   if (!dept) return null;
-                                  const dotColor: Record<string, string> = {
-                                    blue: "bg-blue-500",
-                                    emerald: "bg-emerald-500",
-                                    purple: "bg-purple-500",
-                                    amber: "bg-amber-500",
-                                    orange: "bg-orange-500",
-                                  };
                                   return (
                                     <span
                                       className={cn(

@@ -566,7 +566,7 @@ export default function FacilityBillingPage() {
                       return (
                         <div
                           key={payment.id}
-                          className="hover:bg-muted/50 -mx-1 flex cursor-pointer items-center gap-3 rounded px-1 py-2"
+                          className="hover:bg-muted/50 -mx-1 flex cursor-pointer items-center gap-3 rounded-sm px-1 py-2"
                           onClick={() => {
                             if (payment.bookingId)
                               router.push(

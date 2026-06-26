@@ -776,7 +776,7 @@ function SortableExerciseRow({
         type="button"
         {...attributes}
         {...listeners}
-        className="text-muted-foreground hover:text-foreground -ml-1 cursor-grab touch-none rounded p-1 active:cursor-grabbing"
+        className="text-muted-foreground hover:text-foreground -ml-1 cursor-grab touch-none rounded-sm p-1 active:cursor-grabbing"
         title="Drag to reorder within this tier"
         aria-label={`Drag handle for ${exercise.name}`}
       >
@@ -870,7 +870,7 @@ function FilterPill({
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors",
         "hover:bg-slate-100",
-        "data-[active]:border-transparent data-[active]:text-white",
+        "data-active:border-transparent data-active:text-white",
       )}
       style={
         active

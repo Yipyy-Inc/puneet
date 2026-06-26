@@ -104,9 +104,9 @@ export function ScheduleView() {
   );
 
   // Shift opportunities state
-  const [shiftOpportunities, setShiftOpportunities] = useState<
-    ShiftOpportunity[]
-  >(initialShiftOpportunities);
+  const [, setShiftOpportunities] = useState<ShiftOpportunity[]>(
+    initialShiftOpportunities,
+  );
   const [notifSettings, setNotifSettings] =
     useState<ShiftOpportunityNotificationSettings>(initialNotifSettings);
   const [showPostDialog, setShowPostDialog] = useState(false);

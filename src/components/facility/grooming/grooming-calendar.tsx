@@ -823,8 +823,6 @@ function GroomingSidebar({
 
 function AppointmentBlock({
   appointment,
-  stylistColor,
-  staffLine,
   isSecondary,
   stageOverride,
   onClick,
@@ -986,7 +984,7 @@ function AppointmentBlock({
         <ul className="divide-border max-h-64 divide-y overflow-y-auto">
           {(alertNotes ?? []).map((note) => (
             <li key={note.id} className="px-3 py-2">
-              <p className="text-xs leading-snug">{note.text}</p>
+              <p className="text-xs/snug">{note.text}</p>
               <p className="text-muted-foreground mt-1 text-[10px]">
                 {note.createdBy}
                 {" · "}
@@ -1164,7 +1162,7 @@ function AppointmentBlock({
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-px">
           <div className="flex min-w-0 items-center gap-1">
             <span
-              className="truncate text-xs leading-tight font-semibold"
+              className="truncate text-xs/tight font-semibold"
               title={hasExtraPets ? allPetNames : undefined}
             >
               {allPetNames}
@@ -1227,7 +1225,7 @@ function TimeBlockBlock({ block }: { block: TimeBlock }) {
       title={`${block.reason} · ${block.startTime}–${block.endTime}${
         block.notes ? ` · ${block.notes}` : ""
       }`}
-      className="absolute right-1 left-1 z-[5] overflow-hidden rounded-lg border border-slate-400/40 px-2 py-1 text-slate-700 dark:border-slate-500/40 dark:text-slate-200"
+      className="absolute right-1 left-1 z-5 overflow-hidden rounded-lg border border-slate-400/40 px-2 py-1 text-slate-700 dark:border-slate-500/40 dark:text-slate-200"
       style={{
         top: `${top}px`,
         height: `${height}px`,
@@ -1436,13 +1434,13 @@ function DayView({
                       title="Bulk actions for this groomer's day"
                     >
                       <div
-                        className="flex size-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm"
+                        className="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm"
                         style={{ backgroundColor: headerColor }}
                       >
                         {stylist.name.charAt(0)}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-xs leading-tight font-semibold">
+                        <p className="truncate text-xs/tight font-semibold">
                           {stylist.name}
                         </p>
                         {stylist.staffLine ? (
@@ -1499,7 +1497,7 @@ function DayView({
         </div>
         {/* Grid */}
         <div className="flex">
-          <div className="w-16 flex-shrink-0 select-none" aria-hidden>
+          <div className="w-16 shrink-0 select-none" aria-hidden>
             {HOURS.map((h) => (
               <div
                 key={h}
@@ -1704,7 +1702,6 @@ function WeekView({
   searchActive,
   waitlistByDate,
   onWaitlistOpen,
-  stylistColorById,
   alertCountById,
 }: {
   selectedDate: string;
@@ -1782,7 +1779,7 @@ function WeekView({
                       <div
                         key={apt.id}
                         className={cn(
-                          "flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium",
+                          "flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-medium",
                           s.bg,
                           s.text,
                           isMatch && "ring-2 ring-blue-500 ring-offset-1",
@@ -1827,7 +1824,6 @@ function MonthView({
   searchActive,
   waitlistByDate,
   onWaitlistOpen,
-  stylistColorById,
   alertCountById,
 }: {
   selectedDate: string;
@@ -1909,7 +1905,7 @@ function MonthView({
                   <div
                     key={apt.id}
                     className={cn(
-                      "flex w-full items-center gap-1 rounded px-1 py-0.5 text-[10px] font-medium",
+                      "flex w-full items-center gap-1 rounded-sm px-1 py-0.5 text-[10px] font-medium",
                       s.bg,
                       s.text,
                       isMatch && "ring-2 ring-blue-500 ring-offset-1",
@@ -2206,7 +2202,7 @@ export function GroomingCalendar() {
         />
 
         {/* ── Main View Area ── */}
-        <div className="flex min-w-0 flex-1 flex-col gap-4 rounded-[2rem] border bg-slate-50/50 p-6 shadow-sm dark:bg-slate-900/20">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 rounded-4xl border bg-slate-50/50 p-6 shadow-sm dark:bg-slate-900/20">
           {/* Top Controls */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

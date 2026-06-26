@@ -339,7 +339,7 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col bg-slate-50/40 dark:bg-slate-950/40">
       {/* Header ─────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-10 border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:bg-slate-950/95 dark:supports-[backdrop-filter]:bg-slate-950/80">
+      <header className="sticky top-0 z-10 border-b bg-white/95 backdrop-blur-sm supports-backdrop-filter:bg-white/80 dark:bg-slate-950/95 dark:supports-backdrop-filter:bg-slate-950/80">
         <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
           <Link
             href="/facility/dashboard/services/training"

@@ -39,7 +39,7 @@ export function CustomEmailDomainSettings() {
   const [senderName, setSenderName] = useState("");
   const [domain, setDomain] = useState("");
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [emailVerified, setEmailVerified] = useState(false);
+  const [, setEmailVerified] = useState(false);
   const [domainStatus, setDomainStatus] = useState<DomainStatus>("unverified");
 
   const dnsRecords: DnsRecord[] = [

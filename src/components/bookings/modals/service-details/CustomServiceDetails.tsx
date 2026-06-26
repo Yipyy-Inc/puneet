@@ -22,14 +22,6 @@ for (let h = 7; h <= 19; h++) {
   if (h < 19) TIME_SLOTS.push(`${String(h).padStart(2, "0")}:30`);
 }
 
-function calcCheckoutTime(startTime: string, durationMinutes: number): string {
-  const [h, m] = startTime.split(":").map(Number);
-  const total = h * 60 + m + durationMinutes;
-  const endH = Math.floor(total / 60) % 24;
-  const endM = total % 60;
-  return `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
-}
-
 const formatDateString = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -160,7 +152,6 @@ function ScheduleStep({
   setCheckInTime,
   checkOutTime,
   setCheckOutTime,
-  selectedPets,
   Icon,
 }: {
   serviceModule: CustomServiceModule;

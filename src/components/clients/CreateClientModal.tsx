@@ -411,7 +411,7 @@ function PetVaccineCard({
                 })
               }
               className={cn(
-                "rounded px-2 py-1 text-[11px] transition-colors",
+                "rounded-sm px-2 py-1 text-[11px] transition-colors",
                 v.addLater
                   ? "text-primary hover:bg-primary/5 font-medium"
                   : "text-muted-foreground hover:bg-muted/50",

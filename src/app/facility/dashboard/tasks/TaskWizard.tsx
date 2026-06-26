@@ -323,9 +323,7 @@ function Step1({
           </div>
           <div>
             <p className="font-semibold">{title}</p>
-            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-              {desc}
-            </p>
+            <p className="text-muted-foreground mt-1 text-xs/relaxed">{desc}</p>
             <p className="text-muted-foreground/60 mt-2 text-[10px] italic">
               {example}
             </p>

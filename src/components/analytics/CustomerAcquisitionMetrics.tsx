@@ -3,10 +3,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { acquisitionMetrics } from "@/data/analytics";
+import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, Users, DollarSign, Award } from "lucide-react";
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   PieChart,
@@ -31,15 +30,6 @@ const COLORS = [
 
 export function CustomerAcquisitionMetrics() {
   const metrics = acquisitionMetrics;
-
-  // Calculate growth trend data
-  const growthTrendData = [
-    { month: "Jul", customers: 892, growth: 8.5 },
-    { month: "Aug", customers: 956, growth: 7.2 },
-    { month: "Sep", customers: 1045, growth: 9.3 },
-    { month: "Oct", customers: 1087, growth: 4.0 },
-    { month: "Nov", customers: 1250, growth: 15.0 },
-  ];
 
   // Prepare channel breakdown for pie chart
   const channelData = metrics.channelBreakdown.map((channel) => ({
@@ -197,63 +187,15 @@ export function CustomerAcquisitionMetrics() {
             </p>
           </CardHeader>
           <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={growthTrendData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#e2e8f0"
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="month"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  />
-                  <YAxis
-                    yAxisId="left"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                    tickFormatter={(value) => `${value}%`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      border: "none",
-                      borderRadius: "12px",
-                      boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
-                    }}
-                  />
-                  <Legend />
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="customers"
-                    stroke="#3b82f6"
-                    strokeWidth={3}
-                    name="New Customers"
-                    dot={{ fill: "#3b82f6", r: 4 }}
-                  />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="growth"
-                    stroke="#10b981"
-                    strokeWidth={3}
-                    name="Growth Rate %"
-                    dot={{ fill: "#10b981", r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+            {/* No month-by-month acquisition history is recorded yet, so this
+                renders a loading skeleton rather than a fabricated trend. It
+                will populate once an acquisition-history source is connected. */}
+            <div className="flex h-80 flex-col gap-3">
+              <Skeleton className="w-full flex-1" />
+              <p className="text-muted-foreground text-center text-xs">
+                Awaiting historical acquisition data source — no fabricated
+                trend is shown.
+              </p>
             </div>
           </CardContent>
         </Card>

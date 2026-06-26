@@ -89,25 +89,6 @@ const NOTE_CATEGORY_META: Record<
   },
 };
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function formatDayTime(iso: string): string {
-  const d = new Date(iso);
-  return `${d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  })} · ${d.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  })}`;
-}
-
 /** Long-form "Saturday, June 7, 2026" — used in the session header so the
  *  date reads at a glance without abbreviation noise. */
 function formatLongDate(iso: string): string {

@@ -161,13 +161,13 @@ export function TipPromptDialog({
           type="button"
           onClick={() => onOpenChange(false)}
           aria-label="Close"
-          className="hover:bg-background/80 absolute top-3 right-3 z-10 rounded-full bg-white/70 p-1.5 backdrop-blur transition-colors"
+          className="hover:bg-background/80 absolute top-3 right-3 z-10 rounded-full bg-white/70 p-1.5 backdrop-blur-sm transition-colors"
         >
           <X className="size-4" />
         </button>
 
         {/* Emotional header */}
-        <div className="from-primary/15 via-primary/5 relative bg-gradient-to-b to-transparent px-6 pt-7 pb-4 text-center">
+        <div className="from-primary/15 via-primary/5 relative bg-linear-to-b to-transparent px-6 pt-7 pb-4 text-center">
           <div className="mb-3 flex justify-center">
             <div className="bg-primary/15 ring-primary/20 relative flex size-14 items-center justify-center rounded-full ring-4">
               <Heart className="text-primary size-7 fill-current" />

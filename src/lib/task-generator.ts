@@ -94,7 +94,6 @@ export function generateTasksForBooking(booking: Booking): GeneratedTask[] {
   const nights = nightsBetween(booking.startDate, booking.endDate);
 
   const tasks: GeneratedTask[] = [];
-  let taskCounter = 0;
 
   for (const template of templates) {
     if (template.recurring) {
@@ -104,7 +103,6 @@ export function generateTasksForBooking(booking: Booking): GeneratedTask[] {
 
       for (let day = 0; day < days; day++) {
         for (const time of times) {
-          taskCounter++;
           const dayDate = new Date(booking.startDate + "T00:00:00");
           dayDate.setDate(dayDate.getDate() + day);
 
@@ -128,7 +126,6 @@ export function generateTasksForBooking(booking: Booking): GeneratedTask[] {
         }
       }
     } else {
-      taskCounter++;
       tasks.push({
         id: `task-${booking.id}-${template.id}`,
         bookingId: booking.id,

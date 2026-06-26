@@ -139,12 +139,6 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
     });
   };
 
-  const handleCreateWaitlist = () => {
-    toast.info("Waitlist feature coming soon", {
-      description: t("This feature is not yet implemented."),
-    });
-  };
-
   const handleQuickDaycareCheckIn = () => {
     toast.info("Quick daycare check-in feature coming soon", {
       description: t("This feature is not yet implemented."),

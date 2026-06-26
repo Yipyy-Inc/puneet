@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -41,9 +42,9 @@ import {
   supportAgents,
   slaConfigs,
   getTicketStats,
+  getSlaPerformance,
   SupportTicket,
   SupportAgent,
-  TicketTimelineEvent,
 } from "@/data/support-tickets";
 import {
   Ticket,
@@ -62,21 +63,11 @@ import {
   UserPlus,
   MessageSquare,
   ArrowUpCircle,
-  History,
   Settings,
   Shield,
   Edit,
-  FileText,
-  Send,
   RefreshCw,
-  CircleDot,
-  Circle,
-  ArrowRight,
-  User,
-  Building,
   Tag,
-  Calendar,
-  Zap,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -85,7 +76,6 @@ export function SupportTicketing() {
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(
     null,
   );
-  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isSLAModalOpen, setIsSLAModalOpen] = useState(false);
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
@@ -97,6 +87,11 @@ export function SupportTicketing() {
   const [newTicketDescription, setNewTicketDescription] = useState("");
 
   const stats = useMemo(() => getTicketStats(), []);
+  const sla = useMemo(() => getSlaPerformance(), []);
+  const router = useRouter();
+
+  const goToTicket = (ticketId: string) =>
+    router.push(`/dashboard/support/tickets/${ticketId}`);
 
   const updateTicketStatus = (
     ticketId: string,
@@ -242,50 +237,6 @@ export function SupportTicketing() {
       return { status: "warning", label: "SLA Warning", color: "text-warning" };
     }
     return { status: "on-track", label: "On Track", color: "text-success" };
-  };
-
-  const getTimelineIcon = (type: TicketTimelineEvent["type"]) => {
-    switch (type) {
-      case "created":
-        return <CircleDot className="text-primary size-4" />;
-      case "status_change":
-        return <RefreshCw className="text-info size-4" />;
-      case "assignment":
-        return <UserPlus className="text-success size-4" />;
-      case "priority_change":
-        return <ArrowUpCircle className="text-warning size-4" />;
-      case "message":
-        return <MessageSquare className="text-primary size-4" />;
-      case "sla_update":
-        return <Timer className="text-info size-4" />;
-      case "escalation":
-        return <AlertTriangle className="text-destructive size-4" />;
-      case "note":
-        return <FileText className="text-muted-foreground size-4" />;
-      default:
-        return <Circle className="text-muted-foreground size-4" />;
-    }
-  };
-
-  const formatTimelineEvent = (event: TicketTimelineEvent) => {
-    switch (event.type) {
-      case "created":
-        return event.details.message || "Ticket created";
-      case "status_change":
-        return `Status changed from ${event.details.from} to ${event.details.to}`;
-      case "assignment":
-        return `Assigned to ${event.details.to}${event.details.message ? ` - ${event.details.message}` : ""}`;
-      case "priority_change":
-        return `Priority changed from ${event.details.from} to ${event.details.to}`;
-      case "message":
-        return event.details.message || "Message sent";
-      case "escalation":
-        return event.details.message || "Ticket escalated";
-      case "note":
-        return event.details.note || "Note added";
-      default:
-        return event.details.message || "Activity recorded";
-    }
   };
 
   const ticketColumns: ColumnDef<SupportTicket>[] = [
@@ -583,6 +534,7 @@ export function SupportTicketing() {
                 searchKey="title"
                 searchPlaceholder="Search tickets..."
                 itemsPerPage={10}
+                onRowClick={(ticket) => goToTicket(ticket.id)}
                 actions={(ticket) => {
                   const ticketActions = getTicketActions(ticket);
                   return (
@@ -590,11 +542,9 @@ export function SupportTicketing() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          setSelectedTicket(ticket);
-                          setIsTicketModalOpen(true);
-                        }}
+                        onClick={() => goToTicket(ticket.id)}
                         className="hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
+                        aria-label={`Open ticket ${ticket.id}`}
                       >
                         <Eye className="size-4" />
                       </Button>
@@ -789,24 +739,24 @@ export function SupportTicketing() {
                       First Response SLA
                     </span>
                     <span className="text-success text-sm font-semibold">
-                      94%
+                      {sla.firstResponseRate}%
                     </span>
                   </div>
-                  <Progress value={94} className="h-2" />
+                  <Progress value={sla.firstResponseRate} className="h-2" />
                   <p className="text-muted-foreground mt-1 text-xs">
-                    47/50 tickets met
+                    {sla.firstResponseMet}/{sla.firstResponseTotal} tickets met
                   </p>
                 </div>
                 <div>
                   <div className="mb-2 flex items-center justify-between">
                     <span className="text-sm font-medium">Resolution SLA</span>
                     <span className="text-warning text-sm font-semibold">
-                      88%
+                      {sla.resolutionRate}%
                     </span>
                   </div>
-                  <Progress value={88} className="h-2" />
+                  <Progress value={sla.resolutionRate} className="h-2" />
                   <p className="text-muted-foreground mt-1 text-xs">
-                    44/50 tickets met
+                    {sla.resolutionMet}/{sla.resolutionTotal} tickets met
                   </p>
                 </div>
                 <div>
@@ -814,9 +764,20 @@ export function SupportTicketing() {
                     <span className="text-sm font-medium">
                       Avg Response Time
                     </span>
-                    <span className="text-sm font-semibold">45 min</span>
+                    <span className="text-sm font-semibold">
+                      {sla.avgResponseMinutes} min
+                    </span>
                   </div>
-                  <Progress value={75} className="h-2" />
+                  <Progress
+                    value={Math.min(
+                      100,
+                      Math.round(
+                        (sla.avgResponseMinutes / sla.responseTargetMinutes) *
+                          100,
+                      ),
+                    )}
+                    className="h-2"
+                  />
                   <p className="text-muted-foreground mt-1 text-xs">
                     Target: 1 hour
                   </p>
@@ -826,9 +787,20 @@ export function SupportTicketing() {
                     <span className="text-sm font-medium">
                       Avg Resolution Time
                     </span>
-                    <span className="text-sm font-semibold">6.2 hrs</span>
+                    <span className="text-sm font-semibold">
+                      {sla.avgResolutionHours} hrs
+                    </span>
                   </div>
-                  <Progress value={82} className="h-2" />
+                  <Progress
+                    value={Math.min(
+                      100,
+                      Math.round(
+                        (sla.avgResolutionHours / sla.resolutionTargetHours) *
+                          100,
+                      ),
+                    )}
+                    className="h-2"
+                  />
                   <p className="text-muted-foreground mt-1 text-xs">
                     Target: 8 hours
                   </p>
@@ -838,383 +810,6 @@ export function SupportTicketing() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Ticket Detail Modal */}
-      <Dialog open={isTicketModalOpen} onOpenChange={setIsTicketModalOpen}>
-        <DialogContent className="flex max-h-[90vh] min-w-5xl flex-col p-0">
-          <div className="flex-1 overflow-y-auto p-6">
-            <DialogHeader className="mb-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <DialogTitle className="flex items-center gap-2 text-xl">
-                    <span className="text-primary font-mono">
-                      {selectedTicket?.id}
-                    </span>
-                    <ArrowRight className="text-muted-foreground size-4" />
-                    {selectedTicket?.title}
-                  </DialogTitle>
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    {selectedTicket?.category} • {selectedTicket?.subcategory}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    className={` ${getStatusColor(selectedTicket?.status || "Open")} border`}
-                  >
-                    {selectedTicket?.status}
-                  </Badge>
-                  <Badge
-                    className={` ${getPriorityColor(selectedTicket?.priority || "Low")} border`}
-                  >
-                    {selectedTicket?.priority}
-                  </Badge>
-                </div>
-              </div>
-            </DialogHeader>
-
-            {selectedTicket && (
-              <div className="grid grid-cols-3 gap-6">
-                {/* Main Content - 2 columns */}
-                <div className="col-span-2 space-y-6">
-                  {/* Description */}
-                  <div className="bg-muted/50 rounded-xl p-4">
-                    <h4 className="mb-2 text-sm font-medium">Description</h4>
-                    <p className="text-sm">{selectedTicket.description}</p>
-                  </div>
-
-                  {/* SLA Status */}
-                  {selectedTicket.sla && (
-                    <Card>
-                      <CardHeader className="py-3">
-                        <CardTitle className="flex items-center gap-2 text-sm">
-                          <Timer className="size-4" />
-                          SLA Tracking
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="text-center">
-                            <p className="text-muted-foreground mb-1 text-xs">
-                              First Response
-                            </p>
-                            <p
-                              className={`text-sm font-medium ${
-                                selectedTicket.sla.firstResponseMet
-                                  ? `text-success`
-                                  : `text-muted-foreground`
-                              } `}
-                            >
-                              {selectedTicket.sla.firstResponseMet
-                                ? "✓ Met"
-                                : "Pending"}
-                            </p>
-                            <p className="text-muted-foreground text-xs">
-                              Due:{" "}
-                              {new Date(
-                                selectedTicket.sla.firstResponseDue,
-                              ).toLocaleTimeString()}
-                            </p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-muted-foreground mb-1 text-xs">
-                              Escalation
-                            </p>
-                            <p
-                              className={`text-sm font-medium ${
-                                selectedTicket.sla.isEscalated
-                                  ? `text-destructive`
-                                  : `text-muted-foreground`
-                              } `}
-                            >
-                              {selectedTicket.sla.isEscalated
-                                ? "⚠ Escalated"
-                                : "Not Escalated"}
-                            </p>
-                            <p className="text-muted-foreground text-xs">
-                              Due:{" "}
-                              {new Date(
-                                selectedTicket.sla.escalationDue,
-                              ).toLocaleTimeString()}
-                            </p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-muted-foreground mb-1 text-xs">
-                              Resolution
-                            </p>
-                            <p
-                              className={`text-sm font-medium ${getSLAStatus(selectedTicket)?.color} `}
-                            >
-                              {getSLAStatus(selectedTicket)?.label}
-                            </p>
-                            <p className="text-muted-foreground text-xs">
-                              Due:{" "}
-                              {new Date(
-                                selectedTicket.sla.resolutionDue,
-                              ).toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Messages */}
-                  {selectedTicket.messages &&
-                    selectedTicket.messages.length > 0 && (
-                      <div>
-                        <h4 className="mb-3 flex items-center gap-2 font-semibold">
-                          <MessageSquare className="size-4" />
-                          Conversation ({selectedTicket.messages.length})
-                        </h4>
-                        <div className="space-y-3">
-                          {selectedTicket.messages.map((msg) => {
-                            const isSupport =
-                              msg.sender !== selectedTicket.requester;
-                            return (
-                              <div
-                                key={msg.id}
-                                className={`rounded-xl p-4 ${
-                                  isSupport
-                                    ? "bg-primary/10 ml-8"
-                                    : "bg-muted/50 mr-8"
-                                } `}
-                              >
-                                <div className="mb-2 flex items-start justify-between">
-                                  <span className="text-sm font-medium">
-                                    {msg.sender}
-                                  </span>
-                                  <span className="text-muted-foreground text-xs">
-                                    {new Date(msg.timestamp).toLocaleString()}
-                                  </span>
-                                </div>
-                                <p className="text-sm">{msg.message}</p>
-                                {msg.isInternal && (
-                                  <Badge
-                                    variant="outline"
-                                    className="mt-2 text-xs"
-                                  >
-                                    Internal Note
-                                  </Badge>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Reply Box */}
-                        <div className="mt-4 flex gap-2">
-                          <Textarea
-                            placeholder="Type your reply..."
-                            className="min-h-20"
-                          />
-                          <Button className="shrink-0">
-                            <Send className="size-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                  {/* Resolution Info */}
-                  {selectedTicket.resolution && (
-                    <Card className="border-success/20 bg-success/5">
-                      <CardHeader className="py-3">
-                        <CardTitle className="text-success flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="size-4" />
-                          Resolution
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <p className="text-sm">
-                          {selectedTicket.resolution.resolutionNote}
-                        </p>
-                        <div className="text-muted-foreground mt-3 flex items-center justify-between text-xs">
-                          <span>
-                            Resolved by {selectedTicket.resolution.resolvedBy}
-                          </span>
-                          <span>
-                            {new Date(
-                              selectedTicket.resolution.resolvedAt,
-                            ).toLocaleString()}
-                          </span>
-                        </div>
-                        {selectedTicket.resolution.satisfactionRating && (
-                          <div className="mt-2 flex items-center gap-1">
-                            <span className="text-muted-foreground text-xs">
-                              Rating:
-                            </span>
-                            {[...Array(5)].map((_, i) => (
-                              <span
-                                key={i}
-                                className={`text-sm ${
-                                  i <
-                                  selectedTicket.resolution!.satisfactionRating!
-                                    ? `text-warning`
-                                    : `text-muted`
-                                } `}
-                              >
-                                ★
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-
-                {/* Sidebar - 1 column */}
-                <div className="space-y-4">
-                  {/* Ticket Info */}
-                  <Card>
-                    <CardHeader className="py-3">
-                      <CardTitle className="text-sm">Ticket Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 pt-0">
-                      <div className="flex items-center gap-2 text-sm">
-                        <User className="text-muted-foreground size-4" />
-                        <div>
-                          <p className="font-medium">
-                            {selectedTicket.requester}
-                          </p>
-                          <p className="text-muted-foreground text-xs">
-                            {selectedTicket.requesterEmail}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Building className="text-muted-foreground size-4" />
-                        <span>{selectedTicket.facility}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <UserPlus className="text-muted-foreground size-4" />
-                        <span>{selectedTicket.assignedTo || "Unassigned"}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="text-muted-foreground size-4" />
-                        <span>
-                          {new Date(selectedTicket.createdAt).toLocaleString()}
-                        </span>
-                      </div>
-                      {selectedTicket.tags &&
-                        selectedTicket.tags.length > 0 && (
-                          <div className="flex items-start gap-2 text-sm">
-                            <Tag className="text-muted-foreground mt-0.5 size-4" />
-                            <div className="flex flex-wrap gap-1">
-                              {selectedTicket.tags.map((tag) => (
-                                <Badge
-                                  key={tag}
-                                  variant="outline"
-                                  className="text-xs"
-                                >
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Timeline */}
-                  {selectedTicket.timeline &&
-                    selectedTicket.timeline.length > 0 && (
-                      <Card>
-                        <CardHeader className="py-3">
-                          <CardTitle className="flex items-center gap-2 text-sm">
-                            <History className="size-4" />
-                            Activity Timeline
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                          <div className="space-y-3">
-                            {selectedTicket.timeline.map((event, index) => (
-                              <div key={event.id} className="flex gap-3">
-                                <div className="flex flex-col items-center">
-                                  {getTimelineIcon(event.type)}
-                                  {index <
-                                    selectedTicket.timeline!.length - 1 && (
-                                    <div className="bg-border mt-1 h-full w-px" />
-                                  )}
-                                </div>
-                                <div className="flex-1 pb-3">
-                                  <p className="text-sm">
-                                    {formatTimelineEvent(event)}
-                                  </p>
-                                  <p className="text-muted-foreground mt-0.5 text-xs">
-                                    {event.actor} •{" "}
-                                    {new Date(event.timestamp).toLocaleString()}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                  {/* Quick Actions */}
-                  <Card>
-                    <CardHeader className="py-3">
-                      <CardTitle className="flex items-center gap-2 text-sm">
-                        <Zap className="size-4" />
-                        Quick Actions
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 pt-0">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => setIsAssignModalOpen(true)}
-                      >
-                        <UserPlus className="mr-2 size-4" />
-                        Assign Agent
-                      </Button>
-                      {selectedTicket.status === "Open" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full justify-start"
-                          onClick={() =>
-                            updateTicketStatus(selectedTicket.id, "In Progress")
-                          }
-                        >
-                          <Play className="mr-2 size-4" />
-                          Start Progress
-                        </Button>
-                      )}
-                      {(selectedTicket.status === "Open" ||
-                        selectedTicket.status === "In Progress") && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-warning hover:text-warning w-full justify-start"
-                            onClick={() =>
-                              updateTicketStatus(selectedTicket.id, "Escalated")
-                            }
-                          >
-                            <ArrowUpCircle className="mr-2 size-4" />
-                            Escalate
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="bg-success hover:bg-success/90 w-full justify-start"
-                            onClick={() => setIsResolveDialogOpen(true)}
-                          >
-                            <CheckCircle2 className="mr-2 size-4" />
-                            Resolve
-                          </Button>
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Assign Agent Modal */}
       <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>

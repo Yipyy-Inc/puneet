@@ -6,6 +6,7 @@ import {
   facilitySubscriptions,
   getSubscriptionsByStatus,
 } from "@/data/facility-subscriptions";
+import { subscriptionTiers } from "@/data/subscription-tiers";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -115,26 +116,15 @@ export function FacilitySubscriptionsTable() {
     }
   };
 
-  const getTierLimit = (tierId: string, limitType: string): number => {
-    // Mock function - would normally reference subscription-tiers data
-    const limits: Record<string, Record<string, number>> = {
-      "tier-beginner": {
-        maxUsers: 5,
-        maxReservations: 100,
-        storageGB: 5,
-      },
-      "tier-pro": {
-        maxUsers: 20,
-        maxReservations: 500,
-        storageGB: 25,
-      },
-      "tier-enterprise": {
-        maxUsers: -1,
-        maxReservations: -1,
-        storageGB: 100,
-      },
-    };
-    return limits[tierId]?.[limitType] || 0;
+  // Tier limits come from the real subscription-tiers data layer (never a
+  // hardcoded duplicate). Customizations on the subscription still take
+  // precedence at the call sites above.
+  const getTierLimit = (
+    tierId: string,
+    limitType: "maxUsers" | "maxReservations" | "storageGB",
+  ): number => {
+    const tier = subscriptionTiers.find((t) => t.id === tierId);
+    return tier?.limitations[limitType] ?? 0;
   };
 
   const columns: ColumnDef<FacilitySubscription>[] = [

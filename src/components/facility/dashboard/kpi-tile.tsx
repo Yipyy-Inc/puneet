@@ -19,6 +19,8 @@ interface KpiTileProps {
   icon: LucideIcon;
   tone?: KpiTone;
   trail?: { label: string; value: number | string }[];
+  /** Optional colored sub-label below the hint (e.g. an SLA-breach warning). */
+  alert?: { label: string; tone?: "rose" | "amber" };
   onClick?: () => void;
   active?: boolean;
 }
@@ -118,6 +120,7 @@ export function KpiTile({
   icon: Icon,
   tone = "indigo",
   trail,
+  alert,
   onClick,
   active,
 }: KpiTileProps) {
@@ -128,19 +131,33 @@ export function KpiTile({
     <Card
       data-tone={tone}
       data-active={active ? "true" : undefined}
+      role={isInteractive ? "button" : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
       className={cn(
         "group bg-card relative overflow-hidden border transition-all duration-300",
         "hover:-translate-y-0.5 hover:shadow-lg",
+        isInteractive &&
+          "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
         active ? styles.activeBorder : styles.border,
         isInteractive && "cursor-pointer",
         active && "ring-offset-background shadow-md ring-2 ring-offset-2",
         active && styles.activeRing,
       )}
       onClick={onClick}
+      onKeyDown={
+        isInteractive
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
     >
       <div
         className={cn(
-          "pointer-events-none absolute inset-0 bg-gradient-to-br opacity-90",
+          "pointer-events-none absolute inset-0 bg-linear-to-br opacity-90",
           active ? styles.activeHalo : styles.halo,
         )}
       />
@@ -157,12 +174,24 @@ export function KpiTile({
           <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
             {label}
           </p>
-          <p className="text-xl leading-tight font-semibold tracking-tight tabular-nums">
+          <p className="text-xl/tight font-semibold tracking-tight tabular-nums">
             {value}
           </p>
           {hint && (
             <p className="text-muted-foreground line-clamp-1 text-[11px]">
               {hint}
+            </p>
+          )}
+          {alert && (
+            <p
+              className={cn(
+                "line-clamp-1 text-[11px] font-semibold",
+                alert.tone === "amber"
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-rose-600 dark:text-rose-400",
+              )}
+            >
+              {alert.label}
             </p>
           )}
         </div>

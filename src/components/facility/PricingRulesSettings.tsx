@@ -264,13 +264,6 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
     );
   }, [categoriesWithCounts]);
 
-  const visibleCategoryCount = useMemo(() => {
-    return Object.values(filteredGroups).reduce(
-      (total, categories) => total + categories.length,
-      0,
-    );
-  }, [filteredGroups]);
-
   const allServices = [
     { value: "boarding", label: "Boarding" },
     { value: "daycare", label: "Daycare" },
@@ -418,7 +411,7 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
                                       </Badge>
                                     )}
                                   </div>
-                                  <p className="text-muted-foreground mt-0.5 text-[11px] leading-relaxed">
+                                  <p className="text-muted-foreground mt-0.5 text-[11px]/relaxed">
                                     {category.description}
                                   </p>
                                 </div>

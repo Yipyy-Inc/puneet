@@ -353,7 +353,7 @@ export function ExportReportModal({
               />
               <label
                 htmlFor="includeHeaders"
-                className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="cursor-pointer text-sm/none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 Include column headers
               </label>

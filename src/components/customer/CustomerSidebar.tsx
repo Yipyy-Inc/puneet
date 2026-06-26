@@ -97,16 +97,6 @@ export function CustomerSidebar() {
       ),
     ];
 
-    const now = new Date();
-    const dayKey = [
-      "sunday",
-      "monday",
-      "tuesday",
-      "wednesday",
-      "thursday",
-      "friday",
-      "saturday",
-    ][now.getDay()];
     // Operating hours check is intentionally permissive in sidebar — just show the nav item
     const isWithinOperatingHours = true;
 

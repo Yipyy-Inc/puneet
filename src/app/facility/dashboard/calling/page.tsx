@@ -655,7 +655,7 @@ function CallLogDetail({
                 Transcription
               </p>
               <div className="bg-muted/40 border-border/60 rounded-xl border p-3">
-                <p className="text-muted-foreground text-sm leading-relaxed italic">
+                <p className="text-muted-foreground text-sm/relaxed italic">
                   &ldquo;{call.transcription}&rdquo;
                 </p>
               </div>
@@ -884,7 +884,7 @@ export default function CallingPage() {
   const router = useRouter();
   const [incomingCall, setIncomingCall] = useState<ActiveCall | null>(null);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
-  const [callMinimized, setCallMinimized] = useState(false);
+  const [, setCallMinimized] = useState(false);
   // Call log records live in state so a just-ended call (carrying the notes
   // typed during it) can be prepended, its Staff Notes edited in place, and its
   // follow-up status resolved. Seed each record's default follow-up state.

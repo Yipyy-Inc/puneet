@@ -24,8 +24,6 @@ export function OperationsCalendarToolbar({
   view,
   onViewChange,
   onToday,
-  onStep,
-  rangeLabel,
   searchTerm,
   onSearchTermChange,
   showFilters,

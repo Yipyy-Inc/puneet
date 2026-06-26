@@ -140,10 +140,10 @@ export function TipWizardContent({
 
   return (
     /* -m-6 escapes the p-6 wrapper so the gradient fills the full content panel */
-    <div className="from-primary/20 via-primary/8 to-primary/3 flex h-full bg-gradient-to-br">
+    <div className="from-primary/20 via-primary/8 to-primary/3 flex h-full bg-linear-to-br">
       <div className="bg-background flex h-full w-full flex-col sm:flex-row">
         {/* ── Left panel: emotional context ── */}
-        <div className="from-primary/25 to-primary/10 flex flex-col items-center justify-center gap-6 border-b bg-gradient-to-b px-8 py-10 text-center sm:h-full sm:w-[42%] sm:border-r sm:border-b-0">
+        <div className="from-primary/25 to-primary/10 flex flex-col items-center justify-center gap-6 border-b bg-linear-to-b px-8 py-10 text-center sm:h-full sm:w-[42%] sm:border-r sm:border-b-0">
           {/* Icon */}
           <div className="bg-primary/20 ring-primary/25 relative flex size-18 items-center justify-center rounded-full ring-4">
             <Heart className="text-primary size-9 fill-current" />

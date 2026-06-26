@@ -333,7 +333,7 @@ export function SessionHomeworkPromptDialog({
             <BookOpen className="size-5 text-indigo-600" />
             Assign homework for the week
           </DialogTitle>
-          <DialogDescription className="text-sm leading-relaxed">
+          <DialogDescription className="text-sm/relaxed">
             One or more exercises go out to every present student in{" "}
             <span className="font-medium">{className}</span>. Owners see them on
             their portal Homework tab. You can skip any student below.
@@ -598,7 +598,7 @@ export function SessionHomeworkPromptDialog({
                             })
                           }
                           placeholder={`Start with a 30-second sit\nReward eye contact`}
-                          className="min-h-[72px] text-sm leading-relaxed"
+                          className="min-h-[72px] text-sm/relaxed"
                         />
                       </div>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -615,7 +615,7 @@ export function SessionHomeworkPromptDialog({
                               })
                             }
                             placeholder="https://…"
-                            className="min-h-[56px] text-[12.5px] leading-relaxed"
+                            className="min-h-[56px] text-[12.5px]/relaxed"
                           />
                         </div>
                         <div className="space-y-1.5">

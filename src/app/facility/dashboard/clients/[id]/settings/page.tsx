@@ -468,7 +468,7 @@ export default function FacilityClientSettingsPage({
                   }
                   disabled={!settings.autoTip.enabled}
                   className={cn(
-                    settings.autoTip.type === "fixed" ? "pr-9 pl-9" : "pr-9",
+                    settings.autoTip.type === "fixed" ? "px-9" : "pr-9",
                   )}
                 />
                 <span className="text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2 text-sm">

@@ -1,9 +1,21 @@
 "use client";
 
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { facilitiesQueries } from "@/lib/api/facilities";
+import { GenerateReportModal } from "@/components/facility/GenerateReportModal";
 import {
   FileText,
   Download,
@@ -105,231 +117,31 @@ const COLORS = [
   "#ec4899",
 ];
 
-// Mock data generator based on facility ID
-const generateFacilityReportData = (facilityId: number) => {
-  const baseMultiplier = 1 + (facilityId % 3) * 0.2;
-
-  return {
-    summary: {
-      totalRevenue: Math.round(145000 * baseMultiplier),
-      revenueGrowth: 12.5 + (facilityId % 5),
-      totalBookings: Math.round(842 * baseMultiplier),
-      bookingGrowth: 8.2 + (facilityId % 4),
-      activeClients: Math.round(234 * baseMultiplier),
-      clientGrowth: 15.3 - (facilityId % 3),
-      avgBookingValue: Math.round(125 * baseMultiplier),
-    },
-    revenueByService: [
-      {
-        name: "Boarding",
-        value: Math.round(52000 * baseMultiplier),
-        percentage: 36,
-      },
-      {
-        name: "Grooming",
-        value: Math.round(38000 * baseMultiplier),
-        percentage: 26,
-      },
-      {
-        name: "Daycare",
-        value: Math.round(31000 * baseMultiplier),
-        percentage: 21,
-      },
-      {
-        name: "Training",
-        value: Math.round(24000 * baseMultiplier),
-        percentage: 17,
-      },
-    ],
-    monthlyRevenue: [
-      {
-        month: "Jun",
-        revenue: Math.round(18500 * baseMultiplier),
-        bookings: Math.round(120 * baseMultiplier),
-      },
-      {
-        month: "Jul",
-        revenue: Math.round(21200 * baseMultiplier),
-        bookings: Math.round(138 * baseMultiplier),
-      },
-      {
-        month: "Aug",
-        revenue: Math.round(24800 * baseMultiplier),
-        bookings: Math.round(152 * baseMultiplier),
-      },
-      {
-        month: "Sep",
-        revenue: Math.round(22100 * baseMultiplier),
-        bookings: Math.round(145 * baseMultiplier),
-      },
-      {
-        month: "Oct",
-        revenue: Math.round(26500 * baseMultiplier),
-        bookings: Math.round(168 * baseMultiplier),
-      },
-      {
-        month: "Nov",
-        revenue: Math.round(31900 * baseMultiplier),
-        bookings: Math.round(185 * baseMultiplier),
-      },
-    ],
-    bookingsByDay: [
-      {
-        day: "Mon",
-        bookings: Math.round(98 * baseMultiplier),
-        completed: Math.round(92 * baseMultiplier),
-      },
-      {
-        day: "Tue",
-        bookings: Math.round(112 * baseMultiplier),
-        completed: Math.round(105 * baseMultiplier),
-      },
-      {
-        day: "Wed",
-        bookings: Math.round(125 * baseMultiplier),
-        completed: Math.round(118 * baseMultiplier),
-      },
-      {
-        day: "Thu",
-        bookings: Math.round(118 * baseMultiplier),
-        completed: Math.round(112 * baseMultiplier),
-      },
-      {
-        day: "Fri",
-        bookings: Math.round(156 * baseMultiplier),
-        completed: Math.round(148 * baseMultiplier),
-      },
-      {
-        day: "Sat",
-        bookings: Math.round(142 * baseMultiplier),
-        completed: Math.round(135 * baseMultiplier),
-      },
-      {
-        day: "Sun",
-        bookings: Math.round(91 * baseMultiplier),
-        completed: Math.round(86 * baseMultiplier),
-      },
-    ],
-    clientGrowth: [
-      {
-        month: "Jun",
-        newClients: Math.round(28 * baseMultiplier),
-        returning: Math.round(145 * baseMultiplier),
-      },
-      {
-        month: "Jul",
-        newClients: Math.round(35 * baseMultiplier),
-        returning: Math.round(152 * baseMultiplier),
-      },
-      {
-        month: "Aug",
-        newClients: Math.round(42 * baseMultiplier),
-        returning: Math.round(168 * baseMultiplier),
-      },
-      {
-        month: "Sep",
-        newClients: Math.round(38 * baseMultiplier),
-        returning: Math.round(175 * baseMultiplier),
-      },
-      {
-        month: "Oct",
-        newClients: Math.round(45 * baseMultiplier),
-        returning: Math.round(182 * baseMultiplier),
-      },
-      {
-        month: "Nov",
-        newClients: Math.round(52 * baseMultiplier),
-        returning: Math.round(195 * baseMultiplier),
-      },
-    ],
-    topClients: [
-      {
-        name: "Johnson Family",
-        visits: 24,
-        spent: Math.round(2850 * baseMultiplier),
-      },
-      {
-        name: "Smith Household",
-        visits: 18,
-        spent: Math.round(2120 * baseMultiplier),
-      },
-      {
-        name: "Williams Family",
-        visits: 15,
-        spent: Math.round(1890 * baseMultiplier),
-      },
-      {
-        name: "Brown Residence",
-        visits: 12,
-        spent: Math.round(1560 * baseMultiplier),
-      },
-      {
-        name: "Davis Family",
-        visits: 11,
-        spent: Math.round(1320 * baseMultiplier),
-      },
-    ],
-    recentReports: [
-      {
-        id: 1,
-        name: "Monthly Revenue Summary",
-        type: "Financial",
-        generatedAt: "Nov 26, 2025",
-        status: "completed",
-      },
-      {
-        id: 2,
-        name: "Client Retention Analysis",
-        type: "Customer",
-        generatedAt: "Nov 24, 2025",
-        status: "completed",
-      },
-      {
-        id: 3,
-        name: "Service Utilization Report",
-        type: "Operations",
-        generatedAt: "Nov 22, 2025",
-        status: "completed",
-      },
-      {
-        id: 4,
-        name: "Staff Performance Review",
-        type: "Performance",
-        generatedAt: "Nov 20, 2025",
-        status: "completed",
-      },
-    ],
-    scheduledReports: [
-      {
-        id: 1,
-        name: "Weekly Booking Summary",
-        frequency: "Weekly",
-        nextRun: "Dec 2, 2025",
-        recipients: 2,
-      },
-      {
-        id: 2,
-        name: "Monthly Financial Report",
-        frequency: "Monthly",
-        nextRun: "Dec 1, 2025",
-        recipients: 3,
-      },
-    ],
-    bookingMetrics: {
-      completionRate: 92.5,
-      cancellationRate: 7.5,
-      noShowRate: 2.1,
-    },
-  };
-};
-
 export function FacilityReports({
   facilityId,
   facilityName,
 }: FacilityReportsProps) {
-  const data = generateFacilityReportData(facilityId);
+  const [rangeMonths, setRangeMonths] = useState(6);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const { data, isLoading } = useQuery(
+    facilitiesQueries.report(facilityId, rangeMonths),
+  );
 
   const formatCurrency = formatCurrencyValue;
+
+  if (isLoading || !data) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-muted h-9 w-72 animate-pulse rounded-lg" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-muted h-28 animate-pulse rounded-2xl" />
+          ))}
+        </div>
+        <div className="bg-muted h-80 animate-pulse rounded-2xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -344,16 +156,38 @@ export function FacilityReports({
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
-            <Calendar className="size-4" />
-            Last 6 Months
-          </Button>
-          <Button size="sm" className="gap-2">
+          <Select
+            value={String(rangeMonths)}
+            onValueChange={(v) => setRangeMonths(Number(v))}
+          >
+            <SelectTrigger className="h-8 w-[180px] gap-2">
+              <Calendar className="size-4" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">Last 30 days</SelectItem>
+              <SelectItem value="3">Last 3 months</SelectItem>
+              <SelectItem value="6">Last 6 months</SelectItem>
+              <SelectItem value="12">Last 12 months</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={() => setReportModalOpen(true)}
+          >
             <FileText className="size-4" />
             Generate Report
           </Button>
         </div>
       </div>
+
+      <GenerateReportModal
+        open={reportModalOpen}
+        onOpenChange={setReportModalOpen}
+        facilityId={facilityId}
+        facilityName={facilityName}
+      />
 
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

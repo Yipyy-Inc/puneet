@@ -271,7 +271,7 @@ export function TemplateEditorDialog({
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 rows={14}
-                className="font-mono text-sm leading-relaxed"
+                className="font-mono text-sm/relaxed"
               />
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-muted-foreground text-xs">

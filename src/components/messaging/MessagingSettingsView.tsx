@@ -154,7 +154,7 @@ function SavedReplyEditor({
         />
         <p className="text-[10px] text-slate-400">
           Staff types{" "}
-          <code className="rounded bg-slate-100 px-1">
+          <code className="rounded-sm bg-slate-100 px-1">
             /{shortcut || "shortcut"}
           </code>{" "}
           to insert this reply.
@@ -172,9 +172,10 @@ function SavedReplyEditor({
         />
         <p className="text-[10px] text-slate-400">
           Use{" "}
-          <code className="rounded bg-slate-100 px-1">{`{ClientName}`}</code>{" "}
-          and <code className="rounded bg-slate-100 px-1">{`{PetName}`}</code>{" "}
-          to personalize.
+          <code className="rounded-sm bg-slate-100 px-1">{`{ClientName}`}</code>{" "}
+          and{" "}
+          <code className="rounded-sm bg-slate-100 px-1">{`{PetName}`}</code> to
+          personalize.
         </p>
       </div>
 
@@ -452,8 +453,8 @@ export function MessagingSettingsView() {
         <CardContent>
           <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-700">
             Tip: staff type{" "}
-            <code className="rounded bg-blue-100 px-1 font-semibold">/</code> in
-            the compose box to bring up this menu instantly. They can also
+            <code className="rounded-sm bg-blue-100 px-1 font-semibold">/</code>{" "}
+            in the compose box to bring up this menu instantly. They can also
             &quot;Save as reply&quot; from any message they&#39;ve drafted.
           </div>
 

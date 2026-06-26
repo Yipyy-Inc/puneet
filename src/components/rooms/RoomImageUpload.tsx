@@ -64,9 +64,7 @@ export function RoomImageUpload({
   if (value) {
     return (
       <div className="space-y-1.5">
-        {!compact && (
-          <p className="text-sm leading-none font-medium">{label}</p>
-        )}
+        {!compact && <p className="text-sm/none font-medium">{label}</p>}
         <div
           className={cn(
             "group bg-muted/20 relative overflow-hidden rounded-xl border",
@@ -155,7 +153,7 @@ export function RoomImageUpload({
 
   return (
     <div className="space-y-1.5">
-      <p className="text-sm leading-none font-medium">{label}</p>
+      <p className="text-sm/none font-medium">{label}</p>
       <button
         type="button"
         onClick={() => inputRef.current?.click()}

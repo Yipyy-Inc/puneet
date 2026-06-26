@@ -168,7 +168,7 @@ function ActorBadge({ name, role }: { name: string; role: string }) {
       <span className="text-foreground font-medium">{name}</span>
       <span
         className={cn(
-          "rounded px-1.5 py-0.5 text-[10px] font-medium capitalize",
+          "rounded-sm px-1.5 py-0.5 text-[10px] font-medium capitalize",
           roleTone,
         )}
       >
@@ -376,7 +376,7 @@ export function StaffAuditTrail({ staffId }: StaffAuditTrailProps) {
         subjectId: staffId,
         action: filter === "all" ? undefined : filter,
       }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     [staffId, filter],
   );
 

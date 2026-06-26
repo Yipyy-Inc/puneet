@@ -21,7 +21,6 @@ import { TagList } from "@/components/shared/TagList";
 import { clients } from "@/data/clients";
 import type { CustomServiceModule } from "@/types/facility";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
-import { getCategoryMeta, COLOR_HEX_MAP } from "@/data/custom-services";
 import {
   customServiceCheckIns,
   type CustomServiceCheckInStatus,
@@ -47,26 +46,6 @@ interface CustomServiceDashboardSectionProps {
   module: CustomServiceModule;
 }
 
-const STATUS_STYLES: Record<CustomServiceCheckInStatus, string> = {
-  scheduled:
-    "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
-  "checked-in":
-    "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
-  "in-progress":
-    "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-  completed: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-  "checked-out":
-    "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400",
-};
-
-const STATUS_LABELS: Record<CustomServiceCheckInStatus, string> = {
-  scheduled: "Not Checked-In",
-  "checked-in": "Checked In",
-  "in-progress": "In Progress",
-  completed: "Completed",
-  "checked-out": "Checked Out",
-};
-
 function formatTime(isoStr: string): string {
   return new Date(isoStr).toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -79,9 +58,7 @@ export const CustomServiceDashboardSection = memo(
   function CustomServiceDashboardSection({
     module,
   }: CustomServiceDashboardSectionProps) {
-    const catMeta = getCategoryMeta(module.category);
     const viewAllUrl = `/facility/dashboard/services/custom/${module.slug}`;
-    const accentColor = COLOR_HEX_MAP[module.iconColor] ?? catMeta?.color;
 
     // Real check-in data for this module with local state for transitions
     const initialCheckIns = useMemo(

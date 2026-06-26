@@ -321,7 +321,7 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
                   onChange({ ...EMPTY_VALUE });
                   setAddingNewClient(false);
                 }}
-                className="text-muted-foreground hover:bg-muted flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px]"
+                className="text-muted-foreground hover:bg-muted flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[11px]"
               >
                 <ArrowLeft className="size-3" />
                 Search instead
@@ -654,7 +654,7 @@ function NewPetForm({
           <button
             type="button"
             onClick={onCancel}
-            className="text-muted-foreground hover:bg-muted flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px]"
+            className="text-muted-foreground hover:bg-muted flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[11px]"
           >
             <ArrowLeft className="size-3" />
             Pick from list

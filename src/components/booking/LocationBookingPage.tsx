@@ -181,7 +181,7 @@ export function LocationBookingPage({ location }: { location: Location }) {
               <Calendar className="text-muted-foreground size-4" />
               <p className="text-sm font-semibold">About this booking page</p>
             </div>
-            <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+            <p className="text-muted-foreground mt-2 text-xs/relaxed">
               You&apos;re booking with{" "}
               <strong style={{ color: location.color }}>{location.name}</strong>
               . If you usually visit a different Doggieville location, use the

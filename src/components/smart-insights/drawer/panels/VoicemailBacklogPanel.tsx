@@ -129,7 +129,7 @@ export function VoicemailBacklogPanel({
         </p>
       </div>
 
-      <ul className="max-h-[26rem] space-y-2 overflow-y-auto">
+      <ul className="max-h-104 space-y-2 overflow-y-auto">
         {VOICEMAILS.map((v) => {
           const isHandled = handled.has(v.id);
           const isOld = v.ageHours >= 48;

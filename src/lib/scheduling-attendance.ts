@@ -30,11 +30,6 @@ const EARLY_DEPARTURE_THRESHOLD_MIN = 5;
 const STAYED_LATE_THRESHOLD_MIN = 15;
 const NO_SHOW_GRACE_MIN = 30;
 
-function toMinutes(time: string): number {
-  const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
-}
-
 function diffMin(
   actualIso: string,
   scheduledDate: string,

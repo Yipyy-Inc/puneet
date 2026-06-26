@@ -200,7 +200,7 @@ export function StudentAttendanceCard({
           {/* Identity */}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <p className="truncate text-sm leading-tight font-semibold">
+              <p className="truncate text-sm/tight font-semibold">
                 {row.petName}
               </p>
               {isDropIn && (

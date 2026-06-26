@@ -367,18 +367,6 @@ export function GroomingSection() {
     setSelectedAppointment(null);
   };
 
-  const handleMarkPending = (appointment: GroomingAppointmentWithPending) => {
-    setSelectedAppointment(appointment);
-    setIsDetailsModalOpen(false);
-    setIsCheckInModalOpen(true);
-  };
-
-  const handleStartGrooming = (appointment: GroomingAppointmentWithPending) => {
-    setSelectedAppointment(appointment);
-    setIsDetailsModalOpen(false);
-    setIsCheckInModalOpen(true);
-  };
-
   const handleViewDetails = (appointment: GroomingAppointmentWithPending) => {
     const bookingHref = getBookingOverviewHref({
       petId: appointment.petId,

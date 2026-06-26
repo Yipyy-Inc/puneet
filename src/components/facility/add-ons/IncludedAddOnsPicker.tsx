@@ -105,7 +105,7 @@ export function IncludedAddOnsPicker({
               >
                 <div
                   className={cn(
-                    "flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors",
+                    "flex size-5 shrink-0 items-center justify-center rounded-sm border-2 transition-colors",
                     selected
                       ? "border-emerald-600 bg-emerald-600"
                       : "border-muted-foreground/30",

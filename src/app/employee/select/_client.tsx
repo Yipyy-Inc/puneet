@@ -102,7 +102,7 @@ export function EmployeeSelectClient() {
   };
 
   return (
-    <div className="from-background to-muted/30 flex min-h-screen flex-col items-center justify-start bg-gradient-to-br p-6 pt-16">
+    <div className="from-background to-muted/30 flex min-h-screen flex-col items-center justify-start bg-linear-to-br p-6 pt-16">
       <div className="w-full max-w-4xl">
         <div className="mb-8 text-center">
           <div className="bg-primary/10 mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl">

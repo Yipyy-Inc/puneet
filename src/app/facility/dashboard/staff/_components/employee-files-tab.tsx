@@ -233,7 +233,7 @@ function DocumentCard({
             <button
               type="button"
               onClick={() => onDelete(doc.id)}
-              className="text-muted-foreground hover:text-destructive rounded p-1 transition-colors"
+              className="text-muted-foreground hover:text-destructive rounded-sm p-1 transition-colors"
               aria-label="Delete document"
             >
               <Trash2 className="size-3.5" />

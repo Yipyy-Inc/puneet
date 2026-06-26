@@ -270,7 +270,7 @@ function DefaultAddOnRuleRow({
           {conditions.map((c, i) => (
             <li
               key={i}
-              className="bg-muted/40 flex items-center justify-between gap-2 rounded px-2 py-1 text-[10px]"
+              className="bg-muted/40 flex items-center justify-between gap-2 rounded-sm px-2 py-1 text-[10px]"
             >
               <span>{describeAddOnConditions([c])}</span>
               <button
@@ -1146,7 +1146,7 @@ export function ServiceDialog({
                         key={id}
                         className="flex items-center gap-4 px-4 py-2.5"
                       >
-                        <div className="w-28 flex-shrink-0">
+                        <div className="w-28 shrink-0">
                           <p className="text-xs font-medium">{label}</p>
                           <p className="text-muted-foreground text-[10px]">
                             {maxWeightLbs
@@ -1226,7 +1226,7 @@ export function ServiceDialog({
                           key={key}
                           className="flex items-center gap-4 px-4 py-2"
                         >
-                          <p className="w-20 flex-shrink-0 text-xs font-medium">
+                          <p className="w-20 shrink-0 text-xs font-medium">
                             {label}
                           </p>
                           <div className="relative max-w-[140px] flex-1">
@@ -1360,7 +1360,7 @@ export function ServiceDialog({
                           ),
                         )}
                       </datalist>
-                      <div className="relative w-24 flex-shrink-0">
+                      <div className="relative w-24 shrink-0">
                         <DollarSign className="text-muted-foreground absolute top-1/2 left-2 size-3 -translate-y-1/2" />
                         <Input
                           type="number"
@@ -1374,7 +1374,7 @@ export function ServiceDialog({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 flex-shrink-0 px-3"
+                        className="h-8 shrink-0 px-3"
                         onClick={addBreedOverride}
                       >
                         <Plus className="size-3" />

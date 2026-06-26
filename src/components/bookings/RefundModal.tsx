@@ -45,7 +45,6 @@ type RefundMethod = "original" | "store_credit" | "cash";
 export function RefundModal({
   open,
   onOpenChange,
-  invoiceTotal,
   amountPaid,
   items,
   onConfirm,

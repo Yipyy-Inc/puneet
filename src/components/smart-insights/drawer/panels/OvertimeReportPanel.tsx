@@ -66,8 +66,6 @@ const OT_ROWS: OvertimeRow[] = [
   },
 ];
 
-const TOTAL_OT_COST = OT_ROWS.reduce((s, r) => s + r.otCost, 0);
-
 type Mode = "report" | "redistribute";
 
 export function OvertimeReportPanel({

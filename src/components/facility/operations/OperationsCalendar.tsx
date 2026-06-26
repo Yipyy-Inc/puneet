@@ -578,7 +578,7 @@ export function OperationsCalendar() {
     useState<CalendarVisibilityScope>("full-facility");
   const [visibilityRoles, setVisibilityRoles] = useState<string[]>([]);
 
-  const [axisMode, setAxisMode] = useState<CalendarAxisMode>(() => {
+  const [axisMode] = useState<CalendarAxisMode>(() => {
     return "master";
   });
 
@@ -675,7 +675,6 @@ export function OperationsCalendar() {
     return false;
   });
 
-  const [showEventCreator, setShowEventCreator] = useState(false);
   const [manualEventDraft, setManualEventDraft] = useState(DEFAULT_DRAFT);
   const [manualFacilityEvents, setManualFacilityEvents] = useState<
     ManualFacilityEvent[]
@@ -754,9 +753,6 @@ export function OperationsCalendar() {
     () => buildPermissionSet(permissionLevel),
     [permissionLevel],
   );
-
-  const canCreateFacilityViews = permissions.canManageFacilitySavedViews;
-  const canCreateBookingShortcut = permissions.canEditBookings;
 
   const generatedWorkflowTasks = useMemo(
     () =>

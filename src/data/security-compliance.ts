@@ -370,39 +370,139 @@ export const securityAlerts: SecurityAlert[] = [
   },
 ];
 
-export const securityDashboardStats: SecurityDashboardStats = {
-  totalFailedLogins: 3456,
-  failedLoginsToday: 42,
-  activeAlerts: 7,
-  criticalAlerts: 2,
-  activeSessions: 156,
-  blockedIPs: 23,
-  securityScore: 87,
-  breachesThisMonth: 2,
-  mfaAdoptionRate: 78,
-  weeklyFailedLogins: [
-    { date: "2024-11-22", count: 38 },
-    { date: "2024-11-23", count: 45 },
-    { date: "2024-11-24", count: 52 },
-    { date: "2024-11-25", count: 41 },
-    { date: "2024-11-26", count: 48 },
-    { date: "2024-11-27", count: 55 },
-    { date: "2024-11-28", count: 42 },
-  ],
-  alertsByType: [
-    { type: "Multiple Failed Logins", count: 145, percentage: 35 },
-    { type: "Suspicious Login", count: 120, percentage: 29 },
-    { type: "Unusual Activity", count: 87, percentage: 21 },
-    { type: "Data Access Violation", count: 42, percentage: 10 },
-    { type: "Permission Escalation", count: 21, percentage: 5 },
-  ],
-  topThreats: [
-    { threat: "Brute Force Attacks", count: 145, severity: "High" },
-    { threat: "Credential Stuffing", count: 89, severity: "Medium" },
-    { threat: "SQL Injection Attempts", count: 34, severity: "Critical" },
-    { threat: "XSS Attempts", count: 28, severity: "Medium" },
-  ],
+// Security dashboard rollups are COMPUTED from the records above
+// (failedLoginAttempts, securityAlerts, activeSessions, mfaSettings) — counts,
+// trends, breakdowns and the composite score are never hardcoded (global rule:
+// a hardcoded aggregate is a bug). Time-relative metrics use the data's own
+// latest day as the reference window so they reflect the actual records.
+const SECURITY_SEVERITY_ORDER: Record<SecurityAlert["severity"], number> = {
+  Low: 0,
+  Medium: 1,
+  High: 2,
+  Critical: 3,
 };
+function computeSecurityDashboardStats(): SecurityDashboardStats {
+  const DAY = 86_400_000;
+  const dayStart = (t: number) => {
+    const d = new Date(t);
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  };
+  const isoDay = (t: number) => new Date(t).toISOString().slice(0, 10);
+  const inDay = (t: number, start: number) => t >= start && t < start + DAY;
+
+  // --- Failed logins ---
+  const loginTimes = failedLoginAttempts.map((f) =>
+    new Date(f.attemptTime).getTime(),
+  );
+  const refDay = loginTimes.length ? dayStart(Math.max(...loginTimes)) : 0;
+  const totalFailedLogins = failedLoginAttempts.reduce(
+    (a, f) => a + f.attemptCount,
+    0,
+  );
+  const failedLoginsToday = failedLoginAttempts
+    .filter((f) => inDay(new Date(f.attemptTime).getTime(), refDay))
+    .reduce((a, f) => a + f.attemptCount, 0);
+  const blockedIPs = new Set(
+    failedLoginAttempts.filter((f) => f.isBlocked).map((f) => f.ipAddress),
+  ).size;
+  const weeklyFailedLogins = Array.from({ length: 7 }, (_, i) => {
+    const start = refDay - (6 - i) * DAY;
+    return {
+      date: isoDay(start),
+      count: failedLoginAttempts
+        .filter((f) => inDay(new Date(f.attemptTime).getTime(), start))
+        .reduce((a, f) => a + f.attemptCount, 0),
+    };
+  });
+  const highSeverityFails = failedLoginAttempts.filter(
+    (f) => f.severity === "High" || f.severity === "Critical",
+  ).length;
+
+  // --- Alerts ---
+  const isActive = (a: SecurityAlert) =>
+    a.status !== "Resolved" && a.status !== "Dismissed";
+  const activeAlerts = securityAlerts.filter(isActive).length;
+  const criticalAlerts = securityAlerts.filter(
+    (a) => isActive(a) && a.severity === "Critical",
+  ).length;
+  const breachesThisMonth = securityAlerts.filter(
+    (a) => a.severity === "Critical",
+  ).length;
+  const totalAlerts = securityAlerts.length;
+
+  const typeMap = new Map<string, number>();
+  for (const a of securityAlerts)
+    typeMap.set(a.alertType, (typeMap.get(a.alertType) ?? 0) + 1);
+  const alertsByType = [...typeMap.entries()]
+    .map(([type, count]) => ({
+      type,
+      count,
+      percentage: totalAlerts ? Math.round((count / totalAlerts) * 100) : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const threatMap = new Map<
+    string,
+    { count: number; severity: SecurityAlert["severity"] }
+  >();
+  for (const a of securityAlerts) {
+    const cur = threatMap.get(a.alertType) ?? {
+      count: 0,
+      severity: "Low" as SecurityAlert["severity"],
+    };
+    cur.count += 1;
+    if (
+      SECURITY_SEVERITY_ORDER[a.severity] >
+      SECURITY_SEVERITY_ORDER[cur.severity]
+    )
+      cur.severity = a.severity;
+    threatMap.set(a.alertType, cur);
+  }
+  const topThreats = [...threatMap.entries()]
+    .map(([threat, v]) => ({ threat, count: v.count, severity: v.severity }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  // --- Sessions / MFA / composite score ---
+  const activeSessionCount = activeSessions.filter(
+    (s) => s.status === "Active",
+  ).length;
+  const mfaAdoptionRate = mfaSettings.length
+    ? Math.round(
+        (mfaSettings.filter((m) => m.mfaEnabled).length / mfaSettings.length) *
+          100,
+      )
+    : 0;
+  const alertComponent = Math.max(
+    0,
+    100 - (activeAlerts * 10 + criticalAlerts * 15),
+  );
+  const loginComponent = Math.max(
+    0,
+    100 - (blockedIPs * 10 + highSeverityFails * 5),
+  );
+  const securityScore = Math.round(
+    mfaAdoptionRate * 0.4 + alertComponent * 0.3 + loginComponent * 0.3,
+  );
+
+  return {
+    totalFailedLogins,
+    failedLoginsToday,
+    activeAlerts,
+    criticalAlerts,
+    activeSessions: activeSessionCount,
+    blockedIPs,
+    securityScore,
+    breachesThisMonth,
+    mfaAdoptionRate,
+    weeklyFailedLogins,
+    alertsByType,
+    topThreats,
+  };
+}
+
+export const securityDashboardStats: SecurityDashboardStats =
+  computeSecurityDashboardStats();
 
 export const gdprCompliance: GDPRCompliance[] = [
   {
@@ -1059,18 +1159,69 @@ export const dataSubjectRequests: DataSubjectRequest[] = [
   },
 ];
 
-export const dataSubjectRequestStats: DataSubjectRequestStats = {
-  totalRequests: 156,
-  pendingRequests: 8,
-  inProgressRequests: 12,
-  completedRequests: 128,
-  rejectedRequests: 8,
-  avgCompletionDays: 4.2,
-  exportRequests: 89,
-  deletionRequests: 52,
-  rectificationRequests: 15,
-  complianceRate: 98.5,
-  overdueRequests: 0,
-  thisMonthRequests: 23,
-  lastMonthRequests: 31,
-};
+// GDPR request stats are COMPUTED from the dataSubjectRequests records above —
+// counts, type breakdown, avg completion time and compliance rate are never
+// hardcoded. "Overdue / this-month" use the data's own latest submission as the
+// reference window.
+function computeDataSubjectRequestStats(): DataSubjectRequestStats {
+  const reqs = dataSubjectRequests;
+  const total = reqs.length;
+  const DAY = 86_400_000;
+  const byStatus = (s: DataSubjectRequest["status"]) =>
+    reqs.filter((r) => r.status === s).length;
+  const byType = (t: DataSubjectRequest["requestType"]) =>
+    reqs.filter((r) => r.requestType === t).length;
+
+  const subTimes = reqs.map((r) => new Date(r.submittedAt).getTime());
+  const refNow = subTimes.length ? Math.max(...subTimes) : 0;
+  const monthKey = (t: number) => {
+    const d = new Date(t);
+    return d.getUTCFullYear() * 12 + d.getUTCMonth();
+  };
+  const refMonth = monthKey(refNow);
+
+  const durations = reqs.flatMap((r) => {
+    if (r.status !== "Completed" || !r.completedAt) return [];
+    return [
+      (new Date(r.completedAt).getTime() - new Date(r.submittedAt).getTime()) /
+        DAY,
+    ];
+  });
+  const avgCompletionDays = durations.length
+    ? Math.round(
+        (durations.reduce((a, b) => a + b, 0) / durations.length) * 10,
+      ) / 10
+    : 0;
+
+  const overdueRequests = reqs.filter(
+    (r) =>
+      r.status !== "Completed" &&
+      r.status !== "Rejected" &&
+      new Date(r.deadline).getTime() < refNow,
+  ).length;
+
+  return {
+    totalRequests: total,
+    pendingRequests: byStatus("Pending"),
+    inProgressRequests: byStatus("In Progress"),
+    completedRequests: byStatus("Completed"),
+    rejectedRequests: byStatus("Rejected"),
+    avgCompletionDays,
+    exportRequests: byType("Export"),
+    deletionRequests: byType("Deletion"),
+    rectificationRequests: byType("Rectification"),
+    complianceRate: total
+      ? Math.round(((total - overdueRequests) / total) * 1000) / 10
+      : 100,
+    overdueRequests,
+    thisMonthRequests: reqs.filter(
+      (r) => monthKey(new Date(r.submittedAt).getTime()) === refMonth,
+    ).length,
+    lastMonthRequests: reqs.filter(
+      (r) => monthKey(new Date(r.submittedAt).getTime()) === refMonth - 1,
+    ).length,
+  };
+}
+
+export const dataSubjectRequestStats: DataSubjectRequestStats =
+  computeDataSubjectRequestStats();

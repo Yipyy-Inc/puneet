@@ -494,7 +494,7 @@ export default function StylistsPage() {
       render: (groomer) => {
         const weekly = groomer.capacity.maxWeeklyAppointments;
         return (
-          <div className="text-sm leading-tight">
+          <div className="text-sm/tight">
             <div>
               <span className="font-medium">
                 {groomer.capacity.maxDailyAppointments}
@@ -593,7 +593,7 @@ export default function StylistsPage() {
               ? groomer.rating.toFixed(1)
               : "—";
         return (
-          <div className="text-xs leading-tight">
+          <div className="text-xs/tight">
             <div>
               <span className="font-semibold tabular-nums">
                 {s.completedCount}

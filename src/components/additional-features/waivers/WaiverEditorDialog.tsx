@@ -309,7 +309,7 @@ export function WaiverEditorDialog({
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 rows={14}
-                className="font-mono text-sm leading-relaxed"
+                className="font-mono text-sm/relaxed"
                 placeholder="Write the waiver text. Use **bold lines** for section titles and `- item` for bullets."
               />
               <div className="flex flex-wrap items-center gap-1.5">

@@ -93,11 +93,6 @@ export default function AiSettingsPage() {
     );
   };
 
-  const maskKey = (key: string) => {
-    if (!key) return "Not set";
-    return `${key.slice(0, 12)}${"*".repeat(20)}${key.slice(-4)}`;
-  };
-
   return (
     <div className="flex-1 space-y-6 p-6">
       {/* Header */}

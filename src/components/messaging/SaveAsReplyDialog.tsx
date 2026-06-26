@@ -130,9 +130,9 @@ export function SaveAsReplyDialog({
             />
             <p className="text-[10px] text-slate-400">
               Use{" "}
-              <code className="rounded bg-slate-100 px-1">{`{ClientName}`}</code>{" "}
+              <code className="rounded-sm bg-slate-100 px-1">{`{ClientName}`}</code>{" "}
               and{" "}
-              <code className="rounded bg-slate-100 px-1">{`{PetName}`}</code>{" "}
+              <code className="rounded-sm bg-slate-100 px-1">{`{PetName}`}</code>{" "}
               to personalize on the fly.
             </p>
           </div>
