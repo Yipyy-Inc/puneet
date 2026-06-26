@@ -249,18 +249,18 @@ export default function AutomationsPage() {
 
       {/* Automation Categories */}
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsList className="rounded-xl border bg-gradient-to-r from-sky-50/60 via-white to-orange-50/40 px-2 py-1">
+        <TabsList className="rounded-xl border bg-linear-to-r from-sky-50/60 via-white to-orange-50/40 px-2 py-1">
           <TabsTrigger
             value="all"
             onClick={() => setFilterCategory("all")}
-            className="data-[state=active]:!border-sky-500 data-[state=active]:bg-sky-50/70 data-[state=active]:!text-sky-700"
+            className="data-[state=active]:border-sky-500! data-[state=active]:bg-sky-50/70 data-[state=active]:text-sky-700!"
           >
             All Rules
           </TabsTrigger>
           <TabsTrigger
             value="booking"
             onClick={() => setFilterCategory("booking")}
-            className="data-[state=active]:!border-blue-500 data-[state=active]:bg-blue-50/70 data-[state=active]:!text-blue-700"
+            className="data-[state=active]:border-blue-500! data-[state=active]:bg-blue-50/70 data-[state=active]:text-blue-700!"
           >
             <Calendar className="mr-2 size-4" />
             Booking & Check-ins
@@ -268,7 +268,7 @@ export default function AutomationsPage() {
           <TabsTrigger
             value="reminder"
             onClick={() => setFilterCategory("reminder")}
-            className="data-[state=active]:!border-amber-500 data-[state=active]:bg-amber-50/70 data-[state=active]:!text-amber-700"
+            className="data-[state=active]:border-amber-500! data-[state=active]:bg-amber-50/70 data-[state=active]:text-amber-700!"
           >
             <Clock className="mr-2 size-4" />
             Reminders
@@ -276,7 +276,7 @@ export default function AutomationsPage() {
           <TabsTrigger
             value="rebook"
             onClick={() => setFilterCategory("rebook")}
-            className="data-[state=active]:!border-violet-500 data-[state=active]:bg-violet-50/70 data-[state=active]:!text-violet-700"
+            className="data-[state=active]:border-violet-500! data-[state=active]:bg-violet-50/70 data-[state=active]:text-violet-700!"
           >
             <RefreshCw className="mr-2 size-4" />
             Rebook Reminders
@@ -284,7 +284,7 @@ export default function AutomationsPage() {
           <TabsTrigger
             value="payment"
             onClick={() => setFilterCategory("payment")}
-            className="data-[state=active]:!border-emerald-500 data-[state=active]:bg-emerald-50/70 data-[state=active]:!text-emerald-700"
+            className="data-[state=active]:border-emerald-500! data-[state=active]:bg-emerald-50/70 data-[state=active]:text-emerald-700!"
           >
             <DollarSign className="mr-2 size-4" />
             Payment
@@ -292,7 +292,7 @@ export default function AutomationsPage() {
           <TabsTrigger
             value="forms"
             onClick={() => setFilterCategory("forms")}
-            className="data-[state=active]:!border-indigo-500 data-[state=active]:bg-indigo-50/70 data-[state=active]:!text-indigo-700"
+            className="data-[state=active]:border-indigo-500! data-[state=active]:bg-indigo-50/70 data-[state=active]:text-indigo-700!"
           >
             <FileText className="mr-2 size-4" />
             Forms
@@ -300,7 +300,7 @@ export default function AutomationsPage() {
           <TabsTrigger
             value="recovery"
             onClick={() => setFilterCategory("recovery")}
-            className="data-[state=active]:!border-rose-500 data-[state=active]:bg-rose-50/70 data-[state=active]:!text-rose-700"
+            className="data-[state=active]:border-rose-500! data-[state=active]:bg-rose-50/70 data-[state=active]:text-rose-700!"
           >
             <ShoppingCart className="mr-2 size-4" />
             Recovery
@@ -308,7 +308,7 @@ export default function AutomationsPage() {
           <TabsTrigger
             value="campaign"
             onClick={() => setFilterCategory("campaign")}
-            className="data-[state=active]:!border-orange-500 data-[state=active]:bg-orange-50/70 data-[state=active]:!text-orange-700"
+            className="data-[state=active]:border-orange-500! data-[state=active]:bg-orange-50/70 data-[state=active]:text-orange-700!"
           >
             <Megaphone className="mr-2 size-4" />
             Campaigns
@@ -317,7 +317,7 @@ export default function AutomationsPage() {
 
         {/* All Rules Tab */}
         <TabsContent value="all" className="space-y-4">
-          <Card className="border-sky-100 bg-gradient-to-br from-sky-50/40 via-white to-orange-50/20">
+          <Card className="border-sky-100 bg-linear-to-br from-sky-50/40 via-white to-orange-50/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <span className="flex size-8 items-center justify-center rounded-lg bg-sky-100 text-sky-600">
@@ -427,7 +427,7 @@ export default function AutomationsPage() {
 
         {/* Booking & Check-ins Tab */}
         <TabsContent value="booking" className="space-y-4">
-          <Card className="border-blue-100 bg-gradient-to-br from-blue-50/40 via-white to-white">
+          <Card className="border-blue-100 bg-linear-to-br from-blue-50/40 via-white to-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <span className="flex size-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
@@ -491,7 +491,7 @@ export default function AutomationsPage() {
 
         {/* Reminders Tab */}
         <TabsContent value="reminder" className="space-y-4">
-          <Card className="border-amber-100 bg-gradient-to-br from-amber-50/40 via-white to-white">
+          <Card className="border-amber-100 bg-linear-to-br from-amber-50/40 via-white to-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <span className="flex size-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
@@ -569,7 +569,7 @@ export default function AutomationsPage() {
 
         {/* Payment Tab */}
         <TabsContent value="payment" className="space-y-4">
-          <Card className="border-emerald-100 bg-gradient-to-br from-emerald-50/40 via-white to-white">
+          <Card className="border-emerald-100 bg-linear-to-br from-emerald-50/40 via-white to-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <span className="flex size-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
@@ -632,7 +632,7 @@ export default function AutomationsPage() {
 
         {/* Forms Tab (7.2) */}
         <TabsContent value="forms" className="space-y-4">
-          <Card className="border-indigo-100 bg-gradient-to-br from-indigo-50/40 via-white to-white">
+          <Card className="border-indigo-100 bg-linear-to-br from-indigo-50/40 via-white to-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <span className="flex size-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
@@ -743,7 +743,7 @@ export default function AutomationsPage() {
 
         {/* Recovery Tab */}
         <TabsContent value="recovery" className="space-y-4">
-          <Card className="border-rose-100 bg-gradient-to-br from-rose-50/40 via-white to-white">
+          <Card className="border-rose-100 bg-linear-to-br from-rose-50/40 via-white to-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <span className="flex size-8 items-center justify-center rounded-lg bg-rose-100 text-rose-600">
@@ -837,7 +837,7 @@ export default function AutomationsPage() {
 
         {/* Campaigns Tab */}
         <TabsContent value="campaign" className="space-y-4">
-          <Card className="border-orange-100 bg-gradient-to-br from-orange-50/40 via-white to-white">
+          <Card className="border-orange-100 bg-linear-to-br from-orange-50/40 via-white to-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <span className="flex size-8 items-center justify-center rounded-lg bg-orange-100 text-orange-600">

@@ -242,8 +242,6 @@ export function ShiftTasksTab() {
     groups: shiftTaskGroups.filter((g) => g.shiftId === shift.id),
   }));
 
-  const totalActive = shiftTaskGroups.filter((g) => g.isActive).length;
-
   return (
     <div className="space-y-6">
       {/* Header */}

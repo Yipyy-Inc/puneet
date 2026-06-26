@@ -904,7 +904,7 @@ function Row({
               <div
                 key={i}
                 className={cn(
-                  "rounded-md border-l-2 px-1.5 py-1 text-[10px] leading-tight",
+                  "rounded-md border-l-2 px-1.5 py-1 text-[10px]/tight",
                   s.borderSoft,
                   s.bgSofter,
                 )}

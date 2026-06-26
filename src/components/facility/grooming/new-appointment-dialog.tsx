@@ -1202,7 +1202,6 @@ export function NewAppointmentDialog({
   ]);
 
   const lineItemsSubtotal = petLines.reduce((s, l) => s + l.price, 0);
-  const grandTotal = lineItemsSubtotal + addOnTotal;
   const totalDurationMin = petLines.reduce((s, l) => s + l.durationMin, 0);
   const showPriceSummary = petLines.length > 0;
 
@@ -1781,10 +1780,10 @@ export function NewAppointmentDialog({
                           <Checkbox
                             checked={selected}
                             onCheckedChange={() => toggleAddOn(ao.id)}
-                            className="pointer-events-none flex-shrink-0"
+                            className="pointer-events-none shrink-0"
                           />
                           <div className="min-w-0">
-                            <p className="truncate text-xs leading-tight font-medium">
+                            <p className="truncate text-xs/tight font-medium">
                               {ao.name}
                               {isAuto && selected && (
                                 <span
@@ -1881,7 +1880,7 @@ export function NewAppointmentDialog({
                   </div>
 
                   {/* Static map placeholder — drops in a real map widget later */}
-                  <div className="relative h-28 overflow-hidden rounded-md border bg-gradient-to-br from-sky-100/60 via-emerald-100/40 to-violet-100/40 dark:from-sky-950/30 dark:via-emerald-950/20 dark:to-violet-950/20">
+                  <div className="relative h-28 overflow-hidden rounded-md border bg-linear-to-br from-sky-100/60 via-emerald-100/40 to-violet-100/40 dark:from-sky-950/30 dark:via-emerald-950/20 dark:to-violet-950/20">
                     <div
                       aria-hidden
                       className="absolute inset-0 opacity-30"

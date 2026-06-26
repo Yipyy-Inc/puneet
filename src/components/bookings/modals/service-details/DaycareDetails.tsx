@@ -487,7 +487,7 @@ function DaycareSectionAssignmentStep({
           <h3 className="text-base font-semibold tracking-tight">
             Section Assignment
           </h3>
-          <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
+          <p className="text-muted-foreground mt-0.5 text-xs/relaxed">
             Drag a pet onto a section, or click to assign. The system
             auto-matches by eligibility &amp; capacity on booking creation.
           </p>
@@ -520,7 +520,7 @@ function DaycareSectionAssignmentStep({
             of {selectedPets.length}
           </span>
         </div>
-        <div className="from-muted/40 to-muted/10 ring-border/40 flex min-h-16 flex-wrap items-center gap-2 rounded-2xl bg-gradient-to-br p-3 ring-1 ring-inset">
+        <div className="from-muted/40 to-muted/10 ring-border/40 flex min-h-16 flex-wrap items-center gap-2 rounded-2xl bg-linear-to-br p-3 ring-1 ring-inset">
           {selectedPets
             .filter((pet) => !roomAssignments.find((a) => a.petId === pet.id))
             .map((pet) => (
@@ -681,7 +681,7 @@ function DaycareSectionAssignmentStep({
                               : "ring-border/60 hover:ring-border cursor-pointer hover:-translate-y-1 hover:shadow-xl",
                             isOutsideRate &&
                               !isDisabled &&
-                              "opacity-50 grayscale-[40%]",
+                              "opacity-50 grayscale-40",
                             isDragOver &&
                               "ring-primary scale-[1.02] shadow-2xl ring-2",
                             hasAssigned && "ring-primary/70 shadow-lg ring-2",
@@ -699,12 +699,12 @@ function DaycareSectionAssignmentStep({
                                   className="object-cover transition-transform duration-500 group-hover:scale-110"
                                   unoptimized
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                                <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/10 to-transparent" />
                               </>
                             ) : (
                               <div
                                 className={cn(
-                                  "size-full bg-gradient-to-br",
+                                  "size-full bg-linear-to-br",
                                   section.color === "amber" &&
                                     "from-amber-100 to-amber-300",
                                   section.color === "violet" &&
@@ -793,7 +793,7 @@ function DaycareSectionAssignmentStep({
                               <div className="bg-muted/80 h-1.5 overflow-hidden rounded-full">
                                 <div
                                   className={cn(
-                                    "h-full rounded-full bg-gradient-to-r transition-all duration-500",
+                                    "h-full rounded-full bg-linear-to-r transition-all duration-500",
                                     section.color === "amber" &&
                                       "from-amber-300 to-amber-500",
                                     section.color === "violet" &&

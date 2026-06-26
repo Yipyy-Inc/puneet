@@ -409,7 +409,7 @@ export default function FacilityStaffPage() {
                   {r.label}
                   <span
                     className={cn(
-                      "ml-0.5 rounded px-1 text-[10px] tabular-nums",
+                      "ml-0.5 rounded-sm px-1 text-[10px] tabular-nums",
                       active
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground/60",

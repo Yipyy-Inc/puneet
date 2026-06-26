@@ -177,7 +177,7 @@ function SubmissionRow({
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               placeholder="Write a quick note back to the owner — what looked great, what to refine. They'll see this in their portal."
-              className="min-h-[64px] text-[13px] leading-relaxed"
+              className="min-h-[64px] text-[13px]/relaxed"
             />
           </label>
 

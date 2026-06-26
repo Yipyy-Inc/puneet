@@ -1252,7 +1252,7 @@ function PrereqWarningBanner({
     <div className="space-y-2 rounded-md border-2 border-amber-300 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-950/30">
       <div className="flex items-start gap-2">
         <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
-        <div className="space-y-1 text-[12.5px] leading-relaxed text-amber-900 dark:text-amber-100">
+        <div className="space-y-1 text-[12.5px]/relaxed text-amber-900 dark:text-amber-100">
           <p className="font-semibold">
             {petNamesList} has not completed {prereqClause}, which is required
             before enrolling in {issue.program.name}.

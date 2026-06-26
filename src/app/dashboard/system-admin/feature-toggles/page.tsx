@@ -1,9 +1,8 @@
-import { FeatureToggles } from "@/components/system-admin/FeatureToggles";
+import { redirect } from "next/navigation";
 
+// The feature-flags console moved to /dashboard/platform/flags (4 tabs:
+// Tenant Modules, Global Flags, Tier Defaults, Per-Facility Overrides).
+// Redirect any old links/bookmarks there.
 export default function FeatureTogglesPage() {
-  return (
-    <div className="bg-gradient-mesh bg-background min-h-screen flex-1 p-6 lg:p-8">
-      <FeatureToggles />
-    </div>
-  );
+  redirect("/dashboard/platform/flags");
 }

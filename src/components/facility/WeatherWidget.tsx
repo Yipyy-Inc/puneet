@@ -287,7 +287,7 @@ export function WeatherWidget() {
   const { profile, weatherRules } = useSettings();
   const [data, setData] = useState<WeatherData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const cacheRef = useRef<WeatherData | null>(null);
 
   const [collapsed, setCollapsed] = useState(() => {

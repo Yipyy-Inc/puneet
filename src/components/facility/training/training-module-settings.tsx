@@ -785,13 +785,13 @@ export function TrainingModuleSettings() {
                   update("graduationFollowUpTemplate", e.target.value)
                 }
                 disabled={!draft.graduationFollowUpEnabled}
-                className="min-h-[60px] text-sm leading-relaxed"
+                className="min-h-[60px] text-sm/relaxed"
               />
               <p className="text-muted-foreground text-[11px]">
                 Use{" "}
-                <code className="rounded bg-slate-100 px-1">{`{petName}`}</code>{" "}
+                <code className="rounded-sm bg-slate-100 px-1">{`{petName}`}</code>{" "}
                 and{" "}
-                <code className="rounded bg-slate-100 px-1">{`{programName}`}</code>{" "}
+                <code className="rounded-sm bg-slate-100 px-1">{`{programName}`}</code>{" "}
                 — substituted at send time.
               </p>
             </div>
@@ -1543,7 +1543,7 @@ function PathwayDialog({
                               onClick={() => moveStep(idx, -1)}
                               disabled={idx === 0}
                               className={cn(
-                                "rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700",
+                                "rounded-sm p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700",
                                 idx === 0 && "cursor-not-allowed opacity-30",
                               )}
                               title="Move up"
@@ -1555,7 +1555,7 @@ function PathwayDialog({
                               onClick={() => moveStep(idx, 1)}
                               disabled={idx === steps.length - 1}
                               className={cn(
-                                "rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700",
+                                "rounded-sm p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700",
                                 idx === steps.length - 1 &&
                                   "cursor-not-allowed opacity-30",
                               )}

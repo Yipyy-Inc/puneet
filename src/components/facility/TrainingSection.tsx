@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Modal } from "@/components/ui/modal";
 import { TagList } from "@/components/shared/TagList";
-import { hasCriticalTags, hasWarningTags } from "@/data/tags-notes";
 import { cn } from "@/lib/utils";
 
 import {
@@ -196,10 +195,6 @@ export function TrainingSection() {
     return !trainerStatus[trainerId]?.busy;
   };
 
-  const getTrainerCurrentClass = (trainerId: string) => {
-    return trainerStatus[trainerId]?.currentClass;
-  };
-
   // Get today's sessions
   const todaySessions = useMemo(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -305,20 +300,6 @@ export function TrainingSection() {
 
     setIsDetailsModalOpen(false);
     setSelectedSession(null);
-  };
-
-  const handleMarkPending = (session: TrainingSessionLocal) => {
-    setSelectedSession(session);
-    setArrivedPets(new Set());
-    setIsDetailsModalOpen(false);
-    setIsCheckInModalOpen(true);
-  };
-
-  const handleStartSession = (session: TrainingSessionLocal) => {
-    setSelectedSession(session);
-    setArrivedPets(new Set());
-    setIsDetailsModalOpen(false);
-    setIsCheckInModalOpen(true);
   };
 
   const handleViewDetails = (session: TrainingSessionLocal) => {
@@ -594,12 +575,6 @@ export function TrainingSection() {
                           const client = firstPet
                             ? findClientForPet(firstPet.petId)
                             : undefined;
-                          const hasCritical =
-                            firstPet && hasCriticalTags("pet", firstPet.petId);
-                          const hasWarn =
-                            firstPet &&
-                            !hasCritical &&
-                            hasWarningTags("pet", firstPet.petId);
                           return (
                             <div
                               key={session.id}

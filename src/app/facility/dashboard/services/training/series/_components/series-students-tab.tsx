@@ -1314,7 +1314,7 @@ function MakeupSessionPickerDialog({
             <Coins className="size-5 text-amber-600" />
             Add a make-up session
           </DialogTitle>
-          <DialogDescription className="text-sm leading-relaxed">
+          <DialogDescription className="text-sm/relaxed">
             Pick a future session in another cohort of{" "}
             <span className="font-medium">{currentSeries.courseTypeName}</span>{" "}
             that still has capacity. {targetStudentName} joins as a make-up

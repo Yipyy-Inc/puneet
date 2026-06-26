@@ -178,7 +178,7 @@ export function RosterView() {
     toast.success(`${action} sent to ${emp?.name ?? "team"}`);
   };
 
-  const handlePost = (shift: ScheduleShift) => {
+  const handlePost = (_shift: ScheduleShift) => {
     toast.success("Posted to Shift Opportunities board.", {
       description: "Eligible staff will be notified.",
     });

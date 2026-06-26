@@ -234,7 +234,7 @@ export function ConversationRow({
             {assignee && (
               <div
                 className={cn(
-                  "absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full text-[8px] font-bold text-white shadow ring-2 ring-white",
+                  "absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full text-[8px] font-bold text-white shadow-sm ring-2 ring-white",
                   assignee.color,
                 )}
                 title={`Assigned to ${assignee.name}`}

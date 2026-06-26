@@ -502,7 +502,7 @@ export function GiftCardDetailSheet({
 
           <div className="flex-1 space-y-5 overflow-y-auto py-4">
             {/* Balance card */}
-            <div className="rounded-xl bg-gradient-to-br from-violet-600 to-purple-700 p-5 text-white shadow-lg">
+            <div className="rounded-xl bg-linear-to-br from-violet-600 to-purple-700 p-5 text-white shadow-lg">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-medium opacity-80">

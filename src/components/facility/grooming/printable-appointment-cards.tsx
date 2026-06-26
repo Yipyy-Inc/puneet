@@ -192,7 +192,7 @@ function AppointmentCard({
             </div>
           )}
           <div>
-            <h1 className="text-2xl leading-tight font-bold">
+            <h1 className="text-2xl/tight font-bold">
               {appointment.petName}
               <span className="ml-2 text-base font-normal text-gray-600">
                 {appointment.petBreed}

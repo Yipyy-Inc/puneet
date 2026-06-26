@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +13,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { MapPin, Building, ChevronRight } from "lucide-react";
+import { MapPin, Building, ChevronRight, Plus } from "lucide-react";
+
+import {
+  LocationDetailSheet,
+  type LocationDetail,
+} from "./LocationDetailSheet";
+import {
+  LocationFormModal,
+  type LocationFormValues,
+} from "./LocationFormModal";
 
 interface Location {
   name: string;
@@ -19,21 +30,99 @@ interface Location {
   services: string[];
 }
 
+type LocationRecord = LocationDetail;
+
 interface LocationsTabProps {
+  facilityId: number;
+  facilityName: string;
+  facilityPhone: string;
   locations: Location[];
 }
 
-export function LocationsTab({ locations }: LocationsTabProps) {
+interface FormState {
+  open: boolean;
+  mode: "add" | "edit";
+  editId: string | null;
+  key: string;
+}
+
+export function LocationsTab({
+  facilityId,
+  facilityName,
+  facilityPhone,
+  locations,
+}: LocationsTabProps) {
+  const [locs, setLocs] = useState<LocationRecord[]>(() =>
+    locations.map((l, i) => ({
+      id: `loc-${i}`,
+      name: l.name,
+      address: l.address,
+      services: l.services,
+      phone: facilityPhone,
+    })),
+  );
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [form, setForm] = useState<FormState>({
+    open: false,
+    mode: "add",
+    editId: null,
+    key: "init",
+  });
+
+  const selected = selectedId
+    ? (locs.find((l) => l.id === selectedId) ?? null)
+    : null;
+  const selectedIndex = selected
+    ? locs.findIndex((l) => l.id === selected.id)
+    : -1;
+
+  const formInitial =
+    form.mode === "edit" && form.editId
+      ? (locs.find((l) => l.id === form.editId) ?? null)
+      : null;
+
+  const openAdd = () =>
+    setForm({
+      open: true,
+      mode: "add",
+      editId: null,
+      key: `add-${Date.now()}`,
+    });
+  const openEdit = (id: string) =>
+    setForm({
+      open: true,
+      mode: "edit",
+      editId: id,
+      key: `edit-${id}-${Date.now()}`,
+    });
+
+  const handleSubmit = (v: LocationFormValues) => {
+    if (form.mode === "add") {
+      setLocs((prev) => [...prev, { id: `new-${Date.now()}`, ...v }]);
+      toast.success(`Location "${v.name}" added.`);
+    } else if (form.editId) {
+      setLocs((prev) =>
+        prev.map((l) => (l.id === form.editId ? { ...l, ...v } : l)),
+      );
+      toast.success(`Location "${v.name}" updated.`);
+    }
+    setForm((f) => ({ ...f, open: false }));
+  };
+
   return (
     <Card className="shadow-card border-0">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-lg font-semibold">
           <MapPin className="size-5" />
           Locations
           <Badge variant="secondary" className="ml-2">
-            {locations.length}
+            {locs.length}
           </Badge>
         </CardTitle>
+        <Button onClick={openAdd}>
+          <Plus className="mr-2 size-4" />
+          Add Location
+        </Button>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border">
@@ -47,8 +136,12 @@ export function LocationsTab({ locations }: LocationsTabProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {locations.map((location, index) => (
-                <TableRow key={index}>
+              {locs.map((location) => (
+                <TableRow
+                  key={location.id}
+                  className="hover:bg-muted/50 cursor-pointer transition-colors"
+                  onClick={() => setSelectedId(location.id)}
+                >
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
                       <div
@@ -71,7 +164,7 @@ export function LocationsTab({ locations }: LocationsTabProps) {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {location.services.map((service: string) => (
+                      {location.services.map((service) => (
                         <Badge
                           key={service}
                           variant="secondary"
@@ -83,7 +176,15 @@ export function LocationsTab({ locations }: LocationsTabProps) {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`View ${location.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedId(location.id);
+                      }}
+                    >
                       <ChevronRight className="size-4" />
                     </Button>
                   </TableCell>
@@ -93,6 +194,27 @@ export function LocationsTab({ locations }: LocationsTabProps) {
           </Table>
         </div>
       </CardContent>
+
+      {selected && (
+        <LocationDetailSheet
+          location={selected}
+          locationIndex={selectedIndex}
+          totalLocations={locs.length}
+          facilityId={facilityId}
+          facilityName={facilityName}
+          onClose={() => setSelectedId(null)}
+          onEdit={() => openEdit(selected.id)}
+        />
+      )}
+
+      <LocationFormModal
+        key={form.key}
+        open={form.open}
+        mode={form.mode}
+        initial={formInitial}
+        onOpenChange={(o) => setForm((f) => ({ ...f, open: o }))}
+        onSubmit={handleSubmit}
+      />
     </Card>
   );
 }

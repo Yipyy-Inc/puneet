@@ -79,7 +79,7 @@ export function SessionAttendanceSection({
         ))}
       </div>
 
-      <div className="sticky bottom-0 -mx-4 mt-6 border-t bg-white/95 px-4 py-3 backdrop-blur dark:bg-slate-950/95">
+      <div className="sticky bottom-0 -mx-4 mt-6 border-t bg-white/95 px-4 py-3 backdrop-blur-sm dark:bg-slate-950/95">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
           <p className="text-muted-foreground text-xs">
             {markedCount === rows.length

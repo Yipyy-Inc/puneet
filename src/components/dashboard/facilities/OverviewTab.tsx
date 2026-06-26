@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { facilitiesQueries } from "@/lib/api/facilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,19 +35,22 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { StatCard } from "./StatCard";
+import { SetupProgressCard } from "./SetupProgressCard";
 import { MapPin } from "lucide-react";
 
 interface OverviewTabProps {
   facility: {
+    id: number;
     name: string;
+    enabledModules?: string[];
+    taxConfig?: { taxes?: { rate: number; enabled: boolean }[] };
     usersList: { person: { name: string; email: string }; role: string }[];
     clients: { status: string }[];
     locationsList: { name: string; address: string; services: string[] }[];
     contact?: { email?: string; phone?: string; website?: string };
     owner?: { name?: string; email?: string; phone?: string };
   };
-  totalRevenue: number;
-  activeClients: number;
+  status: string;
   recentActivities: {
     id: number;
     type: string;
@@ -53,6 +58,8 @@ interface OverviewTabProps {
     description: string;
     time: string;
   }[];
+  onNavigate: (tab: string) => void;
+  onMarkActive: () => void;
   onNavigateToReports: () => void;
   onNavigateToModules: () => void;
   onNavigateToLogs: () => void;
@@ -60,13 +67,17 @@ interface OverviewTabProps {
 
 export function OverviewTab({
   facility,
-  totalRevenue,
-  activeClients,
+  status,
   recentActivities,
+  onNavigate,
+  onMarkActive,
   onNavigateToReports,
   onNavigateToModules,
   onNavigateToLogs,
 }: OverviewTabProps) {
+  const { data: kpis, isLoading: kpisLoading } = useQuery(
+    facilitiesQueries.overviewKpis(facility.id),
+  );
   const [showContactDialog, setShowContactDialog] = useState(false);
   const [editableContact, setEditableContact] = useState({
     email: facility.contact?.email ?? "",
@@ -116,51 +127,71 @@ export function OverviewTab({
   return (
     <div className="space-y-6">
       {/* Stats Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Revenue"
-          value={`$${(totalRevenue / 1000).toFixed(1)}K`}
-          subtitle="Last 6 months"
-          icon={DollarSign}
-          iconBgStyle={{
-            background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
-          }}
-          trend={{ value: "+12%", isPositive: true }}
-        />
-        <StatCard
-          title="Staff Members"
-          value={facility.usersList.length}
-          subtitle="Active users"
-          icon={Users}
-          iconBgStyle={{
-            background: "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)",
-          }}
-        />
-        <StatCard
-          title="Active Clients"
-          value={activeClients}
-          subtitle={`of ${facility.clients.length} total`}
-          icon={UserCheck}
-          iconBgStyle={{
-            background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-          }}
-          trend={{ value: "+8%", isPositive: true }}
-        />
-        <StatCard
-          title="Locations"
-          value={facility.locationsList.length}
-          subtitle="Active branches"
-          icon={MapPin}
-          iconBgStyle={{
-            background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-          }}
-        />
-      </div>
+      {kpisLoading || !kpis ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-muted h-[104px] animate-pulse rounded-2xl"
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            title="Total Revenue"
+            value={`$${(kpis.totalRevenue / 1000).toFixed(1)}K`}
+            subtitle="Last 6 months"
+            icon={DollarSign}
+            iconBgStyle={{
+              background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
+            }}
+          />
+          <StatCard
+            title="Staff Members"
+            value={kpis.staffCount}
+            subtitle="Active users"
+            icon={Users}
+            iconBgStyle={{
+              background: "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)",
+            }}
+          />
+          <StatCard
+            title="Active Clients"
+            value={kpis.activeClients}
+            subtitle={`of ${facility.clients.length} total`}
+            icon={UserCheck}
+            iconBgStyle={{
+              background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+            }}
+          />
+          <StatCard
+            title="Locations"
+            value={kpis.locations}
+            subtitle="Active branches"
+            icon={MapPin}
+            iconBgStyle={{
+              background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+            }}
+          />
+        </div>
+      )}
 
       {/* Two Column Layout */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column */}
         <div className="space-y-6 lg:col-span-2">
+          {/* Setup Progress */}
+          <SetupProgressCard
+            facilityId={facility.id}
+            status={status}
+            enabledModules={facility.enabledModules ?? []}
+            taxConfig={facility.taxConfig}
+            staffCount={facility.usersList.length}
+            onNavigate={onNavigate}
+            onMarkActive={onMarkActive}
+          />
+
           {/* Contact & Owner Info */}
           <div className="grid gap-6 md:grid-cols-2">
             {/* Contact Information */}

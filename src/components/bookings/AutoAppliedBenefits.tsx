@@ -127,7 +127,7 @@ export function AutoAppliedBenefits({
     <div className="space-y-2">
       {/* Banner — only when at least one benefit is active */}
       {evaluation.applied.length > 0 && (
-        <div className="rounded-lg border border-emerald-200 bg-gradient-to-r from-emerald-50 via-emerald-50 to-white px-3 py-2.5">
+        <div className="rounded-lg border border-emerald-200 bg-linear-to-r from-emerald-50 via-emerald-50 to-white px-3 py-2.5">
           <div className="flex items-start gap-2">
             <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-100">
               <Sparkles className="size-3.5 text-emerald-700" />

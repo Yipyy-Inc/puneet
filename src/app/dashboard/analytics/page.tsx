@@ -12,6 +12,13 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
+import {
+  acquisitionMetrics,
+  systemReservationMetrics,
+  systemPerformance,
+  utilizationComparison,
+} from "@/data/analytics";
+
 export default function AnalyticsOverviewPage() {
   return (
     <div className="bg-gradient-mesh bg-background min-h-screen flex-1 p-6 lg:p-8">
@@ -35,10 +42,12 @@ export default function AnalyticsOverviewPage() {
                     New Customers
                   </p>
                   <div className="flex items-baseline gap-2">
-                    <h3 className="text-2xl font-bold tracking-tight">1,250</h3>
+                    <h3 className="text-2xl font-bold tracking-tight">
+                      {acquisitionMetrics.totalNewCustomers.toLocaleString()}
+                    </h3>
                     <span className="text-success inline-flex items-center text-xs font-medium">
-                      <TrendingUp className="mr-0.5 size-3" />
-                      +18.5%
+                      <TrendingUp className="mr-0.5 size-3" />+
+                      {acquisitionMetrics.growthRate}%
                     </span>
                   </div>
                   <p className="text-muted-foreground mt-0.5 text-xs">
@@ -66,9 +75,11 @@ export default function AnalyticsOverviewPage() {
                     Total Reservations
                   </p>
                   <div className="flex items-baseline gap-2">
-                    <h3 className="text-2xl font-bold tracking-tight">8,290</h3>
+                    <h3 className="text-2xl font-bold tracking-tight">
+                      {systemReservationMetrics.totalReservations.toLocaleString()}
+                    </h3>
                     <span className="text-success inline-flex items-center text-xs font-medium">
-                      90%
+                      {systemReservationMetrics.completionRate}%
                     </span>
                   </div>
                   <p className="text-muted-foreground mt-0.5 text-xs">
@@ -96,7 +107,9 @@ export default function AnalyticsOverviewPage() {
                     System Utilization
                   </p>
                   <div className="flex items-baseline gap-2">
-                    <h3 className="text-2xl font-bold tracking-tight">78.8%</h3>
+                    <h3 className="text-2xl font-bold tracking-tight">
+                      {utilizationComparison.systemAverage}%
+                    </h3>
                   </div>
                   <p className="text-muted-foreground mt-0.5 text-xs">
                     Average across facilities
@@ -123,7 +136,9 @@ export default function AnalyticsOverviewPage() {
                     System Uptime
                   </p>
                   <div className="flex items-baseline gap-2">
-                    <h3 className="text-2xl font-bold tracking-tight">99.8%</h3>
+                    <h3 className="text-2xl font-bold tracking-tight">
+                      {systemPerformance.systemUptime}%
+                    </h3>
                   </div>
                   <p className="text-muted-foreground mt-0.5 text-xs">
                     This month

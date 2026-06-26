@@ -19,9 +19,12 @@ import { TaskNotificationsPanel } from "@/components/tasks/TaskNotificationsPane
 import { CallingButton } from "@/components/layout/CallingButton";
 import { CallStatusIndicator } from "@/components/layout/CallStatusIndicator";
 import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
+import { SupportCenter } from "@/components/layout/SupportCenter";
 import { FacilityMobileBottomNav } from "@/components/layout/FacilityMobileBottomNav";
 import { LocationContextProviderWrapper } from "@/components/providers/LocationContextProviderWrapper";
 import { LocationStatusBadge } from "@/components/hq/LocationStatusBadge";
+import { FacilityOnboardingBanner } from "@/components/facility/onboarding/facility-onboarding-banner";
+import { ImpersonationBanner } from "@/components/facility/ImpersonationBanner";
 import { LoyaltyProgramProvider } from "@/hooks/use-loyalty-program";
 import { CallAvailabilityProvider } from "@/hooks/use-call-availability";
 import { CallTagsProvider } from "@/hooks/use-call-tags";
@@ -73,10 +76,13 @@ export default async function FacilityLayout({
                           <HeaderDropdown />
                           <FacilityHeader />
                           <CallStatusIndicator />
+                          <SupportCenter />
                           <UserProfileSheet showNotifications={false} />
                         </div>
                       </header>
                       <main className="min-w-0 flex-1 overflow-x-clip">
+                        <ImpersonationBanner />
+                        <FacilityOnboardingBanner />
                         {children}
                       </main>
                       <FacilityMobileBottomNav />

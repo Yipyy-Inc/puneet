@@ -373,7 +373,7 @@ export function TrainingCalendarSidebar({
           <Sparkles className="size-4" />
           Smart Scheduling
         </Button>
-        <p className="mt-1.5 text-[10px] leading-snug text-slate-400">
+        <p className="mt-1.5 text-[10px]/snug text-slate-400">
           Find available 1-on-1 slots across private trainers.
         </p>
       </div>

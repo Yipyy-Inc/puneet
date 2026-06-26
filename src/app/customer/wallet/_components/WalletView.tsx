@@ -155,7 +155,7 @@ export function WalletView() {
   return (
     <div className="space-y-5">
       {/* Balance hero */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-6 text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-violet-600 via-purple-600 to-indigo-700 p-6 text-white shadow-xl">
         <div className="absolute -top-8 -right-8 size-36 rounded-full bg-white/10" />
         <div className="absolute -bottom-6 -left-6 size-28 rounded-full bg-white/10" />
         <div className="relative">

@@ -958,62 +958,105 @@ export const notificationChannels: NotificationChannel[] = [
   },
 ];
 
-export const healthDashboardStats: HealthDashboardStats = {
-  overallHealth: 87,
-  serversOnline: 23,
-  totalServers: 25,
-  criticalAlerts: 1,
-  activeIncidents: 3,
-  avgResponseTime: 234,
-  errorRate: 0.45,
-  systemUptime: 99.87,
-  dailyMetrics: [
-    {
-      date: "2024-01-09",
-      uptime: 99.95,
-      errorRate: 0.28,
-      avgResponseTime: 198,
-    },
-    {
-      date: "2024-01-10",
-      uptime: 99.92,
-      errorRate: 0.31,
-      avgResponseTime: 205,
-    },
-    {
-      date: "2024-01-11",
-      uptime: 99.98,
-      errorRate: 0.25,
-      avgResponseTime: 192,
-    },
-    {
-      date: "2024-01-12",
-      uptime: 99.45,
-      errorRate: 0.78,
-      avgResponseTime: 267,
-    },
-    {
-      date: "2024-01-13",
-      uptime: 99.87,
-      errorRate: 0.35,
-      avgResponseTime: 212,
-    },
-    {
-      date: "2024-01-14",
-      uptime: 99.91,
-      errorRate: 0.32,
-      avgResponseTime: 218,
-    },
-    {
-      date: "2024-01-15",
-      uptime: 99.87,
-      errorRate: 0.45,
-      avgResponseTime: 234,
-    },
-  ],
-  serviceStatus: {
-    operational: 15,
-    degraded: 2,
-    outage: 0,
-  },
-};
+// Health dashboard rollups are COMPUTED from the records above (serverStatuses,
+// serviceUptimes, systemAlerts) — counts and overall-health are never hardcoded
+// (global rule: a hardcoded aggregate is a bug). The daily time-series and
+// response-time / error-rate fields remain seed values consumed only by the
+// deprecated SystemStatus card; the live System Status page reads real process
+// metrics from /api/health instead.
+function computeHealthDashboardStats(): HealthDashboardStats {
+  const totalServers = serverStatuses.length;
+  const serversOnline = serverStatuses.filter(
+    (s) => s.status === "Online",
+  ).length;
+  const totalServices = serviceUptimes.length;
+  const serviceStatus = {
+    operational: serviceUptimes.filter((s) => s.status === "Operational")
+      .length,
+    degraded: serviceUptimes.filter((s) => s.status === "Degraded").length,
+    outage: serviceUptimes.filter(
+      (s) => s.status === "Partial Outage" || s.status === "Major Outage",
+    ).length,
+  };
+  const activeIncidents = systemAlerts.filter(
+    (a) => a.status === "New" || a.status === "Investigating",
+  ).length;
+  const criticalAlerts = systemAlerts.filter(
+    (a) =>
+      a.severity === "Critical" &&
+      a.status !== "Resolved" &&
+      a.status !== "Dismissed",
+  ).length;
+
+  const serverWeight = (s: ServerStatus) =>
+    s.status === "Online" ? 1 : s.status === "Offline" ? 0 : 0.5;
+  const serviceWeight = (s: ServiceUptime) =>
+    s.status === "Operational" ? 1 : s.status === "Degraded" ? 0.5 : 0;
+  const serverScore = totalServers
+    ? serverStatuses.reduce((a, s) => a + serverWeight(s), 0) / totalServers
+    : 1;
+  const serviceScore = totalServices
+    ? serviceUptimes.reduce((a, s) => a + serviceWeight(s), 0) / totalServices
+    : 1;
+  const overallHealth = Math.round(((serverScore + serviceScore) / 2) * 100);
+
+  return {
+    overallHealth,
+    serversOnline,
+    totalServers,
+    criticalAlerts,
+    activeIncidents,
+    serviceStatus,
+    // Seed time-series — consumed only by the deprecated SystemStatus card.
+    avgResponseTime: 234,
+    errorRate: 0.45,
+    systemUptime: 99.87,
+    dailyMetrics: [
+      {
+        date: "2024-01-09",
+        uptime: 99.95,
+        errorRate: 0.28,
+        avgResponseTime: 198,
+      },
+      {
+        date: "2024-01-10",
+        uptime: 99.92,
+        errorRate: 0.31,
+        avgResponseTime: 205,
+      },
+      {
+        date: "2024-01-11",
+        uptime: 99.98,
+        errorRate: 0.25,
+        avgResponseTime: 192,
+      },
+      {
+        date: "2024-01-12",
+        uptime: 99.45,
+        errorRate: 0.78,
+        avgResponseTime: 267,
+      },
+      {
+        date: "2024-01-13",
+        uptime: 99.87,
+        errorRate: 0.35,
+        avgResponseTime: 212,
+      },
+      {
+        date: "2024-01-14",
+        uptime: 99.91,
+        errorRate: 0.32,
+        avgResponseTime: 218,
+      },
+      {
+        date: "2024-01-15",
+        uptime: 99.87,
+        errorRate: 0.45,
+        avgResponseTime: 234,
+      },
+    ],
+  };
+}
+
+export const healthDashboardStats: HealthDashboardStats =
+  computeHealthDashboardStats();

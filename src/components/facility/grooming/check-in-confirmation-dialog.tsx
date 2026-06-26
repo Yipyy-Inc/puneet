@@ -588,7 +588,7 @@ export function CheckInConfirmationDialog({
                     >
                       {name}
                       {isNew && (
-                        <span className="rounded bg-amber-500 px-1 text-[8px] font-bold tracking-wide text-white uppercase">
+                        <span className="rounded-sm bg-amber-500 px-1 text-[8px] font-bold tracking-wide text-white uppercase">
                           New
                         </span>
                       )}

@@ -3,7 +3,9 @@ import type {
   FacilityNotification,
   FacilityRequest,
 } from "@/types/facility";
+import type { FacilityListItem } from "@/types/platform-dashboard";
 
+import { facilities } from "@/data/facilities";
 import { facilityConfig } from "@/data/facility-config";
 import {
   facilitySubscriptions,
@@ -19,6 +21,17 @@ export const facilityQueries = {
   config: () => ({
     queryKey: ["facility", "config"] as const,
     queryFn: async () => facilityConfig,
+  }),
+
+  list: () => ({
+    queryKey: ["facility", "list"] as const,
+    queryFn: async (): Promise<FacilityListItem[]> =>
+      facilities.map((f) => ({
+        id: f.id,
+        name: f.name,
+        status: String((f as { status?: unknown }).status ?? ""),
+        plan: String((f as { plan?: unknown }).plan ?? ""),
+      })),
   }),
 
   subscriptions: () => ({

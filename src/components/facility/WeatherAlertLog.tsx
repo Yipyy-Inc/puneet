@@ -72,8 +72,6 @@ export function WeatherAlertLog() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [actionDraft, setActionDraft] = useState("");
 
-  const refresh = () => setLog(loadLog());
-
   const acknowledge = (id: string) => {
     const updated = log.map((e) =>
       e.id === id

@@ -313,7 +313,7 @@ export function ServiceAreaDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[92vh] max-h-[960px] w-[96vw] !max-w-[1600px] flex-col overflow-hidden p-0">
+      <DialogContent className="flex h-[92vh] max-h-[960px] w-[96vw] max-w-[1600px]! flex-col overflow-hidden p-0">
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle className="text-lg">
             {initial ? "Edit service area" : "Create service area"}
@@ -516,7 +516,7 @@ export function ServiceAreaDialog({
                         </span>
                       );
                     })}
-                    <div className="relative min-w-[10rem] flex-1">
+                    <div className="relative min-w-40 flex-1">
                       <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
                       <Input
                         value={zipQuery}
@@ -593,7 +593,7 @@ export function ServiceAreaDialog({
             />
 
             {/* Overlay toggles — float over the map top-right */}
-            <div className="bg-card/95 absolute top-3 right-3 z-[400] flex w-fit flex-col gap-1 rounded-lg border p-2 shadow-md backdrop-blur">
+            <div className="bg-card/95 absolute top-3 right-3 z-400 flex w-fit flex-col gap-1 rounded-lg border p-2 shadow-md backdrop-blur-sm">
               <label className="flex cursor-pointer items-center gap-1.5 text-xs whitespace-nowrap">
                 <Switch
                   checked={showOtherAreas}
@@ -616,7 +616,7 @@ export function ServiceAreaDialog({
 
             {/* Active drawing summary chip */}
             {method === "draw" && polygon.length > 0 && (
-              <div className="bg-card/95 absolute bottom-3 left-3 z-[400] rounded-full border px-3 py-1 text-xs font-medium shadow-md backdrop-blur">
+              <div className="bg-card/95 absolute bottom-3 left-3 z-400 rounded-full border px-3 py-1 text-xs font-medium shadow-md backdrop-blur-sm">
                 <span className="text-muted-foreground">Points: </span>
                 <span className="tabular-nums">{polygon.length}</span>
               </div>
@@ -624,7 +624,7 @@ export function ServiceAreaDialog({
 
             {/* Active ZIP summary chip */}
             {method === "postal" && zips.length > 0 && (
-              <div className="bg-card/95 absolute bottom-3 left-3 z-[400] flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium shadow-md backdrop-blur">
+              <div className="bg-card/95 absolute bottom-3 left-3 z-400 flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium shadow-md backdrop-blur-sm">
                 <Badge
                   className="border-0 px-1.5 py-0 text-[10px]"
                   style={{ backgroundColor: color, color: "#fff" }}

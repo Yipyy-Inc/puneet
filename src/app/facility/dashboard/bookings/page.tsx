@@ -242,26 +242,12 @@ export default function FacilityBookingsPage() {
 
   // Calculate stats
   const totalBookings = locationBookings.length;
-  const completedBookings = locationBookings.filter(
-    (b) => b.status === "completed",
-  ).length;
   const totalRevenue = locationBookings
     .filter((b) => b.paymentStatus === "paid")
     .reduce((sum, b) => sum + b.totalCost, 0);
   const pendingRevenue = locationBookings
     .filter((b) => b.paymentStatus === "pending")
     .reduce((sum, b) => sum + b.totalCost, 0);
-
-  // Revenue by service
-  const revenueByService = locationBookings
-    .filter((b) => b.paymentStatus === "paid")
-    .reduce(
-      (acc, b) => {
-        acc[b.service] = (acc[b.service] || 0) + b.totalCost;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
 
   const fmtDate = (d: string) => {
     try {
@@ -614,64 +600,6 @@ export default function FacilityBookingsPage() {
     );
   };
 
-  const handleConfirmBooking = async (bookingId: number) => {
-    const booking = bookings.find((b) => b.id === bookingId);
-    if (!booking) return;
-
-    // Update booking status
-    setBookings(
-      bookings.map((b) =>
-        b.id === bookingId ? { ...b, status: "confirmed" as const } : b,
-      ),
-    );
-
-    // Trigger YipyyGo if applicable
-    try {
-      const { processBookingConfirmationForYipyyGo } =
-        await import("@/lib/yipyygo-trigger");
-      const { clients } = await import("@/data/clients");
-      const client = clients.find((c) => c.id === booking.clientId);
-
-      // Handle single pet or multiple pets
-      const petIds = Array.isArray(booking.petId)
-        ? booking.petId
-        : [booking.petId];
-
-      // Process YipyyGo for each pet in the booking
-      for (const petId of petIds) {
-        const pet = client?.pets?.find((p) => p.id === petId);
-
-        if (pet) {
-          await processBookingConfirmationForYipyyGo({
-            id: booking.id,
-            clientId: booking.clientId,
-            petId: petId,
-            petName: pet.name,
-            facilityId: booking.facilityId,
-            service: booking.service,
-            startDate: booking.startDate,
-            checkInTime: booking.checkInTime,
-            status: "confirmed",
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error triggering YipyyGo:", error);
-      // Don't block booking confirmation if YipyyGo fails
-    }
-
-    alert(`Booking #${bookingId} has been confirmed.`);
-  };
-
-  const handleCompleteBooking = (bookingId: number) => {
-    setBookings(
-      bookings.map((b) =>
-        b.id === bookingId ? { ...b, status: "completed" as const } : b,
-      ),
-    );
-    alert(`Booking #${bookingId} has been marked as completed.`);
-  };
-
   const handleProcessRefund = (
     bookingId: number,
     refundReason: string,
@@ -803,7 +731,7 @@ export default function FacilityBookingsPage() {
                 className="h-7 gap-1.5 px-3 text-xs font-medium"
               >
                 {label}
-                <span className="bg-background/70 text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums shadow-sm">
+                <span className="bg-background/70 text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums shadow-sm">
                   {count}
                 </span>
               </TabsTrigger>

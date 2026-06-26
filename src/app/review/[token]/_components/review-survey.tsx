@@ -137,7 +137,7 @@ export function ReviewSurvey({ token }: { token: string }) {
   const [lang, setLang] = useState("en");
   const [hover, setHover] = useState(0);
   const [selected, setSelected] = useState(0);
-  const [ratedAt, setRatedAt] = useState("");
+  const [, setRatedAt] = useState("");
   const [phase, setPhase] = useState<Phase>("rate");
   const [comment, setComment] = useState("");
   const [modal, setModal] = useState<{

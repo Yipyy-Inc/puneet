@@ -46,7 +46,27 @@ const eslintConfig = defineConfig([
       "better-tailwindcss/enforce-consistent-line-wrapping": "off", // conflicts with Prettier
       "better-tailwindcss/no-unnecessary-whitespace": "off", // conflicts with Prettier
       "better-tailwindcss/enforce-canonical-classes": "warn",
-      "better-tailwindcss/no-unknown-classes": "warn",
+      "better-tailwindcss/no-unknown-classes": [
+        "warn",
+        {
+          // Project-specific utilities defined as raw CSS in src/app/globals.css,
+          // which the plugin can't infer from the Tailwind theme. Anchored so they
+          // match the bare class and any variant prefix (e.g. hover:shadow-elevated)
+          // without masking unrelated classes. Genuine unknowns/typos stay flagged.
+          ignore: [
+            "(?:^|:)price-value$",
+            "(?:^|:)bg-gradient-mesh$",
+            "(?:^|:)bg-gradient-primary$",
+            "(?:^|:)shadow-elevated$",
+            "(?:^|:)hover-lift$",
+            "(?:^|:)status-online$",
+            "(?:^|:)scrollbar-(?:thin|hidden)$",
+            "(?:^|:)animate-fade-in$",
+            // Tailwind v4 `!important` modifier — the plugin doesn't parse the `!` prefix.
+            "^!",
+          ],
+        },
+      ],
     },
   },
 ]);

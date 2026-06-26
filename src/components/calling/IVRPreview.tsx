@@ -133,7 +133,7 @@ export function IVRPreview({
                   {active === "greeting" ? "Playing…" : "Play"}
                 </Button>
               </div>
-              <p className="text-foreground text-sm leading-relaxed">
+              <p className="text-foreground text-sm/relaxed">
                 {config.greeting}
               </p>
             </div>
@@ -208,7 +208,7 @@ export function IVRPreview({
                     {active === "afterhours" ? "Playing…" : "Play"}
                   </Button>
                 </div>
-                <p className="text-foreground text-sm leading-relaxed">
+                <p className="text-foreground text-sm/relaxed">
                   {config.afterHoursMessage}
                 </p>
               </div>

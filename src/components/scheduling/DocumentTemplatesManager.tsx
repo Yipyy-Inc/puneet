@@ -504,13 +504,13 @@ function TemplateEditor({
                 value={state.title}
                 onChange={(e) => update("title", e.target.value)}
                 placeholder="Untitled template"
-                className="h-auto border-0 bg-transparent !p-0 text-xl font-bold tracking-tight shadow-none focus-visible:ring-0"
+                className="h-auto border-0 bg-transparent p-0! text-xl font-bold tracking-tight shadow-none focus-visible:ring-0"
               />
               <Input
                 value={state.description}
                 onChange={(e) => update("description", e.target.value)}
                 placeholder="Short description visible to employees..."
-                className="text-muted-foreground mt-1 h-auto border-0 bg-transparent !p-0 text-sm shadow-none focus-visible:ring-0"
+                className="text-muted-foreground mt-1 h-auto border-0 bg-transparent p-0! text-sm shadow-none focus-visible:ring-0"
               />
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <Badge variant="outline" className="text-[10px]">
@@ -629,7 +629,7 @@ function TemplateEditor({
                       }
                       placeholder="Write the body of this section…"
                       rows={6}
-                      className="mt-2 border-0 bg-transparent text-sm leading-relaxed shadow-none focus-visible:ring-0"
+                      className="mt-2 border-0 bg-transparent text-sm/relaxed shadow-none focus-visible:ring-0"
                     />
                   </div>
                 ))}
@@ -881,7 +881,7 @@ function DocumentPreview({ state }: { state: EditorState }) {
         </div>
 
         {/* Body */}
-        <div className="space-y-5 p-6 text-sm leading-relaxed">
+        <div className="space-y-5 p-6 text-sm/relaxed">
           {state.description && (
             <p className="text-muted-foreground italic">{state.description}</p>
           )}

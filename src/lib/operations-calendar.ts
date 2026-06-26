@@ -1805,18 +1805,6 @@ export function getEventsForDay(
   );
 }
 
-function matchesTagLogic(
-  selectedTags: string[],
-  eventTags: string[],
-  logic: CalendarTagLogic,
-): boolean {
-  if (selectedTags.length === 0) return true;
-  if (logic === "and") {
-    return selectedTags.every((tag) => eventTags.includes(tag));
-  }
-  return selectedTags.some((tag) => eventTags.includes(tag));
-}
-
 export function filterEvents(
   events: OperationsCalendarEvent[],
   filters: OperationsCalendarFilters,

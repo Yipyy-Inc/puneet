@@ -90,7 +90,6 @@ export function ReportCardBrandedFooter({
         <SocialLinks
           social={social}
           style={brandConfig.socialLinksStyle ?? "icons"}
-          color={color}
         />
       )}
 
@@ -107,11 +106,9 @@ export function ReportCardBrandedFooter({
 function SocialLinks({
   social,
   style,
-  color,
 }: {
   social: SocialMedia;
   style: "icons" | "buttons" | "text_links";
-  color: string;
 }) {
   const links = [
     { url: social.facebook, icon: Facebook, label: "Facebook" },

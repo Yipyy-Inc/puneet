@@ -739,9 +739,6 @@ export function CreateIncidentModal({
     });
   }, [selectedProtocol, incidentDate, incidentTime, reportedBy]);
 
-  const selectedSeverityMeta = SEVERITY_LEVELS.find(
-    (s) => s.value === severity,
-  );
   const isCriticalOrHigh = severity === "critical" || severity === "high";
   const isValid =
     incidentType &&
@@ -863,7 +860,7 @@ export function CreateIncidentModal({
                     >
                       {t.label}
                     </p>
-                    <p className="text-muted-foreground text-[10px] leading-tight">
+                    <p className="text-muted-foreground text-[10px]/tight">
                       {t.desc}
                     </p>
                   </div>
@@ -930,7 +927,7 @@ export function CreateIncidentModal({
                     >
                       {t.label}
                     </p>
-                    <p className="text-muted-foreground text-[10px] leading-tight">
+                    <p className="text-muted-foreground text-[10px]/tight">
                       {t.desc}
                     </p>
                   </div>
@@ -1057,7 +1054,7 @@ export function CreateIncidentModal({
                           <PawPrint className="size-4 text-orange-600 dark:text-orange-400" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm leading-none font-semibold">
+                          <p className="text-sm/none font-semibold">
                             {pet.name}
                           </p>
                           <p className="text-muted-foreground mt-0.5 text-xs">
@@ -1340,7 +1337,7 @@ export function CreateIncidentModal({
                         onClick={() =>
                           setPhotos(photos.filter((p) => p.id !== photo.id))
                         }
-                        className="text-muted-foreground hover:text-destructive rounded transition-colors"
+                        className="text-muted-foreground hover:text-destructive rounded-sm transition-colors"
                       >
                         <X className="size-4" />
                       </button>

@@ -54,7 +54,7 @@ export function MobileRouteMapPreview({
           {caption}
         </p>
       )}
-      <div className="relative h-40 w-full overflow-hidden rounded-lg border bg-gradient-to-br from-sky-50/60 via-emerald-50/40 to-violet-50/40 dark:from-sky-950/30 dark:via-emerald-950/20 dark:to-violet-950/20">
+      <div className="relative h-40 w-full overflow-hidden rounded-lg border bg-linear-to-br from-sky-50/60 via-emerald-50/40 to-violet-50/40 dark:from-sky-950/30 dark:via-emerald-950/20 dark:to-violet-950/20">
         <div
           aria-hidden
           className="absolute inset-0 opacity-30"

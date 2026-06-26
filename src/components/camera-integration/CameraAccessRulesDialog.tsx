@@ -65,13 +65,6 @@ const SERVICE_OPTIONS: {
   { value: "training", label: "Training", icon: GraduationCap },
 ];
 
-type RuleKey =
-  | "active_stay"
-  | "operation_hours"
-  | "membership"
-  | "package"
-  | "service_customer";
-
 interface RuleState {
   active_stay: { enabled: boolean; services: CameraServiceType[] };
   operation_hours: { enabled: boolean };

@@ -372,7 +372,7 @@ function MinimizedPill({
           className="flex size-8 items-center justify-center rounded-xl text-white transition-colors hover:brightness-110"
           style={{ background: "#EF4444" }}
         >
-          <Phone className="size-3.5 rotate-[135deg]" />
+          <Phone className="size-3.5 rotate-135" />
         </button>
         <button
           onClick={onExpand}
@@ -736,7 +736,7 @@ function DesktopWidget({
             boxShadow: "0 4px 16px rgba(239,68,68,0.35)",
           }}
         >
-          <Phone className="size-4 rotate-[135deg]" />
+          <Phone className="size-4 rotate-135" />
           End Call
         </button>
       </div>
@@ -1063,7 +1063,7 @@ function MobileActiveCall({
               boxShadow: "0 8px 32px rgba(239,68,68,0.4)",
             }}
           >
-            <Phone className="size-5 rotate-[135deg]" />
+            <Phone className="size-5 rotate-135" />
             End Call
           </button>
         </div>

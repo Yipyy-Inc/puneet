@@ -482,7 +482,7 @@ export function ContactList({
                 </span>
                 <span
                   className={cn(
-                    "text-lg leading-none font-bold tabular-nums",
+                    "text-lg/none font-bold tabular-nums",
                     smsRemaining > 500
                       ? "text-blue-600"
                       : smsRemaining > 100

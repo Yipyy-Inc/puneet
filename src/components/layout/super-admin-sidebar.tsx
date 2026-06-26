@@ -13,6 +13,7 @@ import {
   Headphones,
   DollarSign,
   TrendingUp,
+  TrendingDown,
   FileText,
   BarChart2,
   Database,
@@ -21,9 +22,20 @@ import {
   AlertTriangle,
   Globe,
   Ticket,
-  ToggleRight,
   Puzzle,
   Sparkles,
+  Layers,
+  Receipt,
+  BellRing,
+  Hourglass,
+  Repeat,
+  Gift,
+  Flag,
+  Upload,
+  MessagesSquare,
+  PhoneCall,
+  Plug,
+  LineChart,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
@@ -92,6 +104,24 @@ export function AppSidebar() {
           icon: FileText,
           disabled: false,
         },
+        {
+          title: "Churn & Retention",
+          url: "/dashboard/reports/churn",
+          icon: TrendingDown,
+          disabled: false,
+        },
+        {
+          title: "Financial Report",
+          url: "/dashboard/reports/financial",
+          icon: DollarSign,
+          disabled: false,
+        },
+        {
+          title: "Business Report",
+          url: "/dashboard/reports/business",
+          icon: LineChart,
+          disabled: false,
+        },
       ],
     },
 
@@ -156,11 +186,76 @@ export function AppSidebar() {
           icon: DollarSign,
           disabled: false,
         },
+        {
+          title: "Data Import",
+          url: "/dashboard/platform/import",
+          icon: Upload,
+          disabled: false,
+        },
+        {
+          title: "Feature Flags",
+          url: "/dashboard/platform/flags",
+          icon: Flag,
+          disabled: false,
+        },
+      ],
+    },
+    {
+      label: "Commercial",
+      items: [
+        {
+          title: "Tiers & Pricing",
+          url: "/dashboard/commercial/tiers",
+          icon: Layers,
+          disabled: false,
+        },
+        {
+          title: "Subscriptions",
+          url: "/dashboard/commercial/subscriptions",
+          icon: Repeat,
+          disabled: false,
+        },
+        {
+          title: "Invoices",
+          url: "/dashboard/commercial/invoices",
+          icon: Receipt,
+          disabled: false,
+        },
+        {
+          title: "Credits",
+          url: "/dashboard/commercial/credits",
+          icon: Gift,
+          disabled: false,
+        },
+        {
+          title: "Trials",
+          url: "/dashboard/commercial/trials",
+          icon: Hourglass,
+          disabled: false,
+        },
+        {
+          title: "Dunning",
+          url: "/dashboard/commercial/dunning",
+          icon: BellRing,
+          disabled: false,
+        },
       ],
     },
     {
       label: "Communication & Support",
       items: [
+        {
+          title: "Support Chat",
+          url: "/dashboard/support/chat",
+          icon: MessagesSquare,
+          disabled: false,
+        },
+        {
+          title: "Support Calls",
+          url: "/dashboard/support/calling",
+          icon: PhoneCall,
+          disabled: false,
+        },
         {
           title: "Live Support",
           url: "/dashboard/communication/live-support",
@@ -183,12 +278,6 @@ export function AppSidebar() {
           title: "Global Settings",
           url: "/dashboard/system-admin/global-settings",
           icon: Globe,
-          disabled: false,
-        },
-        {
-          title: "Feature Toggles",
-          url: "/dashboard/system-admin/feature-toggles",
-          icon: ToggleRight,
           disabled: false,
         },
         {
@@ -219,6 +308,12 @@ export function AppSidebar() {
           title: "AI Integration",
           url: "/dashboard/system-admin/ai-settings",
           icon: Sparkles,
+          disabled: false,
+        },
+        {
+          title: "Integrations",
+          url: "/dashboard/system-admin/integrations",
+          icon: Plug,
           disabled: false,
         },
       ],

@@ -259,7 +259,7 @@ function MultiDimSelector({
                         />
                       )}
                     </div>
-                    <span className="w-full truncate text-center text-[10px] leading-tight font-medium">
+                    <span className="w-full truncate text-center text-[10px]/tight font-medium">
                       {val}
                     </span>
                     {!available && (
@@ -531,7 +531,7 @@ function SingleDimSelector({
                         />
                       )}
                     </div>
-                    <span className="w-full truncate text-center text-[10px] leading-tight font-medium">
+                    <span className="w-full truncate text-center text-[10px]/tight font-medium">
                       {label}
                     </span>
                     <span className="text-muted-foreground font-[tabular-nums] text-[10px]">

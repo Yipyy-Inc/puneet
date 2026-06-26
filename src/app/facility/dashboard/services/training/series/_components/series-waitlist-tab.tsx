@@ -592,7 +592,7 @@ export function SeriesWaitlistTab({ series }: Props) {
               <Send className="size-5 text-emerald-600" />
               Send offer to {offerTarget?.ownerName}?
             </DialogTitle>
-            <DialogDescription className="text-sm leading-relaxed">
+            <DialogDescription className="text-sm/relaxed">
               We&apos;ll text and email {offerTarget?.ownerName} a confirmation
               link for <span className="font-medium">{series.seriesName}</span>{" "}
               (starts {formatDateLong(series.startDate)}) and hold the spot for{" "}
@@ -752,7 +752,7 @@ function WaitlistDragHandle({ petName }: { petName: string }) {
       type="button"
       {...ctx.attributes}
       {...ctx.listeners}
-      className="text-muted-foreground hover:text-foreground -ml-1 cursor-grab touch-none rounded p-1 active:cursor-grabbing"
+      className="text-muted-foreground hover:text-foreground -ml-1 cursor-grab touch-none rounded-sm p-1 active:cursor-grabbing"
       title="Drag to re-prioritize"
       aria-label={`Drag handle for ${petName}`}
     >

@@ -105,13 +105,13 @@ export function SavedRepliesMenu({
           </span>
         )}
         <span className="ml-auto flex items-center gap-1 text-[10px] text-slate-400">
-          <kbd className="rounded border border-slate-200 bg-white px-1 py-0.5 font-mono">
+          <kbd className="rounded-sm border border-slate-200 bg-white px-1 py-0.5 font-mono">
             ↑↓
           </kbd>
-          <kbd className="rounded border border-slate-200 bg-white px-1 py-0.5 font-mono">
+          <kbd className="rounded-sm border border-slate-200 bg-white px-1 py-0.5 font-mono">
             ↵
           </kbd>
-          <kbd className="rounded border border-slate-200 bg-white px-1 py-0.5 font-mono">
+          <kbd className="rounded-sm border border-slate-200 bg-white px-1 py-0.5 font-mono">
             esc
           </kbd>
         </span>

@@ -226,7 +226,7 @@ export function DepositRequestPanel({
         </p>
       </div>
 
-      <ul className="max-h-[26rem] space-y-2 overflow-y-auto">
+      <ul className="max-h-104 space-y-2 overflow-y-auto">
         {BOOKINGS.map((b) => {
           const isSent = sent.has(b.id);
           return (

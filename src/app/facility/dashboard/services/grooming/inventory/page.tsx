@@ -291,7 +291,7 @@ function UsageCell({ productId }: { productId: string }) {
   }
 
   return (
-    <div className="text-xs leading-tight">
+    <div className="text-xs/tight">
       <div>
         <span className="font-semibold tabular-nums">{week}</span>
         <span className="text-muted-foreground"> this week</span>
@@ -514,7 +514,7 @@ export default function InventoryPage() {
       label: "Supplier",
       defaultVisible: true,
       render: (p) => (
-        <div className="flex flex-col text-xs leading-tight">
+        <div className="flex flex-col text-xs/tight">
           <span>{p.supplier}</span>
           {(p.supplierUrl || p.supplierEmail) && (
             <span className="text-muted-foreground inline-flex items-center gap-1">

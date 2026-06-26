@@ -553,7 +553,8 @@ export function CallingSettingsPanel({
                 }
               />
               <p className="text-muted-foreground mt-1 text-xs">
-                Use <code className="bg-muted rounded px-1">{"{{name}}"}</code>{" "}
+                Use{" "}
+                <code className="bg-muted rounded-sm px-1">{"{{name}}"}</code>{" "}
                 for client name.
               </p>
             </div>

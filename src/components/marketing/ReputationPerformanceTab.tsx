@@ -121,7 +121,7 @@ function StaffRow({
         <td className="py-3 pr-3 pl-5">
           <div className="flex items-center gap-2.5">
             <RankChip rank={rank} />
-            <div className="from-primary/20 to-primary/40 text-primary flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold">
+            <div className="from-primary/20 to-primary/40 text-primary flex size-7 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-xs font-bold">
               {stat.staffName.charAt(0)}
             </div>
             <div className="min-w-0">
@@ -326,7 +326,7 @@ export function ReputationPerformanceTab() {
       {/* Hero spotlight */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {topStaff && (
-          <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 dark:border-amber-800 dark:from-amber-950/20 dark:to-orange-950/20">
+          <Card className="border-amber-200 bg-linear-to-br from-amber-50 to-orange-50 dark:border-amber-800 dark:from-amber-950/20 dark:to-orange-950/20">
             <CardContent className="flex items-center gap-3 px-3 py-2.5">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-400/20">
                 <Trophy className="h-4 w-4 text-amber-600" />
@@ -352,7 +352,7 @@ export function ReputationPerformanceTab() {
           </Card>
         )}
         {topService && (
-          <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 dark:border-emerald-800 dark:from-emerald-950/20 dark:to-teal-950/20">
+          <Card className="border-emerald-200 bg-linear-to-br from-emerald-50 to-teal-50 dark:border-emerald-800 dark:from-emerald-950/20 dark:to-teal-950/20">
             <CardContent className="flex items-center gap-3 px-3 py-2.5">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-400/20">
                 <Zap className="h-4 w-4 text-emerald-600" />

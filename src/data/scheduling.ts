@@ -639,9 +639,6 @@ function generateTimeClockEntries(): TimeClockEntry[] {
       return;
     }
 
-    const [sh, sm] = shift.startTime.split(":").map(Number);
-    const [eh, em] = shift.endTime.split(":").map(Number);
-
     // Late by N minutes for variance 1, early arrival for variance 2,
     // early departure for variance 3, stayed late for variance 4, on-time otherwise.
     let inOffsetMin = 0;

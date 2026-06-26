@@ -252,14 +252,14 @@ function ScrollableTabsBar({ children }: { children: React.ReactNode }) {
       <div
         aria-hidden
         className={cn(
-          "from-background/90 pointer-events-none absolute inset-y-0 left-0 z-[5] w-10 bg-gradient-to-r to-transparent transition-opacity",
+          "from-background/90 pointer-events-none absolute inset-y-0 left-0 z-5 w-10 bg-linear-to-r to-transparent transition-opacity",
           canLeft ? "opacity-100" : "opacity-0",
         )}
       />
       <div
         aria-hidden
         className={cn(
-          "from-background/90 pointer-events-none absolute inset-y-0 right-0 z-[5] w-10 bg-gradient-to-l to-transparent transition-opacity",
+          "from-background/90 pointer-events-none absolute inset-y-0 right-0 z-5 w-10 bg-linear-to-l to-transparent transition-opacity",
           canRight ? "opacity-100" : "opacity-0",
         )}
       />
@@ -443,7 +443,7 @@ function ServicesTab({ profile }: { profile: StaffProfile }) {
             className="border-border/60 bg-card rounded-xl border p-3"
           >
             <ServiceChip module={s} size="md" />
-            <p className="text-muted-foreground mt-2 text-[11px] leading-relaxed">
+            <p className="text-muted-foreground mt-2 text-[11px]/relaxed">
               Access follows the scope on each action — defaults come from the
               staff&apos;s role, overrides apply per-permission.
             </p>

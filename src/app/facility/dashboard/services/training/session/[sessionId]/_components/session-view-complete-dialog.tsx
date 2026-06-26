@@ -44,7 +44,7 @@ export function SessionCompleteConfirmDialog({
               </>
             )}
           </DialogTitle>
-          <DialogDescription className="text-sm leading-relaxed">
+          <DialogDescription className="text-sm/relaxed">
             {hasMissing ? (
               <>
                 <span className="font-semibold text-amber-700">

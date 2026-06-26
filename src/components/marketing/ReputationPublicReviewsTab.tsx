@@ -84,7 +84,7 @@ function ReviewCard({
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="from-primary/20 to-primary/40 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold">
+          <div className="from-primary/20 to-primary/40 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-xs font-bold">
             {req.clientName.charAt(0)}
           </div>
           <div className="min-w-0">
@@ -117,7 +117,7 @@ function ReviewCard({
       </div>
 
       {/* Comment */}
-      <p className="text-muted-foreground line-clamp-3 flex-1 text-xs leading-relaxed italic">
+      <p className="text-muted-foreground line-clamp-3 flex-1 text-xs/relaxed italic">
         &quot;{req.clientComment}&quot;
       </p>
 
@@ -165,7 +165,7 @@ function ReviewRow({
     <div
       className={`hover:bg-muted/30 flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-all ${req.isPubliclyDisplayed ? "border-emerald-200 bg-emerald-50/30 dark:border-emerald-800 dark:bg-emerald-950/10" : "bg-card"}`}
     >
-      <div className="from-primary/20 to-primary/40 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold">
+      <div className="from-primary/20 to-primary/40 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-xs font-bold">
         {req.clientName.charAt(0)}
       </div>
       <div className="min-w-0 flex-1">
@@ -311,7 +311,7 @@ export function ReputationPublicReviewsTab() {
               <p className="text-muted-foreground text-[10px] leading-none tracking-wide uppercase">
                 {s.label}
               </p>
-              <p className="mt-1 text-lg leading-none font-bold tabular-nums">
+              <p className="mt-1 text-lg/none font-bold tabular-nums">
                 {s.value}
               </p>
             </div>
@@ -334,7 +334,7 @@ export function ReputationPublicReviewsTab() {
                 key={req.id}
                 className="bg-background flex items-center gap-2.5 rounded-lg border px-3 py-2"
               >
-                <div className="from-primary/20 to-primary/40 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold">
+                <div className="from-primary/20 to-primary/40 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-xs font-bold">
                   {req.clientName.charAt(0)}
                 </div>
                 <div className="min-w-0 flex-1">

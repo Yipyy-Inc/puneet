@@ -665,7 +665,7 @@ export function GroomingSessionPanel({
                         }
                         onClick={() => toggleCare(c.id)}
                         className={cn(
-                          "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border",
+                          "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-sm border",
                           c.administered
                             ? "border-emerald-600 bg-emerald-600 text-white"
                             : "border-input bg-background hover:border-emerald-400",

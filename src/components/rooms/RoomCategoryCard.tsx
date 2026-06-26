@@ -210,7 +210,7 @@ export function RoomCategoryCard({
               { val: activeRooms.length, label: "Active" },
             ].map(({ val, label }) => (
               <div key={label} className="text-center">
-                <p className="text-lg leading-none font-bold">{val}</p>
+                <p className="text-lg/none font-bold">{val}</p>
                 <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
                   {label}
                 </p>

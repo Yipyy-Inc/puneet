@@ -73,7 +73,6 @@ const EMPTY_OVERRIDES: PetServicePricingOverride[] = [];
 // Real stylist IDs from src/data/grooming.ts — the resolver looks each one
 // up to read `capacity.skillLevel`, so we can't pass a fake id.
 const STYLIST_ID_PREMIUM = "stylist-001"; // skillLevel: "premium"
-const STYLIST_ID_PLATINUM = "stylist-004"; // skillLevel: "platinum"
 
 // ── Scenarios ──────────────────────────────────────────────────────────────
 

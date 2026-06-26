@@ -417,7 +417,7 @@ export default function CustomerCamerasPage() {
               <CardContent className="space-y-3">
                 {/* Video Preview */}
                 <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-900">
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+                  <div className="absolute inset-0 flex items-center justify-center bg-linear-to-br from-slate-800 to-slate-900">
                     <Video className="size-12 text-slate-600" />
                     <div className="absolute top-2 left-2 flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs text-white">
                       <CircleDot className="size-2 animate-pulse" />

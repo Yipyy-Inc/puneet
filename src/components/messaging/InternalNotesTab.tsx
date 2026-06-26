@@ -159,7 +159,7 @@ export function InternalNotesTab({
                     </Badge>
                   </div>
                 )}
-                <p className="pr-16 text-sm leading-relaxed text-slate-700">
+                <p className="pr-16 text-sm/relaxed text-slate-700">
                   {note.body}
                 </p>
                 <div className="mt-2 flex items-center justify-between">
@@ -175,7 +175,7 @@ export function InternalNotesTab({
                       type="button"
                       title={note.pinned ? "Unpin" : "Pin"}
                       onClick={() => togglePin(note.id)}
-                      className="rounded p-1 text-slate-300 hover:bg-amber-100 hover:text-amber-600"
+                      className="rounded-sm p-1 text-slate-300 hover:bg-amber-100 hover:text-amber-600"
                     >
                       {note.pinned ? (
                         <PinOff className="size-3.5" />
@@ -187,7 +187,7 @@ export function InternalNotesTab({
                       type="button"
                       title="Delete note"
                       onClick={() => deleteNote(note.id)}
-                      className="rounded p-1 text-slate-300 hover:bg-red-50 hover:text-red-500"
+                      className="rounded-sm p-1 text-slate-300 hover:bg-red-50 hover:text-red-500"
                     >
                       <span className="text-xs">✕</span>
                     </button>

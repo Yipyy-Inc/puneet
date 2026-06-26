@@ -529,11 +529,11 @@ export function TipSettings() {
                         />
                         <p className="text-muted-foreground text-[10px]">
                           Use{" "}
-                          <code className="bg-muted rounded px-1">
+                          <code className="bg-muted rounded-sm px-1">
                             {"{petName}"}
                           </code>{" "}
                           or{" "}
-                          <code className="bg-muted rounded px-1">
+                          <code className="bg-muted rounded-sm px-1">
                             {"{clientName}"}
                           </code>{" "}
                           to personalize.

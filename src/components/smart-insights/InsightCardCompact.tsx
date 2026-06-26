@@ -73,7 +73,7 @@ export function InsightCardCompact({
         </div>
       </div>
 
-      <h4 className="text-sm leading-tight font-semibold">{insight.title}</h4>
+      <h4 className="text-sm/tight font-semibold">{insight.title}</h4>
       <p className="text-muted-foreground line-clamp-1 text-xs">
         {insight.description}
       </p>

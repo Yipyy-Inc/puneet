@@ -252,7 +252,7 @@ export function CustomReportBuilder({
                       />
                       <label
                         htmlFor={field.key}
-                        className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        className="cursor-pointer text-sm/none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
                         {field.label}
                         <span className="text-muted-foreground ml-2 text-xs">
@@ -480,7 +480,7 @@ export function CustomReportBuilder({
               />
               <label
                 htmlFor="enableSchedule"
-                className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="cursor-pointer text-sm/none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 Enable automatic scheduling
               </label>

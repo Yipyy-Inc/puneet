@@ -324,7 +324,7 @@ export function RecordingsList({
                           onClick={(e) => e.stopPropagation()}
                           className="group hover:text-primary flex items-center gap-1"
                         >
-                          <span className="truncate text-sm leading-tight font-semibold group-hover:underline">
+                          <span className="truncate text-sm/tight font-semibold group-hover:underline">
                             {rec.clientName || "Unknown Caller"}
                           </span>
                           <ExternalLink className="text-muted-foreground size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />

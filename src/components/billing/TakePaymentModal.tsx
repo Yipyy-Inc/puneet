@@ -345,7 +345,7 @@ export function TakePaymentModal({
             {step === "details" && (
               <button
                 onClick={handleBack}
-                className="text-muted-foreground hover:text-foreground mr-1 rounded p-0.5 transition-colors"
+                className="text-muted-foreground hover:text-foreground mr-1 rounded-sm p-0.5 transition-colors"
               >
                 <ChevronLeft className="size-4" />
               </button>

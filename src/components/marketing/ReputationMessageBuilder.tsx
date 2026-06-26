@@ -87,7 +87,7 @@ function PhonePreview({
         <div className="min-h-[200px] bg-[#f4f4f6] p-3 dark:bg-slate-900/60">
           <div
             className={cn(
-              "max-w-[82%] px-3 py-2 text-sm leading-snug",
+              "max-w-[82%] px-3 py-2 text-sm/snug",
               device === "ios"
                 ? "rounded-2xl rounded-bl-sm bg-slate-200 text-slate-900"
                 : "rounded-lg bg-emerald-100 text-emerald-950",
@@ -127,7 +127,7 @@ function EmailPreview({ subject, body }: { subject: string; body: string }) {
           {renderTemplate(subject) || "(no subject)"}
         </p>
       </div>
-      <div className="text-foreground p-3 text-sm leading-relaxed whitespace-pre-line">
+      <div className="text-foreground p-3 text-sm/relaxed whitespace-pre-line">
         {renderTemplate(body) || "Your email body preview appears here…"}
       </div>
     </div>
@@ -228,7 +228,7 @@ export function ReputationMessageBuilder() {
                     : "hover:bg-muted/50",
                 )}
               >
-                <p className="text-sm leading-tight font-medium">
+                <p className="text-sm/tight font-medium">
                   {touchpointLabel(i)}
                 </p>
                 <p className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">

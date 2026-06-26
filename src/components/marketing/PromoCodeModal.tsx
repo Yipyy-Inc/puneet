@@ -259,7 +259,7 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
               />
               <label
                 htmlFor="autoApply"
-                className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="cursor-pointer text-sm/none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 Auto-apply this promo code when conditions are met
               </label>
@@ -278,7 +278,7 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
               />
               <label
                 htmlFor="firstTimeCustomer"
-                className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="cursor-pointer text-sm/none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 First-time customers only
               </label>

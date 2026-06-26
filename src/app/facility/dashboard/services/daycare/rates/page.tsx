@@ -683,7 +683,7 @@ export default function DaycareRatesPage() {
                           className={`hover:bg-muted/50 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors ${i > 0 ? "border-t" : ""} ${selected ? "bg-emerald-50/60" : ""}`}
                         >
                           <div
-                            className={`flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${selected ? "border-emerald-600 bg-emerald-600" : "border-muted-foreground/30"}`}
+                            className={`flex size-5 shrink-0 items-center justify-center rounded-sm border-2 transition-colors ${selected ? "border-emerald-600 bg-emerald-600" : "border-muted-foreground/30"}`}
                           >
                             {selected && (
                               <Check className="size-3 text-white" />
@@ -825,7 +825,7 @@ export default function DaycareRatesPage() {
                                 >
                                   <div
                                     className={cn(
-                                      "flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors",
+                                      "flex size-5 shrink-0 items-center justify-center rounded-sm border-2 transition-colors",
                                       selected
                                         ? "border-blue-600 bg-blue-600"
                                         : "border-muted-foreground/30",

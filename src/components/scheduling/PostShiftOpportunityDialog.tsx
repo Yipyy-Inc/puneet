@@ -481,7 +481,7 @@ export function PostShiftOpportunityDialog({
                         >
                           {mode.label}
                         </p>
-                        <p className="text-muted-foreground mt-0.5 text-[10px] leading-tight">
+                        <p className="text-muted-foreground mt-0.5 text-[10px]/tight">
                           {mode.hint}
                         </p>
                       </div>
@@ -519,7 +519,7 @@ export function PostShiftOpportunityDialog({
                     </PopoverTrigger>
                     <PopoverContent
                       align="start"
-                      className="w-[var(--radix-popover-trigger-width)] p-0"
+                      className="w-(--radix-popover-trigger-width) p-0"
                     >
                       <Command>
                         <CommandInput
@@ -542,7 +542,7 @@ export function PostShiftOpportunityDialog({
                                 >
                                   <div
                                     className={cn(
-                                      "flex size-4 shrink-0 items-center justify-center rounded border",
+                                      "flex size-4 shrink-0 items-center justify-center rounded-sm border",
                                       checked
                                         ? "border-indigo-500 bg-indigo-500 text-white"
                                         : "border-input",

@@ -198,8 +198,8 @@ export function InsightCard({
 
       {/* Title + description */}
       <div className="space-y-0.5">
-        <h3 className="text-sm leading-tight font-bold">{insight.title}</h3>
-        <p className="text-muted-foreground text-xs leading-snug">
+        <h3 className="text-sm/tight font-bold">{insight.title}</h3>
+        <p className="text-muted-foreground text-xs/snug">
           {insight.description}
         </p>
       </div>

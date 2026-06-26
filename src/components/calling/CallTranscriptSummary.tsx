@@ -40,9 +40,7 @@ export function CallTranscriptSummary({
             <FileText className="size-3" />
             Transcript
           </p>
-          <p className="text-foreground text-xs leading-relaxed">
-            {transcription}
-          </p>
+          <p className="text-foreground text-xs/relaxed">{transcription}</p>
         </div>
       )}
 

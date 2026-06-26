@@ -110,7 +110,7 @@ export function PrintableDaySheet({
       <header className="mb-4 border-b-2 border-black pb-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl leading-tight font-bold">
+            <h1 className="text-2xl/tight font-bold">
               Daily Grooming Schedule
             </h1>
             <p className="text-base">{formatDateLong(date)}</p>

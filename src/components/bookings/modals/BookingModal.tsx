@@ -247,7 +247,6 @@ export function BookingModal({
   preSelectedExtraServices,
   preSelectedFeedingSchedule,
   preSelectedMedications,
-  preSelectedSpecialRequests,
   preSelectedNotificationEmail,
   preSelectedNotificationSMS,
   booking,
@@ -1154,13 +1153,6 @@ export function BookingModal({
     parseGuestWeight,
     selectedPets,
   ]);
-
-  const effectiveSelectedPetIds = useMemo(() => {
-    if (isEstimateMode && isGuestEstimate) {
-      return effectiveSelectedPets.map((p) => p.id);
-    }
-    return selectedPetIds;
-  }, [isEstimateMode, isGuestEstimate, effectiveSelectedPets, selectedPetIds]);
 
   // In customer mode the Room Assignment step is hidden — the system
   // auto-assigns each pet to the best-fit section/unit based on the facility's
@@ -3861,7 +3853,7 @@ export function BookingModal({
                       <h3 className="mt-4 text-lg font-bold text-slate-800">
                         Booking Request Received!
                       </h3>
-                      <p className="text-muted-foreground mt-3 max-w-sm text-sm leading-relaxed">
+                      <p className="text-muted-foreground mt-3 max-w-sm text-sm/relaxed">
                         {bookingRequestMessage ||
                           bookingFlow.bookingRequestConfirmationMessage ||
                           "Thank you! We've received your booking request and will verify all the details. You'll receive a confirmation email shortly once everything is reviewed and approved."}

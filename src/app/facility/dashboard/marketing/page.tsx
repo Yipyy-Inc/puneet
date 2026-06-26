@@ -564,7 +564,7 @@ export default function MarketingPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-sm">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-fuchsia-500 shadow-sm">
               <Megaphone className="h-5 w-5 text-white" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight">Marketing</h1>
@@ -1113,9 +1113,9 @@ export default function MarketingPage() {
                     {badges.map((badge) => (
                       <div
                         key={badge.id}
-                        className="group from-muted/40 hover:border-primary/30 relative flex items-start gap-4 overflow-hidden rounded-xl border bg-gradient-to-br to-transparent p-4 transition-all hover:shadow-md"
+                        className="group from-muted/40 hover:border-primary/30 relative flex items-start gap-4 overflow-hidden rounded-xl border bg-linear-to-br to-transparent p-4 transition-all hover:shadow-md"
                       >
-                        <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-100 to-amber-200 text-3xl shadow-sm transition-transform group-hover:scale-110 dark:from-amber-900/40 dark:to-amber-800/40">
+                        <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-amber-100 to-amber-200 text-3xl shadow-sm transition-transform group-hover:scale-110 dark:from-amber-900/40 dark:to-amber-800/40">
                           {badge.icon}
                         </div>
                         <div className="flex-1">

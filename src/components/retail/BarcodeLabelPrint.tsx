@@ -21,7 +21,6 @@ import {
 import { Printer } from "lucide-react";
 import { BarcodeDisplay } from "@/components/retail/BarcodeDisplay";
 import { toast } from "sonner";
-import { facilities } from "@/data/facilities";
 
 interface BarcodeLabelPrintProps {
   open: boolean;
@@ -50,7 +49,6 @@ export function BarcodeLabelPrint({
   const size = LABEL_SIZES.find((s) => s.value === labelSize) ?? LABEL_SIZES[0];
 
   const handlePrint = () => {
-    const facility = facilities.find((f) => f.id === 11);
     const w = window.open("", "_blank", "width=500,height=400");
     if (!w) return;
 

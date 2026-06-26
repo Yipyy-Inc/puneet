@@ -53,11 +53,6 @@ function getStoredAddOns(): ServiceAddOn[] {
   return defaultServiceAddOns;
 }
 
-function formatAddonPrice(addon: ServiceAddOn, qty: number): string {
-  const total = addon.price * qty;
-  return `$${total.toFixed(2)}`;
-}
-
 function formatAddonUnit(addon: ServiceAddOn): string {
   switch (addon.pricingType) {
     case "flat":
@@ -279,7 +274,6 @@ export function ConfirmStep({
   facilityTaxes,
   tipConfig,
   tipAmount,
-  onTipChange,
   onEditStep,
 }: ConfirmStepProps) {
   const serviceInfo = SERVICE_CATEGORIES.find((s) => s.id === selectedService);
@@ -315,8 +309,6 @@ export function ConfirmStep({
   // #1 — Missing data warnings
   const roomsIncomplete =
     isDaycareOrBoarding && selectedPets.length > roomAssignments.length;
-  const noFeeding = isDaycareOrBoarding && feedingSchedule.length === 0;
-  const noMeds = isDaycareOrBoarding && medications.length === 0;
 
   // #5 — Boarding nights count
   const boardingNights =

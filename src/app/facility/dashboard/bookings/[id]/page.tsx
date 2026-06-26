@@ -154,7 +154,6 @@ function BookingTasksSection({
   const [tasks, setTasks] = useState<GeneratedTask[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [customName, setCustomName] = useState("");
-  const [now] = useState(() => Date.now());
 
   // Load tasks on mount
   useEffect(() => {
@@ -625,7 +624,6 @@ export default function FacilityBookingDetailPage({
   }
 
   const invoice = booking.invoice;
-  const allItems = [...(invoice?.items ?? []), ...addedItems];
   const addedSubtotal = addedItems.reduce((s, i) => s + i.price, 0);
 
   return (

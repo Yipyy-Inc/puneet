@@ -45,11 +45,7 @@ const STEPS = [
   { id: "review", title: "Review & Send" },
 ];
 
-export function EstimateWizard({
-  open,
-  onOpenChange,
-  facilityId,
-}: EstimateWizardProps) {
+export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
   const [step, setStep] = useState(0);
 
   // Client selection

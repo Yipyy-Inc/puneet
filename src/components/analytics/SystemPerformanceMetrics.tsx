@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { systemPerformance } from "@/data/analytics";
+import { resourceUtilizations } from "@/data/system-health";
 import {
   Activity,
   Clock,
@@ -25,6 +26,13 @@ import {
 
 export function SystemPerformanceMetrics() {
   const metrics = systemPerformance;
+
+  // Live resource usage from the system-health records (never hardcoded).
+  const resourceUsage = (type: "CPU" | "Memory" | "Disk" | "Network") => {
+    const r = resourceUtilizations.find((x) => x.resourceType === type);
+    if (!r) return "—";
+    return r.unit === "%" ? `${r.current}%` : `${r.current} ${r.unit}`;
+  };
 
   // Calculate additional metrics
   const successRate = (
@@ -524,19 +532,21 @@ export function SystemPerformanceMetrics() {
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center justify-between">
                   <span>CPU Usage</span>
-                  <span className="font-medium">42%</span>
+                  <span className="font-medium">{resourceUsage("CPU")}</span>
                 </li>
                 <li className="flex items-center justify-between">
                   <span>Memory Usage</span>
-                  <span className="font-medium">58%</span>
+                  <span className="font-medium">{resourceUsage("Memory")}</span>
                 </li>
                 <li className="flex items-center justify-between">
                   <span>Network I/O</span>
-                  <span className="font-medium">156 MB/s</span>
+                  <span className="font-medium">
+                    {resourceUsage("Network")}
+                  </span>
                 </li>
                 <li className="flex items-center justify-between">
                   <span>Disk Usage</span>
-                  <span className="font-medium">67%</span>
+                  <span className="font-medium">{resourceUsage("Disk")}</span>
                 </li>
               </ul>
             </div>

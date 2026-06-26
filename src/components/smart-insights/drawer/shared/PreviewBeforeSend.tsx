@@ -66,7 +66,7 @@ export function PreviewBeforeSend({
         )}
 
         <div className="border-t pt-2">
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">{body}</p>
+          <p className="text-sm/relaxed whitespace-pre-wrap">{body}</p>
         </div>
 
         {meta && meta.length > 0 && (

@@ -180,7 +180,7 @@ export function ProgramWaitlistDialog({
             <Clock className="size-5 text-amber-600" />
             Join the waitlist for {program.name}
           </DialogTitle>
-          <DialogDescription className="text-sm leading-relaxed">
+          <DialogDescription className="text-sm/relaxed">
             All upcoming series are at capacity. Add your dog to the waitlist
             and we&apos;ll text + email you the moment a spot opens.
             {earliest && (

@@ -24,6 +24,8 @@ export interface SubscriptionTier {
   availableModules: string[]; // module IDs that can be enabled for this tier
   isActive: boolean;
   isCustomizable: boolean;
+  isPublic?: boolean; // shown on the public pricing page
+  transactionFeePercent?: number; // platform fee on transactions (%)
   createdAt: string;
   updatedAt: string;
 }
@@ -34,6 +36,8 @@ export const subscriptionTiers: SubscriptionTier[] = [
     name: "Puppy",
     type: "beginner",
     description: "Perfect for small facilities just getting started",
+    isPublic: true,
+    transactionFeePercent: 2.9,
     pricing: {
       monthly: 29,
       quarterly: 79,
@@ -71,6 +75,8 @@ export const subscriptionTiers: SubscriptionTier[] = [
     name: "Pack Leader",
     type: "pro",
     description: "Advanced features for growing pet care businesses",
+    isPublic: true,
+    transactionFeePercent: 2.5,
     pricing: {
       monthly: 79,
       quarterly: 219,
@@ -114,6 +120,8 @@ export const subscriptionTiers: SubscriptionTier[] = [
     name: "Alpha Enterprise",
     type: "enterprise",
     description: "Complete solution for large-scale operations",
+    isPublic: true,
+    transactionFeePercent: 1.9,
     pricing: {
       monthly: 199,
       quarterly: 549,
@@ -159,6 +167,8 @@ export const subscriptionTiers: SubscriptionTier[] = [
     name: "Custom Enterprise",
     type: "custom",
     description: "Custom package for premium grooming facilities",
+    isPublic: false,
+    transactionFeePercent: 2.2,
     pricing: {
       monthly: 149,
       quarterly: 409,

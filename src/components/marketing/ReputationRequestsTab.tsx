@@ -316,7 +316,7 @@ function RequestRow({
               {req.clientName.charAt(0)}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm leading-none font-medium">
+              <p className="truncate text-sm/none font-medium">
                 {req.clientName}
               </p>
               <p className="text-muted-foreground mt-0.5 truncate text-[11px]">

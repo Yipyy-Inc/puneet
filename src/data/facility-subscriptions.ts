@@ -410,6 +410,43 @@ export const facilitySubscriptions: FacilitySubscription[] = [
     createdAt: "2025-05-15T00:00:00Z",
     updatedAt: "2025-11-27T00:00:00Z",
   },
+  {
+    // The signed-in facility represented across the facility portal (id 11).
+    // Backs the self-service billing page at /facility/settings/billing.
+    id: "sub-011",
+    facilityId: 11,
+    facilityName: "Example Pet Care Facility",
+    tierId: "tier-beginner",
+    tierName: "Puppy",
+    status: "active",
+    billingCycle: "monthly",
+    startDate: "2025-09-01",
+    endDate: "2026-09-01",
+    autoRenew: true,
+    enabledModules: [
+      "module-booking",
+      "module-customer-management",
+      "module-communication",
+    ],
+    usage: {
+      currentUsers: 4,
+      monthlyReservations: 88,
+      storageUsedGB: 3.2,
+      activeLocations: 1,
+    },
+    billing: {
+      baseCost: 29,
+      moduleCosts: [],
+      totalCost: 29,
+      currency: "USD",
+      nextBillingDate: "2026-07-01",
+      lastPaymentDate: "2026-06-01",
+      paymentMethod: "Credit Card",
+    },
+    notes: "Self-service billing demo facility.",
+    createdAt: "2025-09-01T00:00:00Z",
+    updatedAt: "2026-06-01T00:00:00Z",
+  },
 ];
 
 // Helper functions

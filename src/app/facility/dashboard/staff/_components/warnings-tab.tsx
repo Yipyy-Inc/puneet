@@ -301,7 +301,7 @@ function WarningCard({
               )}
             </p>
             {w.signatureData && (
-              <div className="bg-background/60 mt-1.5 flex h-10 items-center justify-center rounded border">
+              <div className="bg-background/60 mt-1.5 flex h-10 items-center justify-center rounded-sm border">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={w.signatureData}

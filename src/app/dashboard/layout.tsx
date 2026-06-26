@@ -8,10 +8,11 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
-import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
+import { AdminGlobalSearch } from "@/components/search/AdminGlobalSearch";
 import { TopBarIconsNext } from "@/components/layout/TopBarIconsNext";
 import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigProviderWrapper";
 import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
+import { SupportNotificationBell } from "@/components/layout/SupportNotificationBell";
 
 export const metadata: Metadata = {
   title: "Yipyy - Admin Dashboard",
@@ -40,11 +41,12 @@ export default async function DashboardLayout({
             <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors" />
           </div>
 
-          <GlobalSearchNext className="max-w-[520px]" />
+          <AdminGlobalSearch className="max-w-[520px]" />
 
           <div className="flex items-center">
             {/* User Profile & Notifications */}
             <TopBarIconsNext messagesHref="/dashboard/communication/live-support" />
+            <SupportNotificationBell />
             <HeaderDropdown />
             <UserProfileSheet showNotifications={false} />
           </div>

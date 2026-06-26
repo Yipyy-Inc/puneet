@@ -307,39 +307,109 @@ export const auditLogs: AuditLog[] = [
   },
 ];
 
-export const auditStatistics: AuditStatistics = {
-  totalLogs: 15842,
-  financialChanges: 1245,
-  userAccessEvents: 3890,
-  configurationChanges: 567,
-  securityEvents: 234,
-  criticalEvents: 89,
-  failedActions: 156,
-  todayLogs: 234,
-  weeklyTrend: [
-    { date: "Nov 22", count: 1840 },
-    { date: "Nov 23", count: 2120 },
-    { date: "Nov 24", count: 1950 },
-    { date: "Nov 25", count: 2340 },
-    { date: "Nov 26", count: 2180 },
-    { date: "Nov 27", count: 2290 },
-    { date: "Nov 28", count: 234 },
-  ],
-  categoryBreakdown: [
-    { category: "User Access", count: 3890, percentage: 24.6 },
-    { category: "Financial", count: 1245, percentage: 7.9 },
-    { category: "Configuration", count: 567, percentage: 3.6 },
-    { category: "Security", count: 234, percentage: 1.5 },
-    { category: "Data", count: 5678, percentage: 35.8 },
-    { category: "System", count: 4228, percentage: 26.7 },
-  ],
-  topUsers: [
-    { userId: "user-123", userName: "John Admin", actionCount: 1456 },
-    { userId: "user-456", userName: "Sarah Manager", actionCount: 892 },
-    { userId: "user-789", userName: "Mike Support", actionCount: 678 },
-    { userId: "system", userName: "System Automation", actionCount: 5432 },
-  ],
-};
+// Audit Trail immutability (write-once / append-only). Existing audit entries
+// must never be mutated. Deep-freeze the seed so any accidental in-place
+// edit/splice throws at runtime. New entries are added only through the
+// append-only API in src/lib/api/audit-log.ts. This mirrors the database-level
+// guarantee in supabase/migrations/20260625000000_audit_log_append_only.sql
+// (a trigger that blocks UPDATE/DELETE/TRUNCATE for every role).
+for (const entry of auditLogs) {
+  for (const change of entry.changes) Object.freeze(change);
+  Object.freeze(entry.changes);
+  Object.freeze(entry);
+}
+Object.freeze(auditLogs);
+
+// Audit statistics are COMPUTED from the audit records above — never hardcoded.
+// (Global rule: every admin metric derives from the data layer; a hardcoded
+// aggregate is a bug.) Time-relative metrics use the data's own latest day as
+// the reference window so they reflect the actual records.
+const AUDIT_MONTH = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+function computeAuditStatistics(logs: readonly AuditLog[]): AuditStatistics {
+  const total = logs.length;
+  const where = (pred: (l: AuditLog) => boolean) => logs.filter(pred).length;
+  const DAY = 86_400_000;
+  const dayStart = (t: number) => {
+    const d = new Date(t);
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  };
+  const dayLabel = (t: number) => {
+    const d = new Date(t);
+    return `${AUDIT_MONTH[d.getUTCMonth()]} ${d.getUTCDate()}`;
+  };
+  const times = logs.map((l) => new Date(l.timestamp).getTime());
+  const refDay = times.length ? dayStart(Math.max(...times)) : dayStart(0);
+  const inDay = (t: number, start: number) => t >= start && t < start + DAY;
+
+  const categories = [
+    "User Access",
+    "Financial",
+    "Configuration",
+    "Security",
+    "Data",
+    "System",
+  ];
+  const categoryBreakdown = categories.map((category) => {
+    const count = where((l) => l.category === category);
+    return {
+      category,
+      count,
+      percentage: total ? Math.round((count / total) * 1000) / 10 : 0,
+    };
+  });
+
+  const userMap = new Map<
+    string,
+    { userId: string; userName: string; actionCount: number }
+  >();
+  for (const l of logs) {
+    const cur = userMap.get(l.userId) ?? {
+      userId: l.userId,
+      userName: l.userName,
+      actionCount: 0,
+    };
+    cur.actionCount += 1;
+    userMap.set(l.userId, cur);
+  }
+
+  return {
+    totalLogs: total,
+    financialChanges: where((l) => l.category === "Financial"),
+    userAccessEvents: where((l) => l.category === "User Access"),
+    configurationChanges: where((l) => l.category === "Configuration"),
+    securityEvents: where((l) => l.category === "Security"),
+    criticalEvents: where((l) => l.severity === "Critical"),
+    failedActions: where((l) => l.status === "Failed"),
+    todayLogs: where((l) => inDay(new Date(l.timestamp).getTime(), refDay)),
+    weeklyTrend: Array.from({ length: 7 }, (_, i) => {
+      const start = refDay - (6 - i) * DAY;
+      return {
+        date: dayLabel(start),
+        count: where((l) => inDay(new Date(l.timestamp).getTime(), start)),
+      };
+    }),
+    categoryBreakdown,
+    topUsers: [...userMap.values()]
+      .sort((a, b) => b.actionCount - a.actionCount)
+      .slice(0, 5),
+  };
+}
+
+export const auditStatistics: AuditStatistics =
+  computeAuditStatistics(auditLogs);
 
 export const dataBackups: DataBackup[] = [
   {

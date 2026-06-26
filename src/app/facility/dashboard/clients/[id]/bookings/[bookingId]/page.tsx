@@ -131,37 +131,6 @@ function formatDateShort(dateStr: string) {
   });
 }
 
-function statusConfig(status: string) {
-  switch (status) {
-    case "completed":
-      return {
-        dot: "bg-emerald-500",
-        bg: "bg-emerald-50 border-emerald-200 text-emerald-700",
-      };
-    case "confirmed":
-      return {
-        dot: "bg-blue-500",
-        bg: "bg-blue-50 border-blue-200 text-blue-700",
-      };
-    case "pending":
-      return {
-        dot: "bg-amber-500",
-        bg: "bg-amber-50 border-amber-200 text-amber-700",
-      };
-    case "estimate_sent":
-      return {
-        dot: "bg-violet-500",
-        bg: "bg-violet-50 border-violet-200 text-violet-700",
-      };
-    case "declined":
-      return { dot: "bg-red-500", bg: "bg-red-50 border-red-200 text-red-700" };
-    case "cancelled":
-      return { dot: "bg-red-500", bg: "bg-red-50 border-red-200 text-red-700" };
-    default:
-      return { dot: "bg-muted-foreground", bg: "bg-muted" };
-  }
-}
-
 // ========================================
 // Page
 // ========================================
@@ -1445,7 +1414,7 @@ export default function ClientBookingDetailPage({
             open={earlyCheckoutOpen}
             onOpenChange={setEarlyCheckoutOpen}
             isEarlyCheckout
-            onConfirm={({ timestamp, reason }) => {
+            onConfirm={({ reason }) => {
               toast.success(
                 `Early checkout recorded for ${bookingRef}${reason ? ` · "${reason}"` : ""}`,
               );

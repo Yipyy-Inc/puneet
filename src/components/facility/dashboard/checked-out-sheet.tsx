@@ -51,10 +51,10 @@ export function CheckedOutSheet({ bookings, count }: CheckedOutSheetProps) {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="w-[90vw] !max-w-[960px] gap-0 overflow-hidden p-0 sm:!max-w-[960px]">
+      <DialogContent className="w-[90vw] max-w-[960px]! gap-0 overflow-hidden p-0 sm:max-w-[960px]!">
         <DialogHeader className="items-center border-b p-5 pr-12 text-center sm:text-center">
           <DialogTitle className="flex items-center justify-center gap-2 text-base">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-sm">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-sm">
               <LogOut className="size-4" />
             </span>
             Checked Out Today

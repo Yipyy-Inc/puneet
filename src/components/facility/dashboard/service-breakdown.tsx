@@ -22,18 +22,18 @@ export function ServiceBreakdown() {
   };
 
   return (
-    <Card className="from-card via-card to-card relative overflow-hidden border bg-gradient-to-br">
-      <div className="pointer-events-none absolute -top-12 right-0 h-40 w-40 rounded-full bg-gradient-to-br from-sky-200/40 via-cyan-200/20 to-transparent blur-2xl dark:from-sky-500/15 dark:via-cyan-500/10" />
+    <Card className="from-card via-card to-card relative overflow-hidden border bg-linear-to-br">
+      <div className="pointer-events-none absolute -top-12 right-0 h-40 w-40 rounded-full bg-linear-to-br from-sky-200/40 via-cyan-200/20 to-transparent blur-2xl dark:from-sky-500/15 dark:via-cyan-500/10" />
       <div className="relative flex flex-col gap-3 p-3 lg:flex-row lg:items-center">
         <div className="flex items-center gap-2.5 lg:min-w-[180px]">
-          <div className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 via-sky-500 to-cyan-500 text-white shadow-sm shadow-sky-500/20">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-linear-to-br from-sky-500 via-sky-500 to-cyan-500 text-white shadow-sm shadow-sky-500/20">
             <CalendarDays className="size-4" />
           </div>
           <div>
             <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
               Today&apos;s Check-Ins
             </p>
-            <p className="text-lg leading-tight font-semibold tabular-nums">
+            <p className="text-lg/tight font-semibold tabular-nums">
               {total}
               <span className="text-muted-foreground ml-1.5 text-xs font-normal">
                 across {services.length} services
@@ -116,7 +116,7 @@ function ServicePill({
       <span>{label}</span>
       <span
         className={cn(
-          "ml-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums",
+          "ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums",
           active
             ? "bg-white/25 text-white"
             : "bg-muted text-muted-foreground group-hover:bg-muted/80",

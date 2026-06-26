@@ -18,6 +18,8 @@ import {
   Phone,
   Zap,
   DollarSign,
+  CreditCard,
+  Rocket,
   BarChart3,
   Megaphone,
   AlertTriangle,
@@ -306,6 +308,12 @@ export function FacilitySidebar() {
             disabled: false,
           },
           {
+            title: "Subscription & Billing",
+            url: "/facility/settings/billing",
+            icon: CreditCard,
+            disabled: false,
+          },
+          {
             title: "Gift Cards",
             url: "/facility/dashboard/gift-cards",
             icon: Gift,
@@ -374,6 +382,12 @@ export function FacilitySidebar() {
       {
         label: "Settings",
         items: [
+          {
+            title: "Setup Guide",
+            url: "/facility/onboarding",
+            icon: Rocket,
+            disabled: false,
+          },
           {
             title: "Settings",
             url: "/facility/dashboard/settings",
