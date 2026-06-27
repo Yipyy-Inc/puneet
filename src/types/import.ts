@@ -21,7 +21,13 @@ export interface ImportSource {
   /** Some platforms export customers and appointments as separate files. */
   separateFiles: boolean;
   /** Which built-in column parser auto-maps this source (null = manual). */
-  parser: "moego" | "gingr" | null;
+  parser:
+    | "moego"
+    | "gingr"
+    | "pawpartner"
+    | "propetware"
+    | "generic-csv"
+    | null;
 }
 
 export interface YipyyField {

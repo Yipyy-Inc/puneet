@@ -1,6 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
+import { recordAiUsage } from "@/lib/ai-usage-recorder";
+
+const MODEL = "claude-haiku-4-5-20251001";
+
 type TextType =
   | "chat_reply"
   | "email_marketing"
@@ -20,6 +24,8 @@ interface GenerateTextInput {
   context: Record<string, unknown>;
   tone?: "warm" | "professional" | "playful";
   maxWords?: number;
+  /** Facility this generation is for — attributes token usage to the tenant. */
+  facilityId?: number;
 }
 
 const SYSTEM_PROMPTS: Record<TextType, string> = {
@@ -73,7 +79,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const message = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
+      model: MODEL,
       max_tokens: 400,
       system: `${systemPrompt} ${toneModifier} Maximum ${maxWords} words.`,
       messages: [
@@ -87,11 +93,15 @@ export async function POST(req: NextRequest) {
     const text =
       message.content[0].type === "text" ? message.content[0].text : "";
 
-    // Token usage tracking
+    // Token usage tracking — persist the real usage for the AI console.
     const usage = message.usage;
-    console.log(
-      `[AI Usage] type=${input.type} input=${usage?.input_tokens ?? 0} output=${usage?.output_tokens ?? 0} total=${(usage?.input_tokens ?? 0) + (usage?.output_tokens ?? 0)}`,
-    );
+    recordAiUsage({
+      facilityId: input.facilityId,
+      type: input.type,
+      model: MODEL,
+      inputTokens: usage?.input_tokens ?? 0,
+      outputTokens: usage?.output_tokens ?? 0,
+    });
 
     return NextResponse.json({
       text,

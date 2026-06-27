@@ -34,16 +34,49 @@ Ian Brooks,ian.b@example.com,555-0208,9 Crest Ave,,Dog,Terrier,18,,Boarding,2026
 Jenna Cole,jenna.c@example.com,555-0209,40 Park Rd,Oreo,Cat,Ragdoll,13,,Daycare,bad-date,Lee,Confirmed,40
 Kyle Reed,kyle.r@example.com,555-0210,6 Forest Dr,Bandit,Dog,Collie,45,,Boarding,2026-06-19,Kim,Confirmed,120`;
 
-const GENERIC = `Full Name,E-mail,Cell,Animal,Kind,Visit,When,Amount
-Nina Patel,nina.p@example.com,555-0301,Simba,Dog,Grooming,2026-06-10,60
-Owen Clark,owen.c@example.com,555-0302,Nala,Cat,Boarding,2026-06-11,90
-Paula Vega,paula.v@example.com,555-0303,Rocky,Dog,Daycare,2026-06-12,40
-Quinn Ross,quinn.r@example.com,555-0304,Bella,Dog,Grooming,2026-06-13,60`;
+const PAWPARTNER = `Client Name,Client Email,Client Phone,Client Address,Pet Name,Species,Breed,Weight,Pet Notes,Appointment Type,Scheduled Date,Specialist,Appointment Status,Amount Due
+Aaron Blake,aaron.b@example.com,555-0401,10 Bay St,Rex,Dog,Boxer,55,Friendly,Full Groom,2026-06-10,Nadia,Completed,70
+Bella Cruz,bella.c@example.com,555-0402,22 Cove Rd,Mochi,Cat,Persian,9,Matted,De-shed,2026-06-11,Owen,Completed,55
+Caleb Dunn,caleb.d@example.com,555-0403,5 Dock Ln,Scout,Dog,Beagle,24,,Bath & Brush,2026-06-12,Nadia,Confirmed,45
+Dana Ellis,dana.ellis.example.com,555-0404,8 Esp Ave,Pixie,Dog,Poodle,16,Puppy cut,Full Groom,2026-06-13,Owen,Confirmed,70
+Evan Frost,evan.f@example.com,555-0405,3 Fair Rd,Tank,Dog,Bulldog,50,,Nail Trim,2026-06-14,Nadia,Confirmed,20
+Gina Howe,gina.h@example.com,555-0406,7 Gale St,,Dog,Husky,48,Anxious,Full Groom,2026-06-15,Owen,Confirmed,80
+Hugo Iyer,hugo.i@example.com,555-0407,9 Harbor Dr,Luna,Cat,Siamese,8,,De-shed,2026-06-16,Nadia,Confirmed,55
+Iris Jones,,555-0408,4 Inlet Ct,Bear,Dog,Shepherd,72,Large,Full Groom,2026-06-17,Owen,Confirmed,90
+Jack Knox,jack.k@example.com,555-0409,2 Jetty Rd,Ziggy,Dog,Corgi,28,,Bath & Brush,not-a-date,Nadia,Confirmed,45
+Kira Lowe,kira.l@example.com,555-0410,6 Key Ave,Misty,Cat,Ragdoll,12,,De-shed,2026-06-19,Owen,Confirmed,55`;
+
+const PROPETWARE = `Owner Full Name,Owner Email,Owner Mobile,Owner Address,Animal Name,Animal Species,Breed,Weight (kg),Care Notes,Reservation Type,Arrival Date,Assigned Staff,Reservation Status,Rate
+Liam Park,liam.p@example.com,555-0501,12 North Rd,Shadow,Dog,Rottweiler,36,Crate trained,Boarding,2026-06-10,Maya,Checked Out,130
+Mia Quinn,mia.q@example.com,555-0502,8 South Ave,Pepper,Dog,Dalmatian,24,,Daycare,2026-06-11,Noah,Checked Out,45
+Noah Reyes,noah.r@example.com,555-0503,5 East St,Whiskers,Cat,Bengal,5,Shy,Boarding,2026-06-12,Maya,Confirmed,110
+Owen Shaw,owen-shaw-example,555-0504,3 West Rd,Bruno,Dog,Mastiff,44,Large,Boarding,2026-06-13,Noah,Confirmed,150
+Priya Tan,priya.t@example.com,555-0505,7 Vale Dr,Zeus,Dog,Doberman,34,,Boarding,2026-06-14,Maya,Confirmed,130
+Quinn Vale,quinn.v@example.com,555-0506,9 Ridge Rd,,Dog,Spaniel,14,Friendly,Daycare,2026-06-15,Noah,Confirmed,45
+Rosa Webb,rosa.w@example.com,555-0507,2 Dale St,Ginger,Dog,Terrier,8,,Daycare,2026-06-16,Maya,Confirmed,45
+Sean Yu,,555-0508,4 Crest Ave,Oreo,Cat,Ragdoll,6,,Boarding,2026-06-17,Noah,Confirmed,110
+Tara Zane,tara.z@example.com,555-0509,6 Park Rd,Bandit,Dog,Collie,20,,Boarding,bad-date,Maya,Confirmed,130
+Umar Ash,umar.a@example.com,555-0510,1 Forest Dr,Cleo,Cat,Sphynx,4,,Daycare,2026-06-19,Noah,Confirmed,45`;
+
+const GENERIC_CSV = `Full Name,E-mail,Cell,Animal,Kind,Breed,Visit,When,Staff,Amount
+Nina Patel,nina.p@example.com,555-0301,Simba,Dog,Boxer,Grooming,2026-06-10,Tina,60
+Owen Clark,owen.c@example.com,555-0302,Nala,Cat,Bengal,Boarding,2026-06-11,Lee,90
+Paula Vega,paula.v@example.com,555-0303,Rocky,Dog,Husky,Daycare,2026-06-12,Kim,40
+Quinn Ross,quinn.ross.example.com,555-0304,Bella,Dog,Corgi,Grooming,2026-06-13,Tina,60
+Ravi Shah,ravi.s@example.com,555-0305,Coco,Cat,Persian,Boarding,2026-06-14,Lee,90
+Sara Lin,sara.l@example.com,555-0306,,Dog,Beagle,Daycare,2026-06-15,Kim,40
+Tom Bryant,tom.b@example.com,555-0307,Duke,Dog,Shepherd,Grooming,2026-06-16,Tina,60
+Uma Devi,uma.d@example.com,555-0308,Mango,Cat,Tabby,Boarding,not-a-date,Lee,90
+Vince Ola,vince.o@example.com,555-0309,Rex,Dog,Boxer,Daycare,2026-06-18,Kim,40
+Will Park,,555-0310,Buddy,Dog,Golden,Grooming,2026-06-19,Tina,60`;
 
 export const IMPORT_SAMPLES: Record<string, ImportSample> = {
   moego: { fileName: "moego-export.csv", content: MOEGO },
   gingr: { fileName: "gingr-export.csv", content: GINGR },
-  default: { fileName: "sample-export.csv", content: GENERIC },
+  pawpartner: { fileName: "pawpartner-export.csv", content: PAWPARTNER },
+  propetware: { fileName: "propetware-export.csv", content: PROPETWARE },
+  "generic-csv": { fileName: "generic-export.csv", content: GENERIC_CSV },
+  default: { fileName: "sample-export.csv", content: GENERIC_CSV },
 };
 
 export function getImportSample(sourceId: string): ImportSample {

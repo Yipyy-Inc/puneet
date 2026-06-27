@@ -1,10 +1,15 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
+import { recordAiUsage } from "@/lib/ai-usage-recorder";
+
+const MODEL = "claude-haiku-4-5-20251001";
+
 interface EvaluationInput {
   petName: string;
   petBreed: string;
   petAge?: string;
+  facilityId?: number;
   facilityName: string;
   evaluatorName: string;
   evaluationDate: string;
@@ -82,7 +87,7 @@ Keep the total under 200 words. Be warm, professional, and reassuring. Avoid cli
 
   try {
     const message = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
+      model: MODEL,
       max_tokens: 500,
       messages: [{ role: "user", content: prompt }],
     });
@@ -91,9 +96,13 @@ Keep the total under 200 words. Be warm, professional, and reassuring. Avoid cli
       message.content[0].type === "text" ? message.content[0].text : "";
 
     const usage = message.usage;
-    console.log(
-      `[AI Usage] type=evaluation_summary input=${usage?.input_tokens ?? 0} output=${usage?.output_tokens ?? 0}`,
-    );
+    recordAiUsage({
+      facilityId: input.facilityId,
+      type: "evaluation_summary",
+      model: MODEL,
+      inputTokens: usage?.input_tokens ?? 0,
+      outputTokens: usage?.output_tokens ?? 0,
+    });
 
     return NextResponse.json({
       summary: text,
