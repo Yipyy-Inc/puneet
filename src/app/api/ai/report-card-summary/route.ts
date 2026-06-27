@@ -1,8 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
+import { recordAiUsage } from "@/lib/ai-usage-recorder";
+
+const MODEL = "claude-haiku-4-5-20251001";
+
 interface ReportCardInput {
   petName: string;
+  facilityId?: number;
   facilityName: string;
   serviceType: string;
   date: string;
@@ -54,7 +59,7 @@ Write a warm, natural 3-4 sentence summary of the pet's day. Address the pet by 
 
   try {
     const message = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
+      model: MODEL,
       max_tokens: 300,
       messages: [{ role: "user", content: prompt }],
     });
@@ -63,9 +68,13 @@ Write a warm, natural 3-4 sentence summary of the pet's day. Address the pet by 
       message.content[0].type === "text" ? message.content[0].text : "";
 
     const usage = message.usage;
-    console.log(
-      `[AI Usage] type=report_card_summary input=${usage?.input_tokens ?? 0} output=${usage?.output_tokens ?? 0}`,
-    );
+    recordAiUsage({
+      facilityId: input.facilityId,
+      type: "report_card_summary",
+      model: MODEL,
+      inputTokens: usage?.input_tokens ?? 0,
+      outputTokens: usage?.output_tokens ?? 0,
+    });
 
     return NextResponse.json({
       summary: text,

@@ -36,6 +36,9 @@ import {
   PhoneCall,
   Plug,
   LineChart,
+  CalendarClock,
+  Mail,
+  BookOpen,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
@@ -251,6 +254,12 @@ export function AppSidebar() {
           disabled: false,
         },
         {
+          title: "Scheduled Messages",
+          url: "/dashboard/support/chat/scheduled",
+          icon: CalendarClock,
+          disabled: false,
+        },
+        {
           title: "Support Calls",
           url: "/dashboard/support/calling",
           icon: PhoneCall,
@@ -264,8 +273,26 @@ export function AppSidebar() {
         },
         {
           title: "Announcements",
-          url: "/dashboard/communication/announcements",
+          url: "/dashboard/support/announcements",
           icon: Megaphone,
+          disabled: false,
+        },
+        {
+          title: "Email Templates",
+          url: "/dashboard/support/email-templates",
+          icon: Mail,
+          disabled: false,
+        },
+      ],
+    },
+
+    {
+      label: "Support Operations",
+      items: [
+        {
+          title: "Knowledge Base",
+          url: "/dashboard/support/knowledge-base",
+          icon: BookOpen,
           disabled: false,
         },
       ],

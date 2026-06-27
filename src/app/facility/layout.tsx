@@ -25,6 +25,8 @@ import { LocationContextProviderWrapper } from "@/components/providers/LocationC
 import { LocationStatusBadge } from "@/components/hq/LocationStatusBadge";
 import { FacilityOnboardingBanner } from "@/components/facility/onboarding/facility-onboarding-banner";
 import { ImpersonationBanner } from "@/components/facility/ImpersonationBanner";
+import { AnnouncementBanner } from "@/components/facility/announcement-banner";
+import { AnnouncementBell } from "@/components/facility/announcement-bell";
 import { LoyaltyProgramProvider } from "@/hooks/use-loyalty-program";
 import { CallAvailabilityProvider } from "@/hooks/use-call-availability";
 import { CallTagsProvider } from "@/hooks/use-call-tags";
@@ -72,6 +74,7 @@ export default async function FacilityLayout({
                           <TaskNotificationsPanel />
                           <ScheduleNotificationsDropdown />
                           <FacilityNotificationsDropdown facilityId={11} />
+                          <AnnouncementBell facilityId={11} />
                           <BookingRequestsTopbarDropdown />
                           <HeaderDropdown />
                           <FacilityHeader />
@@ -82,6 +85,7 @@ export default async function FacilityLayout({
                       </header>
                       <main className="min-w-0 flex-1 overflow-x-clip">
                         <ImpersonationBanner />
+                        <AnnouncementBanner facilityId={11} />
                         <FacilityOnboardingBanner />
                         {children}
                       </main>

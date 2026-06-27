@@ -33,8 +33,14 @@ import type {
   SupportMissedCall,
   SupportQueuedCall,
 } from "@/types/support-call";
+import { AnalyticsTab } from "./analytics-tab";
+import { CallLogTab } from "./call-log-tab";
+import { DialerTab } from "./dialer-tab";
 import { IvrRoutingTab } from "./ivr-routing-tab";
 import { LiveTab } from "./live-tab";
+import { RecordingsTab } from "./recordings-tab";
+import { SettingsTab } from "./settings-tab";
+import { VoicemailTab } from "./voicemail-tab";
 
 const TABS: { value: string; label: string; icon: LucideIcon }[] = [
   { value: "live", label: "Live", icon: Radio },
@@ -198,6 +204,18 @@ export function SupportCallingClient() {
           <TabsContent key={t.value} value={t.value} className="pt-4">
             {t.value === "ivr" ? (
               <IvrRoutingTab />
+            ) : t.value === "dialer" ? (
+              <DialerTab />
+            ) : t.value === "log" ? (
+              <CallLogTab />
+            ) : t.value === "voicemail" ? (
+              <VoicemailTab />
+            ) : t.value === "recordings" ? (
+              <RecordingsTab />
+            ) : t.value === "analytics" ? (
+              <AnalyticsTab />
+            ) : t.value === "settings" ? (
+              <SettingsTab />
             ) : (
               <TabPlaceholder icon={t.icon} title={t.label} />
             )}

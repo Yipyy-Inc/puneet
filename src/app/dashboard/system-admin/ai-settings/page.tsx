@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
+import { useQuery } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -8,6 +10,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
+import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,16 +45,29 @@ import {
   AlertTriangle,
   Zap,
   TrendingUp,
+  Coins,
+  DollarSign,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import {
-  aiPlatformConfig,
-  aiFacilityConfigs,
-  aiUsageRecords,
-  getAiFacilityUsageSummaries,
-} from "@/data/ai-settings";
-import type { AiFacilityConfig } from "@/types/ai-settings";
+import { aiPlatformConfig, aiFacilityConfigs } from "@/data/ai-settings";
+import { aiUsageQueries } from "@/lib/api/ai-usage";
+import type {
+  AiFacilityConfig,
+  AiFacilityUsageSummary,
+} from "@/types/ai-settings";
+
+const AiCostTrendChart = dynamic(
+  () =>
+    import("./_components/ai-cost-trend-chart").then((m) => m.AiCostTrendChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-muted/40 h-[260px] animate-pulse rounded-lg" />
+    ),
+  },
+);
 
 export default function AiSettingsPage() {
   // Platform config
@@ -73,16 +90,71 @@ export default function AiSettingsPage() {
   const [facilityConfigs, setFacilityConfigs] =
     useState<AiFacilityConfig[]>(aiFacilityConfigs);
 
-  const usageSummaries = getAiFacilityUsageSummaries();
-  const totalTokensThisMonth = usageSummaries.reduce(
-    (s, u) => s + u.currentMonthTokens,
-    0,
-  );
-  const totalCostThisMonth = usageSummaries.reduce(
-    (s, u) => s + u.estimatedCost,
-    0,
-  );
-  const totalRequests = aiUsageRecords.length;
+  // Usage dashboard — seeded baseline merged with real Anthropic usage
+  // recorded by the AI routes (via /api/ai/usage).
+  const { data: dashboard } = useQuery(aiUsageQueries.dashboard());
+  const usageSummaries = dashboard.summaries;
+  const totalTokensThisMonth = dashboard.kpis.totalTokensThisMonth;
+  const totalCostThisMonth = dashboard.kpis.estimatedCostThisMonth;
+  const totalRequests = dashboard.records.length;
+  const aiUsageRecords = dashboard.recentRecords;
+
+  const topFacilityColumns: ColumnDef<AiFacilityUsageSummary>[] = [
+    {
+      key: "facilityName",
+      label: "Facility",
+      sortable: true,
+      render: (f) => (
+        <div>
+          <p className="font-medium">{f.facilityName}</p>
+          <p className="text-muted-foreground text-xs">ID: {f.facilityId}</p>
+        </div>
+      ),
+    },
+    {
+      key: "currentMonthTokens",
+      label: "Tokens (mo)",
+      sortable: true,
+      sortValue: (f) => f.currentMonthTokens,
+      render: (f) => (
+        <span className="font-medium tabular-nums">
+          {f.currentMonthTokens.toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      key: "estimatedCost",
+      label: "Est. Cost",
+      sortable: true,
+      sortValue: (f) => f.estimatedCost,
+      render: (f) => (
+        <span className="tabular-nums">${f.estimatedCost.toFixed(2)}</span>
+      ),
+    },
+    {
+      key: "totalRequests",
+      label: "Requests",
+      sortable: true,
+      sortValue: (f) => f.totalRequests,
+      render: (f) => <span className="tabular-nums">{f.totalRequests}</span>,
+    },
+    {
+      key: "limit",
+      label: "Of Limit",
+      sortable: false,
+      render: (f) => {
+        const pct =
+          f.monthlyLimit > 0
+            ? Math.min(100, (f.currentMonthTokens / f.monthlyLimit) * 100)
+            : 0;
+        return (
+          <span className="text-muted-foreground text-xs tabular-nums">
+            {f.monthlyLimit > 0 ? `${Math.round(pct)}%` : "Unlimited"}
+          </span>
+        );
+      },
+    },
+  ];
 
   const updateFacility = (
     facilityId: number,
@@ -165,10 +237,11 @@ export default function AiSettingsPage() {
       </div>
 
       <Tabs defaultValue="platform" className="w-full">
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
+        <TabsList className="grid w-full max-w-2xl grid-cols-4">
           <TabsTrigger value="platform">Platform Config</TabsTrigger>
           <TabsTrigger value="facilities">Facility Access</TabsTrigger>
           <TabsTrigger value="usage">Usage & Billing</TabsTrigger>
+          <TabsTrigger value="cost">Usage & Cost</TabsTrigger>
         </TabsList>
 
         {/* ── Platform Config ─────────────────────────────────────── */}
@@ -639,6 +712,67 @@ export default function AiSettingsPage() {
                   ))}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Usage & Cost ─────────────────────────────────────────── */}
+        <TabsContent value="cost" className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <KpiTile
+              label="Total Tokens This Month"
+              value={dashboard.kpis.totalTokensThisMonth.toLocaleString()}
+              icon={Coins}
+              tone="amber"
+            />
+            <KpiTile
+              label="Estimated Cost"
+              value={`$${dashboard.kpis.estimatedCostThisMonth.toFixed(2)}`}
+              hint="Current month · all facilities"
+              icon={DollarSign}
+              tone="emerald"
+            />
+            <KpiTile
+              label="Facilities Using AI"
+              value={dashboard.kpis.facilitiesUsingAi}
+              icon={Bot}
+              tone="violet"
+            />
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="size-5" />
+                Monthly AI Cost Trend
+              </CardTitle>
+              <CardDescription>
+                Estimated Anthropic spend over the last 12 months.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AiCostTrendChart data={dashboard.monthlyTrend} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="size-5" />
+                Top Facilities by Token Usage
+              </CardTitle>
+              <CardDescription>
+                This month&apos;s heaviest AI consumers (top 10).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                data={dashboard.topFacilities}
+                columns={topFacilityColumns}
+                searchKeys={["facilityName"]}
+                searchPlaceholder="Search facility…"
+                itemsPerPage={10}
+              />
             </CardContent>
           </Card>
         </TabsContent>
