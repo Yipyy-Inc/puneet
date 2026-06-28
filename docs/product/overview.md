@@ -1,10 +1,10 @@
 # Product overview
 
-Plain-language description of what Doggieville MTL / Yipyy is and does **today**, written for a new teammate and filled from the codebase audit. Claims are **observed** (cite a route/file) or **[inferred]** (reconstructed from copy/structure). This describes the prototype's surface; it is not a commitment about a roadmap.
+Plain-language description of what Yipyy is and does **today**, written for a new teammate and filled from the codebase audit. Claims are **observed** (cite a route/file) or **[inferred]** (reconstructed from copy/structure). This describes the prototype's surface; it is not a commitment about a roadmap.
 
 ## In one paragraph
 
-Yipyy (branded "Doggieville MTL") is a SaaS platform for pet-care businesses — daycare, boarding, grooming, training, retail, and vet — that ties together **online booking, front-desk operations, customer self-service, loyalty/marketing, and multi-location management** in one app. Pet owners book and manage services and watch their pets; facility staff run the day (check-ins, report cards, scheduling, POS); facility owners manage clients, money, staff, loyalty, and reputation across one or many locations; and a platform super-admin oversees all facilities. It is currently a **mock-driven prototype** — every flow is navigable, but data is in-memory and the only live integration is Anthropic-powered text generation. (Observed: route groups under [src/app/](../../src/app/); AI routes under [src/app/api/ai/](../../src/app/api/ai/).)
+Yipyy is a SaaS platform for pet-care businesses — daycare, boarding, grooming, training, retail, and vet — that ties together **online booking, front-desk operations, customer self-service, loyalty/marketing, and multi-location management** in one app. Pet owners book and manage services and watch their pets; facility staff run the day (check-ins, report cards, scheduling, POS); facility owners manage clients, money, staff, loyalty, and reputation across one or many locations; and a platform super-admin oversees all facilities. It is currently a **mock-driven prototype** — every flow is navigable, but data is in-memory and the only live integration is Anthropic-powered text generation. (Observed: route groups under [src/app/](../../src/app/); AI routes under [src/app/api/ai/](../../src/app/api/ai/).)
 
 ## Who it's for (user types)
 

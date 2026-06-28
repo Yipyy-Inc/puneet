@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import {
   Shield,
+  ShieldCheck,
   FileText,
   CheckCircle2,
   XCircle,
@@ -26,8 +27,6 @@ import {
   Trash2,
   FileOutput,
   UserX,
-  Play,
-  Mail,
 } from "lucide-react";
 import {
   BarChart,
@@ -48,7 +47,6 @@ import {
   complianceReports,
   certificates,
   auditTrails,
-  dataSubjectRequests,
   dataSubjectRequestStats,
   type GDPRCompliance,
   type DataProtectionSetting,
@@ -60,8 +58,34 @@ import {
   type AuditTrail,
   type DataSubjectRequest,
 } from "@/data/security-compliance";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { NonCompliantDialog } from "./compliance/non-compliant-dialog";
+import { RetentionSettingsTab } from "./compliance/retention-settings-tab";
+import { ComplianceChecklistCard } from "./compliance/compliance-checklist-card";
+import { toast } from "sonner";
+import { downloadDsrExport } from "@/lib/dsr-export";
+import { markRequestExported, useDataSubjectRequests } from "@/lib/dsr-store";
+import { DsrEraseDialog } from "./compliance/dsr-erase-dialog";
+import { DsrRejectDialog } from "./compliance/dsr-reject-dialog";
 
 export function ComplianceTools() {
+  const [activeTab, setActiveTab] = useState("data-subject-requests");
+  const [nonCompliantOpen, setNonCompliantOpen] = useState(false);
+
+  const dsrs = useDataSubjectRequests();
+  const [eraseTarget, setEraseTarget] = useState<DataSubjectRequest | null>(
+    null,
+  );
+  const [rejectTarget, setRejectTarget] = useState<DataSubjectRequest | null>(
+    null,
+  );
+  const generateExport = (req: DataSubjectRequest) => {
+    const file = downloadDsrExport(req);
+    markRequestExported(req.id, `exports/${file}`);
+    toast.success(`Export generated for ${req.requesterName}`);
+  };
+
   // Badge helpers
   const getComplianceStatusBadge = (status: string) => {
     const variants: Record<
@@ -783,48 +807,52 @@ export function ComplianceTools() {
     },
   ];
 
-  const dataSubjectRequestActions = (item: DataSubjectRequest) => (
-    <div className="flex gap-1">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-8"
-        title="View Details"
-      >
-        <Eye className="size-4" />
-      </Button>
-      {item.status === "Pending" && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-8"
-          title="Process Request"
-        >
-          <Play className="size-4" />
-        </Button>
-      )}
-      {item.status === "Completed" &&
-        item.requestType === "Export" &&
-        item.exportFileUrl && (
+  const dataSubjectRequestActions = (item: DataSubjectRequest) => {
+    const isFinal = item.status === "Completed" || item.status === "Rejected";
+    return (
+      <div className="flex flex-wrap gap-1">
+        {item.requestType === "Export" && item.status !== "Rejected" && (
           <Button
             variant="ghost"
-            size="icon"
-            className="size-8"
-            title="Download Export"
+            size="sm"
+            className="gap-1.5"
+            aria-label="Generate export"
+            title="Generate Export (Article 20)"
+            onClick={() => generateExport(item)}
           >
-            <Download className="size-4" />
+            <FileOutput className="size-4" />
+            Generate Export
           </Button>
         )}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-8"
-        title="Send Notification"
-      >
-        <Mail className="size-4" />
-      </Button>
-    </div>
-  );
+        {item.requestType === "Deletion" && !isFinal && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-red-600 hover:text-red-700"
+            aria-label="Anonymize or delete records"
+            title="Anonymize or Delete (Article 17)"
+            onClick={() => setEraseTarget(item)}
+          >
+            <Trash2 className="size-4" />
+            Anonymize / Delete
+          </Button>
+        )}
+        {!isFinal && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5"
+            aria-label="Reject request"
+            title="Reject Request"
+            onClick={() => setRejectTarget(item)}
+          >
+            <XCircle className="size-4" />
+            Reject
+          </Button>
+        )}
+      </div>
+    );
+  };
 
   // Audit Trail Columns
   const auditTrailColumns = [
@@ -978,7 +1006,22 @@ export function ComplianceTools() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-card border-0">
+        <Card
+          className={cn(
+            "shadow-card cursor-pointer border-0 transition-shadow hover:shadow-md",
+            nonCompliantOpen && "ring-2 ring-orange-400",
+          )}
+          role="button"
+          tabIndex={0}
+          aria-label="View non-compliant settings"
+          onClick={() => setNonCompliantOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setNonCompliantOpen(true);
+            }
+          }}
+        >
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -988,8 +1031,8 @@ export function ComplianceTools() {
                 <h3 className="text-2xl font-bold tracking-tight">
                   {totalNonCompliantSettings}
                 </h3>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  Settings need attention
+                <p className="mt-0.5 text-xs font-medium text-orange-600">
+                  Settings need attention →
                 </p>
               </div>
               <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-orange-500/20 to-orange-600/20">
@@ -1022,10 +1065,15 @@ export function ComplianceTools() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs defaultValue="data-subject-requests" className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
         <TabsList>
           <TabsTrigger value="data-subject-requests">GDPR Requests</TabsTrigger>
           <TabsTrigger value="data-privacy">Data Privacy</TabsTrigger>
+          <TabsTrigger value="data-retention">Data Retention</TabsTrigger>
           <TabsTrigger value="regulatory-compliance">
             Regulatory Compliance
           </TabsTrigger>
@@ -1202,10 +1250,16 @@ export function ComplianceTools() {
             <CardContent>
               <DataTable
                 columns={dataSubjectRequestColumns}
-                data={dataSubjectRequests}
+                data={dsrs}
                 actions={dataSubjectRequestActions}
                 searchKey="requesterName"
                 searchPlaceholder="Search by name or email..."
+                emptyState={{
+                  icon: ShieldCheck,
+                  title: "No data subject requests",
+                  description:
+                    "GDPR export and deletion requests will appear here once submitted.",
+                }}
               />
             </CardContent>
           </Card>
@@ -1291,6 +1345,12 @@ export function ComplianceTools() {
                 columns={gdprColumns}
                 data={gdprCompliance}
                 actions={gdprActions}
+                emptyState={{
+                  icon: Shield,
+                  title: "No GDPR requirements tracked",
+                  description:
+                    "GDPR compliance requirements will be listed here once configured.",
+                }}
               />
             </CardContent>
           </Card>
@@ -1311,6 +1371,12 @@ export function ComplianceTools() {
                 columns={dataProtectionColumns}
                 data={dataProtectionSettings}
                 actions={dataProtectionActions}
+                emptyState={{
+                  icon: Lock,
+                  title: "No data protection settings",
+                  description:
+                    "Data protection and security settings will appear here once configured.",
+                }}
               />
             </CardContent>
           </Card>
@@ -1331,6 +1397,12 @@ export function ComplianceTools() {
                 columns={privacyPolicyColumns}
                 data={privacyPolicies}
                 actions={privacyPolicyActions}
+                emptyState={{
+                  icon: FileText,
+                  title: "No privacy policies",
+                  description:
+                    "Privacy policies and user agreements will appear here once added.",
+                }}
               />
             </CardContent>
           </Card>
@@ -1347,13 +1419,30 @@ export function ComplianceTools() {
               </p>
             </CardHeader>
             <CardContent>
-              <DataTable columns={userConsentColumns} data={userConsents} />
+              <DataTable
+                columns={userConsentColumns}
+                data={userConsents}
+                emptyState={{
+                  icon: Users,
+                  title: "No consent records",
+                  description:
+                    "User consent records for data processing will appear here.",
+                }}
+              />
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Regulatory Compliance Tab */}
+        {/* Data Retention Settings Tab */}
+        <TabsContent value="data-retention" className="space-y-6">
+          <RetentionSettingsTab />
+        </TabsContent>
+
+        {/* Regulatory Compliance Tab */}
         <TabsContent value="regulatory-compliance" className="space-y-6">
+          <ComplianceChecklistCard onFixTab={setActiveTab} />
+
           {/* Compliance Frameworks Chart */}
           <Card className="shadow-card border-0">
             <CardHeader>
@@ -1397,6 +1486,12 @@ export function ComplianceTools() {
                 columns={frameworkColumns}
                 data={complianceFrameworks}
                 actions={frameworkActions}
+                emptyState={{
+                  icon: Award,
+                  title: "No compliance frameworks",
+                  description:
+                    "Industry compliance standards and certifications will appear here.",
+                }}
               />
             </CardContent>
           </Card>
@@ -1417,6 +1512,12 @@ export function ComplianceTools() {
                 columns={reportColumns}
                 data={complianceReports}
                 actions={reportActions}
+                emptyState={{
+                  icon: FileText,
+                  title: "No compliance reports",
+                  description:
+                    "Audit reports and compliance assessments will appear here.",
+                }}
               />
             </CardContent>
           </Card>
@@ -1437,6 +1538,12 @@ export function ComplianceTools() {
                 columns={certificateColumns}
                 data={certificates}
                 actions={certificateActions}
+                emptyState={{
+                  icon: FileCheck,
+                  title: "No certificates",
+                  description:
+                    "SSL/TLS and other security certificates will appear here.",
+                }}
               />
             </CardContent>
           </Card>
@@ -1453,11 +1560,44 @@ export function ComplianceTools() {
               </p>
             </CardHeader>
             <CardContent>
-              <DataTable columns={auditTrailColumns} data={auditTrails} />
+              <DataTable
+                columns={auditTrailColumns}
+                data={auditTrails}
+                emptyState={{
+                  icon: Database,
+                  title: "No audit trail entries",
+                  description:
+                    "Compliance-relevant audit logs and activity will appear here.",
+                }}
+              />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      <NonCompliantDialog
+        open={nonCompliantOpen}
+        onOpenChange={setNonCompliantOpen}
+        onFixTab={(tab) => {
+          setNonCompliantOpen(false);
+          setActiveTab(tab);
+        }}
+      />
+
+      <DsrEraseDialog
+        key={eraseTarget?.id ?? "erase"}
+        request={eraseTarget}
+        onOpenChange={(o) => {
+          if (!o) setEraseTarget(null);
+        }}
+      />
+      <DsrRejectDialog
+        key={rejectTarget?.id ?? "reject"}
+        request={rejectTarget}
+        onOpenChange={(o) => {
+          if (!o) setRejectTarget(null);
+        }}
+      />
     </div>
   );
 }

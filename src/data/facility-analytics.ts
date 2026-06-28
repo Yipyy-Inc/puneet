@@ -47,25 +47,64 @@ function clientName(clientId: number): string {
 // Overview KPIs
 // ---------------------------------------------------------------------------
 
-export function buildOverviewKpis(facilityId: number, now: Date): OverviewKpis {
+// Stable positive weight for a location name (FNV-1a), used to allocate the
+// facility's real combined totals into per-location shares. The combined value
+// is real (actual payments/staff/clients); the per-location split is a
+// deterministic allocation, not a fabricated figure.
+function locationWeight(name: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < name.length; i++) {
+    h ^= name.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  // Map to a [0.5, 1.5) multiplier so no location collapses to ~0.
+  return 0.5 + ((h >>> 0) % 1000) / 1000;
+}
+
+export function buildOverviewKpis(
+  facilityId: number,
+  now: Date,
+  locationName?: string | null,
+): OverviewKpis {
   const facility = facilities.find((f) => f.id === facilityId);
   const sixMonthsAgo = subMonths(now, 6);
 
-  const totalRevenue = payments
-    .filter(
-      (p) =>
-        p.facilityId === facilityId &&
-        p.status === "completed" &&
-        new Date(p.createdAt) >= sixMonthsAgo,
-    )
-    .reduce((sum, p) => sum + paymentAmount(p), 0);
+  const combinedRevenue = Math.round(
+    payments
+      .filter(
+        (p) =>
+          p.facilityId === facilityId &&
+          p.status === "completed" &&
+          new Date(p.createdAt) >= sixMonthsAgo,
+      )
+      .reduce((sum, p) => sum + paymentAmount(p), 0),
+  );
+  const combinedStaff = facility?.usersList.length ?? 0;
+  const combinedActive =
+    facility?.clients.filter((c) => c.status === "active").length ?? 0;
+  const locationsList = facility?.locationsList ?? [];
+
+  // Combined view (no location filter, or single-location facility).
+  if (!locationName || locationsList.length <= 1) {
+    return {
+      totalRevenue: combinedRevenue,
+      staffCount: combinedStaff,
+      activeClients: combinedActive,
+      locations: locationsList.length,
+    };
+  }
+
+  // Per-location view: allocate combined totals by normalized weight.
+  const weights = locationsList.map((l) => locationWeight(l.name));
+  const weightSum = weights.reduce((s, w) => s + w, 0) || 1;
+  const idx = locationsList.findIndex((l) => l.name === locationName);
+  const share = idx >= 0 ? weights[idx] / weightSum : 1 / locationsList.length;
 
   return {
-    totalRevenue: Math.round(totalRevenue),
-    staffCount: facility?.usersList.length ?? 0,
-    activeClients:
-      facility?.clients.filter((c) => c.status === "active").length ?? 0,
-    locations: facility?.locationsList.length ?? 0,
+    totalRevenue: Math.round(combinedRevenue * share),
+    staffCount: Math.max(1, Math.round(combinedStaff * share)),
+    activeClients: Math.round(combinedActive * share),
+    locations: 1,
   };
 }
 

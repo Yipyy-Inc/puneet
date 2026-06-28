@@ -25,11 +25,11 @@ const weekdayOnlyHours: LocationWeeklyHours = {
 };
 
 export const locations: Location[] = [
-  // ── Doggieville MTL — 3 locations ─────────────────────────────────────────
+  // ── Yipyy — 3 locations ─────────────────────────────────────────
   {
     id: "loc-dv-main",
     facilityId: 11,
-    name: "Doggieville – Plateau",
+    name: "Yipyy – Plateau",
     shortCode: "PLT",
     address: "4215 Boul Saint-Laurent",
     city: "Montréal",
@@ -37,7 +37,7 @@ export const locations: Location[] = [
     postalCode: "H2W 1Z4",
     country: "CA",
     phone: "(514) 555-0101",
-    email: "plateau@doggieville.ca",
+    email: "plateau@yipyy.com",
     isActive: true,
     isPrimary: true,
     services: ["daycare", "boarding", "grooming", "training"],
@@ -112,7 +112,7 @@ export const locations: Location[] = [
   {
     id: "loc-dv-ouest",
     facilityId: 11,
-    name: "Doggieville – NDG",
+    name: "Yipyy – NDG",
     shortCode: "NDG",
     address: "5700 Ave Monkland",
     city: "Montréal",
@@ -120,7 +120,7 @@ export const locations: Location[] = [
     postalCode: "H4A 1E5",
     country: "CA",
     phone: "(514) 555-0202",
-    email: "ndg@doggieville.ca",
+    email: "ndg@yipyy.com",
     isActive: true,
     isPrimary: false,
     services: ["daycare", "grooming"],
@@ -200,7 +200,7 @@ export const locations: Location[] = [
   {
     id: "loc-dv-laval",
     facilityId: 11,
-    name: "Doggieville – Laval",
+    name: "Yipyy – Laval",
     shortCode: "LVL",
     address: "3030 Boul Le Carrefour",
     city: "Laval",
@@ -208,7 +208,7 @@ export const locations: Location[] = [
     postalCode: "H7T 2J6",
     country: "CA",
     phone: "(450) 555-0303",
-    email: "laval@doggieville.ca",
+    email: "laval@yipyy.com",
     isActive: true,
     isPrimary: false,
     services: ["daycare", "boarding", "training"],
@@ -331,7 +331,7 @@ const FACILITY_LOCATION_IDS = [
 ] as const;
 
 /**
- * Deterministically maps any entity ID to one of the 3 Doggieville locations.
+ * Deterministically maps any entity ID to one of the 3 Yipyy locations.
  * For strings, extracts the trailing numeric suffix ("bg-003" → 3).
  * For numbers, uses the number directly.
  * Result is stable: same ID always maps to the same location.

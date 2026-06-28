@@ -97,7 +97,7 @@ const FLAGGED: FlaggedBooking[] = [
   },
 ];
 
-const DEFAULT_SMS = `Hi {{firstName}}, this is Doggieville confirming {{petName}}'s appointment on {{date}}. Our cancellation policy: please give 24-hour notice or a no-show fee may apply. Reply YES to confirm, or call us at (514) 555-0100. Thanks!`;
+const DEFAULT_SMS = `Hi {{firstName}}, this is Yipyy confirming {{petName}}'s appointment on {{date}}. Our cancellation policy: please give 24-hour notice or a no-show fee may apply. Reply YES to confirm, or call us at (514) 555-0100. Thanks!`;
 
 type Mode = "menu" | "sms" | "deposit";
 

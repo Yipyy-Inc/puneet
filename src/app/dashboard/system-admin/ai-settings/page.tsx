@@ -772,6 +772,12 @@ export default function AiSettingsPage() {
                 searchKeys={["facilityName"]}
                 searchPlaceholder="Search facility…"
                 itemsPerPage={10}
+                emptyState={{
+                  icon: Sparkles,
+                  title: "No AI usage yet",
+                  description:
+                    "Facility AI token consumption will appear here once usage is recorded.",
+                }}
               />
             </CardContent>
           </Card>

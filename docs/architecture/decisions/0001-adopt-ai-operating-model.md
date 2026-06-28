@@ -6,7 +6,7 @@
 
 ## Context
 
-The Doggieville MTL / Yipyy codebase is a large (266 routes), fast-moving, **mock-driven prototype** on Next.js 16 / React 19. It predates a formalized AI operating model. It already carries a strong [CLAUDE.md](../../../CLAUDE.md) with architecture, build-performance, and code-style rules, but lacked: an explicit task loop, product documentation (the product's intent lived only in code, copy, and scattered notes), a conventions/debt map, and repeatable skills to enforce the workflow across AI sessions.
+The Yipyy codebase is a large (266 routes), fast-moving, **mock-driven prototype** on Next.js 16 / React 19. It predates a formalized AI operating model. It already carries a strong [CLAUDE.md](../../../CLAUDE.md) with architecture, build-performance, and code-style rules, but lacked: an explicit task loop, product documentation (the product's intent lived only in code, copy, and scattered notes), a conventions/debt map, and repeatable skills to enforce the workflow across AI sessions.
 
 Unlike the typical target of this operating model, this is **not a legacy production system** — there is no backend and there are no automated tests. So the model is adapted: "green" is defined by the CI gates (`typecheck`, `lint`, `format:check`, `build`) plus manual UI verification, not by a test suite.
 

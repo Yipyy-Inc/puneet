@@ -5,7 +5,7 @@ import { CreditCard, Mail, MessageSquare } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { TwilioIntegrationCard } from "./twilio-integration-card";
+import { TwilioIntegrationCard } from "@/components/integrations/twilio-integration-card";
 
 const OTHER: { name: string; desc: string; icon: LucideIcon }[] = [
   { name: "Stripe", desc: "Billing & payments", icon: CreditCard },

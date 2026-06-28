@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/DataTable";
 import type { ColumnDef } from "@/components/ui/DataTable";
 import {
-  integrations,
   apiKeys,
   systemSettings,
   featureFlags,
@@ -22,6 +21,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Settings,
   Key,
+  KeyRound,
   Plug,
   Flag,
   CheckCircle2,
@@ -37,6 +37,14 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import {
+  reconnectIntegration,
+  testIntegrationConnection,
+  useIntegrations,
+} from "@/lib/integrations-store";
+import { TwilioIntegrationCard } from "@/components/integrations/twilio-integration-card";
 
 type BadgeVariant =
   | "default"
@@ -49,6 +57,8 @@ type BadgeVariant =
 
 export function SystemConfiguration() {
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({});
+  const router = useRouter();
+  const integrationsData = useIntegrations();
 
   const getIntegrationStatusBadge = (status: string) => {
     const variants: Record<
@@ -153,7 +163,19 @@ export function SystemConfiguration() {
     {
       key: "status",
       label: "Status",
-      render: (item) => getIntegrationStatusBadge(item.status),
+      render: (item) => (
+        <div className="space-y-1">
+          {getIntegrationStatusBadge(item.status)}
+          {item.status === "Error" && item.errorMessage && (
+            <div
+              className="max-w-[280px] truncate text-xs text-rose-600 dark:text-rose-400"
+              title={item.errorMessage}
+            >
+              {item.errorMessage}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       key: "usageStats",
@@ -196,15 +218,36 @@ export function SystemConfiguration() {
     },
   ];
 
-  const integrationActions = (_item: Integration) => (
-    <div className="flex gap-2">
-      <Button variant="ghost" size="sm" className="gap-2">
+  const integrationActions = (item: Integration) => (
+    <div className="flex gap-1">
+      {item.status === "Error" && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+          onClick={(e) => {
+            e.stopPropagation();
+            reconnectIntegration(item.id);
+            toast.success(`${item.name} reconnected`);
+          }}
+        >
+          <RotateCcw className="size-4" />
+          Reconnect
+        </Button>
+      )}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="gap-1.5"
+        onClick={(e) => {
+          e.stopPropagation();
+          const r = testIntegrationConnection(item.id);
+          if (r.ok) toast.success(r.message);
+          else toast.error(r.message);
+        }}
+      >
         <TestTube className="size-4" />
         Test
-      </Button>
-      <Button variant="ghost" size="sm" className="gap-2">
-        <Settings className="size-4" />
-        Configure
       </Button>
     </div>
   );
@@ -476,7 +519,7 @@ export function SystemConfiguration() {
   );
 
   // Calculate statistics
-  const activeIntegrations = integrations.filter(
+  const activeIntegrations = integrationsData.filter(
     (i) => i.status === "Active",
   ).length;
   const activeApiKeys = apiKeys.filter((k) => k.status === "Active").length;
@@ -512,7 +555,7 @@ export function SystemConfiguration() {
                   {activeIntegrations}
                 </h3>
                 <p className="text-muted-foreground mt-0.5 text-xs">
-                  of {integrations.length} total
+                  of {integrationsData.length} total
                 </p>
               </div>
               <div
@@ -621,6 +664,14 @@ export function SystemConfiguration() {
 
         {/* Integrations Tab */}
         <TabsContent value="integrations" className="space-y-6">
+          {/* Featured: Twilio Support Calling — powers the Section 5 calling module */}
+          <div className="space-y-2">
+            <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+              Featured integration
+            </h3>
+            <TwilioIntegrationCard />
+          </div>
+
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">
@@ -633,10 +684,22 @@ export function SystemConfiguration() {
             <CardContent>
               <DataTable
                 columns={integrationColumns}
-                data={integrations}
+                data={integrationsData}
                 actions={integrationActions}
                 searchKey="name"
                 searchPlaceholder="Search integrations..."
+                onRowClick={(item) =>
+                  router.push(
+                    `/dashboard/system-admin/system-config/integrations/${item.id}`,
+                  )
+                }
+                rowClassName={() => "cursor-pointer"}
+                emptyState={{
+                  icon: Plug,
+                  title: "No integrations connected",
+                  description:
+                    "Connect a third-party service to start syncing data.",
+                }}
               />
             </CardContent>
           </Card>
@@ -660,6 +723,12 @@ export function SystemConfiguration() {
                 actions={apiKeyActions}
                 searchKey="name"
                 searchPlaceholder="Search API keys..."
+                emptyState={{
+                  icon: KeyRound,
+                  title: "No API keys yet",
+                  description:
+                    "Generate an API key to grant programmatic access.",
+                }}
               />
             </CardContent>
           </Card>
@@ -691,6 +760,12 @@ export function SystemConfiguration() {
                 actions={settingsActions}
                 searchKey="name"
                 searchPlaceholder="Search settings..."
+                emptyState={{
+                  icon: Settings,
+                  title: "No system settings",
+                  description:
+                    "Configurable system parameters will appear here.",
+                }}
               />
             </CardContent>
           </Card>
@@ -714,6 +789,12 @@ export function SystemConfiguration() {
                 actions={featureFlagActions}
                 searchKey="name"
                 searchPlaceholder="Search feature flags..."
+                emptyState={{
+                  icon: Flag,
+                  title: "No feature flags",
+                  description:
+                    "Create a feature flag to control rollout and experiments.",
+                }}
               />
             </CardContent>
           </Card>

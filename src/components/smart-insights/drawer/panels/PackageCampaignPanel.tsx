@@ -179,12 +179,12 @@ We've loved seeing {{petName}} so often — {{visitsPast90}} visits in the past 
 
 Our {{bestPackage}} would save you about ${"${{savings}}"} based on your current visit pattern — paid up front, used at your own pace.
 
-Take a look: doggieville.ca/packages
+Take a look: yipyy.com/packages
 
 No pressure — just thought you should know it's there.
 
 Cheers,
-The Doggieville team`;
+The Yipyy team`;
 
 export function PackageCampaignPanel({
   onComplete,

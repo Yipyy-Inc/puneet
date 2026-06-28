@@ -282,7 +282,7 @@ const facilityVariables: TemplateVariable[] = [
     label: "Facility Name",
     category: "facility",
     description: "Name of the facility",
-    example: "Doggieville MTL",
+    example: "Yipyy",
   },
   {
     key: "facility_phone",
@@ -296,7 +296,7 @@ const facilityVariables: TemplateVariable[] = [
     label: "Facility Email",
     category: "facility",
     description: "Facility email address",
-    example: "info@doggievillemtl.com",
+    example: "info@yipyymtl.com",
   },
   {
     key: "facility_address",
@@ -311,7 +311,7 @@ const facilityVariables: TemplateVariable[] = [
     label: "Facility Website",
     category: "facility",
     description: "Facility website URL",
-    example: "www.doggievillemtl.com",
+    example: "www.yipyymtl.com",
     contextRequired: ["booking", "customer", "marketing", "general"],
   },
   {

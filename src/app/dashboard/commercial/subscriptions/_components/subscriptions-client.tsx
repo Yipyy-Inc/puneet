@@ -11,6 +11,7 @@ import {
   Download,
   Hourglass,
   PauseCircle,
+  Repeat,
 } from "lucide-react";
 
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
@@ -287,6 +288,12 @@ export function SubscriptionsClient() {
         onRowClick={(r) =>
           router.push(`/dashboard/facilities/${r.facilityId}?tab=billing`)
         }
+        emptyState={{
+          icon: Repeat,
+          title: "No subscriptions yet",
+          description:
+            "Facility subscriptions will appear here once plans are active.",
+        }}
       />
     </div>
   );

@@ -57,13 +57,13 @@ export function BusinessInformationStep({
           form={form}
           name="legalName"
           label="Facility Legal Name"
-          placeholder="Doggieville MTL Inc."
+          placeholder="Yipyy Inc."
         />
         <FormField
           form={form}
           name="displayName"
           label="Display Name"
-          placeholder="Doggieville"
+          placeholder="Yipyy"
         />
       </div>
 
@@ -122,7 +122,7 @@ export function BusinessInformationStep({
         form={form}
         name="website"
         label="Website"
-        placeholder="https://doggieville.com"
+        placeholder="https://yipyy.com"
       />
 
       <form.Field name="businessTypes">

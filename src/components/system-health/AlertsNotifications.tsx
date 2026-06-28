@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import {
   Bell,
+  BellRing,
   AlertTriangle,
   AlertCircle,
   CheckCircle2,
@@ -18,22 +21,162 @@ import {
   Smartphone,
   Webhook,
   Settings,
-  Eye,
   Play,
   Check,
+  ArrowUpCircle,
+  Pencil,
+  Trash2,
+  Plus,
   Users,
-  Zap,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
-  systemAlerts,
-  alertConfigurations,
   notificationChannels,
   type SystemAlert,
   type AlertConfiguration,
   type NotificationChannel,
 } from "@/data/system-health";
+import {
+  acknowledgeAlert,
+  escalateAlert,
+  resolveAlert,
+  useAlerts,
+  type AlertSeverity,
+} from "@/lib/alerts-store";
+import { IMPERSONATING_ADMIN } from "@/lib/impersonation";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { supportAgents } from "@/data/support-tickets";
+import {
+  createAlertConfig,
+  deleteAlertConfig,
+  toggleAlertConfig,
+  updateAlertConfig,
+  useAlertConfigs,
+  type AlertRuleInput,
+} from "@/lib/alert-config-store";
+import { AlertRuleModal } from "./alert-rule-modal";
+import { NotificationHoursCard } from "./notification-hours-card";
+import { NotificationRecipientsCard } from "./notification-recipients-card";
+import { NotificationSlackCard } from "./notification-slack-card";
 
 export function AlertsNotifications() {
+  const alerts = useAlerts();
+  const admin = IMPERSONATING_ADMIN.name;
+
+  const [resolveTarget, setResolveTarget] = useState<SystemAlert | null>(null);
+  const [resolveNote, setResolveNote] = useState("");
+  const [escalateTarget, setEscalateTarget] = useState<SystemAlert | null>(
+    null,
+  );
+  const [escalateNote, setEscalateNote] = useState("");
+  const [escalateSeverity, setEscalateSeverity] =
+    useState<AlertSeverity>("High");
+
+  const SEVERITY_ORDER: AlertSeverity[] = ["Low", "Medium", "High", "Critical"];
+  const nextSeverity = (s: AlertSeverity): AlertSeverity =>
+    SEVERITY_ORDER[Math.min(SEVERITY_ORDER.indexOf(s) + 1, 3)];
+
+  const handleAcknowledge = (item: SystemAlert) => {
+    acknowledgeAlert(item.alertId, admin);
+    toast.success(`Alert acknowledged by ${admin}`);
+  };
+  const openResolve = (item: SystemAlert) => {
+    setResolveTarget(item);
+    setResolveNote("");
+  };
+  const confirmResolve = () => {
+    if (!resolveTarget) return;
+    resolveAlert(resolveTarget.alertId, resolveNote.trim(), admin);
+    toast.success("Alert resolved");
+    setResolveTarget(null);
+  };
+  const openEscalate = (item: SystemAlert) => {
+    setEscalateTarget(item);
+    setEscalateNote("");
+    setEscalateSeverity(nextSeverity(item.severity));
+  };
+  const confirmEscalate = () => {
+    if (!escalateTarget) return;
+    escalateAlert(
+      escalateTarget.alertId,
+      escalateSeverity,
+      escalateNote.trim(),
+      admin,
+    );
+    toast.success(`Alert escalated to ${escalateSeverity}`);
+    setEscalateTarget(null);
+  };
+
+  // Alert rules (configuration tab)
+  const configs = useAlertConfigs();
+  const availableSupportAgents = supportAgents.filter(
+    (a) => a.status === "Available",
+  );
+
+  const [ruleModalOpen, setRuleModalOpen] = useState(false);
+  const [ruleNonce, setRuleNonce] = useState(0);
+  const [editTarget, setEditTarget] = useState<AlertConfiguration | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AlertConfiguration | null>(
+    null,
+  );
+
+  const openCreateRule = () => {
+    setEditTarget(null);
+    setRuleNonce((n) => n + 1);
+    setRuleModalOpen(true);
+  };
+  const openEditRule = (item: AlertConfiguration) => {
+    setEditTarget(item);
+    setRuleNonce((n) => n + 1);
+    setRuleModalOpen(true);
+  };
+  const handleSaveRule = (input: AlertRuleInput) => {
+    if (editTarget) {
+      updateAlertConfig(editTarget.configId, input);
+      toast.success("Alert rule updated");
+    } else {
+      createAlertConfig(input, admin);
+      toast.success("Alert rule created");
+    }
+    setRuleModalOpen(false);
+  };
+  const confirmDeleteRule = () => {
+    if (!deleteTarget) return;
+    deleteAlertConfig(deleteTarget.configId);
+    toast.success("Alert rule deleted");
+    setDeleteTarget(null);
+  };
+  const handleToggleRule = (item: AlertConfiguration, enabled: boolean) => {
+    toggleAlertConfig(item.configId, enabled);
+    toast.success(enabled ? "Rule enabled" : "Rule disabled");
+  };
+
   // Badge helpers
   const getSeverityBadge = (severity: string) => {
     const variants: Record<
@@ -96,6 +239,17 @@ export function AlertsNotifications() {
     return icons[channelType] || Bell;
   };
 
+  const conditionSymbol = (c: string) =>
+    (
+      ({
+        greater_than: ">",
+        less_than: "<",
+        equals: "=",
+        not_equals: "≠",
+        anomaly: "anomaly",
+      }) as Record<string, string>
+    )[c] ?? c;
+
   // System Alerts Columns
   const alertColumns = [
     {
@@ -124,6 +278,14 @@ export function AlertsNotifications() {
               Auto-escalated
             </Badge>
           )}
+          {item.escalatedBy && (
+            <Badge
+              variant="outline"
+              className="border-amber-300 text-xs text-amber-600 dark:border-amber-800 dark:text-amber-400"
+            >
+              Escalated
+            </Badge>
+          )}
         </div>
       ),
     },
@@ -148,28 +310,62 @@ export function AlertsNotifications() {
           <div className="text-muted-foreground text-xs">
             {new Date(item.triggeredAt).toLocaleString()}
           </div>
+          {item.acknowledgedBy && item.acknowledgedAt && (
+            <div className="text-muted-foreground text-[11px]">
+              Ack: {item.acknowledgedBy} ·{" "}
+              {new Date(item.acknowledgedAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+          )}
         </div>
       ),
     },
   ];
 
-  const alertActions = (item: SystemAlert) => (
-    <div className="flex gap-1">
-      <Button variant="ghost" size="icon" className="size-8">
-        <Eye className="size-4" />
-      </Button>
-      {item.status === "New" && (
-        <Button variant="ghost" size="icon" className="size-8">
-          <Check className="size-4" />
+  const alertActions = (item: SystemAlert) => {
+    const isActive = item.status !== "Resolved" && item.status !== "Dismissed";
+    if (!isActive) {
+      return <span className="text-muted-foreground text-xs">—</span>;
+    }
+    return (
+      <div className="flex flex-wrap gap-1">
+        {item.status === "New" && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            aria-label="Acknowledge alert"
+            title="Acknowledge"
+            onClick={() => handleAcknowledge(item)}
+          >
+            <Check className="size-4" />
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          aria-label="Resolve alert"
+          title="Resolve"
+          onClick={() => openResolve(item)}
+        >
+          <CheckCircle2 className="size-4" />
         </Button>
-      )}
-      {(item.status === "Acknowledged" || item.status === "New") && (
-        <Button variant="ghost" size="icon" className="size-8">
-          <Play className="size-4" />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          aria-label="Escalate alert"
+          title="Escalate"
+          onClick={() => openEscalate(item)}
+        >
+          <ArrowUpCircle className="size-4" />
         </Button>
-      )}
-    </div>
-  );
+      </div>
+    );
+  };
 
   // Alert Configuration Columns
   const configColumns = [
@@ -192,11 +388,13 @@ export function AlertsNotifications() {
       render: (item: AlertConfiguration) => (
         <div className="space-y-1 text-sm">
           <div className="font-mono">
-            {item.condition} {item.threshold}
+            {conditionSymbol(item.condition)} {item.threshold}
           </div>
-          <div className="text-muted-foreground text-xs">
-            for {item.duration}min
-          </div>
+          {item.duration > 0 && (
+            <div className="text-muted-foreground text-xs">
+              for {item.duration}min
+            </div>
+          )}
         </div>
       ),
     },
@@ -224,6 +422,16 @@ export function AlertsNotifications() {
               +{item.channels.length - 2}
             </Badge>
           )}
+          {item.routeToSupportAgents && (
+            <Badge
+              variant="secondary"
+              className="gap-1 text-xs"
+              title={availableSupportAgents.map((a) => a.name).join(", ")}
+            >
+              <Users className="size-3" />
+              {availableSupportAgents.length} support agents
+            </Badge>
+          )}
         </div>
       ),
     },
@@ -232,7 +440,11 @@ export function AlertsNotifications() {
       label: "Status",
       render: (item: AlertConfiguration) => (
         <div className="space-y-1">
-          <Switch checked={item.enabled} disabled />
+          <Switch
+            checked={item.enabled}
+            onCheckedChange={(c) => handleToggleRule(item, c)}
+            aria-label={item.enabled ? "Disable rule" : "Enable rule"}
+          />
           <div className="text-muted-foreground text-xs">
             {item.triggerCount} triggers
           </div>
@@ -243,14 +455,26 @@ export function AlertsNotifications() {
 
   const configActions = (item: AlertConfiguration) => (
     <div className="flex gap-1">
-      <Button variant="ghost" size="icon" className="size-8">
-        <Settings className="size-4" />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8"
+        aria-label="Edit rule"
+        title="Edit"
+        onClick={() => openEditRule(item)}
+      >
+        <Pencil className="size-4" />
       </Button>
-      {item.enabled && (
-        <Button variant="ghost" size="icon" className="size-8">
-          <Eye className="size-4" />
-        </Button>
-      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8 text-red-600 hover:text-red-700"
+        aria-label="Delete rule"
+        title="Delete"
+        onClick={() => setDeleteTarget(item)}
+      >
+        <Trash2 className="size-4" />
+      </Button>
     </div>
   );
 
@@ -307,31 +531,13 @@ export function AlertsNotifications() {
     },
   ];
 
-  const channelActions = (item: NotificationChannel) => (
-    <div className="flex gap-1">
-      <Button variant="ghost" size="icon" className="size-8">
-        <Settings className="size-4" />
-      </Button>
-      {item.status === "Active" && (
-        <Button variant="ghost" size="icon" className="size-8">
-          <Zap className="size-4" />
-        </Button>
-      )}
-    </div>
-  );
-
   // Calculate stats
-  const criticalAlerts = systemAlerts.filter(
-    (a) => a.severity === "Critical",
-  ).length;
-  const activeAlerts = systemAlerts.filter(
+  const criticalAlerts = alerts.filter((a) => a.severity === "Critical").length;
+  const activeAlerts = alerts.filter(
     (a) => a.status === "New" || a.status === "Investigating",
   ).length;
-  const totalImpacted = systemAlerts.reduce(
-    (sum, a) => sum + a.impactedUsers,
-    0,
-  );
-  const activeConfigs = alertConfigurations.filter((c) => c.enabled).length;
+  const totalImpacted = alerts.reduce((sum, a) => sum + a.impactedUsers, 0);
+  const activeConfigs = configs.filter((c) => c.enabled).length;
 
   return (
     <div className="space-y-6">
@@ -455,8 +661,14 @@ export function AlertsNotifications() {
             <CardContent>
               <DataTable
                 columns={alertColumns}
-                data={systemAlerts}
+                data={alerts}
                 actions={alertActions}
+                emptyState={{
+                  icon: BellRing,
+                  title: "No system alerts",
+                  description:
+                    "All systems are healthy. Triggered alerts will appear here.",
+                }}
               />
             </CardContent>
           </Card>
@@ -469,20 +681,42 @@ export function AlertsNotifications() {
         >
           <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Settings className="size-5" />
-                Alert Configuration
-              </CardTitle>
-              <p className="text-muted-foreground text-sm">
-                Configure alert thresholds, notification channels, and
-                escalation rules
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                    <Settings className="size-5" />
+                    Alert Configuration
+                  </CardTitle>
+                  <p className="text-muted-foreground text-sm">
+                    Configure alert thresholds, notification channels, and
+                    escalation rules
+                  </p>
+                </div>
+                <Button
+                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                  onClick={openCreateRule}
+                >
+                  <Plus className="mr-2 size-4" />
+                  New Alert Rule
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <DataTable
                 columns={configColumns}
-                data={alertConfigurations}
+                data={configs}
                 actions={configActions}
+                emptyState={{
+                  icon: Settings,
+                  title: "No alert rules configured",
+                  description:
+                    "Create a rule to define thresholds, channels, and escalation paths.",
+                  action: {
+                    label: "New Alert Rule",
+                    onClick: openCreateRule,
+                    icon: Plus,
+                  },
+                }}
               />
             </CardContent>
           </Card>
@@ -490,26 +724,177 @@ export function AlertsNotifications() {
 
         {/* Notification Channels Tab */}
         <TabsContent value="channels" className="space-y-6 overflow-x-hidden">
+          <NotificationRecipientsCard />
+          <NotificationSlackCard />
+          <NotificationHoursCard />
+
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Bell className="size-5" />
-                Notification Channels
+                Connected Channels
               </CardTitle>
               <p className="text-muted-foreground text-sm">
-                Manage email, SMS, Slack, PagerDuty, and webhook integrations
+                Live delivery status of your email, SMS, Slack, PagerDuty, and
+                webhook integrations
               </p>
             </CardHeader>
             <CardContent>
               <DataTable
                 columns={channelColumns}
                 data={notificationChannels}
-                actions={channelActions}
+                emptyState={{
+                  icon: Bell,
+                  title: "No notification channels",
+                  description:
+                    "Connect email, SMS, Slack, PagerDuty, or webhook integrations to deliver alerts.",
+                }}
               />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Create / Edit alert rule */}
+      <AlertRuleModal
+        key={`rule-${ruleNonce}`}
+        open={ruleModalOpen}
+        target={editTarget}
+        onOpenChange={setRuleModalOpen}
+        onSubmit={handleSaveRule}
+      />
+
+      {/* Delete rule confirm */}
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete alert rule?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &ldquo;{deleteTarget?.alertName}&rdquo; will be permanently
+              removed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={confirmDeleteRule}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Resolve modal */}
+      <Dialog
+        open={!!resolveTarget}
+        onOpenChange={(o) => {
+          if (!o) setResolveTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="size-5 text-emerald-600" />
+              Resolve Alert
+            </DialogTitle>
+            <DialogDescription>{resolveTarget?.title}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-1.5">
+            <Label htmlFor="resolution-note">Resolution note</Label>
+            <Textarea
+              id="resolution-note"
+              rows={4}
+              value={resolveNote}
+              onChange={(e) => setResolveNote(e.target.value)}
+              placeholder="Describe how the issue was resolved…"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResolveTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              disabled={!resolveNote.trim()}
+              onClick={confirmResolve}
+            >
+              <CheckCircle2 className="mr-2 size-4" />
+              Resolve Alert
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Escalate modal */}
+      <Dialog
+        open={!!escalateTarget}
+        onOpenChange={(o) => {
+          if (!o) setEscalateTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowUpCircle className="size-5 text-amber-600" />
+              Escalate Alert
+            </DialogTitle>
+            <DialogDescription>
+              {escalateTarget?.title}
+              {escalateTarget && ` · currently ${escalateTarget.severity}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid gap-1.5">
+              <Label>New severity</Label>
+              <Select
+                value={escalateSeverity}
+                onValueChange={(v) => setEscalateSeverity(v as AlertSeverity)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SEVERITY_ORDER.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="escalation-note">Escalation note</Label>
+              <Textarea
+                id="escalation-note"
+                rows={4}
+                value={escalateNote}
+                onChange={(e) => setEscalateNote(e.target.value)}
+                placeholder="Why is this being escalated?…"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEscalateTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-amber-600 text-white hover:bg-amber-700"
+              disabled={!escalateNote.trim()}
+              onClick={confirmEscalate}
+            >
+              <ArrowUpCircle className="mr-2 size-4" />
+              Escalate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

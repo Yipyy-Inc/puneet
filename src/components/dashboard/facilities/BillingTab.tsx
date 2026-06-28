@@ -13,6 +13,7 @@ import {
   Pencil,
   Percent,
   Play,
+  Receipt,
   RefreshCcw,
   Wallet,
   XCircle,
@@ -395,6 +396,12 @@ export function BillingTab({
             searchKey="number"
             searchPlaceholder="Search invoices…"
             itemsPerPage={10}
+            emptyState={{
+              icon: Receipt,
+              title: "No invoices yet",
+              description:
+                "Invoices will appear here once the facility is billed.",
+            }}
           />
         </CardContent>
       </Card>

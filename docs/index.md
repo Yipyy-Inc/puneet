@@ -1,6 +1,6 @@
 # Docs index
 
-Documentation for the Doggieville MTL / Yipyy platform. Start with [AGENTS.md](../AGENTS.md) (the operating manual) and [CLAUDE.md](../CLAUDE.md) (the authoritative architecture/style rules). These docs add product context and the harness around them.
+Documentation for the Yipyy platform. Start with [AGENTS.md](../AGENTS.md) (the operating manual) and [CLAUDE.md](../CLAUDE.md) (the authoritative architecture/style rules). These docs add product context and the harness around them.
 
 ## Architecture
 

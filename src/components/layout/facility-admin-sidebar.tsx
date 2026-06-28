@@ -45,6 +45,8 @@ import {
   ShieldCheck,
   Boxes,
   Award,
+  LifeBuoy,
+  Database,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
@@ -110,10 +112,9 @@ export function FacilitySidebar() {
           },
           {
             title: "Notifications",
-            url: "/facility/dashboard/notifications",
+            url: "/facility/notifications",
             icon: Bell,
             disabled: false,
-            count: 13,
           },
         ],
       },
@@ -395,9 +396,21 @@ export function FacilitySidebar() {
             disabled: false,
           },
           {
+            title: "Export Data",
+            url: "/facility/settings/data-export",
+            icon: Database,
+            disabled: false,
+          },
+          {
             title: "Intake Forms",
             url: "/facility/dashboard/forms",
             icon: ClipboardList,
+            disabled: false,
+          },
+          {
+            title: "Help Center",
+            url: "/facility/help",
+            icon: LifeBuoy,
             disabled: false,
           },
         ],

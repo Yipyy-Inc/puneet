@@ -21,6 +21,7 @@ interface StatusBadgeProps {
 const DOT_COLORS: Record<string, string> = {
   // Positive states
   active: "bg-emerald-500",
+  success: "bg-emerald-500",
   completed: "bg-emerald-500",
   confirmed: "bg-emerald-500",
   paid: "bg-emerald-500",
@@ -31,6 +32,7 @@ const DOT_COLORS: Record<string, string> = {
 
   // Warning / pending states
   pending: "bg-amber-400",
+  invited: "bg-amber-400",
   low_stock: "bg-amber-400",
   busy: "bg-amber-400",
   medium: "bg-amber-400",
@@ -46,6 +48,8 @@ const DOT_COLORS: Record<string, string> = {
   suspended: "bg-red-400",
   denied: "bg-red-400",
   high: "bg-red-400",
+  critical: "bg-red-500",
+  failed: "bg-red-400",
 
   // Roles & plans (no dot)
   low: "bg-emerald-500",
@@ -55,6 +59,7 @@ const DISPLAY_VALUES: Record<string, string> = {
   active: "Active",
   inactive: "Inactive",
   pending: "Pending",
+  invited: "Invited",
   approved: "Approved",
   denied: "Denied",
   suspended: "Suspended",
@@ -88,6 +93,7 @@ const DISPLAY_VALUES: Record<string, string> = {
   high: "High",
   medium: "Medium",
   low: "Low",
+  critical: "Critical",
 };
 
 export function StatusBadge({

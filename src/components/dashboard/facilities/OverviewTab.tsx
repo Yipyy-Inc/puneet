@@ -16,6 +16,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   Phone,
@@ -75,8 +82,13 @@ export function OverviewTab({
   onNavigateToModules,
   onNavigateToLogs,
 }: OverviewTabProps) {
+  const [locationView, setLocationView] = useState("all");
+  const isMultiLocation = facility.locationsList.length > 1;
   const { data: kpis, isLoading: kpisLoading } = useQuery(
-    facilitiesQueries.overviewKpis(facility.id),
+    facilitiesQueries.overviewKpis(
+      facility.id,
+      locationView === "all" ? null : locationView,
+    ),
   );
   const [showContactDialog, setShowContactDialog] = useState(false);
   const [editableContact, setEditableContact] = useState({
@@ -126,6 +138,31 @@ export function OverviewTab({
 
   return (
     <div className="space-y-6">
+      {/* Location filter (multi-location facilities only) */}
+      {isMultiLocation && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-muted-foreground text-sm">
+            {locationView === "all"
+              ? "Combined across all locations"
+              : `Showing ${locationView}`}
+          </p>
+          <Select value={locationView} onValueChange={setLocationView}>
+            <SelectTrigger className="w-[230px]">
+              <MapPin className="size-4" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Combined (All Locations)</SelectItem>
+              {facility.locationsList.map((l) => (
+                <SelectItem key={l.name} value={l.name}>
+                  {l.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* Stats Grid */}
       {kpisLoading || !kpis ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -168,7 +205,9 @@ export function OverviewTab({
           <StatCard
             title="Locations"
             value={kpis.locations}
-            subtitle="Active branches"
+            subtitle={
+              locationView === "all" ? "Active branches" : "Selected branch"
+            }
             icon={MapPin}
             iconBgStyle={{
               background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",

@@ -6,6 +6,7 @@ import { ArrowRight, Check, ListChecks, X } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { facilityBillingQueries } from "@/lib/api/facility-billing";
 import { bookingQueries } from "@/lib/api/booking";
 import { ONBOARDING_FACILITY_ID } from "@/data/facility-onboarding";
@@ -106,15 +107,18 @@ export function SetupProgressCard({
   onNavigate: (tab: string) => void;
   onMarkActive: () => void;
 }) {
-  const { data: subscription } = useQuery(
+  const { data: subscription, isLoading: subLoading } = useQuery(
     facilityBillingQueries.subscription(facilityId),
   );
-  const { data: card } = useQuery(
+  const { data: card, isLoading: cardLoading } = useQuery(
     facilityBillingQueries.paymentMethod(facilityId),
   );
-  const { data: bookings = [] } = useQuery(
+  const { data: bookings = [], isLoading: bookingsLoading } = useQuery(
     bookingQueries.byFacility(facilityId),
   );
+  // Several checklist items depend on these queries — show a skeleton rather
+  // than falsely marking them incomplete (✗) while the data is still loading.
+  const dataLoading = subLoading || cardLoading || bookingsLoading;
 
   const taxSet = Boolean(
     taxConfig?.taxes?.some((t) => t.enabled && t.rate > 0),
@@ -176,64 +180,83 @@ export function SetupProgressCard({
           <ListChecks className="size-5" />
           Setup Progress
         </CardTitle>
-        <span className="text-muted-foreground text-sm font-medium tabular-nums">
-          {completed}/{items.length} complete
-        </span>
+        {dataLoading ? (
+          <Skeleton className="h-4 w-24" />
+        ) : (
+          <span className="text-muted-foreground text-sm font-medium tabular-nums">
+            {completed}/{items.length} complete
+          </span>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
-          <div
-            className={cn(
-              "h-full rounded-full transition-all",
-              allDone ? "bg-emerald-500" : "bg-violet-500",
-            )}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
+        {dataLoading ? (
+          <>
+            <Skeleton className="h-2 w-full rounded-full" />
+            <ul className="space-y-2">
+              {Array.from({ length: items.length }).map((_, i) => (
+                <li key={i}>
+                  <Skeleton className="h-[46px] w-full rounded-lg" />
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <>
+            <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all",
+                  allDone ? "bg-emerald-500" : "bg-violet-500",
+                )}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
 
-        <ul className="space-y-2">
-          {items.map((item) => (
-            <li
-              key={item.key}
-              className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5"
-            >
-              <div className="flex items-center gap-2.5">
-                <span
-                  className={cn(
-                    "flex size-6 shrink-0 items-center justify-center rounded-full",
-                    item.done
-                      ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
-                      : "bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400",
-                  )}
+            <ul className="space-y-2">
+              {items.map((item) => (
+                <li
+                  key={item.key}
+                  className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5"
                 >
-                  {item.done ? (
-                    <Check className="size-3.5" />
-                  ) : (
-                    <X className="size-3.5" />
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className={cn(
+                        "flex size-6 shrink-0 items-center justify-center rounded-full",
+                        item.done
+                          ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
+                          : "bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400",
+                      )}
+                    >
+                      {item.done ? (
+                        <Check className="size-3.5" />
+                      ) : (
+                        <X className="size-3.5" />
+                      )}
+                    </span>
+                    <span className="text-sm font-medium">{item.label}</span>
+                  </div>
+                  {!item.done && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-rose-600 hover:text-rose-700"
+                      onClick={() =>
+                        item.fixAction
+                          ? item.fixAction()
+                          : item.fixTab && onNavigate(item.fixTab)
+                      }
+                    >
+                      Fix This
+                      <ArrowRight className="size-3.5" />
+                    </Button>
                   )}
-                </span>
-                <span className="text-sm font-medium">{item.label}</span>
-              </div>
-              {!item.done && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-rose-600 hover:text-rose-700"
-                  onClick={() =>
-                    item.fixAction
-                      ? item.fixAction()
-                      : item.fixTab && onNavigate(item.fixTab)
-                  }
-                >
-                  Fix This
-                  <ArrowRight className="size-3.5" />
-                </Button>
-              )}
-            </li>
-          ))}
-        </ul>
+                </li>
+              ))}
+            </ul>
 
-        {facilityId === ONBOARDING_FACILITY_ID && <OnboardingMirror />}
+            {facilityId === ONBOARDING_FACILITY_ID && <OnboardingMirror />}
+          </>
+        )}
       </CardContent>
     </Card>
   );

@@ -222,6 +222,17 @@ export function AnnouncementsListClient() {
         searchKey="title"
         searchPlaceholder="Search announcements…"
         itemsPerPage={10}
+        emptyState={{
+          icon: Megaphone,
+          title: "No announcements yet",
+          description: "Broadcast updates to facilities across the platform.",
+          action: {
+            label: "New Announcement",
+            onClick: () =>
+              router.push("/dashboard/support/announcements/compose"),
+            icon: Plus,
+          },
+        }}
         actions={(a) => (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

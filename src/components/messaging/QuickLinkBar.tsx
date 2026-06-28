@@ -26,7 +26,7 @@ export interface QuickLinkContext {
   facilitySlug?: string;
 }
 
-const SLUG = "doggieville.ca";
+const SLUG = "yipyy.com";
 
 export const QUICK_LINK_ACTIONS: QuickLinkAction[] = [
   {

@@ -645,7 +645,7 @@ export default function FacilityStaffPage() {
               {inviteTarget && (
                 <>
                   We&apos;ll email {inviteTarget.email} an invite link to join
-                  Doggieville and set their password.
+                  Yipyy and set their password.
                 </>
               )}
             </DialogDescription>

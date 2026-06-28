@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ToggleRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
@@ -156,6 +157,10 @@ export function TenantModulesTab() {
         searchPlaceholder="Search tenant…"
         itemsPerPage={10}
         onRowClick={(c) => setSelected(c)}
+        emptyState={{
+          icon: ToggleRight,
+          title: "No tenants configured",
+        }}
       />
 
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>

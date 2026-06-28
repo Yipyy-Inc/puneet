@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import { Headset } from "lucide-react";
 
 import { HelpFaqsTab } from "@/components/support/help-faqs-tab";
 import { SubmitTicketTab } from "@/components/support/submit-ticket-tab";
 import { SupportChatTab } from "@/components/support/support-chat-tab";
+import {
+  setSupportDrawerOpen,
+  setSupportDrawerTab,
+  useSupportDrawer,
+  type SupportDrawerTab,
+} from "@/lib/support-drawer-store";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -22,14 +27,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  * submission and searchable help articles.
  */
 export function SupportCenter() {
-  const [open, setOpen] = useState(false);
+  const { open, tab } = useSupportDrawer();
 
   return (
     <>
       <Button
         type="button"
         variant="ghost"
-        onClick={() => setOpen(true)}
+        onClick={() => setSupportDrawerOpen(true)}
         aria-label="Yipyy Support"
         className="h-10 gap-2 rounded-xl px-2.5 sm:px-3"
       >
@@ -37,7 +42,7 @@ export function SupportCenter() {
         <span className="hidden text-sm font-medium sm:inline">Support</span>
       </Button>
 
-      <Sheet open={open} onOpenChange={setOpen}>
+      <Sheet open={open} onOpenChange={setSupportDrawerOpen}>
         <SheetContent
           side="right"
           className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
@@ -55,7 +60,8 @@ export function SupportCenter() {
           </SheetHeader>
 
           <Tabs
-            defaultValue="chat"
+            value={tab}
+            onValueChange={(v) => setSupportDrawerTab(v as SupportDrawerTab)}
             className="flex min-h-0 flex-1 flex-col gap-0"
           >
             <TabsList className="shrink-0 border-b px-3">

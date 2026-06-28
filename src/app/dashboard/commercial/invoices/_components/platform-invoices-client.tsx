@@ -10,6 +10,7 @@ import {
   Clock,
   FileText,
   Plus,
+  Receipt,
 } from "lucide-react";
 
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
@@ -387,6 +388,17 @@ export function PlatformInvoicesClient() {
           searchPlaceholder="Search invoice #, facility, or plan…"
           itemsPerPage={12}
           onRowClick={(i) => setSelectedId(i.id)}
+          emptyState={{
+            icon: Receipt,
+            title: "No invoices yet",
+            description:
+              "Draft invoices appear here each billing cycle, or create one manually.",
+            action: {
+              label: "Create Invoice",
+              onClick: () => setCreateOpen(true),
+              icon: Plus,
+            },
+          }}
         />
       )}
 

@@ -1,7 +1,7 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { NotificationCenter } from "@/components/facility/NotificationCenter";
-
-export default function FacilityNotificationsPage() {
-  return <NotificationCenter facilityId={11} />;
+// Unified notification center now lives at /facility/notifications.
+// This legacy route permanently redirects there.
+export default function FacilityDashboardNotificationsPage() {
+  redirect("/facility/notifications");
 }

@@ -55,14 +55,14 @@ export const reputationSettings: ReputationSettings = {
   reviewPlatforms: {
     google: {
       enabled: true,
-      url: "https://g.page/r/doggieville-mtl/review",
+      url: "https://g.page/r/yipyy-mtl/review",
       reviewCount: 312,
       avgRating: 4.8,
       weight: 60,
     },
     facebook: {
       enabled: true,
-      url: "https://www.facebook.com/doggieville.mtl/reviews",
+      url: "https://www.facebook.com/yipyy.mtl/reviews",
       reviewCount: 147,
       avgRating: 4.7,
       weight: 40,
@@ -163,7 +163,7 @@ export const reputationSettings: ReputationSettings = {
     happyNoClickReminderHours: 48,
   },
   negativePauseDays: 14,
-  managerAlertEmails: ["manager@doggieville.com"],
+  managerAlertEmails: ["manager@yipyy.com"],
   staffNotifications: [
     { staffId: 1, staffName: "Emma Tremblay", notifyOn: "all" },
     { staffId: 2, staffName: "Liam Bouchard", notifyOn: "under_3_stars" },

@@ -103,7 +103,7 @@ const MISSED_CALLS: MissedCall[] = [
 
 const NO_VOICEMAIL = MISSED_CALLS.filter((c) => !c.voicemail);
 
-const DEFAULT_SMS = `Hi! This is Doggieville — we missed your call earlier today. How can we help? Reply here or call us back at (514) 555-0100. — The Doggieville team`;
+const DEFAULT_SMS = `Hi! This is Yipyy — we missed your call earlier today. How can we help? Reply here or call us back at (514) 555-0100. — The Yipyy team`;
 
 type Mode = "log" | "callback";
 

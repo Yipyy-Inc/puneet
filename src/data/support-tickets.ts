@@ -53,7 +53,7 @@ export const supportAgents: SupportAgent[] = [
   {
     id: "agent-001",
     name: "Emma Thompson",
-    email: "emma.thompson@doggieville.com",
+    email: "emma.thompson@yipyy.com",
     role: "Team Lead",
     department: "Technical Support",
     status: "Available",
@@ -63,7 +63,7 @@ export const supportAgents: SupportAgent[] = [
   {
     id: "agent-002",
     name: "Michael Chen",
-    email: "michael.chen@doggieville.com",
+    email: "michael.chen@yipyy.com",
     role: "Senior Agent",
     department: "Billing Support",
     status: "Busy",
@@ -73,7 +73,7 @@ export const supportAgents: SupportAgent[] = [
   {
     id: "agent-003",
     name: "Sarah Martinez",
-    email: "sarah.martinez@doggieville.com",
+    email: "sarah.martinez@yipyy.com",
     role: "Agent",
     department: "Customer Support",
     status: "Available",
@@ -83,7 +83,7 @@ export const supportAgents: SupportAgent[] = [
   {
     id: "agent-004",
     name: "David Wilson",
-    email: "david.wilson@doggieville.com",
+    email: "david.wilson@yipyy.com",
     role: "Senior Agent",
     department: "Technical Support",
     status: "Away",
@@ -93,7 +93,7 @@ export const supportAgents: SupportAgent[] = [
   {
     id: "agent-005",
     name: "Jennifer Lee",
-    email: "jennifer.lee@doggieville.com",
+    email: "jennifer.lee@yipyy.com",
     role: "Manager",
     department: "Support Operations",
     status: "Available",
@@ -103,7 +103,7 @@ export const supportAgents: SupportAgent[] = [
   {
     id: "agent-006",
     name: "Robert Brown",
-    email: "robert.brown@doggieville.com",
+    email: "robert.brown@yipyy.com",
     role: "Agent",
     department: "Technical Support",
     status: "Offline",
@@ -397,7 +397,7 @@ export const supportTickets: SupportTicket[] = [
     status: "Resolved",
     priority: "Urgent",
     requester: "System Alert",
-    requesterEmail: "alerts@doggieville.com",
+    requesterEmail: "alerts@yipyy.com",
     facility: "All Facilities",
     createdAt: "2024-11-26T02:00:00Z",
     updatedAt: "2024-11-26T03:30:00Z",

@@ -59,8 +59,9 @@ Not derivable from code. See Open Question Q4. No analytics/KPI instrumentation 
 - **Q3 — Non-goals:** What is explicitly out of scope (e.g. veterinary EMR depth, accounting/GL, e-commerce beyond retail POS)?
 - **Q4 — Success metrics:** What are the target metrics and thresholds for the core journeys (e.g. % bookings self-served, check-in time, review conversion)?
 - **Q5 — Launch reality:** Is there a target for replacing the mock layer with a real backend, and which integrations (payments, telephony, cameras, auth) are committed vs. exploratory?
-- **Q6 — Branding:** Is "Doggieville MTL" a single flagship tenant and "Yipyy" the platform, or are these interchangeable? (Both strings appear in the UI — [inferred] distinction.)
+- **Q6 — Branding:** RESOLVED — the platform is **"Yipyy"**. The former "Doggieville MTL" name (used for both the platform brand and the built-in demo facility) was retired and rebranded to "Yipyy" across the app.
 
 ## Decision log
 
 - **2026-06-20** — PRD reverse-engineered from the codebase; **pending product-owner review.** All goals/non-goals/metrics are Open Questions, not assumptions. Update via the `write-prd` skill as answers arrive; append decisions here.
+- **2026-06-28** — Branding (Q6) decided: platform name unified to **"Yipyy"**; "Doggieville MTL" / "Doggieville" rebranded to "Yipyy" everywhere in `src/` (Global Settings, page titles, emails/SMS, greetings, branding defaults, locations, domains).

@@ -226,7 +226,7 @@ function ReminderFlow({
 }) {
   const [step, setStep] = useState<"compose" | "preview">("compose");
   const [template, setTemplate] = useState(
-    `Hi {{firstName}}, this is Doggieville reminding you about {{petName}}'s appointment on {{date}}. To confirm, reply YES. To cancel, please give us 24 hours notice. Otherwise a no-show fee will apply. Thanks!`,
+    `Hi {{firstName}}, this is Yipyy reminding you about {{petName}}'s appointment on {{date}}. To confirm, reply YES. To cancel, please give us 24 hours notice. Otherwise a no-show fee will apply. Thanks!`,
   );
 
   if (step === "compose") {

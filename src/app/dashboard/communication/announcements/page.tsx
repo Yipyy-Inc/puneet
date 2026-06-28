@@ -666,6 +666,24 @@ export default function AnnouncementsPage() {
                     searchKey="title"
                     searchPlaceholder="Search announcements..."
                     itemsPerPage={10}
+                    emptyState={{
+                      icon: Megaphone,
+                      title:
+                        tab === "published"
+                          ? "No published announcements"
+                          : tab === "drafts"
+                            ? "No draft announcements"
+                            : tab === "archived"
+                              ? "No archived announcements"
+                              : "No announcements yet",
+                      description:
+                        "Create an announcement to broadcast updates to your facilities.",
+                      action: {
+                        label: "Create Announcement",
+                        onClick: () => setIsCreateDialogOpen(true),
+                        icon: Plus,
+                      },
+                    }}
                     actions={(announcement) => (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

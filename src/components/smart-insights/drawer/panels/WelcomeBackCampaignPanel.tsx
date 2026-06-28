@@ -155,14 +155,14 @@ const FIRST_TIMERS: {
 const DEFAULT_SUBJECT = "We loved meeting {{petName}} — come back and save";
 const DEFAULT_BODY = `Hi {{firstName}},
 
-Thanks for trying Doggieville with {{petName}}! We hope you both had a great first visit.
+Thanks for trying Yipyy with {{petName}}! We hope you both had a great first visit.
 
 For your second visit, here's a thank-you: 10% off, OR a free add-on of your choice (nail trim, teeth brushing, or de-shed treatment) — your pick.
 
-Book within 30 days to use it: doggieville.ca/book
+Book within 30 days to use it: yipyy.com/book
 
 Looking forward to seeing you again,
-The Doggieville team`;
+The Yipyy team`;
 
 export function WelcomeBackCampaignPanel({
   onComplete,

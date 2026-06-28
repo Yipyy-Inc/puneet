@@ -4,7 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 
 import { importQueries } from "@/lib/api/imports";
 import { Badge } from "@/components/ui/badge";
@@ -135,6 +135,17 @@ export function ImportHistoryClient() {
           searchKeys={["facilityName", "sourceName", "importedBy"]}
           searchPlaceholder="Search facility, source, or importer…"
           itemsPerPage={12}
+          emptyState={{
+            icon: Upload,
+            title: "No imports yet",
+            description:
+              "Migrate customers, pets and bookings from another platform to get started.",
+            action: {
+              label: "Start New Import",
+              onClick: () => setWizardOpen(true),
+              icon: Plus,
+            },
+          }}
         />
       )}
 

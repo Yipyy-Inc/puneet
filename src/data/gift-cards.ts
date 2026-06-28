@@ -56,10 +56,10 @@ export const giftCardSettings: GiftCardProgramSettings[] = [
       primaryColor: "#7C3AED",
       accentColor: "#DDD6FE",
       footerText:
-        "Thank you for choosing Doggieville MTL — where every tail tells a happy story.",
+        "Thank you for choosing Yipyy — where every tail tells a happy story.",
     },
     customCardDesign: {
-      label: "Doggieville Signature",
+      label: "Yipyy Signature",
       imageUrl: "/dogs/dog-1.jpg",
     },
     updatedAt: "2026-04-01T10:00:00Z",

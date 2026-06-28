@@ -273,7 +273,7 @@ const mockYipyyGoConfigs: YipyyGoConfig[] = [
     tipPopup: {
       ...defaultTipPopupConfig,
       message:
-        "Our team at Doggieville truly loves caring for your pup. If you'd like to leave a tip to show appreciation, it goes 100% to the staff.",
+        "Our team at Yipyy truly loves caring for your pup. If you'd like to leave a tip to show appreciation, it goes 100% to the staff.",
     },
     confirmationEmail: {
       ...defaultConfirmationEmailConfig,

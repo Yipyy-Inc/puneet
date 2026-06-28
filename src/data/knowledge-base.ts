@@ -25,11 +25,13 @@ function toHtml(text: string): string {
 
 export const DEFAULT_KB_CATEGORIES = [
   "Getting Started",
-  "Bookings",
-  "Billing",
+  "Bookings & Scheduling",
   "Clients & Pets",
-  "Account",
-  "Marketing",
+  "Payments & Invoicing",
+  "Staff Management",
+  "Calling & Messaging",
+  "Reports",
+  "Account Settings",
 ];
 
 interface ExtraSeed {
@@ -42,17 +44,38 @@ interface ExtraSeed {
 
 const EXTRAS: ExtraSeed[] = [
   {
+    id: "kb-staff-roles",
+    title: "Manage staff roles and permissions",
+    body: "<p>Open <strong>Staff → Team</strong>, select a member, and choose their role (Owner, Manager, Front Desk or Groomer). Each role unlocks a different set of permissions across bookings, billing and reports.</p><p>To remove access for someone who has left, open their profile and switch their status to <strong>Inactive</strong> — their history stays intact.</p>",
+    category: "Staff Management",
+    status: "Published",
+  },
+  {
+    id: "kb-call-forwarding",
+    title: "Set up call forwarding and voicemail greetings",
+    body: "<p>Under <strong>Calling → Settings</strong> you can forward calls to a mobile during busy hours and record separate greetings for business hours, after hours and holidays.</p><p>Missed calls are logged automatically, and an optional auto-response SMS can be sent to the caller so no enquiry slips through.</p>",
+    category: "Calling & Messaging",
+    status: "Published",
+  },
+  {
+    id: "kb-export-reports",
+    title: "Export and schedule your reports",
+    body: "<p>From <strong>Reports &amp; Analytics</strong>, pick a report, set the date range, and click <strong>Export</strong> to download a PDF or CSV. Revenue, occupancy and staff-performance reports are all available.</p>",
+    category: "Reports",
+    status: "Published",
+  },
+  {
     id: "kb-promo-codes",
     title: "Run a promotion with promo codes",
-    body: "<p>Create a promo code under <strong>Marketing → Promo Codes</strong>, set a discount and expiry, then share the code with clients. Redemptions are tracked automatically.</p>",
-    category: "Marketing",
+    body: "<p>Create a promo code under <strong>Marketing → Promo Codes</strong>, set a discount and expiry, then share the code with clients. The discount is applied automatically at checkout and redemptions are tracked for you.</p>",
+    category: "Payments & Invoicing",
     status: "Published",
   },
   {
     id: "kb-loyalty-setup",
     title: "Set up a loyalty program (draft)",
     body: "<p>Loyalty lets clients earn points per visit or per dollar spent. This article is still being written — check back soon.</p>",
-    category: "Marketing",
+    category: "Clients & Pets",
     status: "Draft",
   },
   {

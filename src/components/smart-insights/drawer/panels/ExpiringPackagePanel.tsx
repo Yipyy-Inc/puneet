@@ -110,7 +110,7 @@ const HOLDERS: ExpiringHolder[] = [
   },
 ];
 
-const DEFAULT_TEMPLATE = `Hi {{firstName}}, your {{packageName}} for {{petName}} expires {{expiryDate}} and you still have {{sessionsRemaining}} session(s) remaining. Book now so you don't lose them: doggieville.ca/book. Reply STOP to opt out.`;
+const DEFAULT_TEMPLATE = `Hi {{firstName}}, your {{packageName}} for {{petName}} expires {{expiryDate}} and you still have {{sessionsRemaining}} session(s) remaining. Book now so you don't lose them: yipyy.com/book. Reply STOP to opt out.`;
 
 const TOTAL_SESSIONS_AT_RISK = HOLDERS.reduce(
   (sum, h) => sum + h.sessionsRemaining,

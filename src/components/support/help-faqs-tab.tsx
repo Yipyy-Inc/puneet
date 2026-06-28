@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { ArrowRight, Search } from "lucide-react";
 
 import { helpQueries } from "@/lib/api/help";
+import { closeSupportDrawer } from "@/lib/support-drawer-store";
 import {
   Accordion,
   AccordionContent,
@@ -72,6 +74,17 @@ export function HelpFaqsTab() {
             ))}
           </Accordion>
         )}
+      </div>
+
+      <div className="border-t p-3">
+        <Link
+          href="/facility/help"
+          onClick={() => closeSupportDrawer()}
+          className="text-primary inline-flex items-center gap-1 text-xs font-medium hover:underline"
+        >
+          Open the full Help Center
+          <ArrowRight className="size-3" />
+        </Link>
       </div>
     </div>
   );

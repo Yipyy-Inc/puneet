@@ -155,7 +155,7 @@ export function AddLocationDialog({ open, onOpenChange, onCreate }: Props) {
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Doggieville – Verdun"
+                  placeholder="Yipyy – Verdun"
                 />
               </div>
               <div className="space-y-1.5">
@@ -262,7 +262,7 @@ export function AddLocationDialog({ open, onOpenChange, onCreate }: Props) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="verdun@doggieville.ca"
+                  placeholder="verdun@yipyy.com"
                 />
               </div>
             </div>

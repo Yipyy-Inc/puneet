@@ -821,13 +821,13 @@ export function AppointmentPanel({
         open={markReadyOpen}
         onOpenChange={setMarkReadyOpen}
         apt={appointment}
-        facilityName="Doggieville MTL"
+        facilityName="Yipyy"
         onConfirm={(result: MarkReadyConfirmation) => {
           const summary = applyMarkReadyResult(appointment, result, {
             clients: initialClients,
             setStationStatus,
             notify: (title, detail) => toast.message(title, detail),
-            facilityName: "Doggieville MTL",
+            facilityName: "Yipyy",
           });
           toast.success(`${appointment.petName} — Ready for Pickup`, {
             description: `Owner notified · total $${summary.updatedTotal.toFixed(2)}`,
@@ -859,7 +859,7 @@ export function AppointmentPanel({
                 clients: initialClients,
                 setStationStatus,
                 notify: (title, detail) => toast.message(title, detail),
-                facilityName: "Doggieville MTL",
+                facilityName: "Yipyy",
               });
               toast.success(`${appointment.petName} — Completed`, {
                 description: `Receipt sent · $${summary.amountCharged.toFixed(2)} charged`,

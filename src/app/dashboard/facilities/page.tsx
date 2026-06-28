@@ -39,6 +39,7 @@ import {
   Download,
   Mail,
   Building,
+  Building2,
   CreditCard,
   Shield,
   Users,
@@ -624,6 +625,17 @@ export default function FacilitiesPage() {
             onRowClick={(facility) =>
               router.push(`/dashboard/facilities/${facility.id}`)
             }
+            emptyState={{
+              icon: Building2,
+              title: "No facilities yet",
+              description:
+                "Onboard your first facility to start managing operations.",
+              action: {
+                label: "Add Facility",
+                onClick: () => setWizardOpen(true),
+                icon: Plus,
+              },
+            }}
           />
         </CardContent>
       </Card>

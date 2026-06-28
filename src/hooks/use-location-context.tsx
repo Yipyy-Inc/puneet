@@ -37,7 +37,12 @@ export function LocationContextProvider({ children }: { children: ReactNode }) {
   const isMultiLocation = locs.length > 1;
   const primary = getPrimaryLocation(facilityId);
 
-  const [locationId, setLocationId] = useState<string | null>(null);
+  // Deterministic default (same on server + first client paint, so the selector
+  // shows "All Locations" immediately for multi-location facilities instead of
+  // flashing an unresolved state). A persisted choice is restored in the effect.
+  const [locationId, setLocationId] = useState<string | null>(
+    isMultiLocation ? HQ_SENTINEL : (primary?.id ?? locs[0]?.id ?? null),
+  );
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -47,9 +52,8 @@ export function LocationContextProvider({ children }: { children: ReactNode }) {
       setLocationId(HQ_SENTINEL);
     } else if (saved && locs.some((l) => l.id === saved)) {
       setLocationId(saved);
-    } else {
-      setLocationId(primary?.id ?? locs[0]?.id ?? null);
     }
+    // else: keep the deterministic default from useState above.
   }, []);
 
   const setLocation = useCallback(

@@ -318,6 +318,12 @@ export function TrialsClient() {
           searchPlaceholder="Search facility, plan, or admin…"
           itemsPerPage={12}
           actions={rowActions}
+          emptyState={{
+            icon: Hourglass,
+            title: "No active trials",
+            description:
+              "There are no free trials in progress right now. New trials will appear here as facilities sign up.",
+          }}
         />
       )}
 

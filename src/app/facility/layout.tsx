@@ -13,7 +13,7 @@ import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigPro
 import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
 import { TopBarIconsNext } from "@/components/layout/TopBarIconsNext";
 import { BookingRequestsTopbarDropdown } from "@/components/facility/BookingRequestsTopbarDropdown";
-import { FacilityNotificationsDropdown } from "@/components/facility/FacilityNotificationsDropdown";
+import { FacilityNotificationBell } from "@/components/facility/notifications/facility-notification-bell";
 import { ScheduleNotificationsDropdown } from "@/components/scheduling/ScheduleNotificationsDropdown";
 import { TaskNotificationsPanel } from "@/components/tasks/TaskNotificationsPanel";
 import { CallingButton } from "@/components/layout/CallingButton";
@@ -22,7 +22,7 @@ import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
 import { SupportCenter } from "@/components/layout/SupportCenter";
 import { FacilityMobileBottomNav } from "@/components/layout/FacilityMobileBottomNav";
 import { LocationContextProviderWrapper } from "@/components/providers/LocationContextProviderWrapper";
-import { LocationStatusBadge } from "@/components/hq/LocationStatusBadge";
+import { LocationTopNavSelector } from "@/components/hq/LocationTopNavSelector";
 import { FacilityOnboardingBanner } from "@/components/facility/onboarding/facility-onboarding-banner";
 import { ImpersonationBanner } from "@/components/facility/ImpersonationBanner";
 import { AnnouncementBanner } from "@/components/facility/announcement-banner";
@@ -66,14 +66,14 @@ export default async function FacilityLayout({
                           />
                         </div>
                         <div className="flex items-center gap-2">
-                          <LocationStatusBadge />
+                          <LocationTopNavSelector />
                           <div className="hidden items-center gap-1 sm:flex">
                             <CallingButton />
                             <TopBarIconsNext />
                           </div>
                           <TaskNotificationsPanel />
                           <ScheduleNotificationsDropdown />
-                          <FacilityNotificationsDropdown facilityId={11} />
+                          <FacilityNotificationBell />
                           <AnnouncementBell facilityId={11} />
                           <BookingRequestsTopbarDropdown />
                           <HeaderDropdown />

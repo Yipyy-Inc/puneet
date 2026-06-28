@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ClipboardCheck } from "lucide-react";
 
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/button";
@@ -169,6 +169,12 @@ export function FacilityRequestsClient() {
           searchKey="facilityName"
           searchPlaceholder="Search applications…"
           itemsPerPage={10}
+          emptyState={{
+            icon: ClipboardCheck,
+            title: "No pending applications",
+            description:
+              "New facility applications will appear here for review.",
+          }}
           actions={(r) => (
             <div className="flex items-center justify-end gap-2">
               <Button size="sm" onClick={() => handleApprove(r)}>

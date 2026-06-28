@@ -32,7 +32,7 @@ const SOURCE = {
   bookings: 41,
   revenue: "$2,840",
   subject: "A gift for the moms (and the pups in their lives) 🌷",
-  body: `Hi {{firstName}},\n\nHappy almost-Mother's Day! To celebrate, we're offering 20% off any grooming, daycare, or boarding booking made through May 14.\n\nBook here: doggieville.ca/book\n\nThank you for being part of the Doggieville family,\nThe Doggieville team`,
+  body: `Hi {{firstName}},\n\nHappy almost-Mother's Day! To celebrate, we're offering 20% off any grooming, daycare, or boarding booking made through May 14.\n\nBook here: yipyy.com/book\n\nThank you for being part of the Yipyy family,\nThe Yipyy team`,
 };
 
 const AUDIENCES = [
@@ -47,9 +47,7 @@ export function DuplicateCampaignPanel({
   onCancel,
 }: InsightPanelProps) {
   const [step, setStep] = useState<"compose" | "preview">("compose");
-  const [subject, setSubject] = useState(
-    "Father's Day at Doggieville — 20% off",
-  );
+  const [subject, setSubject] = useState("Father's Day at Yipyy — 20% off");
   const [body, setBody] = useState(
     SOURCE.body.replaceAll("Mother", "Father").replaceAll("moms", "dads"),
   );

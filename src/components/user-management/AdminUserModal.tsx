@@ -22,12 +22,18 @@ import {
   roleDisplayNames,
   accessLevelDescriptions,
 } from "@/data/admin-users";
+import { useRolePermissions } from "@/lib/role-permissions-store";
 
 interface AdminUserModalProps {
   user: AdminUser;
 }
 
 export function AdminUserModal({ user }: AdminUserModalProps) {
+  // Permissions are role-based: show the live set for this member's role so
+  // edits made on the Roles & Permissions page are reflected here.
+  const rolePerms = useRolePermissions();
+  const memberPermissions = rolePerms[user.role] ?? user.permissions;
+
   return (
     <DetailsModal
       title={user.name}
@@ -42,7 +48,11 @@ export function AdminUserModal({ user }: AdminUserModalProps) {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <InfoCard
             title="Last Login"
-            value={new Date(user.lastLogin).toLocaleDateString()}
+            value={
+              user.lastLogin
+                ? new Date(user.lastLogin).toLocaleDateString()
+                : "Never"
+            }
             subtitle="Last activity"
             icon={Clock}
             variant="info"
@@ -150,7 +160,7 @@ export function AdminUserModal({ user }: AdminUserModalProps) {
           </CardHeader>
           <CardContent className="px-5 pb-5">
             <div className="flex flex-wrap gap-2">
-              {user.permissions.map((permission) => (
+              {memberPermissions.map((permission) => (
                 <Badge
                   key={permission}
                   variant="secondary"

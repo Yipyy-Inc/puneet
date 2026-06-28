@@ -118,14 +118,14 @@ const DEFAULT_SUBJECT = "We miss you and {{petName}}";
 
 const DEFAULT_BODY = `Hi {{firstName}},
 
-It's been a while since we saw {{petName}} at Doggieville! We've missed having them in for grooming.
+It's been a while since we saw {{petName}} at Yipyy! We've missed having them in for grooming.
 
 To welcome you back, here's 15% off your next grooming appointment — just use code WELCOMEBACK15 when you book in the next 14 days.
 
-Book now: doggieville.ca/book
+Book now: yipyy.com/book
 
 Hope to see you and {{petName}} soon,
-The Doggieville team`;
+The Yipyy team`;
 
 export function ChurnWinBackCampaignPanel({
   onComplete,

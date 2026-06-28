@@ -280,6 +280,12 @@ export function TicketsListClient() {
         columns={columns}
         itemsPerPage={12}
         onRowClick={(t) => router.push(`/dashboard/support/tickets/${t.id}`)}
+        emptyState={{
+          icon: TicketIcon,
+          title: "No tickets yet",
+          description:
+            "Facility support requests will appear here once submitted.",
+        }}
       />
     </div>
   );

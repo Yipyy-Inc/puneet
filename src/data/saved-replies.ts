@@ -88,7 +88,7 @@ export const savedReplies: SavedReply[] = [
     id: "sr-009",
     shortcut: "pricing-payment",
     title: "Payment methods",
-    body: "We accept all major credit cards, Interac e-Transfer (info@doggieville.ca), and cash. Memberships and packages can be paid in installments — just ask!",
+    body: "We accept all major credit cards, Interac e-Transfer (info@yipyy.com), and cash. Memberships and packages can be paid in installments — just ask!",
     category: "pricing",
     createdBy: "Sarah M.",
     createdAt: "2026-04-04T15:00:00Z",

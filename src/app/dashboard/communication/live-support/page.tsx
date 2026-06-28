@@ -380,6 +380,12 @@ export default function LiveSupportPage() {
                   searchKey="title"
                   searchPlaceholder="Search tickets..."
                   itemsPerPage={10}
+                  emptyState={{
+                    icon: Ticket,
+                    title: "No tickets yet",
+                    description:
+                      "Support requests from facilities will appear here.",
+                  }}
                   actions={(ticket) => {
                     const ticketActions = getTicketActions(ticket);
                     return (

@@ -1,13 +1,35 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import {
-  rolePermissions,
+  BarChart3,
+  Copy,
+  DollarSign,
+  Edit,
+  Eye,
+  Headphones,
+  Plus,
+  Shield,
+  UserCog,
+  Users,
+} from "lucide-react";
+
+import {
   roleDisplayNames,
   roleDescriptions,
-  adminUsers,
   AdminRole,
 } from "@/data/admin-users";
+import {
+  updateRolePermissions,
+  useRolePermissions,
+} from "@/lib/role-permissions-store";
+import { useAdminTeam } from "@/lib/admin-team-store";
+import {
+  createCustomRole,
+  updateCustomRole,
+  useCustomRoles,
+} from "@/lib/custom-roles-store";
 import {
   Card,
   CardContent,
@@ -17,26 +39,11 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Shield,
-  Users,
-  Settings,
-  Edit,
-  Eye,
-  DollarSign,
-  Headphones,
-  BarChart3,
-  UserCog,
-} from "lucide-react";
+  RoleEditorDialog,
+  type EditorMode,
+  type RoleView,
+} from "./_components/role-editor-dialog";
 
 const roleIcons: Record<AdminRole, React.ElementType> = {
   sales_team: BarChart3,
@@ -46,88 +53,67 @@ const roleIcons: Record<AdminRole, React.ElementType> = {
   system_administrator: UserCog,
 };
 
-const allPermissions = [
-  { id: "view_leads", label: "View Leads", category: "Sales" },
-  { id: "manage_leads", label: "Manage Leads", category: "Sales" },
-  { id: "create_quotes", label: "Create Quotes", category: "Sales" },
-  { id: "view_clients", label: "View Clients", category: "Clients" },
-  { id: "manage_clients", label: "Manage Clients", category: "Clients" },
-  { id: "view_billing", label: "View Billing", category: "Finance" },
-  { id: "manage_billing", label: "Manage Billing", category: "Finance" },
-  { id: "view_transactions", label: "View Transactions", category: "Finance" },
-  {
-    id: "export_financial_data",
-    label: "Export Financial Data",
-    category: "Finance",
-  },
-  {
-    id: "compliance_reports",
-    label: "Compliance Reports",
-    category: "Finance",
-  },
-  {
-    id: "manage_subscriptions",
-    label: "Manage Subscriptions",
-    category: "Clients",
-  },
-  { id: "view_reports", label: "View Reports", category: "Reports" },
-  {
-    id: "send_communications",
-    label: "Send Communications",
-    category: "Communication",
-  },
-  { id: "view_tickets", label: "View Tickets", category: "Support" },
-  { id: "manage_tickets", label: "Manage Tickets", category: "Support" },
-  { id: "view_system_logs", label: "View System Logs", category: "System" },
-  {
-    id: "access_knowledge_base",
-    label: "Access Knowledge Base",
-    category: "Support",
-  },
-  { id: "remote_assistance", label: "Remote Assistance", category: "Support" },
-  { id: "escalate_issues", label: "Escalate Issues", category: "Support" },
-  {
-    id: "audit_trail_access",
-    label: "Audit Trail Access",
-    category: "Security",
-  },
-  { id: "full_system_access", label: "Full System Access", category: "System" },
-  { id: "manage_users", label: "Manage Users", category: "Administration" },
-  { id: "manage_roles", label: "Manage Roles", category: "Administration" },
-  {
-    id: "system_configuration",
-    label: "System Configuration",
-    category: "System",
-  },
-  { id: "security_settings", label: "Security Settings", category: "Security" },
-  { id: "backup_restore", label: "Backup & Restore", category: "System" },
-  { id: "audit_all_actions", label: "Audit All Actions", category: "Security" },
-];
-
 export default function RolesPermissionsPage() {
-  const [selectedRole, setSelectedRole] = useState<AdminRole | null>(null);
-  const [viewMode, setViewMode] = useState<"view" | "edit">("view");
+  const permsByRole = useRolePermissions();
+  const team = useAdminTeam();
+  const customRoles = useCustomRoles();
+  const [editor, setEditor] = useState<{
+    mode: EditorMode;
+    role: RoleView | null;
+  } | null>(null);
 
-  const roles = Object.keys(rolePermissions) as AdminRole[];
+  const builtInRoles: RoleView[] = (
+    Object.keys(permsByRole) as AdminRole[]
+  ).map((role) => ({
+    id: role,
+    name: roleDisplayNames[role],
+    description: roleDescriptions[role],
+    permissions: permsByRole[role],
+    isCustom: false,
+    memberCount: team.filter((u) => u.role === role).length,
+  }));
 
-  const getUserCountByRole = (role: AdminRole) => {
-    return adminUsers.filter((u) => u.role === role).length;
+  const customRoleViews: RoleView[] = customRoles.map((r) => ({
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    permissions: r.permissions,
+    isCustom: true,
+    memberCount: 0,
+  }));
+
+  const allRoles = [...builtInRoles, ...customRoleViews];
+
+  const iconFor = (r: RoleView): React.ElementType =>
+    r.isCustom ? Shield : roleIcons[r.id as AdminRole];
+
+  const handleSaveExisting = (role: RoleView, permissions: string[]) => {
+    if (role.isCustom) {
+      updateCustomRole(role.id, { permissions });
+      toast.success(`${role.name} permissions updated`);
+    } else {
+      updateRolePermissions(role.id as AdminRole, permissions);
+      const n = role.memberCount;
+      toast.success(
+        `Permissions updated — ${n} ${role.name} member${n === 1 ? "" : "s"} affected`,
+      );
+    }
+    setEditor(null);
   };
 
-  const getPermissionsByCategory = () => {
-    const categories: Record<string, typeof allPermissions> = {};
-    allPermissions.forEach((perm) => {
-      if (!categories[perm.category]) {
-        categories[perm.category] = [];
-      }
-      categories[perm.category].push(perm);
-    });
-    return categories;
+  const handleCreate = (data: {
+    name: string;
+    description: string;
+    permissions: string[];
+  }) => {
+    const r = createCustomRole(data);
+    toast.success(`Role “${r.name}” created`);
+    setEditor(null);
   };
 
   return (
     <div className="flex-1 space-y-6 p-4 pt-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
             {"Roles & Permissions"}
@@ -136,32 +122,30 @@ export default function RolesPermissionsPage() {
             Configure user roles and their associated permissions
           </p>
         </div>
+        <Button onClick={() => setEditor({ mode: "create", role: null })}>
+          <Plus className="mr-2 size-4" />
+          {"Create Role"}
+        </Button>
       </div>
 
       {/* Stats Section */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        {roles.map((role) => {
-          const Icon = roleIcons[role];
-          const userCount = getUserCountByRole(role);
+        {allRoles.map((r) => {
+          const Icon = iconFor(r);
           return (
             <Card
-              key={role}
+              key={r.id}
               className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => {
-                setSelectedRole(role);
-                setViewMode("view");
-              }}
+              onClick={() => setEditor({ mode: "view", role: r })}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {roleDisplayNames[role]}
-                </CardTitle>
+                <CardTitle className="text-sm font-medium">{r.name}</CardTitle>
                 <Icon className="text-muted-foreground size-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{userCount}</div>
+                <div className="text-2xl font-bold">{r.memberCount}</div>
                 <p className="text-muted-foreground text-xs">
-                  {rolePermissions[role].length} permissions
+                  {r.permissions.length} permissions
                 </p>
               </CardContent>
             </Card>
@@ -171,25 +155,27 @@ export default function RolesPermissionsPage() {
 
       {/* Roles Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {roles.map((role) => {
-          const Icon = roleIcons[role];
-          const permissions = rolePermissions[role];
-          const userCount = getUserCountByRole(role);
-
+        {allRoles.map((r) => {
+          const Icon = iconFor(r);
           return (
-            <Card key={role} className="overflow-hidden">
+            <Card key={r.id} className="overflow-hidden">
               <CardHeader className="bg-muted/30">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-3">
                     <div className="bg-primary/10 rounded-lg p-2">
                       <Icon className="text-primary size-5" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg">
-                        {roleDisplayNames[role]}
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        {r.name}
+                        {r.isCustom && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            Custom
+                          </Badge>
+                        )}
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        {roleDescriptions[role]}
+                        {r.description || "Custom role"}
                       </CardDescription>
                     </div>
                   </div>
@@ -201,14 +187,14 @@ export default function RolesPermissionsPage() {
                     <span className="text-muted-foreground">
                       Users with this role
                     </span>
-                    <Badge variant="secondary">{userCount}</Badge>
+                    <Badge variant="secondary">{r.memberCount}</Badge>
                   </div>
                   <div>
                     <p className="mb-2 text-sm font-medium">
-                      Permissions ({permissions.length})
+                      Permissions ({r.permissions.length})
                     </p>
                     <div className="flex flex-wrap gap-1.5">
-                      {permissions.slice(0, 4).map((perm) => (
+                      {r.permissions.slice(0, 4).map((perm) => (
                         <Badge
                           key={perm}
                           variant="outline"
@@ -217,10 +203,15 @@ export default function RolesPermissionsPage() {
                           {perm.replace(/_/g, " ")}
                         </Badge>
                       ))}
-                      {permissions.length > 4 && (
+                      {r.permissions.length > 4 && (
                         <Badge variant="secondary" className="text-xs">
-                          +{permissions.length - 4} more
+                          +{r.permissions.length - 4} more
                         </Badge>
+                      )}
+                      {r.permissions.length === 0 && (
+                        <span className="text-muted-foreground text-xs">
+                          No permissions yet
+                        </span>
                       )}
                     </div>
                   </div>
@@ -229,10 +220,7 @@ export default function RolesPermissionsPage() {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => {
-                        setSelectedRole(role);
-                        setViewMode("view");
-                      }}
+                      onClick={() => setEditor({ mode: "view", role: r })}
                     >
                       <Eye className="mr-1 size-4" />
                       View
@@ -241,13 +229,19 @@ export default function RolesPermissionsPage() {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => {
-                        setSelectedRole(role);
-                        setViewMode("edit");
-                      }}
+                      onClick={() => setEditor({ mode: "edit", role: r })}
                     >
                       <Edit className="mr-1 size-4" />
                       Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setEditor({ mode: "duplicate", role: r })}
+                    >
+                      <Copy className="mr-1 size-4" />
+                      Duplicate
                     </Button>
                   </div>
                 </div>
@@ -257,93 +251,12 @@ export default function RolesPermissionsPage() {
         })}
       </div>
 
-      {/* Role Details Modal */}
-      <Dialog open={!!selectedRole} onOpenChange={() => setSelectedRole(null)}>
-        <DialogContent className="max-h-[80vh] min-w-5xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Shield className="size-5" />
-              {selectedRole && roleDisplayNames[selectedRole]} -{" "}
-              {viewMode === "edit" ? "Edit Permissions" : "View Permissions"}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedRole && roleDescriptions[selectedRole]}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedRole && (
-            <div className="mt-4 space-y-6">
-              <div className="bg-muted/30 flex items-center gap-4 rounded-lg p-4">
-                <StatusBadge type="adminRole" value={selectedRole} showIcon />
-                <div className="text-muted-foreground text-sm">
-                  {getUserCountByRole(selectedRole)} users •{" "}
-                  {rolePermissions[selectedRole].length} permissions
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                {Object.entries(getPermissionsByCategory()).map(
-                  ([category, perms]) => (
-                    <div key={category}>
-                      <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                        <Settings className="size-4" />
-                        {category}
-                      </h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        {perms.map((perm) => {
-                          const isEnabled = rolePermissions[
-                            selectedRole
-                          ].includes(perm.id);
-                          return (
-                            <div
-                              key={perm.id}
-                              className={`flex items-center gap-2 rounded-lg p-2 ${
-                                isEnabled
-                                  ? `bg-green-50 dark:bg-green-950/20`
-                                  : "bg-muted/30"
-                              } `}
-                            >
-                              <Checkbox
-                                id={perm.id}
-                                checked={isEnabled}
-                                disabled={viewMode === "view"}
-                              />
-                              <label
-                                htmlFor={perm.id}
-                                className={`text-sm ${
-                                  isEnabled
-                                    ? "font-medium"
-                                    : "text-muted-foreground"
-                                } `}
-                              >
-                                {perm.label}
-                              </label>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ),
-                )}
-              </div>
-
-              {viewMode === "edit" && (
-                <div className="flex justify-end gap-2 border-t pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setSelectedRole(null)}
-                  >
-                    {"Cancel"}
-                  </Button>
-                  <Button onClick={() => setSelectedRole(null)}>
-                    {"Save"}
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <RoleEditorDialog
+        state={editor}
+        onClose={() => setEditor(null)}
+        onSaveExisting={handleSaveExisting}
+        onCreate={handleCreate}
+      />
     </div>
   );
 }

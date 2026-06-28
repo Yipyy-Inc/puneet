@@ -465,6 +465,12 @@ export function FacilityPerformanceMetrics() {
               facilityPerformance as (FacilityPerformance &
                 Record<string, unknown>)[]
             }
+            emptyState={{
+              icon: TrendingUp,
+              title: "No performance data yet",
+              description:
+                "Facility performance metrics will appear here once data is available.",
+            }}
           />
         </CardContent>
       </Card>

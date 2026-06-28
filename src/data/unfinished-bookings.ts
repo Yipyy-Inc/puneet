@@ -4,7 +4,7 @@ import type {
   UnfinishedBookingStatus,
 } from "@/types/unfinished-booking";
 
-// Facility 11 = Doggieville MTL (the mock facility used throughout the app)
+// Facility 11 = Yipyy (the mock facility used throughout the app)
 const FACILITY_ID = 11;
 
 export const unfinishedBookings: UnfinishedBooking[] = [

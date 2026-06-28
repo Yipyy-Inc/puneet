@@ -54,7 +54,7 @@ export function PrimaryAdminStep({
         name="adminEmail"
         label="Email"
         type="email"
-        placeholder="marie@doggieville.com"
+        placeholder="marie@yipyy.com"
       />
 
       <div className="flex items-center justify-between rounded-lg border p-3">

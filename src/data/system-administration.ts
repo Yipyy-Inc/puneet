@@ -65,6 +65,8 @@ export interface DataBackup {
   verificationStatus: "Verified" | "Failed" | "Pending" | "Not Verified";
   isEncrypted: boolean;
   compressionRatio: number;
+  // Set by the "Verify (checksum)" action — the computed integrity checksum.
+  checksum?: string;
 }
 
 export interface DataRecovery {
@@ -135,6 +137,10 @@ export interface Integration {
   };
   facilities: string[];
   testStatus?: "Passed" | "Failed" | "Not Tested";
+  // The specific provider/API error shown on Error-status integrations.
+  errorMessage?: string;
+  // Last time a request to this integration actually succeeded.
+  lastSuccessfulCall?: string;
 }
 
 export interface ApiKey {
@@ -684,6 +690,9 @@ export const integrations: Integration[] = [
     },
     facilities: ["All"],
     testStatus: "Failed",
+    errorMessage:
+      "401 invalid_auth — the Slack OAuth token was revoked by the workspace owner. Reconnect to re-authorize the app.",
+    lastSuccessfulCall: "2025-11-27T21:55:00Z",
   },
 ];
 

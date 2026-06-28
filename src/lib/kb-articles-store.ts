@@ -105,6 +105,27 @@ export function deleteKbArticle(id: string) {
   commit({ ...state, articles: state.articles.filter((a) => a.id !== id) });
 }
 
+/**
+ * Record a "Was this helpful?" thumbs vote from the facility Help Center.
+ * Updates the same store the admin reads, so helpfulness stays in sync.
+ */
+export function recordKbHelpfulVote(id: string, helpful: boolean) {
+  ensureInit();
+  if (!state) return;
+  commit({
+    ...state,
+    articles: state.articles.map((a) =>
+      a.id === id
+        ? {
+            ...a,
+            helpfulYes: a.helpfulYes + (helpful ? 1 : 0),
+            helpfulNo: a.helpfulNo + (helpful ? 0 : 1),
+          }
+        : a,
+    ),
+  });
+}
+
 // --- category management --------------------------------------------------
 
 function ensureCategory(categories: string[], name: string): string[] {

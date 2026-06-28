@@ -122,14 +122,20 @@ export interface SystemAlert {
   acknowledgedBy: string | null;
   resolvedAt: string | null;
   resolution: string | null;
+  resolvedBy?: string | null;
   impactedUsers: number;
   autoEscalated: boolean;
+  // Manual escalation (distinct from autoEscalated) — set by the Escalate action.
+  escalatedAt?: string | null;
+  escalatedBy?: string | null;
+  escalationNote?: string | null;
+  previousSeverity?: "Low" | "Medium" | "High" | "Critical" | null;
 }
 
 export interface AlertConfiguration {
   configId: string;
   alertName: string;
-  alertType: "Threshold" | "Anomaly" | "Pattern" | "Composite";
+  alertType: "Threshold" | "Anomaly" | "Pattern" | "Composite" | "Support SLA";
   metric: string;
   condition: string;
   threshold: number;
@@ -147,6 +153,10 @@ export interface AlertConfiguration {
   createdBy: string;
   lastTriggered: string | null;
   triggerCount: number;
+  // Support-specific routing: when true, the rule notifies all currently
+  // available support agents (derived from `supportAgents`) rather than the
+  // static `recipients` list. Used by the "Facility Chat Unanswered" SLA rule.
+  routeToSupportAgents?: boolean;
 }
 
 export interface NotificationChannel {
@@ -881,6 +891,28 @@ export const alertConfigurations: AlertConfiguration[] = [
     createdBy: "Security Team",
     lastTriggered: "2024-01-15T10:15:00Z",
     triggerCount: 42,
+  },
+  {
+    configId: "config-006",
+    alertName: "Facility Chat Unanswered > 10 minutes",
+    alertType: "Support SLA",
+    metric: "Facility Chat First-Response Time",
+    condition: "greater_than",
+    threshold: 10,
+    duration: 0,
+    severity: "High",
+    enabled: true,
+    channels: ["Slack", "SMS"],
+    recipients: [],
+    routeToSupportAgents: true,
+    escalationRules: [
+      { level: 1, delay: 0, recipients: ["All available support agents"] },
+      { level: 2, delay: 5, recipients: ["Support Operations Manager"] },
+    ],
+    cooldown: 5,
+    createdBy: "System",
+    lastTriggered: null,
+    triggerCount: 0,
   },
 ];
 

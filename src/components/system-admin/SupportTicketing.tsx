@@ -68,6 +68,7 @@ import {
   Edit,
   RefreshCw,
   Tag,
+  Plus,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -534,6 +535,17 @@ export function SupportTicketing() {
                 searchKey="title"
                 searchPlaceholder="Search tickets..."
                 itemsPerPage={10}
+                emptyState={{
+                  icon: Ticket,
+                  title: "No support tickets yet",
+                  description:
+                    "When facilities submit support requests, they'll appear here for triage and assignment.",
+                  action: {
+                    label: "Create Ticket",
+                    onClick: () => setIsCreateTicketModalOpen(true),
+                    icon: Plus,
+                  },
+                }}
                 onRowClick={(ticket) => goToTicket(ticket.id)}
                 actions={(ticket) => {
                   const ticketActions = getTicketActions(ticket);

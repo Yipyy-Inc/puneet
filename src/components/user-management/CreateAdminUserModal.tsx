@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   rolePermissions,
   roleDisplayNames,
   AdminRole,
   AccessLevel,
+  AdminUser,
   accessLevelDescriptions,
 } from "@/data/admin-users";
+import { inviteAdminMember } from "@/lib/admin-team-store";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +43,7 @@ import {
   ChevronLeft,
   CheckCircle,
   User,
+  Copy,
 } from "lucide-react";
 
 const departments = [
@@ -81,28 +85,29 @@ const responsibilityOptions = [
   "Infrastructure",
 ];
 
+export interface InviteResult {
+  sent: boolean;
+  reason?: string;
+  message?: string;
+  setupUrl: string;
+  expiresAt: number;
+}
+
 interface CreateAdminUserModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (newUser: {
-    name: string;
-    email: string;
-    phone: string;
-    department: string;
-    role: AdminRole;
-    accessLevel: AccessLevel;
-    responsibilityAreas: string[];
-  }) => void;
+  onInvited?: (member: AdminUser, result: InviteResult) => void;
 }
 
 export function CreateAdminUserModal({
   open,
   onOpenChange,
-  onSave,
+  onInvited,
 }: CreateAdminUserModalProps) {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [inviteResult, setInviteResult] = useState<InviteResult | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -209,10 +214,8 @@ export function CreateAdminUserModal({
   const handleSubmit = async () => {
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    onSave({
+    // Add the member to the team roster (shows as "Invited" right away).
+    const member = inviteAdminMember({
       name: formData.name.trim(),
       email: formData.email.trim(),
       phone: formData.phone.trim(),
@@ -222,18 +225,41 @@ export function CreateAdminUserModal({
       responsibilityAreas: formData.responsibilityAreas,
     });
 
+    // Send the real invitation email (server route + 48h setup link).
+    let result: InviteResult = {
+      sent: false,
+      reason: "error",
+      message: "Could not reach the email service.",
+      setupUrl: "",
+      expiresAt: Date.now(),
+    };
+    try {
+      const res = await fetch("/api/admin/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: member.id,
+          name: member.name,
+          email: member.email,
+          role: member.role,
+          department: member.department,
+        }),
+      });
+      result = (await res.json()) as InviteResult;
+    } catch {
+      // keep the error default
+    }
+
+    setInviteResult(result);
     setIsSubmitting(false);
     setShowSuccess(true);
-
-    // Auto close after success
-    setTimeout(() => {
-      resetAndClose();
-    }, 1500);
+    onInvited?.(member, result);
   };
 
   const resetAndClose = () => {
     setStep(1);
     setShowSuccess(false);
+    setInviteResult(null);
     setFormData({
       name: "",
       email: "",
@@ -257,27 +283,68 @@ export function CreateAdminUserModal({
     <Dialog open={open} onOpenChange={resetAndClose}>
       <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
         {showSuccess ? (
-          <div className="py-12 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle className="size-8 text-green-600" />
+          <div className="py-8 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/15">
+              {inviteResult?.sent ? (
+                <Mail className="size-8 text-emerald-600" />
+              ) : (
+                <CheckCircle className="size-8 text-emerald-600" />
+              )}
             </div>
             <h3 className="mb-2 text-xl font-semibold">
-              User Created Successfully
+              {inviteResult?.sent ? "Invitation sent" : "Invitation created"}
             </h3>
-            <p className="text-muted-foreground">
-              {formData.name} has been added as a{" "}
-              {formData.role && roleDisplayNames[formData.role as AdminRole]}.
+            <p className="text-muted-foreground mx-auto max-w-md text-sm">
+              {inviteResult?.sent ? (
+                <>
+                  We emailed a setup link to <strong>{formData.email}</strong>.
+                  It expires in 48 hours — {formData.name.split(" ")[0]} will
+                  show as <strong>Invited</strong> until they finish setting up.
+                </>
+              ) : (
+                <>
+                  {inviteResult?.message ??
+                    "We couldn't send the email automatically."}{" "}
+                  Share this 48-hour setup link with{" "}
+                  {formData.name.split(" ")[0]}:
+                </>
+              )}
             </p>
+
+            {inviteResult && !inviteResult.sent && inviteResult.setupUrl && (
+              <div className="bg-muted/40 mx-auto mt-4 flex max-w-md items-center gap-2 rounded-lg border p-2">
+                <code className="text-muted-foreground flex-1 truncate text-left text-xs">
+                  {inviteResult.setupUrl}
+                </code>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 shrink-0 gap-1.5"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(inviteResult.setupUrl);
+                    toast.success("Setup link copied");
+                  }}
+                >
+                  <Copy className="size-3.5" />
+                  Copy
+                </Button>
+              </div>
+            )}
+
+            <Button type="button" className="mt-6" onClick={resetAndClose}>
+              Done
+            </Button>
           </div>
         ) : (
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <UserPlus className="size-5" />
-                {"Create New User"} - Step {step} of 3
+                {"Invite Admin"} — Step {step} of 3
               </DialogTitle>
               <DialogDescription>
-                {step === 1 && "Enter basic user information"}
+                {step === 1 && "Enter the new admin's basic information"}
                 {step === 2 && "Assign role and access level"}
                 {step === 3 && "Define responsibility areas (optional)"}
               </DialogDescription>
@@ -606,12 +673,12 @@ export function CreateAdminUserModal({
                     {isSubmitting ? (
                       <>
                         <span className="mr-2 animate-spin">⏳</span>
-                        Creating...
+                        Sending...
                       </>
                     ) : (
                       <>
-                        <UserPlus className="mr-2 size-4" />
-                        {"Add User"}
+                        <Mail className="mr-2 size-4" />
+                        {"Send Invitation"}
                       </>
                     )}
                   </Button>
