@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MessageSquare, Plus, Search } from "lucide-react";
+import Link from "next/link";
+import { Clock, MessageSquare, Plus, Search } from "lucide-react";
 
 import { CURRENT_AGENT, lastMessage } from "@/hooks/use-support-inbox";
+import { ConnectionStatus } from "@/components/realtime/connection-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,12 +63,26 @@ export function InboxList({
 
   return (
     <div className="bg-card flex h-full min-h-0 w-[380px] shrink-0 flex-col overflow-hidden rounded-2xl border">
-      <div className="flex items-center justify-between gap-2 border-b p-3">
-        <h2 className="text-sm font-semibold">Support Inbox</h2>
-        <Button size="sm" onClick={onNew}>
-          <Plus className="mr-1.5 size-4" />
-          New Conversation
-        </Button>
+      <div className="space-y-2 border-b p-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">Support Inbox</h2>
+          <ConnectionStatus
+            name={CURRENT_AGENT?.name ?? "Agent"}
+            role="agent"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" className="flex-1" onClick={onNew}>
+            <Plus className="mr-1.5 size-4" />
+            New Conversation
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/dashboard/support/chat/scheduled">
+              <Clock className="mr-1.5 size-4" />
+              Scheduled
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-1.5 border-b px-3 py-2">

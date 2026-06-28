@@ -1,7 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Calendar, Clock, Pencil, Send, User, X } from "lucide-react";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  Pencil,
+  Send,
+  User,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -71,6 +80,17 @@ export function ScheduledMessagesClient() {
 
   return (
     <div className="space-y-6 p-6">
+      <Button
+        asChild
+        variant="ghost"
+        size="sm"
+        className="text-muted-foreground -ml-2 w-fit"
+      >
+        <Link href="/dashboard/support/chat">
+          <ArrowLeft className="mr-1.5 size-4" />
+          Back to Inbox
+        </Link>
+      </Button>
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">
           Scheduled Messages

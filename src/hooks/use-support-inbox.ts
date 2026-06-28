@@ -5,6 +5,10 @@ import { useSyncExternalStore } from "react";
 import { adminUsers } from "@/data/admin-users";
 import { facilities } from "@/data/facilities";
 import { supportConversations } from "@/data/support-conversations";
+import {
+  publishRealtime,
+  subscribeRealtime,
+} from "@/lib/realtime/realtime-client";
 import type {
   AdminSupportMessage,
   ConversationStatus,
@@ -14,10 +18,11 @@ import type {
 
 // Shared real-time support store. It backs BOTH the facility Support drawer
 // (Task 14) and the admin Support Chat Inbox (Task 15). Within a tab the module
-// store keeps every subscriber in sync; across tabs a BroadcastChannel relays
-// each mutation, so a facility message lands in the agent's inbox instantly and
-// an agent reply lands in the facility drawer instantly. The channel stands in
-// for the real WebSocket/Pusher connection (Task 84) until a backend exists.
+// store keeps every subscriber in sync; across tabs/portals it relays each
+// mutation over the centralized real-time connection (src/lib/realtime), on the
+// shared "support-chat" channel — so a facility message lands in the agent's
+// inbox instantly and an agent reply lands in the facility drawer instantly.
+// That single connection is env-gated to a real WebSocket when configured.
 
 export const supportAgents = adminUsers
   .filter((u) => u.status === "active")
@@ -71,7 +76,7 @@ function patch(
   commit(state.map((c) => (c.id === id ? fn(c) : c)));
 }
 
-// --- real-time transport (BroadcastChannel = shared WebSocket) ------------
+// --- real-time transport (centralized connection, "support-chat" channel) -
 
 type RealtimeEvent =
   | {
@@ -85,21 +90,19 @@ type RealtimeEvent =
   | { kind: "assign"; conversationId: string; agentId: number | null }
   | { kind: "read"; conversationId: string };
 
-let channel: BroadcastChannel | null = null;
-let channelReady = false;
+let realtimeReady = false;
 
-function ensureChannel() {
-  if (channelReady || typeof window === "undefined") return;
-  channelReady = true;
-  channel = new BroadcastChannel("yipyy-support-chat");
-  channel.onmessage = (e) => applyRemote(e.data as RealtimeEvent);
+function ensureRealtime() {
+  if (realtimeReady || typeof window === "undefined") return;
+  realtimeReady = true;
+  subscribeRealtime("support-chat", (ev) => applyRemote(ev as RealtimeEvent));
 }
 
 function publish(ev: RealtimeEvent) {
-  ensureChannel();
-  // BroadcastChannel never echoes to the sender, so this only reaches OTHER
-  // tabs — no feedback loop.
-  channel?.postMessage(ev);
+  ensureRealtime();
+  // Reaches every other tab/subscriber on the shared connection — never echoes
+  // back to us, so there's no feedback loop.
+  publishRealtime("support-chat", ev);
 }
 
 function applyRemote(ev: RealtimeEvent) {
@@ -280,7 +283,7 @@ export function createConversation(facility: {
 // --- subscriptions --------------------------------------------------------
 
 function subscribe(listener: () => void) {
-  ensureChannel();
+  ensureRealtime();
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
