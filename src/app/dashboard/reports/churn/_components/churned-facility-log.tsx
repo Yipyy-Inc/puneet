@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { Download } from "lucide-react";
+import { Download, TrendingDown } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -151,6 +151,11 @@ export function ChurnedFacilityLog({
           searchKey="name"
           searchPlaceholder="Search facilities..."
           itemsPerPage={10}
+          emptyState={{
+            icon: TrendingDown,
+            title: "No churned facilities",
+            description: "No facilities have churned in the last 12 months.",
+          }}
         />
       </CardContent>
     </Card>

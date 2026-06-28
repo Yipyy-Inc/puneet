@@ -3,9 +3,9 @@ import type { Insight } from "@/types/smart-insights";
 const FACILITY_ID = 11;
 
 const LOC = {
-  plateau: { id: "loc-dv-main", name: "Doggieville – Plateau" },
-  ndg: { id: "loc-dv-ouest", name: "Doggieville – NDG" },
-  laval: { id: "loc-dv-laval", name: "Doggieville – Laval" },
+  plateau: { id: "loc-dv-main", name: "Yipyy – Plateau" },
+  ndg: { id: "loc-dv-ouest", name: "Yipyy – NDG" },
+  laval: { id: "loc-dv-laval", name: "Yipyy – Laval" },
 } as const;
 
 // Last nightly run: 2026-05-20 at 3 AM Eastern = 07:00 UTC.

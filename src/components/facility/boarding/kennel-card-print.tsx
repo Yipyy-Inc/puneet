@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import type { BoardingGuest } from "@/data/boarding";
 
-const QR_BASE = "https://care.doggieville.ca";
+const QR_BASE = "https://care.yipyy.com";
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -95,7 +95,7 @@ export type FacilityInfo = {
 };
 
 export const DEFAULT_FACILITY_INFO: FacilityInfo = {
-  name: "Doggieville MTL",
+  name: "Yipyy",
   phone: "(514) 555-0100",
   address: "1234 Rue Sainte-Catherine, Montréal, QC",
 };
@@ -372,7 +372,7 @@ export function KennelCardTemplate({
         suppressHydrationWarning
         className="mt-4 border-t pt-2 text-center text-[10px] text-gray-400"
       >
-        Doggieville MTL · Generated {new Date().toLocaleString()}
+        Yipyy · Generated {new Date().toLocaleString()}
       </div>
     </div>
   );

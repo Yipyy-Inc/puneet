@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { CircleCheck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -137,6 +138,11 @@ export function InvoiceAgingCard({
           searchKey="facility"
           searchPlaceholder="Search facilities..."
           itemsPerPage={8}
+          emptyState={{
+            icon: CircleCheck,
+            title: "No outstanding invoices",
+            description: "All receivables are settled — nothing is aging.",
+          }}
         />
       </CardContent>
     </Card>

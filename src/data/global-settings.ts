@@ -88,7 +88,7 @@ export interface EmailTemplate {
 
 // Branding Settings Data
 export const brandingSettings: BrandingSettings = {
-  platformName: "Doggieville MTL",
+  platformName: "Yipyy",
   tagline: "Premium Pet Care Management",
   logoUrl: "/images/logo.png",
   faviconUrl: "/favicon.ico",
@@ -98,15 +98,15 @@ export const brandingSettings: BrandingSettings = {
   darkModeEnabled: true,
   customCss: "",
   emailLogoUrl: "/images/email-logo.png",
-  emailFooterText: "© 2025 Doggieville MTL. All rights reserved.",
-  supportEmail: "support@doggieville.com",
+  emailFooterText: "© 2025 Yipyy. All rights reserved.",
+  supportEmail: "support@yipyy.com",
   supportPhone: "+1 (555) 123-4567",
-  websiteUrl: "https://doggieville.com",
+  websiteUrl: "https://yipyy.com",
   socialLinks: {
-    facebook: "https://facebook.com/doggieville",
-    twitter: "https://twitter.com/doggieville",
-    instagram: "https://instagram.com/doggieville",
-    linkedin: "https://linkedin.com/company/doggieville",
+    facebook: "https://facebook.com/yipyy",
+    twitter: "https://twitter.com/yipyy",
+    instagram: "https://instagram.com/yipyy",
+    linkedin: "https://linkedin.com/company/yipyy",
   },
 };
 

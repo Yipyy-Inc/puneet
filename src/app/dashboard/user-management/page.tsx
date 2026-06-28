@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import {
-  adminUsers,
   roleDisplayNames,
   rolePermissions,
   AdminUser,
 } from "@/data/admin-users";
+import { getAdminTeam, useAdminTeam } from "@/lib/admin-team-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -21,6 +22,7 @@ import {
 import {
   Download,
   User,
+  Users,
   Mail as MailIcon,
   Shield,
   Building,
@@ -85,9 +87,12 @@ const exportUsersToCSV = (usersData: AdminUser[]) => {
 export default function UserManagementPage() {
   // Deep-link: global search navigates here with ?user=<id> to open the modal.
   const searchParams = useSearchParams();
+  const team = useAdminTeam();
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(() => {
     const id = searchParams.get("user");
-    const found = id ? adminUsers.find((u) => String(u.id) === id) : undefined;
+    const found = id
+      ? getAdminTeam().find((u) => String(u.id) === id)
+      : undefined;
     return found ? (found as unknown as AdminUser) : null;
   });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -139,7 +144,10 @@ export default function UserManagementPage() {
       label: "Last Login",
       icon: Clock,
       defaultVisible: true,
-      render: (user) => new Date(user.lastLogin).toLocaleDateString(),
+      render: (user) =>
+        user.lastLogin
+          ? new Date(user.lastLogin).toLocaleDateString()
+          : "Never",
     },
   ];
 
@@ -150,6 +158,7 @@ export default function UserManagementPage() {
       options: [
         { value: "all", label: "All Status" },
         { value: "active", label: "Active" },
+        { value: "invited", label: "Invited" },
         { value: "inactive", label: "Inactive" },
         { value: "suspended", label: "Suspended" },
       ],
@@ -179,29 +188,23 @@ export default function UserManagementPage() {
     },
   ];
 
-  const activeUsers = adminUsers.filter((u) => u.status === "active").length;
-  const suspendedUsers = adminUsers.filter(
-    (u) => u.status === "suspended",
-  ).length;
-  const inactiveUsers = adminUsers.filter(
-    (u) => u.status === "inactive",
-  ).length;
+  const activeUsers = team.filter((u) => u.status === "active").length;
+  const suspendedUsers = team.filter((u) => u.status === "suspended").length;
+  const inactiveUsers = team.filter((u) => u.status === "inactive").length;
+  const invitedUsers = team.filter((u) => u.status === "invited").length;
 
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">{"Admin Users"}</h2>
         <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            onClick={() => exportUsersToCSV(adminUsers)}
-          >
+          <Button variant="outline" onClick={() => exportUsersToCSV(team)}>
             <Download className="mr-2 size-4" />
             {"Export"}
           </Button>
           <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="mr-2 size-4" />
-            {"Add User"}
+            {"Invite Admin"}
           </Button>
         </div>
       </div>
@@ -216,8 +219,12 @@ export default function UserManagementPage() {
             <UserCog className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{adminUsers.length}</div>
-            <p className="text-muted-foreground text-xs">Across all roles</p>
+            <div className="text-2xl font-bold">{team.length}</div>
+            <p className="text-muted-foreground text-xs">
+              {invitedUsers > 0
+                ? `${invitedUsers} pending invite${invitedUsers === 1 ? "" : "s"}`
+                : "Across all roles"}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -232,7 +239,7 @@ export default function UserManagementPage() {
               {activeUsers}
             </div>
             <p className="text-muted-foreground text-xs">
-              {Math.round((activeUsers / adminUsers.length) * 100)}% of total
+              {Math.round((activeUsers / team.length) * 100)}% of total
             </p>
           </CardContent>
         </Card>
@@ -248,7 +255,7 @@ export default function UserManagementPage() {
               {suspendedUsers}
             </div>
             <p className="text-muted-foreground text-xs">
-              {inactiveUsers} inactive
+              {inactiveUsers} inactive · {invitedUsers} invited
             </p>
           </CardContent>
         </Card>
@@ -271,13 +278,24 @@ export default function UserManagementPage() {
       </div>
 
       <DataTable
-        data={adminUsers as unknown as Record<string, unknown>[]}
+        data={team as unknown as Record<string, unknown>[]}
         columns={columns as unknown as ColumnDef<Record<string, unknown>>[]}
         filters={filters}
         searchKey="name"
         searchPlaceholder={"Search admin users..."}
         itemsPerPage={10}
         onRowClick={(user) => setSelectedUser(user as unknown as AdminUser)}
+        emptyState={{
+          icon: Users,
+          title: "No admin users yet",
+          description:
+            "Invite teammates to manage the platform across roles and access levels.",
+          action: {
+            label: "Invite Admin",
+            onClick: () => setIsCreateModalOpen(true),
+            icon: Plus,
+          },
+        }}
       />
       <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
         <DialogContent className="flex max-h-[90vh] min-w-5xl flex-col p-0">
@@ -295,10 +313,15 @@ export default function UserManagementPage() {
       <CreateAdminUserModal
         open={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}
-        onSave={(userData) => {
-          console.log("New user created:", userData);
-          // In a real application, this would make an API call to create the user
-          setIsCreateModalOpen(false);
+        onInvited={(member, result) => {
+          if (result.sent) {
+            toast.success(`Invitation email sent to ${member.email}`);
+          } else {
+            toast.message(`${member.name} invited`, {
+              description:
+                "Email service isn't configured — share the setup link from the dialog.",
+            });
+          }
         }}
       />
     </div>

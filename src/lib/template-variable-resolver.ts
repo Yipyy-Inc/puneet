@@ -256,11 +256,11 @@ export function getMockPreviewData(): VariableDataContext {
     pets: mockClient?.pets as Pet[],
     booking: mockBooking,
     facility: {
-      name: "Doggieville MTL",
+      name: "Yipyy",
       phone: "(514) 555-0100",
-      email: "info@doggievillemtl.com",
+      email: "info@yipyymtl.com",
       address: "456 Bark Avenue, Montreal, QC H2X 1Y4",
-      website: "www.doggievillemtl.com",
+      website: "www.yipyymtl.com",
       checkinHours: "7:00 AM - 10:00 AM",
     },
     staff: {

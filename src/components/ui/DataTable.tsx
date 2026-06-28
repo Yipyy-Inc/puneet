@@ -37,8 +37,20 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Search, Filter, Columns, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  Search,
+  Filter,
+  Columns,
+  ArrowUp,
+  ArrowDown,
+  Inbox,
+  SearchX,
+} from "lucide-react";
 import { LucideIcon } from "lucide-react";
+import {
+  TableEmptyState,
+  type TableEmptyStateAction,
+} from "@/components/ui/table-empty-state";
 
 export interface ColumnDef<T> {
   key: string;
@@ -85,6 +97,17 @@ interface DataTableProps<T> {
   onSelectionChange?: (ids: Set<string | number>) => void;
   /** Extra content rendered at the end of the toolbar row */
   toolbarExtra?: React.ReactNode;
+  /**
+   * Empty state shown when there are no rows at all. Falls back to a generic
+   * "No data yet" state when omitted. A separate "no matching results" state is
+   * shown automatically when a search/filter hides every row.
+   */
+  emptyState?: {
+    icon?: LucideIcon;
+    title?: string;
+    description?: string;
+    action?: TableEmptyStateAction;
+  };
 }
 
 export function DataTable<T extends object>({
@@ -106,6 +129,7 @@ export function DataTable<T extends object>({
   selectedIds: externalSelectedIds,
   onSelectionChange,
   toolbarExtra,
+  emptyState,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterValues, setFilterValues] = useState<Record<string, string>>(
@@ -196,6 +220,15 @@ export function DataTable<T extends object>({
   );
 
   const visibleColumnDefs = columns.filter((col) => visibleColumns[col.key]);
+  const emptyColSpan =
+    (selectable && getItemId ? 1 : 0) +
+    visibleColumnDefs.length +
+    (actions ? 1 : 0);
+  // Distinguish "nothing here yet" from "your search/filter hid everything".
+  const isFilteredEmpty =
+    data.length > 0 &&
+    (searchTerm.trim() !== "" ||
+      Object.values(filterValues).some((v) => v && v !== "all"));
 
   return (
     <div className="space-y-4">
@@ -369,12 +402,22 @@ export function DataTable<T extends object>({
           </TableHeader>
           <TableBody>
             {paginatedData.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={visibleColumnDefs.length + (actions ? 1 : 0)}
-                  className="text-muted-foreground py-8 text-center"
-                >
-                  No data found
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={emptyColSpan} className="p-0">
+                  {isFilteredEmpty ? (
+                    <TableEmptyState
+                      icon={SearchX}
+                      title="No matching results"
+                      description="Try adjusting your search or filters."
+                    />
+                  ) : (
+                    <TableEmptyState
+                      icon={emptyState?.icon ?? Inbox}
+                      title={emptyState?.title ?? "No data yet"}
+                      description={emptyState?.description}
+                      action={emptyState?.action}
+                    />
+                  )}
                 </TableCell>
               </TableRow>
             ) : (

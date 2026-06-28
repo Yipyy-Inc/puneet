@@ -12,7 +12,7 @@ import type { Insight, MetricChip } from "@/types/smart-insights";
 // recent call timestamp, not the live clock.
 // ============================================================
 
-const LOC = { id: "loc-dv-main", name: "Doggieville – Plateau" };
+const LOC = { id: "loc-dv-main", name: "Yipyy – Plateau" };
 const GENERATED_AT = "2026-06-04T07:05:00.000Z"; // nightly run
 
 const WEEKDAYS = [

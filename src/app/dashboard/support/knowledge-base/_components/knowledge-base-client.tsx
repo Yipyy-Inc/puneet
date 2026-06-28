@@ -270,6 +270,17 @@ export function KnowledgeBaseClient() {
         searchKey="title"
         searchPlaceholder="Search articles…"
         itemsPerPage={10}
+        emptyState={{
+          icon: BookOpen,
+          title: "No articles yet",
+          description:
+            "Create your first help article to power the facility Help Center.",
+          action: {
+            label: "New Article",
+            onClick: () => router.push(EDITOR_URL),
+            icon: Plus,
+          },
+        }}
         onRowClick={(a) => router.push(`${EDITOR_URL}?id=${a.id}`)}
         actions={(a) => (
           <DropdownMenu>

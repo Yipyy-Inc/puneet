@@ -246,6 +246,12 @@ export function CustomReportsManager() {
             columns={columns}
             data={customReports as (CustomReport & Record<string, unknown>)[]}
             actions={renderActions}
+            emptyState={{
+              icon: FileText,
+              title: "No custom reports yet",
+              description:
+                "Create a custom report to schedule and generate analytics.",
+            }}
           />
         </CardContent>
       </Card>

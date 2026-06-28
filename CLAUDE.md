@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Pet services platform (Doggieville MTL / Yipyy) built with Next.js 16, React 19, and TypeScript. Currently entirely mock-driven with no backend API — all data lives in `src/data/`. See `@SPECIFICATION.md` for full product context.
+Pet services platform (Yipyy) built with Next.js 16, React 19, and TypeScript. Currently entirely mock-driven with no backend API — all data lives in `src/data/`. See `@SPECIFICATION.md` for full product context.
 
 ## Commands
 

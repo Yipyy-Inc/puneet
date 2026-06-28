@@ -4,7 +4,7 @@ The entry point for every AI session in this repo. Read this first, then the spe
 
 ## What this repository is
 
-**Doggieville MTL / Yipyy** — a pet-services platform (booking, daycare, boarding, grooming, training, retail, loyalty, calling, reputation, gift cards, multi-location HQ) built on **Next.js 16.1**, **React 19.2**, **TypeScript 5.9** (strict), Tailwind CSS 4, shadcn/ui (New York), next-intl (en/fr).
+**Yipyy** — a pet-services platform (booking, daycare, boarding, grooming, training, retail, loyalty, calling, reputation, gift cards, multi-location HQ) built on **Next.js 16.1**, **React 19.2**, **TypeScript 5.9** (strict), Tailwind CSS 4, shadcn/ui (New York), next-intl (en/fr).
 
 It is a **mock-driven prototype, not a legacy or production system.** There is no backend: all data lives as typed mock objects in [src/data/](src/data/) (~135 files), increasingly wrapped by a TanStack Query factory layer in [src/lib/api/](src/lib/api/). The codebase is new and large (266 routes). The operating model here is **discipline while building fast**, not "evolve a legacy system" — but the principle is the same: new code follows the target conventions; existing code is left alone unless the task is about it.
 

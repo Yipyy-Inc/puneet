@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +25,14 @@ import {
   Eye,
   Ban,
   Play,
-  Settings,
+  Mail,
+  RotateCcw,
+  Pencil,
+  Trash2,
+  Plus,
+  ScrollText,
+  ShieldOff,
+  Loader2,
 } from "lucide-react";
 import {
   LineChart,
@@ -38,10 +47,6 @@ import {
   Tooltip,
 } from "recharts";
 import {
-  mfaSettings,
-  ipWhitelist,
-  activeSessions,
-  passwordPolicies,
   failedLoginAttempts,
   securityAlerts,
   securityDashboardStats,
@@ -52,8 +57,156 @@ import {
   type FailedLoginAttempt,
   type SecurityAlert,
 } from "@/data/security-compliance";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { IMPERSONATING_ADMIN } from "@/lib/impersonation";
+import {
+  CURRENT_SESSION_ID,
+  addIp,
+  disableMfa,
+  removeIp,
+  resetMfa,
+  setIpStatus,
+  terminateAllSessionsExcept,
+  terminateSession,
+  updateIp,
+  updatePolicy,
+  useSecurity,
+  type IpRuleInput,
+} from "@/lib/security-store";
+import { toast } from "sonner";
+import { EnforceMfaModal } from "./enforce-mfa-modal";
+import { IpAttemptsDialog } from "./ip-attempts-dialog";
+import { IpRuleModal } from "./ip-rule-modal";
+import { PasswordPolicyDrawer } from "./password-policy-drawer";
 
 export function SecurityManagement() {
+  const security = useSecurity();
+  const admin = IMPERSONATING_ADMIN.name;
+
+  // MFA
+  const [disableMfaTarget, setDisableMfaTarget] = useState<MFASettings | null>(
+    null,
+  );
+  const [resetMfaTarget, setResetMfaTarget] = useState<MFASettings | null>(
+    null,
+  );
+  const [enforceMfaOpen, setEnforceMfaOpen] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+
+  // IP
+  const [ipModalOpen, setIpModalOpen] = useState(false);
+  const [ipNonce, setIpNonce] = useState(0);
+  const [ipEditTarget, setIpEditTarget] = useState<IPWhitelist | null>(null);
+  const [removeIpTarget, setRemoveIpTarget] = useState<IPWhitelist | null>(
+    null,
+  );
+  const [attemptsIp, setAttemptsIp] = useState<IPWhitelist | null>(null);
+
+  // Sessions
+  const [terminateTarget, setTerminateTarget] =
+    useState<SessionManagement | null>(null);
+  const [terminateAllOpen, setTerminateAllOpen] = useState(false);
+
+  // Policies
+  const [policyDrawer, setPolicyDrawer] = useState<PasswordPolicy | null>(null);
+
+  const resendMfa = async (item: MFASettings) => {
+    const email = `${item.userName.toLowerCase().replace(/\s+/g, ".")}@yipyy.com`;
+    setResendingId(item.id);
+    try {
+      const res = await fetch("/api/security/mfa-setup-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userName: item.userName, email }),
+      });
+      const data = (await res.json()) as { sent: boolean; message?: string };
+      if (data.sent) toast.success(data.message ?? "MFA setup email sent");
+      else toast.error(data.message ?? "Could not send setup email");
+    } catch {
+      toast.error("Could not reach the email service");
+    } finally {
+      setResendingId(null);
+    }
+  };
+
+  const openAddIp = () => {
+    setIpEditTarget(null);
+    setIpNonce((n) => n + 1);
+    setIpModalOpen(true);
+  };
+  const openEditIp = (item: IPWhitelist) => {
+    setIpEditTarget(item);
+    setIpNonce((n) => n + 1);
+    setIpModalOpen(true);
+  };
+  const submitIp = (input: IpRuleInput) => {
+    if (ipEditTarget) {
+      updateIp(ipEditTarget.id, input);
+      toast.success("IP rule updated");
+    } else {
+      addIp(input, admin);
+      toast.success("IP address added");
+    }
+    setIpModalOpen(false);
+  };
+  const toggleBlockIp = (item: IPWhitelist) => {
+    if (item.status === "Blocked") {
+      setIpStatus(item.id, "Active");
+      toast.success(`Unblocked ${item.ipAddress}`);
+    } else {
+      setIpStatus(item.id, "Blocked");
+      toast.success(`Blocked ${item.ipAddress}`);
+    }
+  };
+
+  const confirmDisableMfa = () => {
+    if (!disableMfaTarget) return;
+    disableMfa(disableMfaTarget.id);
+    toast.success(`MFA disabled for ${disableMfaTarget.userName}`);
+    setDisableMfaTarget(null);
+  };
+  const confirmResetMfa = () => {
+    if (!resetMfaTarget) return;
+    resetMfa(resetMfaTarget.id);
+    toast.success(
+      `MFA reset for ${resetMfaTarget.userName} — re-enrollment required`,
+    );
+    setResetMfaTarget(null);
+  };
+  const confirmRemoveIp = () => {
+    if (!removeIpTarget) return;
+    removeIp(removeIpTarget.id);
+    toast.success("IP rule removed");
+    setRemoveIpTarget(null);
+  };
+  const confirmTerminate = () => {
+    if (!terminateTarget) return;
+    terminateSession(terminateTarget.id);
+    toast.success(`Session terminated (${terminateTarget.userName})`);
+    setTerminateTarget(null);
+  };
+  const confirmTerminateAll = () => {
+    const count = security.sessions.filter(
+      (s) => s.status === "Active" && s.id !== CURRENT_SESSION_ID,
+    ).length;
+    terminateAllSessionsExcept(CURRENT_SESSION_ID);
+    toast.success(`Terminated ${count} session(s)`);
+    setTerminateAllOpen(false);
+  };
+  const savePolicy = (id: string, patch: Partial<PasswordPolicy>) => {
+    updatePolicy(id, patch);
+    toast.success("Password policy updated");
+    setPolicyDrawer(null);
+  };
   // Badge helpers
   const getMFAStatusBadge = (status: string) => {
     const variants: Record<
@@ -194,15 +347,46 @@ export function SecurityManagement() {
   ];
 
   const mfaActions = (item: MFASettings) => (
-    <div className="flex gap-2">
-      <Button variant="ghost" size="sm">
-        <Settings className="size-4" />
-      </Button>
-      {item.mfaEnabled && (
-        <Button variant="ghost" size="sm">
-          <Eye className="size-4" />
+    <div className="flex gap-1">
+      {item.status === "Pending Setup" && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          aria-label="Resend setup email"
+          title="Resend setup email"
+          disabled={resendingId === item.id}
+          onClick={() => resendMfa(item)}
+        >
+          {resendingId === item.id ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Mail className="size-4" />
+          )}
         </Button>
       )}
+      {item.mfaEnabled && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8 text-red-600 hover:text-red-700"
+          aria-label="Disable MFA"
+          title="Disable MFA"
+          onClick={() => setDisableMfaTarget(item)}
+        >
+          <ShieldOff className="size-4" />
+        </Button>
+      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8"
+        aria-label="Reset MFA"
+        title="Reset MFA"
+        onClick={() => setResetMfaTarget(item)}
+      >
+        <RotateCcw className="size-4" />
+      </Button>
     </div>
   );
   const ipColumns = [
@@ -258,20 +442,61 @@ export function SecurityManagement() {
   ];
 
   const ipActions = (item: IPWhitelist) => (
-    <div className="flex gap-2">
+    <div className="flex gap-1">
       {item.status === "Blocked" ? (
-        <Button variant="ghost" size="sm" className="gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          aria-label="Unblock IP"
+          title="Unblock"
+          onClick={() => toggleBlockIp(item)}
+        >
           <CheckCircle2 className="size-4" />
-          Unblock
         </Button>
       ) : (
-        <Button variant="ghost" size="sm" className="gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          aria-label="Block IP"
+          title="Block"
+          onClick={() => toggleBlockIp(item)}
+        >
           <Ban className="size-4" />
-          Block
         </Button>
       )}
-      <Button variant="ghost" size="sm">
-        <Settings className="size-4" />
+      {item.status === "Blocked" && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          aria-label="View login attempts"
+          title="View login attempts"
+          onClick={() => setAttemptsIp(item)}
+        >
+          <ScrollText className="size-4" />
+        </Button>
+      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8"
+        aria-label="Edit IP"
+        title="Edit"
+        onClick={() => openEditIp(item)}
+      >
+        <Pencil className="size-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8 text-red-600 hover:text-red-700"
+        aria-label="Remove IP"
+        title="Remove"
+        onClick={() => setRemoveIpTarget(item)}
+      >
+        <Trash2 className="size-4" />
       </Button>
     </div>
   );
@@ -337,19 +562,30 @@ export function SecurityManagement() {
     },
   ];
 
-  const sessionActions = (item: SessionManagement) => (
-    <div className="flex gap-2">
-      {item.status === "Active" && (
-        <Button variant="ghost" size="sm" className="text-destructive gap-1">
-          <XCircle className="size-4" />
-          Terminate
-        </Button>
-      )}
-      <Button variant="ghost" size="sm">
-        <Eye className="size-4" />
+  const sessionActions = (item: SessionManagement) => {
+    if (item.id === CURRENT_SESSION_ID) {
+      return (
+        <Badge variant="outline" className="text-xs">
+          This session
+        </Badge>
+      );
+    }
+    if (item.status !== "Active") {
+      return <span className="text-muted-foreground text-xs">—</span>;
+    }
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8 text-red-600 hover:text-red-700"
+        aria-label="Terminate session"
+        title="Terminate session"
+        onClick={() => setTerminateTarget(item)}
+      >
+        <XCircle className="size-4" />
       </Button>
-    </div>
-  );
+    );
+  };
 
   // Password Policy Table Columns
   const policyColumns = [
@@ -420,15 +656,17 @@ export function SecurityManagement() {
   ];
 
   const policyActions = (item: PasswordPolicy) => (
-    <div className="flex gap-2">
-      <Button variant="ghost" size="sm">
-        <Settings className="size-4" />
+    <div className="flex gap-1">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8"
+        aria-label="Edit policy"
+        title="Edit"
+        onClick={() => setPolicyDrawer(item)}
+      >
+        <Pencil className="size-4" />
       </Button>
-      {item.status === "Active" && (
-        <Button variant="ghost" size="sm">
-          <Eye className="size-4" />
-        </Button>
-      )}
     </div>
   );
 
@@ -665,19 +903,37 @@ export function SecurityManagement() {
           {/* MFA Settings */}
           <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Lock className="size-5" />
-                Multi-Factor Authentication
-              </CardTitle>
-              <p className="text-muted-foreground text-sm">
-                Manage MFA settings for users
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                    <Lock className="size-5" />
+                    Multi-Factor Authentication
+                  </CardTitle>
+                  <p className="text-muted-foreground text-sm">
+                    Manage MFA settings for users
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => setEnforceMfaOpen(true)}
+                >
+                  <ShieldCheck className="size-4" />
+                  Enforce MFA by Role
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <DataTable
                 columns={mfaColumns}
-                data={mfaSettings}
+                data={security.mfa}
                 actions={mfaActions}
+                emptyState={{
+                  icon: Lock,
+                  title: "No MFA settings yet",
+                  description:
+                    "User multi-factor authentication settings will appear here.",
+                }}
               />
             </CardContent>
           </Card>
@@ -685,19 +941,36 @@ export function SecurityManagement() {
           {/* IP Whitelist */}
           <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Globe className="size-5" />
-                IP Whitelist Management
-              </CardTitle>
-              <p className="text-muted-foreground text-sm">
-                Control access based on IP addresses
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                    <Globe className="size-5" />
+                    IP Whitelist Management
+                  </CardTitle>
+                  <p className="text-muted-foreground text-sm">
+                    Control access based on IP addresses
+                  </p>
+                </div>
+                <Button
+                  className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
+                  onClick={openAddIp}
+                >
+                  <Plus className="size-4" />
+                  Add IP
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <DataTable
                 columns={ipColumns}
-                data={ipWhitelist}
+                data={security.ips}
                 actions={ipActions}
+                emptyState={{
+                  icon: Globe,
+                  title: "No IP rules yet",
+                  description:
+                    "Add an IP address to start controlling access by network.",
+                }}
               />
             </CardContent>
           </Card>
@@ -705,19 +978,37 @@ export function SecurityManagement() {
           {/* Active Sessions */}
           <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Clock className="size-5" />
-                Active Sessions
-              </CardTitle>
-              <p className="text-muted-foreground text-sm">
-                Monitor and manage user sessions
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                    <Clock className="size-5" />
+                    Active Sessions
+                  </CardTitle>
+                  <p className="text-muted-foreground text-sm">
+                    Monitor and manage user sessions
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="gap-2 border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+                  onClick={() => setTerminateAllOpen(true)}
+                >
+                  <XCircle className="size-4" />
+                  Terminate All Sessions Except Mine
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <DataTable
                 columns={sessionColumns}
-                data={activeSessions}
+                data={security.sessions}
                 actions={sessionActions}
+                emptyState={{
+                  icon: Clock,
+                  title: "No active sessions",
+                  description:
+                    "Signed-in user sessions will appear here while they are active.",
+                }}
               />
             </CardContent>
           </Card>
@@ -736,8 +1027,14 @@ export function SecurityManagement() {
             <CardContent>
               <DataTable
                 columns={policyColumns}
-                data={passwordPolicies}
+                data={security.policies}
                 actions={policyActions}
+                emptyState={{
+                  icon: Key,
+                  title: "No password policies yet",
+                  description:
+                    "Configured password requirements and rules will appear here.",
+                }}
               />
             </CardContent>
           </Card>
@@ -900,6 +1197,12 @@ export function SecurityManagement() {
               <DataTable
                 columns={failedLoginColumns}
                 data={failedLoginAttempts}
+                emptyState={{
+                  icon: AlertTriangle,
+                  title: "No failed login attempts",
+                  description:
+                    "Failed authentication attempts will be tracked here.",
+                }}
               />
             </CardContent>
           </Card>
@@ -920,11 +1223,179 @@ export function SecurityManagement() {
                 columns={alertColumns}
                 data={securityAlerts}
                 actions={alertActions}
+                emptyState={{
+                  icon: ShieldCheck,
+                  title: "No security alerts",
+                  description:
+                    "Real-time threats and suspicious activity will appear here.",
+                }}
               />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Enforce MFA by Role */}
+      <EnforceMfaModal open={enforceMfaOpen} onOpenChange={setEnforceMfaOpen} />
+
+      {/* Add / Edit IP */}
+      <IpRuleModal
+        key={`ip-${ipNonce}`}
+        open={ipModalOpen}
+        target={ipEditTarget}
+        onOpenChange={setIpModalOpen}
+        onSubmit={submitIp}
+      />
+
+      {/* View login attempts (blocked IP) */}
+      <IpAttemptsDialog
+        ip={attemptsIp}
+        onOpenChange={(o) => {
+          if (!o) setAttemptsIp(null);
+        }}
+      />
+
+      {/* Edit password policy */}
+      <PasswordPolicyDrawer
+        key={`policy-${policyDrawer?.id ?? "none"}`}
+        policy={policyDrawer}
+        onOpenChange={(o) => {
+          if (!o) setPolicyDrawer(null);
+        }}
+        onSave={savePolicy}
+      />
+
+      {/* Disable MFA confirm */}
+      <AlertDialog
+        open={!!disableMfaTarget}
+        onOpenChange={(o) => {
+          if (!o) setDisableMfaTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disable MFA?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {disableMfaTarget?.userName} will be able to sign in without
+              two-factor authentication. You can re-enable it later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={confirmDisableMfa}
+            >
+              Disable MFA
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset MFA confirm */}
+      <AlertDialog
+        open={!!resetMfaTarget}
+        onOpenChange={(o) => {
+          if (!o) setResetMfaTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset MFA?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This clears {resetMfaTarget?.userName}&rsquo;s enrollment and
+              backup codes. They&rsquo;ll be prompted to set up MFA again on
+              next sign-in.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-amber-600 text-white hover:bg-amber-700"
+              onClick={confirmResetMfa}
+            >
+              Reset MFA
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove IP confirm */}
+      <AlertDialog
+        open={!!removeIpTarget}
+        onOpenChange={(o) => {
+          if (!o) setRemoveIpTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove IP rule?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-mono">{removeIpTarget?.ipAddress}</span>{" "}
+              will be permanently removed from the access list.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={confirmRemoveIp}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Terminate session confirm */}
+      <AlertDialog
+        open={!!terminateTarget}
+        onOpenChange={(o) => {
+          if (!o) setTerminateTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Terminate session?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {terminateTarget?.userName}&rsquo;s session on{" "}
+              {terminateTarget?.deviceType} ({terminateTarget?.browser}) will be
+              signed out immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={confirmTerminate}
+            >
+              Terminate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Terminate ALL sessions except mine */}
+      <AlertDialog open={terminateAllOpen} onOpenChange={setTerminateAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Terminate all other sessions?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This signs out every active session except your own. Use this if
+              you suspect an account is compromised.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={confirmTerminateAll}
+            >
+              Terminate all
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

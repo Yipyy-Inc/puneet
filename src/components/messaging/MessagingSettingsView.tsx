@@ -197,7 +197,7 @@ export function MessagingSettingsView() {
   // Business identity
   const [businessPhone, setBusinessPhone] = useState("(514) 555-0100");
   const [smsSenderId, setSmsSenderId] = useState("DOGGIEVL");
-  const [emailFrom, setEmailFrom] = useState("hello@doggieville.ca");
+  const [emailFrom, setEmailFrom] = useState("hello@yipyy.com");
 
   // Auto-reply
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(true);
@@ -212,7 +212,7 @@ export function MessagingSettingsView() {
   // Opt-out
   const [stopHandlingEnabled, setStopHandlingEnabled] = useState(true);
   const [stopConfirmation, setStopConfirmation] = useState(
-    "You have been unsubscribed from Doggieville MTL messages. Reply START to re-subscribe.",
+    "You have been unsubscribed from Yipyy messages. Reply START to re-subscribe.",
   );
   const [optedOutNumbers, setOptedOutNumbers] = useState<
     Array<{ name: string; phone: string; optedOutAt: string }>

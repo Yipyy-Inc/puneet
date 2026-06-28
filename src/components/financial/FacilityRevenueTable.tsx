@@ -12,7 +12,12 @@ import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { revenueData, RevenueData } from "@/data/revenue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, TrendingUp, TrendingDown } from "lucide-react";
+import {
+  MoreHorizontal,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -192,6 +197,12 @@ export function FacilityRevenueTable() {
                 item: Record<string, unknown>,
               ) => React.ReactNode
             }
+            emptyState={{
+              icon: DollarSign,
+              title: "No revenue data",
+              description:
+                "Revenue will appear here once facilities start generating income.",
+            }}
           />
         </CardContent>
       </Card>

@@ -535,22 +535,22 @@ export const exampleHybridWithMilestonesConfig: FacilityLoyaltyConfig = {
 };
 
 // ============================================================================
-// Example: Doggieville MTL (facilityId: 4)
+// Example: Yipyy (facilityId: 4)
 // Visit-based daycare + points for grooming + $25/$10% referral
 // ============================================================================
 
-export const exampleDoggievilleMTLConfig: FacilityLoyaltyConfig = {
+export const exampleYipyyMTLConfig: FacilityLoyaltyConfig = {
   facilityId: 4,
   enabled: true,
   pointsEarning: {
-    id: "doggieville-hybrid",
+    id: "yipyy-hybrid",
     method: "hybrid",
     hybrid: {
       enabled: true,
       combinationMethod: "add",
       rules: [
         {
-          id: "doggieville-visit-milestones",
+          id: "yipyy-visit-milestones",
           method: "per_visit_count",
           perVisitCount: {
             enabled: true,
@@ -565,7 +565,7 @@ export const exampleDoggievilleMTLConfig: FacilityLoyaltyConfig = {
           },
         },
         {
-          id: "doggieville-grooming-points",
+          id: "yipyy-grooming-points",
           method: "per_service_type",
           perServiceType: {
             enabled: true,
@@ -907,9 +907,9 @@ export function buildDefaultReferralProgram(
     maxUsagePerCode: null,
     codeExpiryDays: 90,
     welcomeMessageTemplate:
-      "Welcome to Doggieville! Your friend referred you — use code {code} to get {refereeReward} on your first visit. 🐾",
+      "Welcome to Yipyy! Your friend referred you — use code {code} to get {refereeReward} on your first visit. 🐾",
     shareMessageTemplate:
-      "I love bringing my pup to Doggieville! Use my code {code} for {refereeReward} on your first visit — and I'll earn {referrerReward} too.",
+      "I love bringing my pup to Yipyy! Use my code {code} for {refereeReward} on your first visit — and I'll earn {referrerReward} too.",
   };
 }
 
@@ -990,7 +990,7 @@ export function getFacilityLoyaltyConfig(
     1: exampleSimplePerDollarConfig,
     2: examplePerBookingConfig,
     3: exampleHybridWithMilestonesConfig,
-    4: exampleDoggievilleMTLConfig,
+    4: exampleYipyyMTLConfig,
     5: exampleLuxuryBoardingConfig,
   };
 

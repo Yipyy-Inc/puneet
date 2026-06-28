@@ -98,10 +98,10 @@ export const messageTemplates: MessageTemplate[] = [
     name: "Booking Confirmation",
     category: "booking",
     smsBody:
-      "Hi {ClientName}! Your booking for {PetName} on {NextAppointment} is confirmed. See you soon! 🐾 – Doggieville MTL",
-    emailSubject: "Your Booking is Confirmed – Doggieville MTL",
+      "Hi {ClientName}! Your booking for {PetName} on {NextAppointment} is confirmed. See you soon! 🐾 – Yipyy",
+    emailSubject: "Your Booking is Confirmed – Yipyy",
     emailBody:
-      "Hi {ClientName},\n\nWe're excited to welcome {PetName} on {NextAppointment}!\n\nIf you have any questions, reply to this email or call us at (514) 555-0100.\n\nWoof regards,\nThe Doggieville MTL Team",
+      "Hi {ClientName},\n\nWe're excited to welcome {PetName} on {NextAppointment}!\n\nIf you have any questions, reply to this email or call us at (514) 555-0100.\n\nWoof regards,\nThe Yipyy Team",
     variables: ["{ClientName}", "{PetName}", "{NextAppointment}"],
     charCount: 110,
   },
@@ -110,7 +110,7 @@ export const messageTemplates: MessageTemplate[] = [
     name: "Booking Reminder – 24h",
     category: "booking",
     smsBody:
-      "Reminder: {PetName}'s appointment is tomorrow at {NextAppointment}. Reply CONFIRM or CANCEL. – Doggieville MTL",
+      "Reminder: {PetName}'s appointment is tomorrow at {NextAppointment}. Reply CONFIRM or CANCEL. – Yipyy",
     emailSubject: "Reminder: Your Appointment Tomorrow",
     emailBody:
       "Hi {ClientName},\n\nJust a friendly reminder that {PetName} has an appointment tomorrow at {NextAppointment}.\n\nNeed to reschedule? Click here: {BookingLink}\n\nSee you tomorrow!",
@@ -127,7 +127,7 @@ export const messageTemplates: MessageTemplate[] = [
     name: "Booking Cancellation",
     category: "booking",
     smsBody:
-      "Hi {ClientName}, your booking for {PetName} on {NextAppointment} has been cancelled. Book again at doggieville.ca – Doggieville MTL",
+      "Hi {ClientName}, your booking for {PetName} on {NextAppointment} has been cancelled. Book again at yipyy.com – Yipyy",
     emailSubject: "Your Booking Has Been Cancelled",
     emailBody:
       "Hi {ClientName},\n\nWe've cancelled your booking for {PetName} on {NextAppointment} as requested.\n\nWe'd love to see {PetName} again soon. Book online at {BookingLink}.",
@@ -145,7 +145,7 @@ export const messageTemplates: MessageTemplate[] = [
     name: "Boarding Check-In Confirmation",
     category: "boarding",
     smsBody:
-      "🐾 {PetName} has checked in! They're settling in great. We'll send updates throughout their stay. – Doggieville MTL",
+      "🐾 {PetName} has checked in! They're settling in great. We'll send updates throughout their stay. – Yipyy",
     emailSubject: "{PetName} Has Checked In!",
     emailBody:
       "Hi {ClientName},\n\n{PetName} has arrived safely and is already making friends! We'll keep you posted with daily updates.\n\nFor urgent matters, call (514) 555-0100.",
@@ -157,7 +157,7 @@ export const messageTemplates: MessageTemplate[] = [
     name: "Boarding Daily Update",
     category: "boarding",
     smsBody:
-      "Daily update: {PetName} had a great day! Ate well, played lots, and is resting comfortably. 🐶 – Doggieville MTL",
+      "Daily update: {PetName} had a great day! Ate well, played lots, and is resting comfortably. 🐶 – Yipyy",
     emailSubject: "Daily Update: {PetName} is Doing Great!",
     emailBody:
       "Hi {ClientName},\n\nHere's your daily update for {PetName}:\n\n✅ Meals: All eaten\n✅ Exercise: Playtime completed\n✅ Rest: Comfortable\n\nWe'll send another update tomorrow!",
@@ -170,7 +170,7 @@ export const messageTemplates: MessageTemplate[] = [
     name: "Grooming Ready for Pickup",
     category: "grooming",
     smsBody:
-      "Great news! {PetName} is all groomed and ready for pickup. Looking fabulous! 🐾 – Doggieville MTL",
+      "Great news! {PetName} is all groomed and ready for pickup. Looking fabulous! 🐾 – Yipyy",
     emailSubject: "{PetName} is Ready for Pickup!",
     emailBody:
       "Hi {ClientName},\n\n{PetName} is freshly groomed and ready to come home! Come pick them up at your convenience.\n\nTotal: ${Balance}",
@@ -183,7 +183,7 @@ export const messageTemplates: MessageTemplate[] = [
     name: "Vaccine Expiry Reminder – 30 Days",
     category: "vaccination",
     smsBody:
-      "Hi {ClientName}, {PetName}'s vaccines expire in 30 days. Please update to keep their booking active. – Doggieville MTL",
+      "Hi {ClientName}, {PetName}'s vaccines expire in 30 days. Please update to keep their booking active. – Yipyy",
     emailSubject: "Action Required: {PetName}'s Vaccines Expire Soon",
     emailBody:
       "Hi {ClientName},\n\nThis is a reminder that {PetName}'s vaccinations are due for renewal within the next 30 days.\n\nUp-to-date vaccines are required for all services. Please send us the updated records.\n\nQuestions? Reply to this email.",
@@ -195,7 +195,7 @@ export const messageTemplates: MessageTemplate[] = [
     name: "Vaccine Expiry – 7 Days",
     category: "vaccination",
     smsBody:
-      "⚠️ {PetName}'s vaccines expire in 7 days! Please update ASAP to avoid booking suspension. – Doggieville MTL",
+      "⚠️ {PetName}'s vaccines expire in 7 days! Please update ASAP to avoid booking suspension. – Yipyy",
     emailSubject: "Urgent: {PetName}'s Vaccines Expire in 7 Days",
     emailBody:
       "Hi {ClientName},\n\nUrgent reminder: {PetName}'s vaccinations expire in 7 days. Failure to update may result in booking suspension.\n\nPlease send updated vaccine records immediately.",
@@ -208,7 +208,7 @@ export const messageTemplates: MessageTemplate[] = [
     name: "Payment Reminder",
     category: "payment",
     smsBody:
-      "Hi {ClientName}, you have an outstanding balance of {Balance}. Pay online: {BookingLink} – Doggieville MTL",
+      "Hi {ClientName}, you have an outstanding balance of {Balance}. Pay online: {BookingLink} – Yipyy",
     emailSubject: "Payment Reminder – Outstanding Balance",
     emailBody:
       "Hi {ClientName},\n\nWe noticed you have an outstanding balance of {Balance}.\n\nPay securely online: {BookingLink}\n\nIf you have any questions, don't hesitate to reach out.",
@@ -221,10 +221,10 @@ export const messageTemplates: MessageTemplate[] = [
     name: "Birthday Message",
     category: "general",
     smsBody:
-      "🎂 Happy Birthday {PetName}! Wishing them lots of treats and belly rubs today! – Doggieville MTL",
+      "🎂 Happy Birthday {PetName}! Wishing them lots of treats and belly rubs today! – Yipyy",
     emailSubject: "Happy Birthday {PetName}! 🎂",
     emailBody:
-      "Hi {ClientName},\n\nToday is {PetName}'s birthday! 🎂🐾\n\nWe hope they have a wonderful day filled with treats, cuddles, and play. From all of us at Doggieville MTL – Happy Birthday {PetName}!",
+      "Hi {ClientName},\n\nToday is {PetName}'s birthday! 🎂🐾\n\nWe hope they have a wonderful day filled with treats, cuddles, and play. From all of us at Yipyy – Happy Birthday {PetName}!",
     variables: ["{ClientName}", "{PetName}"],
     charCount: 97,
   },
@@ -233,10 +233,10 @@ export const messageTemplates: MessageTemplate[] = [
     name: "Post-Visit Feedback Request",
     category: "general",
     smsBody:
-      "Hi {ClientName}! Hope {PetName} had a great time with us. Share your experience: {BookingLink} – Doggieville MTL",
+      "Hi {ClientName}! Hope {PetName} had a great time with us. Share your experience: {BookingLink} – Yipyy",
     emailSubject: "How Was Your Visit? Leave Us a Review!",
     emailBody:
-      "Hi {ClientName},\n\nThank you for choosing Doggieville MTL! We hope {PetName} had a wonderful time.\n\nWe'd love to hear your feedback: {BookingLink}\n\nYour review helps other pet parents find us!",
+      "Hi {ClientName},\n\nThank you for choosing Yipyy! We hope {PetName} had a wonderful time.\n\nWe'd love to hear your feedback: {BookingLink}\n\nYour review helps other pet parents find us!",
     variables: ["{ClientName}", "{PetName}", "{BookingLink}"],
     charCount: 113,
   },
@@ -245,7 +245,7 @@ export const messageTemplates: MessageTemplate[] = [
     name: "Missed Call Auto-Reply",
     category: "general",
     smsBody:
-      "Hi! Sorry we missed your call at Doggieville MTL. How can we help? Reply here or call (514) 555-0100.",
+      "Hi! Sorry we missed your call at Yipyy. How can we help? Reply here or call (514) 555-0100.",
     variables: ["{ClientName}"],
     charCount: 100,
   },
@@ -262,7 +262,7 @@ export const campaigns: Campaign[] = [
     audience: "all_active",
     recipientCount: 284,
     message:
-      "🐾 Easter is coming! Book boarding for your pup April 18–22 and get 10% off with code EASTER10. Limited spots! doggieville.ca/book – Doggieville MTL",
+      "🐾 Easter is coming! Book boarding for your pup April 18–22 and get 10% off with code EASTER10. Limited spots! yipyy.com/book – Yipyy",
     scheduledAt: "2026-04-10T09:00:00Z",
     sentAt: "2026-04-10T09:01:22Z",
     smsCost: 14.2,
@@ -295,7 +295,7 @@ export const campaigns: Campaign[] = [
     audience: "vaccine_expired",
     recipientCount: 67,
     message:
-      "⚠️ Hi {ClientName}, {PetName}'s vaccines have expired. Please update to avoid booking suspension. – Doggieville MTL",
+      "⚠️ Hi {ClientName}, {PetName}'s vaccines have expired. Please update to avoid booking suspension. – Yipyy",
     sentAt: "2026-04-18T08:00:00Z",
     smsCost: 3.35,
     smsSegments: 1,
@@ -325,7 +325,7 @@ export const campaigns: Campaign[] = [
     audience: "membership_holders",
     recipientCount: 89,
     message:
-      "Hi {ClientName}, your Doggieville membership renews soon! Ensure uninterrupted benefits at doggieville.ca/membership",
+      "Hi {ClientName}, your Yipyy membership renews soon! Ensure uninterrupted benefits at yipyy.com/membership",
     smsCost: 4.45,
     smsSegments: 1,
     createdAt: "2026-04-24T15:30:00Z",
@@ -343,7 +343,7 @@ export const automations: Automation[] = [
     channel: "sms",
     templateId: "tpl-001",
     message:
-      "Hi {ClientName}! Your booking for {PetName} on {NextAppointment} is confirmed. See you soon! 🐾 – Doggieville MTL",
+      "Hi {ClientName}! Your booking for {PetName} on {NextAppointment} is confirmed. See you soon! 🐾 – Yipyy",
     delayMinutes: 0,
     enabled: true,
     sentCount: 1247,
@@ -408,7 +408,7 @@ export const automations: Automation[] = [
     channel: "sms",
     templateId: "tpl-012",
     message:
-      "Hi! Sorry we missed your call at Doggieville MTL. How can we help? Reply here or call (514) 555-0100.",
+      "Hi! Sorry we missed your call at Yipyy. How can we help? Reply here or call (514) 555-0100.",
     delayMinutes: 2,
     enabled: true,
     sentCount: 214,

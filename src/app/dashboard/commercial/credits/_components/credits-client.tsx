@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BadgePercent, Plus, Wallet } from "lucide-react";
+import { BadgePercent, Gift, Plus, Wallet } from "lucide-react";
 
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
@@ -235,6 +235,17 @@ export function CreditsClient() {
         searchKeys={["facilityName", "reason", "appliedBy"]}
         searchPlaceholder="Search facility, reason, or admin…"
         itemsPerPage={20}
+        emptyState={{
+          icon: Gift,
+          title: "No credits or discounts yet",
+          description:
+            "Account credits and recurring discounts granted to facilities will appear here.",
+          action: {
+            label: "Apply Credit",
+            onClick: () => setCreditOpen(true),
+            icon: Plus,
+          },
+        }}
       />
 
       <ApplyCreditModal open={creditOpen} onOpenChange={setCreditOpen} />

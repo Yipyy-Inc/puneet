@@ -230,7 +230,7 @@ function buildSupplierMailto(p: GroomingProduct): string {
     `- Current stock: ${p.currentStock} ${measurementUnitLabels[p.measurementUnit]}`,
     "",
     "Thanks,",
-    "Doggieville MTL",
+    "Yipyy",
   ].filter(Boolean) as string[];
   const body = lines.join("\n");
   return `mailto:${p.supplierEmail ?? ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;

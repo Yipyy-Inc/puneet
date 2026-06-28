@@ -205,7 +205,7 @@ export function MessageCenter({
     const callbackNumber = call?.to ?? toParam ?? "us";
     setComposePrefill({
       key: sourceParam,
-      text: `Hi ${firstName}, sorry we missed your call at Doggieville MTL. How can we help? Reply here or call us back at ${callbackNumber}.`,
+      text: `Hi ${firstName}, sorry we missed your call at Yipyy. How can we help? Reply here or call us back at ${callbackNumber}.`,
     });
   }, [mode, sourceParam, toParam]);
 

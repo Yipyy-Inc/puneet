@@ -68,7 +68,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-owner-01",
     firstName: "Émilie",
     lastName: "Laurent",
-    email: "emilie@doggieville.com",
+    email: "emilie@yipyy.com",
     phone: "+1-514-555-0101",
     colorHex: "#B45309",
     avatarUrl:
@@ -106,7 +106,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-mgr-01",
     firstName: "Nathalie",
     lastName: "Côté",
-    email: "nathalie@doggieville.com",
+    email: "nathalie@yipyy.com",
     phone: "+1-514-555-0102",
     colorHex: "#7C3AED",
     avatarUrl:
@@ -140,7 +140,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-rec-01",
     firstName: "Yasmine",
     lastName: "Tremblay",
-    email: "yasmine@doggieville.com",
+    email: "yasmine@yipyy.com",
     phone: "+1-514-555-0103",
     colorHex: "#0284C7",
     avatarUrl:
@@ -167,7 +167,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-groom-01",
     firstName: "Olivia",
     lastName: "Beaumont",
-    email: "olivia@doggieville.com",
+    email: "olivia@yipyy.com",
     phone: "+1-514-555-0104",
     colorHex: "#E11D48",
     avatarUrl:
@@ -194,7 +194,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-groom-02",
     firstName: "Julien",
     lastName: "Roy",
-    email: "julien@doggieville.com",
+    email: "julien@yipyy.com",
     phone: "+1-514-555-0105",
     colorHex: "#9D174D",
     avatarUrl:
@@ -221,7 +221,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-groom-08",
     firstName: "Jessica",
     lastName: "Martinez",
-    email: "jessica@doggieville.com",
+    email: "jessica@yipyy.com",
     phone: "+1-514-555-0201",
     colorHex: "#0369A1",
     avatarUrl:
@@ -249,7 +249,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-groom-09",
     firstName: "Amy",
     lastName: "Chen",
-    email: "amy@doggieville.com",
+    email: "amy@yipyy.com",
     phone: "+1-514-555-0202",
     colorHex: "#7C3AED",
     avatarUrl:
@@ -277,7 +277,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-groom-10",
     firstName: "Marcus",
     lastName: "Thompson",
-    email: "marcus.t@doggieville.com",
+    email: "marcus.t@yipyy.com",
     phone: "+1-514-555-0203",
     colorHex: "#059669",
     avatarUrl:
@@ -305,7 +305,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-groom-11",
     firstName: "Sophie",
     lastName: "Laurent",
-    email: "sophie.l@doggieville.com",
+    email: "sophie.l@yipyy.com",
     phone: "+1-514-555-0204",
     colorHex: "#DB2777",
     avatarUrl:
@@ -337,7 +337,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-groom-12",
     firstName: "David",
     lastName: "Kim",
-    email: "david@doggieville.com",
+    email: "david@yipyy.com",
     phone: "+1-514-555-0205",
     colorHex: "#D97706",
     avatarUrl:
@@ -365,7 +365,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-train-01",
     firstName: "Marcus",
     lastName: "Bélanger",
-    email: "marcus@doggieville.com",
+    email: "marcus@yipyy.com",
     phone: "+1-514-555-0106",
     colorHex: "#059669",
     avatarUrl:
@@ -392,7 +392,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-daycare-01",
     firstName: "Sophie",
     lastName: "Gagnon",
-    email: "sophie@doggieville.com",
+    email: "sophie@yipyy.com",
     phone: "+1-514-555-0107",
     colorHex: "#EA580C",
     avatarUrl:
@@ -419,7 +419,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-board-01",
     firstName: "Dominic",
     lastName: "Levesque",
-    email: "dominic@doggieville.com",
+    email: "dominic@yipyy.com",
     phone: "+1-514-555-0108",
     colorHex: "#4338CA",
     avatarUrl:
@@ -447,7 +447,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-board-02",
     firstName: "Amira",
     lastName: "Saleh",
-    email: "amira@doggieville.com",
+    email: "amira@yipyy.com",
     phone: "+1-514-555-0109",
     colorHex: "#4F46E5",
     avatarUrl:
@@ -473,7 +473,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-sani-01",
     firstName: "Philippe",
     lastName: "Dubois",
-    email: "philippe@doggieville.com",
+    email: "philippe@yipyy.com",
     phone: "+1-514-555-0110",
     colorHex: "#0D9488",
     avatarUrl:
@@ -500,7 +500,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-train-02",
     firstName: "Noémie",
     lastName: "Fortin",
-    email: "noemie@doggieville.com",
+    email: "noemie@yipyy.com",
     phone: "+1-514-555-0111",
     colorHex: "#0F766E",
     avatarUrl:
@@ -529,7 +529,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-groom-03",
     firstName: "Camille",
     lastName: "Bergeron",
-    email: "camille@doggieville.com",
+    email: "camille@yipyy.com",
     phone: "+1-514-555-0112",
     colorHex: "#BE185D",
     primaryRole: "groomer",
@@ -557,7 +557,7 @@ export const facilityStaff: StaffProfile[] = [
     id: "fs-rec-02",
     firstName: "Luca",
     lastName: "Moreau",
-    email: "luca@doggieville.com",
+    email: "luca@yipyy.com",
     phone: "+1-514-555-0113",
     colorHex: "#0369A1",
     primaryRole: "reception",

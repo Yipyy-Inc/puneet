@@ -45,6 +45,9 @@ import {
   AlertTriangle,
   Package,
   CheckCircle,
+  CreditCard,
+  Clock,
+  PauseCircle,
 } from "lucide-react";
 
 export function FacilitySubscriptionsTable() {
@@ -350,6 +353,11 @@ export function FacilitySubscriptionsTable() {
             }
             searchKey="facilityName"
             searchPlaceholder="Search facilities..."
+            emptyState={{
+              icon: CreditCard,
+              title: "No subscriptions",
+              description: "No facility subscriptions to display yet.",
+            }}
           />
         </TabsContent>
 
@@ -364,6 +372,12 @@ export function FacilitySubscriptionsTable() {
             }
             searchKey="facilityName"
             searchPlaceholder="Search facilities..."
+            emptyState={{
+              icon: CheckCircle,
+              title: "No active subscriptions",
+              description:
+                "No facilities currently have an active subscription.",
+            }}
           />
         </TabsContent>
 
@@ -378,6 +392,11 @@ export function FacilitySubscriptionsTable() {
             }
             searchKey="facilityName"
             searchPlaceholder="Search facilities..."
+            emptyState={{
+              icon: Clock,
+              title: "No trial subscriptions",
+              description: "No facilities are currently on a trial plan.",
+            }}
           />
         </TabsContent>
 
@@ -394,6 +413,11 @@ export function FacilitySubscriptionsTable() {
             }
             searchKey="facilityName"
             searchPlaceholder="Search facilities..."
+            emptyState={{
+              icon: PauseCircle,
+              title: "No suspended subscriptions",
+              description: "No facility subscriptions are currently suspended.",
+            }}
           />
         </TabsContent>
       </Tabs>

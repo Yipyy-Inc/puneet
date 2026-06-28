@@ -32,7 +32,7 @@ interface LowStockItem {
 const LOW_STOCK: LowStockItem[] = [
   {
     id: "inv-shampoo",
-    name: "Doggieville Pro Wash Shampoo",
+    name: "Yipyy Pro Wash Shampoo",
     currentStock: 4,
     threshold: 10,
     suggestedQty: 24,
@@ -43,7 +43,7 @@ const LOW_STOCK: LowStockItem[] = [
   },
   {
     id: "inv-conditioner",
-    name: "Doggieville Conditioner",
+    name: "Yipyy Conditioner",
     currentStock: 6,
     threshold: 10,
     suggestedQty: 18,
@@ -87,7 +87,7 @@ function buildMailto(item: LowStockItem): string {
     `Suggested quantity: ${item.suggestedQty} ${item.unit}`,
     "",
     "Thanks,",
-    "Doggieville MTL",
+    "Yipyy",
   ].join("\n");
   return `mailto:${item.supplierEmail}?subject=${encodeURIComponent(
     subject,

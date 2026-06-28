@@ -32,6 +32,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
+// Shared "Support Calling" Twilio configuration card. Powers the Section 5
+// calling module (Task 19): every calling surface reads the same
+// `useTwilioConfig()` store. Featured on both the standalone Integrations page
+// and the System Configuration → Integrations tab.
 export function TwilioIntegrationCard() {
   const cfg = useTwilioConfig();
   const hooks = twilioWebhooks(cfg.webhookBaseUrl);

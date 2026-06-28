@@ -402,7 +402,7 @@ export default function DepartmentsPage() {
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Doggieville MTL"
+                placeholder="e.g., Yipyy"
               />
             </div>
             <div className="space-y-1.5">

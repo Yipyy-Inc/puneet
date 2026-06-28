@@ -33,7 +33,7 @@ export const trainers: Trainer[] = [
   {
     id: "trainer-001",
     name: "Marcus Chen",
-    email: "marcus.chen@doggieville.com",
+    email: "marcus.chen@yipyy.com",
     phone: "(514) 555-0201",
     photoUrl: "/trainers/marcus.jpg",
     specializations: ["Obedience", "Agility", "Puppy Training"],
@@ -48,7 +48,7 @@ export const trainers: Trainer[] = [
   {
     id: "trainer-002",
     name: "Sophie Martinez",
-    email: "sophie.martinez@doggieville.com",
+    email: "sophie.martinez@yipyy.com",
     phone: "(514) 555-0202",
     photoUrl: "/trainers/sophie.jpg",
     specializations: [
@@ -67,7 +67,7 @@ export const trainers: Trainer[] = [
   {
     id: "trainer-003",
     name: "Jake Wilson",
-    email: "jake.wilson@doggieville.com",
+    email: "jake.wilson@yipyy.com",
     phone: "(514) 555-0203",
     photoUrl: "/trainers/jake.jpg",
     specializations: [
@@ -86,7 +86,7 @@ export const trainers: Trainer[] = [
   {
     id: "trainer-004",
     name: "Elena Kowalski",
-    email: "elena.kowalski@doggieville.com",
+    email: "elena.kowalski@yipyy.com",
     phone: "(514) 555-0204",
     photoUrl: "/trainers/elena.jpg",
     specializations: ["Agility", "Rally", "Competition Training"],

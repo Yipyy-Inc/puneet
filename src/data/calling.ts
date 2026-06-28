@@ -107,7 +107,7 @@ export const ivrConfig: IVRConfig = {
   id: "ivr-001",
   enabled: true,
   greeting:
-    "Thank you for calling Doggieville MTL, where every tail gets a five-star stay. Please listen carefully to the following options.",
+    "Thank you for calling Yipyy, where every tail gets a five-star stay. Please listen carefully to the following options.",
   afterHoursMessage:
     "Our facility is currently closed. Our hours are Monday through Friday 7 AM to 7 PM, and weekends 8 AM to 6 PM. Please leave a voicemail and we'll return your call the next business day, or press 1 to book online.",
   holdMusic: "jazz",
@@ -162,7 +162,7 @@ export const ivrConfig: IVRConfig = {
       label: "Book an Appointment via Text",
       action: "send_sms",
       smsText:
-        "Hi! Click here to book your appointment online: https://doggieville.ca/book",
+        "Hi! Click here to book your appointment online: https://yipyy.com/book",
     },
     {
       id: "node-8",
@@ -184,7 +184,7 @@ export const voicemailGreetings: VoicemailGreeting[] = [
     type: "default",
     name: "Main Greeting",
     transcription:
-      "Hi, you've reached Doggieville MTL. We're currently assisting other clients. Please leave your name, number, and the reason for your call, and we'll get back to you as soon as possible. Thank you!",
+      "Hi, you've reached Yipyy. We're currently assisting other clients. Please leave your name, number, and the reason for your call, and we'll get back to you as soon as possible. Thank you!",
     isActive: true,
     lastUpdated: "2026-02-10T10:00:00Z",
   },
@@ -193,7 +193,7 @@ export const voicemailGreetings: VoicemailGreeting[] = [
     type: "after_hours",
     name: "After Hours",
     transcription:
-      "Thank you for calling Doggieville MTL. Our facility is currently closed. Our hours are Monday to Friday 7 AM to 7 PM and weekends 8 AM to 6 PM. Please leave a voicemail and we will call you back first thing in the morning. For boarding emergencies, please press 1.",
+      "Thank you for calling Yipyy. Our facility is currently closed. Our hours are Monday to Friday 7 AM to 7 PM and weekends 8 AM to 6 PM. Please leave a voicemail and we will call you back first thing in the morning. For boarding emergencies, please press 1.",
     isActive: true,
     lastUpdated: "2026-01-15T09:00:00Z",
   },
@@ -202,7 +202,7 @@ export const voicemailGreetings: VoicemailGreeting[] = [
     type: "holiday",
     name: "Holiday Season",
     transcription:
-      "Season's greetings from Doggieville MTL! We are operating with reduced hours during the holiday period. Please visit our website for updated schedules or leave a message and we'll get back to you. Happy holidays!",
+      "Season's greetings from Yipyy! We are operating with reduced hours during the holiday period. Please visit our website for updated schedules or leave a message and we'll get back to you. Happy holidays!",
     isActive: false,
     lastUpdated: "2025-12-20T08:00:00Z",
   },
@@ -211,7 +211,7 @@ export const voicemailGreetings: VoicemailGreeting[] = [
     type: "temporary",
     name: "Temporary Closure",
     transcription:
-      "Hi, Doggieville MTL is temporarily closed for maintenance. We will reopen on Monday. For urgent boarding matters please contact our emergency line. Thank you for your patience.",
+      "Hi, Yipyy is temporarily closed for maintenance. We will reopen on Monday. For urgent boarding matters please contact our emergency line. Thank you for your patience.",
     isActive: false,
     lastUpdated: "2026-03-01T07:00:00Z",
   },
@@ -373,7 +373,7 @@ export const defaultCallingSettings: CallingSettings = {
   aiSummaryEnabled: true,
   missedCallAutoSMS: true,
   missedCallSMSTemplate:
-    "Hi {{name}}, sorry we missed your call at Doggieville MTL! How can we help? Reply here or call us back at (514) 555-0100.",
+    "Hi {{name}}, sorry we missed your call at Yipyy! How can we help? Reply here or call us back at (514) 555-0100.",
   businessNumber: "+1 (514) 555-0100",
   businessHours: {
     monday: { open: "07:00", close: "19:00", enabled: true },
@@ -593,7 +593,7 @@ export const callRoutingRules: CallRoutingRule[] = [
       routeTo: "staff_group",
       staffGroupId: "grp-reception",
       greeting:
-        "Welcome to Doggieville! Since this looks like your first time calling, we'll connect you with our reception team to get you set up.",
+        "Welcome to Yipyy! Since this looks like your first time calling, we'll connect you with our reception team to get you set up.",
     },
     priority: 4,
     enabled: true,

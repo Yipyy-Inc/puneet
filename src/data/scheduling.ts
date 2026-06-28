@@ -103,7 +103,7 @@ export const skillsCatalog: Skill[] = [
 export const departments: Department[] = [
   {
     id: "dept-1",
-    name: "Doggieville MTL",
+    name: "Yipyy",
     facilityId: 1,
     color: "#6366f1",
     description: "Main daycare and boarding facility",
@@ -123,7 +123,7 @@ export const departments: Department[] = [
   },
   {
     id: "dept-3",
-    name: "Doggieville Laval",
+    name: "Yipyy Laval",
     facilityId: 1,
     color: "#10b981",
     description: "Laval branch - daycare and training",
@@ -268,7 +268,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
   {
     id: "emp-1",
     name: "Sarah Johnson",
-    email: "sarah@doggieville.com",
+    email: "sarah@yipyy.com",
     phone: "+1-514-555-0101",
     avatar: "https://i.pravatar.cc/80?u=sarah-johnson-emp1",
     initials: "SJ",
@@ -285,7 +285,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
   {
     id: "emp-2",
     name: "Mike Chen",
-    email: "mike@doggieville.com",
+    email: "mike@yipyy.com",
     phone: "+1-514-555-0102",
     avatar: "https://i.pravatar.cc/80?u=mike-chen-emp2",
     initials: "MC",
@@ -302,7 +302,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
   {
     id: "emp-3",
     name: "Emily Davis",
-    email: "emily@doggieville.com",
+    email: "emily@yipyy.com",
     phone: "+1-514-555-0103",
     avatar: "https://i.pravatar.cc/80?u=emily-davis-emp3",
     initials: "ED",
@@ -319,7 +319,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
   {
     id: "emp-4",
     name: "David Wilson",
-    email: "david@doggieville.com",
+    email: "david@yipyy.com",
     phone: "+1-514-555-0104",
     avatar: "https://i.pravatar.cc/80?u=david-wilson-emp4",
     initials: "DW",
@@ -335,7 +335,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
   {
     id: "emp-5",
     name: "Lisa Rodriguez",
-    email: "lisa@doggieville.com",
+    email: "lisa@yipyy.com",
     phone: "+1-514-555-0105",
     avatar: "https://i.pravatar.cc/80?u=lisa-rodriguez-emp5",
     initials: "LR",
@@ -352,7 +352,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
   {
     id: "emp-6",
     name: "Tom Anderson",
-    email: "tom@doggieville.com",
+    email: "tom@yipyy.com",
     phone: "+1-514-555-0106",
     avatar: "https://i.pravatar.cc/80?u=tom-anderson-emp6",
     initials: "TA",
@@ -441,7 +441,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
   {
     id: "emp-11",
     name: "Nadia Lavoie",
-    email: "nadia@doggieville.com",
+    email: "nadia@yipyy.com",
     phone: "+1-450-555-0301",
     avatar: "https://i.pravatar.cc/80?u=nadia-lavoie-emp11",
     initials: "NL",
@@ -457,7 +457,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
   {
     id: "emp-12",
     name: "Omar Hassan",
-    email: "omar@doggieville.com",
+    email: "omar@yipyy.com",
     phone: "+1-450-555-0302",
     avatar: "https://i.pravatar.cc/80?u=omar-hassan-emp12",
     initials: "OH",
@@ -473,7 +473,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
   {
     id: "emp-13",
     name: "Chloe Gagnon",
-    email: "chloe@doggieville.com",
+    email: "chloe@yipyy.com",
     phone: "+1-450-555-0303",
     avatar: "https://i.pravatar.cc/80?u=chloe-gagnon-emp13",
     initials: "CG",
@@ -685,20 +685,20 @@ export const timeClockEntries: TimeClockEntry[] = generateTimeClockEntries();
 
 export const companyProfile: CompanyProfile = {
   id: "company-1",
-  name: "Doggieville",
-  legalName: "Doggieville Pet Services Inc.",
+  name: "Yipyy",
+  legalName: "Yipyy Pet Services Inc.",
   industry: "Pet care · daycare · boarding · grooming",
   taxId: "QC-DOG-2025",
-  contactEmail: "hello@doggieville.com",
+  contactEmail: "hello@yipyy.com",
   contactPhone: "+1-514-555-0100",
-  website: "https://doggieville.com",
+  website: "https://yipyy.com",
   defaultTimezone: "America/Toronto",
   weekStartsOn: 1, // Monday
   payPeriod: "biweekly",
   locations: [
     {
       id: "loc-1",
-      name: "Doggieville MTL",
+      name: "Yipyy",
       address: "1234 Rue Saint-Denis",
       city: "Montréal",
       region: "QC",
@@ -740,7 +740,7 @@ export const companyProfile: CompanyProfile = {
     },
     {
       id: "loc-3",
-      name: "Doggieville Laval",
+      name: "Yipyy Laval",
       address: "456 Boulevard Le Carrefour",
       city: "Laval",
       region: "QC",
@@ -2270,7 +2270,7 @@ export const employeeDocumentTemplates: EmployeeDocumentTemplate[] = [
       "Standard employment contract covering terms, compensation, and responsibilities",
     content: `EMPLOYMENT AGREEMENT
 
-This Employment Agreement ("Agreement") is entered into as of the date of signing between Doggieville MTL ("Employer") and the employee named below ("Employee").
+This Employment Agreement ("Agreement") is entered into as of the date of signing between Yipyy ("Employer") and the employee named below ("Employee").
 
 1. POSITION AND DUTIES
 Employee agrees to perform the duties associated with the position as assigned by Employer. Employee shall devote their full working time and attention to Employer's business.
@@ -2354,7 +2354,7 @@ By signing below, Employee acknowledges they have read, understood, and agree to
       "Non-disclosure agreement protecting client data and business information",
     content: `CONFIDENTIALITY AND NON-DISCLOSURE AGREEMENT
 
-This Confidentiality Agreement ("Agreement") is made between Doggieville MTL ("Company") and the undersigned employee.
+This Confidentiality Agreement ("Agreement") is made between Yipyy ("Company") and the undersigned employee.
 
 1. CONFIDENTIAL INFORMATION
 "Confidential Information" includes all client data, pet health records, business practices, pricing, supplier relationships, and any proprietary information belonging to the Company.
@@ -2402,7 +2402,7 @@ Any breach of this Agreement may result in disciplinary action, termination, and
       "Acknowledgement of having read and understood the employee handbook and all company policies",
     content: `COMPANY POLICY ACKNOWLEDGEMENT
 
-I, the undersigned employee, acknowledge that I have received, read, and understood the Doggieville MTL Employee Handbook and all Company Policies, including but not limited to:
+I, the undersigned employee, acknowledge that I have received, read, and understood the Yipyy Employee Handbook and all Company Policies, including but not limited to:
 
 WORKPLACE POLICIES
 - Anti-harassment and workplace respect
@@ -2566,7 +2566,7 @@ This information is stored securely and in accordance with Quebec privacy law (L
     description: "Banking information for payroll direct deposit setup",
     content: `DIRECT DEPOSIT AUTHORIZATION FORM
 
-By completing this form, you authorize Doggieville MTL ("Employer") to initiate electronic fund transfers (direct deposit) to the bank account you specify below.
+By completing this form, you authorize Yipyy ("Employer") to initiate electronic fund transfers (direct deposit) to the bank account you specify below.
 
 AUTHORIZATION
 I hereby authorize my Employer to deposit my net pay directly into my designated bank account. I understand that:

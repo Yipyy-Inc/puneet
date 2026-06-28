@@ -170,7 +170,7 @@ export default function LoyaltyOverviewPage() {
               id="program-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Doggieville Rewards"
+              placeholder="e.g., Yipyy Rewards"
             />
           </div>
           <div className="space-y-2">

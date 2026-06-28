@@ -932,7 +932,7 @@ export interface SpecialEventRewardsConfig {
 export interface FacilityLoyaltyConfig {
   facilityId: number;
   enabled: boolean;
-  /** Customer-facing program name (e.g. "Doggieville Rewards"). Optional;
+  /** Customer-facing program name (e.g. "Yipyy Rewards"). Optional;
    *  falls back to `settings.pointsName` for display when absent. */
   programName?: string;
   /** Short marketing tagline shown under the program name on the customer

@@ -391,7 +391,7 @@ const PROGRAM_BY_SERIES: Record<string, string> = {
 };
 
 /** Multi-location assignment for each mock series — distributes the demo
- *  catalog across the 3 Doggieville locations so the HQ overview surfaces
+ *  catalog across the 3 Yipyy locations so the HQ overview surfaces
  *  meaningful per-branch numbers. Plateau (main) carries the most volume,
  *  matching its flagship role; Laval as the newest gets the fewest series. */
 const LOCATION_BY_SERIES: Record<string, string> = {

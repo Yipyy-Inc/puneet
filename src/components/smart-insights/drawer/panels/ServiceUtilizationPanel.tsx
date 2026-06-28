@@ -176,7 +176,7 @@ function PromoteFlow({
     `Try our ${SERVICE.name} — limited time`,
   );
   const [body, setBody] = useState(
-    `Hi {{firstName}},\n\nOur ${SERVICE.name} hasn't gotten the love it deserves lately — so we're running a short promo: 20% off any ${SERVICE.name} booking made in the next 14 days.\n\nBook here: doggieville.ca/book\n\nHope to see ${"{{petName}}"} soon,\nThe Doggieville team`,
+    `Hi {{firstName}},\n\nOur ${SERVICE.name} hasn't gotten the love it deserves lately — so we're running a short promo: 20% off any ${SERVICE.name} booking made in the next 14 days.\n\nBook here: yipyy.com/book\n\nHope to see ${"{{petName}}"} soon,\nThe Yipyy team`,
   );
 
   if (step === "compose") {

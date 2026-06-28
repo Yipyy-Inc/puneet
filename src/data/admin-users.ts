@@ -12,7 +12,7 @@ export interface AdminUser {
   name: string;
   email: string;
   role: AdminRole;
-  status: "active" | "inactive" | "suspended";
+  status: "active" | "inactive" | "suspended" | "invited";
   accessLevel: AccessLevel;
   responsibilityAreas: string[];
   permissions: string[];

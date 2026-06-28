@@ -22,12 +22,12 @@ Last summer was our busiest yet, and our boarding spots in mid-July typically bo
 
 To make sure {{petName}} has a spot when you need it, you can reserve now and only pay when you check in:
 
-→ Book early: doggieville.ca/book
+→ Book early: yipyy.com/book
 
 We expect peak weeks of July 13–26 to fill first. Locking in your dates today means no scrambling when summer arrives.
 
 Cheers,
-The Doggieville team`;
+The Yipyy team`;
 
 const ACTIVE_CLIENT_COUNT = 612;
 

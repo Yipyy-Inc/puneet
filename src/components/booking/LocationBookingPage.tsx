@@ -44,7 +44,7 @@ export function LocationBookingPage({ location }: { location: Location }) {
         <div className="container mx-auto px-6 py-12 text-white">
           <div className="flex items-center gap-2 text-sm opacity-90">
             <PawPrint className="size-4" />
-            Doggieville · {location.shortCode}
+            Yipyy · {location.shortCode}
           </div>
           <h1 className="mt-2 text-4xl font-bold tracking-tight md:text-5xl">
             {location.name}
@@ -135,8 +135,8 @@ export function LocationBookingPage({ location }: { location: Location }) {
               Existing client?
             </p>
             <p className="text-muted-foreground mt-1 text-xs">
-              Sign in with the email you used at any Doggieville location — your
-              pets, vaccinations, and history transfer automatically.
+              Sign in with the email you used at any Yipyy location — your pets,
+              vaccinations, and history transfer automatically.
             </p>
           </div>
         </div>
@@ -184,7 +184,7 @@ export function LocationBookingPage({ location }: { location: Location }) {
             <p className="text-muted-foreground mt-2 text-xs/relaxed">
               You&apos;re booking with{" "}
               <strong style={{ color: location.color }}>{location.name}</strong>
-              . If you usually visit a different Doggieville location, use the
+              . If you usually visit a different Yipyy location, use the
               location switcher in your account. All your records carry across.
             </p>
           </div>

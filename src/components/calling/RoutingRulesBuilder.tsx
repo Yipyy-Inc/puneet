@@ -485,7 +485,7 @@ export function RoutingRulesBuilder({
                         <Textarea
                           rows={2}
                           className="text-sm"
-                          placeholder="e.g. Welcome to Doggieville! We'll connect you with the right team…"
+                          placeholder="e.g. Welcome to Yipyy! We'll connect you with the right team…"
                           value={rule.action.greeting ?? ""}
                           onChange={(e) =>
                             patchAction(rule.id, {

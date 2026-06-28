@@ -336,6 +336,17 @@ export function StaffTab({
           searchPlaceholder="Search staff by name, email, or role..."
           itemsPerPage={10}
           actions={rowActions}
+          emptyState={{
+            icon: Users,
+            title: "No staff accounts yet",
+            description:
+              "Add staff members to give them access to this facility.",
+            action: {
+              label: "Add Staff",
+              onClick: () => setAddOpen(true),
+              icon: Plus,
+            },
+          }}
         />
       </CardContent>
 

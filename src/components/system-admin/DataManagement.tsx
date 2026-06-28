@@ -23,11 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  dataBackups,
-  dataRecoveries,
-  retentionPolicies,
-} from "@/data/system-administration";
+import { retentionPolicies } from "@/data/system-administration";
 import type {
   DataBackup,
   DataRecovery,
@@ -52,6 +48,27 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { adminUsers } from "@/data/admin-users";
+import { IMPERSONATING_ADMIN } from "@/lib/impersonation";
+import {
+  createRestoreRequest,
+  deleteBackup,
+  useDataManagement,
+  verifyBackup,
+} from "@/lib/data-management-store";
+import { BackupScheduleCard } from "./data-management/backup-schedule-card";
+import { RestoreApprovalsCard } from "./data-management/restore-approvals-card";
 
 type BadgeVariant =
   | "default"
@@ -72,8 +89,13 @@ export function DataManagement() {
   );
   const [backupInProgress, setBackupInProgress] = useState(false);
   const [backupComplete, setBackupComplete] = useState(false);
-  const [restoreInProgress, setRestoreInProgress] = useState(false);
-  const [restoreComplete, setRestoreComplete] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DataBackup | null>(null);
+
+  const dm = useDataManagement();
+  const admin = IMPERSONATING_ADMIN.name;
+  const systemAdmins = adminUsers
+    .filter((u) => u.role === "system_administrator")
+    .map((u) => u.name);
 
   const handleCreateBackup = () => {
     setBackupInProgress(true);
@@ -87,17 +109,21 @@ export function DataManagement() {
     }, 2000);
   };
 
-  const handleRestore = () => {
-    setRestoreInProgress(true);
-    setTimeout(() => {
-      setRestoreInProgress(false);
-      setRestoreComplete(true);
-      setTimeout(() => {
-        setRestoreComplete(false);
-        setShowRestoreModal(false);
-        setSelectedBackup(null);
-      }, 2000);
-    }, 2000);
+  const requestRestore = () => {
+    if (!selectedBackup) return;
+    const notified = systemAdmins.filter((n) => n !== admin);
+    createRestoreRequest(selectedBackup, admin, notified);
+    toast.success(
+      `Restore requested — ${notified.length} System admin(s) notified. A second approval is required within 4 hours.`,
+    );
+    setShowRestoreModal(false);
+    setSelectedBackup(null);
+  };
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    deleteBackup(deleteTarget.id);
+    toast.success("Backup deleted");
+    setDeleteTarget(null);
   };
 
   const handleDownload = (backup: DataBackup) => {
@@ -283,7 +309,19 @@ export function DataManagement() {
     {
       key: "verificationStatus",
       label: "Verification",
-      render: (item) => getVerificationBadge(item.verificationStatus),
+      render: (item) => (
+        <div className="space-y-1">
+          {getVerificationBadge(item.verificationStatus)}
+          {item.checksum && (
+            <div
+              className="text-muted-foreground max-w-[170px] truncate font-mono text-[10px]"
+              title={item.checksum}
+            >
+              {item.checksum}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       key: "backupMethod",
@@ -297,11 +335,32 @@ export function DataManagement() {
   ];
 
   const backupActions = (item: DataBackup) => (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-1">
       <Button
         variant="ghost"
         size="sm"
-        className="gap-2"
+        className="gap-1.5"
+        onClick={() => handleDownload(item)}
+      >
+        <Download className="size-4" />
+        Download
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="gap-1.5"
+        onClick={() => {
+          verifyBackup(item.id);
+          toast.success(`${item.backupName} verified — checksum generated`);
+        }}
+      >
+        <ShieldCheck className="size-4" />
+        Verify
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="gap-1.5"
         onClick={() => {
           setSelectedBackup(item);
           setShowRestoreModal(true);
@@ -313,11 +372,11 @@ export function DataManagement() {
       <Button
         variant="ghost"
         size="sm"
-        className="gap-2"
-        onClick={() => handleDownload(item)}
+        className="gap-1.5 text-red-600 hover:text-red-700"
+        onClick={() => setDeleteTarget(item)}
       >
-        <Download className="size-4" />
-        Download
+        <Trash2 className="size-4" />
+        Delete
       </Button>
     </div>
   );
@@ -463,16 +522,16 @@ export function DataManagement() {
   );
 
   // Calculate statistics
-  const completedBackups = dataBackups.filter(
+  const completedBackups = dm.backups.filter(
     (b) => b.status === "Completed",
   ).length;
-  const totalBackupSize = dataBackups
+  const totalBackupSize = dm.backups
     .filter((b) => b.status === "Completed")
     .reduce((sum, b) => sum + b.size, 0);
-  const verifiedBackups = dataBackups.filter(
+  const verifiedBackups = dm.backups.filter(
     (b) => b.verificationStatus === "Verified",
   ).length;
-  const activeRecoveries = dataRecoveries.filter(
+  const activeRecoveries = dm.recoveries.filter(
     (r) => r.status === "In Progress",
   ).length;
 
@@ -502,7 +561,7 @@ export function DataManagement() {
                   Total Backups
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
-                  {dataBackups.length}
+                  {dm.backups.length}
                 </h3>
                 <p className="text-muted-foreground mt-0.5 text-xs">
                   {completedBackups} completed
@@ -559,8 +618,11 @@ export function DataManagement() {
                   {verifiedBackups}
                 </h3>
                 <p className="text-muted-foreground mt-0.5 text-xs">
-                  {((verifiedBackups / dataBackups.length) * 100).toFixed(0)}%
-                  verification rate
+                  {(
+                    (verifiedBackups / Math.max(1, dm.backups.length)) *
+                    100
+                  ).toFixed(0)}
+                  % verification rate
                 </p>
               </div>
               <div
@@ -614,6 +676,8 @@ export function DataManagement() {
 
         {/* Backups Tab */}
         <TabsContent value="backups" className="space-y-6">
+          <BackupScheduleCard />
+
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">
@@ -626,10 +690,21 @@ export function DataManagement() {
             <CardContent>
               <DataTable
                 columns={backupColumns}
-                data={dataBackups}
+                data={dm.backups}
                 actions={backupActions}
                 searchKey="backupName"
                 searchPlaceholder="Search backups..."
+                emptyState={{
+                  icon: Database,
+                  title: "No backups yet",
+                  description:
+                    "Create a manual backup to protect system and facility data.",
+                  action: {
+                    label: "Create Backup",
+                    onClick: () => setShowBackupModal(true),
+                    icon: Plus,
+                  },
+                }}
               />
             </CardContent>
           </Card>
@@ -637,6 +712,8 @@ export function DataManagement() {
 
         {/* Recovery Tab */}
         <TabsContent value="recovery" className="space-y-6">
+          <RestoreApprovalsCard />
+
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">
@@ -649,9 +726,15 @@ export function DataManagement() {
             <CardContent>
               <DataTable
                 columns={recoveryColumns}
-                data={dataRecoveries}
+                data={dm.recoveries}
                 searchKey="recoveryName"
                 searchPlaceholder="Search recovery operations..."
+                emptyState={{
+                  icon: RefreshCw,
+                  title: "No restore requests",
+                  description:
+                    "Recovery operations appear here once a backup restore is requested.",
+                }}
               />
             </CardContent>
           </Card>
@@ -733,6 +816,12 @@ export function DataManagement() {
                 actions={policyActions}
                 searchKey="policyName"
                 searchPlaceholder="Search policies..."
+                emptyState={{
+                  icon: Archive,
+                  title: "No retention policies",
+                  description:
+                    "Configure automated retention policies to manage data lifecycle and compliance.",
+                }}
               />
             </CardContent>
           </Card>
@@ -881,89 +970,93 @@ export function DataManagement() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RefreshCw className="size-5" />
-              Restore Backup
+              Request Restore
             </DialogTitle>
             <DialogDescription>
-              Restore data from backup: {selectedBackup?.backupName}
+              Restoring replaces current data and requires a second System
+              administrator&rsquo;s approval.
             </DialogDescription>
           </DialogHeader>
-          {restoreComplete ? (
-            <div className="flex flex-col items-center py-8">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                <CheckCircle className="size-8 text-green-600" />
-              </div>
-              <h3 className="text-lg font-semibold">Restore Complete!</h3>
-              <p className="text-muted-foreground text-sm">
-                Data has been restored successfully
+          <div className="space-y-4 py-2">
+            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-900 dark:bg-yellow-950/40">
+              <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                <strong>Two-person control:</strong> submitting this request
+                notifies the other System administrators. The restore executes
+                only after a second admin approves, and the request expires if
+                no one approves within 4 hours.
               </p>
             </div>
-          ) : restoreInProgress ? (
-            <div className="flex flex-col items-center py-8">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-                <RefreshCw className="size-8 animate-spin text-blue-600" />
-              </div>
-              <h3 className="text-lg font-semibold">Restoring...</h3>
-              <p className="text-muted-foreground text-sm">
-                Please wait while we restore your data
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-4 py-4">
-                <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Warning:</strong> Restoring this backup will replace
-                    current data. This action cannot be undone.
-                  </p>
+            {selectedBackup && (
+              <div className="bg-muted/50 space-y-2 rounded-lg p-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Backup Name:</span>
+                  <span className="font-medium">
+                    {selectedBackup.backupName}
+                  </span>
                 </div>
-                {selectedBackup && (
-                  <div className="bg-muted/50 space-y-2 rounded-lg p-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Backup Name:
-                      </span>
-                      <span className="font-medium">
-                        {selectedBackup.backupName}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Created:</span>
-                      <span>
-                        {new Date(
-                          selectedBackup.startTime,
-                        ).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Size:</span>
-                      <span>
-                        {selectedBackup.size >= 1024
-                          ? `${(selectedBackup.size / 1024).toFixed(2)} GB`
-                          : `${selectedBackup.size} MB`}
-                      </span>
-                    </div>
-                  </div>
-                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Scope:</span>
+                  <span>{selectedBackup.scope}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    Admins to notify:
+                  </span>
+                  <span>
+                    {systemAdmins.filter((n) => n !== admin).join(", ") ||
+                      "None"}
+                  </span>
+                </div>
               </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowRestoreModal(false);
-                    setSelectedBackup(null);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button variant="destructive" onClick={handleRestore}>
-                  <RefreshCw className="mr-2 size-4" />
-                  Restore Backup
-                </Button>
-              </DialogFooter>
-            </>
-          )}
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowRestoreModal(false);
+                setSelectedBackup(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={requestRestore}
+            >
+              <RefreshCw className="mr-2 size-4" />
+              Request Restore
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete backup confirm */}
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete backup?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &ldquo;{deleteTarget?.backupName}&rdquo; will be permanently
+              removed from the backup history. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={confirmDelete}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Edit Policy Modal */}
       <Dialog open={showEditPolicyModal} onOpenChange={setShowEditPolicyModal}>

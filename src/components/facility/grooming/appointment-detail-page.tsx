@@ -587,7 +587,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       clients: initialClients,
       setStationStatus,
       notify: (title, detail) => toast.message(title, detail),
-      facilityName: "Doggieville MTL",
+      facilityName: "Yipyy",
     });
     if (result.afterPhotos.length > 0) {
       recordHistory(
@@ -622,7 +622,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       clients: initialClients,
       setStationStatus,
       notify: (title, detail) => toast.message(title, detail),
-      facilityName: "Doggieville MTL",
+      facilityName: "Yipyy",
     });
     recordHistory(
       `Payment · ${result.method.replace(/-/g, " ")} · $${result.amountCharged.toFixed(2)}`,
@@ -1511,7 +1511,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
         open={markReadyOpen}
         onOpenChange={setMarkReadyOpen}
         apt={apt}
-        facilityName="Doggieville MTL"
+        facilityName="Yipyy"
         onConfirm={handleMarkReadyConfirm}
       />
       {(() => {

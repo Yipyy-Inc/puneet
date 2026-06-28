@@ -329,7 +329,7 @@ function WinbackFlow({
     "We'd love to reschedule {{petName}}'s visit",
   );
   const [body, setBody] = useState(
-    `Hi {{firstName}},\n\nSorry we missed {{petName}} this week. We'd love to get you rescheduled at a time that works better.\n\nAs a thank-you for sticking with us, here's 10% off your next visit if you rebook within 14 days.\n\nBook now: doggieville.ca/book\n\nHope to see you soon,\nThe Doggieville team`,
+    `Hi {{firstName}},\n\nSorry we missed {{petName}} this week. We'd love to get you rescheduled at a time that works better.\n\nAs a thank-you for sticking with us, here's 10% off your next visit if you rebook within 14 days.\n\nBook now: yipyy.com/book\n\nHope to see you soon,\nThe Yipyy team`,
   );
 
   if (step === "compose") {

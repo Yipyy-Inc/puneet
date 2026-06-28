@@ -27,7 +27,7 @@ import { getLocationsByFacility } from "@/data/locations";
  *  would default to `new Date().toISOString()` here. */
 const MOCK_MONTH_ANCHOR = "2026-05-17";
 
-/** Doggieville is facility 11 per the locations seed — that's the only
+/** Yipyy is facility 11 per the locations seed — that's the only
  *  multi-location facility in the mock so the HQ page is hardcoded to it. */
 const FACILITY_ID = 11;
 

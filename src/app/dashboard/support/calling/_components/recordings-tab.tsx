@@ -6,6 +6,7 @@ import {
   ExternalLink,
   Flag,
   Lock,
+  Mic,
   Play,
   ShieldCheck,
   Star,
@@ -273,6 +274,12 @@ export function RecordingsTab() {
         data={filtered}
         columns={columns}
         itemsPerPage={10}
+        emptyState={{
+          icon: Mic,
+          title: "No recordings yet",
+          description:
+            "Call recordings will appear here once calls are recorded for quality assurance.",
+        }}
         getSearchValue={(r) =>
           `${lookupFacilityByPhone(r.callerNumber)?.facilityName ?? "unknown caller"} ${r.callerNumber}`
         }

@@ -635,7 +635,14 @@ export function SystemStatus() {
               </p>
             </CardHeader>
             <CardContent>
-              <DataTable columns={serverColumns} data={serverStatuses} />
+              <DataTable
+                columns={serverColumns}
+                data={serverStatuses}
+                emptyState={{
+                  icon: Server,
+                  title: "No server status data",
+                }}
+              />
             </CardContent>
           </Card>
 
@@ -653,6 +660,10 @@ export function SystemStatus() {
               <DataTable
                 columns={resourceColumns}
                 data={resourceUtilizations}
+                emptyState={{
+                  icon: Gauge,
+                  title: "No resource utilization data",
+                }}
               />
             </CardContent>
           </Card>
@@ -671,7 +682,14 @@ export function SystemStatus() {
               </p>
             </CardHeader>
             <CardContent>
-              <DataTable columns={databaseColumns} data={databaseMetrics} />
+              <DataTable
+                columns={databaseColumns}
+                data={databaseMetrics}
+                emptyState={{
+                  icon: Database,
+                  title: "No database metrics",
+                }}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -689,7 +707,14 @@ export function SystemStatus() {
               </p>
             </CardHeader>
             <CardContent>
-              <DataTable columns={apiColumns} data={apiEndpoints} />
+              <DataTable
+                columns={apiColumns}
+                data={apiEndpoints}
+                emptyState={{
+                  icon: Link,
+                  title: "No API endpoints",
+                }}
+              />
             </CardContent>
           </Card>
 
@@ -707,6 +732,10 @@ export function SystemStatus() {
               <DataTable
                 columns={performanceColumns}
                 data={performanceMetrics}
+                emptyState={{
+                  icon: BarChart3,
+                  title: "No performance metrics",
+                }}
               />
             </CardContent>
           </Card>
@@ -725,7 +754,14 @@ export function SystemStatus() {
               </p>
             </CardHeader>
             <CardContent>
-              <DataTable columns={serviceColumns} data={serviceUptimes} />
+              <DataTable
+                columns={serviceColumns}
+                data={serviceUptimes}
+                emptyState={{
+                  icon: Globe,
+                  title: "No service uptime data",
+                }}
+              />
             </CardContent>
           </Card>
         </TabsContent>

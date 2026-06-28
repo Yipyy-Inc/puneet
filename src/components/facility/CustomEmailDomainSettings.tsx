@@ -173,7 +173,7 @@ export function CustomEmailDomainSettings() {
                   <div className="space-y-2">
                     <Label>Sender Name</Label>
                     <Input
-                      placeholder="e.g. Doggieville MTL"
+                      placeholder="e.g. Yipyy"
                       value={senderName}
                       onChange={(e) => setSenderName(e.target.value)}
                     />
@@ -184,7 +184,7 @@ export function CustomEmailDomainSettings() {
                   <div className="space-y-2">
                     <Label>Business Email Address</Label>
                     <Input
-                      placeholder="e.g. info@doggieville.com"
+                      placeholder="e.g. info@yipyy.com"
                       value={domain}
                       onChange={(e) => setDomain(e.target.value)}
                     />

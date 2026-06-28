@@ -36,6 +36,7 @@ import {
   Layers,
   ArrowRight,
   X,
+  ScrollText,
 } from "lucide-react";
 import {
   Dialog,
@@ -1108,6 +1109,12 @@ export function AuditLogsManager() {
                 actions={renderActions}
                 searchKey="action"
                 searchPlaceholder="Search by action, user, or entity..."
+                emptyState={{
+                  icon: ScrollText,
+                  title: "No audit events",
+                  description:
+                    "Admin actions and system changes will appear here as they are logged.",
+                }}
               />
             </CardContent>
           </Card>

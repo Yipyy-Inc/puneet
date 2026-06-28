@@ -57,6 +57,7 @@ import {
   Puzzle,
   Shield,
   LayoutDashboard,
+  Database,
 } from "lucide-react";
 import { notFound } from "next/navigation";
 import {
@@ -66,6 +67,7 @@ import {
   StaffTab,
   BillingTab,
   ModulesTab,
+  DataExportTab,
 } from "@/components/dashboard/facilities";
 import { FacilitySuspensionBanner } from "./_components/facility-suspension-banner";
 
@@ -192,6 +194,11 @@ const tabs = [
     id: "modules",
     name: "Modules",
     icon: Puzzle,
+  },
+  {
+    id: "data",
+    name: "Data",
+    icon: Database,
   },
   {
     id: "reports",
@@ -345,6 +352,9 @@ export default function FacilityDetailPage() {
 
       case "billing":
         return <BillingTab facility={facility} />;
+
+      case "data":
+        return <DataExportTab facility={facility} />;
 
       case "modules":
         return (
