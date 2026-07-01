@@ -193,6 +193,12 @@ interface CustomServiceWizardProps {
   showFacilitySelector?: boolean;
   /** Override the default redirect path after save/cancel */
   redirectPath?: string;
+  /**
+   * Seed a NEW module for this facility (facility-scoped creation). The facility
+   * is fixed and not selectable — pair with `showFacilitySelector={false}`.
+   * Ignored in edit mode (when `initialData` is provided).
+   */
+  facilityId?: number;
 }
 
 // ========================================
@@ -205,6 +211,7 @@ export function CustomServiceWizard({
   onCancel,
   showFacilitySelector = false,
   redirectPath = "/facility/dashboard/services/custom",
+  facilityId,
 }: CustomServiceWizardProps) {
   const router = useRouter();
   const { addModule, updateModule, resources } = useCustomServices();
@@ -216,7 +223,8 @@ export function CustomServiceWizard({
   // Initialize form data — never from localStorage, always in-memory
   const [formData, setFormData] = useState<CustomServiceModule>(() => {
     if (initialData) return { ...initialData };
-    return createDefaultCustomServiceModule(11); // default facilityId
+    // Facility-scoped creation seeds the fixed facility; falls back to 11.
+    return createDefaultCustomServiceModule(facilityId ?? 11);
   });
 
   const handleChange = useCallback((updates: Partial<CustomServiceModule>) => {

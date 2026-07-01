@@ -139,6 +139,30 @@ export function setFacilityModule(
   );
 }
 
+/** Clear every per-facility module override for one facility (Reset to Tier Defaults). */
+export function resetFacilityModules(facilityId: number, label: string) {
+  const prefix = `${facilityId}:`;
+  const next: Record<string, boolean> = {};
+  let cleared = 0;
+  for (const [key, value] of Object.entries(state.facilityModules)) {
+    if (key.startsWith(prefix)) cleared += 1;
+    else next[key] = value;
+  }
+  if (cleared === 0) return;
+  commit(
+    { ...state, facilityModules: next },
+    {
+      configId: String(facilityId),
+      configKey: label,
+      action: "updated",
+      previousValue: `${cleared} override${cleared === 1 ? "" : "s"}`,
+      newValue: "tier defaults",
+      actor: ACTOR,
+      affectedTenants: 1,
+    },
+  );
+}
+
 /** Override lookup with a base fallback. */
 export function resolved(
   map: Record<string, boolean>,

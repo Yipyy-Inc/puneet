@@ -1,6 +1,6 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
+import { ArrowRight, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 
@@ -21,6 +21,8 @@ interface KpiTileProps {
   trail?: { label: string; value: number | string }[];
   /** Optional colored sub-label below the hint (e.g. an SLA-breach warning). */
   alert?: { label: string; tone?: "rose" | "amber" };
+  /** Optional footer call-to-action, rendered as a "label →" link. */
+  link?: { label: string; onClick: () => void };
   onClick?: () => void;
   active?: boolean;
 }
@@ -121,6 +123,7 @@ export function KpiTile({
   tone = "indigo",
   trail,
   alert,
+  link,
   onClick,
   active,
 }: KpiTileProps) {
@@ -218,6 +221,24 @@ export function KpiTile({
               {t.label}
             </span>
           ))}
+        </div>
+      )}
+      {link && (
+        <div className="relative border-t border-dashed border-current/10 px-4 py-1.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              link.onClick();
+            }}
+            className={cn(
+              "group/link inline-flex items-center gap-1 text-[11px] font-semibold hover:underline focus-visible:ring-1 focus-visible:outline-none",
+              styles.accentText,
+            )}
+          >
+            {link.label}
+            <ArrowRight className="size-3 transition-transform group-hover/link:translate-x-0.5" />
+          </button>
         </div>
       )}
     </Card>

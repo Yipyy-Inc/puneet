@@ -47,6 +47,7 @@ import {
   Award,
   LifeBuoy,
   Database,
+  FolderOpen,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
@@ -405,6 +406,12 @@ export function FacilitySidebar() {
             title: "Intake Forms",
             url: "/facility/dashboard/forms",
             icon: ClipboardList,
+            disabled: false,
+          },
+          {
+            title: "Documents",
+            url: "/facility/documents",
+            icon: FolderOpen,
             disabled: false,
           },
           {

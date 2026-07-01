@@ -76,6 +76,8 @@ export interface ServiceMeta {
   label: string;
   color: string;
   icon: string;
+  /** True for custom-service modules (vs. the built-in standard services). */
+  isCustom?: boolean;
 }
 
 export interface UnifiedBookingsContextValue {
@@ -354,6 +356,7 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
         label: c.moduleName,
         color: sample.serviceColor,
         icon: sample.serviceIcon,
+        isCustom: true,
       });
     }
     return out;

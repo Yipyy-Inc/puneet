@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { facilitiesQueries } from "@/lib/api/facilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,14 @@ interface OverviewTabProps {
   onNavigateToLogs: () => void;
 }
 
+// Revenue time-period options for the Total Revenue KPI (0 = all time).
+const REVENUE_PERIODS = [
+  { value: 3, label: "Last 3 months" },
+  { value: 6, label: "Last 6 months" },
+  { value: 12, label: "Last 12 months" },
+  { value: 0, label: "All time" },
+] as const;
+
 export function OverviewTab({
   facility,
   status,
@@ -83,13 +91,18 @@ export function OverviewTab({
   onNavigateToLogs,
 }: OverviewTabProps) {
   const [locationView, setLocationView] = useState("all");
+  const [periodMonths, setPeriodMonths] = useState(6);
   const isMultiLocation = facility.locationsList.length > 1;
-  const { data: kpis, isLoading: kpisLoading } = useQuery(
-    facilitiesQueries.overviewKpis(
+  const { data: kpis, isLoading: kpisLoading } = useQuery({
+    ...facilitiesQueries.overviewKpis(
       facility.id,
       locationView === "all" ? null : locationView,
+      periodMonths,
     ),
-  );
+    // Keep the prior value visible while a new period/location recomputes, so
+    // the skeleton appears only on the genuine first load — not on every change.
+    placeholderData: keepPreviousData,
+  });
   const [showContactDialog, setShowContactDialog] = useState(false);
   const [editableContact, setEditableContact] = useState({
     email: facility.contact?.email ?? "",
@@ -138,30 +151,50 @@ export function OverviewTab({
 
   return (
     <div className="space-y-6">
-      {/* Location filter (multi-location facilities only) */}
-      {isMultiLocation && (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-muted-foreground text-sm">
-            {locationView === "all"
+      {/* Controls: revenue period (always) + location filter (multi-location) */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-muted-foreground text-sm">
+          {isMultiLocation
+            ? locationView === "all"
               ? "Combined across all locations"
-              : `Showing ${locationView}`}
-          </p>
-          <Select value={locationView} onValueChange={setLocationView}>
-            <SelectTrigger className="w-[230px]">
-              <MapPin className="size-4" />
+              : `Showing ${locationView}`
+            : "Facility overview"}
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          {isMultiLocation && (
+            <Select value={locationView} onValueChange={setLocationView}>
+              <SelectTrigger className="w-[230px]">
+                <MapPin className="size-4" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Combined (All Locations)</SelectItem>
+                {facility.locationsList.map((l) => (
+                  <SelectItem key={l.name} value={l.name}>
+                    {l.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Select
+            value={String(periodMonths)}
+            onValueChange={(v) => setPeriodMonths(Number(v))}
+          >
+            <SelectTrigger className="w-[170px]">
+              <Calendar className="size-4" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Combined (All Locations)</SelectItem>
-              {facility.locationsList.map((l) => (
-                <SelectItem key={l.name} value={l.name}>
-                  {l.name}
+              {REVENUE_PERIODS.map((p) => (
+                <SelectItem key={p.value} value={String(p.value)}>
+                  {p.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-      )}
+      </div>
 
       {/* Stats Grid */}
       {kpisLoading || !kpis ? (
@@ -178,7 +211,10 @@ export function OverviewTab({
           <StatCard
             title="Total Revenue"
             value={`$${(kpis.totalRevenue / 1000).toFixed(1)}K`}
-            subtitle="Last 6 months"
+            subtitle={
+              REVENUE_PERIODS.find((p) => p.value === periodMonths)?.label ??
+              "Last 6 months"
+            }
             icon={DollarSign}
             iconBgStyle={{
               background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",

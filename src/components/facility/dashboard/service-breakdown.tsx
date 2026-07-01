@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { useUnifiedBookings } from "@/hooks/use-unified-bookings";
 import { useDashboardFilters } from "@/components/facility/dashboard/dashboard-filters-context";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function ServiceBreakdown() {
@@ -15,6 +15,7 @@ export function ServiceBreakdown() {
     (sum, s) => sum + (counts.byService[s.key] ?? 0),
     0,
   );
+  const hasCustom = services.some((s) => s.isCustom);
 
   const handleClick = (key: string) => {
     setServiceFilter(key);
@@ -41,29 +42,38 @@ export function ServiceBreakdown() {
             </p>
           </div>
         </div>
-        <div className="flex flex-1 flex-wrap gap-1.5">
-          <ServicePill
-            label="All"
-            value={total}
-            color="#0ea5e9"
-            icon="LayoutGrid"
-            active={serviceFilter === "all"}
-            onClick={() => {
-              setServiceFilter("all");
-              setTab("scheduled");
-            }}
-          />
-          {services.map((s) => (
+        <div className="flex flex-1 flex-col gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             <ServicePill
-              key={s.key}
-              label={s.label}
-              value={counts.byService[s.key] ?? 0}
-              color={s.color}
-              icon={s.icon}
-              active={serviceFilter === s.key}
-              onClick={() => handleClick(s.key)}
+              label="All"
+              value={total}
+              color="#0ea5e9"
+              icon="LayoutGrid"
+              active={serviceFilter === "all"}
+              onClick={() => {
+                setServiceFilter("all");
+                setTab("scheduled");
+              }}
             />
-          ))}
+            {services.map((s) => (
+              <ServicePill
+                key={s.key}
+                label={s.label}
+                value={counts.byService[s.key] ?? 0}
+                color={s.color}
+                icon={s.icon}
+                isCustom={s.isCustom}
+                active={serviceFilter === s.key}
+                onClick={() => handleClick(s.key)}
+              />
+            ))}
+          </div>
+          {hasCustom && (
+            <p className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium">
+              <Star className="size-2.5 fill-teal-500 text-teal-500" />
+              Custom module
+            </p>
+          )}
         </div>
       </div>
     </Card>
@@ -76,6 +86,7 @@ interface ServicePillProps {
   color: string;
   icon: string;
   active: boolean;
+  isCustom?: boolean;
   onClick: () => void;
 }
 
@@ -85,6 +96,7 @@ function ServicePill({
   color,
   icon,
   active,
+  isCustom,
   onClick,
 }: ServicePillProps) {
   return (
@@ -92,16 +104,23 @@ function ServicePill({
       type="button"
       onClick={onClick}
       data-active={active ? "true" : undefined}
+      data-custom={isCustom ? "true" : undefined}
       data-color={color}
       className={cn(
-        "group bg-background inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all",
+        "group inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all",
         "hover:-translate-y-px hover:shadow-sm",
         "data-[active=true]:border-transparent data-[active=true]:text-white data-[active=true]:shadow-md",
+        // Custom modules get a soft-teal fill to stand apart from standard chips.
+        isCustom
+          ? "border-teal-300/70 bg-teal-50 dark:border-teal-800/60 dark:bg-teal-950/40"
+          : "bg-background",
       )}
       style={
         active
           ? { backgroundColor: color, borderColor: color }
-          : { borderColor: `${color}33` }
+          : isCustom
+            ? undefined
+            : { borderColor: `${color}33` }
       }
     >
       <span
@@ -113,6 +132,15 @@ function ServicePill({
       >
         <DynamicIcon name={icon} className="size-3" />
       </span>
+      {isCustom && (
+        <Star
+          aria-hidden
+          className={cn(
+            "size-3 shrink-0 fill-current",
+            active ? "text-white" : "text-teal-500",
+          )}
+        />
+      )}
       <span>{label}</span>
       <span
         className={cn(

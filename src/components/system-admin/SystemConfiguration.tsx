@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   reconnectIntegration,
@@ -55,10 +55,19 @@ type BadgeVariant =
   | "info"
   | "outline";
 
+const CONFIG_TABS = ["integrations", "api-keys", "settings", "features"];
+
 export function SystemConfiguration() {
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({});
   const router = useRouter();
+  const searchParams = useSearchParams();
   const integrationsData = useIntegrations();
+
+  // Allow deep-linking to a specific tab, e.g. ?tab=settings from the Command
+  // Center Platform Health tile's "View Details" link.
+  const tabParam = searchParams.get("tab");
+  const defaultTab =
+    tabParam && CONFIG_TABS.includes(tabParam) ? tabParam : "integrations";
 
   const getIntegrationStatusBadge = (status: string) => {
     const variants: Record<
@@ -654,7 +663,7 @@ export function SystemConfiguration() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="integrations" className="space-y-6">
+      <Tabs defaultValue={defaultTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="api-keys">API Keys</TabsTrigger>

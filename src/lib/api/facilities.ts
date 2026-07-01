@@ -21,15 +21,20 @@ export interface FacilityLogs {
 // Query factory for facility-profile analytics (Overview KPIs, Reports, Logs).
 // The live clock is injected here so the builders stay pure.
 export const facilitiesQueries = {
-  overviewKpis: (facilityId: number, locationName?: string | null) => ({
+  overviewKpis: (
+    facilityId: number,
+    locationName?: string | null,
+    periodMonths: number = 6,
+  ) => ({
     queryKey: [
       "facilities",
       "overview-kpis",
       facilityId,
       locationName ?? "all",
+      periodMonths,
     ] as const,
     queryFn: async (): Promise<OverviewKpis> =>
-      buildOverviewKpis(facilityId, new Date(), locationName),
+      buildOverviewKpis(facilityId, new Date(), locationName, periodMonths),
   }),
 
   report: (facilityId: number, rangeMonths: number) => ({

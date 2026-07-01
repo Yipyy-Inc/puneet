@@ -130,7 +130,9 @@ export function ModuleRequestsInbox() {
                 {(req.status === "pending" || req.status === "in_progress") && (
                   <div className="mt-3 flex items-center gap-2">
                     {req.status === "pending" && (
-                      <Link href="/dashboard/services/custom-modules/create">
+                      <Link
+                        href={`/dashboard/facilities/${req.facilityId}/custom-modules/create`}
+                      >
                         <Button size="sm" className="h-7 gap-1 text-xs">
                           <ArrowRight className="size-3" />
                           Build Module

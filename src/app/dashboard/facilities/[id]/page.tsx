@@ -7,8 +7,12 @@ import {
   availableModules,
   moduleQuotedPrices,
 } from "@/data/facilities";
-import { bookings } from "@/data/bookings";
-import { clients } from "@/data/clients";
+import {
+  getTenantActivityLogs,
+  getTenantAuditLogs,
+  type TenantActivityLog,
+  type TenantAuditLog,
+} from "@/data/tenant-logs";
 import {
   createImpersonationToken,
   IMPERSONATING_ADMIN,
@@ -58,6 +62,7 @@ import {
   Shield,
   LayoutDashboard,
   Database,
+  FileSignature,
 } from "lucide-react";
 import { notFound } from "next/navigation";
 import {
@@ -68,12 +73,14 @@ import {
   BillingTab,
   ModulesTab,
   DataExportTab,
+  AgreementsTab,
 } from "@/components/dashboard/facilities";
 import { FacilitySuspensionBanner } from "./_components/facility-suspension-banner";
 
-// Real per-facility module usage. Only modules with a genuine per-facility data
-// source are populated (booking → bookings, customers → client/pet profiles);
-// the rest stay absent so ModulesTab shows a skeleton, never a fabricated count.
+// Real per-facility module usage, derived from the facility's activity log
+// (activity + audit trail) filtered by module. Every module in availableModules
+// gets an entry — modules with genuine zero activity report "0" / "—" so the
+// Modules tab never shows an indefinite loading skeleton.
 type ModuleUsage = { usage: string; lastUsed: string; actions: number };
 
 function relativeTime(iso: string): string {
@@ -95,41 +102,94 @@ function sameMonth(iso: string, now: Date): boolean {
   );
 }
 
-function buildModuleUsage(
-  facilityId: number,
-  facilityName: string,
-): Record<string, ModuleUsage> {
-  const now = new Date();
-  const out: Record<string, ModuleUsage> = {};
+// Map a raw log entry to the module short-id it belongs to (null = not a
+// module-scoped event, e.g. security/system/config noise).
+function moduleForActivityType(
+  type: TenantActivityLog["actionType"],
+): string | null {
+  switch (type) {
+    case "booking":
+      return "booking";
+    case "payment":
+      return "financial";
+    case "client":
+    case "pet":
+      return "customers";
+    case "staff":
+    case "user":
+      return "scheduling";
+    case "communication":
+      return "communication";
+    case "service":
+      return "grooming";
+    default:
+      return null; // settings, system
+  }
+}
 
-  const facBookings = bookings.filter((b) => b.facilityId === facilityId);
-  if (facBookings.length > 0) {
-    const latest = facBookings.reduce((a, b) =>
-      a.startDate > b.startDate ? a : b,
-    ).startDate;
-    out.booking = {
-      usage: `${facBookings.length} bookings`,
-      actions: facBookings.filter((b) => sameMonth(b.startDate, now)).length,
-      lastUsed: relativeTime(latest),
-    };
+function moduleForAuditCategory(
+  category: TenantAuditLog["category"],
+): string | null {
+  switch (category) {
+    case "Booking":
+      return "booking";
+    case "Financial":
+      return "financial";
+    case "Client":
+      return "customers";
+    case "User Access":
+      return "scheduling";
+    default:
+      return null; // Configuration, Security, Data, System
+  }
+}
+
+// A discrete "action" is a created booking / processed transaction, as opposed
+// to a passive access (view/update). Detected from the action verb.
+const TRANSACTION_VERB =
+  /^(created|processed|confirmed|completed|checked|extended|booked|sent|generated)\b/;
+
+type ModuleEvent = { moduleId: string; timestamp: string; isAction: boolean };
+
+function buildModuleUsage(facilityId: number): Record<string, ModuleUsage> {
+  const now = new Date();
+  const events: ModuleEvent[] = [];
+
+  for (const log of getTenantActivityLogs(facilityId)) {
+    const moduleId = moduleForActivityType(log.actionType);
+    if (!moduleId) continue;
+    events.push({
+      moduleId,
+      timestamp: log.timestamp,
+      isAction: TRANSACTION_VERB.test(log.action.toLowerCase()),
+    });
+  }
+  for (const log of getTenantAuditLogs(facilityId)) {
+    const moduleId = moduleForAuditCategory(log.category);
+    if (!moduleId) continue;
+    events.push({
+      moduleId,
+      timestamp: log.timestamp,
+      isAction: TRANSACTION_VERB.test(log.action.toLowerCase()),
+    });
   }
 
-  const facClients = clients.filter((c) => c.facility === facilityName);
-  if (facClients.length > 0) {
-    const visits = facClients
-      .map((c) => c.lastVisitDate)
-      .filter((d): d is string => Boolean(d))
-      .sort();
-    const latest = visits.length ? visits[visits.length - 1] : null;
-    out.customers = {
-      usage: `${facClients.length} profiles`,
-      actions: facClients.filter(
-        (c) => c.lastVisitDate && sameMonth(c.lastVisitDate, now),
-      ).length,
+  const out: Record<string, ModuleUsage> = {};
+  for (const mod of availableModules) {
+    const mine = events.filter((e) => e.moduleId === mod.id);
+    const thisMonth = mine.filter((e) => sameMonth(e.timestamp, now));
+    const accesses = thisMonth.length;
+    const actions = thisMonth.filter((e) => e.isAction).length;
+    const latest = mine.reduce<string | null>(
+      (acc, e) => (acc && acc > e.timestamp ? acc : e.timestamp),
+      null,
+    );
+    out[mod.id] = {
+      usage: `${accesses} ${accesses === 1 ? "access" : "accesses"}`,
+      actions,
       lastUsed: latest ? relativeTime(latest) : "—",
     };
   }
-
   return out;
 }
 
@@ -201,6 +261,11 @@ const tabs = [
     icon: Database,
   },
   {
+    id: "agreements",
+    name: "Agreements",
+    icon: FileSignature,
+  },
+  {
     id: "reports",
     name: "Reports",
     icon: Shield,
@@ -248,8 +313,8 @@ export default function FacilityDetailPage() {
   );
 
   const moduleUsageData = useMemo(
-    () => buildModuleUsage(facility.id, facility.name),
-    [facility.id, facility.name],
+    () => buildModuleUsage(facility.id),
+    [facility.id],
   );
 
   const services = facility.locationsList.flatMap((l) => l.services);
@@ -355,6 +420,18 @@ export default function FacilityDetailPage() {
 
       case "data":
         return <DataExportTab facility={facility} />;
+
+      case "agreements":
+        return (
+          <AgreementsTab
+            facilityId={facility.id}
+            facilityName={facility.name}
+            ownerName={facility.owner?.name ?? "Facility Owner"}
+            contactEmail={
+              facility.contact?.email ?? facility.owner?.email ?? ""
+            }
+          />
+        );
 
       case "modules":
         return (

@@ -37,6 +37,11 @@ interface CustomServiceModuleCardProps {
   onDelete?: (id: string) => void;
   onToggleStatus?: (module: CustomServiceModule) => void;
   onArchive?: (id: string) => void;
+  /**
+   * Read-only mode (Custom Module Registry). When provided, the edit/actions
+   * dropdown is hidden and the "View" button opens a non-editable detail drawer.
+   */
+  onView?: (module: CustomServiceModule) => void;
   /** Facility name to show on card (super admin context) */
   facilityName?: string;
 }
@@ -48,6 +53,7 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
   onDelete,
   onToggleStatus,
   onArchive,
+  onView,
   facilityName,
 }: CustomServiceModuleCardProps) {
   const router = useRouter();
@@ -85,55 +91,57 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
             </div>
           </div>
 
-          {/* Actions dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Actions for ${module.name}`}
-                className="min-h-[44px] min-w-[44px] shrink-0 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
-              >
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={handleEdit}>
-                <Pencil className="size-4" />
-                Edit Module
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDuplicate?.(module.id)}>
-                <Copy className="size-4" />
-                Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              {module.status === "active" ? (
-                <DropdownMenuItem onClick={() => onToggleStatus?.(module)}>
-                  <ToggleLeft className="size-4" />
-                  Disable
+          {/* Actions dropdown — hidden in read-only (registry) mode */}
+          {!onView && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Actions for ${module.name}`}
+                  className="min-h-[44px] min-w-[44px] shrink-0 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
+                >
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleEdit}>
+                  <Pencil className="size-4" />
+                  Edit Module
                 </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem onClick={() => onToggleStatus?.(module)}>
-                  <ToggleRight className="size-4" />
-                  Activate
+                <DropdownMenuItem onClick={() => onDuplicate?.(module.id)}>
+                  <Copy className="size-4" />
+                  Duplicate
                 </DropdownMenuItem>
-              )}
-              {module.status !== "archived" && (
-                <DropdownMenuItem onClick={() => onArchive?.(module.id)}>
-                  <Archive className="size-4" />
-                  Archive
+                <DropdownMenuSeparator />
+                {module.status === "active" ? (
+                  <DropdownMenuItem onClick={() => onToggleStatus?.(module)}>
+                    <ToggleLeft className="size-4" />
+                    Disable
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => onToggleStatus?.(module)}>
+                    <ToggleRight className="size-4" />
+                    Activate
+                  </DropdownMenuItem>
+                )}
+                {module.status !== "archived" && (
+                  <DropdownMenuItem onClick={() => onArchive?.(module.id)}>
+                    <Archive className="size-4" />
+                    Archive
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => onDelete?.(module.id)}
+                >
+                  <Trash2 className="size-4" />
+                  Delete
                 </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => onDelete?.(module.id)}
-              >
-                <Trash2 className="size-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </CardHeader>
 
@@ -194,7 +202,7 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
           variant="outline"
           size="sm"
           className="w-full"
-          onClick={handleEdit}
+          onClick={() => (onView ? onView(module) : handleEdit())}
         >
           <Eye className="size-3.5" />
           View

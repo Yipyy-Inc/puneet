@@ -6,27 +6,17 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
-import { FacilityHeader } from "@/components/layout/FacilityHeader";
 import { BookingModalProviderWrapper } from "@/components/providers/BookingModalProviderWrapper";
 import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigProviderWrapper";
 import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
-import { TopBarIconsNext } from "@/components/layout/TopBarIconsNext";
-import { BookingRequestsTopbarDropdown } from "@/components/facility/BookingRequestsTopbarDropdown";
-import { FacilityNotificationBell } from "@/components/facility/notifications/facility-notification-bell";
-import { ScheduleNotificationsDropdown } from "@/components/scheduling/ScheduleNotificationsDropdown";
-import { TaskNotificationsPanel } from "@/components/tasks/TaskNotificationsPanel";
-import { CallingButton } from "@/components/layout/CallingButton";
-import { CallStatusIndicator } from "@/components/layout/CallStatusIndicator";
-import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
+import { FacilityHeaderActions } from "@/components/layout/FacilityHeaderActions";
 import { SupportCenter } from "@/components/layout/SupportCenter";
+import { SupportFab } from "@/components/layout/SupportFab";
 import { FacilityMobileBottomNav } from "@/components/layout/FacilityMobileBottomNav";
 import { LocationContextProviderWrapper } from "@/components/providers/LocationContextProviderWrapper";
-import { LocationTopNavSelector } from "@/components/hq/LocationTopNavSelector";
 import { FacilityOnboardingBanner } from "@/components/facility/onboarding/facility-onboarding-banner";
 import { ImpersonationBanner } from "@/components/facility/ImpersonationBanner";
 import { AnnouncementBanner } from "@/components/facility/announcement-banner";
-import { AnnouncementBell } from "@/components/facility/announcement-bell";
 import { LoyaltyProgramProvider } from "@/hooks/use-loyalty-program";
 import { CallAvailabilityProvider } from "@/hooks/use-call-availability";
 import { CallTagsProvider } from "@/hooks/use-call-tags";
@@ -58,30 +48,14 @@ export default async function FacilityLayout({
                     <FacilitySidebar />
                     <SidebarInset className="flex min-h-[calc(100vh-64px)] min-w-0 flex-col overflow-x-clip">
                       <header className="from-background to-muted/20 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-linear-to-r px-4 backdrop-blur-sm sm:px-6">
-                        <div className="flex items-center gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
                           <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors md:hidden" />
                           <GlobalSearchNext
-                            className="hidden w-[460px] max-w-[480px] sm:flex"
+                            className="hidden w-[460px] max-w-[480px] min-w-0 sm:flex"
                             canCreateCustomer={userRole === "facility_admin"}
                           />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <LocationTopNavSelector />
-                          <div className="hidden items-center gap-1 sm:flex">
-                            <CallingButton />
-                            <TopBarIconsNext />
-                          </div>
-                          <TaskNotificationsPanel />
-                          <ScheduleNotificationsDropdown />
-                          <FacilityNotificationBell />
-                          <AnnouncementBell facilityId={11} />
-                          <BookingRequestsTopbarDropdown />
-                          <HeaderDropdown />
-                          <FacilityHeader />
-                          <CallStatusIndicator />
-                          <SupportCenter />
-                          <UserProfileSheet showNotifications={false} />
-                        </div>
+                        <FacilityHeaderActions facilityId={11} />
                       </header>
                       <main className="min-w-0 flex-1 overflow-x-clip">
                         <ImpersonationBanner />
@@ -91,6 +65,8 @@ export default async function FacilityLayout({
                       </main>
                       <FacilityMobileBottomNav />
                     </SidebarInset>
+                    <SupportFab />
+                    <SupportCenter />
                   </SidebarProvider>
                 </ReputationProvider>
               </CallTagsProvider>

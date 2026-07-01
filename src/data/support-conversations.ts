@@ -176,4 +176,49 @@ export const supportConversations: SupportConversation[] = [
       },
     ],
   },
+  // The signed-in demo facility (id 11) — a prior UNRESOLVED conversation so the
+  // facility Support panel opens straight into the thread (see support-chat-tab).
+  {
+    id: "conv-11",
+    facilityId: 11,
+    facilityName: "Example Pet Care Facility",
+    contactName: "Admin Owner",
+    contactEmail: "info@examplepetcare.com",
+    channel: "chat",
+    status: "open",
+    priority: false,
+    assignedAgentId: 1,
+    online: true,
+    unreadCount: 0,
+    messages: [
+      {
+        id: "m11-1",
+        sender: "facility",
+        authorName: "Admin Owner",
+        body: "Hi! We'd like to add a second location to our account — what's the process?",
+        at: `${D}10:12:00Z`,
+      },
+      {
+        id: "m11-2",
+        sender: "agent",
+        authorName: "John Smith",
+        body: "Happy to help! I can enable multi-location on your plan. Do you have the new address ready?",
+        at: `${D}10:20:00Z`,
+      },
+      {
+        id: "m11-3",
+        sender: "facility",
+        authorName: "Admin Owner",
+        body: "Yes — 240 Rue Rachel E, Montréal. Same hours as our main branch.",
+        at: `${D}10:24:00Z`,
+      },
+      {
+        id: "m11-4",
+        sender: "agent",
+        authorName: "John Smith",
+        body: "Perfect — I'll get that set up and send a confirmation shortly. Anything else in the meantime?",
+        at: `${D}10:31:00Z`,
+      },
+    ],
+  },
 ];

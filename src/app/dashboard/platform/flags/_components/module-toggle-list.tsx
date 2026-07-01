@@ -21,7 +21,11 @@ export function ModuleToggleList({
           key={m.moduleId}
           className={cn(
             "flex items-center gap-3 rounded-xl border p-3 transition-colors",
-            m.enabled ? "border-primary/30 bg-primary/5" : "bg-muted/40",
+            m.override
+              ? "border-violet-400/50 bg-violet-500/5"
+              : m.enabled
+                ? "border-primary/30 bg-primary/5"
+                : "bg-muted/40",
           )}
         >
           <div
@@ -52,10 +56,7 @@ export function ModuleToggleList({
                 {m.tierIncluded ? "Tier default" : "Add-on"}
               </Badge>
               {m.override && (
-                <Badge
-                  variant="outline"
-                  className="border-amber-400/60 px-1.5 py-0 text-[10px] font-normal text-amber-700 dark:text-amber-300"
-                >
+                <Badge className="bg-violet-600 px-1.5 py-0 text-[10px] font-normal text-white hover:bg-violet-600">
                   Override
                 </Badge>
               )}

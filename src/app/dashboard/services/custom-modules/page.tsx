@@ -1,18 +1,14 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useState, useMemo } from "react";
 import {
-  Plus,
   Search,
   LayoutGrid,
   List,
   SlidersHorizontal,
-  AlertTriangle,
   Building,
+  Eye,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,16 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { CustomServiceModuleCard } from "@/components/custom-services/CustomServiceModuleCard";
+import { CustomModuleDetailDrawer } from "@/components/custom-services/CustomModuleDetailDrawer";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import {
   CUSTOM_SERVICE_CATEGORIES_META,
@@ -49,7 +38,7 @@ import type {
 type ViewMode = "grid" | "list";
 
 // ========================================
-// LIST ROW COMPONENT
+// LIST ROW COMPONENT (read-only)
 // ========================================
 
 const STATUS_COLORS: Record<CustomServiceStatus, string> = {
@@ -79,17 +68,10 @@ function getModuleFacilityNames(mod: CustomServiceModule): string {
 
 function ModuleListRow({
   module: mod,
-  onEdit,
-  onDelete: _onDelete,
-  onToggleStatus: _onToggleStatus,
-  onArchive: _onArchive,
+  onView,
 }: {
   module: CustomServiceModule;
-  onEdit: (m: CustomServiceModule) => void;
-  onDuplicate: (id: string) => void;
-  onDelete: (id: string) => void;
-  onToggleStatus: (m: CustomServiceModule) => void;
-  onArchive: (id: string) => void;
+  onView: (m: CustomServiceModule) => void;
 }) {
   const catMeta = getCategoryMeta(mod.category);
 
@@ -129,23 +111,22 @@ function ModuleListRow({
       <Button
         variant="outline"
         size="sm"
-        onClick={() => onEdit(mod)}
+        onClick={() => onView(mod)}
         className="shrink-0"
       >
-        Edit
+        <Eye className="size-3.5" />
+        View
       </Button>
     </div>
   );
 }
 
 // ========================================
-// MAIN PAGE
+// MAIN PAGE — READ-ONLY REGISTRY
 // ========================================
 
-export default function SuperAdminCustomModulesPage() {
-  const router = useRouter();
-  const { modules, deleteModule, duplicateModule, setModuleStatus } =
-    useCustomServices();
+export default function CustomModuleRegistryPage() {
+  const { modules } = useCustomServices();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<CustomServiceStatus | "all">(
@@ -156,7 +137,7 @@ export default function SuperAdminCustomModulesPage() {
   >("all");
   const [facilityFilter, setFacilityFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [deleteTarget, setDeleteTarget] = useState<CustomServiceModule | null>(
+  const [viewModule, setViewModule] = useState<CustomServiceModule | null>(
     null,
   );
 
@@ -200,60 +181,6 @@ export default function SuperAdminCustomModulesPage() {
     return ids.sort((a, b) => a - b);
   }, [modules]);
 
-  const handleEdit = useCallback(
-    (module: CustomServiceModule) => {
-      router.push(`/dashboard/services/custom-modules/${module.slug}/edit`);
-    },
-    [router],
-  );
-
-  const handleDuplicate = useCallback(
-    (id: string) => {
-      duplicateModule(id);
-    },
-    [duplicateModule],
-  );
-
-  const handleSetDeleteTarget = useCallback(
-    (id: string) => {
-      setDeleteTarget(modules.find((m) => m.id === id) ?? null);
-    },
-    [modules],
-  );
-
-  const handleDeleteConfirm = useCallback(() => {
-    if (deleteTarget) {
-      deleteModule(deleteTarget.id);
-      setDeleteTarget(null);
-    }
-  }, [deleteTarget, deleteModule]);
-
-  const handleToggleStatus = useCallback(
-    (module: CustomServiceModule) => {
-      const next: CustomServiceStatus =
-        module.status === "active" ? "disabled" : "active";
-      const result = setModuleStatus(module.id, next);
-      if (!result.ok) {
-        toast.error(result.reason ?? "Unable to change module status");
-        return;
-      }
-      toast.success(next === "active" ? "Module activated" : "Module disabled");
-    },
-    [setModuleStatus],
-  );
-
-  const handleArchive = useCallback(
-    (id: string) => {
-      const result = setModuleStatus(id, "archived");
-      if (!result.ok) {
-        toast.error(result.reason ?? "Unable to archive module");
-        return;
-      }
-      toast.success("Module archived");
-    },
-    [setModuleStatus],
-  );
-
   const activeFiltersCount = useMemo(
     () =>
       (statusFilter !== "all" ? 1 : 0) +
@@ -270,19 +197,18 @@ export default function SuperAdminCustomModulesPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-xl font-bold tracking-tight">
-                Custom Service Modules
+                Custom Module Registry
               </h1>
               <p className="text-muted-foreground mt-1 text-sm">
-                Create and manage custom modules for facilities across the
-                platform.
+                A read-only registry of every custom module across all
+                facilities. Custom modules are created from within a
+                facility&apos;s Modules tab.
               </p>
             </div>
-            <Button asChild>
-              <Link href="/dashboard/services/custom-modules/create">
-                <Plus className="size-4" />
-                New Module
-              </Link>
-            </Button>
+            <Badge variant="outline" className="gap-1.5 whitespace-nowrap">
+              <Eye className="size-3.5" />
+              Read-only
+            </Badge>
           </div>
 
           {/* Stats row */}
@@ -438,17 +364,9 @@ export default function SuperAdminCustomModulesPage() {
             <h3 className="text-lg font-semibold">No modules found</h3>
             <p className="text-muted-foreground mt-1 text-sm">
               {modules.length === 0
-                ? "Create your first custom service module to get started."
+                ? "Custom modules appear here once a facility creates one from its Modules tab."
                 : "Try adjusting your search or filters."}
             </p>
-            {modules.length === 0 && (
-              <Button asChild className="mt-4">
-                <Link href="/dashboard/services/custom-modules/create">
-                  <Plus className="size-4" />
-                  Create Module
-                </Link>
-              </Button>
-            )}
           </div>
         ) : viewMode === "grid" ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -456,11 +374,7 @@ export default function SuperAdminCustomModulesPage() {
               <CustomServiceModuleCard
                 key={mod.id}
                 module={mod}
-                onEdit={() => handleEdit(mod)}
-                onDuplicate={() => handleDuplicate(mod.id)}
-                onDelete={() => handleSetDeleteTarget(mod.id)}
-                onToggleStatus={() => handleToggleStatus(mod)}
-                onArchive={() => handleArchive(mod.id)}
+                onView={setViewModule}
                 facilityName={getModuleFacilityNames(mod)}
               />
             ))}
@@ -468,47 +382,18 @@ export default function SuperAdminCustomModulesPage() {
         ) : (
           <div className="space-y-2">
             {filtered.map((mod) => (
-              <ModuleListRow
-                key={mod.id}
-                module={mod}
-                onEdit={handleEdit}
-                onDuplicate={handleDuplicate}
-                onDelete={handleSetDeleteTarget}
-                onToggleStatus={handleToggleStatus}
-                onArchive={handleArchive}
-              />
+              <ModuleListRow key={mod.id} module={mod} onView={setViewModule} />
             ))}
           </div>
         )}
       </div>
 
-      {/* Delete confirmation dialog */}
-      <Dialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => !o && setDeleteTarget(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-red-500" />
-              Delete Module
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete{" "}
-              <span className="font-semibold">{deleteTarget?.name}</span>? This
-              cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Read-only detail drawer */}
+      <CustomModuleDetailDrawer
+        module={viewModule}
+        open={!!viewModule}
+        onOpenChange={(o) => !o && setViewModule(null)}
+      />
     </div>
   );
 }
