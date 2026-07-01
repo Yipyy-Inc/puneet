@@ -131,7 +131,14 @@ export function BusinessHealthTiles() {
         hint={`${platformHealth.serversOnline}/${platformHealth.totalServers} servers · ${platformHealth.degradedServices} degraded`}
         icon={Activity}
         tone={healthTone}
-        onClick={() => router.push("/dashboard/system-health/system-status")}
+        onClick={() =>
+          router.push("/dashboard/system-admin/system-config?tab=settings")
+        }
+        link={{
+          label: "View Details",
+          onClick: () =>
+            router.push("/dashboard/system-admin/system-config?tab=settings"),
+        }}
       />
     </div>
   );

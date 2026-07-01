@@ -65,9 +65,17 @@ export function buildOverviewKpis(
   facilityId: number,
   now: Date,
   locationName?: string | null,
+  // Revenue window in months (default: last 6 months). 0 = all time.
+  periodMonths: number = 6,
 ): OverviewKpis {
   const facility = facilities.find((f) => f.id === facilityId);
-  const sixMonthsAgo = subMonths(now, 6);
+  // Scope the revenue window to the selected period. A 0/negative value means
+  // "all time" (no lower bound).
+  const windowStart = periodMonths > 0 ? subMonths(now, periodMonths) : null;
+  const inWindow = (iso: string): boolean => {
+    const d = new Date(iso);
+    return d <= now && (windowStart === null || d >= windowStart);
+  };
 
   const combinedRevenue = Math.round(
     payments
@@ -75,7 +83,7 @@ export function buildOverviewKpis(
         (p) =>
           p.facilityId === facilityId &&
           p.status === "completed" &&
-          new Date(p.createdAt) >= sixMonthsAgo,
+          inWindow(p.createdAt),
       )
       .reduce((sum, p) => sum + paymentAmount(p), 0),
   );

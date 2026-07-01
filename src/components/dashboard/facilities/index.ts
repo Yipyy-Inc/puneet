@@ -6,3 +6,4 @@ export { StaffTab } from "./StaffTab";
 export { BillingTab } from "./BillingTab";
 export { ModulesTab } from "./ModulesTab";
 export { DataExportTab } from "./DataExportTab";
+export { AgreementsTab } from "./AgreementsTab";

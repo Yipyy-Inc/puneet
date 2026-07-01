@@ -218,7 +218,11 @@ export function sendAsFacility(body: string) {
 
 /** The current facility's conversation id, creating an (unassigned) one if new. */
 export function ensureCurrentConversation(): string {
-  const existing = state.find((c) => c.facilityId === CURRENT_FACILITY.id);
+  // Reuse only an OPEN/PENDING conversation — once the facility resolves one,
+  // the next message starts a fresh thread rather than reopening a closed one.
+  const existing = state.find(
+    (c) => c.facilityId === CURRENT_FACILITY.id && c.status !== "resolved",
+  );
   if (existing) return existing.id;
   const conversation: SupportConversation = {
     id: nextId("conv"),
@@ -296,8 +300,16 @@ export function useSupportInbox(): SupportConversation[] {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
-/** The current facility's conversation, for the Support drawer (or null). */
+/**
+ * The facility's ACTIVE (open/pending) conversation for the Support panel, or
+ * null. A resolved conversation is treated as "no active thread" so the panel
+ * falls back to the empty state and the facility can start a fresh one.
+ */
 export function useCurrentFacilityConversation(): SupportConversation | null {
   const all = useSupportInbox();
-  return all.find((c) => c.facilityId === CURRENT_FACILITY.id) ?? null;
+  return (
+    all.find(
+      (c) => c.facilityId === CURRENT_FACILITY.id && c.status !== "resolved",
+    ) ?? null
+  );
 }

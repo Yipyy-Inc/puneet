@@ -11,6 +11,7 @@ import {
   CheckSquare,
   Database,
   DollarSign,
+  FileSignature,
   FileText,
   Flag,
   Gauge,
@@ -145,7 +146,7 @@ export function AppSidebar() {
           disabled: false,
         },
         {
-          title: "Custom Modules",
+          title: "Custom Module Registry",
           url: "/dashboard/services/custom-modules",
           icon: Puzzle,
           disabled: false,
@@ -259,6 +260,12 @@ export function AppSidebar() {
           title: "Facilities Report",
           url: "/dashboard/reports/facilities",
           icon: Building2,
+          disabled: false,
+        },
+        {
+          title: "Agreements Report",
+          url: "/dashboard/reports/agreements",
+          icon: FileSignature,
           disabled: false,
         },
         {

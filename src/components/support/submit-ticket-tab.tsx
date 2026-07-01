@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { toast } from "sonner";
+import Link from "next/link";
 import { CheckCircle2, Paperclip, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { CURRENT_FACILITY } from "@/hooks/use-support-inbox";
+import { submitFacilityTicket } from "@/lib/facility-tickets-store";
+import { closeSupportDrawer } from "@/lib/support-drawer-store";
+import type { FacilityTicket } from "@/types/facility-ticket";
 
 const CATEGORIES = [
   "Technical Issue",
@@ -29,41 +33,59 @@ export function SubmitTicketTab() {
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [ticket, setTicket] = useState<FacilityTicket | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const valid = subject.trim().length > 0 && description.trim().length > 0;
+  const email = CURRENT_FACILITY.contactEmail || "your email on file";
 
   function submit() {
     if (!valid) return;
-    setSubmitted(true);
-    toast.success("Ticket submitted — we'll email you a response.");
+    const created = submitFacilityTicket({
+      subject,
+      category,
+      description,
+      attachmentName: file?.name,
+    });
+    setTicket(created);
   }
 
-  function reset() {
-    setSubject("");
-    setCategory(CATEGORIES[0]);
-    setDescription("");
-    setFile(null);
-    setSubmitted(false);
-  }
-
-  if (submitted) {
+  // Confirmation state — replaces the form once the ticket is created.
+  if (ticket) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+      <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
         <span className="flex size-12 items-center justify-center rounded-full bg-emerald-500/10">
           <CheckCircle2 className="size-7 text-emerald-600 dark:text-emerald-400" />
         </span>
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <h3 className="font-semibold tracking-tight">Ticket submitted</h3>
+          <p className="text-sm">
+            Your ticket number is{" "}
+            <span className="font-semibold">{ticket.number}</span>.
+          </p>
           <p className="text-muted-foreground mx-auto max-w-xs text-sm">
-            We&apos;ve received your request and will follow up by email. You
-            can track it in your support history.
+            We&apos;ll email you at{" "}
+            <span className="text-foreground font-medium">{email}</span> when we
+            respond.
           </p>
         </div>
-        <Button variant="outline" onClick={reset}>
-          Submit another
-        </Button>
+        <div className="flex w-full max-w-xs flex-col gap-2">
+          <Button asChild className="w-full">
+            <Link
+              href="/facility/support/tickets"
+              onClick={() => closeSupportDrawer()}
+            >
+              View my tickets
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => closeSupportDrawer()}
+          >
+            Done
+          </Button>
+        </div>
       </div>
     );
   }
