@@ -1,6 +1,6 @@
 # Yipyy Settings Page — Part 2 · Copy-Paste Build Prompts
 
-One prompt per master-list task (**44 total**), taken verbatim from *Yipyy Settings Page — UI/UX Workflow Specification, Part 2*. Paste them into Claude Code **in build order**: all **4 CRITICAL** first, then **25 HIGH**, then **14 MEDIUM**, then **1 LOW**. Each prompt is self-contained and names the exact component file to edit.
+One prompt per master-list task (**44 total**), taken verbatim from _Yipyy Settings Page — UI/UX Workflow Specification, Part 2_. Paste them into Claude Code **in build order**: all **4 CRITICAL** first, then **25 HIGH**, then **14 MEDIUM**, then **1 LOW**. Each prompt is self-contained and names the exact component file to edit.
 
 **Standing rules baked into every task (the agent already has these from `CLAUDE.md`, restated here so each prompt is portable):**
 
@@ -8,21 +8,21 @@ One prompt per master-list task (**44 total**), taken verbatim from *Yipyy Setti
 
 **Component map (section key → file to edit):**
 
-| Spec section | `?section=` key | Component file |
-|---|---|---|
-| A.1 Form Requirements | `form-requirements` | `src/components/forms/FormRequirementsSettings.tsx` |
-| A.2 Form Notifications | `form-notifications` | `src/components/forms/FormNotificationSettings.tsx` |
-| B Roles & Permissions | `roles-permissions` | `src/components/facility/RolesPermissionsSettings.tsx` |
-| C.1 Pet Breeds | `pet-breeds` | `src/components/facility/BreedManagement.tsx` |
-| C.2 Care Tasks | `care-tasks` | `src/components/facility/CareTaskSettings.tsx` (+ `FeedingMedicationConfig.tsx`) |
-| D.1 Evaluations | `evaluations` | `src/components/facility/EvaluationSettings.tsx`, `EvaluationBookingWizardSettings.tsx`, `src/components/evaluations/EvaluationFormBuilder.tsx`, `EvaluationReportCardBuilder.tsx` |
-| D.2 Booking Statuses | `booking-statuses` | `src/components/facility/BookingStatusSettings.tsx`, `StatusColorSettings.tsx` |
-| D.3 Express Check-In | `checkin-requirements` | `src/components/facility/CheckinRequirementsSettings.tsx` |
-| D.4 Retail / POS | `retail` | `src/components/facility/RetailSettings.tsx` (+ `TaxSettings.tsx`) |
-| E.1 Pricing Rules | `pricing-rules` | `src/components/facility/PricingRulesSettings.tsx` |
-| E.2 Estimate Settings | `estimate-settings` | `src/components/estimates/EstimateFollowUpSettings.tsx` |
-| E.3 Deposit Rules | `deposit-rules` | `src/components/facility/DepositRulesSettings.tsx` |
-| E.4 Invoice Template | `invoice-template` | `src/components/facility/InvoiceTemplateSettings.tsx` |
+| Spec section           | `?section=` key        | Component file                                                                                                                                                                     |
+| ---------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A.1 Form Requirements  | `form-requirements`    | `src/components/forms/FormRequirementsSettings.tsx`                                                                                                                                |
+| A.2 Form Notifications | `form-notifications`   | `src/components/forms/FormNotificationSettings.tsx`                                                                                                                                |
+| B Roles & Permissions  | `roles-permissions`    | `src/components/facility/RolesPermissionsSettings.tsx`                                                                                                                             |
+| C.1 Pet Breeds         | `pet-breeds`           | `src/components/facility/BreedManagement.tsx`                                                                                                                                      |
+| C.2 Care Tasks         | `care-tasks`           | `src/components/facility/CareTaskSettings.tsx` (+ `FeedingMedicationConfig.tsx`)                                                                                                   |
+| D.1 Evaluations        | `evaluations`          | `src/components/facility/EvaluationSettings.tsx`, `EvaluationBookingWizardSettings.tsx`, `src/components/evaluations/EvaluationFormBuilder.tsx`, `EvaluationReportCardBuilder.tsx` |
+| D.2 Booking Statuses   | `booking-statuses`     | `src/components/facility/BookingStatusSettings.tsx`, `StatusColorSettings.tsx`                                                                                                     |
+| D.3 Express Check-In   | `checkin-requirements` | `src/components/facility/CheckinRequirementsSettings.tsx`                                                                                                                          |
+| D.4 Retail / POS       | `retail`               | `src/components/facility/RetailSettings.tsx` (+ `TaxSettings.tsx`)                                                                                                                 |
+| E.1 Pricing Rules      | `pricing-rules`        | `src/components/facility/PricingRulesSettings.tsx`                                                                                                                                 |
+| E.2 Estimate Settings  | `estimate-settings`    | `src/components/estimates/EstimateFollowUpSettings.tsx`                                                                                                                            |
+| E.3 Deposit Rules      | `deposit-rules`        | `src/components/facility/DepositRulesSettings.tsx`                                                                                                                                 |
+| E.4 Invoice Template   | `invoice-template`     | `src/components/facility/InvoiceTemplateSettings.tsx`                                                                                                                              |
 
 > Task numbers below match the spec's **Master Task Table — Part 2** (1–44) so you can cross-reference. They are grouped by priority, not numeric order.
 
@@ -33,6 +33,7 @@ One prompt per master-list task (**44 total**), taken verbatim from *Yipyy Setti
 ---
 
 ## Task 11 [CRITICAL] — Roles & Permissions — Confirm/build "+ New Role" modal
+
 ```
 Edit src/components/facility/RolesPermissionsSettings.tsx (settings section=roles-permissions).
 
@@ -49,6 +50,7 @@ On save, the new custom role appears in the LEFT panel and must be visually dist
 ```
 
 ## Task 28 [CRITICAL] — Retail / POS — Add Tax Configuration section
+
 ```
 Edit src/components/facility/RetailSettings.tsx (settings section=retail). Reuse the existing src/components/facility/TaxSettings.tsx if it already models tax fields; otherwise add the fields directly.
 
@@ -66,6 +68,7 @@ Persist via TanStack Query factory in src/lib/api/retail.ts. This configuration 
 ```
 
 ## Task 40 [CRITICAL] — Invoice Template — Tax lines pull from Tax Configuration
+
 ```
 Edit src/components/facility/InvoiceTemplateSettings.tsx (settings section=invoice-template).
 
@@ -77,6 +80,7 @@ DO: Make the invoice preview tax lines pull from the Tax Configuration defined i
 ```
 
 ## Task 41 [CRITICAL] — Invoice Template — Generic, configurable tax registration numbers
+
 ```
 Edit src/components/facility/InvoiceTemplateSettings.tsx (settings section=invoice-template).
 
@@ -92,6 +96,7 @@ DO: Replace the hardcoded QST/GST field labels with a generic, configurable list
 ---
 
 ## Task 1 [HIGH] — Form Requirements — Add per-form "Preview" (eye icon) slide-over
+
 ```
 Edit src/components/forms/FormRequirementsSettings.tsx (settings section=form-requirements).
 
@@ -103,6 +108,7 @@ DO: Add a "Preview" link (eye icon) next to each form name in the requirement li
 ```
 
 ## Task 2 [HIGH] — Form Requirements — Colour-code enforcement & timing badges
+
 ```
 Edit src/components/forms/FormRequirementsSettings.tsx (settings section=form-requirements).
 
@@ -112,6 +118,7 @@ DO: Increase the size and contrast of the timing and enforcement badges/chips. C
 ```
 
 ## Task 3 [HIGH] — Form Requirements — Replace ambiguous service badges with a summary line
+
 ```
 Edit src/components/forms/FormRequirementsSettings.tsx (settings section=form-requirements).
 
@@ -121,6 +128,7 @@ DO: Replace the ambiguous status badges on each service section header with a si
 ```
 
 ## Task 5 [HIGH] — Form Requirements — Add explicit sticky "Save Changes" button
+
 ```
 Edit src/components/forms/FormRequirementsSettings.tsx (settings section=form-requirements).
 
@@ -130,6 +138,7 @@ DO: Add a "Save Changes" button to Form Requirements, sticky at the bottom of th
 ```
 
 ## Task 6 [HIGH] — Form Notifications — Configure red-flag keywords (link + modal)
+
 ```
 Edit src/components/forms/FormNotificationSettings.tsx (settings section=form-notifications).
 
@@ -141,6 +150,7 @@ DO: Add a "Configure red-flag keywords and responses" link directly below the Re
 ```
 
 ## Task 7 [HIGH] — Form Notifications — Timing field for Missing Required Forms Reminder
+
 ```
 Edit src/components/forms/FormNotificationSettings.tsx (settings section=form-notifications).
 
@@ -150,6 +160,7 @@ DO: Add a timing field beneath the Missing Required Forms Reminder toggle: "Send
 ```
 
 ## Task 9 [HIGH] — Roles & Permissions — Fix duplicate "Custom roles" stat label
+
 ```
 Edit src/components/facility/RolesPermissionsSettings.tsx (settings section=roles-permissions).
 
@@ -159,6 +170,7 @@ DO: Fix the four stat labels so each is different and meaningful: "Preset Roles 
 ```
 
 ## Task 10 [HIGH] — Roles & Permissions — Make the role's actual toggle state the primary visual
+
 ```
 Edit src/components/facility/RolesPermissionsSettings.tsx (settings section=roles-permissions).
 
@@ -168,6 +180,7 @@ DO: Show the selected role's ACTUAL permission state (On or Off) as the primary 
 ```
 
 ## Task 12 [HIGH] — Roles & Permissions — "Go to Staff Management →" link
+
 ```
 Edit src/components/facility/RolesPermissionsSettings.tsx (settings section=roles-permissions).
 
@@ -177,6 +190,7 @@ DO: Add a prominent "Go to Staff Management →" link/button at the top of the R
 ```
 
 ## Task 13 [HIGH] — Pet Breeds — Add "Restrict Breed" action per row
+
 ```
 Edit src/components/facility/BreedManagement.tsx (settings section=pet-breeds).
 
@@ -188,6 +202,7 @@ DO: Add a "Restrict Breed" action to each breed row (via a "..." menu or a toggl
 ```
 
 ## Task 15 [HIGH] — Pet Breeds — Add a legend explaining row icons
+
 ```
 Edit src/components/facility/BreedManagement.tsx (settings section=pet-breeds).
 
@@ -197,6 +212,7 @@ DO: Add a legend below the breed-list header explaining every icon used on breed
 ```
 
 ## Task 17 [HIGH] — Care Tasks — Clarify the Feeding Feedback percentage labels
+
 ```
 Edit src/components/facility/CareTaskSettings.tsx (settings section=care-tasks; feeding/med config may live in FeedingMedicationConfig.tsx).
 
@@ -208,6 +224,7 @@ DO: Clarify the labels. If the number is a preset portion-size reference, show i
 ```
 
 ## Task 19 [HIGH] — Evaluations — Define the Form Builder Edit mode
+
 ```
 Edit src/components/evaluations/EvaluationFormBuilder.tsx (settings section=evaluations; container EvaluationSettings.tsx).
 
@@ -223,6 +240,7 @@ Protect core sections (Temperament Assessment, Play Profile) from deletion, but 
 ```
 
 ## Task 20 [HIGH] — Evaluations — "Result goes to pet profile automatically" toggle
+
 ```
 Edit src/components/facility/EvaluationSettings.tsx / the Evaluation Result Card component (settings section=evaluations).
 
@@ -234,6 +252,7 @@ DO: Add an "Evaluation result goes to pet profile automatically" toggle under th
 ```
 
 ## Task 22 [HIGH] — Booking Statuses — Collapse Status Colors rows by default
+
 ```
 Edit src/components/facility/StatusColorSettings.tsx (settings section=booking-statuses).
 
@@ -245,6 +264,7 @@ DO: Collapse each status colour row by default so it shows only the status name,
 ```
 
 ## Task 23 [HIGH] — Booking Statuses — Rename "IFTTT Service Rules" to "Automatic Status Rules"
+
 ```
 Edit src/components/facility/BookingStatusSettings.tsx (settings section=booking-statuses).
 
@@ -256,6 +276,7 @@ DO: Rename the "IFTTT Service Rules" section to "Automatic Status Rules" and cha
 ```
 
 ## Task 25 [HIGH] — Express Check-In — Inline Required/Optional/Disable control per row
+
 ```
 Edit src/components/facility/CheckinRequirementsSettings.tsx (settings section=checkin-requirements).
 
@@ -267,6 +288,7 @@ DO: Make Required / Optional / Disable a direct dropdown or segmented control on
 ```
 
 ## Task 27 [HIGH] — Express Check-In — Service-specific check-in requirements
+
 ```
 Edit src/components/facility/CheckinRequirementsSettings.tsx (settings section=checkin-requirements).
 
@@ -276,6 +298,7 @@ DO: Add a "Service-specific check-in requirements" capability: allow each check-
 ```
 
 ## Task 29 [HIGH] — Retail / POS — Add Receipt Settings section
+
 ```
 Edit src/components/facility/RetailSettings.tsx (settings section=retail).
 
@@ -292,6 +315,7 @@ Persist via src/lib/api/retail.ts.
 ```
 
 ## Task 34 [HIGH] — Estimate Settings — Max follow-ups + stop conditions
+
 ```
 Edit src/components/estimates/EstimateFollowUpSettings.tsx (settings section=estimate-settings).
 
@@ -303,6 +327,7 @@ DO: Add a "Max follow-ups" field to each reminder rule: "Send up to [X] times, t
 ```
 
 ## Task 35 [HIGH] — Estimate Settings — "Preview rendered message" toggle
+
 ```
 Edit src/components/estimates/EstimateFollowUpSettings.tsx (settings section=estimate-settings).
 
@@ -312,6 +337,7 @@ DO: Add a "Preview rendered message" toggle above the template textarea. In Prev
 ```
 
 ## Task 36 [HIGH] — Estimate Settings — Estimate Expiry section
+
 ```
 Edit src/components/estimates/EstimateFollowUpSettings.tsx (settings section=estimate-settings).
 
@@ -324,6 +350,7 @@ When an estimate expires, the follow-up reminder chain must stop automatically (
 ```
 
 ## Task 38 [HIGH] — Deposit Rules — Deposit Refund Policy section
+
 ```
 Edit src/components/facility/DepositRulesSettings.tsx (settings section=deposit-rules).
 
@@ -335,6 +362,7 @@ DO: Add a "Deposit Refund Policy" section below the per-service rules: "If a boo
 ```
 
 ## Task 42 [HIGH] — Invoice Template — Invoice Number Format setting
+
 ```
 Edit src/components/facility/InvoiceTemplateSettings.tsx (settings section=invoice-template).
 
@@ -344,6 +372,7 @@ DO: Add an "Invoice Number Format" setting where the admin defines the pattern. 
 ```
 
 ## Task 43 [HIGH] — Invoice Template — Payment Terms field
+
 ```
 Edit src/components/facility/InvoiceTemplateSettings.tsx (settings section=invoice-template).
 
@@ -357,6 +386,7 @@ DO: Add a "Payment Terms" field to Invoice Settings with standard options — Du
 ---
 
 ## Task 4 [MEDIUM] — Form Requirements — Prefix Requirements Overview entries with service name
+
 ```
 Edit src/components/forms/FormRequirementsSettings.tsx (settings section=form-requirements).
 
@@ -366,6 +396,7 @@ DO: In the Requirements Overview, render each entry as "[Service Name] · [Form 
 ```
 
 ## Task 8 [MEDIUM] — Form Notifications — Differentiate Staff vs Customer badge colours
+
 ```
 Edit src/components/forms/FormNotificationSettings.tsx (settings section=form-notifications).
 
@@ -375,6 +406,7 @@ DO: Give the two badges different colours for quick scanning — e.g. teal for t
 ```
 
 ## Task 14 [MEDIUM] — Pet Breeds — Subtitle for the "Other" section
+
 ```
 Edit src/components/facility/BreedManagement.tsx (settings section=pet-breeds).
 
@@ -384,6 +416,7 @@ DO: Add a subtitle to the "Other" section header: "Other species (rabbits, ferre
 ```
 
 ## Task 16 [MEDIUM] — Care Tasks — Edit button per category row
+
 ```
 Edit src/components/facility/CareTaskSettings.tsx / FeedingMedicationConfig.tsx (settings section=care-tasks).
 
@@ -395,6 +428,7 @@ DO: Add an "Edit" button to each category row (Schedules, Types, Sources, Units,
 ```
 
 ## Task 18 [MEDIUM] — Care Tasks — Sticky unsaved-changes save banner
+
 ```
 Edit src/components/facility/CareTaskSettings.tsx (settings section=care-tasks).
 
@@ -404,6 +438,7 @@ DO: Add a sticky save banner that appears at the bottom (or top) of Care Tasks w
 ```
 
 ## Task 21 [MEDIUM] — Evaluations — Group Buffer & Pets-per-slot under "Slot Constraints"
+
 ```
 Edit src/components/facility/EvaluationBookingWizardSettings.tsx (settings section=evaluations).
 
@@ -415,6 +450,7 @@ DO: Move "Buffer between sessions" and "Pets per slot" to directly below the Sta
 ```
 
 ## Task 24 [MEDIUM] — Booking Statuses — Collapsible "Status Flow Preview" diagram
+
 ```
 Edit src/components/facility/BookingStatusSettings.tsx (settings section=booking-statuses).
 
@@ -424,6 +460,7 @@ DO: Add a small, collapsible "Status Flow Preview" panel at the TOP of the Booki
 ```
 
 ## Task 26 [MEDIUM] — Express Check-In — Recipient email on the Testing panel
+
 ```
 Edit src/components/facility/CheckinRequirementsSettings.tsx (settings section=checkin-requirements).
 
@@ -433,6 +470,7 @@ DO: Add a recipient input to the Testing panel: "Send to: [email field]", defaul
 ```
 
 ## Task 30 [MEDIUM] — Retail / POS — Low Stock Alerts section
+
 ```
 Edit src/components/facility/RetailSettings.tsx (settings section=retail).
 
@@ -446,6 +484,7 @@ Persist via src/lib/api/retail.ts.
 ```
 
 ## Task 31 [MEDIUM] — Pricing Rules — Make "Available For" service chips clickable
+
 ```
 Edit src/components/facility/PricingRulesSettings.tsx (settings section=pricing-rules).
 
@@ -457,6 +496,7 @@ DO: Make the "Available For" service chips clickable — clicking a chip toggles
 ```
 
 ## Task 32 [MEDIUM] — Pricing Rules — Status dot per rule in the sidebar
+
 ```
 Edit src/components/facility/PricingRulesSettings.tsx (settings section=pricing-rules).
 
@@ -466,6 +506,7 @@ DO: Add a coloured status dot to each rule in the left sidebar: green = active, 
 ```
 
 ## Task 37 [MEDIUM] — Deposit Rules — Inline-editable deposit amounts
+
 ```
 Edit src/components/facility/DepositRulesSettings.tsx (settings section=deposit-rules).
 
@@ -475,6 +516,7 @@ DO: Make the deposit amount fields directly editable inline — clicking a value
 ```
 
 ## Task 39 [MEDIUM] — Deposit Rules — Remove or relabel Retail & Vet rows
+
 ```
 Edit src/components/facility/DepositRulesSettings.tsx (settings section=deposit-rules).
 
@@ -484,6 +526,7 @@ DO: Remove the Retail and Vet rows from Deposit Rules if those services do not s
 ```
 
 ## Task 44 [MEDIUM] — Invoice Template — Confirm "Full Preview" opens a full-screen modal
+
 ```
 Edit src/components/facility/InvoiceTemplateSettings.tsx (settings section=invoice-template).
 
@@ -497,6 +540,7 @@ DO: Confirm the "Full Preview" button (already present top-right) works and open
 ---
 
 ## Task 33 [LOW] — Pricing Rules — Verify sidebar search filters all categories
+
 ```
 Edit src/components/facility/PricingRulesSettings.tsx (settings section=pricing-rules).
 
@@ -507,4 +551,4 @@ DO: Ensure the existing "Search categories" text field at the top of the left si
 
 ---
 
-*Yipyy · Settings Page · UI/UX Workflow Specification · Part 2 · 44 tasks · Companion to `YIPYY_BUILD_PROMPTS.md` — combine both task tables for the full sprint. For Internal Development Use Only.*
+_Yipyy · Settings Page · UI/UX Workflow Specification · Part 2 · 44 tasks · Companion to `YIPYY_BUILD_PROMPTS.md` — combine both task tables for the full sprint. For Internal Development Use Only._
