@@ -765,9 +765,9 @@ export function BuyGiftCardFlow({
                 <span className="font-medium">{recipientEmail}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Send date</span>
+                <span className="text-muted-foreground">Delivery</span>
                 <span className="font-medium">
-                  {schedulePreview ?? "Immediately"}
+                  {schedulePreview ?? "Immediately after purchase"}
                 </span>
               </div>
               <div className="flex justify-between border-t pt-2">
