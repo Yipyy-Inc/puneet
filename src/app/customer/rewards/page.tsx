@@ -33,6 +33,7 @@ import {
   CreditCard,
   ArrowRight,
   Lock,
+  QrCode,
   type LucideIcon,
 } from "lucide-react";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
@@ -61,6 +62,7 @@ import {
 import {
   buildRewardsWallet,
   type WalletIcon,
+  type WalletReward,
 } from "@/lib/loyalty/rewards-wallet";
 import Link from "next/link";
 import { payments } from "@/data/payments";
@@ -100,6 +102,9 @@ export default function CustomerRewardsPage() {
   );
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [pointsRedeemOpen, setPointsRedeemOpen] = useState(false);
+  const [useRewardTarget, setUseRewardTarget] = useState<WalletReward | null>(
+    null,
+  );
 
   useEffect(() => {
     setIsMounted(true);
@@ -117,6 +122,8 @@ export default function CustomerRewardsPage() {
     enabled: !!selectedFacility,
   });
   const redemptionRate = facilityLoyaltyConfig?.redemptionRate ?? 100;
+  const minimumRedemptionPoints =
+    facilityLoyaltyConfig?.settings?.minimumRedemptionPoints ?? 100;
 
   // Active earn rules drive the dynamic "How Points Are Earned" list so it always
   // mirrors the facility's current EarnRule config. Falls back to the defaults
@@ -147,6 +154,16 @@ export default function CustomerRewardsPage() {
     ...loyaltyQueries.transactions(loyaltyFacilityId, MOCK_CUSTOMER_ID),
     enabled: !!selectedFacility,
   });
+
+  // Lifetime points = cumulative total of ALL points ever earned (positive
+  // ledger entries), not net of redemptions.
+  const lifetimePoints = useMemo(
+    () =>
+      pointTransactions
+        .filter((t) => t.points > 0)
+        .reduce((sum, t) => sum + t.points, 0),
+    [pointTransactions],
+  );
 
   // Get loyalty data
   const loyaltyData = useMemo(() => {
@@ -377,9 +394,16 @@ export default function CustomerRewardsPage() {
                       </div>
                     </div>
                   </div>
-                  <Button onClick={() => setPointsRedeemOpen(true)}>
-                    Redeem Points
-                  </Button>
+                  <div className="flex flex-col items-end gap-1">
+                    <Button onClick={() => setPointsRedeemOpen(true)}>
+                      Redeem Points
+                    </Button>
+                    <p className="text-muted-foreground text-right text-xs">
+                      {redemptionRate} points = $1.00 in credit. Minimum
+                      redemption: {minimumRedemptionPoints.toLocaleString()}{" "}
+                      points.
+                    </p>
+                  </div>
                 </div>
 
                 {/* Tier and Progress */}
@@ -451,8 +475,30 @@ export default function CustomerRewardsPage() {
           </Card>
         )}
 
+        {/* Stat bar — persistent context directly below the hero (Task 52) */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <KpiTile
+            label="Current Points"
+            value={loyaltyData?.points || 0}
+            icon={Star}
+            tone="amber"
+          />
+          <KpiTile
+            label="Lifetime Points"
+            value={lifetimePoints}
+            icon={TrendingUp}
+            tone="violet"
+          />
+          <KpiTile
+            label="Total Spent"
+            value={`$${totalSpent.toFixed(2)}`}
+            icon={DollarSign}
+            tone="emerald"
+          />
+        </div>
+
         {/* How Points Are Earned */}
-        <Card>
+        <Card id="how-points-earned" className="scroll-mt-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="size-5" />
@@ -548,6 +594,15 @@ export default function CustomerRewardsPage() {
                           </span>
                         )}
                       </div>
+
+                      <Button
+                        size="sm"
+                        className="w-full gap-1.5"
+                        onClick={() => setUseRewardTarget(reward)}
+                      >
+                        <QrCode className="size-4" />
+                        Use reward
+                      </Button>
                     </div>
                   );
                 })}
@@ -676,6 +731,19 @@ export default function CustomerRewardsPage() {
                 )}
               </div>
             </CardContent>
+            <CardContent className="pt-0">
+              <button
+                type="button"
+                onClick={() =>
+                  document
+                    .getElementById("how-points-earned")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
+                className="text-primary text-sm font-medium hover:underline"
+              >
+                How do I earn more points?
+              </button>
+            </CardContent>
           </Card>
         )}
 
@@ -706,28 +774,6 @@ export default function CustomerRewardsPage() {
                 />
               </CardContent>
             </Card>
-
-            {/* Stats Summary */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <KpiTile
-                label="Current Points"
-                value={loyaltyData?.points || 0}
-                icon={Star}
-                tone="amber"
-              />
-              <KpiTile
-                label="Lifetime Points"
-                value={loyaltyData?.lifetimePoints || 0}
-                icon={TrendingUp}
-                tone="violet"
-              />
-              <KpiTile
-                label="Total Spent"
-                value={`$${totalSpent.toFixed(2)}`}
-                icon={DollarSign}
-                tone="emerald"
-              />
-            </div>
           </TabsContent>
 
           {/* Rewards Tab */}
@@ -1366,6 +1412,67 @@ export default function CustomerRewardsPage() {
             redemptionRate={redemptionRate}
           />
         )}
+
+        {/* Use reward — show the code/QR to present at the facility (Task 46) */}
+        <Dialog
+          open={useRewardTarget !== null}
+          onOpenChange={(v) => !v && setUseRewardTarget(null)}
+        >
+          <DialogContent className="max-w-sm">
+            {useRewardTarget &&
+              (() => {
+                const code = `RWD-${useRewardTarget.id
+                  .replace(/[^a-zA-Z0-9]/g, "")
+                  .slice(-8)
+                  .toUpperCase()
+                  .padStart(8, "0")}`;
+                return (
+                  <>
+                    <DialogHeader>
+                      <DialogTitle>{useRewardTarget.title}</DialogTitle>
+                      <DialogDescription>
+                        Show this code at {selectedFacility?.name || "the front desk"}{" "}
+                        to redeem your reward.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col items-center gap-4 py-2">
+                      <div className="rounded-xl border bg-white p-4">
+                        <QrCode className="size-32 text-slate-900" />
+                      </div>
+                      <div className="w-full text-center">
+                        <p className="text-muted-foreground text-xs">
+                          Reward code
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(code, useRewardTarget.id)}
+                          className="mt-1 inline-flex items-center gap-2 rounded-lg border px-3 py-2 font-mono text-lg font-semibold tracking-wider hover:bg-muted"
+                        >
+                          {code}
+                          {copiedCode === useRewardTarget.id ? (
+                            <CheckCircle2 className="size-4 text-green-600" />
+                          ) : (
+                            <Copy className="size-4" />
+                          )}
+                        </button>
+                      </div>
+                      <Badge variant="secondary" className="font-semibold">
+                        {useRewardTarget.valueChip} · {useRewardTarget.servicesText}
+                      </Badge>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        className="w-full"
+                        onClick={() => setUseRewardTarget(null)}
+                      >
+                        Done
+                      </Button>
+                    </DialogFooter>
+                  </>
+                );
+              })()}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
