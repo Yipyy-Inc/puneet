@@ -525,6 +525,13 @@ export default function CustomerRewardsPage() {
                         {earnRuleCustomerSummary(rule)}
                       </div>
                     </div>
+                    <Badge
+                      variant="secondary"
+                      className="shrink-0 gap-1 border-green-200 bg-green-50 text-green-700 dark:border-green-900/50 dark:bg-green-950/40 dark:text-green-400"
+                    >
+                      <CheckCircle2 className="size-3" />
+                      Active
+                    </Badge>
                   </div>
                 ))}
               </div>
