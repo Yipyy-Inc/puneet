@@ -1,7 +1,8 @@
-import { BuyGiftCardFlow } from "./_components/BuyGiftCardFlow";
+import { GiftCardsTabs } from "./_components/GiftCardsTabs";
 
-// Hardcoded facility for now — replace with context/auth when available
+// Hardcoded facility + current customer for now — replace with context/auth.
 const FACILITY_ID = 11;
+const CUSTOMER_ID = 15;
 
 export default function CustomerGiftCardsPage() {
   return (
@@ -13,7 +14,7 @@ export default function CustomerGiftCardsPage() {
           straight to the inbox
         </p>
       </div>
-      <BuyGiftCardFlow facilityId={FACILITY_ID} />
+      <GiftCardsTabs facilityId={FACILITY_ID} customerId={CUSTOMER_ID} />
     </div>
   );
 }
