@@ -165,18 +165,26 @@ export function BuyGiftCardFlow({
 
   const handleScheduleToggle = (on: boolean) => {
     setScheduleDelivery(on);
-    if (on && !deliveryDate) {
-      setDeliveryDate(minDeliveryDate);
-      setDeliveryTime("10:00");
+    if (on) {
+      // Default to the earliest allowed slot (tomorrow at 10 AM) so the
+      // confirmation line has a valid value to show right away.
+      if (!deliveryDate) {
+        setDeliveryDate(minDeliveryDate);
+        setDeliveryTime("10:00");
+      }
+    } else {
+      // Toggling off reverts to "send immediately" — clear the picked date.
+      setDeliveryDate("");
     }
   };
 
-  // First line of the personal message, truncated for the card preview.
+  // First line of the personal message, truncated to ~40 chars for the
+  // Step 4 review card preview.
   const messagePreview = (() => {
     const firstLine = message.split("\n")[0].trim();
     if (!firstLine) return "";
-    return firstLine.length > 60
-      ? `${firstLine.slice(0, 60).trimEnd()}…`
+    return firstLine.length > 40
+      ? `${firstLine.slice(0, 40).trimEnd()}…`
       : firstLine;
   })();
 
@@ -590,7 +598,7 @@ export function BuyGiftCardFlow({
                   </div>
                   {schedulePreview && (
                     <p className="text-muted-foreground text-xs">
-                      This gift card will be delivered on{" "}
+                      Will be delivered on{" "}
                       <span className="text-foreground font-medium">
                         {schedulePreview}
                       </span>
