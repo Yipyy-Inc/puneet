@@ -96,6 +96,22 @@ const CARD_DESIGNS = [
     accentBg: "bg-teal-50 dark:bg-teal-950/20",
     border: "border-teal-200 dark:border-teal-800",
   },
+  {
+    id: "new_pet",
+    label: "New pet",
+    emoji: "🐶",
+    gradient: "from-orange-400 via-amber-500 to-yellow-500",
+    accentBg: "bg-orange-50 dark:bg-orange-950/20",
+    border: "border-orange-200 dark:border-orange-800",
+  },
+  {
+    id: "gotcha_day",
+    label: "Gotcha Day",
+    emoji: "🎉",
+    gradient: "from-emerald-400 via-teal-500 to-green-600",
+    accentBg: "bg-emerald-50 dark:bg-emerald-950/20",
+    border: "border-emerald-200 dark:border-emerald-800",
+  },
 ];
 
 // Hourly delivery slots, 9 AM through 9 PM.
@@ -128,7 +144,7 @@ export function BuyGiftCardFlow({
   onViewSent,
 }: BuyGiftCardFlowProps) {
   const settings = giftCardSettings.find((s) => s.facilityId === facilityId);
-  const presets = settings?.presetAmounts ?? [25, 50, 100, 150, 200];
+  const presets = settings?.presetAmounts ?? [25, 50, 75, 100, 150, 200];
 
   const [step, setStep] = useState(1);
   const [amount, setAmount] = useState<number | "">("");
@@ -136,7 +152,12 @@ export function BuyGiftCardFlow({
   const [selectedDesign, setSelectedDesign] = useState(CARD_DESIGNS[0]);
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
-  const [senderName, setSenderName] = useState("");
+  // Pre-fill "From" with the customer's first name (editable).
+  const [senderName, setSenderName] = useState(
+    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID)?.name?.split(" ")[0] ?? "",
+  );
+  const [emailError, setEmailError] = useState("");
+  const [attemptedStep3, setAttemptedStep3] = useState(false);
   const [message, setMessage] = useState("");
   const [scheduleDelivery, setScheduleDelivery] = useState(false);
   const [deliveryDate, setDeliveryDate] = useState("");
@@ -150,10 +171,19 @@ export function BuyGiftCardFlow({
 
   const resolvedAmount = amount !== "" ? amount : parseFloat(customAmount) || 0;
 
+  // Inline range error for a typed custom amount (presets are always valid).
+  const amountError =
+    customAmount.trim() !== "" && (resolvedAmount < 10 || resolvedAmount > 500)
+      ? "Amount must be between $10 and $500."
+      : "";
+
+  const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
   const purchaserEmail =
     clients.find((c) => c.id === MOCK_CUSTOMER_ID)?.email ?? "your email";
   const activeCard =
     SAVED_CARDS.find((c) => c.id === paymentCardId) ?? SAVED_CARDS[0];
+  const hasPaymentMethod = SAVED_CARDS.length > 0 && !!activeCard;
 
   // Scheduled delivery is allowed from tomorrow up to a year out.
   // Build YYYY-MM-DD from LOCAL components (toISOString would shift the day in
@@ -213,6 +243,22 @@ export function BuyGiftCardFlow({
     recipientEmail.includes("@") && recipientName.trim().length > 0,
     true,
   ][step - 1];
+
+  // Step 3 Continue stays clickable so we can surface inline required errors.
+  const handleContinue = () => {
+    if (step === 3) {
+      const nameOk = recipientName.trim().length > 0;
+      const emailOk = isValidEmail(recipientEmail.trim());
+      if (!nameOk || !emailOk) {
+        setAttemptedStep3(true);
+        if (recipientEmail.trim().length > 0 && !emailOk) {
+          setEmailError("Please enter a valid email address.");
+        }
+        return;
+      }
+    }
+    setStep((s) => (s + 1) as typeof s);
+  };
 
   const handlePurchase = async () => {
     setLoading(true);
@@ -417,8 +463,12 @@ export function BuyGiftCardFlow({
                       setAmount("");
                     }}
                     placeholder="Enter amount"
+                    aria-invalid={amountError !== ""}
                   />
                 </div>
+                {amountError && (
+                  <p className="text-destructive text-xs">{amountError}</p>
+                )}
               </div>
             </div>
 
@@ -433,11 +483,15 @@ export function BuyGiftCardFlow({
                 <div className="absolute -top-4 -right-4 size-16 rounded-full bg-white/10" />
                 <div className="relative">
                   <span className="text-2xl">{selectedDesign.emoji}</span>
-                  <p className="mt-2 text-2xl font-bold">
-                    {resolvedAmount > 0
-                      ? `$${resolvedAmount.toFixed(2)}`
-                      : "$0.00"}
-                  </p>
+                  {resolvedAmount > 0 ? (
+                    <p className="mt-2 text-2xl font-bold">
+                      ${resolvedAmount.toFixed(2)}
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-base font-semibold opacity-80">
+                      Choose an amount
+                    </p>
+                  )}
                   <p className="text-[10px] tracking-wide uppercase opacity-70">
                     Gift Card
                   </p>
@@ -511,7 +565,13 @@ export function BuyGiftCardFlow({
                 value={recipientName}
                 onChange={(e) => setRecipientName(e.target.value)}
                 placeholder="Jane Smith"
+                aria-invalid={attemptedStep3 && recipientName.trim().length === 0}
               />
+              {attemptedStep3 && recipientName.trim().length === 0 && (
+                <p className="text-destructive text-xs">
+                  Recipient name is required.
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1.5">
@@ -522,9 +582,33 @@ export function BuyGiftCardFlow({
               <Input
                 type="email"
                 value={recipientEmail}
-                onChange={(e) => setRecipientEmail(e.target.value)}
+                onChange={(e) => {
+                  setRecipientEmail(e.target.value);
+                  if (emailError) setEmailError("");
+                }}
+                onBlur={() => {
+                  if (
+                    recipientEmail.trim().length > 0 &&
+                    !isValidEmail(recipientEmail.trim())
+                  ) {
+                    setEmailError("Please enter a valid email address.");
+                  }
+                }}
                 placeholder="jane@example.com"
+                aria-invalid={
+                  emailError !== "" ||
+                  (attemptedStep3 && recipientEmail.trim().length === 0)
+                }
               />
+              {attemptedStep3 && recipientEmail.trim().length === 0 ? (
+                <p className="text-destructive text-xs">
+                  Recipient email is required.
+                </p>
+              ) : (
+                emailError && (
+                  <p className="text-destructive text-xs">{emailError}</p>
+                )
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1.5">
@@ -806,8 +890,8 @@ export function BuyGiftCardFlow({
 
         {step < 4 ? (
           <Button
-            onClick={() => setStep((s) => (s + 1) as typeof s)}
-            disabled={!canProceed}
+            onClick={handleContinue}
+            disabled={step < 3 && !canProceed}
             className="gap-1.5"
           >
             Continue
@@ -816,7 +900,7 @@ export function BuyGiftCardFlow({
         ) : (
           <Button
             onClick={handlePurchase}
-            disabled={loading}
+            disabled={loading || !hasPaymentMethod}
             className="min-w-32 gap-1.5"
           >
             {loading ? (
