@@ -29,6 +29,7 @@ import {
   Loader2,
   ChevronRight,
   Sparkles,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { giftCardSettings } from "@/data/gift-cards";
@@ -117,11 +118,14 @@ const STEPS = [
 interface BuyGiftCardFlowProps {
   facilityId: number;
   onComplete?: () => void;
+  /** Switch the parent tabs to "Cards I sent" from the success screen. */
+  onViewSent?: () => void;
 }
 
 export function BuyGiftCardFlow({
   facilityId,
   onComplete,
+  onViewSent,
 }: BuyGiftCardFlowProps) {
   const settings = giftCardSettings.find((s) => s.facilityId === facilityId);
   const presets = settings?.presetAmounts ?? [25, 50, 100, 150, 200];
@@ -278,7 +282,9 @@ export function BuyGiftCardFlow({
         </div>
 
         <div className="space-y-1">
-          <p className="text-lg font-semibold">Your gift is on its way!</p>
+          <p className="text-lg font-semibold">
+            Gift card sent to {recipientName || "your recipient"}!
+          </p>
           <p className="text-muted-foreground text-sm">
             A beautifully branded email has been sent to{" "}
             <span className="text-foreground font-medium">
@@ -289,9 +295,18 @@ export function BuyGiftCardFlow({
           </p>
         </div>
 
-        <Button onClick={onComplete ?? resetFlow} className="w-full max-w-xs">
-          {onComplete ? "Done" : "Buy Another Gift Card"}
-        </Button>
+        <div className="flex w-full max-w-xs flex-col gap-2">
+          <Button onClick={onComplete ?? resetFlow}>
+            <Gift className="size-4" />
+            Send another gift card
+          </Button>
+          {onViewSent && (
+            <Button variant="outline" onClick={onViewSent}>
+              <Send className="size-4" />
+              View cards I sent
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
