@@ -104,7 +104,7 @@ export function RedeemPointsDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="redeem-points">Points to redeem</Label>
+            <Label htmlFor="redeem-points">How many points to redeem?</Label>
             <Input
               id="redeem-points"
               type="number"
@@ -167,7 +167,7 @@ export function RedeemPointsDialog({
             className="bg-emerald-600 text-white hover:bg-emerald-700"
             onClick={handleRedeem}
           >
-            Redeem for ${creditPreview.toFixed(2)} credit
+            Apply to my wallet
           </Button>
         </DialogFooter>
       </DialogContent>
