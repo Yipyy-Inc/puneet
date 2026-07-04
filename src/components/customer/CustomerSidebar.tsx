@@ -246,11 +246,6 @@ export function CustomerSidebar() {
           icon: Gift,
         },
         {
-          title: "My Gift Cards",
-          url: "/customer/gift-cards/my-cards",
-          icon: Gift,
-        },
-        {
           title: "Loyalty & Rewards",
           url: "/customer/rewards",
           icon: Ticket,
