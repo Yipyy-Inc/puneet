@@ -205,7 +205,8 @@ export function UsageReportClient({ report }: { report: UsageReport }) {
             emptyState={{
               icon: Gauge,
               title: "No module usage yet",
-              description: "Module adoption will appear once facilities start using features.",
+              description:
+                "Module adoption will appear once facilities start using features.",
             }}
           />
         </CardContent>
@@ -234,7 +235,8 @@ export function UsageReportClient({ report }: { report: UsageReport }) {
               emptyState={{
                 icon: Cpu,
                 title: "No AI usage yet",
-                description: "Facility AI token consumption will appear here once usage is recorded.",
+                description:
+                  "Facility AI token consumption will appear here once usage is recorded.",
               }}
             />
           </CardContent>

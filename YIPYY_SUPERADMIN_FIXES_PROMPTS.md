@@ -1,6 +1,6 @@
 # Yipyy Super Admin — Workflow Fixes · Copy-Paste Build Prompts
 
-One prompt per task (**29 total**), taken verbatim from *YIPYY — Super Admin Workflow Fixes*. **Every task in this document is CRITICAL priority** (the spec states this explicitly), so they are ordered by feature area / build dependency rather than by priority tier. Paste them into Claude Code in the order shown. Each prompt is self-contained and names the exact file(s) to edit.
+One prompt per task (**29 total**), taken verbatim from _YIPYY — Super Admin Workflow Fixes_. **Every task in this document is CRITICAL priority** (the spec states this explicitly), so they are ordered by feature area / build dependency rather than by priority tier. Paste them into Claude Code in the order shown. Each prompt is self-contained and names the exact file(s) to edit.
 
 **Standing rules baked into every task (the agent already has these from `CLAUDE.md`, restated here so each prompt is portable):**
 
@@ -8,17 +8,17 @@ One prompt per task (**29 total**), taken verbatim from *YIPYY — Super Admin W
 
 **Component map (spec area → file to edit):**
 
-| Spec section | Primary file(s) to edit |
-|---|---|
-| 1 Agreements & Waivers (super admin) | `src/components/layout/super-admin-sidebar.tsx` (nav) · new route `src/app/dashboard/support/agreements/` · builder + signing components (new) |
-| 1.5 Facility Agreements access | `src/app/facility/documents/_components/facility-documents-client.tsx`, `src/app/facility/dashboard/waivers/page.tsx`, `src/components/dashboard/facilities/AgreementsTab.tsx` |
-| 2 Custom Module Registry (remove) | `src/components/layout/super-admin-sidebar.tsx`, `src/app/dashboard/services/custom-modules/page.tsx`, `src/components/dashboard/facilities/ModulesTab.tsx` |
-| 3 Super Admin Chat | `src/app/dashboard/support/chat/_components/support-chat-client.tsx`; mirror `src/components/messaging/*` (CommunicationHub, ContactList, ComposeBar, SavedRepliesMenu, InternalNotesTab, ClientContextPanel) |
-| 4 Announcements | `src/app/dashboard/support/announcements/_components/rich-text-editor.tsx`, `announcement-composer.tsx`, `announcement-preview.tsx` |
-| 5 Email Templates + Saved Replies | `src/app/dashboard/support/email-templates/page.tsx`, `src/lib/api/email-templates.ts`, `src/lib/api/communications.ts` |
-| 6 Owner Account (avatar menu) | `src/components/layout/UserProfileSheet.tsx`, `src/components/layout/facility-admin-sidebar.tsx`, `src/app/facility/settings/billing/*`, `src/app/facility/settings/data-export/page.tsx` |
-| 7 Clover Fiserv | `src/components/system-admin/SystemConfiguration.tsx`, `src/app/dashboard/system-admin/integrations/page.tsx`, `src/lib/fiserv-payment-service.ts`, `src/lib/clover-terminal-service.ts` |
-| 8 Knowledge Base + Help Center | `src/app/dashboard/support/knowledge-base/_components/kb-rich-editor.tsx`, `kb-article-editor.tsx`, `src/app/facility/help/_components/help-center-client.tsx`, `src/lib/kb-articles-store.ts` |
+| Spec section                         | Primary file(s) to edit                                                                                                                                                                                       |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 Agreements & Waivers (super admin) | `src/components/layout/super-admin-sidebar.tsx` (nav) · new route `src/app/dashboard/support/agreements/` · builder + signing components (new)                                                                |
+| 1.5 Facility Agreements access       | `src/app/facility/documents/_components/facility-documents-client.tsx`, `src/app/facility/dashboard/waivers/page.tsx`, `src/components/dashboard/facilities/AgreementsTab.tsx`                                |
+| 2 Custom Module Registry (remove)    | `src/components/layout/super-admin-sidebar.tsx`, `src/app/dashboard/services/custom-modules/page.tsx`, `src/components/dashboard/facilities/ModulesTab.tsx`                                                   |
+| 3 Super Admin Chat                   | `src/app/dashboard/support/chat/_components/support-chat-client.tsx`; mirror `src/components/messaging/*` (CommunicationHub, ContactList, ComposeBar, SavedRepliesMenu, InternalNotesTab, ClientContextPanel) |
+| 4 Announcements                      | `src/app/dashboard/support/announcements/_components/rich-text-editor.tsx`, `announcement-composer.tsx`, `announcement-preview.tsx`                                                                           |
+| 5 Email Templates + Saved Replies    | `src/app/dashboard/support/email-templates/page.tsx`, `src/lib/api/email-templates.ts`, `src/lib/api/communications.ts`                                                                                       |
+| 6 Owner Account (avatar menu)        | `src/components/layout/UserProfileSheet.tsx`, `src/components/layout/facility-admin-sidebar.tsx`, `src/app/facility/settings/billing/*`, `src/app/facility/settings/data-export/page.tsx`                     |
+| 7 Clover Fiserv                      | `src/components/system-admin/SystemConfiguration.tsx`, `src/app/dashboard/system-admin/integrations/page.tsx`, `src/lib/fiserv-payment-service.ts`, `src/lib/clover-terminal-service.ts`                      |
+| 8 Knowledge Base + Help Center       | `src/app/dashboard/support/knowledge-base/_components/kb-rich-editor.tsx`, `kb-article-editor.tsx`, `src/app/facility/help/_components/help-center-client.tsx`, `src/lib/kb-articles-store.ts`                |
 
 > **Build-order note:** Do **Section 7 (Clover Fiserv)** before **Task 21 (Payment Method page)** — the owner's card-on-file form depends on the Clover integration being configured. Do **Task 1** (create the Agreements section) before Tasks 2–8.
 
@@ -26,11 +26,12 @@ One prompt per task (**29 total**), taken verbatim from *YIPYY — Super Admin W
 
 # SECTION 1 — Agreement & Waiver Builder (Super Admin Portal)
 
-*Replaces the current "upload a pre-made PDF into a facility's Agreements tab" flow with a full document builder + e-signature system. Yipyy staff design legally-binding agreements/waivers from scratch, send them for e-signature to the facility owner, and the system records the legally-signed result.*
+_Replaces the current "upload a pre-made PDF into a facility's Agreements tab" flow with a full document builder + e-signature system. Yipyy staff design legally-binding agreements/waivers from scratch, send them for e-signature to the facility owner, and the system records the legally-signed result._
 
 ---
 
 ## Task 1 [CRITICAL] — Add "Agreements & Waivers" super-admin section + two-tab shell
+
 ```
 Add a new top-level section to the Super Admin sidebar. Edit src/components/layout/super-admin-sidebar.tsx.
 
@@ -45,6 +46,7 @@ Extract the tab switching into a small client component. Add a query factory src
 ```
 
 ## Task 2 [CRITICAL] — Document Template Builder: core rich editor
+
 ```
 Build the Agreement Template Builder — a rich DOCUMENT editor (NOT a PDF upload), reached from the Templates tab (Task 1) via "New Template". Create it under src/app/dashboard/support/agreements/_components/ (e.g. AgreementTemplateEditor.tsx), lazy-loaded via next/dynamic. It lets Yipyy design the full agreement layout and content.
 
@@ -61,6 +63,7 @@ Use a proven rich-text engine (e.g. TipTap/ProseMirror) rather than contentedita
 ```
 
 ## Task 3 [CRITICAL] — Template Builder: merge fields + signature blocks
+
 ```
 Extend the Agreement Template Builder (Task 2, src/app/dashboard/support/agreements/_components/AgreementTemplateEditor.tsx).
 
@@ -75,6 +78,7 @@ Allow MULTIPLE signature blocks in one document (e.g. both a Yipyy representativ
 ```
 
 ## Task 4 [CRITICAL] — Template Builder: version control + settings panel + PDF preview
+
 ```
 Extend the Agreement Template Builder (Task 2/3) with version control, a settings panel, and preview.
 
@@ -90,6 +94,7 @@ PREVIEW: a Preview button renders a full-page PDF preview of the document with S
 ```
 
 ## Task 5 [CRITICAL] — "Send to Facility" flow (steps 1–6) + new email template
+
 ```
 Build the "Send to Facility" flow for agreement templates. On a template in the Templates tab, a "Send to Facility" action opens a multi-step modal. Implement steps 1–6:
 
@@ -104,6 +109,7 @@ Persist the outgoing agreement as a "Sent Agreement" record (status = Pending) v
 ```
 
 ## Task 6 [CRITICAL] — Signing portal + signature capture/audit + confirmation + distribution (steps 7–10)
+
 ```
 Build the e-signature signing portal and post-signature handling (steps 7–10 of the send flow, Task 5).
 
@@ -116,6 +122,7 @@ Route example: /sign/[token]. Validate the token (one-time, respects the expiry 
 ```
 
 ## Task 7 [CRITICAL] — Sent Agreements log (table + actions + permanent-lock rule)
+
 ```
 Build the "Sent Agreements" tab (Task 1) at /dashboard/support/agreements. Edit src/app/dashboard/support/agreements/ and use the DataTable component.
 
@@ -131,6 +138,7 @@ RULE (enforce in data + UI): once a document is Signed it is PERMANENTLY LOCKED 
 ```
 
 ## Task 8 [CRITICAL] — Facility portal Agreements access: owner-only, read-only
+
 ```
 Lock down Yipyy agreements in the Facility portal. Edit src/app/facility/documents/_components/facility-documents-client.tsx (and its route guard) plus the "My Waivers" area src/app/facility/dashboard/waivers/page.tsx.
 
@@ -148,6 +156,7 @@ KEEP EDITABLE: the "My Waivers" tab (the facility's own customer-facing document
 ---
 
 ## Task 9 [CRITICAL] — Remove the global Custom Module Registry
+
 ```
 Remove the global "Custom Module Registry" from the Super Admin portal.
 
@@ -161,11 +170,12 @@ RULE: the ONLY place custom modules can be created, viewed, or managed is inside
 
 # SECTION 3 — Super Admin Chat — Professional Upgrade
 
-*Bring the Super Admin chat (Support > Chat) up to the standard of the more powerful Facility Portal messaging module (src/components/messaging/*). Edit src/app/dashboard/support/chat/_components/support-chat-client.tsx and reuse the messaging components where possible.*
+_Bring the Super Admin chat (Support > Chat) up to the standard of the more powerful Facility Portal messaging module (src/components/messaging/_). Edit src/app/dashboard/support/chat/\_components/support-chat-client.tsx and reuse the messaging components where possible.\*
 
 ---
 
 ## Task 10 [CRITICAL] — Conversation list (left panel): tabs, rich rows, context menu
+
 ```
 Upgrade the Super Admin chat conversation list (left panel). Edit src/app/dashboard/support/chat/_components/support-chat-client.tsx; mirror src/components/messaging/ContactList.tsx and ClientContextPanel.tsx.
 
@@ -177,6 +187,7 @@ Drive everything from src/lib/api/support.ts / communications.ts queries — no 
 ```
 
 ## Task 11 [CRITICAL] — Active conversation (center panel): top bar + composer + attachments
+
 ```
 Upgrade the Super Admin chat active-conversation center panel. Edit src/app/dashboard/support/chat/_components/support-chat-client.tsx; mirror src/components/messaging/ComposeBar.tsx and InternalNotesTab.tsx.
 
@@ -192,6 +203,7 @@ ATTACH FILES: drag-and-drop or click. Supported types: PDF, PNG, JPG, GIF, MP4, 
 ```
 
 ## Task 12 [CRITICAL] — Saved Replies (/) in composer + Email-mode template integration
+
 ```
 Add Saved Replies and Email-template support to the Super Admin chat composer. Edit src/app/dashboard/support/chat/_components/support-chat-client.tsx; reuse src/components/messaging/SavedRepliesMenu.tsx and saved-replies-context.
 
@@ -201,6 +213,7 @@ EMAIL-MODE TEMPLATE INTEGRATION: when the channel is Email (not Chat), the compo
 ```
 
 ## Task 13 [CRITICAL] — Facility info (right panel): live data
+
 ```
 Upgrade the Super Admin chat right-side facility info panel. Edit src/app/dashboard/support/chat/_components/support-chat-client.tsx; mirror src/components/messaging/ClientContextPanel.tsx.
 
@@ -213,11 +226,12 @@ This panel currently exists in basic form — verify EVERY field is LIVE data fr
 
 # SECTION 4 — Announcements — Add Rich Media Support
 
-*The Announcement composer currently has only a basic rich text editor (Bold, Italic, Underline, List, Link). Upgrade it to support images and video. Edit src/app/dashboard/support/announcements/_components/rich-text-editor.tsx, announcement-composer.tsx, announcement-preview.tsx.*
+_The Announcement composer currently has only a basic rich text editor (Bold, Italic, Underline, List, Link). Upgrade it to support images and video. Edit src/app/dashboard/support/announcements/\_components/rich-text-editor.tsx, announcement-composer.tsx, announcement-preview.tsx._
 
 ---
 
 ## Task 14 [CRITICAL] — Image support in Announcements
+
 ```
 Add image support to the Announcement composer. Edit src/app/dashboard/support/announcements/_components/rich-text-editor.tsx (+ composer).
 
@@ -229,6 +243,7 @@ Add image support to the Announcement composer. Edit src/app/dashboard/support/a
 ```
 
 ## Task 15 [CRITICAL] — Video support in Announcements (+ delivery rule)
+
 ```
 Add video support to the Announcement composer. Edit src/app/dashboard/support/announcements/_components/rich-text-editor.tsx (+ composer).
 
@@ -240,6 +255,7 @@ RULE: video announcements can only be delivered IN-PLATFORM. If the admin select
 ```
 
 ## Task 16 [CRITICAL] — Announcement preview (in-platform + email)
+
 ```
 Upgrade the Announcement Preview. Edit src/app/dashboard/support/announcements/_components/announcement-preview.tsx.
 
@@ -253,6 +269,7 @@ The Preview button must render the announcement EXACTLY as it will appear in the
 ---
 
 ## Task 17 [CRITICAL] — Image support in Email Templates (CDN rule)
+
 ```
 Add image support to the Email Template body editor. Edit src/app/dashboard/support/email-templates/page.tsx (+ its editor component) and src/lib/api/email-templates.ts.
 
@@ -261,6 +278,7 @@ Add image support to the Email Template body editor. Edit src/app/dashboard/supp
 ```
 
 ## Task 18 [CRITICAL] — Saved Replies management page (second tab) + panel behavior
+
 ```
 Create a Saved Replies management area. Edit src/app/dashboard/support/email-templates/page.tsx to become a TWO-TAB page: "Transactional Templates" (the existing email templates) and "Saved Replies" (new). Back it with a query factory (extend src/lib/api/communications.ts, which already has a quickReplies concept, or add saved-replies queries).
 
@@ -275,11 +293,12 @@ These replies feed the "/" panel in the Super Admin chat composer (Task 12): a f
 
 # SECTION 6 — Facility Portal — Owner Account Section (Top-Right Avatar Menu)
 
-*Move confidential business/financial settings out of the main operational menu into an owner-only account section under the top-right avatar dropdown. These must not be accessible to managers or staff. Edit src/components/layout/UserProfileSheet.tsx and src/components/layout/facility-admin-sidebar.tsx.*
+_Move confidential business/financial settings out of the main operational menu into an owner-only account section under the top-right avatar dropdown. These must not be accessible to managers or staff. Edit src/components/layout/UserProfileSheet.tsx and src/components/layout/facility-admin-sidebar.tsx._
 
 ---
 
 ## Task 19 [CRITICAL] — Restructure avatar menu into an Owner Account section + guards
+
 ```
 Restructure the facility-portal top-right avatar/username dropdown into a full "Owner Account" section. Edit src/components/layout/UserProfileSheet.tsx (avatar dropdown) and src/components/layout/facility-admin-sidebar.tsx (main sidebar).
 
@@ -296,6 +315,7 @@ RULE (server-side): every page in the Owner Account section enforces owner-only 
 ```
 
 ## Task 20 [CRITICAL] — My Subscription page (facility owner)
+
 ```
 Build the "My Subscription" page inside the facility-portal Owner Account section (owner-only, server-guarded per Task 19). Reuse/relocate from src/app/facility/settings/billing/*. Pull data via src/lib/api/facility-billing.ts / subscriptions.ts.
 
@@ -307,6 +327,7 @@ Show:
 ```
 
 ## Task 21 [CRITICAL] — Payment Method page (Clover Fiserv) — do AFTER Section 7
+
 ```
 Build the "Payment Method" page inside the facility-portal Owner Account section (owner-only, server-guarded per Task 19). Reuse src/app/facility/settings/billing/_components/update-payment-method-dialog.tsx; integrate src/lib/fiserv-payment-service.ts / clover-terminal-service.ts. Requires Section 7 (Clover config) to be in place.
 
@@ -317,6 +338,7 @@ Build the "Payment Method" page inside the facility-portal Owner Account section
 ```
 
 ## Task 22 [CRITICAL] — Export Data page — owner-only relocation
+
 ```
 Relocate Export Data into the facility-portal Owner Account section (owner-only, server-guarded per Task 19). Edit src/app/facility/settings/data-export/page.tsx and remove its main-sidebar entry (facility-admin-sidebar.tsx).
 
@@ -332,6 +354,7 @@ Relocate Export Data into the facility-portal Owner Account section (owner-only,
 ---
 
 ## Task 23 [CRITICAL] — "Payment Processing" tab in System Configuration
+
 ```
 Add a "Payment Processing" tab inside System Configuration (alongside Integrations, API Keys, System Settings, Feature Flags). Edit src/components/system-admin/SystemConfiguration.tsx and the route src/app/dashboard/system-admin/system-config/page.tsx. This is where Yipyy configures how it charges facilities for subscriptions. Wire through src/lib/fiserv-payment-service.ts / clover-terminal-service.ts.
 
@@ -344,6 +367,7 @@ Clover Fiserv setup fields:
 ```
 
 ## Task 24 [CRITICAL] — Make Clover Fiserv the primary/Featured integration + Phase-1 card-only rule
+
 ```
 Update the Integration Management table. Edit src/app/dashboard/system-admin/integrations/page.tsx (the table currently shows Stripe as Payment).
 
@@ -355,11 +379,12 @@ Update the Integration Management table. Edit src/app/dashboard/system-admin/int
 
 # SECTION 8 — Knowledge Base — Rich Article Editor
 
-*KB articles teach facilities to use the platform and are visible to every facility owner and their staff from the Help Center. Upgrade the basic editor to a full rich content editor. Edit src/app/dashboard/support/knowledge-base/_components/kb-rich-editor.tsx + kb-article-editor.tsx; store src/lib/kb-articles-store.ts.*
+_KB articles teach facilities to use the platform and are visible to every facility owner and their staff from the Help Center. Upgrade the basic editor to a full rich content editor. Edit src/app/dashboard/support/knowledge-base/\_components/kb-rich-editor.tsx + kb-article-editor.tsx; store src/lib/kb-articles-store.ts._
 
 ---
 
 ## Task 25 [CRITICAL] — KB editor toolbar: text formatting + structure/layout
+
 ```
 Upgrade the Knowledge Base article editor toolbar. Edit src/app/dashboard/support/knowledge-base/_components/kb-rich-editor.tsx.
 
@@ -371,6 +396,7 @@ Use a proven rich-text engine (e.g. TipTap). Persist to src/lib/kb-articles-stor
 ```
 
 ## Task 26 [CRITICAL] — KB editor: media + linking
+
 ```
 Add media and linking to the KB article editor. Edit src/app/dashboard/support/knowledge-base/_components/kb-rich-editor.tsx.
 
@@ -387,6 +413,7 @@ LINKING:
 ```
 
 ## Task 27 [CRITICAL] — KB editor: callouts + step-by-step blocks + tables
+
 ```
 Add structured block types to the KB article editor. Edit src/app/dashboard/support/knowledge-base/_components/kb-rich-editor.tsx.
 
@@ -396,6 +423,7 @@ Add structured block types to the KB article editor. Edit src/app/dashboard/supp
 ```
 
 ## Task 28 [CRITICAL] — KB article settings panel (right sidebar)
+
 ```
 Build the KB article Settings panel (right sidebar). Edit src/app/dashboard/support/knowledge-base/_components/kb-article-editor.tsx.
 
@@ -407,6 +435,7 @@ Build the KB article Settings panel (right sidebar). Edit src/app/dashboard/supp
 ```
 
 ## Task 29 [CRITICAL] — Help Center (facility side): full-screen render + TOC + helpfulness + related
+
 ```
 Upgrade the facility-portal Help Center (opened via the floating "?" support button). Edit src/app/facility/help/_components/help-center-client.tsx (+ help-article-item.tsx). Data via src/lib/api/help.ts.
 
@@ -418,4 +447,4 @@ Upgrade the facility-portal Help Center (opened via the floating "?" support but
 
 ---
 
-*Yipyy · Super Admin Workflow Fixes · 29 tasks · all CRITICAL priority · companion to `YIPYY_BUILD_PROMPTS.md` and `YIPYY_SETTINGS_PART2_PROMPTS.md`. For Internal Development Use Only.*
+_Yipyy · Super Admin Workflow Fixes · 29 tasks · all CRITICAL priority · companion to `YIPYY_BUILD_PROMPTS.md` and `YIPYY_SETTINGS_PART2_PROMPTS.md`. For Internal Development Use Only._
