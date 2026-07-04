@@ -48,7 +48,7 @@ export const giftCardSettings: GiftCardProgramSettings[] = [
       addons: true,
       tips: false,
     },
-    presetAmounts: [25, 50, 100, 150, 200],
+    presetAmounts: [25, 50, 75, 100, 150, 200],
     minAmount: 10,
     maxAmount: 500,
     emailBranding: {
