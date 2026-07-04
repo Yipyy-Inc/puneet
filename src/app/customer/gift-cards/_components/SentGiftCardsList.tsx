@@ -19,6 +19,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -202,18 +207,34 @@ export function SentGiftCardsList({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        disabled={isPhysical || resentIds.has(gc.id)}
-                        title={
-                          isPhysical
-                            ? "Physical cards cannot be resent by email."
-                            : undefined
-                        }
-                        onSelect={() => handleResend(gc)}
-                      >
-                        <Send className="size-4" />
-                        {resentIds.has(gc.id) ? "Email resent" : "Resend email"}
-                      </DropdownMenuItem>
+                      {isPhysical ? (
+                        // Physical cards can't be emailed — greyed with a tooltip
+                        // (kept hoverable so the tooltip actually shows).
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <DropdownMenuItem
+                              onSelect={(e) => e.preventDefault()}
+                              className="opacity-50"
+                            >
+                              <Send className="size-4" />
+                              Resend email
+                            </DropdownMenuItem>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-56 text-xs">
+                            Physical cards cannot be resent by email.
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <DropdownMenuItem
+                          disabled={resentIds.has(gc.id)}
+                          onSelect={() => handleResend(gc)}
+                        >
+                          <Send className="size-4" />
+                          {resentIds.has(gc.id)
+                            ? "Email resent"
+                            : "Resend email"}
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onSelect={() => setDetailCard(gc)}>
                         <Eye className="size-4" />
                         View details
