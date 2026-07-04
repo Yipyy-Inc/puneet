@@ -43,6 +43,12 @@ export const facilityConfig = {
       customer: {
         submissionConfirmed: true,
         missingRequiredFormsReminder: true,
+        /** When the missing-required-forms reminder fires. */
+        missingRequiredFormsReminderTiming: {
+          value: 48,
+          unit: "hours" as "hours" | "days",
+          anchor: "check_in" as "appointment" | "check_in",
+        },
         formRejectedNeedsCorrection: true,
       },
     },
@@ -843,6 +849,14 @@ export const facilityConfig = {
     units: ["Scoop", "Cup", "Oz", "Tbsp", "Grams"],
     foodTypes: ["Kibble", "Wet food", "Raw", "Prescription", "Homemade"],
     sources: ["House provide", "Owner provide"],
+    destinations: ["Kennel", "Crate", "Play yard", "Feeding station"],
+    frequencies: [
+      "Once daily",
+      "Twice daily",
+      "Three times daily",
+      "Free feed",
+    ],
+    allowedProteins: ["Chicken", "Beef", "Lamb", "Fish", "Turkey", "Duck"],
     instructions: ["Feed alone", "Free feed", "Hand feed", "Slow feeder"],
     allergyPresets: [
       "Chicken",
@@ -879,11 +893,11 @@ export const facilityConfig = {
   // ── Care task feedback options (configurable per facility) ──────
   careTaskFeedback: {
     feeding: [
-      { value: "ate_all", label: "Ate all (100%)" },
-      { value: "ate_most", label: "Ate most (75%)" },
-      { value: "ate_some", label: "Ate some (50%)" },
-      { value: "ate_little", label: "Ate little (25%)" },
-      { value: "refused", label: "Refused to eat (0%)" },
+      { value: "ate_all", label: "Ate all (100% of meal)" },
+      { value: "ate_most", label: "Ate most (75% of meal)" },
+      { value: "ate_some", label: "Ate some (50% of meal)" },
+      { value: "ate_little", label: "Ate little (25% of meal)" },
+      { value: "refused", label: "Refused to eat (0% of meal)" },
     ],
     medication: [
       { value: "given", label: "Given" },

@@ -1,7 +1,26 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useSettings } from "@/hooks/use-settings";
+import { evaluationMutations } from "@/lib/api/evaluations";
 import type {
   EvaluationFormTemplate,
   EvalSection,
@@ -34,7 +53,31 @@ import {
   X,
   Pencil,
   Save,
+  Copy,
+  Lock,
 } from "lucide-react";
+import { toast } from "sonner";
+
+// Stable-ish id generator that avoids Date.now()/Math.random() (impure during
+// render); crypto.randomUUID keeps ids unique across sessions.
+let _idSeq = 0;
+function uid(prefix: string): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+  _idSeq += 1;
+  return `${prefix}-${_idSeq}`;
+}
+
+// Section types offered when adding a new section — each seeds a starter
+// question of that field type.
+const SECTION_TYPE_OPTIONS: { value: EvalFieldType; label: string }[] = [
+  { value: "scale", label: "Scale" },
+  { value: "yes_no", label: "Yes-No" },
+  { value: "single_select", label: "Single Select" },
+  { value: "multi_select", label: "Multi Select" },
+  { value: "text", label: "Free Text" },
+];
 
 // ── Field type config (color + label) ────────────────────────────────
 
@@ -391,20 +434,28 @@ function SectionEditor({
   section,
   onChange,
   onRemove,
-  onMoveUp,
-  onMoveDown,
-  isFirst,
-  isLast,
+  onDuplicate,
 }: {
   section: EvalSection;
   onChange: (s: EvalSection) => void;
   onRemove: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-  isFirst: boolean;
-  isLast: boolean;
+  onDuplicate: () => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const isCore = section.core === true;
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: section.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
 
   const updateQuestion = (idx: number, q: EvalQuestion) => {
     const next = [...section.questions];
@@ -438,9 +489,22 @@ function SectionEditor({
   };
 
   return (
-    <div className="overflow-hidden rounded-xl border shadow-sm transition-shadow hover:shadow-md">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="overflow-hidden rounded-xl border bg-white shadow-sm transition-shadow hover:shadow-md"
+    >
       {/* Section header */}
       <div className="flex items-center gap-2 border-b bg-slate-50 px-4 py-3">
+        <button
+          type="button"
+          className="text-muted-foreground/40 cursor-grab touch-none hover:text-slate-500 active:cursor-grabbing"
+          aria-label="Drag to reorder section"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="size-4" />
+        </button>
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
@@ -453,12 +517,23 @@ function SectionEditor({
           )}
         </button>
         <div className="min-w-0 flex-1">
-          <Input
-            value={section.title}
-            onChange={(e) => onChange({ ...section, title: e.target.value })}
-            className="h-7 border-0 bg-transparent px-1 text-sm font-semibold shadow-none focus-visible:ring-1"
-            placeholder="Section title..."
-          />
+          <div className="flex items-center gap-1.5">
+            <Input
+              value={section.title}
+              onChange={(e) => onChange({ ...section, title: e.target.value })}
+              className="h-7 border-0 bg-transparent px-1 text-sm font-semibold shadow-none focus-visible:ring-1"
+              placeholder="Section title..."
+            />
+            {isCore && (
+              <Badge
+                variant="outline"
+                className="shrink-0 gap-1 border-slate-300 bg-slate-100 text-[10px] text-slate-600"
+              >
+                <Lock className="size-2.5" />
+                Core
+              </Badge>
+            )}
+          </div>
           <Input
             value={section.description ?? ""}
             onChange={(e) =>
@@ -480,25 +555,20 @@ function SectionEditor({
             variant="ghost"
             size="icon"
             className="size-7"
-            onClick={onMoveUp}
-            disabled={isFirst}
+            onClick={onDuplicate}
+            title="Duplicate section"
           >
-            <ChevronUp className="size-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            onClick={onMoveDown}
-            disabled={isLast}
-          >
-            <ChevronDown className="size-3.5" />
+            <Copy className="size-3.5" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             className="text-destructive/60 hover:text-destructive size-7"
             onClick={onRemove}
+            disabled={isCore}
+            title={
+              isCore ? "Core section — can't be deleted" : "Delete section"
+            }
           >
             <Trash2 className="size-3.5" />
           </Button>
@@ -614,12 +684,34 @@ export function EvaluationFormBuilder() {
   const [editing, setEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<"sections" | "codes">("sections");
 
+  const queryClient = useQueryClient();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
   const isDirty =
     JSON.stringify(local) !== JSON.stringify(evaluationFormTemplate);
 
+  // Persist the form structure through the evaluations query factory (the
+  // query-cache source of truth); the context update keeps the live preview and
+  // dirty-state in sync.
+  const saveTemplate = useMutation({
+    ...evaluationMutations.saveFormTemplate(local),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["evaluations", "form-template"],
+      });
+    },
+  });
+
   const handleSave = () => {
     updateEvaluationFormTemplate(local);
+    saveTemplate.mutate();
     setEditing(false);
+    toast.success("Evaluation form saved");
   };
 
   const handleCancel = () => {
@@ -634,25 +726,59 @@ export function EvaluationFormBuilder() {
   };
 
   const removeSection = (idx: number) => {
+    if (local.sections[idx]?.core) return; // core sections are protected
     setLocal({
       ...local,
       sections: local.sections.filter((_, i) => i !== idx),
     });
   };
 
-  const moveSection = (idx: number, dir: -1 | 1) => {
+  const duplicateSection = (idx: number) => {
+    const src = local.sections[idx];
+    if (!src) return;
+    const copy: EvalSection = {
+      ...src,
+      id: uid("section"),
+      title: `${src.title} (Copy)`,
+      core: false, // a duplicate is always an editable, deletable copy
+      questions: src.questions.map((q) => ({
+        ...q,
+        id: uid("q"),
+      })),
+    };
     const next = [...local.sections];
-    const swap = idx + dir;
-    if (swap < 0 || swap >= next.length) return;
-    [next[idx], next[swap]] = [next[swap], next[idx]];
+    next.splice(idx + 1, 0, copy);
     setLocal({ ...local, sections: next });
   };
 
-  const addSection = () => {
+  const handleSectionDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIdx = local.sections.findIndex((s) => s.id === active.id);
+    const newIdx = local.sections.findIndex((s) => s.id === over.id);
+    if (oldIdx < 0 || newIdx < 0) return;
+    setLocal({ ...local, sections: arrayMove(local.sections, oldIdx, newIdx) });
+  };
+
+  const addSection = (type: EvalFieldType) => {
+    const label =
+      SECTION_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? "Section";
+    const starter: EvalQuestion = {
+      id: uid("q"),
+      label: "New question",
+      type,
+      required: false,
+      ...(type === "scale"
+        ? { scaleLabels: { low: "Low", mid: "Medium", high: "High" } }
+        : {}),
+      ...(type === "single_select" || type === "multi_select"
+        ? { options: [] }
+        : {}),
+    };
     const newSection: EvalSection = {
-      id: `section-${Date.now()}`,
-      title: "New Section",
-      questions: [],
+      id: uid("section"),
+      title: `New ${label} Section`,
+      questions: [starter],
     };
     setLocal({ ...local, sections: [...local.sections, newSection] });
   };
@@ -720,7 +846,18 @@ export function EvaluationFormBuilder() {
                 className="overflow-hidden rounded-xl border"
               >
                 <div className="border-b bg-slate-50 px-4 py-2.5">
-                  <p className="text-sm font-semibold">{section.title}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-semibold">{section.title}</p>
+                    {section.core && (
+                      <Badge
+                        variant="outline"
+                        className="gap-1 border-slate-300 bg-slate-100 text-[10px] text-slate-600"
+                      >
+                        <Lock className="size-2.5" />
+                        Core
+                      </Badge>
+                    )}
+                  </div>
                   {section.description && (
                     <p className="text-muted-foreground text-xs">
                       {section.description}
@@ -814,26 +951,49 @@ export function EvaluationFormBuilder() {
 
             {activeTab === "sections" && (
               <div className="space-y-3">
-                {local.sections.map((section, i) => (
-                  <SectionEditor
-                    key={section.id}
-                    section={section}
-                    onChange={(s) => updateSection(i, s)}
-                    onRemove={() => removeSection(i)}
-                    onMoveUp={() => moveSection(i, -1)}
-                    onMoveDown={() => moveSection(i, 1)}
-                    isFirst={i === 0}
-                    isLast={i === local.sections.length - 1}
-                  />
-                ))}
-                <button
-                  type="button"
-                  onClick={addSection}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-4 text-sm font-medium text-slate-400 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600"
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleSectionDragEnd}
                 >
-                  <Plus className="size-4" />
-                  Add section
-                </button>
+                  <SortableContext
+                    items={local.sections.map((s) => s.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-3">
+                      {local.sections.map((section, i) => (
+                        <SectionEditor
+                          key={section.id}
+                          section={section}
+                          onChange={(s) => updateSection(i, s)}
+                          onRemove={() => removeSection(i)}
+                          onDuplicate={() => duplicateSection(i)}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+
+                {/* Add a section — choose the field type it starts with */}
+                <div className="rounded-xl border-2 border-dashed border-slate-200 p-3">
+                  <p className="text-muted-foreground mb-2 text-xs font-medium">
+                    Add a section
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {SECTION_TYPE_OPTIONS.map((opt) => (
+                      <Button
+                        key={opt.value}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5"
+                        onClick={() => addSection(opt.value)}
+                      >
+                        <Plus className="size-3.5" />
+                        {opt.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
 
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>

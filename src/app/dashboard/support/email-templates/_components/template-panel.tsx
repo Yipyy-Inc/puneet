@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { updateEmailTemplate } from "@/lib/email-templates-store";
+import { hydrateEmailBodyForPreview } from "@/lib/api/email-templates";
 import type { EmailTemplate } from "@/types/email-templates";
 import {
   fillSubject,
@@ -143,8 +144,10 @@ export function TemplatePanel({ template }: { template: EmailTemplate }) {
               <p className="text-sm font-semibold">{fillSubject(subject)}</p>
             </div>
             <div
-              className="text-foreground/90 [&_a]:text-primary space-y-2 p-4 text-sm/relaxed [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5"
-              dangerouslySetInnerHTML={{ __html: renderBodyPreview(body) }}
+              className="text-foreground/90 [&_a]:text-primary space-y-2 p-4 text-sm/relaxed [&_a]:underline [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-lg [&_ul]:list-disc [&_ul]:pl-5"
+              dangerouslySetInnerHTML={{
+                __html: hydrateEmailBodyForPreview(renderBodyPreview(body)),
+              }}
             />
           </div>
 

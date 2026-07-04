@@ -1,4 +1,45 @@
-import type { InvoiceTemplate } from "@/types/invoice-template";
+import type {
+  InvoiceTemplate,
+  InvoiceNumberFormat,
+  InvoicePaymentTerms,
+} from "@/types/invoice-template";
+
+/** Human-readable payment-terms line shown on the invoice. */
+export function paymentTermsLabel(terms: InvoicePaymentTerms): string {
+  switch (terms.type) {
+    case "due_on_receipt":
+      return "Due on receipt";
+    case "net_7":
+      return "Net 7 — payment due within 7 days";
+    case "net_14":
+      return "Net 14 — payment due within 14 days";
+    case "net_30":
+      return "Net 30 — payment due within 30 days";
+    case "custom":
+      return terms.customText.trim();
+  }
+}
+
+/**
+ * Build an invoice number from a configured format, e.g.
+ * { prefix: "INV", yearFormat: "YYYY", monthFormat: "MM", padding: 4 } with
+ * year 2026, month 6, seq 1 → "INV-2026-06-0001". Pure — the caller supplies
+ * the date parts so this stays deterministic.
+ */
+export function formatInvoiceNumber(
+  fmt: InvoiceNumberFormat,
+  year: number,
+  month: number,
+  seq: number,
+): string {
+  const parts: string[] = [];
+  if (fmt.prefix.trim()) parts.push(fmt.prefix.trim());
+  if (fmt.yearFormat === "YYYY") parts.push(String(year));
+  else if (fmt.yearFormat === "YY") parts.push(String(year).slice(-2));
+  if (fmt.monthFormat === "MM") parts.push(String(month).padStart(2, "0"));
+  parts.push(String(Math.max(0, seq)).padStart(fmt.padding, "0"));
+  return parts.join("-");
+}
 
 export interface InvoiceDocumentLineItem {
   name: string;
@@ -40,6 +81,11 @@ export interface InvoiceDocumentData {
   taxes?: InvoiceDocumentTax[];
   taxAmount?: number;
   taxRate?: number;
+  /**
+   * When true, the tax configuration has not loaded yet: render skeleton
+   * placeholders for the tax lines and dependent totals rather than a value.
+   */
+  taxesLoading?: boolean;
   tipTotal?: number;
   total: number;
   depositCollected?: number;
@@ -92,9 +138,25 @@ export function buildInvoiceDocumentHtml(
     .map((l) => escapeHtml(l!))
     .join(" &middot; ");
 
-  const taxNumbersLine = template.taxNumbers
-    ? `<div style="color:#64748b;font-size:10px;margin-top:6px;letter-spacing:0.04em">${escapeHtml(template.taxNumbers)}</div>`
+  const taxRegistrationsText = (template.taxRegistrations ?? [])
+    .filter((r) => r.value.trim())
+    .map(
+      (r) =>
+        `${r.label.trim() ? `${escapeHtml(r.label)}: ` : ""}${escapeHtml(r.value)}`,
+    )
+    .join(" &middot; ");
+  const taxNumbersLine = taxRegistrationsText
+    ? `<div style="color:#64748b;font-size:10px;margin-top:6px;letter-spacing:0.04em">${taxRegistrationsText}</div>`
     : "";
+
+  // Payment terms — only on invoices (a receipt is already paid).
+  const paymentTermsText = template.paymentTerms
+    ? paymentTermsLabel(template.paymentTerms)
+    : "";
+  const paymentTermsLine =
+    !isReceipt && paymentTermsText
+      ? `<div style="margin-top:6px;color:#475569;font-size:11px"><span style="color:#64748b">Payment terms:</span> ${escapeHtml(paymentTermsText)}</div>`
+      : "";
 
   const statusBadge = data.invoiceStatus
     ? (() => {
@@ -142,9 +204,23 @@ export function buildInvoiceDocumentHtml(
       <td style="padding:5px 0;text-align:right;font-variant-numeric:tabular-nums;color:${opts?.color ?? (opts?.muted ? "#64748b" : "#0f172a")};${opts?.emphasize ? "font-weight:700;font-size:16px" : ""}">${value}</td>
     </tr>`;
 
+  // Skeleton bar used while the tax configuration is still loading.
+  const skeletonBar = (width: number, height = 12) =>
+    `<span style="display:inline-block;width:${width}px;height:${height}px;border-radius:4px;background:#e2e8f0;animation:invSkeleton 1.2s ease-in-out infinite;vertical-align:middle"></span>`;
+  const skeletonRow = (
+    labelWidth: number,
+    valueWidth: number,
+    tall = false,
+  ) => `
+    <tr>
+      <td style="padding:5px 0">${skeletonBar(labelWidth, tall ? 16 : 12)}</td>
+      <td style="padding:5px 0;text-align:right">${skeletonBar(valueWidth, tall ? 16 : 12)}</td>
+    </tr>`;
+
   const taxes = data.taxes ?? [];
-  const taxRows =
-    taxes.length > 0
+  const taxRows = data.taxesLoading
+    ? skeletonRow(96, 56) + skeletonRow(84, 52)
+    : taxes.length > 0
       ? taxes
           .map((t) =>
             summaryRow(
@@ -162,6 +238,14 @@ export function buildInvoiceDocumentHtml(
           )
         : "";
 
+  // When taxes are still loading, the total and its dependents are unknown —
+  // show skeletons rather than a total that omits tax (a fake value).
+  const totalTailHtml = data.taxesLoading
+    ? skeletonRow(60, 72, true)
+    : `${summaryRow("Total", `$${fmt(data.total)}`, { emphasize: true })}
+      ${(data.depositCollected ?? 0) > 0 ? summaryRow("Deposit collected", `-$${fmt(data.depositCollected)}`, { color: "#16a34a" }) : ""}
+      ${(data.remainingDue ?? 0) > 0 ? summaryRow("Remaining due", `$${fmt(data.remainingDue)}`, { emphasize: true, color: "#b91c1c" }) : ""}`;
+
   const summaryHtml = `
     <table style="width:100%;border-collapse:collapse;margin-top:16px">
       ${summaryRow("Subtotal", `$${fmt(data.subtotal)}`, { muted: true })}
@@ -169,9 +253,7 @@ export function buildInvoiceDocumentHtml(
       ${taxRows}
       ${(data.tipTotal ?? 0) > 0 ? summaryRow("Tip", `$${fmt(data.tipTotal)}`, { muted: true }) : ""}
       <tr><td colspan="2" style="border-top:2px solid ${accent};padding-top:6px"></td></tr>
-      ${summaryRow("Total", `$${fmt(data.total)}`, { emphasize: true })}
-      ${(data.depositCollected ?? 0) > 0 ? summaryRow("Deposit collected", `-$${fmt(data.depositCollected)}`, { color: "#16a34a" }) : ""}
-      ${(data.remainingDue ?? 0) > 0 ? summaryRow("Remaining due", `$${fmt(data.remainingDue)}`, { emphasize: true, color: "#b91c1c" }) : ""}
+      ${totalTailHtml}
     </table>`;
 
   const paymentsHtml =
@@ -230,6 +312,7 @@ export function buildInvoiceDocumentHtml(
   <style>
     * { box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 720px; margin: 0 auto; padding: 40px 32px; color: #0f172a; font-size: 14px; line-height: 1.5; background: #ffffff; }
+    @keyframes invSkeleton { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
     @media print { body { padding: 24px; max-width: none; } }
   </style>
 </head>
@@ -249,6 +332,7 @@ export function buildInvoiceDocumentHtml(
       <div style="margin-top:4px;color:#64748b;font-size:12px;font-variant-numeric:tabular-nums">#${escapeHtml(data.invoiceNumber)}</div>
       <div style="margin-top:2px;color:#64748b;font-size:11px">${escapeHtml(data.issuedDate)}</div>
       ${statusBadge ? `<div style="margin-top:8px">${statusBadge}</div>` : ""}
+      ${paymentTermsLine}
     </div>
   </div>
 

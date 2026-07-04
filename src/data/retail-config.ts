@@ -43,12 +43,64 @@ export interface RetailUnit {
   name: string;
 }
 
+/**
+ * Canadian sales-tax modes. This replaces the previously hardcoded
+ * Quebec-only (GST/QST) tax logic in the POS module.
+ */
+export type RetailTaxMode = "HST" | "GST" | "PST" | "QST";
+
+/**
+ * Single source of truth for retail/POS tax calculation. The POS module and
+ * the Invoice Template read from this instead of hardcoding rates.
+ */
+export interface RetailTaxConfig {
+  /** Default rate as a percentage (e.g. 5 = 5%), applied to all taxable products unless overridden. */
+  defaultRate: number;
+  /** Active Canadian tax mode. */
+  taxMode: RetailTaxMode;
+  /** Facility tax registration / business number shown on receipts. */
+  registrationNumber: string;
+  /** Show the itemized tax breakdown on printed/emailed receipts. */
+  showBreakdownOnReceipt: boolean;
+  /** IDs of product categories that are tax-exempt. */
+  exemptCategoryIds: string[];
+}
+
+/** How a POS receipt is delivered to the customer. */
+export type RetailReceiptFormat = "print" | "email" | "both";
+
+/** Receipt / POS presentation settings for the retail module. */
+export interface RetailReceiptConfig {
+  /** Custom text shown at the top of the receipt. */
+  header: string;
+  /** Custom text shown at the bottom of the receipt. */
+  footer: string;
+  /** Whether receipts print, email, or both. */
+  format: RetailReceiptFormat;
+  /** Show the facility logo at the top of the receipt. */
+  showLogo: boolean;
+  /** Return / refund policy text printed on the receipt. */
+  returnPolicy: string;
+}
+
+/** Low-stock alerting for the retail/inventory module. */
+export interface RetailLowStockConfig {
+  /** Default threshold (units): alert when a product's stock falls below this,
+   *  unless overridden per-product on the product page. */
+  defaultThreshold: number;
+  /** Whether a low-stock alert is sent to the staff notifications channel. */
+  notifyStaff: boolean;
+}
+
 export interface RetailConfig {
   categories: RetailCategory[];
   suppliers: RetailSupplier[];
   brands: RetailBrand[];
   productTags: RetailProductTag[];
   unitsOfMeasure: RetailUnit[];
+  taxConfig: RetailTaxConfig;
+  receiptConfig: RetailReceiptConfig;
+  lowStockConfig: RetailLowStockConfig;
 }
 
 // ── Default data ─────────────────────────────────────────────────────────────
@@ -190,4 +242,22 @@ export const retailConfig: RetailConfig = {
     { id: "unit-9", name: "oz" },
     { id: "unit-10", name: "Pair" },
   ],
+  taxConfig: {
+    defaultRate: 5,
+    taxMode: "GST",
+    registrationNumber: "",
+    showBreakdownOnReceipt: true,
+    exemptCategoryIds: [],
+  },
+  receiptConfig: {
+    header: "",
+    footer: "Thank you for shopping with us!",
+    format: "print",
+    showLogo: true,
+    returnPolicy: "Returns accepted within 30 days with receipt.",
+  },
+  lowStockConfig: {
+    defaultThreshold: 5,
+    notifyStaff: true,
+  },
 };

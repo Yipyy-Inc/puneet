@@ -8,7 +8,6 @@ import { insightQueries } from "@/lib/api/smart-insights";
 import {
   Home,
   Users,
-  PawPrint,
   Calendar,
   CalendarClock,
   UserCheck,
@@ -19,7 +18,6 @@ import {
   Zap,
   DollarSign,
   CreditCard,
-  Rocket,
   BarChart3,
   Megaphone,
   AlertTriangle,
@@ -27,8 +25,6 @@ import {
   Grid3X3,
   Scissors,
   ShoppingCart,
-  Bell,
-  Bed,
   Tags,
   Camera,
   Lightbulb,
@@ -36,33 +32,18 @@ import {
   GraduationCap,
   ClipboardList,
   ClipboardCheck,
-  Plus,
-  Globe,
-  GitCompare,
-  ArrowLeftRight,
   HeartHandshake,
   Gift,
   ShieldCheck,
-  Boxes,
   Award,
-  LifeBuoy,
-  Database,
-  FolderOpen,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
 import { facilities } from "@/data/facilities";
-import { useCustomServices } from "@/hooks/use-custom-services";
-import { resolveIcon } from "@/lib/service-registry";
-import { COLOR_HEX_MAP } from "@/data/custom-services";
 import { LocationContextSelector } from "@/components/hq/LocationContextSelector";
-import { useLocationContext } from "@/hooks/use-location-context";
 
 export function FacilitySidebar() {
   const isMounted = useHydrated();
-  const { activeModules } = useCustomServices();
-  const sidebarModules = isMounted ? activeModules : [];
-  const { isMultiLocation } = useLocationContext();
 
   // Static facility ID for now (would come from user token in production).
   const facilityId = 11;
@@ -76,22 +57,8 @@ export function FacilitySidebar() {
 
   // Show all menu items since permission system is removed
   const filteredMenuSections = useMemo((): MenuSection[] => {
-    // Build custom service sidebar items from active modules that have showInSidebar
-    const customServiceItems = sidebarModules
-      .filter((m) => m.showInSidebar)
-      .sort((a, b) => a.sidebarPosition - b.sidebarPosition)
-      .map((m) => ({
-        title: m.sidebarLabel?.trim() || m.name,
-        url: `/facility/dashboard/services/custom/${m.slug}`,
-        icon: resolveIcon(m.icon),
-        // Step 1 brand color so the module icon is tinted in the sidebar.
-        iconColor: COLOR_HEX_MAP[m.iconColor] ?? "#3b82f6",
-        disabled: false,
-      }));
-
     const allMenuSections: MenuSection[] = [
       {
-        label: "Overview",
         items: [
           {
             title: "Dashboard",
@@ -99,23 +66,87 @@ export function FacilitySidebar() {
             icon: Home,
             disabled: false,
           },
+        ],
+      },
+      {
+        label: "Calendars",
+        items: [
           {
-            title: "Calendar",
+            title: "Facility Calendar",
             url: "/facility/dashboard/calendar",
             icon: Calendar,
             disabled: false,
           },
           {
-            title: "Occupancy",
+            title: "Occupancy Calendar",
             url: "/facility/dashboard/kennel-view",
             icon: Grid3X3,
             disabled: false,
           },
+        ],
+      },
+      {
+        label: "Communication",
+        items: [
           {
-            title: "Notifications",
-            url: "/facility/notifications",
-            icon: Bell,
+            title: "Calling",
+            url: "/facility/dashboard/calling",
+            icon: Phone,
             disabled: false,
+          },
+          {
+            title: "Inbox",
+            url: "/facility/dashboard/messaging",
+            icon: MessageSquare,
+            disabled: false,
+          },
+        ],
+      },
+      {
+        items: [
+          {
+            title: "Grooming",
+            url: "/facility/dashboard/services/grooming",
+            icon: Scissors,
+            disabled: false,
+          },
+        ],
+      },
+      {
+        items: [
+          {
+            title: "Training",
+            url: "/facility/dashboard/services/training",
+            icon: GraduationCap,
+            disabled: false,
+          },
+        ],
+      },
+      {
+        items: [
+          {
+            title: "Retail / POS",
+            url: "/facility/dashboard/services/retail",
+            icon: ShoppingCart,
+            disabled: false,
+          },
+        ],
+      },
+      {
+        label: "Intelligence",
+        items: [
+          {
+            title: "Automations",
+            url: "/facility/dashboard/automations",
+            icon: Zap,
+            disabled: false,
+          },
+          {
+            title: "Smart Insights",
+            url: "/facility/dashboard/insights",
+            icon: Lightbulb,
+            disabled: false,
+            count: highPriorityCount > 0 ? highPriorityCount : undefined,
           },
         ],
       },
@@ -133,96 +164,9 @@ export function FacilitySidebar() {
       {
         items: [
           {
-            title: "Grooming",
-            url: "/facility/dashboard/services/grooming",
-            icon: Scissors,
-            disabled: false,
-          },
-        ],
-      },
-      {
-        items: [
-          {
             title: "Scheduling",
             url: "/facility/dashboard/services/scheduling",
             icon: Clock,
-            disabled: false,
-          },
-        ],
-      },
-      {
-        items: [
-          {
-            title: "Calling",
-            url: "/facility/dashboard/calling",
-            icon: Phone,
-            disabled: false,
-          },
-        ],
-      },
-      {
-        items: [
-          {
-            title: "Messages",
-            url: "/facility/dashboard/messaging",
-            icon: MessageSquare,
-            disabled: false,
-          },
-        ],
-      },
-      {
-        items: [
-          {
-            title: "Automations",
-            url: "/facility/dashboard/automations",
-            icon: Zap,
-            disabled: false,
-          },
-        ],
-      },
-      {
-        items: [
-          {
-            title: "Smart Insights",
-            url: "/facility/dashboard/insights",
-            icon: Lightbulb,
-            disabled: false,
-            count: highPriorityCount > 0 ? highPriorityCount : undefined,
-          },
-        ],
-      },
-      {
-        label: "Modules",
-        items: [
-          {
-            title: "Daycare",
-            url: "/facility/dashboard/services/daycare",
-            icon: PawPrint,
-            disabled: false,
-          },
-          {
-            title: "Boarding",
-            url: "/facility/dashboard/services/boarding",
-            icon: Bed,
-            disabled: false,
-          },
-          {
-            title: "Training",
-            url: "/facility/dashboard/services/training",
-            icon: GraduationCap,
-            disabled: false,
-          },
-          {
-            title: "Retail / POS",
-            url: "/facility/dashboard/services/retail",
-            icon: ShoppingCart,
-            disabled: false,
-          },
-          ...customServiceItems,
-          {
-            title: "+ Request Module",
-            url: "/facility/dashboard/modules/request",
-            icon: Plus,
             disabled: false,
           },
         ],
@@ -275,14 +219,8 @@ export function FacilitySidebar() {
             disabled: false,
           },
           {
-            title: "Inventory",
+            title: "Operational Inventory",
             url: "/facility/dashboard/inventory",
-            icon: Package,
-            disabled: false,
-          },
-          {
-            title: "Add-Ons",
-            url: "/facility/dashboard/add-ons",
             icon: Package,
             disabled: false,
           },
@@ -379,111 +317,31 @@ export function FacilitySidebar() {
             icon: FileText,
             disabled: false,
           },
-        ],
-      },
-      {
-        label: "Settings",
-        items: [
-          {
-            title: "Setup Guide",
-            url: "/facility/onboarding",
-            icon: Rocket,
-            disabled: false,
-          },
-          {
-            title: "Settings",
-            url: "/facility/dashboard/settings",
-            icon: Settings,
-            disabled: false,
-          },
-          {
-            title: "Export Data",
-            url: "/facility/settings/data-export",
-            icon: Database,
-            disabled: false,
-          },
           {
             title: "Intake Forms",
             url: "/facility/dashboard/forms",
             icon: ClipboardList,
             disabled: false,
           },
+        ],
+      },
+      // Single Settings entry at the end. Daycare, Boarding and the HQ
+      // controls now live inside the Settings page rather than the sidebar.
+      {
+        items: [
           {
-            title: "Documents",
-            url: "/facility/documents",
-            icon: FolderOpen,
-            disabled: false,
-          },
-          {
-            title: "Help Center",
-            url: "/facility/help",
-            icon: LifeBuoy,
+            title: "Settings",
+            url: "/facility/dashboard/settings",
+            icon: Settings,
             disabled: false,
           },
         ],
       },
-      ...(isMultiLocation
-        ? [
-            {
-              label: "HQ",
-              items: [
-                {
-                  title: "HQ Overview",
-                  url: "/facility/hq/overview",
-                  icon: Globe,
-                  disabled: false,
-                },
-                {
-                  title: "Compare Locations",
-                  url: "/facility/hq/comparison",
-                  icon: GitCompare,
-                  disabled: false,
-                },
-                {
-                  title: "HQ Reports",
-                  url: "/facility/hq/reports",
-                  icon: BarChart3,
-                  disabled: false,
-                },
-                {
-                  title: "Service Catalog",
-                  url: "/facility/hq/services",
-                  icon: Boxes,
-                  disabled: false,
-                },
-                {
-                  title: "Training",
-                  url: "/facility/hq/training",
-                  icon: GraduationCap,
-                  disabled: false,
-                },
-                {
-                  title: "Staff Pool",
-                  url: "/facility/hq/staff",
-                  icon: Users,
-                  disabled: false,
-                },
-                {
-                  title: "Transfer History",
-                  url: "/facility/hq/transfers",
-                  icon: ArrowLeftRight,
-                  disabled: false,
-                },
-                {
-                  title: "HQ Settings",
-                  url: "/facility/hq/settings",
-                  icon: Settings,
-                  disabled: false,
-                },
-              ],
-            } satisfies MenuSection,
-          ]
-        : []),
     ];
 
     // Since permission system is removed, always show all items
     return allMenuSections;
-  }, [sidebarModules, isMultiLocation, highPriorityCount]);
+  }, [highPriorityCount]);
 
   const handleLogout = () => {
     // TODO: Implement logout logic

@@ -17,6 +17,7 @@ import {
   Search,
   ChevronRight,
   Settings2,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCustomServices } from "@/hooks/use-custom-services";
@@ -159,33 +160,100 @@ const CATEGORIES: CategoryDef[] = [
   },
 ];
 
-function getActiveCount(
+type CategoryStatus = "active" | "inactive" | "warning";
+
+interface CategoryStats {
+  activeCount: number;
+  warningCount: number;
+  /** Concatenated, lowercased names/labels of every rule in the category, so
+   *  the sidebar search can match individual rules — not just category titles. */
+  searchText: string;
+}
+
+// Human-readable fields on a stored rule that should be searchable.
+const RULE_NAME_KEYS = [
+  "name",
+  "label",
+  "title",
+  "description",
+  "bundledServiceLabel",
+  "note",
+  "notes",
+];
+
+function collectRuleText(entry: Record<string, unknown>): string {
+  const parts: string[] = [];
+  for (const key of RULE_NAME_KEYS) {
+    const value = entry[key];
+    if (typeof value === "string" && value.trim()) {
+      parts.push(value.toLowerCase());
+    }
+  }
+  return parts.join(" ");
+}
+
+// Active-rule count, a count of rules that warn (i.e. scoped to a service that
+// no longer exists), and the searchable text of every rule for a category.
+function getCategoryStats(
   countKey: keyof StoredPricingRules,
+  serviceValues: string[],
   facilityId?: number,
-): number {
+): CategoryStats {
   const rules = getStoredPricingRules(facilityId);
   const data = rules[countKey];
-  if (typeof data === "string") return data ? 1 : 0;
-  if (Array.isArray(data))
-    return data.filter((rule) => {
-      if (!rule || typeof rule !== "object") return false;
+  const serviceSet = new Set(serviceValues);
+
+  const ruleActive = (entry: Record<string, unknown>): boolean => {
+    if ("isActive" in entry) return entry.isActive !== false;
+    if ("enabled" in entry) return entry.enabled !== false;
+    return true;
+  };
+  const ruleWarns = (entry: Record<string, unknown>): boolean => {
+    const svc = entry.applicableServices;
+    if (!Array.isArray(svc) || svc.length === 0 || svc.includes("all")) {
+      return false;
+    }
+    return svc.some((s) => s !== "all" && !serviceSet.has(s));
+  };
+
+  if (typeof data === "string") {
+    return { activeCount: data ? 1 : 0, warningCount: 0, searchText: "" };
+  }
+  if (Array.isArray(data)) {
+    let activeCount = 0;
+    let warningCount = 0;
+    const searchParts: string[] = [];
+    for (const rule of data) {
+      if (!rule || typeof rule !== "object") continue;
       const entry = rule as Record<string, unknown>;
-      if ("isActive" in entry) return entry.isActive !== false;
-      if ("enabled" in entry) return entry.enabled !== false;
-      return true;
-    }).length;
+      if (ruleActive(entry)) activeCount += 1;
+      if (ruleWarns(entry)) warningCount += 1;
+      searchParts.push(collectRuleText(entry));
+    }
+    return { activeCount, warningCount, searchText: searchParts.join(" ") };
+  }
   if (
     data &&
     typeof data === "object" &&
     ("enabled" in (data as Record<string, unknown>) ||
       "isActive" in (data as Record<string, unknown>))
-  )
-    return ((data as { enabled?: boolean; isActive?: boolean }).isActive ??
-      (data as { enabled?: boolean; isActive?: boolean }).enabled)
-      ? 1
-      : 0;
-  return 0;
+  ) {
+    const entry = data as { enabled?: boolean; isActive?: boolean };
+    return {
+      activeCount: (entry.isActive ?? entry.enabled) ? 1 : 0,
+      warningCount: 0,
+      searchText: collectRuleText(data as Record<string, unknown>),
+    };
+  }
+  return { activeCount: 0, warningCount: 0, searchText: "" };
 }
+
+type CategoryWithStats = CategoryDef & {
+  activeCount: number;
+  warningCount: number;
+  status: CategoryStatus;
+  searchText: string;
+};
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -214,13 +282,38 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
   );
   const { activeModules } = useCustomServices();
 
+  const allServices = useMemo(
+    () => [
+      { value: "boarding", label: "Boarding" },
+      { value: "daycare", label: "Daycare" },
+      { value: "grooming", label: "Grooming" },
+      { value: "training", label: "Training" },
+      ...activeModules.map((m) => ({ value: m.slug, label: m.name })),
+    ],
+    [activeModules],
+  );
+  const serviceValues = useMemo(
+    () => allServices.map((s) => s.value),
+    [allServices],
+  );
+
   const categoriesWithCounts = useMemo(
     () =>
-      uniqueCategories.map((category) => ({
-        ...category,
-        activeCount: getActiveCount(category.countKey, facilityId),
-      })),
-    [uniqueCategories, facilityId],
+      uniqueCategories.map((category): CategoryWithStats => {
+        const { activeCount, warningCount, searchText } = getCategoryStats(
+          category.countKey,
+          serviceValues,
+          facilityId,
+        );
+        const status: CategoryStatus =
+          warningCount > 0
+            ? "warning"
+            : activeCount > 0
+              ? "active"
+              : "inactive";
+        return { ...category, activeCount, warningCount, status, searchText };
+      }),
+    [uniqueCategories, facilityId, serviceValues],
   );
 
   const groups = categoriesWithCounts.reduce(
@@ -229,7 +322,7 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
       acc[cat.group].push(cat);
       return acc;
     },
-    {} as Record<string, Array<CategoryDef & { activeCount: number }>>,
+    {} as Record<string, CategoryWithStats[]>,
   );
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
@@ -243,7 +336,10 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
           return (
             category.title.toLowerCase().includes(normalizedSearch) ||
             category.description.toLowerCase().includes(normalizedSearch) ||
-            category.group.toLowerCase().includes(normalizedSearch)
+            category.group.toLowerCase().includes(normalizedSearch) ||
+            // Match individual rule names/labels across every category, so a
+            // search for a specific rule surfaces the category that holds it.
+            category.searchText.includes(normalizedSearch)
           );
         });
 
@@ -253,7 +349,7 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
 
         return acc;
       },
-      {} as Record<string, Array<CategoryDef & { activeCount: number }>>,
+      {} as Record<string, CategoryWithStats[]>,
     );
   }, [groups, normalizedSearch]);
 
@@ -263,14 +359,6 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
       0,
     );
   }, [categoriesWithCounts]);
-
-  const allServices = [
-    { value: "boarding", label: "Boarding" },
-    { value: "daycare", label: "Daycare" },
-    { value: "grooming", label: "Grooming" },
-    { value: "training", label: "Training" },
-    ...activeModules.map((m) => ({ value: m.slug, label: m.name })),
-  ];
 
   const activeCategory =
     categoriesWithCounts.find((category) => category.id === activeCategoryId) ??
@@ -343,7 +431,7 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     className="h-8 border-slate-200 bg-white pl-8 text-xs"
-                    placeholder="Search categories"
+                    placeholder="Search rules or categories"
                   />
                 </div>
               </div>
@@ -357,77 +445,114 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
                   </div>
                 ) : (
                   Object.entries(filteredGroups).map(
-                    ([groupName, categories]) => (
-                      <div key={groupName}>
-                        <p className="text-muted-foreground px-2 pb-1 text-[10px] font-semibold tracking-wider uppercase">
-                          {groupName}
-                        </p>
-                        <div className="space-y-1.5">
-                          {categories.map((category) => {
-                            const Icon = category.icon;
-                            const isActive = activeCategory?.id === category.id;
+                    ([groupName, categories]) => {
+                      const groupWarnings = categories.reduce(
+                        (n, c) => n + c.warningCount,
+                        0,
+                      );
+                      return (
+                        <div key={groupName}>
+                          <div className="flex items-center gap-1.5 px-2 pb-1">
+                            <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                              {groupName}
+                            </p>
+                            {groupWarnings > 0 && (
+                              <Badge className="gap-0.5 border border-amber-200 bg-amber-50 text-[9px] text-amber-700">
+                                <AlertTriangle className="size-2.5" />
+                                {groupWarnings}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="space-y-1.5">
+                            {categories.map((category) => {
+                              const Icon = category.icon;
+                              const isActive =
+                                activeCategory?.id === category.id;
+                              const dotClass =
+                                category.status === "warning"
+                                  ? "bg-amber-500"
+                                  : category.status === "active"
+                                    ? "bg-emerald-500"
+                                    : "bg-slate-300";
+                              const dotTitle =
+                                category.status === "warning"
+                                  ? "Warning — a rule targets a removed service"
+                                  : category.status === "active"
+                                    ? "Active"
+                                    : "Inactive";
 
-                            return (
-                              <button
-                                key={category.id}
-                                ref={(element) => {
-                                  categoryButtonRefs.current[category.id] =
-                                    element;
-                                }}
-                                type="button"
-                                onClick={() =>
-                                  handleCategorySelect(category.id)
-                                }
-                                className={cn(
-                                  "group relative flex w-full items-start gap-3 overflow-hidden rounded-xl border px-3 py-2.5 text-left transition-all duration-200",
-                                  isActive
-                                    ? "border-primary/45 bg-primary/8 shadow-sm"
-                                    : "border-slate-200/80 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm",
-                                )}
-                              >
-                                {isActive && (
-                                  <span className="bg-primary absolute top-0 left-0 h-full w-1" />
-                                )}
-
-                                <div
+                              return (
+                                <button
+                                  key={category.id}
+                                  ref={(element) => {
+                                    categoryButtonRefs.current[category.id] =
+                                      element;
+                                  }}
+                                  type="button"
+                                  onClick={() =>
+                                    handleCategorySelect(category.id)
+                                  }
                                   className={cn(
-                                    "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
-                                    category.iconBg,
+                                    "group relative flex w-full items-start gap-3 overflow-hidden rounded-xl border px-3 py-2.5 text-left transition-all duration-200",
+                                    isActive
+                                      ? "border-primary/45 bg-primary/8 shadow-sm"
+                                      : "border-slate-200/80 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm",
                                   )}
                                 >
-                                  <Icon
-                                    className={cn("size-4", category.iconColor)}
-                                  />
-                                </div>
-
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-sm font-medium">
-                                      {category.title}
-                                    </p>
-                                    {category.activeCount > 0 && (
-                                      <Badge className="bg-emerald-50 text-[10px] text-emerald-700">
-                                        {category.activeCount}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <p className="text-muted-foreground mt-0.5 text-[11px]/relaxed">
-                                    {category.description}
-                                  </p>
-                                </div>
-
-                                <ChevronRight
-                                  className={cn(
-                                    "mt-0.5 size-4 shrink-0 text-slate-300 transition-all group-hover:translate-x-0.5",
-                                    isActive && "text-primary rotate-90",
+                                  {isActive && (
+                                    <span className="bg-primary absolute top-0 left-0 h-full w-1" />
                                   )}
-                                />
-                              </button>
-                            );
-                          })}
+
+                                  <div
+                                    className={cn(
+                                      "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
+                                      category.iconBg,
+                                    )}
+                                  >
+                                    <Icon
+                                      className={cn(
+                                        "size-4",
+                                        category.iconColor,
+                                      )}
+                                    />
+                                  </div>
+
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className={cn(
+                                          "size-2 shrink-0 rounded-full",
+                                          dotClass,
+                                        )}
+                                        title={dotTitle}
+                                      />
+                                      <p className="text-sm font-medium">
+                                        {category.title}
+                                      </p>
+                                      {category.activeCount > 0 && (
+                                        <Badge className="bg-emerald-50 text-[10px] text-emerald-700">
+                                          {category.activeCount}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-muted-foreground mt-0.5 text-[11px]/relaxed">
+                                      {category.description}
+                                    </p>
+                                  </div>
+
+                                  <ChevronRight
+                                    className={cn(
+                                      "mt-0.5 size-4 shrink-0 text-slate-300 transition-all group-hover:translate-x-0.5",
+                                      isActive && "text-primary rotate-90",
+                                    )}
+                                  />
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    ),
+                      );
+                    },
                   )
                 )}
               </div>

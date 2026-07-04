@@ -60,6 +60,9 @@ export interface KbArticleDraft {
   category: string;
   body: string;
   status: KbArticleStatus;
+  summary?: string;
+  tags?: string[];
+  planTiers?: string[];
 }
 
 /** Create or update an article (preserves views/helpfulness on edit). */
@@ -78,6 +81,9 @@ export function upsertKbArticle(draft: KbArticleDraft): KbArticle {
     helpfulNo: existing?.helpfulNo ?? 0,
     author: existing?.author ?? "Yipyy Support",
     updatedAt: new Date().toISOString(),
+    summary: draft.summary,
+    tags: draft.tags,
+    planTiers: draft.planTiers,
   };
   commit({
     articles: [article, ...list.filter((a) => a.id !== article.id)].sort(
@@ -122,6 +128,21 @@ export function recordKbHelpfulVote(id: string, helpful: boolean) {
             helpfulNo: a.helpfulNo + (helpful ? 0 : 1),
           }
         : a,
+    ),
+  });
+}
+
+/**
+ * Increment an article's view counter (called once per Help Center open).
+ * Feeds the Knowledge Base performance metrics in the Super Admin panel.
+ */
+export function recordKbArticleView(id: string) {
+  ensureInit();
+  if (!state) return;
+  commit({
+    ...state,
+    articles: state.articles.map((a) =>
+      a.id === id ? { ...a, views: a.views + 1 } : a,
     ),
   });
 }

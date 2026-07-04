@@ -20,12 +20,27 @@ export type DepositRule = z.infer<typeof depositRuleSchema>;
 
 export type DepositRuleSet = DepositRule[];
 
+// What happens to a collected deposit when a booking is cancelled.
+export const depositRefundTypeEnum = z.enum([
+  "full_before_window",
+  "non_refundable",
+  "credit",
+]);
+export type DepositRefundType = z.infer<typeof depositRefundTypeEnum>;
+
+export const depositRefundPolicySchema = z.object({
+  type: depositRefundTypeEnum,
+  /** Hours-before-booking cutoff for a full refund (full_before_window only). */
+  refundBeforeHours: z.number(),
+});
+export type DepositRefundPolicy = z.infer<typeof depositRefundPolicySchema>;
+
+// Only booking-based services collect deposits. Retail (POS) and vet
+// transactions are not booking flows, so they are intentionally excluded.
 export const SERVICE_TYPES_FOR_DEPOSITS = [
   "boarding",
   "daycare",
   "grooming",
   "training",
-  "vet",
-  "retail",
 ] as const;
 export type DepositServiceType = (typeof SERVICE_TYPES_FOR_DEPOSITS)[number];

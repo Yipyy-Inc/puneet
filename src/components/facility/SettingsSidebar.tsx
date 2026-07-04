@@ -25,6 +25,7 @@ import {
   CloudSun,
   Receipt,
   Sparkles,
+  Globe,
 } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import {
@@ -124,6 +125,10 @@ const STATIC_GROUPS: SettingsGroup[] = [
       { id: "yipyygo", label: "Yipyy Express Check-in", icon: FileText },
       { id: "audit", label: "Audit Log", icon: History },
     ],
+  },
+  {
+    label: "Multi-Location",
+    sections: [{ id: "hq", label: "HQ", icon: Globe }],
   },
 ];
 

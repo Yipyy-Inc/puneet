@@ -1,9 +1,15 @@
 "use client";
 
 import { use, useState, useMemo, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { bookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
+import { checkinQueries } from "@/lib/api/checkin-requirements";
+import {
+  getCheckinConfig,
+  isSectionEnabledForService,
+} from "@/data/checkin-requirements";
 import {
   getYipyyGoConfig,
   getFormTemplateForService,
@@ -97,6 +103,13 @@ export default function YipyyGoFormPage({
     if (!booking) return null;
     return getYipyyGoConfig(booking.facilityId);
   }, [booking]);
+
+  // Per-service check-in requirements (Settings → Check-in Requirements).
+  // initialData gives a synchronous value so section visibility is stable.
+  const { data: checkinConfig } = useQuery({
+    ...checkinQueries.config(),
+    initialData: getCheckinConfig,
+  });
 
   // Get or create form data
   const [formData, setFormData] = useState<YipyyGoFormData | null>(null);
@@ -582,6 +595,10 @@ export default function YipyyGoFormPage({
     ? getFormTemplateForService(yipyyGoConfig, booking.service)
     : null;
   const features = effectiveFormTemplate?.features;
+  // A section is shown only if the facility hasn't disabled it for this service
+  // in Check-in Requirements settings (per-service override or default).
+  const sectionEnabled = (key: string) =>
+    isSectionEnabledForService(checkinConfig, booking.service, key);
   const sections = [
     ...(features?.contactInfoSection !== false
       ? [
@@ -610,12 +627,30 @@ export default function YipyyGoFormPage({
           },
         ]
       : []),
-    { id: "feeding", label: "Feeding", component: FeedingSection },
-    { id: "medication", label: "Medications", component: MedicationSection },
+    ...(sectionEnabled("feeding")
+      ? [{ id: "feeding", label: "Feeding", component: FeedingSection }]
+      : []),
+    ...(sectionEnabled("medication")
+      ? [
+          {
+            id: "medication",
+            label: "Medications",
+            component: MedicationSection,
+          },
+        ]
+      : []),
     ...(features?.addOnsSection
       ? [{ id: "addons", label: "Add-ons", component: AddOnsSection }]
       : []),
-    { id: "belongings", label: "Belongings", component: BelongingsSection },
+    ...(sectionEnabled("belongings")
+      ? [
+          {
+            id: "belongings",
+            label: "Belongings",
+            component: BelongingsSection,
+          },
+        ]
+      : []),
     { id: "review", label: "Review", component: ReviewSection },
   ];
 

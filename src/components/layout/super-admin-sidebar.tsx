@@ -29,7 +29,6 @@ import {
   MessagesSquare,
   PhoneCall,
   Plug,
-  Puzzle,
   Receipt,
   Repeat,
   Settings,
@@ -146,12 +145,6 @@ export function AppSidebar() {
           disabled: false,
         },
         {
-          title: "Custom Module Registry",
-          url: "/dashboard/services/custom-modules",
-          icon: Puzzle,
-          disabled: false,
-        },
-        {
           title: "Data Import",
           url: "/dashboard/platform/import",
           icon: Upload,
@@ -190,6 +183,12 @@ export function AppSidebar() {
           title: "Email Templates",
           url: "/dashboard/support/email-templates",
           icon: Mail,
+          disabled: false,
+        },
+        {
+          title: "Agreements & Waivers",
+          url: "/dashboard/support/agreements",
+          icon: FileSignature,
           disabled: false,
         },
         {

@@ -22,6 +22,9 @@ import {
   Shield,
   Lock,
   WandSparkles,
+  Workflow,
+  ChevronDown,
+  ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -160,8 +163,21 @@ let _iftttRuleId = 1200;
 
 // ── Component ────────────────────────────────────────────────────────────────
 
+// Statuses that end the lifecycle — shown separately from the linear flow.
+const TERMINAL_STATUS_IDS = new Set(["no_show", "cancelled", "declined"]);
+
+// Short labels for the auto-transition events, used on the flow arrows.
+const EVENT_ARROW_LABELS: Record<AutoTransitionAction, string> = {
+  onDepositPaid: "deposit",
+  onPaymentComplete: "payment",
+  onCheckIn: "check-in",
+  onCheckout: "checkout",
+};
+
 export function BookingStatusSettings() {
   const { role } = useFacilityRole();
+
+  const [showFlow, setShowFlow] = useState(true);
 
   const [customStatuses, setCustomStatuses] = useState<CustomStatus[]>(
     (defaultConfig?.customStatuses as CustomStatus[]) ?? [],
@@ -228,6 +244,35 @@ export function BookingStatusSettings() {
       label,
     }));
   }, [customStatuses]);
+
+  // Linear lifecycle for the flow preview: system statuses in their canonical
+  // order (minus terminal ones), merged with custom statuses by their position.
+  const statusFlow = useMemo(() => {
+    const systemFlow = SYSTEM_STATUSES.filter(
+      (s) => !TERMINAL_STATUS_IDS.has(s.id),
+    ).map((s, i) => ({ id: s.id, label: s.label, color: s.color, order: i }));
+    const customFlow = customStatuses
+      .filter((s) => s.name.trim())
+      .map((s) => ({
+        id: s.id,
+        label: s.name.trim(),
+        color: s.color,
+        order: s.position ?? systemFlow.length,
+      }));
+    return [...systemFlow, ...customFlow].sort((a, b) => a.order - b.order);
+  }, [customStatuses]);
+
+  const exitStatuses = useMemo(
+    () => SYSTEM_STATUSES.filter((s) => TERMINAL_STATUS_IDS.has(s.id)),
+    [],
+  );
+
+  // Auto-transition events (if any) that lead into a given status.
+  const eventsIntoStatus = (statusId: string): string =>
+    (Object.keys(autoTransitions) as AutoTransitionAction[])
+      .filter((k) => autoTransitions[k] === statusId)
+      .map((k) => EVENT_ARROW_LABELS[k])
+      .join(", ");
 
   const handleAddCustom = () => {
     _customId += 1;
@@ -321,6 +366,86 @@ export function BookingStatusSettings() {
           System statuses cannot be removed.
         </p>
       </div>
+
+      {/* Status Flow Preview — read-only lifecycle diagram */}
+      <Card>
+        <button
+          type="button"
+          onClick={() => setShowFlow((v) => !v)}
+          className="hover:bg-muted/30 w-full rounded-t-xl text-left transition-colors"
+        >
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Workflow className="size-4" />
+                Status Flow Preview
+                <span className="text-muted-foreground rounded-full border px-1.5 py-0.5 text-[10px] font-normal">
+                  Read-only
+                </span>
+              </CardTitle>
+              <ChevronDown
+                className={cn(
+                  "text-muted-foreground size-4 transition-transform",
+                  showFlow && "rotate-180",
+                )}
+              />
+            </div>
+          </CardHeader>
+        </button>
+        {showFlow && (
+          <CardContent className="space-y-3">
+            <p className="text-muted-foreground text-xs">
+              Booking lifecycle built from your configured statuses and
+              transition rules — for verification only.
+            </p>
+            <div className="flex items-center overflow-x-auto pb-2">
+              {statusFlow.map((s, i) => {
+                const dot =
+                  COLOR_OPTIONS.find((c) => c.value === s.color)?.dot ??
+                  "bg-muted-foreground";
+                const events = i > 0 ? eventsIntoStatus(s.id) : "";
+                return (
+                  <div key={s.id} className="flex shrink-0 items-center">
+                    {i > 0 && (
+                      <div className="flex shrink-0 flex-col items-center px-1">
+                        {events && (
+                          <span className="text-muted-foreground text-[9px] leading-none whitespace-nowrap">
+                            {events}
+                          </span>
+                        )}
+                        <ArrowRight className="text-muted-foreground size-4" />
+                      </div>
+                    )}
+                    <span className="bg-background inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium">
+                      <span className={cn("size-2 rounded-full", dot)} />
+                      {s.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            {exitStatuses.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 border-t pt-2 text-[11px]">
+                <span className="text-muted-foreground">Exit states:</span>
+                {exitStatuses.map((s) => {
+                  const dot =
+                    COLOR_OPTIONS.find((c) => c.value === s.color)?.dot ??
+                    "bg-muted-foreground";
+                  return (
+                    <span
+                      key={s.id}
+                      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
+                    >
+                      <span className={cn("size-1.5 rounded-full", dot)} />
+                      {s.label}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
 
       {/* System Statuses */}
       <Card>
@@ -490,7 +615,8 @@ export function BookingStatusSettings() {
               <h4 className="text-sm font-semibold">Default Fallback Rules</h4>
             </div>
             <p className="text-muted-foreground text-xs">
-              These apply when no service-specific IFTTT rule matches.
+              These apply when no service-specific automatic status rule
+              matches.
             </p>
 
             <div className="space-y-3">
@@ -537,11 +663,14 @@ export function BookingStatusSettings() {
               <div>
                 <div className="flex items-center gap-2">
                   <WandSparkles className="size-3.5 text-violet-600" />
-                  <h4 className="text-sm font-semibold">IFTTT Service Rules</h4>
+                  <h4 className="text-sm font-semibold">
+                    Automatic Status Rules
+                  </h4>
                 </div>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  If this event happens for this service, then move booking to a
-                  specific status.
+                  Set conditions that automatically move a booking to a specific
+                  status — for example, automatically set grooming bookings to
+                  In Progress when the pet checks in.
                 </p>
               </div>
               <Button
@@ -551,14 +680,15 @@ export function BookingStatusSettings() {
                 onClick={handleAddIftttRule}
               >
                 <Plus className="size-3.5" />
-                Add IFTTT Rule
+                Add Automatic Status Rule
               </Button>
             </div>
 
             {iftttTransitionRules.length === 0 ? (
               <p className="text-muted-foreground rounded-lg border border-dashed py-6 text-center text-sm">
-                No service rules yet. Add a rule like: IF service is Grooming +
-                event is Check-In THEN status becomes In Progress.
+                No automatic status rules yet. Add one like: when a grooming
+                booking&apos;s pet checks in, automatically set it to In
+                Progress.
               </p>
             ) : (
               <div className="space-y-3">

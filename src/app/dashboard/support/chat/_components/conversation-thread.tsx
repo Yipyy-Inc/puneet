@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Lock, Paperclip } from "lucide-react";
+import Link from "next/link";
+import {
+  FileText,
+  FileVideo,
+  Lock,
+  Mail,
+  Paperclip,
+  Sheet,
+} from "lucide-react";
 
 import {
   assignConversation,
@@ -19,13 +27,27 @@ import { cn } from "@/lib/utils";
 import type {
   AdminSupportMessage,
   ConversationStatus,
+  SupportAttachment,
   SupportConversation,
 } from "@/types/support-chat";
 import { FacilityAvatar } from "./facility-avatar";
 import { MessageComposer } from "./message-composer";
-import { formatTime } from "./support-chat-utils";
+import { STATUS_META, STATUS_ORDER, formatTime } from "./support-chat-utils";
 
-const STATUSES: ConversationStatus[] = ["open", "pending", "resolved"];
+function formatBytes(bytes?: number): string {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileIcon(type?: string) {
+  const cls = "size-3.5 shrink-0";
+  if (type === "application/pdf") return <FileText className={cls} />;
+  if (type === "text/csv") return <Sheet className={cls} />;
+  if (type?.startsWith("video/")) return <FileVideo className={cls} />;
+  return <Paperclip className={cls} />;
+}
 
 export function ConversationThread({
   conversation,
@@ -58,9 +80,13 @@ export function ConversationThread({
           />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="truncate font-semibold">
+              <Link
+                href={`/dashboard/facilities/${conversation.facilityId}`}
+                className="truncate font-semibold hover:underline"
+                title={`Open ${conversation.facilityName}`}
+              >
                 {conversation.facilityName}
-              </p>
+              </Link>
               <span className="text-muted-foreground inline-flex shrink-0 items-center gap-1 text-xs">
                 <span
                   className={cn(
@@ -106,13 +132,13 @@ export function ConversationThread({
               setConversationStatus(conversation.id, v as ConversationStatus)
             }
           >
-            <SelectTrigger className="h-9 w-32 capitalize">
+            <SelectTrigger className="h-9 w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {STATUSES.map((s) => (
-                <SelectItem key={s} value={s} className="capitalize">
-                  {s}
+              {STATUS_ORDER.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {STATUS_META[s].label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -132,7 +158,12 @@ export function ConversationThread({
         <div ref={bottomRef} />
       </div>
 
-      <MessageComposer convId={conversation.id} />
+      <MessageComposer
+        convId={conversation.id}
+        facilityName={conversation.facilityName}
+        contactName={conversation.contactName}
+        contactEmail={conversation.contactEmail}
+      />
     </div>
   );
 }
@@ -181,22 +212,30 @@ function MessageRow({
             isAgent ? "bg-violet-600 text-white" : "bg-muted",
           )}
         >
+          {message.channel === "email" && (
+            <p
+              className={cn(
+                "mb-1 flex items-center gap-1 border-b pb-1 text-[10px] font-semibold",
+                isAgent
+                  ? "border-white/20 text-white/80"
+                  : "text-muted-foreground",
+              )}
+            >
+              <Mail className="size-3" />
+              Email{message.subject ? ` · ${message.subject}` : ""}
+            </p>
+          )}
           {message.body && (
             <p className="whitespace-pre-wrap">{message.body}</p>
           )}
           {message.attachments?.length ? (
-            <div className="mt-1.5 flex flex-wrap gap-1">
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
               {message.attachments.map((a) => (
-                <span
+                <AttachmentPreview
                   key={a.id}
-                  className={cn(
-                    "flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]",
-                    isAgent ? "bg-white/20" : "bg-background border",
-                  )}
-                >
-                  <Paperclip className="size-3" />
-                  {a.name}
-                </span>
+                  attachment={a}
+                  isAgent={isAgent}
+                />
               ))}
             </div>
           ) : null}
@@ -206,5 +245,60 @@ function MessageRow({
         </p>
       </div>
     </div>
+  );
+}
+
+function AttachmentPreview({
+  attachment: a,
+  isAgent,
+}: {
+  attachment: SupportAttachment;
+  isAgent: boolean;
+}) {
+  const isImage = a.type?.startsWith("image/") && a.url;
+
+  if (isImage) {
+    return (
+      <a
+        href={a.url}
+        target="_blank"
+        rel="noreferrer"
+        title={a.name}
+        className="block overflow-hidden rounded-lg border"
+      >
+        {/* Inline image preview (data URL from the composer). */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={a.url}
+          alt={a.name}
+          className="max-h-44 max-w-[220px] object-cover"
+        />
+      </a>
+    );
+  }
+
+  const chip = (
+    <span
+      className={cn(
+        "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px]",
+        isAgent ? "bg-white/20" : "bg-background border",
+      )}
+    >
+      {fileIcon(a.type)}
+      <span className="max-w-[160px] truncate font-medium">{a.name}</span>
+      {a.size ? (
+        <span className={isAgent ? "text-white/70" : "text-muted-foreground"}>
+          {formatBytes(a.size)}
+        </span>
+      ) : null}
+    </span>
+  );
+
+  return a.url ? (
+    <a href={a.url} target="_blank" rel="noreferrer" title={a.name}>
+      {chip}
+    </a>
+  ) : (
+    chip
   );
 }

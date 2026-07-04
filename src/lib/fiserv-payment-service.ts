@@ -286,3 +286,114 @@ export function maskCardNumber(cardNumber: string): string {
   if (cleaned.length < 4) return "****";
   return `**** **** **** ${cleaned.slice(-4)}`;
 }
+
+// ---- Card-on-file tokenization (Clover Fiserv) ---------------------------
+//
+// The subscription card is tokenized by Clover Fiserv (the primary processor).
+// In production the PAN is captured by Clover's hosted fields and never reaches
+// Yipyy — PCI DSS is Clover's responsibility. This mock simulates the token
+// exchange and returns ONLY the Clover token plus last 4 + expiry (+ brand and
+// cardholder name) for display; the raw number is discarded, never persisted.
+
+const BRAND_LABEL: Record<string, string> = {
+  visa: "Visa",
+  mastercard: "Mastercard",
+  amex: "Amex",
+  discover: "Discover",
+  jcb: "JCB",
+  diners: "Diners",
+  unknown: "Card",
+};
+
+/** Human-readable brand for a card number (e.g. "Visa"). */
+export function displayCardBrand(cardNumber: string): string {
+  return BRAND_LABEL[detectCardBrand(cardNumber)] ?? "Card";
+}
+
+export interface TokenizeCardRequest {
+  facilityId: number;
+  /** Raw PAN — used only to obtain a token; never returned or stored. */
+  number: string;
+  expMonth: number;
+  expYear: number;
+  cardholderName: string;
+}
+
+export interface TokenizedCard {
+  /** Clover-issued token — the only card reference Yipyy persists. */
+  token: string;
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  cardholderName: string;
+}
+
+// ---- Platform-level Clover Fiserv setup (System Config) -----------------
+
+export interface CloverConnectionTest {
+  ok: boolean;
+  message: string;
+}
+
+/** Verify the platform's Clover Fiserv API credentials. */
+export async function testCloverConnection(input: {
+  merchantId: string;
+  appSecret: string;
+  appId: string;
+  environment: "sandbox" | "production";
+}): Promise<CloverConnectionTest> {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  if (!input.merchantId || !input.appSecret || !input.appId) {
+    return {
+      ok: false,
+      message:
+        "Missing credentials — Merchant ID, Private App Secret and App ID are all required.",
+    };
+  }
+  return {
+    ok: true,
+    message: `Connected to Clover Fiserv (${input.environment}).`,
+  };
+}
+
+export interface CloverTestChargeResult {
+  ok: boolean;
+  chargeId?: string;
+  refundId?: string;
+  message: string;
+}
+
+/**
+ * Send a $0.01 test charge to the designated test card and immediately refund it,
+ * confirming the full charge → refund flow through Clover Fiserv end-to-end.
+ */
+export async function sendCloverTestCharge(): Promise<CloverTestChargeResult> {
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  const chargeId = `txn_test_${Date.now()}`;
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const refundId = `refund_test_${Date.now()}`;
+  return {
+    ok: true,
+    chargeId,
+    refundId,
+    message: "Test charge of $0.01 succeeded and was immediately refunded.",
+  };
+}
+
+/** Tokenize a card through Clover Fiserv. Returns display-safe fields only. */
+export async function tokenizeCard(
+  request: TokenizeCardRequest,
+): Promise<TokenizedCard> {
+  const digits = request.number.replace(/\D/g, "");
+  // Simulate the Clover tokenization round-trip.
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  return {
+    token: `clover_tok_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+    brand: displayCardBrand(digits),
+    last4: digits.slice(-4),
+    expMonth: request.expMonth,
+    expYear: request.expYear,
+    cardholderName: request.cardholderName,
+  };
+}

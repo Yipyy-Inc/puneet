@@ -512,6 +512,28 @@ export interface FormTemplate {
   updatedAt: string;
 }
 
+/**
+ * A single rule that marks a form answer as a red flag (e.g. a specific
+ * question answered "Yes"). Drives the "Red-flag answers detected" staff
+ * notification — this is a configurable intake-safety mapping, not hardcoded.
+ */
+export interface RedFlagRule {
+  id: string;
+  formId: string;
+  formName: string;
+  questionId: string;
+  questionLabel: string;
+  operator: "equals" | "contains";
+  value: string;
+}
+
+export interface RedFlagConfig {
+  /** Any free-text answer containing one of these keywords is flagged. */
+  keywords: string[];
+  /** Specific question → answer rules that trigger a flag. */
+  rules: RedFlagRule[];
+}
+
 export interface FormVersionSummary {
   versionId: string;
   versionNumber: number;

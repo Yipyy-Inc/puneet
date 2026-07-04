@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,73 +10,139 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { ImagePlus, Eye, FileText, Trash2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ImagePlus, Eye, FileText, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   defaultInvoiceTemplate,
   loadInvoiceTemplate,
-  saveInvoiceTemplate,
 } from "@/data/invoice-template";
-import type { InvoiceTemplate } from "@/types/invoice-template";
+import type {
+  InvoiceTemplate,
+  TaxRegistration,
+  InvoiceNumberFormat,
+  InvoicePaymentTerms,
+} from "@/types/invoice-template";
 import {
   buildInvoiceDocumentHtml,
+  formatInvoiceNumber,
   type InvoiceDocumentData,
 } from "@/lib/invoice-document";
+import { buildRetailTaxLines, retailQueries } from "@/lib/api/retail";
+import { invoiceTemplateMutations } from "@/lib/api/invoice-template";
+import type { RetailTaxConfig } from "@/data/retail-config";
 
-const PREVIEW_DATA: InvoiceDocumentData = {
-  invoiceNumber: "10001",
-  invoiceStatus: "open",
-  issuedDate: new Date().toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }),
-  bookingDateRange: "Apr 1 – Apr 4, 2026 (3 nights)",
-  clientName: "Alice Johnson",
-  clientEmail: "alice@example.com",
-  clientPhone: "(555) 234-5678",
-  petName: "Buddy",
-  serviceLabel: "Boarding",
-  items: [
-    {
-      name: "Boarding — Standard (3 nights)",
-      unitPrice: 45,
-      quantity: 3,
-      price: 135,
-    },
-    {
-      name: "Video Call",
-      unitPrice: 20,
-      quantity: 1,
-      price: 20,
-      staffName: "Amy C.",
-    },
-    {
-      name: "Enrichment Session",
-      unitPrice: 15,
-      quantity: 1,
-      price: 15,
-      staffName: "Jake M.",
-    },
-  ],
-  subtotal: 170,
-  taxes: [
-    { name: "GST", rate: 0.05, amount: 8.5 },
-    { name: "QST", rate: 0.09975, amount: 16.96 },
-  ],
-  total: 195.46,
-  depositCollected: 50,
-  remainingDue: 145.46,
-  payments: [
-    {
-      date: "2026-04-01",
-      method: "card",
-      amount: 50,
-      kind: "deposit",
-      collectedBy: "Sarah K.",
-    },
-  ],
-};
+// Heavy, conditionally-shown modal — loaded on demand when the user opens the
+// full preview, keeping it out of the settings-page bundle.
+const InvoiceFullPreviewDialog = dynamic(
+  () =>
+    import("@/components/facility/InvoiceFullPreviewDialog").then(
+      (mod) => mod.InvoiceFullPreviewDialog,
+    ),
+  { ssr: false },
+);
+
+function newTaxRegistrationId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `tax-reg-${Math.round(performance.now() * 1000)}`;
+}
+
+const PREVIEW_SUBTOTAL = 170;
+const PREVIEW_DEPOSIT = 50;
+
+/**
+ * Sample invoice for the live preview. Taxes are derived from the retail Tax
+ * Configuration (Retail Settings → Tax Configuration) rather than hardcoded, so
+ * the template reflects the same single source of truth the POS uses. While the
+ * config is still loading (`taxConfig` undefined) the tax lines render as a
+ * skeleton — never a fabricated rate.
+ */
+function buildPreviewData(
+  taxConfig: RetailTaxConfig | undefined,
+  numberFormat: InvoiceNumberFormat,
+): InvoiceDocumentData {
+  const taxes = taxConfig
+    ? buildRetailTaxLines(PREVIEW_SUBTOTAL, taxConfig)
+    : [];
+  const taxTotal = taxes.reduce((sum, t) => sum + t.amount, 0);
+  const total = PREVIEW_SUBTOTAL + taxTotal;
+  const now = new Date();
+  return {
+    invoiceNumber: formatInvoiceNumber(
+      numberFormat,
+      now.getFullYear(),
+      now.getMonth() + 1,
+      numberFormat.nextNumber,
+    ),
+    invoiceStatus: "open",
+    issuedDate: new Date().toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }),
+    bookingDateRange: "Apr 1 – Apr 4, 2026 (3 nights)",
+    clientName: "Alice Johnson",
+    clientEmail: "alice@example.com",
+    clientPhone: "(555) 234-5678",
+    petName: "Buddy",
+    serviceLabel: "Boarding",
+    items: [
+      {
+        name: "Boarding — Standard (3 nights)",
+        unitPrice: 45,
+        quantity: 3,
+        price: 135,
+      },
+      {
+        name: "Video Call",
+        unitPrice: 20,
+        quantity: 1,
+        price: 20,
+        staffName: "Amy C.",
+      },
+      {
+        name: "Enrichment Session",
+        unitPrice: 15,
+        quantity: 1,
+        price: 15,
+        staffName: "Jake M.",
+      },
+    ],
+    subtotal: PREVIEW_SUBTOTAL,
+    taxes,
+    taxesLoading: !taxConfig,
+    total,
+    depositCollected: PREVIEW_DEPOSIT,
+    remainingDue: total - PREVIEW_DEPOSIT,
+    payments: [
+      {
+        date: "2026-04-01",
+        method: "card",
+        amount: PREVIEW_DEPOSIT,
+        kind: "deposit",
+        collectedBy: "Sarah K.",
+      },
+    ],
+  };
+}
+
+/** Example invoice number for the current month, for the live hint. */
+function exampleInvoiceNumber(fmt: InvoiceNumberFormat): string {
+  const now = new Date();
+  return formatInvoiceNumber(
+    fmt,
+    now.getFullYear(),
+    now.getMonth() + 1,
+    fmt.nextNumber,
+  );
+}
 
 export function InvoiceTemplateSettings() {
   const [template, setTemplate] = useState<InvoiceTemplate>(
@@ -82,7 +150,12 @@ export function InvoiceTemplateSettings() {
   );
   const [hasMounted, setHasMounted] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [fullPreviewOpen, setFullPreviewOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+
+  // Tax rates come from Retail/POS Settings — the single source of truth.
+  const { data: taxConfig } = useQuery(retailQueries.taxConfig());
 
   useEffect(() => {
     setTemplate(loadInvoiceTemplate());
@@ -95,6 +168,44 @@ export function InvoiceTemplateSettings() {
   ) => {
     setTemplate((prev) => ({ ...prev, [key]: value }));
     setDirty(true);
+  };
+
+  // ── Tax registration list ────────────────────────────────────────────
+  const addTaxRegistration = () => {
+    update("taxRegistrations", [
+      ...template.taxRegistrations,
+      { id: newTaxRegistrationId(), label: "", value: "" },
+    ]);
+  };
+
+  const updateTaxRegistration = (
+    id: string,
+    patch: Partial<Omit<TaxRegistration, "id">>,
+  ) => {
+    update(
+      "taxRegistrations",
+      template.taxRegistrations.map((r) =>
+        r.id === id ? { ...r, ...patch } : r,
+      ),
+    );
+  };
+
+  const removeTaxRegistration = (id: string) => {
+    update(
+      "taxRegistrations",
+      template.taxRegistrations.filter((r) => r.id !== id),
+    );
+  };
+
+  const updateNumberFormat = (patch: Partial<InvoiceNumberFormat>) => {
+    update("invoiceNumberFormat", {
+      ...template.invoiceNumberFormat,
+      ...patch,
+    });
+  };
+
+  const updatePaymentTerms = (patch: Partial<InvoicePaymentTerms>) => {
+    update("paymentTerms", { ...template.paymentTerms, ...patch });
   };
 
   const handleLogoUpload = (file: File) => {
@@ -110,10 +221,17 @@ export function InvoiceTemplateSettings() {
     reader.readAsDataURL(file);
   };
 
+  const saveTemplate = useMutation({
+    ...invoiceTemplateMutations.save(template),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice-template"] });
+      setDirty(false);
+      toast.success("Invoice template saved");
+    },
+  });
+
   const handleSave = () => {
-    saveInvoiceTemplate(template);
-    setDirty(false);
-    toast.success("Invoice template saved");
+    saveTemplate.mutate();
   };
 
   const handleReset = () => {
@@ -124,15 +242,12 @@ export function InvoiceTemplateSettings() {
   const previewHtml = useMemo(() => {
     if (!hasMounted) return "";
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    return buildInvoiceDocumentHtml(template, PREVIEW_DATA, origin);
-  }, [template, hasMounted]);
-
-  const handleOpenFullPreview = () => {
-    const w = window.open("", "_blank", "width=720,height=900");
-    if (!w) return;
-    w.document.write(previewHtml);
-    w.document.close();
-  };
+    return buildInvoiceDocumentHtml(
+      template,
+      buildPreviewData(taxConfig, template.invoiceNumberFormat),
+      origin,
+    );
+  }, [template, hasMounted, taxConfig]);
 
   if (!hasMounted) return null;
 
@@ -151,7 +266,11 @@ export function InvoiceTemplateSettings() {
           <Button variant="outline" size="sm" onClick={handleReset}>
             Reset to defaults
           </Button>
-          <Button variant="outline" size="sm" onClick={handleOpenFullPreview}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setFullPreviewOpen(true)}
+          >
             <Eye className="size-3.5" />
             Full preview
           </Button>
@@ -303,13 +422,210 @@ export function InvoiceTemplateSettings() {
               </div>
               <div>
                 <Label className="text-xs">Tax / registration numbers</Label>
-                <Input
-                  value={template.taxNumbers ?? ""}
-                  onChange={(e) => update("taxNumbers", e.target.value)}
-                  className="mt-1"
-                  placeholder="GST: 123456789 · QST: 987654321"
-                />
+                <p className="text-muted-foreground mt-0.5 text-[11px]">
+                  Add each tax or registration number your invoices must show —
+                  label each one however your region requires.
+                </p>
+                <div className="mt-2 space-y-2">
+                  {template.taxRegistrations.length === 0 && (
+                    <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-[11px]">
+                      No registration numbers yet. Add one below.
+                    </p>
+                  )}
+                  {template.taxRegistrations.map((reg) => (
+                    <div key={reg.id} className="flex items-center gap-2">
+                      <Input
+                        value={reg.label}
+                        onChange={(e) =>
+                          updateTaxRegistration(reg.id, {
+                            label: e.target.value,
+                          })
+                        }
+                        className="h-9 flex-1"
+                        placeholder="Label (e.g. GST/HST Number)"
+                        aria-label="Tax registration label"
+                      />
+                      <Input
+                        value={reg.value}
+                        onChange={(e) =>
+                          updateTaxRegistration(reg.id, {
+                            value: e.target.value,
+                          })
+                        }
+                        className="h-9 flex-1"
+                        placeholder="Number"
+                        aria-label="Tax registration number"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-destructive size-9 shrink-0"
+                        onClick={() => removeTaxRegistration(reg.id)}
+                        aria-label="Remove registration number"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5"
+                    onClick={addTaxRegistration}
+                  >
+                    <Plus className="size-3.5" />
+                    Add registration number
+                  </Button>
+                </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Invoice numbering */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Invoice numbering</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label className="text-xs">Prefix</Label>
+                  <Input
+                    value={template.invoiceNumberFormat.prefix}
+                    onChange={(e) =>
+                      updateNumberFormat({ prefix: e.target.value })
+                    }
+                    className="mt-1"
+                    placeholder="e.g. INV"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Counter digits</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={template.invoiceNumberFormat.padding}
+                    onChange={(e) =>
+                      updateNumberFormat({
+                        padding: Math.min(
+                          10,
+                          Math.max(1, Number(e.target.value) || 1),
+                        ),
+                      })
+                    }
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Year format</Label>
+                  <Select
+                    value={template.invoiceNumberFormat.yearFormat}
+                    onValueChange={(v) =>
+                      updateNumberFormat({
+                        yearFormat: v as InvoiceNumberFormat["yearFormat"],
+                      })
+                    }
+                  >
+                    <SelectTrigger className="mt-1 h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="YYYY">YYYY (2026)</SelectItem>
+                      <SelectItem value="YY">YY (26)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Month format</Label>
+                  <Select
+                    value={template.invoiceNumberFormat.monthFormat}
+                    onValueChange={(v) =>
+                      updateNumberFormat({
+                        monthFormat: v as InvoiceNumberFormat["monthFormat"],
+                      })
+                    }
+                  >
+                    <SelectTrigger className="mt-1 h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="MM">MM (06)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Next number</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={template.invoiceNumberFormat.nextNumber}
+                    onChange={(e) =>
+                      updateNumberFormat({
+                        nextNumber: Math.max(0, Number(e.target.value) || 0),
+                      })
+                    }
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              <div className="bg-muted/40 rounded-md border px-3 py-2 text-xs">
+                <span className="text-muted-foreground">Next invoice: </span>
+                <span className="font-mono font-semibold">
+                  {exampleInvoiceNumber(template.invoiceNumberFormat)}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Payment terms */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Payment terms</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <Label className="text-xs">Terms</Label>
+                <Select
+                  value={template.paymentTerms.type}
+                  onValueChange={(v) =>
+                    updatePaymentTerms({
+                      type: v as InvoicePaymentTerms["type"],
+                    })
+                  }
+                >
+                  <SelectTrigger className="mt-1 h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="due_on_receipt">
+                      Due on receipt
+                    </SelectItem>
+                    <SelectItem value="net_7">Net 7</SelectItem>
+                    <SelectItem value="net_14">Net 14</SelectItem>
+                    <SelectItem value="net_30">Net 30</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {template.paymentTerms.type === "custom" && (
+                <div>
+                  <Label className="text-xs">Custom terms</Label>
+                  <Input
+                    value={template.paymentTerms.customText}
+                    onChange={(e) =>
+                      updatePaymentTerms({ customText: e.target.value })
+                    }
+                    className="mt-1"
+                    placeholder="e.g. 50% due now, balance on pickup"
+                  />
+                </div>
+              )}
+              <p className="text-muted-foreground text-xs">
+                Shown on the invoice to tell customers when payment is due.
+              </p>
             </CardContent>
           </Card>
 
@@ -413,6 +729,14 @@ export function InvoiceTemplateSettings() {
           </Card>
         </div>
       </div>
+
+      {fullPreviewOpen && (
+        <InvoiceFullPreviewDialog
+          open={fullPreviewOpen}
+          onOpenChange={setFullPreviewOpen}
+          html={previewHtml}
+        />
+      )}
     </div>
   );
 }

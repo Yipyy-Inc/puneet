@@ -1,4 +1,8 @@
-import type { DepositRule, DepositRuleSet } from "@/types/deposit-rules";
+import type {
+  DepositRule,
+  DepositRuleSet,
+  DepositRefundPolicy,
+} from "@/types/deposit-rules";
 import { SERVICE_TYPES_FOR_DEPOSITS } from "@/types/deposit-rules";
 
 const STORAGE_KEY = "yipyy:deposit-rules";
@@ -41,24 +45,6 @@ export const defaultDepositRules: DepositRuleSet = [
     label: "Training — 50% deposit",
   },
   {
-    id: "deposit-vet",
-    scope: "service",
-    serviceType: "vet",
-    amountType: "fixed",
-    amount: 0,
-    enabled: false,
-    label: "Vet — no deposit",
-  },
-  {
-    id: "deposit-retail",
-    scope: "service",
-    serviceType: "retail",
-    amountType: "fixed",
-    amount: 0,
-    enabled: false,
-    label: "Retail — no deposit",
-  },
-  {
     id: "deposit-high-value",
     scope: "booking_value",
     amountType: "percentage",
@@ -70,6 +56,14 @@ export const defaultDepositRules: DepositRuleSet = [
 ];
 
 export function ensureAllServiceRules(rules: DepositRuleSet): DepositRuleSet {
+  // Drop stale service rules for services that no longer support deposits
+  // (e.g. retail/vet from an older persisted set), then backfill any missing.
+  const supported = new Set<string>(SERVICE_TYPES_FOR_DEPOSITS);
+  rules = rules.filter(
+    (r) =>
+      r.scope !== "service" ||
+      (r.serviceType != null && supported.has(r.serviceType)),
+  );
   const present = new Set(
     rules
       .filter((r) => r.scope === "service" && r.serviceType)
@@ -118,6 +112,34 @@ export function loadDepositRules(): DepositRuleSet {
 export function saveDepositRules(rules: DepositRuleSet): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(rules));
+}
+
+// ── Deposit refund policy (what happens to a deposit on cancellation) ────────
+
+const REFUND_POLICY_KEY = "yipyy:deposit-refund-policy";
+
+export const defaultDepositRefundPolicy: DepositRefundPolicy = {
+  type: "full_before_window",
+  refundBeforeHours: 24,
+};
+
+export function loadDepositRefundPolicy(): DepositRefundPolicy {
+  if (typeof window === "undefined") return defaultDepositRefundPolicy;
+  try {
+    const raw = window.localStorage.getItem(REFUND_POLICY_KEY);
+    if (!raw) return defaultDepositRefundPolicy;
+    return {
+      ...defaultDepositRefundPolicy,
+      ...(JSON.parse(raw) as Partial<DepositRefundPolicy>),
+    };
+  } catch {
+    return defaultDepositRefundPolicy;
+  }
+}
+
+export function saveDepositRefundPolicy(policy: DepositRefundPolicy): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(REFUND_POLICY_KEY, JSON.stringify(policy));
 }
 
 export function computeDepositAmount(

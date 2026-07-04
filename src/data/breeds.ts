@@ -2,6 +2,8 @@ export interface Breed {
   name: string;
   species: "Dog" | "Cat" | "Other";
   popular?: boolean;
+  /** Facility has marked this breed as restricted/blocked for booking. */
+  restricted?: boolean;
 }
 
 export const breeds: Breed[] = [
@@ -321,14 +323,85 @@ function saveRemovedBreeds(removed: string[]) {
 }
 
 // ========================================
+// Restricted breeds + the customer-facing message
+// ========================================
+
+const RESTRICTED_KEY = "yipyy_restricted_breeds";
+const RESTRICTION_MSG_KEY = "yipyy_breed_restriction_message";
+
+export const DEFAULT_BREED_RESTRICTION_MESSAGE =
+  "We're sorry — our facility isn't able to accept this breed at this time. Please contact us if you have any questions.";
+
+function loadRestrictedBreeds(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const saved = localStorage.getItem(RESTRICTED_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRestrictedBreeds(list: string[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(RESTRICTED_KEY, JSON.stringify(list));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isBreedRestricted(name: string): boolean {
+  return loadRestrictedBreeds().some(
+    (n) => n.toLowerCase() === name.toLowerCase(),
+  );
+}
+
+export function setBreedRestricted(name: string, restricted: boolean): void {
+  const list = loadRestrictedBreeds().filter(
+    (n) => n.toLowerCase() !== name.toLowerCase(),
+  );
+  if (restricted) list.push(name);
+  saveRestrictedBreeds(list);
+}
+
+export function getBreedRestrictionMessage(): string {
+  if (typeof window === "undefined") return DEFAULT_BREED_RESTRICTION_MESSAGE;
+  try {
+    return (
+      localStorage.getItem(RESTRICTION_MSG_KEY) ??
+      DEFAULT_BREED_RESTRICTION_MESSAGE
+    );
+  } catch {
+    return DEFAULT_BREED_RESTRICTION_MESSAGE;
+  }
+}
+
+export function saveBreedRestrictionMessage(message: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(RESTRICTION_MSG_KEY, message);
+  } catch {
+    /* ignore */
+  }
+}
+
+// ========================================
 // Read functions (merge defaults + custom, minus removed)
 // ========================================
 
 export function getAllBreeds(): Breed[] {
   const removed = new Set(loadRemovedBreeds());
+  const restricted = new Set(
+    loadRestrictedBreeds().map((n) => n.toLowerCase()),
+  );
   const base = breeds.filter((b) => !removed.has(b.name));
   const custom = loadCustomBreeds();
-  return [...base, ...custom].sort((a, b) => a.name.localeCompare(b.name));
+  return [...base, ...custom]
+    .map((b) =>
+      restricted.has(b.name.toLowerCase()) ? { ...b, restricted: true } : b,
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function getBreedsBySpecies(species: string): Breed[] {

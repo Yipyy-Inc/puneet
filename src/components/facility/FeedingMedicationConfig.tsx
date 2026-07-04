@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Utensils,
@@ -12,59 +12,110 @@ import {
   Plus,
   Trash2,
   Pencil,
-  GripVertical,
+  Check,
+  ChevronUp,
+  ChevronDown,
   Clock,
-  Save,
 } from "lucide-react";
 import { toast } from "sonner";
-import { facilityConfig } from "@/data/facility-config";
+import { getCareTasksConfig } from "@/data/care-tasks";
+import { careTaskMutations } from "@/lib/api/care-tasks";
+import type {
+  ScheduleItem,
+  FeedingOptions,
+  MedicationOptions,
+} from "@/data/care-tasks";
 
-// ── Editable list helper ─────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────
 
-function EditableList({
-  title,
+function moveItem<T>(arr: T[], idx: number, dir: -1 | 1): T[] {
+  const swap = idx + dir;
+  if (swap < 0 || swap >= arr.length) return arr;
+  const next = [...arr];
+  [next[idx], next[swap]] = [next[swap], next[idx]];
+  return next;
+}
+
+function ReorderButtons({
+  index,
+  count,
+  onMove,
+}: {
+  index: number;
+  count: number;
+  onMove: (dir: -1 | 1) => void;
+}) {
+  return (
+    <div className="flex shrink-0 flex-col">
+      <button
+        type="button"
+        aria-label="Move up"
+        disabled={index === 0}
+        onClick={() => onMove(-1)}
+        className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+      >
+        <ChevronUp className="size-3" />
+      </button>
+      <button
+        type="button"
+        aria-label="Move down"
+        disabled={index === count - 1}
+        onClick={() => onMove(1)}
+        className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+      >
+        <ChevronDown className="size-3" />
+      </button>
+    </div>
+  );
+}
+
+// ── String category editor (rename / reorder / delete / add) ─────────
+
+function StringTagEditor({
   items,
   onChange,
   placeholder,
 }: {
-  title: string;
   items: string[];
-  onChange: (items: string[]) => void;
+  onChange: (values: string[]) => void;
   placeholder: string;
 }) {
   const [draft, setDraft] = useState("");
-
   const add = () => {
-    const val = draft.trim();
-    if (!val || items.includes(val)) {
+    const v = draft.trim();
+    if (!v || items.includes(v)) {
       setDraft("");
       return;
     }
-    onChange([...items, val]);
+    onChange([...items, v]);
     setDraft("");
   };
-
   return (
-    <div className="space-y-2">
-      <Label className="text-xs font-semibold">{title}</Label>
-      <div className="space-y-1">
-        {items.map((item, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-2 rounded-lg border px-3 py-1.5"
+    <div className="space-y-1.5">
+      {items.map((item, i) => (
+        <div key={i} className="flex items-center gap-1.5">
+          <ReorderButtons
+            index={i}
+            count={items.length}
+            onMove={(dir) => onChange(moveItem(items, i, dir))}
+          />
+          <Input
+            value={item}
+            onChange={(e) =>
+              onChange(items.map((x, j) => (j === i ? e.target.value : x)))
+            }
+            className="h-8 flex-1 text-sm"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-destructive size-8 shrink-0 p-0"
+            onClick={() => onChange(items.filter((_, j) => j !== i))}
           >
-            <GripVertical className="text-muted-foreground/30 size-3.5 shrink-0" />
-            <span className="flex-1 text-sm">{item}</span>
-            <button
-              type="button"
-              onClick={() => onChange(items.filter((_, j) => j !== i))}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              <Trash2 className="size-3" />
-            </button>
-          </div>
-        ))}
-      </div>
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
+      ))}
       <div className="flex gap-2">
         <Input
           value={draft}
@@ -76,7 +127,7 @@ function EditableList({
             }
           }}
           placeholder={placeholder}
-          className="h-8 text-xs"
+          className="h-8 text-sm"
         />
         <Button
           variant="outline"
@@ -92,57 +143,56 @@ function EditableList({
   );
 }
 
-// ── Schedule list (label + time) ─────────────────────────────────────
+// ── Schedule category editor (label + time) ──────────────────────────
 
-function ScheduleList({
+function ScheduleTagEditor({
   items,
   onChange,
 }: {
-  items: { id: string; label: string; time: string }[];
-  onChange: (items: { id: string; label: string; time: string }[]) => void;
+  items: ScheduleItem[];
+  onChange: (values: ScheduleItem[]) => void;
 }) {
   const [draftLabel, setDraftLabel] = useState("");
   const [draftTime, setDraftTime] = useState("08:00");
-
   const add = () => {
     if (!draftLabel.trim()) return;
-    onChange([
-      ...items,
-      {
-        id: `s-${Date.now()}`,
-        label: draftLabel.trim(),
-        time: draftTime,
-      },
-    ]);
+    onChange([...items, { label: draftLabel.trim(), time: draftTime }]);
     setDraftLabel("");
     setDraftTime("08:00");
   };
-
+  const patch = (i: number, p: Partial<ScheduleItem>) =>
+    onChange(items.map((x, j) => (j === i ? { ...x, ...p } : x)));
   return (
-    <div className="space-y-2">
-      <Label className="text-xs font-semibold">Feeding Schedules</Label>
-      <div className="space-y-1">
-        {items.map((item, i) => (
-          <div
-            key={item.id}
-            className="flex items-center gap-2 rounded-lg border px-3 py-1.5"
+    <div className="space-y-1.5">
+      {items.map((item, i) => (
+        <div key={item.id ?? i} className="flex items-center gap-1.5">
+          <ReorderButtons
+            index={i}
+            count={items.length}
+            onMove={(dir) => onChange(moveItem(items, i, dir))}
+          />
+          <Input
+            value={item.label}
+            onChange={(e) => patch(i, { label: e.target.value })}
+            className="h-8 flex-1 text-sm"
+            placeholder="Label"
+          />
+          <input
+            type="time"
+            value={item.time}
+            onChange={(e) => patch(i, { time: e.target.value })}
+            className="border-border h-8 rounded-md border px-2 text-xs"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-destructive size-8 shrink-0 p-0"
+            onClick={() => onChange(items.filter((_, j) => j !== i))}
           >
-            <GripVertical className="text-muted-foreground/30 size-3.5 shrink-0" />
-            <span className="flex-1 text-sm font-medium">{item.label}</span>
-            <Badge variant="outline" className="text-[10px] tabular-nums">
-              <Clock className="mr-1 size-2.5" />
-              {item.time}
-            </Badge>
-            <button
-              type="button"
-              onClick={() => onChange(items.filter((_, j) => j !== i))}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              <Trash2 className="size-3" />
-            </button>
-          </div>
-        ))}
-      </div>
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
+      ))}
       <div className="flex gap-2">
         <Input
           value={draftLabel}
@@ -154,7 +204,7 @@ function ScheduleList({
             }
           }}
           placeholder="e.g. Evening"
-          className="h-8 flex-1 text-xs"
+          className="h-8 flex-1 text-sm"
         />
         <input
           type="time"
@@ -176,71 +226,150 @@ function ScheduleList({
   );
 }
 
+// ── Category group: read-only tags + per-category Edit ───────────────
+
+function CategoryGroup({
+  label,
+  count,
+  editing,
+  onToggle,
+  readOnly,
+  editor,
+}: {
+  label: string;
+  count: number;
+  editing: boolean;
+  onToggle: () => void;
+  readOnly: React.ReactNode;
+  editor: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
+            {label}
+          </p>
+          <Badge variant="secondary" className="text-[10px]">
+            {count}
+          </Badge>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 gap-1 px-2 text-xs"
+          onClick={onToggle}
+        >
+          {editing ? (
+            <>
+              <Check className="size-3" />
+              Done
+            </>
+          ) : (
+            <>
+              <Pencil className="size-3" />
+              Edit
+            </>
+          )}
+        </Button>
+      </div>
+      {editing ? editor : readOnly}
+    </div>
+  );
+}
+
+function StringTags({ items }: { items: string[] }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((v) => (
+        <Badge key={v} variant="outline" className="text-xs">
+          {v}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
+function ScheduleTags({ items }: { items: ScheduleItem[] }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((s, i) => (
+        <Badge key={s.id ?? i} variant="outline" className="gap-1 text-xs">
+          <Clock className="size-2.5" />
+          {s.label} ({s.time})
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
 // ── Main component ───────────────────────────────────────────────────
 
 export function FeedingMedicationConfig() {
-  const [feeding, setFeeding] = useState(facilityConfig.feedingOptions);
-  const [medication, setMedication] = useState(
-    facilityConfig.medicationOptions,
+  const [feeding, setFeeding] = useState<FeedingOptions>(
+    () => getCareTasksConfig().feeding,
   );
-  const [editing, setEditing] = useState(false);
+  const [medication, setMedication] = useState<MedicationOptions>(
+    () => getCareTasksConfig().medication,
+  );
+  const [editingCat, setEditingCat] = useState<string | null>(null);
 
-  const handleSave = () => {
-    facilityConfig.feedingOptions = feeding;
-    facilityConfig.medicationOptions = medication;
-    setEditing(false);
-    toast.success("Feeding & medication options saved");
+  const queryClient = useQueryClient();
+  const save = useMutation({
+    ...careTaskMutations.save(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["care-tasks"] });
+    },
+  });
+
+  const setFeedingList = <K extends keyof FeedingOptions>(
+    key: K,
+    values: FeedingOptions[K],
+  ) => {
+    const next = { ...feeding, [key]: values };
+    setFeeding(next);
+    save.mutate({ feeding: next, medication });
   };
+
+  const setMedList = <K extends keyof MedicationOptions>(
+    key: K,
+    values: MedicationOptions[K],
+  ) => {
+    const next = { ...medication, [key]: values };
+    setMedication(next);
+    save.mutate({ feeding, medication: next });
+  };
+
+  const toggle = (cat: string) =>
+    setEditingCat((c) => {
+      if (c === cat) {
+        toast.success("Changes saved");
+        return null;
+      }
+      return cat;
+    });
 
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-orange-100">
-            <Utensils className="size-4 text-orange-700" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold">Feeding & Medication Options</h3>
-            <p className="text-muted-foreground text-xs">
-              Configure the options staff and customers see when adding care
-              instructions
-            </p>
-          </div>
+      <div className="flex items-center gap-2.5">
+        <div className="flex size-9 items-center justify-center rounded-xl bg-orange-100">
+          <Utensils className="size-4 text-orange-700" />
         </div>
-        {!editing ? (
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            onClick={() => setEditing(true)}
-          >
-            <Pencil className="size-3.5" />
-            Edit
-          </Button>
-        ) : (
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setFeeding(facilityConfig.feedingOptions);
-                setMedication(facilityConfig.medicationOptions);
-                setEditing(false);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button size="sm" className="gap-1.5" onClick={handleSave}>
-              <Save className="size-3.5" />
-              Save
-            </Button>
-          </div>
-        )}
+        <div>
+          <h3 className="text-sm font-bold">
+            Feeding &amp; Medication Options
+          </h3>
+          <p className="text-muted-foreground text-xs">
+            Configure the options staff and customers see when adding care
+            instructions. Edit any category to rename, reorder, or remove
+            values.
+          </p>
+        </div>
       </div>
 
       {/* Feeding */}
-      <Card className="overflow-hidden transition-shadow hover:shadow-md">
+      <Card className="overflow-hidden">
         <CardHeader className="border-b bg-slate-50/50 pb-3">
           <CardTitle className="flex items-center gap-2.5 text-sm">
             <div className="flex size-8 items-center justify-center rounded-lg bg-orange-100">
@@ -250,130 +379,136 @@ export function FeedingMedicationConfig() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5 pt-4">
-          {!editing ? (
-            /* Read-only */
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
-                  Schedules
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {feeding.schedules.map((s) => (
-                    <Badge key={s.id} variant="outline" className="text-xs">
-                      {s.label} ({s.time})
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
-                  Units
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {feeding.units.map((u) => (
-                    <Badge key={u} variant="outline" className="text-xs">
-                      {u}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
-                  Food Types
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {feeding.foodTypes.map((t) => (
-                    <Badge key={t} variant="outline" className="text-xs">
-                      {t}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
-                  Instructions
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {feeding.instructions.map((i) => (
-                    <Badge key={i} variant="outline" className="text-xs">
-                      {i}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
-                  Sources
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {feeding.sources.map((s) => (
-                    <Badge key={s} variant="outline" className="text-xs">
-                      {s}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
-                  Allergy Presets
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {feeding.allergyPresets.map((a) => (
-                    <Badge
-                      key={a}
-                      variant="outline"
-                      className="border-red-200 text-xs text-red-700"
-                    >
-                      {a}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Edit mode */
-            <div className="grid gap-5 sm:grid-cols-2">
-              <ScheduleList
+          <CategoryGroup
+            label="Schedules"
+            count={feeding.schedules.length}
+            editing={editingCat === "schedules"}
+            onToggle={() => toggle("schedules")}
+            readOnly={<ScheduleTags items={feeding.schedules} />}
+            editor={
+              <ScheduleTagEditor
                 items={feeding.schedules}
-                onChange={(s) => setFeeding({ ...feeding, schedules: s })}
+                onChange={(v) => setFeedingList("schedules", v)}
               />
-              <EditableList
-                title="Units"
+            }
+          />
+          <CategoryGroup
+            label="Units"
+            count={feeding.units.length}
+            editing={editingCat === "units"}
+            onToggle={() => toggle("units")}
+            readOnly={<StringTags items={feeding.units} />}
+            editor={
+              <StringTagEditor
                 items={feeding.units}
-                onChange={(u) => setFeeding({ ...feeding, units: u })}
+                onChange={(v) => setFeedingList("units", v)}
                 placeholder="e.g. Lbs"
               />
-              <EditableList
-                title="Food Types"
+            }
+          />
+          <CategoryGroup
+            label="Food Types"
+            count={feeding.foodTypes.length}
+            editing={editingCat === "foodTypes"}
+            onToggle={() => toggle("foodTypes")}
+            readOnly={<StringTags items={feeding.foodTypes} />}
+            editor={
+              <StringTagEditor
                 items={feeding.foodTypes}
-                onChange={(t) => setFeeding({ ...feeding, foodTypes: t })}
+                onChange={(v) => setFeedingList("foodTypes", v)}
                 placeholder="e.g. Freeze-dried"
               />
-              <EditableList
-                title="Instructions"
+            }
+          />
+          <CategoryGroup
+            label="Instructions"
+            count={feeding.instructions.length}
+            editing={editingCat === "instructions"}
+            onToggle={() => toggle("instructions")}
+            readOnly={<StringTags items={feeding.instructions} />}
+            editor={
+              <StringTagEditor
                 items={feeding.instructions}
-                onChange={(i) => setFeeding({ ...feeding, instructions: i })}
+                onChange={(v) => setFeedingList("instructions", v)}
                 placeholder="e.g. Elevated bowl"
               />
-              <EditableList
-                title="Sources"
+            }
+          />
+          <CategoryGroup
+            label="Sources"
+            count={feeding.sources.length}
+            editing={editingCat === "sources"}
+            onToggle={() => toggle("sources")}
+            readOnly={<StringTags items={feeding.sources} />}
+            editor={
+              <StringTagEditor
                 items={feeding.sources}
-                onChange={(s) => setFeeding({ ...feeding, sources: s })}
+                onChange={(v) => setFeedingList("sources", v)}
                 placeholder="e.g. Mix both"
               />
-              <EditableList
-                title="Allergy Presets"
+            }
+          />
+          <CategoryGroup
+            label="Destinations"
+            count={feeding.destinations.length}
+            editing={editingCat === "destinations"}
+            onToggle={() => toggle("destinations")}
+            readOnly={<StringTags items={feeding.destinations} />}
+            editor={
+              <StringTagEditor
+                items={feeding.destinations}
+                onChange={(v) => setFeedingList("destinations", v)}
+                placeholder="e.g. Feeding station"
+              />
+            }
+          />
+          <CategoryGroup
+            label="Frequencies"
+            count={feeding.frequencies.length}
+            editing={editingCat === "feeding-frequencies"}
+            onToggle={() => toggle("feeding-frequencies")}
+            readOnly={<StringTags items={feeding.frequencies} />}
+            editor={
+              <StringTagEditor
+                items={feeding.frequencies}
+                onChange={(v) => setFeedingList("frequencies", v)}
+                placeholder="e.g. Every 8 hours"
+              />
+            }
+          />
+          <CategoryGroup
+            label="Allowed Proteins"
+            count={feeding.allowedProteins.length}
+            editing={editingCat === "allowedProteins"}
+            onToggle={() => toggle("allowedProteins")}
+            readOnly={<StringTags items={feeding.allowedProteins} />}
+            editor={
+              <StringTagEditor
+                items={feeding.allowedProteins}
+                onChange={(v) => setFeedingList("allowedProteins", v)}
+                placeholder="e.g. Venison"
+              />
+            }
+          />
+          <CategoryGroup
+            label="Allergy Presets"
+            count={feeding.allergyPresets.length}
+            editing={editingCat === "allergyPresets"}
+            onToggle={() => toggle("allergyPresets")}
+            readOnly={<StringTags items={feeding.allergyPresets} />}
+            editor={
+              <StringTagEditor
                 items={feeding.allergyPresets}
-                onChange={(a) => setFeeding({ ...feeding, allergyPresets: a })}
+                onChange={(v) => setFeedingList("allergyPresets", v)}
                 placeholder="e.g. Soy"
               />
-            </div>
-          )}
+            }
+          />
         </CardContent>
       </Card>
 
       {/* Medication */}
-      <Card className="overflow-hidden transition-shadow hover:shadow-md">
+      <Card className="overflow-hidden">
         <CardHeader className="border-b bg-slate-50/50 pb-3">
           <CardTitle className="flex items-center gap-2.5 text-sm">
             <div className="flex size-8 items-center justify-center rounded-lg bg-violet-100">
@@ -383,81 +518,47 @@ export function FeedingMedicationConfig() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5 pt-4">
-          {!editing ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
-                  Methods
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {medication.methods.map((m) => (
-                    <Badge key={m} variant="outline" className="text-xs">
-                      {m}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
-                  Frequencies
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {medication.frequencies.map((f) => (
-                    <Badge key={f} variant="outline" className="text-xs">
-                      {f}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div className="sm:col-span-2">
-                <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
-                  Quick Times
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {medication.quickTimes.map((t) => (
-                    <Badge key={t.time} variant="outline" className="text-xs">
-                      {t.label} ({t.time})
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="grid gap-5 sm:grid-cols-2">
-              <EditableList
-                title="Methods"
+          <CategoryGroup
+            label="Methods"
+            count={medication.methods.length}
+            editing={editingCat === "methods"}
+            onToggle={() => toggle("methods")}
+            readOnly={<StringTags items={medication.methods} />}
+            editor={
+              <StringTagEditor
                 items={medication.methods}
-                onChange={(m) => setMedication({ ...medication, methods: m })}
+                onChange={(v) => setMedList("methods", v)}
                 placeholder="e.g. Inhaled"
               />
-              <EditableList
-                title="Frequencies"
+            }
+          />
+          <CategoryGroup
+            label="Frequencies"
+            count={medication.frequencies.length}
+            editing={editingCat === "frequencies"}
+            onToggle={() => toggle("frequencies")}
+            readOnly={<StringTags items={medication.frequencies} />}
+            editor={
+              <StringTagEditor
                 items={medication.frequencies}
-                onChange={(f) =>
-                  setMedication({ ...medication, frequencies: f })
-                }
+                onChange={(v) => setMedList("frequencies", v)}
                 placeholder="e.g. Every 12 hours"
               />
-              <div className="sm:col-span-2">
-                <ScheduleList
-                  items={medication.quickTimes.map((t, i) => ({
-                    id: `mt-${i}`,
-                    label: t.label,
-                    time: t.time,
-                  }))}
-                  onChange={(items) =>
-                    setMedication({
-                      ...medication,
-                      quickTimes: items.map((i) => ({
-                        label: i.label,
-                        time: i.time,
-                      })),
-                    })
-                  }
-                />
-              </div>
-            </div>
-          )}
+            }
+          />
+          <CategoryGroup
+            label="Quick Times"
+            count={medication.quickTimes.length}
+            editing={editingCat === "quickTimes"}
+            onToggle={() => toggle("quickTimes")}
+            readOnly={<ScheduleTags items={medication.quickTimes} />}
+            editor={
+              <ScheduleTagEditor
+                items={medication.quickTimes}
+                onChange={(v) => setMedList("quickTimes", v)}
+              />
+            }
+          />
         </CardContent>
       </Card>
     </div>

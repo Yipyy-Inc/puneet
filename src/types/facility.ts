@@ -344,6 +344,8 @@ export const evalSectionSchema = z.object({
   title: z.string(),
   description: z.string().optional(),
   questions: z.array(evalQuestionSchema),
+  /** Core sections ship with the template and can be edited but not deleted. */
+  core: z.boolean().optional(),
 });
 export type EvalSection = z.infer<typeof evalSectionSchema>;
 

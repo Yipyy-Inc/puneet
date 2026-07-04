@@ -10,7 +10,20 @@ export const defaultInvoiceTemplate: InvoiceTemplate = {
   phone: "(555) 111-2222",
   email: "info@examplepetcare.com",
   website: "",
-  taxNumbers: "GST: RT 123456789 · QST: QT 987654321",
+  taxRegistrations: [
+    { id: "tax-reg-1", label: "GST/HST Number", value: "123456789 RT0001" },
+  ],
+  invoiceNumberFormat: {
+    prefix: "INV",
+    yearFormat: "YYYY",
+    monthFormat: "MM",
+    padding: 4,
+    nextNumber: 1,
+  },
+  paymentTerms: {
+    type: "due_on_receipt",
+    customText: "",
+  },
   accentColor: "#0f172a",
   footerText:
     "Thank you for trusting us with your furry family member. We appreciate your business.",

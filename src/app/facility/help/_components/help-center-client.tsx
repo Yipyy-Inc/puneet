@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
   Eye,
@@ -16,12 +16,12 @@ import { useKbState } from "@/lib/kb-articles-store";
 import { openSupportDrawer } from "@/lib/support-drawer-store";
 import type { KbArticle } from "@/types/knowledge-base";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
-import { Accordion } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 import { HelpArticleItem } from "./help-article-item";
+import { HelpArticleReader } from "./help-article-reader";
 import {
   categoryMeta,
   HELP_CATEGORIES,
@@ -34,11 +34,54 @@ export function HelpCenterClient() {
   const { articles } = useKbState();
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const published = useMemo(
     () => articles.filter((a) => a.status === "Published"),
     [articles],
   );
+
+  // Deep-link: read ?article= on mount and keep it in sync with browser history
+  // so an article can be opened directly, in a new tab, and closed with Back.
+  useEffect(() => {
+    const sync = () => {
+      const id = new URLSearchParams(window.location.search).get("article");
+      setActiveId(id);
+    };
+    sync();
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
+
+  const openArticle = useCallback((id: string) => {
+    setActiveId(id);
+    const url = `/facility/help?article=${encodeURIComponent(id)}`;
+    window.history.pushState({ article: id }, "", url);
+    window.scrollTo({ top: 0 });
+  }, []);
+
+  const closeArticle = useCallback(() => {
+    setActiveId(null);
+    window.history.pushState({}, "", "/facility/help");
+    window.scrollTo({ top: 0 });
+  }, []);
+
+  const activeArticle = useMemo(
+    () =>
+      activeId ? (published.find((a) => a.id === activeId) ?? null) : null,
+    [activeId, published],
+  );
+
+  const relatedArticles = useMemo(() => {
+    if (!activeArticle) return [];
+    const cat = normalizeCategory(activeArticle.category);
+    return published
+      .filter(
+        (a) =>
+          a.id !== activeArticle.id && normalizeCategory(a.category) === cat,
+      )
+      .slice(0, 3);
+  }, [activeArticle, published]);
 
   const stats = useMemo(() => {
     const totalViews = published.reduce((s, a) => s + a.views, 0);
@@ -105,6 +148,17 @@ export function HelpCenterClient() {
   const navCategories = HELP_CATEGORIES.filter(
     (c) => (counts.get(c.name) ?? 0) > 0,
   );
+
+  if (hydrated && activeArticle) {
+    return (
+      <HelpArticleReader
+        article={activeArticle}
+        related={relatedArticles}
+        onBack={closeArticle}
+        onOpen={openArticle}
+      />
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-6">
@@ -247,15 +301,15 @@ export function HelpCenterClient() {
                           {section.items.length === 1 ? "" : "s"}
                         </span>
                       </div>
-                      <Accordion
-                        type="single"
-                        collapsible
-                        className="space-y-2.5"
-                      >
+                      <div className="grid gap-2.5 sm:grid-cols-2">
                         {section.items.map((a) => (
-                          <HelpArticleItem key={a.id} article={a} />
+                          <HelpArticleItem
+                            key={a.id}
+                            article={a}
+                            onOpen={openArticle}
+                          />
                         ))}
-                      </Accordion>
+                      </div>
                     </section>
                   );
                 })

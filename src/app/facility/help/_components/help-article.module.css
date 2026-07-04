@@ -1,0 +1,255 @@
+/* Help Center article reader. Renders the same rich HTML the Knowledge Base
+   admin produces (kb-editor.module.css), but for a plain container instead of
+   the ProseMirror canvas. Tailwind preflight strips heading/list styles, so
+   they're restored here alongside blockquote, tables, code blocks, callouts,
+   step cards, embedded video and the highlight.js token palette. Callouts are
+   already self-contained (inline styles from the KbCallout node) so they need
+   no rules here. */
+
+.body {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--color-foreground);
+}
+
+.body > * + * {
+  margin-top: 0.75em;
+}
+
+.body h1 {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 1.5rem;
+}
+.body h2 {
+  font-size: 1.45rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.75rem;
+  scroll-margin-top: 5rem;
+}
+.body h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  scroll-margin-top: 5rem;
+}
+
+.body p {
+  margin: 0.5rem 0;
+}
+
+.body ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+}
+.body ol {
+  list-style: decimal;
+  padding-left: 1.5rem;
+}
+.body li {
+  margin: 0.2em 0;
+}
+.body li p {
+  margin: 0;
+}
+
+.body blockquote {
+  border-left: 3px solid var(--color-primary, #6366f1);
+  background: color-mix(in srgb, var(--color-primary, #6366f1) 6%, transparent);
+  padding: 0.6rem 1rem;
+  border-radius: 0 0.375rem 0.375rem 0;
+  color: var(--color-muted-foreground);
+}
+
+.body a,
+.body :global(.kb-link) {
+  color: #4f46e5;
+  text-decoration: underline;
+  cursor: pointer;
+}
+:global(.dark) .body a,
+:global(.dark) .body :global(.kb-link) {
+  color: #a5b4fc;
+}
+
+.body :global(.kb-tooltip) {
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: help;
+}
+
+/* Inline images */
+.body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  margin: 0.75rem 0;
+}
+
+/* Embedded / uploaded video block */
+.body :global(.kb-video) {
+  max-width: 100%;
+  margin: 1rem 0;
+}
+.body :global(.kb-video iframe),
+.body :global(.kb-video video) {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: none;
+  border-radius: 0.5rem;
+  display: block;
+}
+
+/* Step-by-step block — numbered cards via a CSS counter */
+.body :global(.kb-steps) {
+  list-style: none;
+  counter-reset: kb-step;
+  padding: 0;
+  margin: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.body :global(.kb-step) {
+  counter-increment: kb-step;
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem 0.75rem 3rem;
+  background: var(--color-card);
+}
+.body :global(.kb-step::before) {
+  content: counter(kb-step);
+  position: absolute;
+  left: 0.7rem;
+  top: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 9999px;
+  background: var(--color-primary, #6366f1);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.body :global(.kb-step > p) {
+  margin: 0;
+}
+
+/* Tables — borders, header + alternating row shading */
+.body table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 1rem 0;
+  overflow: hidden;
+}
+.body td,
+.body th {
+  min-width: 3rem;
+  border: 1px solid var(--color-border);
+  padding: 0.45rem 0.7rem;
+  vertical-align: top;
+}
+.body th {
+  background: var(--color-muted);
+  font-weight: 600;
+  text-align: left;
+}
+.body tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--color-muted) 45%, transparent);
+}
+.body td > p,
+.body th > p {
+  margin: 0;
+}
+
+/* Inline code + code blocks */
+.body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+}
+.body pre {
+  position: relative;
+  background: #1e293b;
+  color: #e2e8f0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 1rem 1rem 1rem 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  margin: 1rem 0;
+}
+.body pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* Copy button injected onto each code block by the reader */
+.copyBtn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 0.35rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.copyBtn:hover {
+  color: #f8fafc;
+  background: rgba(148, 163, 184, 0.28);
+}
+
+.body hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 1.5rem 0;
+}
+
+/* highlight.js token colours (dark code block) */
+.body :global(.hljs-comment),
+.body :global(.hljs-quote) {
+  color: #94a3b8;
+  font-style: italic;
+}
+.body :global(.hljs-keyword),
+.body :global(.hljs-selector-tag),
+.body :global(.hljs-built_in) {
+  color: #c084fc;
+}
+.body :global(.hljs-string),
+.body :global(.hljs-attr) {
+  color: #86efac;
+}
+.body :global(.hljs-number),
+.body :global(.hljs-literal) {
+  color: #fdba74;
+}
+.body :global(.hljs-title),
+.body :global(.hljs-function .hljs-title),
+.body :global(.hljs-name) {
+  color: #7dd3fc;
+}
+.body :global(.hljs-type),
+.body :global(.hljs-class .hljs-title) {
+  color: #fca5a5;
+}

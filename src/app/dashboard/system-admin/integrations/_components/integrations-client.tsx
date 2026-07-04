@@ -6,11 +6,32 @@ import { CreditCard, Mail, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { TwilioIntegrationCard } from "@/components/integrations/twilio-integration-card";
+import { CloverIntegrationCard } from "@/components/integrations/clover-integration-card";
 
-const OTHER: { name: string; desc: string; icon: LucideIcon }[] = [
-  { name: "Stripe", desc: "Billing & payments", icon: CreditCard },
-  { name: "SendGrid", desc: "Transactional email", icon: Mail },
-  { name: "Slack", desc: "Team notifications", icon: MessageSquare },
+const OTHER: {
+  name: string;
+  desc: string;
+  icon: LucideIcon;
+  badge: string;
+}[] = [
+  {
+    name: "Stripe",
+    desc: "Optional secondary card processor",
+    icon: CreditCard,
+    badge: "Secondary",
+  },
+  {
+    name: "SendGrid",
+    desc: "Transactional email",
+    icon: Mail,
+    badge: "Coming soon",
+  },
+  {
+    name: "Slack",
+    desc: "Team notifications",
+    icon: MessageSquare,
+    badge: "Coming soon",
+  },
 ];
 
 export function IntegrationsClient() {
@@ -23,7 +44,13 @@ export function IntegrationsClient() {
         </p>
       </div>
 
-      <TwilioIntegrationCard />
+      <div className="space-y-2">
+        <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          Featured integrations
+        </h2>
+        <CloverIntegrationCard />
+        <TwilioIntegrationCard />
+      </div>
 
       <div>
         <h2 className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
@@ -42,7 +69,7 @@ export function IntegrationsClient() {
                     <p className="font-medium">{o.name}</p>
                     <p className="text-muted-foreground text-xs">{o.desc}</p>
                   </div>
-                  <Badge variant="outline">Coming soon</Badge>
+                  <Badge variant="outline">{o.badge}</Badge>
                 </CardContent>
               </Card>
             );

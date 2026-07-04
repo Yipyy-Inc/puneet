@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -36,6 +38,8 @@ import {
   PawPrint,
   Cat,
   Rabbit,
+  Ban,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -44,8 +48,10 @@ import {
   addBreed,
   updateBreed,
   removeBreed,
+  getBreedRestrictionMessage,
   type Breed,
 } from "@/data/breeds";
+import { breedMutations } from "@/lib/api/breeds";
 
 const SPECIES_CONFIG = [
   { key: "Dog" as const, label: "Dogs", icon: PawPrint },
@@ -71,7 +77,47 @@ export function BreedManagement() {
   );
   const [formPopular, setFormPopular] = useState(false);
 
+  // Restriction message — persisted via the breeds query factory.
+  const queryClient = useQueryClient();
+  const [savedMessage, setSavedMessage] = useState(() =>
+    getBreedRestrictionMessage(),
+  );
+  const [messageDraft, setMessageDraft] = useState(savedMessage);
+
+  const restrictMutation = useMutation({
+    ...breedMutations.setRestricted(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["breeds"] });
+      setRefreshKey((k) => k + 1);
+    },
+  });
+
+  const saveMessageMutation = useMutation({
+    ...breedMutations.setRestrictionMessage(messageDraft),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["breeds", "restriction-message"],
+      });
+      setSavedMessage(messageDraft);
+      toast.success("Restriction message saved");
+    },
+  });
+
+  const toggleRestrict = (breed: Breed) => {
+    const next = !breed.restricted;
+    restrictMutation.mutate({ name: breed.name, restricted: next });
+    toast.success(
+      next
+        ? `"${breed.name}" is now restricted`
+        : `Restriction removed from "${breed.name}"`,
+    );
+  };
+
   const allBreeds = useMemo(() => getAllBreeds(), [refreshKey]);
+  const restrictedCount = useMemo(
+    () => allBreeds.filter((b) => b.restricted).length,
+    [allBreeds],
+  );
 
   const filteredBreeds = useMemo(() => {
     if (!searchQuery.trim()) return allBreeds;
@@ -151,7 +197,14 @@ export function BreedManagement() {
             <CardTitle className="text-base">Pet Breeds</CardTitle>
             <p className="text-muted-foreground mt-1 text-sm">
               Manage the breed list used when creating and editing pets.{" "}
-              {allBreeds.length} breeds total.
+              {allBreeds.length} breeds total
+              {restrictedCount > 0 && (
+                <span className="text-red-600">
+                  {" · "}
+                  {restrictedCount} restricted
+                </span>
+              )}
+              .
             </p>
           </div>
           <Button size="sm" className="gap-1.5" onClick={openAddDialog}>
@@ -172,6 +225,60 @@ export function BreedManagement() {
           />
         </div>
 
+        {/* Restricted breed booking message */}
+        <div className="space-y-2 rounded-md border border-red-100 bg-red-50/40 p-3">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="size-4 text-red-600" />
+            <span className="text-sm font-semibold">
+              Restricted breed booking message
+            </span>
+          </div>
+          <p className="text-muted-foreground text-xs">
+            Shown to a customer who tries to book with a breed you&apos;ve
+            marked as restricted.
+          </p>
+          <Textarea
+            value={messageDraft}
+            onChange={(e) => setMessageDraft(e.target.value)}
+            rows={2}
+            className="bg-background text-sm"
+            placeholder="Explain why this breed can't be booked…"
+          />
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={
+                messageDraft.trim() === savedMessage.trim() ||
+                !messageDraft.trim() ||
+                saveMessageMutation.isPending
+              }
+              onClick={() => saveMessageMutation.mutate()}
+            >
+              {saveMessageMutation.isPending ? "Saving…" : "Save message"}
+            </Button>
+          </div>
+        </div>
+
+        {/* Legend — explains every icon/marker shown on breed rows */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-md border px-3 py-2 text-xs">
+          <span className="text-muted-foreground font-medium">Legend</span>
+          <span className="flex items-center gap-1.5">
+            <Star className="size-3 fill-amber-400 text-amber-400" />
+            Popular breed — shown at the top of breed search
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Badge
+              variant="outline"
+              className="gap-1 border-red-200 bg-red-50 text-[10px] text-red-700"
+            >
+              <Ban className="size-2.5" />
+              Restricted
+            </Badge>
+            Blocked from booking (shows your restriction message)
+          </span>
+        </div>
+
         {/* Species groups */}
         {SPECIES_CONFIG.map((sp) => {
           const list = breedsBySpecies[sp.key] ?? [];
@@ -183,12 +290,20 @@ export function BreedManagement() {
               onOpenChange={() => toggleSection(sp.key)}
             >
               <CollapsibleTrigger className="hover:bg-muted/50 flex w-full items-center justify-between rounded-md border px-3 py-2 transition-colors">
-                <div className="flex items-center gap-2">
-                  <Icon className="text-muted-foreground size-4" />
-                  <span className="text-sm font-semibold">{sp.label}</span>
-                  <Badge variant="secondary" className="text-[10px]">
-                    {list.length}
-                  </Badge>
+                <div className="flex flex-col items-start gap-0.5 text-left">
+                  <div className="flex items-center gap-2">
+                    <Icon className="text-muted-foreground size-4" />
+                    <span className="text-sm font-semibold">{sp.label}</span>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {list.length}
+                    </Badge>
+                  </div>
+                  {sp.key === "Other" && (
+                    <span className="text-muted-foreground ml-6 text-[11px] font-normal">
+                      Other species (rabbits, ferrets, guinea pigs, birds,
+                      reptiles, etc.)
+                    </span>
+                  )}
                 </div>
                 <ChevronDown
                   className={cn(
@@ -209,29 +324,67 @@ export function BreedManagement() {
                     list.map((breed) => (
                       <div
                         key={breed.name}
-                        className="group flex items-center justify-between border-b px-3 py-1.5 last:border-b-0"
+                        className={cn(
+                          "group flex items-center justify-between border-b px-3 py-1.5 last:border-b-0",
+                          breed.restricted && "bg-red-50/50",
+                        )}
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{breed.name}</span>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span
+                            className={cn(
+                              "truncate text-sm",
+                              breed.restricted &&
+                                "text-muted-foreground line-through",
+                            )}
+                          >
+                            {breed.name}
+                          </span>
                           {breed.popular && (
-                            <Star className="size-3 fill-amber-400 text-amber-400" />
+                            <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" />
+                          )}
+                          {breed.restricted && (
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 gap-1 border-red-200 bg-red-50 text-[10px] text-red-700"
+                            >
+                              <Ban className="size-2.5" />
+                              Restricted
+                            </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <div className="flex items-center gap-1">
                           <button
-                            onClick={() => openEditDialog(breed)}
-                            className="text-muted-foreground hover:text-foreground rounded-sm p-1 transition-colors"
-                            title="Edit"
+                            onClick={() => toggleRestrict(breed)}
+                            className={cn(
+                              "rounded-sm p-1 transition-colors",
+                              breed.restricted
+                                ? "text-red-600 hover:text-red-700"
+                                : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-red-600",
+                            )}
+                            title={
+                              breed.restricted
+                                ? "Remove restriction"
+                                : "Restrict breed"
+                            }
                           >
-                            <Pencil className="size-3" />
+                            <Ban className="size-3" />
                           </button>
-                          <button
-                            onClick={() => handleRemove(breed)}
-                            className="text-muted-foreground hover:text-destructive rounded-sm p-1 transition-colors"
-                            title="Remove"
-                          >
-                            <Trash2 className="size-3" />
-                          </button>
+                          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                            <button
+                              onClick={() => openEditDialog(breed)}
+                              className="text-muted-foreground hover:text-foreground rounded-sm p-1 transition-colors"
+                              title="Edit"
+                            >
+                              <Pencil className="size-3" />
+                            </button>
+                            <button
+                              onClick={() => handleRemove(breed)}
+                              className="text-muted-foreground hover:text-destructive rounded-sm p-1 transition-colors"
+                              title="Remove"
+                            >
+                              <Trash2 className="size-3" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))

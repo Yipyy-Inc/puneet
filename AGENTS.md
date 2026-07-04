@@ -12,7 +12,7 @@ It is a **mock-driven prototype, not a legacy or production system.** There is n
 
 Every task follows: **Ground → Plan → Implement → Verify → Encode.**
 
-1. **Ground** — Read the relevant doc below and the neighboring code before writing anything. Inventory what exists (components, hooks, `src/lib/api/` factories, `src/data/` shapes) and reuse it — never recreate.
+1. **Ground** — Read the relevant doc below and the neighboring code before writing anything. Inventory what exists (components, hooks, `src/lib/api/` factories, `src/data/` shapes) and reuse it — never recreate. **Confirm the target component is actually wired in before editing it** — a file that typechecks can still be dead code (a superseded duplicate). When a task names a component (especially a settings section), grep its host page for the import first; if it's absent, find what the section really renders and edit that. For settings: `grep -n "<Component>" src/app/facility/dashboard/settings/page.tsx` — no match means it's likely dead (e.g. the old `RolesPermissionsSettings.tsx` vs the live `FacilityRolesStudio.tsx`, 2026-07). The gate `bun run check:settings-wiring` fails on any orphaned `*Settings.tsx`; `bun run prune` (Knip) also flags files imported nowhere.
 2. **Plan** — For anything beyond a trivial fix, state a short plan first (CLAUDE.md: "Plan before coding").
 3. **Implement** — Small steps, keep the build green. New code follows [docs/conventions/code-style.md](docs/conventions/code-style.md) §(b).
 4. **Verify** — Run the green sequence below and prove the change works (for UI, run the app and look at the touched journey). Never claim done without evidence.
@@ -22,15 +22,16 @@ Every task follows: **Ground → Plan → Implement → Verify → Encode.**
 
 There is **no test runner** in this project. "Green" = the CI gates plus a manual look at the UI.
 
-| Command                 | Purpose                                                                |
-| ----------------------- | ---------------------------------------------------------------------- |
-| `bun run dev`           | Dev server (webpack); `bun run dev:turbo` for turbo                    |
-| `bun run typecheck`     | `tsc --noEmit` — the primary gate (also runs on pre-commit & pre-push) |
-| `bun run lint`          | ESLint (cached); `bun run lint:fix` to autofix                         |
-| `bun run format:check`  | Prettier check; `bun run format` to write                              |
-| `bun run build`         | `next build` — full production build (CI runs this)                    |
-| `bun run prune`         | Knip — dead-code / unused-export report                                |
-| `bun run check:pricing` | Project-specific pricing-consistency script                            |
+| Command                         | Purpose                                                                    |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| `bun run dev`                   | Dev server (webpack); `bun run dev:turbo` for turbo                        |
+| `bun run typecheck`             | `tsc --noEmit` — the primary gate (also runs on pre-commit & pre-push)     |
+| `bun run lint`                  | ESLint (cached); `bun run lint:fix` to autofix                             |
+| `bun run format:check`          | Prettier check; `bun run format` to write                                  |
+| `bun run build`                 | `next build` — full production build (CI runs this)                        |
+| `bun run prune`                 | Knip — dead-code / unused-export report                                    |
+| `bun run check:pricing`         | Project-specific pricing-consistency script                                |
+| `bun run check:settings-wiring` | Fails if a `*Settings.tsx` component is imported nowhere (dead-code guard) |
 
 **The green sequence (run before claiming done):** `bun run typecheck && bun run lint && bun run format:check`, then for UI changes `bun run dev` and visually confirm the touched [critical user journey](docs/product/critical-user-journeys.md). Run `bun run build` for anything structural (routing, layouts, server/client boundaries). Use **bun** only — never npm/yarn/pnpm.
 

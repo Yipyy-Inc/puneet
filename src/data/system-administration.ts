@@ -637,23 +637,30 @@ export const integrations: Integration[] = [
     testStatus: "Passed",
   },
   {
+    // Clover Fiserv is the PRIMARY (and, for Phase 1, only) payment processor —
+    // it replaced Stripe. Phase 1 is online card payments only, on both the
+    // super-admin (facility → Yipyy) and facility-portal (customer → facility)
+    // sides. Cash / bank-transfer workflows arrive in a later phase.
     id: "int-003",
-    name: "Stripe Payment Gateway",
+    name: "Clover Fiserv",
     type: "Payment",
-    provider: "Stripe",
+    provider: "Clover Fiserv",
     status: "Active",
     connectedAt: "2024-05-10",
     lastSync: "2025-11-28T14:20:00Z",
-    apiEndpoint: "https://api.stripe.com/v1",
+    apiEndpoint: "https://api.clover.com/v3",
     authenticationType: "API Key",
     credentials: {
       encrypted: true,
       lastUpdated: "2025-11-01",
     },
     configuration: {
+      isPrimary: true,
       currency: "USD",
       captureMethod: "automatic",
-      statementDescriptor: "PET PARADISE",
+      statementDescriptor: "YIPYY",
+      paymentMethods: ["card"],
+      cardOnlyPhase1: true,
     },
     usageStats: {
       totalRequests: 78901,

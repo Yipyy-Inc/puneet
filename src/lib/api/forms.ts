@@ -30,6 +30,13 @@ import {
   updateSubmissionStatus,
   updateSubmissionRecordStatus,
 } from "@/data/form-submissions";
+import {
+  formRequirements,
+  saveFormRequirements,
+  type ServiceFormRequirementsConfig,
+} from "@/data/settings";
+import { getRedFlagConfig, saveRedFlagConfig } from "@/data/form-red-flags";
+import type { RedFlagConfig } from "@/types/forms";
 
 // ---- Query factories ----
 
@@ -98,6 +105,15 @@ export const formQueries = {
     queryKey: ["forms", "answers-record", submissionId] as const,
     queryFn: async () => getAnswersRecord(submissionId),
   }),
+  requirements: () => ({
+    queryKey: ["forms", "requirements"] as const,
+    queryFn: async (): Promise<ServiceFormRequirementsConfig[]> =>
+      formRequirements,
+  }),
+  redFlags: () => ({
+    queryKey: ["forms", "red-flags"] as const,
+    queryFn: async (): Promise<RedFlagConfig> => getRedFlagConfig(),
+  }),
 };
 
 // ---- Mutation helpers ----
@@ -115,4 +131,11 @@ export const formMutations = {
   createSubmission,
   updateSubmissionStatus,
   updateSubmissionRecordStatus,
+  saveRequirements: (configs: ServiceFormRequirementsConfig[]) => ({
+    mutationFn: async (): Promise<ServiceFormRequirementsConfig[]> =>
+      saveFormRequirements(configs),
+  }),
+  saveRedFlags: (config: RedFlagConfig) => ({
+    mutationFn: async (): Promise<RedFlagConfig> => saveRedFlagConfig(config),
+  }),
 };
