@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Eye, FileText, Send, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Eye, FileText, Send, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -128,7 +128,13 @@ function ComposerForm({ existing }: { existing: EnhancedAnnouncement | null }) {
 
   const deliveryMethod =
     inPlatform && email ? "both" : email ? "email" : "in_platform";
-  const canSave = title.trim().length > 0 && bodyPreview(body).length > 0;
+  // Embedded media (image/video/iframe) counts as content even without text.
+  const hasMedia = /<img|<video|<iframe/i.test(body);
+  const hasVideo = /<video|<iframe/i.test(body);
+  const canSave =
+    title.trim().length > 0 && (bodyPreview(body).length > 0 || hasMedia);
+  // Video can only be delivered in-platform; email degrades to a summary + link.
+  const videoEmailConflict = hasVideo && email;
 
   function toggle(list: string[], value: string): string[] {
     return list.includes(value)
@@ -170,6 +176,11 @@ function ComposerForm({ existing }: { existing: EnhancedAnnouncement | null }) {
           ? "Announcement scheduled"
           : "Announcement published",
     );
+    if (intent === "publish" && videoEmailConflict) {
+      toast(
+        "Email recipients will get a text summary with a “View full announcement” link.",
+      );
+    }
     router.push(LIST_URL);
   }
 
@@ -397,6 +408,20 @@ function ComposerForm({ existing }: { existing: EnhancedAnnouncement | null }) {
                 <p className="text-xs text-rose-600 dark:text-rose-400">
                   Select at least one delivery method.
                 </p>
+              )}
+              {videoEmailConflict && (
+                <div className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-300">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                  <div className="space-y-0.5">
+                    <p className="font-medium">
+                      Video content cannot be sent via email.
+                    </p>
+                    <p>
+                      The email version will show a link to view the
+                      announcement in-platform.
+                    </p>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>

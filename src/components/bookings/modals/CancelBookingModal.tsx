@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,6 +18,7 @@ import { AlertTriangle, CreditCard, Wallet } from "lucide-react";
 import type { Booking } from "@/types/booking";
 import { clients } from "@/data/clients";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { loadDepositRefundPolicy } from "@/data/deposit-rules";
 
 interface CancelBookingModalProps {
   booking: Booking;
@@ -37,14 +38,39 @@ export function CancelBookingModal({
   onOpenChange,
   onConfirm,
 }: CancelBookingModalProps) {
+  // Deposit refund policy (Settings → Deposit Rules) governs the deposit's
+  // disposition on cancellation; default the method to Store Credit when the
+  // policy issues the deposit as credit.
+  const [refundPolicy] = useState(loadDepositRefundPolicy);
   const [cancellationReason, setCancellationReason] = useState("");
   const [refundMethod, setRefundMethod] = useState<"card" | "store_credit">(
-    "card",
+    refundPolicy.type === "credit" ? "store_credit" : "card",
   );
   const [refundAmount, setRefundAmount] = useState(booking.totalCost);
 
   const client = clients.find((c) => c.id === booking.clientId);
   const pet = client?.pets.find((p) => p.id === booking.petId);
+
+  const bookingStartLabel = useMemo(() => {
+    const d = new Date(booking.startDate);
+    if (booking.checkInTime) {
+      const [h, m] = booking.checkInTime.split(":").map(Number);
+      d.setHours(h, m, 0, 0);
+    }
+    return d.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }, [booking.startDate, booking.checkInTime]);
+
+  const depositPolicyText =
+    refundPolicy.type === "non_refundable"
+      ? "The collected deposit is non-refundable — exclude it from the refund amount below."
+      : refundPolicy.type === "credit"
+        ? "The collected deposit is issued as store credit toward a future booking (refund method preset to Store Credit)."
+        : `Full deposit refund if cancelled at least ${refundPolicy.refundBeforeHours}h before the booking (starts ${bookingStartLabel}). Otherwise the deposit is forfeited.`;
 
   const handleConfirm = () => {
     if (!cancellationReason.trim()) {
@@ -79,6 +105,13 @@ export function CancelBookingModal({
             <AlertDescription>
               This action will cancel the booking. This cannot be undone.
             </AlertDescription>
+          </Alert>
+
+          {/* Deposit refund policy from Deposit Rules settings */}
+          <Alert>
+            <Wallet className="size-4" />
+            <AlertTitle>Deposit refund policy</AlertTitle>
+            <AlertDescription>{depositPolicyText}</AlertDescription>
           </Alert>
 
           {/* Cancellation Reason */}

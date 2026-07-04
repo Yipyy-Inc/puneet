@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -40,11 +43,26 @@ import {
   Copy,
   KeyRound,
   ExternalLink,
+  Receipt,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useFacilityRole } from "@/hooks/use-facility-role";
-import { retailConfig, type RetailSupplier } from "@/data/retail-config";
+import {
+  retailConfig,
+  type RetailSupplier,
+  type RetailTaxMode,
+  type RetailReceiptFormat,
+} from "@/data/retail-config";
+import { retailMutations } from "@/lib/api/retail";
+
+const TAX_MODES: { value: RetailTaxMode; label: string; hint: string }[] = [
+  { value: "HST", label: "HST", hint: "Harmonized Sales Tax" },
+  { value: "GST", label: "GST", hint: "Goods & Services Tax" },
+  { value: "PST", label: "PST", hint: "Provincial Sales Tax" },
+  { value: "QST", label: "QST", hint: "Quebec Sales Tax" },
+];
 
 const COLOR_OPTIONS = [
   { value: "red", label: "Red", dot: "bg-red-500" },
@@ -64,11 +82,54 @@ function nextId(prefix: string) {
 
 export function RetailSettings() {
   const { role } = useFacilityRole();
+  const queryClient = useQueryClient();
   const [categories, setCategories] = useState(retailConfig.categories);
   const [suppliers, setSuppliers] = useState(retailConfig.suppliers);
   const [brands, setBrands] = useState(retailConfig.brands);
   const [tags, setTags] = useState(retailConfig.productTags);
   const [units, setUnits] = useState(retailConfig.unitsOfMeasure);
+
+  // Tax configuration — single source of truth for the POS + Invoice Template
+  const [defaultTaxRate, setDefaultTaxRate] = useState(
+    String(retailConfig.taxConfig.defaultRate),
+  );
+  const [taxMode, setTaxMode] = useState<RetailTaxMode>(
+    retailConfig.taxConfig.taxMode,
+  );
+  const [taxRegistrationNumber, setTaxRegistrationNumber] = useState(
+    retailConfig.taxConfig.registrationNumber,
+  );
+  const [showTaxBreakdown, setShowTaxBreakdown] = useState(
+    retailConfig.taxConfig.showBreakdownOnReceipt,
+  );
+  const [exemptCategoryIds, setExemptCategoryIds] = useState<string[]>(
+    retailConfig.taxConfig.exemptCategoryIds,
+  );
+
+  // Receipt / POS presentation
+  const [receiptHeader, setReceiptHeader] = useState(
+    retailConfig.receiptConfig.header,
+  );
+  const [receiptFooter, setReceiptFooter] = useState(
+    retailConfig.receiptConfig.footer,
+  );
+  const [receiptFormat, setReceiptFormat] = useState<RetailReceiptFormat>(
+    retailConfig.receiptConfig.format,
+  );
+  const [receiptShowLogo, setReceiptShowLogo] = useState(
+    retailConfig.receiptConfig.showLogo,
+  );
+  const [receiptReturnPolicy, setReceiptReturnPolicy] = useState(
+    retailConfig.receiptConfig.returnPolicy,
+  );
+
+  // Low stock alerts
+  const [lowStockThreshold, setLowStockThreshold] = useState(
+    String(retailConfig.lowStockConfig.defaultThreshold),
+  );
+  const [lowStockNotify, setLowStockNotify] = useState(
+    retailConfig.lowStockConfig.notifyStaff,
+  );
 
   // Inline add state
   const [newCat, setNewCat] = useState("");
@@ -77,12 +138,77 @@ export function RetailSettings() {
   const [newTagColor, setNewTagColor] = useState("blue");
   const [newUnit, setNewUnit] = useState("");
 
+  const toggleCategoryExempt = (categoryId: string) => {
+    setExemptCategoryIds((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId],
+    );
+  };
+
+  const saveTaxConfig = useMutation({
+    ...retailMutations.updateTaxConfig({
+      defaultRate: Number.parseFloat(defaultTaxRate) || 0,
+      taxMode,
+      registrationNumber: taxRegistrationNumber.trim(),
+      showBreakdownOnReceipt: showTaxBreakdown,
+      // Keep only exemptions for categories that still exist
+      exemptCategoryIds: exemptCategoryIds.filter((id) =>
+        categories.some((c) => c.id === id),
+      ),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["retail", "tax-config"] });
+    },
+  });
+
+  const saveReceiptConfig = useMutation({
+    ...retailMutations.updateReceiptConfig({
+      header: receiptHeader.trim(),
+      footer: receiptFooter.trim(),
+      format: receiptFormat,
+      showLogo: receiptShowLogo,
+      returnPolicy: receiptReturnPolicy.trim(),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["retail", "receipt-config"] });
+    },
+  });
+
+  const saveLowStockConfig = useMutation({
+    ...retailMutations.updateLowStockConfig({
+      defaultThreshold: Math.max(
+        0,
+        Number.parseInt(lowStockThreshold, 10) || 0,
+      ),
+      notifyStaff: lowStockNotify,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["retail", "low-stock-config"],
+      });
+    },
+  });
+
+  const handleSendTestReceipt = () => {
+    const via =
+      receiptFormat === "both"
+        ? "print and email"
+        : receiptFormat === "email"
+          ? "email"
+          : "print";
+    toast.success(`Test receipt sent via ${via}`);
+  };
+
   const handleSave = () => {
     retailConfig.categories = categories;
     retailConfig.suppliers = suppliers;
     retailConfig.brands = brands;
     retailConfig.productTags = tags;
     retailConfig.unitsOfMeasure = units;
+    saveTaxConfig.mutate();
+    saveReceiptConfig.mutate();
+    saveLowStockConfig.mutate();
     toast.success("Retail settings saved");
   };
 
@@ -218,6 +344,139 @@ export function RetailSettings() {
         onUpdate={setSuppliers}
         nextId={nextId}
       />
+
+      {/* Tax Configuration */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Receipt className="size-4" />
+            Tax Configuration
+          </CardTitle>
+          <p className="text-muted-foreground text-xs">
+            Single source of truth for POS and invoice tax. Replaces the
+            hardcoded tax logic in the point-of-sale module.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Default rate + tax mode */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="default-tax-rate" className="text-xs">
+                Default Tax Rate (%)
+              </Label>
+              <Input
+                id="default-tax-rate"
+                type="number"
+                step="0.001"
+                min="0"
+                max="100"
+                value={defaultTaxRate}
+                onChange={(e) => setDefaultTaxRate(e.target.value)}
+                placeholder="5"
+                className="h-9 text-sm"
+              />
+              <p className="text-muted-foreground text-xs">
+                Applied to all taxable products unless overridden
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Tax Mode</Label>
+              <Select
+                value={taxMode}
+                onValueChange={(v) => setTaxMode(v as RetailTaxMode)}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TAX_MODES.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      <span className="font-medium">{m.label}</span>
+                      <span className="text-muted-foreground ml-2 text-xs">
+                        {m.hint}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                For Canadian facilities
+              </p>
+            </div>
+          </div>
+
+          {/* Registration number */}
+          <div className="space-y-1.5">
+            <Label htmlFor="tax-registration" className="text-xs">
+              Tax Registration Number
+            </Label>
+            <Input
+              id="tax-registration"
+              value={taxRegistrationNumber}
+              onChange={(e) => setTaxRegistrationNumber(e.target.value)}
+              placeholder="e.g. 123456789 RT0001"
+              className="h-9 text-sm"
+            />
+          </div>
+
+          <Separator />
+
+          {/* Show breakdown on receipt */}
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">
+                Show tax breakdown on receipt
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Itemize each tax line on printed and emailed receipts.
+              </p>
+            </div>
+            <Switch
+              checked={showTaxBreakdown}
+              onCheckedChange={setShowTaxBreakdown}
+            />
+          </div>
+
+          <Separator />
+
+          {/* Per-category tax exemptions */}
+          <div className="space-y-2">
+            <div>
+              <p className="text-sm font-medium">Tax-exempt categories</p>
+              <p className="text-muted-foreground text-xs">
+                Products in an exempt category are sold without tax.
+              </p>
+            </div>
+            {categories.length === 0 ? (
+              <p className="text-muted-foreground py-2 text-xs">
+                Add product categories above to configure exemptions.
+              </p>
+            ) : (
+              <div className="divide-y rounded-lg border">
+                {categories.map((cat) => (
+                  <div
+                    key={cat.id}
+                    className="flex items-center justify-between px-3 py-2.5"
+                  >
+                    <span className="text-sm">{cat.name}</span>
+                    <div className="flex items-center gap-2">
+                      {exemptCategoryIds.includes(cat.id) && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          Exempt
+                        </Badge>
+                      )}
+                      <Switch
+                        checked={exemptCategoryIds.includes(cat.id)}
+                        onCheckedChange={() => toggleCategoryExempt(cat.id)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Brands */}
       <Card>
@@ -418,6 +677,161 @@ export function RetailSettings() {
               }}
             >
               <Plus className="size-3.5" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Low Stock Alerts */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Package className="size-4" />
+            Low Stock Alerts
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-1.5">
+            <Label htmlFor="low-stock-threshold" className="text-xs">
+              Default low-stock threshold (units)
+            </Label>
+            <Input
+              id="low-stock-threshold"
+              type="number"
+              min="0"
+              value={lowStockThreshold}
+              onChange={(e) => setLowStockThreshold(e.target.value)}
+              placeholder="5"
+              className="h-9 max-w-[160px] text-sm"
+            />
+            <p className="text-muted-foreground text-xs">
+              Alert me when any product falls below this many units. Per-product
+              overrides are set from the individual product page.
+            </p>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">
+                Send low-stock alert to staff notifications
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Post an alert to the staff notifications channel when a product
+                hits its threshold.
+              </p>
+            </div>
+            <Switch
+              checked={lowStockNotify}
+              onCheckedChange={setLowStockNotify}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Receipt Settings */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Receipt className="size-4" />
+            Receipt Settings
+          </CardTitle>
+          <p className="text-muted-foreground text-xs">
+            Customize how POS receipts look and how they reach customers.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-1.5">
+            <Label htmlFor="receipt-header" className="text-xs">
+              Receipt header
+            </Label>
+            <Textarea
+              id="receipt-header"
+              value={receiptHeader}
+              onChange={(e) => setReceiptHeader(e.target.value)}
+              placeholder="Custom text shown at the top of the receipt (e.g. store name, address)"
+              rows={2}
+              className="text-sm"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="receipt-footer" className="text-xs">
+              Receipt footer
+            </Label>
+            <Textarea
+              id="receipt-footer"
+              value={receiptFooter}
+              onChange={(e) => setReceiptFooter(e.target.value)}
+              placeholder="e.g. Thank you for shopping with us!"
+              rows={2}
+              className="text-sm"
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Receipt format</Label>
+              <Select
+                value={receiptFormat}
+                onValueChange={(v) =>
+                  setReceiptFormat(v as RetailReceiptFormat)
+                }
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="print">Print</SelectItem>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="both">Both</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                How receipts are delivered at checkout.
+              </p>
+            </div>
+            <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Show facility logo</p>
+                <p className="text-muted-foreground text-xs">
+                  Print the facility logo at the top of the receipt.
+                </p>
+              </div>
+              <Switch
+                checked={receiptShowLogo}
+                onCheckedChange={setReceiptShowLogo}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="receipt-return-policy" className="text-xs">
+              Return policy
+            </Label>
+            <Textarea
+              id="receipt-return-policy"
+              value={receiptReturnPolicy}
+              onChange={(e) => setReceiptReturnPolicy(e.target.value)}
+              placeholder="e.g. Returns accepted within 30 days with receipt."
+              rows={2}
+              className="text-sm"
+            />
+            <p className="text-muted-foreground text-xs">
+              Printed near the bottom of every receipt.
+            </p>
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={handleSendTestReceipt}
+            >
+              <Send className="size-3.5" />
+              Send test receipt
             </Button>
           </div>
         </CardContent>

@@ -161,6 +161,11 @@ function DocTable({
   );
 }
 
+// Yipyy Agreements are legally signed records: this tab is DELIBERATELY
+// download-only. No rename, delete or upload actions are wired here (DocTable is
+// rendered without an `actions` prop, so only Download shows). Access to the
+// whole Documents page is additionally restricted to the Facility Owner by the
+// server-side route guard in ../page.tsx.
 function AgreementsTab() {
   const docs = usePlatformAgreements();
   const [query, setQuery] = useState("");
@@ -175,8 +180,8 @@ function AgreementsTab() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
             <ShieldCheck className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-            Read-only — agreements &amp; terms provided by Yipyy. View and
-            download only.
+            Locked legal records — signed agreements &amp; terms from Yipyy.
+            Download only; these cannot be renamed, edited or deleted.
           </p>
           <SearchBox value={query} onChange={setQuery} />
         </div>

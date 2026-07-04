@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import { RotateCcw } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { RotateCcw, Pencil } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -33,8 +34,11 @@ function StatusColorRow({
   onReset: () => void;
   hasOverride: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   return (
-    <div className="space-y-1.5 rounded-xl border border-slate-100 p-3">
+    <div className="rounded-xl border border-slate-100 p-3">
+      {/* Collapsed row: name · current colour · edit pencil */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span
@@ -45,28 +49,56 @@ function StatusColorRow({
             {label}
           </span>
         </div>
-        {hasOverride && (
+        <div className="flex items-center gap-1">
+          {hasOverride && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onReset}
+              className="h-6 gap-1 px-2 text-xs text-slate-400 hover:text-slate-600"
+            >
+              <RotateCcw className="size-3" />
+              Reset
+            </Button>
+          )}
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            onClick={onReset}
-            className="h-6 gap-1 px-2 text-xs text-slate-400 hover:text-slate-600"
+            onClick={() => setExpanded((prev) => !prev)}
+            aria-expanded={expanded}
+            aria-label={
+              expanded ? `Close ${label} colour picker` : `Edit ${label} colour`
+            }
+            className={cn(
+              "size-6 p-0",
+              expanded
+                ? "text-slate-700"
+                : "text-slate-400 hover:text-slate-600",
+            )}
           >
-            <RotateCcw className="size-3" />
-            Reset
+            <Pencil className="size-3.5" />
           </Button>
-        )}
+        </div>
       </div>
-      <RateColorPicker value={currentColor} onChange={onColorChange} label="" />
-      {hasOverride && (
-        <p className="px-0.5 text-[10px] text-slate-400">
-          Default:{" "}
-          <span className="font-semibold">
-            {BRAND_COLOR_PALETTE.find((c) => c.hex === defaultColor)?.name ??
-              defaultColor}
-          </span>
-        </p>
+
+      {/* Expanded: full swatch picker for this status only */}
+      {expanded && (
+        <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2.5">
+          <RateColorPicker
+            value={currentColor}
+            onChange={onColorChange}
+            label=""
+          />
+          <p className="px-0.5 text-[10px] text-slate-400">
+            Default:{" "}
+            <span className="font-semibold">
+              {BRAND_COLOR_PALETTE.find((c) => c.hex === defaultColor)?.name ??
+                defaultColor}
+            </span>
+          </p>
+        </div>
       )}
     </div>
   );

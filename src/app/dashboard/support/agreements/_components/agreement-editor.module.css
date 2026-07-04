@@ -1,0 +1,137 @@
+/* Document canvas styling for the Agreement Template Builder. Tailwind's
+   preflight strips heading sizes and list markers, so the editor restores them
+   here and gives each heading a distinct, professional weight. Scoped via a
+   CSS-module wrapper class; :global reaches the ProseMirror-managed DOM. */
+
+.canvas :global(.ProseMirror) {
+  min-height: 60vh;
+  outline: none;
+  color: #1f2937;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.canvas :global(.ProseMirror:focus) {
+  outline: none;
+}
+
+.canvas :global(.ProseMirror > * + *) {
+  margin-top: 0.6em;
+}
+
+.canvas :global(.ProseMirror h1) {
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 1em;
+}
+
+.canvas :global(.ProseMirror h2) {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+  margin-top: 0.9em;
+}
+
+.canvas :global(.ProseMirror h3) {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 0.8em;
+}
+
+.canvas :global(.ProseMirror p) {
+  margin: 0;
+}
+
+.canvas :global(.ProseMirror ul) {
+  list-style: disc;
+  padding-left: 1.6rem;
+}
+
+.canvas :global(.ProseMirror ol) {
+  list-style: decimal;
+  padding-left: 1.6rem;
+}
+
+.canvas :global(.ProseMirror li) {
+  margin: 0.2em 0;
+}
+
+.canvas :global(.ProseMirror li p) {
+  margin: 0;
+}
+
+.canvas :global(.ProseMirror hr) {
+  border: none;
+  border-top: 1px solid #d1d5db;
+  margin: 1.2rem 0;
+}
+
+.canvas :global(.ProseMirror a) {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+
+/* Dynamic merge-field tokens — highlighted so authors can tell dynamic tokens
+   apart from static text (both in the editor and in serialized previews). */
+.canvas :global(.agreement-merge-field) {
+  background: #eef2ff;
+  color: #4338ca;
+  border-radius: 4px;
+  padding: 0 4px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Signature block as serialized by getHTML() (previews / sent document). The
+   in-editor rendering is the React NodeView; these rules style the static HTML. */
+.canvas :global(.agreement-signature-block) {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px dashed #d4d4d8;
+  border-radius: 0.5rem;
+  background: rgba(250, 250, 250, 0.7);
+}
+
+.canvas :global(.agreement-signature-block .sig-role) {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #52525b;
+  margin-bottom: 0.75rem;
+}
+
+.canvas :global(.agreement-signature-block .sig-grid) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.canvas :global(.agreement-signature-block .sig-field) {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.canvas :global(.agreement-signature-block .sig-label) {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #71717a;
+}
+
+.canvas :global(.agreement-signature-block .sig-line) {
+  display: block;
+  height: 2rem;
+  border-bottom: 1px solid #a1a1aa;
+}
+
+/* Placeholder for the empty document */
+.canvas :global(.ProseMirror p.is-editor-empty:first-child::before) {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

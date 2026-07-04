@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +37,7 @@ import {
   Pencil,
   Users,
   Lock,
+  ArrowRight,
 } from "lucide-react";
 import {
   FacilityRbacProvider,
@@ -182,13 +184,16 @@ function StudioInner() {
             </CardTitle>
             <p className="text-muted-foreground mt-1 text-sm">
               Define what each role can do. Create custom roles for your
-              facility, or override the built-in presets. Assign roles to staff
-              from{" "}
-              <span className="text-foreground font-medium">
-                Staff Management
-              </span>
-              .
+              facility, or override the built-in presets. Assign these roles to
+              individual staff from Staff Management.
             </p>
+            <Button asChild size="sm" className="mt-3 gap-1.5">
+              <Link href="/facility/dashboard/staff">
+                <Users className="size-3.5" />
+                Go to Staff Management
+                <ArrowRight className="size-3.5" />
+              </Link>
+            </Button>
           </div>
 
           <div className="flex gap-2">
@@ -887,14 +892,20 @@ function PermissionValueSelect({
                   : "bg-muted-foreground/30"
             : "bg-rose-500";
 
-  const label =
-    value === "preset"
-      ? `Default (${presetDefault ? ACCESS_SCOPE_META[presetDefault].label : "Blocked"})`
+  // The scope actually in force — shown as the primary label so each row reflects
+  // the role's real state, not the system default (which becomes a small hint).
+  const effectiveLabel = alwaysOn
+    ? "Always on"
+    : value === "preset"
+      ? presetDefault
+        ? ACCESS_SCOPE_META[presetDefault].label
+        : "Not granted"
       : value === "revoked"
         ? "Revoked"
         : value === "none"
           ? "Not granted"
           : ACCESS_SCOPE_META[value].label;
+  const inheritedFromDefault = value === "preset" && !alwaysOn;
 
   return (
     <Select
@@ -908,7 +919,12 @@ function PermissionValueSelect({
             <span
               className={cn("inline-block size-2 rounded-full", dotColor)}
             />
-            {alwaysOn ? "Always on" : label}
+            <span className="font-medium">{effectiveLabel}</span>
+            {inheritedFromDefault && (
+              <span className="text-muted-foreground text-[9px] font-normal">
+                default
+              </span>
+            )}
           </span>
         </SelectValue>
       </SelectTrigger>

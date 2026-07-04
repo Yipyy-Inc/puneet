@@ -1,5 +1,5 @@
-import { EmailTemplatesClient } from "./_components/email-templates-client";
+import { SupportTemplatesTabs } from "./_components/support-templates-tabs";
 
 export default function EmailTemplatesPage() {
-  return <EmailTemplatesClient />;
+  return <SupportTemplatesTabs />;
 }

@@ -2,17 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Clock, MessageSquare, Plus, Search } from "lucide-react";
+import { Clock, Plus, Search } from "lucide-react";
 
 import { CURRENT_AGENT, lastMessage } from "@/hooks/use-support-inbox";
 import { ConnectionStatus } from "@/components/realtime/connection-status";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { SupportConversation } from "@/types/support-chat";
-import { FacilityAvatar } from "./facility-avatar";
-import { formatTime } from "./support-chat-utils";
+import { SupportConversationRow } from "./support-conversation-row";
 
 type Filter = "all" | "unread" | "mine" | "unassigned" | "priority";
 const FILTERS: { key: Filter; label: string }[] = [
@@ -121,61 +119,14 @@ export function InboxList({
             No conversations match.
           </p>
         ) : (
-          items.map((c) => {
-            const m = lastMessage(c);
-            const unread = c.unreadCount > 0;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => onSelect(c.id)}
-                className={cn(
-                  "flex w-full items-start gap-3 border-b px-3 py-3 text-left transition-colors",
-                  selectedId === c.id ? "bg-muted" : "hover:bg-muted/50",
-                )}
-              >
-                <FacilityAvatar name={c.facilityName} id={c.facilityId} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={cn(
-                        "truncate text-sm",
-                        unread ? "font-semibold" : "font-medium",
-                      )}
-                    >
-                      {c.facilityName}
-                    </span>
-                    <span className="text-muted-foreground shrink-0 text-[10px]">
-                      {m ? formatTime(m.at) : ""}
-                    </span>
-                  </div>
-                  <p className="text-muted-foreground line-clamp-1 text-xs">
-                    {m
-                      ? m.isInternalNote
-                        ? "Internal note"
-                        : m.body
-                      : "No messages yet"}
-                  </p>
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <Badge variant="outline" className="gap-1 text-[10px]">
-                      <MessageSquare className="size-2.5" />
-                      Chat
-                    </Badge>
-                    {c.priority && (
-                      <Badge className="bg-rose-600 text-[10px] text-white hover:bg-rose-600">
-                        Priority
-                      </Badge>
-                    )}
-                    {unread && (
-                      <span className="ml-auto flex size-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-semibold text-white">
-                        {c.unreadCount}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </button>
-            );
-          })
+          items.map((c) => (
+            <SupportConversationRow
+              key={c.id}
+              conversation={c}
+              selected={selectedId === c.id}
+              onSelect={onSelect}
+            />
+          ))
         )}
       </div>
     </div>

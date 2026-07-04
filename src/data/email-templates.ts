@@ -232,6 +232,25 @@ export const emailTemplates: EmailTemplate[] = [
     recipient: "Assigned agent (notification)",
     updatedAt: UPDATED,
   },
+
+  // --- Account Management --------------------------------------------------
+  {
+    id: "tmpl-agreement-signature-request",
+    name: "Agreement Signature Request",
+    category: "Account Management",
+    subject: "Action required: sign {{document_name}} for {{facility_name}}",
+    body: "Hi {{owner_name}},\n\nYipyy has sent {{facility_name}} a document that needs your signature: {{document_name}}.\n\nReview and sign it securely here:\n{{signing_link}}\n\nThis is a one-time link and expires on {{expiry_date}}. If it expires, contact support to request a new one.\n\n— The Yipyy Team",
+    mergeTags: [
+      "facility_name",
+      "owner_name",
+      "document_name",
+      "signing_link",
+      "expiry_date",
+    ],
+    trigger: "Agreement sent to facility (Agreements & Waivers)",
+    recipient: "Facility owner",
+    updatedAt: UPDATED,
+  },
 ];
 
 export function getEmailTemplate(id: string): EmailTemplate | undefined {

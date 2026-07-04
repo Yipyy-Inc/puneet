@@ -59,7 +59,7 @@ export const supportConversations: SupportConversation[] = [
     contactName: "Maria Lopez",
     contactEmail: "maria@happytails.com",
     channel: "chat",
-    status: "pending",
+    status: "waiting",
     priority: true,
     assignedAgentId: 2,
     online: false,

@@ -1,0 +1,222 @@
+/* KB article editor canvas. Tailwind preflight strips heading/list styles, so
+   they're restored here; also includes blockquote, code-block and a compact
+   highlight.js token palette for syntax-highlighted code blocks. */
+
+.canvas :global(.ProseMirror) {
+  min-height: 340px;
+  outline: none;
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+
+.canvas :global(.ProseMirror:focus) {
+  outline: none;
+}
+
+.canvas :global(.ProseMirror > * + *) {
+  margin-top: 0.5em;
+}
+
+.canvas :global(.ProseMirror h1) {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.canvas :global(.ProseMirror h2) {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+.canvas :global(.ProseMirror h3) {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.canvas :global(.ProseMirror ul) {
+  list-style: disc;
+  padding-left: 1.5rem;
+}
+.canvas :global(.ProseMirror ol) {
+  list-style: decimal;
+  padding-left: 1.5rem;
+}
+.canvas :global(.ProseMirror li) {
+  margin: 0.15em 0;
+}
+.canvas :global(.ProseMirror li p) {
+  margin: 0;
+}
+
+.canvas :global(.ProseMirror blockquote) {
+  border-left: 3px solid var(--color-primary, #6366f1);
+  background: rgba(99, 102, 241, 0.06);
+  padding: 0.5rem 0.9rem;
+  border-radius: 0 0.375rem 0.375rem 0;
+  color: #4b5563;
+}
+
+.canvas :global(.ProseMirror a),
+.canvas :global(.ProseMirror .kb-link) {
+  color: #4f46e5;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Definition tooltip (native title on hover) */
+.canvas :global(.ProseMirror .kb-tooltip) {
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: help;
+}
+
+/* Embedded / uploaded video block */
+.canvas :global(.ProseMirror .kb-video) {
+  max-width: 100%;
+}
+.canvas :global(.ProseMirror .kb-video.ProseMirror-selectednode) {
+  outline: 2px solid var(--color-primary, #6366f1);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Step-by-step block — numbered cards via a CSS counter */
+.canvas :global(.ProseMirror .kb-steps) {
+  list-style: none;
+  counter-reset: kb-step;
+  padding: 0;
+  margin: 0.75rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.canvas :global(.ProseMirror .kb-step) {
+  counter-increment: kb-step;
+  position: relative;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.9rem 0.65rem 2.75rem;
+  background: #ffffff;
+}
+.canvas :global(.ProseMirror .kb-step::before) {
+  content: counter(kb-step);
+  position: absolute;
+  left: 0.6rem;
+  top: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: var(--color-primary, #6366f1);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.canvas :global(.ProseMirror .kb-step > p) {
+  margin: 0;
+}
+
+/* Tables — borders, header + alternating row shading, drag-to-resize columns */
+.canvas :global(.ProseMirror table) {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0.75rem 0;
+  overflow: hidden;
+}
+.canvas :global(.ProseMirror td),
+.canvas :global(.ProseMirror th) {
+  position: relative;
+  min-width: 3rem;
+  border: 1px solid #d1d5db;
+  padding: 0.4rem 0.6rem;
+  vertical-align: top;
+}
+.canvas :global(.ProseMirror th) {
+  background: #f3f4f6;
+  font-weight: 600;
+  text-align: left;
+}
+.canvas :global(.ProseMirror tbody tr:nth-child(even) td) {
+  background: #f9fafb;
+}
+.canvas :global(.ProseMirror .selectedCell) {
+  background: rgba(99, 102, 241, 0.12);
+}
+.canvas :global(.ProseMirror td > p),
+.canvas :global(.ProseMirror th > p) {
+  margin: 0;
+}
+.canvas :global(.ProseMirror .column-resize-handle) {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: 0;
+  width: 4px;
+  background: var(--color-primary, #6366f1);
+  cursor: col-resize;
+  pointer-events: none;
+}
+.canvas :global(.ProseMirror.resize-cursor) {
+  cursor: col-resize;
+}
+
+.canvas :global(.ProseMirror code) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+}
+
+.canvas :global(.ProseMirror pre) {
+  background: #1e293b;
+  color: #e2e8f0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 0.85rem 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.canvas :global(.ProseMirror pre code) {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+.canvas :global(.ProseMirror hr) {
+  border: none;
+  border-top: 1px solid #d1d5db;
+  margin: 1rem 0;
+}
+
+/* highlight.js token colours (dark code block) */
+.canvas :global(.hljs-comment),
+.canvas :global(.hljs-quote) {
+  color: #94a3b8;
+  font-style: italic;
+}
+.canvas :global(.hljs-keyword),
+.canvas :global(.hljs-selector-tag),
+.canvas :global(.hljs-built_in) {
+  color: #c084fc;
+}
+.canvas :global(.hljs-string),
+.canvas :global(.hljs-attr) {
+  color: #86efac;
+}
+.canvas :global(.hljs-number),
+.canvas :global(.hljs-literal) {
+  color: #fdba74;
+}
+.canvas :global(.hljs-title),
+.canvas :global(.hljs-function .hljs-title),
+.canvas :global(.hljs-name) {
+  color: #7dd3fc;
+}
+.canvas :global(.hljs-type),
+.canvas :global(.hljs-class .hljs-title) {
+  color: #fca5a5;
+}

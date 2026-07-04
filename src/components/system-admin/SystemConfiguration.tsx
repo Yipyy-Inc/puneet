@@ -45,6 +45,7 @@ import {
   useIntegrations,
 } from "@/lib/integrations-store";
 import { TwilioIntegrationCard } from "@/components/integrations/twilio-integration-card";
+import { PaymentProcessingConfig } from "@/components/system-admin/PaymentProcessingConfig";
 
 type BadgeVariant =
   | "default"
@@ -55,7 +56,13 @@ type BadgeVariant =
   | "info"
   | "outline";
 
-const CONFIG_TABS = ["integrations", "api-keys", "settings", "features"];
+const CONFIG_TABS = [
+  "integrations",
+  "api-keys",
+  "settings",
+  "features",
+  "payment-processing",
+];
 
 export function SystemConfiguration() {
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({});
@@ -664,11 +671,14 @@ export function SystemConfiguration() {
 
       {/* Tabs */}
       <Tabs defaultValue={defaultTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="api-keys">API Keys</TabsTrigger>
           <TabsTrigger value="settings">System Settings</TabsTrigger>
           <TabsTrigger value="features">Feature Flags</TabsTrigger>
+          <TabsTrigger value="payment-processing">
+            Payment Processing
+          </TabsTrigger>
         </TabsList>
 
         {/* Integrations Tab */}
@@ -807,6 +817,11 @@ export function SystemConfiguration() {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Payment Processing Tab — how Yipyy charges facilities (Clover Fiserv) */}
+        <TabsContent value="payment-processing" className="space-y-6">
+          <PaymentProcessingConfig />
         </TabsContent>
       </Tabs>
     </div>

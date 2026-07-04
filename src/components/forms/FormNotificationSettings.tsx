@@ -1,12 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Bell,
   BellRing,
@@ -19,9 +28,22 @@ import {
   AlertTriangle,
   Mail,
   MessageSquare,
+  SlidersHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { facilityConfig } from "@/data/facility-config";
+
+// Facility whose forms back the settings demo (matches the seeded forms).
+const DEMO_FACILITY_ID = 11;
+
+// Lazy-loaded — the red-flag config modal chunk only downloads when opened.
+const RedFlagConfigModal = dynamic(
+  () =>
+    import("@/components/forms/RedFlagConfigModal").then((m) => ({
+      default: m.RedFlagConfigModal,
+    })),
+  { ssr: false },
+);
 
 interface NotifToggle {
   key: string;
@@ -87,6 +109,20 @@ export function FormNotificationSettings() {
     },
   ]);
 
+  const [redFlagModalOpen, setRedFlagModalOpen] = useState(false);
+
+  // Timing for the "Missing required forms reminder" — default 48h before check-in.
+  const initialTiming = initial?.customer?.missingRequiredFormsReminderTiming;
+  const [reminderValue, setReminderValue] = useState<number>(
+    initialTiming?.value ?? 48,
+  );
+  const [reminderUnit, setReminderUnit] = useState<"hours" | "days">(
+    initialTiming?.unit ?? "hours",
+  );
+  const [reminderAnchor, setReminderAnchor] = useState<
+    "appointment" | "check_in"
+  >(initialTiming?.anchor ?? "check_in");
+
   const toggleStaff = (key: string) => {
     setStaffToggles((prev) =>
       prev.map((t) => (t.key === key ? { ...t, enabled: !t.enabled } : t)),
@@ -100,6 +136,14 @@ export function FormNotificationSettings() {
   };
 
   const handleSave = () => {
+    const customer = facilityConfig.notifications?.forms?.customer;
+    if (customer) {
+      customer.missingRequiredFormsReminderTiming = {
+        value: reminderValue,
+        unit: reminderUnit,
+        anchor: reminderAnchor,
+      };
+    }
     toast.success("Form notification settings saved");
   };
 
@@ -129,7 +173,10 @@ export function FormNotificationSettings() {
             <div className="mb-4 flex items-center gap-2">
               <BellRing className="text-primary size-4" />
               <h3 className="text-sm font-semibold">Notify staff when</h3>
-              <Badge variant="secondary" className="text-xs">
+              <Badge
+                variant="outline"
+                className="border-teal-200 bg-teal-50 text-xs text-teal-700"
+              >
                 {activeStaffCount}/{staffToggles.length} active
               </Badge>
               <Badge
@@ -159,6 +206,16 @@ export function FormNotificationSettings() {
                     <p className="text-muted-foreground mt-0.5 text-xs">
                       {toggle.description}
                     </p>
+                    {toggle.key === "redFlagAnswers" && (
+                      <button
+                        type="button"
+                        onClick={() => setRedFlagModalOpen(true)}
+                        className="text-primary mt-1.5 inline-flex items-center gap-1 text-xs font-medium hover:underline"
+                      >
+                        <SlidersHorizontal className="size-3" />
+                        Configure red-flag keywords and responses
+                      </button>
+                    )}
                   </div>
                   <Switch
                     id={`staff-${toggle.key}`}
@@ -177,7 +234,10 @@ export function FormNotificationSettings() {
             <div className="mb-4 flex items-center gap-2">
               <Users className="text-primary size-4" />
               <h3 className="text-sm font-semibold">Notify customer when</h3>
-              <Badge variant="secondary" className="text-xs">
+              <Badge
+                variant="outline"
+                className="border-blue-200 bg-blue-50 text-xs text-blue-700"
+              >
                 {activeCustomerCount}/{customerToggles.length} active
               </Badge>
               <div className="ml-auto flex gap-1">
@@ -210,6 +270,59 @@ export function FormNotificationSettings() {
                     <p className="text-muted-foreground mt-0.5 text-xs">
                       {toggle.description}
                     </p>
+                    {toggle.key === "missingRequiredFormsReminder" &&
+                      toggle.enabled && (
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                          <span className="text-muted-foreground">
+                            Send reminder
+                          </span>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={reminderValue}
+                            onChange={(e) =>
+                              setReminderValue(
+                                Math.max(1, Number(e.target.value) || 1),
+                              )
+                            }
+                            className="h-7 w-16 text-xs"
+                            aria-label="Reminder lead time"
+                          />
+                          <Select
+                            value={reminderUnit}
+                            onValueChange={(v) =>
+                              setReminderUnit(v as "hours" | "days")
+                            }
+                          >
+                            <SelectTrigger className="h-7 w-[92px] text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="hours">hours</SelectItem>
+                              <SelectItem value="days">days</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <span className="text-muted-foreground">before</span>
+                          <Select
+                            value={reminderAnchor}
+                            onValueChange={(v) =>
+                              setReminderAnchor(v as "appointment" | "check_in")
+                            }
+                          >
+                            <SelectTrigger className="h-7 w-[150px] text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="check_in">
+                                check-in date
+                              </SelectItem>
+                              <SelectItem value="appointment">
+                                appointment
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                   </div>
                   <Switch
                     id={`cust-${toggle.key}`}
@@ -222,6 +335,14 @@ export function FormNotificationSettings() {
           </div>
         </CardContent>
       </Card>
+
+      {redFlagModalOpen && (
+        <RedFlagConfigModal
+          open
+          onOpenChange={setRedFlagModalOpen}
+          facilityId={DEMO_FACILITY_ID}
+        />
+      )}
     </div>
   );
 }

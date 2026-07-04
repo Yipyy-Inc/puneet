@@ -110,6 +110,7 @@ import {
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { giftCards } from "@/data/payments";
+import { retailConfig } from "@/data/retail-config";
 import { hasPermission, getCurrentUserId } from "@/lib/role-utils";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import {
@@ -395,7 +396,43 @@ export default function POSPage() {
   }
 
   const discountTotal = lineItemDiscountTotal + cartDiscountAmount;
-  const taxTotal = 0; // Can be calculated if needed
+
+  // Tax — driven by the retail Tax Configuration (Retail Settings → Tax
+  // Configuration), the single source of truth. Replaces the former hardcoded
+  // Quebec-only tax logic.
+  const taxConfig = retailConfig.taxConfig;
+  // Receipt presentation — driven by Retail Settings → Receipt Settings.
+  const receiptConfig = retailConfig.receiptConfig;
+  const exemptCategoryNames = new Set(
+    retailConfig.categories
+      .filter((c) => taxConfig.exemptCategoryIds.includes(c.id))
+      .map((c) => c.name),
+  );
+  const taxableSubtotal = cart.reduce((sum, item) => {
+    // Only tangible products are taxed here; services carry their own tax.
+    if (item.itemType !== "product" || item.isComp) return sum;
+    const product = item.productId
+      ? products.find((p) => p.id === item.productId)
+      : undefined;
+    if (
+      product &&
+      (!product.taxable || exemptCategoryNames.has(product.category))
+    ) {
+      return sum;
+    }
+    return sum + item.unitPrice * item.quantity;
+  }, 0);
+  // Allocate the overall discount proportionally to the taxable portion.
+  const taxableAfterDiscount =
+    subtotal > 0
+      ? Math.max(
+          0,
+          taxableSubtotal - discountTotal * (taxableSubtotal / subtotal),
+        )
+      : 0;
+  const taxTotal =
+    Math.round(taxableAfterDiscount * (taxConfig.defaultRate / 100) * 100) /
+    100;
 
   // Determine service type for tips configuration
   const detectedServiceType = useMemo(() => {
@@ -2488,56 +2525,19 @@ export default function POSPage() {
                   </span>
                 </div>
               )}
-              {/* Separate tax lines from facility config */}
-              {(() => {
-                const facility = facilities.find(
-                  (f: { id: number }) => f.id === 11,
-                );
-                const tc = facility?.taxConfig;
-                if (tc && tc.showTaxesSeparately && tc.taxes) {
-                  const taxableAmount = subtotal - discountTotal;
-                  return (
-                    tc.taxes as {
-                      name: string;
-                      rate: number;
-                      enabled: boolean;
-                    }[]
-                  )
-                    .filter((t) => t.enabled)
-                    .map((t, idx) => (
-                      <div
-                        key={idx}
-                        className="flex justify-between py-0.5 text-sm"
-                      >
-                        <span className="text-muted-foreground">
-                          {t.name} (
-                          {(t.rate * 100).toFixed(
-                            (t.rate * 100) % 1 === 0 ? 0 : 3,
-                          )}
-                          %)
-                        </span>
-                        <span className="font-[tabular-nums]">
-                          $
-                          {(
-                            Math.round(taxableAmount * t.rate * 100) / 100
-                          ).toFixed(2)}
-                        </span>
-                      </div>
-                    ));
-                }
-                // Fallback: single tax line
-                if (taxTotal > 0) {
-                  return (
-                    <div className="flex justify-between py-0.5 text-sm">
-                      <span className="text-muted-foreground">Tax</span>
-                      <span className="font-[tabular-nums]">
-                        ${taxTotal.toFixed(2)}
-                      </span>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
+              {/* Tax line — driven by the retail Tax Configuration */}
+              {taxTotal > 0 && (
+                <div className="flex justify-between py-0.5 text-sm">
+                  <span className="text-muted-foreground">
+                    {taxConfig.showBreakdownOnReceipt
+                      ? `${taxConfig.taxMode} (${taxConfig.defaultRate}%)`
+                      : "Tax"}
+                  </span>
+                  <span className="font-[tabular-nums]">
+                    ${taxTotal.toFixed(2)}
+                  </span>
+                </div>
+              )}
 
               {/* Tips Section - Only show if tips are enabled for this service type */}
               {tipsConfig.enabled && subtotal - discountTotal > 0 && (
@@ -2898,16 +2898,19 @@ export default function POSPage() {
 .badge{background:#ecfdf5;color:#059669;padding:8px 16px;border-radius:8px;text-align:center;margin-top:16px;font-weight:600;font-size:13px}
 .footer{margin-top:24px;text-align:center;font-size:10px;color:#999}
 @media print{body{padding:20px}}</style></head><body>
-${invoiceHeaderHtml(facility)}
+${invoiceHeaderHtml(receiptConfig.showLogo || !facility ? facility : { ...facility, logo: undefined })}
 <h1 style="font-size:18px;margin:0">Retail Receipt</h1>
-<p style="font-size:12px;color:#666;margin:4px 0 20px">${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
+<p style="font-size:12px;color:#666;margin:4px 0 ${receiptConfig.header.trim() ? "8px" : "20px"}">${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
+${receiptConfig.header.trim() ? `<p style="font-size:12px;color:#444;margin:0 0 20px;white-space:pre-line">${receiptConfig.header}</p>` : ""}
 ${itemsHtml}
 <div class="row sub"><span>Subtotal</span><span>$${subtotal.toFixed(2)}</span></div>
 ${discountTotal > 0 ? `<div class="row sub"><span>Discount</span><span>-$${discountTotal.toFixed(2)}</span></div>` : ""}
-${taxTotal > 0 ? `<div class="row sub"><span>Tax</span><span>$${taxTotal.toFixed(2)}</span></div>` : ""}
+${taxTotal > 0 ? `<div class="row sub"><span>${taxConfig.showBreakdownOnReceipt ? `${taxConfig.taxMode} (${taxConfig.defaultRate}%)` : "Tax"}</span><span>$${taxTotal.toFixed(2)}</span></div>` : ""}
+${taxTotal > 0 && taxConfig.registrationNumber ? `<div class="row sub"><span style="font-size:11px;color:#888">${taxConfig.taxMode} Reg. ${taxConfig.registrationNumber}</span><span></span></div>` : ""}
 ${calculatedTipAmount > 0 ? `<div class="row sub"><span>Tip</span><span>$${calculatedTipAmount.toFixed(2)}</span></div>` : ""}
 <div class="row total"><span>Total</span><span>$${grandTotal.toFixed(2)}</span></div>
-<div class="footer">Thank you for your purchase!<br>${facility?.name ?? ""}</div>
+${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10px;color:#888;white-space:pre-line">${receiptConfig.returnPolicy}</div>` : ""}
+<div class="footer">${receiptConfig.footer.trim() || "Thank you for your purchase!"}<br>${facility?.name ?? ""}</div>
 <script>window.print()</script>
 </body></html>`);
                       w.document.close();
@@ -5337,7 +5340,14 @@ ${calculatedTipAmount > 0 ? `<div class="row sub"><span>Tip</span><span>$${calcu
                     </div>
                     <div className="text-muted-foreground space-y-1 text-sm">
                       <div>Subtotal: ${subtotal.toFixed(2)}</div>
-                      {taxTotal > 0 && <div>Tax: ${taxTotal.toFixed(2)}</div>}
+                      {taxTotal > 0 && (
+                        <div>
+                          {taxConfig.showBreakdownOnReceipt
+                            ? `${taxConfig.taxMode} (${taxConfig.defaultRate}%)`
+                            : "Tax"}
+                          : ${taxTotal.toFixed(2)}
+                        </div>
+                      )}
                       {calculatedTipAmount > 0 && (
                         <div>Tip: ${calculatedTipAmount.toFixed(2)}</div>
                       )}
@@ -5577,12 +5587,17 @@ ${calculatedTipAmount > 0 ? `<div class="row sub"><span>Tip</span><span>$${calcu
                     </div>
                   </div>
 
-                  {/* Receipt Options */}
+                  {/* Receipt Options — default method(s) from Retail Settings */}
                   <div className="space-y-2">
                     <Label>Receipt Delivery</Label>
                     <div className="grid grid-cols-2 gap-2">
                       <Button
-                        variant="outline"
+                        variant={
+                          receiptConfig.format === "print" ||
+                          receiptConfig.format === "both"
+                            ? "default"
+                            : "outline"
+                        }
                         className="gap-2"
                         onClick={() => {
                           window.print();
@@ -5592,7 +5607,12 @@ ${calculatedTipAmount > 0 ? `<div class="row sub"><span>Tip</span><span>$${calcu
                         Print
                       </Button>
                       <Button
-                        variant="outline"
+                        variant={
+                          receiptConfig.format === "email" ||
+                          receiptConfig.format === "both"
+                            ? "default"
+                            : "outline"
+                        }
                         className="gap-2"
                         disabled={!customerEmail}
                         onClick={() => {

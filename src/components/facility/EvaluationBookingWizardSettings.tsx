@@ -646,40 +646,50 @@ export function EvaluationBookingWizardSettings() {
 
           <Separator />
 
-          {/* Buffer & capacity */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Slot Constraints — grouped directly below the slots/start times */}
+          <div className="space-y-3">
             <div>
-              <Label className="text-xs">Buffer between sessions (min)</Label>
-              <Input
-                type="number"
-                min={0}
-                max={120}
-                step={5}
-                value={bufferMinutes}
-                onChange={(e) =>
-                  setBufferMinutes(parseInt(e.target.value, 10) || 0)
-                }
-                className="mt-1 h-9 text-sm"
-              />
-              <p className="text-muted-foreground mt-0.5 text-[10px]">
-                Gap between back-to-back evaluations
+              <p className="text-xs font-semibold text-slate-700">
+                Slot Constraints
+              </p>
+              <p className="text-muted-foreground text-[10px]">
+                Scheduling limits applied to every generated slot.
               </p>
             </div>
-            <div>
-              <Label className="text-xs">Pets per slot</Label>
-              <Input
-                type="number"
-                min={1}
-                max={10}
-                value={capacityPerSlot}
-                onChange={(e) =>
-                  setCapacityPerSlot(parseInt(e.target.value, 10) || 1)
-                }
-                className="mt-1 h-9 text-sm"
-              />
-              <p className="text-muted-foreground mt-0.5 text-[10px]">
-                Max concurrent evaluations at the same start time
-              </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs">Buffer between sessions (min)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={120}
+                  step={5}
+                  value={bufferMinutes}
+                  onChange={(e) =>
+                    setBufferMinutes(parseInt(e.target.value, 10) || 0)
+                  }
+                  className="mt-1 h-9 text-sm"
+                />
+                <p className="text-muted-foreground mt-0.5 text-[10px]">
+                  Gap between back-to-back evaluations
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs">Pets per slot</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={capacityPerSlot}
+                  onChange={(e) =>
+                    setCapacityPerSlot(parseInt(e.target.value, 10) || 1)
+                  }
+                  className="mt-1 h-9 text-sm"
+                />
+                <p className="text-muted-foreground mt-0.5 text-[10px]">
+                  Max concurrent evaluations at the same start time
+                </p>
+              </div>
             </div>
           </div>
         </CardContent>

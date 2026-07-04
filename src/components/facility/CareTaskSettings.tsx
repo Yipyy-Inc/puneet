@@ -28,6 +28,17 @@ export function CareTaskSettings() {
   );
   const [newFeeding, setNewFeeding] = useState("");
   const [newMed, setNewMed] = useState("");
+  // Snapshot of the last-saved state; dirty is derived by comparing to it, so
+  // every edit (add/rename/delete) flips the sticky banner automatically.
+  const [savedSnapshot, setSavedSnapshot] = useState(() =>
+    JSON.stringify({
+      feeding: facilityConfig.careTaskFeedback.feeding,
+      medication: facilityConfig.careTaskFeedback.medication,
+    }),
+  );
+  const dirty =
+    JSON.stringify({ feeding: feedingOptions, medication: medOptions }) !==
+    savedSnapshot;
 
   const handleAddFeeding = () => {
     if (!newFeeding.trim()) return;
@@ -58,6 +69,9 @@ export function CareTaskSettings() {
     // For now: update the in-memory config
     facilityConfig.careTaskFeedback.feeding = feedingOptions;
     facilityConfig.careTaskFeedback.medication = medOptions;
+    setSavedSnapshot(
+      JSON.stringify({ feeding: feedingOptions, medication: medOptions }),
+    );
     toast.success("Care task feedback options saved");
   };
 
@@ -83,6 +97,14 @@ export function CareTaskSettings() {
         <CardContent className="space-y-3">
           <p className="text-muted-foreground text-xs">
             Staff selects one of these when logging a meal. Drag to reorder.
+          </p>
+          <p className="text-muted-foreground text-xs">
+            Any percentage is a{" "}
+            <span className="text-foreground font-medium">
+              portion-of-meal reference
+            </span>{" "}
+            — how much of the meal the pet ate (100% = the full meal). It is not
+            a historical usage rate.
           </p>
           <div className="space-y-1.5">
             {feedingOptions.map((opt, idx) => (
@@ -216,12 +238,17 @@ export function CareTaskSettings() {
         </CardContent>
       </Card>
 
-      {/* Save */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} className="gap-1.5">
-          Save Changes
-        </Button>
-      </div>
+      {/* Sticky save banner — appears whenever there are unsaved changes */}
+      {dirty && (
+        <div className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky bottom-0 z-10 flex items-center justify-end gap-3 border-t py-3 backdrop-blur-sm">
+          <span className="text-muted-foreground mr-auto text-sm">
+            You have unsaved changes
+          </span>
+          <Button onClick={handleSave} className="gap-1.5">
+            Save Changes
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

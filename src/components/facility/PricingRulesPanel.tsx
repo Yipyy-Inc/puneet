@@ -42,6 +42,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import {
   getStoredServiceAddOns,
@@ -157,6 +158,63 @@ function normalizeApplicableServices(applicableServices?: string[]) {
   return applicableServices.includes("all")
     ? ["all"]
     : Array.from(new Set(applicableServices));
+}
+
+// Toggle a single service in/out of a rule's scope. "all" expands to every
+// service; you can't remove the last one; re-selecting everything collapses
+// back to ["all"].
+function toggleServiceScope(
+  applicableServices: string[] | undefined,
+  allValues: string[],
+  service: string,
+): string[] {
+  const normalized = normalizeApplicableServices(applicableServices);
+  const current = normalized.includes("all") ? [...allValues] : normalized;
+  const has = current.includes(service);
+  if (has && current.length === 1) return normalized; // keep at least one
+  const next = has
+    ? current.filter((s) => s !== service)
+    : [...current, service];
+  return allValues.every((v) => next.includes(v)) ? ["all"] : next;
+}
+
+// Clickable service-scope chips for a rule — toggles apply immediately (the
+// panel auto-saves on rule-state change).
+function ServiceScopeChips({
+  applicableServices,
+  serviceOptions,
+  onToggle,
+}: {
+  applicableServices?: string[];
+  serviceOptions: ServiceOption[];
+  onToggle: (service: string) => void;
+}) {
+  const normalized = normalizeApplicableServices(applicableServices);
+  const allSelected = normalized.includes("all");
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1">
+      <span className="text-muted-foreground text-[10px]">Available for:</span>
+      {serviceOptions.map((opt) => {
+        const selected = allSelected || normalized.includes(opt.value);
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onToggle(opt.value)}
+            aria-pressed={selected}
+            className={cn(
+              "rounded-full border px-2 py-0.5 text-[10px] transition-colors",
+              selected
+                ? "border-primary/30 bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground border-dashed hover:border-solid",
+            )}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function formatAdjustmentLabel(
@@ -319,6 +377,7 @@ export function PricingRulesPanel({
   const serviceLabelMap = Object.fromEntries(
     serviceOptions.map((service) => [service.value, service.label]),
   ) as Record<string, string>;
+  const allServiceValues = serviceOptions.map((service) => service.value);
   const addOnOptions = getStoredServiceAddOns(facilityId).filter(
     (addOn) => addOn.isActive,
   );
@@ -415,6 +474,55 @@ export function PricingRulesPanel({
     groomingConditionAdjustments,
     serviceBundles,
   ]);
+
+  // Toggle a service in a rule's scope — state change auto-saves via the effect.
+  const toggleMultiPetScope = (ruleId: string, service: string) =>
+    setMultiPet((prev) =>
+      prev.map((r) =>
+        r.id === ruleId
+          ? {
+              ...r,
+              applicableServices: toggleServiceScope(
+                r.applicableServices,
+                allServiceValues,
+                service,
+              ),
+            }
+          : r,
+      ),
+    );
+
+  const toggleMultiNightScope = (ruleId: string, service: string) =>
+    setMultiNight((prev) =>
+      prev.map((r) =>
+        r.id === ruleId
+          ? {
+              ...r,
+              applicableServices: toggleServiceScope(
+                r.applicableServices,
+                allServiceValues,
+                service,
+              ),
+            }
+          : r,
+      ),
+    );
+
+  const toggleRoomTypeScope = (ruleId: string, service: string) =>
+    setRoomTypeAdjustments((prev) =>
+      prev.map((r) =>
+        r.id === ruleId
+          ? {
+              ...r,
+              applicableServices: toggleServiceScope(
+                r.applicableServices,
+                allServiceValues,
+                service,
+              ),
+            }
+          : r,
+      ),
+    );
 
   // Preview state
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -814,10 +922,13 @@ export function PricingRulesPanel({
                         )
                         .join(" · ")}
                     </p>
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      Applies to:{" "}
-                      {formatApplicableServices(rule.applicableServices)}
-                    </p>
+                    <ServiceScopeChips
+                      applicableServices={rule.applicableServices}
+                      serviceOptions={serviceOptions}
+                      onToggle={(service) =>
+                        toggleMultiPetScope(rule.id, service)
+                      }
+                    />
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
@@ -911,10 +1022,13 @@ export function PricingRulesPanel({
                             }`
                           : `${rule.discountPercent}% off`}
                     </p>
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      Applies to:{" "}
-                      {formatApplicableServices(rule.applicableServices)}
-                    </p>
+                    <ServiceScopeChips
+                      applicableServices={rule.applicableServices}
+                      serviceOptions={serviceOptions}
+                      onToggle={(service) =>
+                        toggleMultiNightScope(rule.id, service)
+                      }
+                    />
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
@@ -1015,10 +1129,13 @@ export function PricingRulesPanel({
                       Rooms: {rule.roomTypeIds.join(", ")} ·{" "}
                       {formatRange(rule.minNights, rule.maxNights, "nights")}
                     </p>
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      Applies to:{" "}
-                      {formatApplicableServices(rule.applicableServices)}
-                    </p>
+                    <ServiceScopeChips
+                      applicableServices={rule.applicableServices}
+                      serviceOptions={serviceOptions}
+                      onToggle={(service) =>
+                        toggleRoomTypeScope(rule.id, service)
+                      }
+                    />
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch

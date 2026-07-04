@@ -17,4 +17,10 @@ export interface KbArticle {
   helpfulNo: number;
   author: string;
   updatedAt: string;
+  /** SEO/search summary (2–3 sentences) shown in Help Center search results. */
+  summary?: string;
+  /** Keywords that improve internal search relevance. */
+  tags?: string[];
+  /** Restrict visibility to these plan tiers; empty/undefined = all plans. */
+  planTiers?: string[];
 }

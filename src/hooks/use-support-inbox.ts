@@ -13,6 +13,7 @@ import type {
   AdminSupportMessage,
   ConversationStatus,
   SupportAttachment,
+  SupportChannel,
   SupportConversation,
 } from "@/types/support-chat";
 
@@ -88,6 +89,13 @@ type RealtimeEvent =
   | { kind: "create"; conversation: SupportConversation }
   | { kind: "status"; conversationId: string; status: ConversationStatus }
   | { kind: "assign"; conversationId: string; agentId: number | null }
+  | {
+      kind: "flags";
+      conversationId: string;
+      flags: Partial<
+        Pick<SupportConversation, "priority" | "followUp" | "starred">
+      >;
+    }
   | { kind: "read"; conversationId: string };
 
 let realtimeReady = false;
@@ -118,6 +126,9 @@ function applyRemote(ev: RealtimeEvent) {
       break;
     case "assign":
       assignInternal(ev.conversationId, ev.agentId, false);
+      break;
+    case "flags":
+      setFlagsInternal(ev.conversationId, ev.flags, false);
       break;
     case "read":
       markReadInternal(ev.conversationId, false);
@@ -169,6 +180,17 @@ function assignInternal(
   if (broadcast) publish({ kind: "assign", conversationId: convId, agentId });
 }
 
+function setFlagsInternal(
+  convId: string,
+  flags: Partial<
+    Pick<SupportConversation, "priority" | "followUp" | "starred">
+  >,
+  broadcast: boolean,
+) {
+  patch(convId, (c) => ({ ...c, ...flags }));
+  if (broadcast) publish({ kind: "flags", conversationId: convId, flags });
+}
+
 function markReadInternal(convId: string, broadcast: boolean) {
   let changed = false;
   patch(convId, (c) => {
@@ -185,7 +207,12 @@ function markReadInternal(convId: string, broadcast: boolean) {
 export function sendSupportReply(
   convId: string,
   body: string,
-  opts?: { isInternalNote?: boolean; attachments?: SupportAttachment[] },
+  opts?: {
+    isInternalNote?: boolean;
+    attachments?: SupportAttachment[];
+    channel?: SupportChannel;
+    subject?: string;
+  },
 ) {
   const trimmed = body.trim();
   if (!trimmed && !opts?.attachments?.length) return;
@@ -197,6 +224,8 @@ export function sendSupportReply(
     at: new Date().toISOString(),
     attachments: opts?.attachments,
     isInternalNote: opts?.isInternalNote,
+    channel: opts?.channel,
+    subject: opts?.subject,
   };
   addMessageInternal(convId, message, false, true);
 }
@@ -221,7 +250,10 @@ export function ensureCurrentConversation(): string {
   // Reuse only an OPEN/PENDING conversation — once the facility resolves one,
   // the next message starts a fresh thread rather than reopening a closed one.
   const existing = state.find(
-    (c) => c.facilityId === CURRENT_FACILITY.id && c.status !== "resolved",
+    (c) =>
+      c.facilityId === CURRENT_FACILITY.id &&
+      c.status !== "resolved" &&
+      c.status !== "closed",
   );
   if (existing) return existing.id;
   const conversation: SupportConversation = {
@@ -255,6 +287,19 @@ export function setConversationStatus(
 
 export function assignConversation(convId: string, agentId: number | null) {
   assignInternal(convId, agentId, true);
+}
+
+/** Agent-side organizational flags used by the inbox context menu. */
+export function setConversationPriority(convId: string, value: boolean) {
+  setFlagsInternal(convId, { priority: value }, true);
+}
+
+export function setConversationFollowUp(convId: string, value: boolean) {
+  setFlagsInternal(convId, { followUp: value }, true);
+}
+
+export function setConversationStarred(convId: string, value: boolean) {
+  setFlagsInternal(convId, { starred: value }, true);
 }
 
 export function createConversation(facility: {
@@ -309,7 +354,10 @@ export function useCurrentFacilityConversation(): SupportConversation | null {
   const all = useSupportInbox();
   return (
     all.find(
-      (c) => c.facilityId === CURRENT_FACILITY.id && c.status !== "resolved",
+      (c) =>
+        c.facilityId === CURRENT_FACILITY.id &&
+        c.status !== "resolved" &&
+        c.status !== "closed",
     ) ?? null
   );
 }

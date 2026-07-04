@@ -31,6 +31,10 @@ import {
   Settings,
   Building2,
   Shield,
+  FileSignature,
+  Receipt,
+  CreditCard,
+  Download,
 } from "lucide-react";
 import { getUserRole, setUserRole, type UserRole } from "@/lib/role-utils";
 import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";
@@ -250,6 +254,59 @@ export function UserProfileSheet({
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
+          {currentRole === "facility_admin" && (
+            <>
+              <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs">
+                {t("Owner Account")}
+              </DropdownMenuLabel>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/facility/documents"
+                  className="flex items-center gap-2"
+                >
+                  <FileSignature className="size-4" />
+                  {t("Yipyy Agreements")}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/facility/account/subscription"
+                  className="flex items-center gap-2"
+                >
+                  <Receipt className="size-4" />
+                  {t("My Subscription")}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/facility/account/payment-method"
+                  className="flex items-center gap-2"
+                >
+                  <CreditCard className="size-4" />
+                  {t("Payment Method")}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/facility/account/export"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="size-4" />
+                  {t("Export Data")}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/facility/dashboard/settings"
+                  className="flex items-center gap-2"
+                >
+                  <Settings className="size-4" />
+                  {t("Account Settings")}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
           <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs">
             {t("Context Switcher")}
           </DropdownMenuLabel>

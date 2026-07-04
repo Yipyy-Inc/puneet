@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   resolvePermission,
   type AccessScope,
@@ -20,6 +21,14 @@ import {
   type StaffProfile,
 } from "@/types/facility-staff";
 import { facilityStaff } from "@/data/facility-staff";
+import { setFacilityRoleCookie } from "@/lib/facility-role";
+import {
+  roleQueries,
+  useCreateCustomRole,
+  useDeleteCustomRole,
+  useSetCustomRolePermission,
+  useUpdateCustomRole,
+} from "@/lib/api/roles";
 
 // ============================================================================
 // Types
@@ -27,7 +36,6 @@ import { facilityStaff } from "@/data/facility-staff";
 
 interface RbacState {
   viewerId: string;
-  customRoles: CustomRolesById;
   presetOverrides: RolePresetOverrides;
 }
 
@@ -72,9 +80,12 @@ const STORAGE_KEY = "facility-rbac-state-v1";
 const DEFAULT_STATE: RbacState = {
   // Default to the owner profile so everything is visible out of the box.
   viewerId: "fs-owner-01",
-  customRoles: {},
   presetOverrides: {},
 };
+
+// Custom roles now live in the TanStack Query cache (see @/lib/api/roles); a
+// stable empty map keeps memoized values referentially stable while loading.
+const EMPTY_CUSTOM_ROLES: CustomRolesById = {};
 
 const RbacContext = createContext<RbacContextValue | null>(null);
 
@@ -86,13 +97,28 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<RbacState>(DEFAULT_STATE);
   const [hydrated, setHydrated] = useState(false);
 
+  // Custom roles are read through the roles query layer; their writes go through
+  // the mutations below. viewerId + presetOverrides stay local to this provider.
+  const { data: customRolesData } = useQuery(roleQueries.customRoles());
+  const customRoles = customRolesData ?? EMPTY_CUSTOM_ROLES;
+
+  const { mutate: createRoleMutate } = useCreateCustomRole();
+  const { mutate: updateRoleMutate } = useUpdateCustomRole();
+  const { mutate: deleteRoleMutate } = useDeleteCustomRole();
+  const { mutate: setRolePermissionMutate } = useSetCustomRolePermission();
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
+        // Older blobs may still carry a `customRoles` field — it now lives in
+        // the query store, so only pull the fields this provider still owns.
         const parsed = JSON.parse(raw) as Partial<RbacState>;
-        setState((prev) => ({ ...prev, ...parsed }));
+        setState((prev) => ({
+          viewerId: parsed.viewerId ?? prev.viewerId,
+          presetOverrides: parsed.presetOverrides ?? prev.presetOverrides,
+        }));
       }
     } catch {
       /* ignore */
@@ -115,13 +141,21 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
     );
   }, [state.viewerId]);
 
+  // Mirror the active viewer's role into a server-readable cookie so server-side
+  // route guards (e.g. the owner-only Documents / Yipyy Agreements area) can
+  // enforce access — not just hide it in the UI.
+  useEffect(() => {
+    if (!hydrated) return;
+    setFacilityRoleCookie(viewer.primaryRole);
+  }, [viewer.primaryRole, hydrated]);
+
   const resolveFor = useCallback(
     (staff: StaffProfile, key: PermissionKey) =>
       resolvePermission(staff, key, {
-        customRoles: state.customRoles,
+        customRoles,
         presetOverrides: state.presetOverrides,
       }),
-    [state.customRoles, state.presetOverrides],
+    [customRoles, state.presetOverrides],
   );
 
   const can = useCallback(
@@ -133,6 +167,8 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
     (
       role: Omit<CustomFacilityRole, "id" | "createdAt">,
     ): CustomFacilityRole => {
+      // Build the full role here so callers can select it synchronously; the
+      // mutation persists it and optimistically updates the query cache.
       const id = `custom-${Date.now().toString(36)}-${Math.random()
         .toString(36)
         .slice(2, 6)}`;
@@ -141,60 +177,31 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
         id,
         createdAt: new Date().toISOString(),
       };
-      setState((prev) => ({
-        ...prev,
-        customRoles: { ...prev.customRoles, [id]: full },
-      }));
+      createRoleMutate(full);
       return full;
     },
-    [],
+    [createRoleMutate],
   );
 
   const updateCustomRole = useCallback(
     (id: string, patch: Partial<CustomFacilityRole>) => {
-      setState((prev) => {
-        const existing = prev.customRoles[id];
-        if (!existing) return prev;
-        return {
-          ...prev,
-          customRoles: {
-            ...prev.customRoles,
-            [id]: { ...existing, ...patch, id, createdAt: existing.createdAt },
-          },
-        };
-      });
+      updateRoleMutate({ id, patch });
     },
-    [],
+    [updateRoleMutate],
   );
 
-  const deleteCustomRole = useCallback((id: string) => {
-    setState((prev) => {
-      const { [id]: _removed, ...rest } = prev.customRoles;
-      return { ...prev, customRoles: rest };
-    });
-  }, []);
+  const deleteCustomRole = useCallback(
+    (id: string) => {
+      deleteRoleMutate(id);
+    },
+    [deleteRoleMutate],
+  );
 
   const setCustomRolePermission = useCallback(
     (id: string, key: PermissionKey, scope: AccessScope | null) => {
-      setState((prev) => {
-        const role = prev.customRoles[id];
-        if (!role) return prev;
-        const nextPermissions = { ...role.permissions };
-        if (scope === null) {
-          delete nextPermissions[key];
-        } else {
-          nextPermissions[key] = scope;
-        }
-        return {
-          ...prev,
-          customRoles: {
-            ...prev.customRoles,
-            [id]: { ...role, permissions: nextPermissions },
-          },
-        };
-      });
+      setRolePermissionMutate({ id, key, scope });
     },
-    [],
+    [setRolePermissionMutate],
   );
 
   const setPresetPermission = useCallback(
@@ -243,7 +250,7 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
       viewer,
       viewerId: state.viewerId,
       setViewerId,
-      customRoles: state.customRoles,
+      customRoles,
       presetOverrides: state.presetOverrides,
       can,
       resolveFor,
@@ -258,7 +265,7 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
     [
       viewer,
       state.viewerId,
-      state.customRoles,
+      customRoles,
       state.presetOverrides,
       setViewerId,
       can,

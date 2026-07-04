@@ -19,7 +19,6 @@ import { AnnouncementBell } from "@/components/facility/announcement-bell";
 import { BookingRequestsTopbarDropdown } from "@/components/facility/BookingRequestsTopbarDropdown";
 import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
 import { FacilityHeader } from "@/components/layout/FacilityHeader";
-import { CallStatusIndicator } from "@/components/layout/CallStatusIndicator";
 import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
 
 /**
@@ -46,7 +45,6 @@ export function FacilityHeaderActions({ facilityId }: { facilityId: number }) {
       <BookingRequestsTopbarDropdown />
       <HeaderDropdown />
       <FacilityHeader facilityId={facilityId} />
-      <CallStatusIndicator />
     </>
   );
 

@@ -93,6 +93,7 @@ export const evaluationFormTemplate: EvaluationFormTemplate = {
       id: "temperament",
       title: "Temperament Assessment",
       description: "Evaluate the pet's behavior around dogs and people",
+      core: true,
       questions: [
         {
           id: "dog_friendly",
@@ -138,6 +139,7 @@ export const evaluationFormTemplate: EvaluationFormTemplate = {
       id: "play_profile",
       title: "Play Profile",
       description: "Assess play style and assign an appropriate group",
+      core: true,
       questions: [
         {
           id: "play_style",
@@ -211,6 +213,39 @@ export const evaluationFormTemplate: EvaluationFormTemplate = {
   ],
   internalNotesEnabled: true,
 };
+
+// Persistence for the evaluation form template (same localStorage key the
+// settings context uses, so the two stay consistent). Wrapped by the
+// evaluations query factory in @/lib/api/evaluations.
+const EVAL_FORM_TEMPLATE_KEY = "settings-eval-form-template";
+
+export function getEvaluationFormTemplate(): EvaluationFormTemplate {
+  if (typeof window === "undefined") return evaluationFormTemplate;
+  try {
+    const raw = window.localStorage.getItem(EVAL_FORM_TEMPLATE_KEY);
+    return raw
+      ? (JSON.parse(raw) as EvaluationFormTemplate)
+      : evaluationFormTemplate;
+  } catch {
+    return evaluationFormTemplate;
+  }
+}
+
+export function saveEvaluationFormTemplate(
+  template: EvaluationFormTemplate,
+): EvaluationFormTemplate {
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.setItem(
+        EVAL_FORM_TEMPLATE_KEY,
+        JSON.stringify(template),
+      );
+    } catch {
+      /* ignore quota / serialization errors */
+    }
+  }
+  return template;
+}
 
 // ========================================
 // BUSINESS CONFIGURATION DATA
@@ -452,6 +487,18 @@ export const formRequirements: ServiceFormRequirementsConfig[] = [
     ],
   },
 ];
+
+/** Persist the edited form-requirement configs back into the mock store. */
+export function saveFormRequirements(
+  next: ServiceFormRequirementsConfig[],
+): ServiceFormRequirementsConfig[] {
+  formRequirements.splice(
+    0,
+    formRequirements.length,
+    ...(JSON.parse(JSON.stringify(next)) as ServiceFormRequirementsConfig[]),
+  );
+  return formRequirements;
+}
 
 export const reportCardConfig: ReportCardConfig = {
   enabledThemes: [

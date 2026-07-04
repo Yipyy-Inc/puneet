@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -12,10 +11,7 @@ import {
 } from "lucide-react";
 
 import { helpQueries } from "@/lib/api/help";
-import {
-  closeSupportDrawer,
-  setSupportDrawerTab,
-} from "@/lib/support-drawer-store";
+import { setSupportDrawerTab } from "@/lib/support-drawer-store";
 import { Input } from "@/components/ui/input";
 
 export function HelpFaqsTab() {
@@ -68,7 +64,7 @@ export function HelpFaqsTab() {
 
           <div className="mt-6 border-t pt-3">
             <a
-              href="/facility/help"
+              href={`/facility/help?article=${encodeURIComponent(selected.id)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary inline-flex items-center gap-1 text-xs font-medium hover:underline"
@@ -135,14 +131,15 @@ export function HelpFaqsTab() {
       </div>
 
       <div className="border-t p-3">
-        <Link
+        <a
           href="/facility/help"
-          onClick={() => closeSupportDrawer()}
+          target="_blank"
+          rel="noopener noreferrer"
           className="text-primary inline-flex items-center gap-1 text-xs font-medium hover:underline"
         >
           Open the full Help Center
           <ArrowRight className="size-3" />
-        </Link>
+        </a>
       </div>
     </div>
   );

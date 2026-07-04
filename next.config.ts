@@ -11,6 +11,9 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
+    // Enables forbidden()/unauthorized() so owner-only pages can return a real
+    // 403 (rendered by app/forbidden.tsx) instead of a redirect or 404.
+    authInterrupts: true,
     optimizePackageImports: [
       "lucide-react",
       "recharts",

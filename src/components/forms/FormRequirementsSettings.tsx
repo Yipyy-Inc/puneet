@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,14 +27,28 @@ import {
   AlertTriangle,
   CheckCircle,
   Ban,
+  Eye,
+  Save,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   formRequirements,
   type ServiceFormRequirementsConfig,
   type ServiceFormRequirement,
   type FormRequirementGate,
 } from "@/data/settings";
+import { formMutations } from "@/lib/api/forms";
+
+// Read-only field preview — lazy-loaded so its chunk only downloads when an
+// admin actually opens a preview.
+const FormPreviewSheet = dynamic(
+  () =>
+    import("@/components/forms/FormPreviewSheet").then((m) => ({
+      default: m.FormPreviewSheet,
+    })),
+  { ssr: false },
+);
 
 const STAGE_CONFIG: Record<
   string,
@@ -55,19 +71,23 @@ const STAGE_CONFIG: Record<
   },
 };
 
-const _ENFORCEMENT_CONFIG: Record<
-  string,
-  { label: string; icon: React.ReactNode; color: string }
+const ENFORCEMENT_STYLES: Record<
+  FormRequirementGate["enforcement"],
+  { label: string; icon: React.ReactNode; trigger: string; itemText: string }
 > = {
   block: {
-    label: "Block step",
-    icon: <Ban className="size-3" />,
-    color: "bg-red-50 text-red-700 border-red-200",
+    label: "Blocks this stage",
+    icon: <Ban className="size-4" />,
+    // Dominant, high-contrast red pill.
+    trigger: "border-red-300 bg-red-100 text-red-800 hover:bg-red-100",
+    itemText: "text-red-700",
   },
   warn: {
-    label: "Allow with banner",
-    icon: <AlertTriangle className="size-3" />,
-    color: "bg-amber-50 text-amber-700 border-amber-200",
+    label: "Warns only",
+    icon: <AlertTriangle className="size-4" />,
+    // Dominant amber pill.
+    trigger: "border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-100",
+    itemText: "text-amber-700",
   },
 };
 
@@ -91,13 +111,29 @@ export function FormRequirementsSettings() {
   const [configs, setConfigs] = useState<ServiceFormRequirementsConfig[]>(() =>
     JSON.parse(JSON.stringify(formRequirements)),
   );
+  const [preview, setPreview] = useState<{ id: string; name: string } | null>(
+    null,
+  );
+  const [dirty, setDirty] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Any edit routes through here so the dirty state (and the sticky Save bar)
+  // stays in sync.
+  const applyChange = (
+    updater: (
+      prev: ServiceFormRequirementsConfig[],
+    ) => ServiceFormRequirementsConfig[],
+  ) => {
+    setConfigs(updater);
+    setDirty(true);
+  };
 
   const updateRequirement = (
     serviceIdx: number,
     reqIdx: number,
     patch: Partial<ServiceFormRequirement>,
   ) => {
-    setConfigs((prev) => {
+    applyChange((prev) => {
       const next = JSON.parse(
         JSON.stringify(prev),
       ) as ServiceFormRequirementsConfig[];
@@ -112,7 +148,7 @@ export function FormRequirementsSettings() {
     gateIdx: number,
     patch: Partial<FormRequirementGate>,
   ) => {
-    setConfigs((prev) => {
+    applyChange((prev) => {
       const next = JSON.parse(
         JSON.stringify(prev),
       ) as ServiceFormRequirementsConfig[];
@@ -125,7 +161,7 @@ export function FormRequirementsSettings() {
   };
 
   const addGate = (serviceIdx: number, reqIdx: number) => {
-    setConfigs((prev) => {
+    applyChange((prev) => {
       const next = JSON.parse(
         JSON.stringify(prev),
       ) as ServiceFormRequirementsConfig[];
@@ -145,7 +181,7 @@ export function FormRequirementsSettings() {
   };
 
   const removeGate = (serviceIdx: number, reqIdx: number, gateIdx: number) => {
-    setConfigs((prev) => {
+    applyChange((prev) => {
       const next = JSON.parse(
         JSON.stringify(prev),
       ) as ServiceFormRequirementsConfig[];
@@ -155,7 +191,7 @@ export function FormRequirementsSettings() {
   };
 
   const addRequirement = (serviceIdx: number) => {
-    setConfigs((prev) => {
+    applyChange((prev) => {
       const next = JSON.parse(
         JSON.stringify(prev),
       ) as ServiceFormRequirementsConfig[];
@@ -178,7 +214,7 @@ export function FormRequirementsSettings() {
   };
 
   const removeRequirement = (serviceIdx: number, reqIdx: number) => {
-    setConfigs((prev) => {
+    applyChange((prev) => {
       const next = JSON.parse(
         JSON.stringify(prev),
       ) as ServiceFormRequirementsConfig[];
@@ -187,22 +223,26 @@ export function FormRequirementsSettings() {
     });
   };
 
+  const saveRequirements = useMutation({
+    ...formMutations.saveRequirements(configs),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forms", "requirements"] });
+      setDirty(false);
+      toast.success("Form requirements saved");
+    },
+  });
+
   const handleSave = () => {
-    toast.success("Form requirements saved");
+    saveRequirements.mutate();
   };
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Shield className="text-primary size-5" />
-              <CardTitle>Form Requirements per Service</CardTitle>
-            </div>
-            <Button size="sm" onClick={handleSave}>
-              Save changes
-            </Button>
+          <div className="flex items-center gap-2">
+            <Shield className="text-primary size-5" />
+            <CardTitle>Form Requirements per Service</CardTitle>
           </div>
           <p className="text-muted-foreground mt-1 text-sm">
             Configure which forms are required before customers can book, staff
@@ -213,13 +253,31 @@ export function FormRequirementsSettings() {
         </CardHeader>
         <CardContent className="space-y-6">
           {configs.map((serviceConfig, sIdx) => {
-            const activeCount = serviceConfig.requirements.filter(
+            const enabledReqs = serviceConfig.requirements.filter(
               (r) => r.enabled,
-            ).length;
-            const blockerCount = serviceConfig.requirements
-              .filter((r) => r.enabled)
-              .flatMap((r) => r.gates)
-              .filter((g) => g.enforcement === "block").length;
+            );
+            // Count how many forms gate each stage (a form counts once per stage).
+            const stageSummary = (
+              ["before_booking", "before_approval", "before_checkin"] as const
+            )
+              .map((stage) => ({
+                stage,
+                count: enabledReqs.filter((r) =>
+                  r.gates.some((g) => g.stage === stage),
+                ).length,
+              }))
+              .filter((s) => s.count > 0);
+            const summaryLine =
+              stageSummary.length === 0
+                ? "No forms required — customers can book freely"
+                : stageSummary
+                    .map(
+                      (s) =>
+                        `${s.count} form${s.count === 1 ? "" : "s"} required ${STAGE_CONFIG[
+                          s.stage
+                        ].label.toLowerCase()}`,
+                    )
+                    .join(" · ");
 
             return (
               <div
@@ -237,13 +295,7 @@ export function FormRequirementsSettings() {
                         {serviceConfig.serviceLabel}
                       </h3>
                       <p className="text-muted-foreground text-xs">
-                        {activeCount} required form
-                        {activeCount !== 1 ? "s" : ""}
-                        {blockerCount > 0 && (
-                          <span className="ml-1 text-red-600">
-                            ({blockerCount} blocking)
-                          </span>
-                        )}
+                        {summaryLine}
                       </p>
                     </div>
                   </div>
@@ -305,6 +357,21 @@ export function FormRequirementsSettings() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              className="text-muted-foreground hover:text-foreground size-7 shrink-0"
+                              onClick={() =>
+                                setPreview({
+                                  id: req.formId,
+                                  name: req.formName,
+                                })
+                              }
+                              aria-label={`Preview ${req.formName}`}
+                              title="Preview form fields"
+                            >
+                              <Eye className="size-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               className="text-destructive size-7 shrink-0"
                               onClick={() => removeRequirement(sIdx, rIdx)}
                             >
@@ -319,57 +386,86 @@ export function FormRequirementsSettings() {
                             {req.gates.map((gate, gIdx) => (
                               <div
                                 key={gIdx}
-                                className="flex items-center gap-2 text-sm"
+                                className="flex flex-wrap items-center gap-2"
                               >
-                                <div className="text-muted-foreground flex min-w-0 items-center gap-1.5">
-                                  {STAGE_CONFIG[gate.stage]?.icon}
-                                  <Select
-                                    value={gate.stage}
-                                    onValueChange={(v) =>
-                                      updateGate(sIdx, rIdx, gIdx, {
-                                        stage:
-                                          v as FormRequirementGate["stage"],
-                                      })
-                                    }
-                                  >
-                                    <SelectTrigger className="h-7 w-[150px] text-xs">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="before_booking">
-                                        Before booking
-                                      </SelectItem>
-                                      <SelectItem value="before_approval">
-                                        Before approval
-                                      </SelectItem>
-                                      <SelectItem value="before_checkin">
-                                        Before check-in
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
+                                {/* Enforcement — the dominant, colour-coded pill */}
                                 <Select
                                   value={gate.enforcement}
                                   onValueChange={(v) =>
                                     updateGate(sIdx, rIdx, gIdx, {
-                                      enforcement: v as "block" | "warn",
+                                      enforcement:
+                                        v as FormRequirementGate["enforcement"],
                                     })
                                   }
                                 >
-                                  <SelectTrigger className="h-7 w-[160px] text-xs">
+                                  <SelectTrigger
+                                    className={cn(
+                                      "h-9 w-[184px] gap-2 rounded-full border-2 px-3.5 text-sm font-semibold shadow-sm focus:ring-2",
+                                      ENFORCEMENT_STYLES[gate.enforcement]
+                                        .trigger,
+                                    )}
+                                  >
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="block">
-                                      <span className="flex items-center gap-1.5">
-                                        <Ban className="size-3 text-red-600" />
-                                        Block step
+                                      <span
+                                        className={cn(
+                                          "flex items-center gap-2 font-semibold",
+                                          ENFORCEMENT_STYLES.block.itemText,
+                                        )}
+                                      >
+                                        {ENFORCEMENT_STYLES.block.icon}
+                                        {ENFORCEMENT_STYLES.block.label}
                                       </span>
                                     </SelectItem>
                                     <SelectItem value="warn">
-                                      <span className="flex items-center gap-1.5">
-                                        <AlertTriangle className="size-3 text-amber-600" />
-                                        Allow with banner
+                                      <span
+                                        className={cn(
+                                          "flex items-center gap-2 font-semibold",
+                                          ENFORCEMENT_STYLES.warn.itemText,
+                                        )}
+                                      >
+                                        {ENFORCEMENT_STYLES.warn.icon}
+                                        {ENFORCEMENT_STYLES.warn.label}
+                                      </span>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+
+                                <span className="text-muted-foreground text-xs font-medium">
+                                  at
+                                </span>
+
+                                {/* Timing — clear secondary chip */}
+                                <Select
+                                  value={gate.stage}
+                                  onValueChange={(v) =>
+                                    updateGate(sIdx, rIdx, gIdx, {
+                                      stage: v as FormRequirementGate["stage"],
+                                    })
+                                  }
+                                >
+                                  <SelectTrigger className="bg-muted/40 h-9 w-[178px] gap-1.5 border-2 text-sm font-medium [&>svg]:opacity-70">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="before_booking">
+                                      <span className="flex items-center gap-2">
+                                        <CalendarCheck className="size-4" />
+                                        Before booking
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="before_approval">
+                                      <span className="flex items-center gap-2">
+                                        <ClipboardCheck className="size-4" />
+                                        Before approval
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="before_checkin">
+                                      <span className="flex items-center gap-2">
+                                        <DoorOpen className="size-4" />
+                                        Before check-in
                                       </span>
                                     </SelectItem>
                                   </SelectContent>
@@ -378,10 +474,10 @@ export function FormRequirementsSettings() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="size-6 shrink-0"
+                                    className="size-8 shrink-0"
                                     onClick={() => removeGate(sIdx, rIdx, gIdx)}
                                   >
-                                    <Trash2 className="size-3" />
+                                    <Trash2 className="size-3.5" />
                                   </Button>
                                 )}
                               </div>
@@ -465,7 +561,8 @@ export function FormRequirementsSettings() {
                             <CheckCircle className="size-3 shrink-0 text-amber-500" />
                           )}
                           <span className="truncate">
-                            <span className="font-medium">{item.service}</span>:{" "}
+                            <span className="font-medium">{item.service}</span>
+                            <span className="text-muted-foreground"> · </span>
                             {item.form}
                           </span>
                         </div>
@@ -478,6 +575,34 @@ export function FormRequirementsSettings() {
           </div>
         </CardContent>
       </Card>
+
+      {preview && (
+        <FormPreviewSheet
+          formId={preview.id}
+          formName={preview.name}
+          open
+          onOpenChange={(o) => {
+            if (!o) setPreview(null);
+          }}
+        />
+      )}
+
+      {/* Sticky save bar — makes explicit that changes require an explicit save */}
+      <div className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky bottom-0 z-10 flex items-center justify-end gap-3 border-t py-3 backdrop-blur-sm">
+        {dirty && (
+          <span className="text-muted-foreground mr-auto text-sm">
+            You have unsaved changes
+          </span>
+        )}
+        <Button
+          onClick={handleSave}
+          disabled={!dirty || saveRequirements.isPending}
+          className="gap-1.5"
+        >
+          <Save className="size-4" />
+          {saveRequirements.isPending ? "Saving…" : "Save Changes"}
+        </Button>
+      </div>
     </div>
   );
 }
