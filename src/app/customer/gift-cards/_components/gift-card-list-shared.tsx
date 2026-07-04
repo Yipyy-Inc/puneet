@@ -52,16 +52,22 @@ export function Thumb({ id }: { id: string }) {
 export function EmptyState({
   icon,
   text,
+  note,
+  action,
 }: {
   icon: React.ReactNode;
   text: string;
+  note?: string;
+  action?: React.ReactNode;
 }) {
   return (
     <div className="text-muted-foreground flex flex-col items-center gap-2 rounded-xl border border-dashed py-12 text-center text-sm">
       <div className="bg-muted flex size-12 items-center justify-center rounded-full">
         {icon}
       </div>
-      {text}
+      <p className="font-medium">{text}</p>
+      {note && <p className="max-w-xs px-4 text-xs">{note}</p>}
+      {action && <div className="mt-2">{action}</div>}
     </div>
   );
 }
