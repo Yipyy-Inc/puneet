@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -793,7 +794,18 @@ export function BuyGiftCardFlow({
           {/* Payment method */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Payment method</Label>
-            {!showCardSelector ? (
+            {!hasPaymentMethod ? (
+              <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed p-4 text-center">
+                <CreditCard className="text-muted-foreground size-6" />
+                <p className="text-muted-foreground text-sm">
+                  You don&apos;t have a saved payment method. Add one to
+                  complete your purchase.
+                </p>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/customer/billing">Add a payment method</Link>
+                </Button>
+              </div>
+            ) : !showCardSelector ? (
               <>
                 <div className="flex items-center gap-3 rounded-xl border p-3">
                   <div className="bg-muted flex size-9 items-center justify-center rounded-md border">
