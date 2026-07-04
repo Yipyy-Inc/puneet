@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { paymentMethods } from "@/data/payments";
 import {
@@ -20,9 +20,32 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CreditCard, Plus, Check, AlertCircle } from "lucide-react";
+import {
+  CreditCard,
+  Plus,
+  Check,
+  AlertCircle,
+  MoreHorizontal,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 // Mock customer ID - TODO: Get from auth context
@@ -33,9 +56,12 @@ export function PaymentMethodsTab() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
-  const customerPaymentMethods = useMemo(() => {
-    return paymentMethods.filter((pm) => pm.clientId === MOCK_CUSTOMER_ID);
-  }, []);
+  const [customerPaymentMethods, setCustomerPaymentMethods] = useState(() =>
+    paymentMethods.filter((pm) => pm.clientId === MOCK_CUSTOMER_ID),
+  );
+  const [removeTarget, setRemoveTarget] = useState<
+    (typeof customerPaymentMethods)[number] | null
+  >(null);
 
   const [formData, setFormData] = useState({
     cardNumber: "",
@@ -137,9 +163,25 @@ export function PaymentMethodsTab() {
     }, 800);
   };
 
-  const handleSetDefault = async (_id: string) => {
-    // TODO: Call API to set as default
+  const handleSetDefault = (id: string) => {
+    setCustomerPaymentMethods((prev) =>
+      prev.map((m) => ({ ...m, isDefault: m.id === id })),
+    );
     toast.success("Default payment method updated");
+  };
+
+  const removeMethod = (id: string) => {
+    setCustomerPaymentMethods((prev) => prev.filter((m) => m.id !== id));
+    toast.success("Payment method removed");
+  };
+
+  const handleRemove = (method: (typeof customerPaymentMethods)[number]) => {
+    // Removing the default card needs an explicit confirmation.
+    if (method.isDefault) {
+      setRemoveTarget(method);
+    } else {
+      removeMethod(method.id);
+    }
   };
 
   return (
@@ -210,25 +252,45 @@ export function PaymentMethodsTab() {
                         </CardDescription>
                       </div>
                     </div>
-                    {method.isDefault && (
-                      <Badge variant="default" className="gap-1">
-                        <Check className="size-3" />
-                        Default
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {method.isDefault && (
+                        <Badge variant="default" className="gap-1">
+                          <Check className="size-3" />
+                          Default
+                        </Badge>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            aria-label="Payment method actions"
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {!method.isDefault && (
+                            <DropdownMenuItem
+                              onSelect={() => handleSetDefault(method.id)}
+                            >
+                              <Check className="size-4" />
+                              Set as default
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onSelect={() => handleRemove(method)}
+                          >
+                            <Trash2 className="size-4" />
+                            Remove
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 </CardHeader>
-                {!method.isDefault && (
-                  <CardContent>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleSetDefault(method.id)}
-                    >
-                      Set as Default
-                    </Button>
-                  </CardContent>
-                )}
               </Card>
             );
           })}
@@ -358,6 +420,33 @@ export function PaymentMethodsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm removing the default card */}
+      <AlertDialog
+        open={removeTarget !== null}
+        onOpenChange={(v) => !v && setRemoveTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove default card?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure? You will need to add a new default card before making
+              purchases.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (removeTarget) removeMethod(removeTarget.id);
+                setRemoveTarget(null);
+              }}
+            >
+              Remove card
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

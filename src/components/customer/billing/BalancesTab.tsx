@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, Gift, CreditCard, TrendingUp, Calendar } from "lucide-react";
+import { Wallet, Gift, TrendingUp, Calendar } from "lucide-react";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -52,21 +52,6 @@ export function BalancesTab() {
         (inv.status === "sent" || inv.status === "overdue"),
     );
   }, []);
-
-  const totalCredits = useMemo(() => {
-    return customerCreditsList.reduce((sum, c) => sum + c.remainingAmount, 0);
-  }, [customerCreditsList]);
-
-  const totalGiftCardBalance = useMemo(() => {
-    return customerGiftCards.reduce((sum, gc) => sum + gc.currentBalance, 0);
-  }, [customerGiftCards]);
-
-  const totalOutstanding = useMemo(() => {
-    return customerOutstandingInvoices.reduce(
-      (sum, inv) => sum + inv.amountDue,
-      0,
-    );
-  }, [customerOutstandingInvoices]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -142,63 +127,6 @@ export function BalancesTab() {
           Store credit, gift cards, prepaid balances, and any outstanding
           amounts
         </p>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="size-5" />
-              Store Credit
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {formatCurrency(totalCredits)}
-            </div>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {customerCreditsList.length} active credit
-              {customerCreditsList.length !== 1 ? "s" : ""}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Gift className="size-5" />
-              Gift Card Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {formatCurrency(totalGiftCardBalance)}
-            </div>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {customerGiftCards.length} active gift card
-              {customerGiftCards.length !== 1 ? "s" : ""}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wallet className="size-5" />
-              Outstanding Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {formatCurrency(totalOutstanding)}
-            </div>
-            <p className="text-muted-foreground mt-1 text-sm">
-              From unpaid or overdue invoices (if your facility allows
-              pay-later)
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Credits List */}

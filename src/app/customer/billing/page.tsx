@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PaymentMethodsTab } from "@/components/customer/billing/PaymentMethodsTab";
 import { BookingInvoicesTab } from "@/components/customer/billing/BookingInvoicesTab";
 import { BalancesTab } from "@/components/customer/billing/BalancesTab";
+import { BalanceSummaryCards } from "@/components/customer/billing/BalanceSummaryCards";
 import { CreditCard, FileText, Wallet } from "lucide-react";
 
 export default function CustomerBillingPage() {
@@ -20,6 +21,9 @@ export default function CustomerBillingPage() {
             Manage your payment methods, view invoices, and track your balances
           </p>
         </div>
+
+        {/* Balance cards stay visible above the tabs (Task 36) */}
+        <BalanceSummaryCards />
 
         <Tabs
           value={activeTab}
