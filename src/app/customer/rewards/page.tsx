@@ -778,6 +778,8 @@ export default function CustomerRewardsPage() {
                   transactions={pointTransactions}
                   currentBalance={loyaltyData?.points ?? 0}
                   filterable
+                  showTime
+                  emptyText="No transactions yet. Points you earn and redeem will appear here."
                 />
               </CardContent>
             </Card>
