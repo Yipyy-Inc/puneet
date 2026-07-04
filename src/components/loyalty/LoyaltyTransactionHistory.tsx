@@ -63,12 +63,19 @@ function kindOf(t: LoyaltyTransaction): Kind {
   }
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
+function formatDate(iso: string, withTime = false) {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
+  if (!withTime) return date;
+  const time = d.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return `${date} · ${time}`;
 }
 
 /**
@@ -81,11 +88,17 @@ export function LoyaltyTransactionHistory({
   transactions,
   currentBalance,
   filterable = false,
+  showTime = false,
+  emptyText = "No transactions yet.",
 }: {
   transactions: LoyaltyTransaction[];
   currentBalance: number;
   /** Show an earned/redeemed/all type filter above the table. */
   filterable?: boolean;
+  /** Append the time to each row's date. */
+  showTime?: boolean;
+  /** Empty-state message when there are no transactions. */
+  emptyText?: string;
 }) {
   const rows = useMemo(() => {
     const sorted = [...transactions].sort((a, b) =>
@@ -118,9 +131,7 @@ export function LoyaltyTransactionHistory({
   const pageRows = displayRows.slice(start, start + PAGE_SIZE);
 
   if (rows.length === 0) {
-    return (
-      <p className="text-muted-foreground text-sm">No transactions yet.</p>
-    );
+    return <p className="text-muted-foreground text-sm">{emptyText}</p>;
   }
 
   const filterControl = filterable ? (
@@ -175,7 +186,7 @@ export function LoyaltyTransactionHistory({
               return (
                 <TableRow key={txn.id}>
                   <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                    {formatDate(txn.createdAt)}
+                    {formatDate(txn.createdAt, showTime)}
                   </TableCell>
                   <TableCell>
                     <Badge
