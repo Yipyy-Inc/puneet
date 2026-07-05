@@ -1074,9 +1074,9 @@ export default function CustomerRewardsPage() {
                 ) : (
                   <div className="text-muted-foreground py-8 text-center">
                     <Users className="mx-auto mb-2 size-12 opacity-50" />
-                    <p>No referral codes available</p>
-                    <p className="mt-1 text-xs">
-                      Contact the facility to get your referral code
+                    <p className="max-w-sm mx-auto text-sm">
+                      Share your referral link to earn bonus points when a
+                      friend joins.
                     </p>
                   </div>
                 )}
