@@ -39,6 +39,12 @@ import { clients } from "@/data/clients";
 // Portal's current customer (mirrors the customer dashboard).
 const MOCK_CUSTOMER_ID = 15;
 
+// Purchaser's first name, pre-filled into "From (Your Name)". Derived once so the
+// initial state and resetFlow share a single source and can't drift (Task 14: the
+// field must not load blank after "Send another gift card").
+const CUSTOMER_FIRST_NAME =
+  clients.find((c) => c.id === MOCK_CUSTOMER_ID)?.name?.split(" ")[0] ?? "";
+
 const SAVED_CARDS = [
   { id: "visa-4242", brand: "VISA", last4: "4242", label: "Default card" },
   { id: "mc-8888", brand: "Mastercard", last4: "8888", label: "Personal" },
@@ -154,9 +160,7 @@ export function BuyGiftCardFlow({
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
   // Pre-fill "From" with the customer's first name (editable).
-  const [senderName, setSenderName] = useState(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID)?.name?.split(" ")[0] ?? "",
-  );
+  const [senderName, setSenderName] = useState(CUSTOMER_FIRST_NAME);
   const [emailError, setEmailError] = useState("");
   const [attemptedStep3, setAttemptedStep3] = useState(false);
   const [message, setMessage] = useState("");
@@ -278,7 +282,7 @@ export function BuyGiftCardFlow({
     setSelectedDesign(CARD_DESIGNS[0]);
     setRecipientName("");
     setRecipientEmail("");
-    setSenderName("");
+    setSenderName(CUSTOMER_FIRST_NAME);
     setMessage("");
     setScheduleDelivery(false);
     setDeliveryDate("");

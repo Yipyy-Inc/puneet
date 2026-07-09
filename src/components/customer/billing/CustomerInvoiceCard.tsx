@@ -96,11 +96,15 @@ const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
     label: "Estimate",
     classes: "border-zinc-300 bg-zinc-100 text-zinc-700",
   },
-  open: {
-    label: "Open",
+  unpaid: {
+    label: "Unpaid",
     classes: "border-amber-300 bg-amber-100 text-amber-800",
   },
-  closed: {
+  overdue: {
+    label: "Overdue",
+    classes: "border-red-300 bg-red-100 text-red-800",
+  },
+  paid: {
     label: "Paid",
     classes: "border-emerald-300 bg-emerald-100 text-emerald-800",
   },
@@ -121,8 +125,20 @@ export function CustomerInvoiceCard({
     [booking, invoice, client, petName],
   );
 
-  const statusCfg = STATUS_CONFIG[invoice.status] ?? STATUS_CONFIG.estimate;
   const hasBalance = invoice.remainingDue > 0 && invoice.status !== "closed";
+  // "Overdue" mirrors the Invoices tab's filter: an unpaid balance past the
+  // booking's end date. Otherwise open invoices read "Unpaid", estimates read
+  // "Estimate", and settled invoices read "Paid".
+  const isOverdue = hasBalance && new Date(booking.endDate) < new Date();
+  const statusKey =
+    invoice.status === "closed"
+      ? "paid"
+      : isOverdue
+        ? "overdue"
+        : invoice.status === "open"
+          ? "unpaid"
+          : "estimate";
+  const statusCfg = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.estimate;
 
   const previewHtml = useMemo(() => {
     if (!previewOpen) return "";
