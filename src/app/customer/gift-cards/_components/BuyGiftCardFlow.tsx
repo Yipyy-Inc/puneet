@@ -570,7 +570,9 @@ export function BuyGiftCardFlow({
                 value={recipientName}
                 onChange={(e) => setRecipientName(e.target.value)}
                 placeholder="Jane Smith"
-                aria-invalid={attemptedStep3 && recipientName.trim().length === 0}
+                aria-invalid={
+                  attemptedStep3 && recipientName.trim().length === 0
+                }
               />
               {attemptedStep3 && recipientName.trim().length === 0 && (
                 <p className="text-destructive text-xs">

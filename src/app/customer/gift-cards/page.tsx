@@ -8,7 +8,9 @@ interface PageProps {
   searchParams: Promise<{ tab?: string }>;
 }
 
-export default async function CustomerGiftCardsPage({ searchParams }: PageProps) {
+export default async function CustomerGiftCardsPage({
+  searchParams,
+}: PageProps) {
   // "Check your balance" links from gift-card emails arrive with ?tab=received
   // and land on the Cards I received tab; normal navigation defaults to Send.
   const { tab } = await searchParams;

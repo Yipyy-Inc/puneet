@@ -430,8 +430,8 @@ export function PaymentMethodsTab() {
           <AlertDialogHeader>
             <AlertDialogTitle>Remove default card?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure? You will need to add a new default card before making
-              purchases.
+              Are you sure? You will need to add a new default card before
+              making purchases.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

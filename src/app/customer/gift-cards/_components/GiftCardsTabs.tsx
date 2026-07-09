@@ -56,7 +56,10 @@ export function GiftCardsTabs({
       </TabsContent>
 
       <TabsContent value="received" className="mt-6">
-        <ReceivedGiftCardsList facilityId={facilityId} customerId={customerId} />
+        <ReceivedGiftCardsList
+          facilityId={facilityId}
+          customerId={customerId}
+        />
       </TabsContent>
     </Tabs>
   );

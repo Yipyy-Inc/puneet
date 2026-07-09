@@ -29,17 +29,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Send,
-  Search,
-  MoreHorizontal,
-  Eye,
-  DollarSign,
-} from "lucide-react";
+import { Send, Search, MoreHorizontal, Eye, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { giftCards } from "@/data/gift-cards";
 import type { GiftCard } from "@/types/payments";
-import { EmptyState, STATUS_META, Thumb, fmtDate } from "./gift-card-list-shared";
+import {
+  EmptyState,
+  STATUS_META,
+  Thumb,
+  fmtDate,
+} from "./gift-card-list-shared";
 
 type SortKey = "newest" | "oldest" | "highest" | "lowest";
 
