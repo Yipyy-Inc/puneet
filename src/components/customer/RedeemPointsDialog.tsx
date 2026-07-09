@@ -69,7 +69,7 @@ export function RedeemPointsDialog({
     // Refresh the account/transactions so the balance updates immediately.
     queryClient.invalidateQueries({ queryKey: ["loyalty"] });
     toast.success(
-      `Redeemed ${result.pointsRedeemed} points for $${result.creditAdded?.toFixed(2)} credit`,
+      `Redeemed ${result.pointsRedeemed} points for $${result.creditAdded?.toFixed(2)} account credit`,
     );
     setPointsInput("");
     onOpenChange(false);
@@ -167,7 +167,7 @@ export function RedeemPointsDialog({
             className="bg-emerald-600 text-white hover:bg-emerald-700"
             onClick={handleRedeem}
           >
-            Apply to my wallet
+            Apply as account credit
           </Button>
         </DialogFooter>
       </DialogContent>

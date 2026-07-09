@@ -108,7 +108,7 @@ export function ReceivedGiftCardsList({
       {received.length === 0 ? (
         <EmptyState
           icon={<Inbox className="size-6" />}
-          text="No gift cards received yet,"
+          text="No gift cards received yet"
           note="Share the Gift Cards page with friends and family so they can send you one."
         />
       ) : (

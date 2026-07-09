@@ -459,17 +459,6 @@ export default function CustomerRewardsPage() {
                     )}
                   </div>
                 )}
-
-                {/* Summary Text (Example Format) */}
-                {loyaltyData.nextTier && (
-                  <div className="border-t pt-2">
-                    <p className="text-base font-medium">
-                      {loyaltyData.points.toLocaleString()} Points –{" "}
-                      {loyaltyData.pointsToNextTier.toLocaleString()} points
-                      away from {loyaltyData.nextTier.name} Tier
-                    </p>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -959,9 +948,9 @@ export default function CustomerRewardsPage() {
                       .length === 0 && (
                       <div className="text-muted-foreground py-8 text-center">
                         <Gift className="mx-auto mb-2 size-12 opacity-50" />
-                        <p>No rewards available at this time</p>
+                        <p>No rewards available.</p>
                         <p className="mt-1 text-xs">
-                          Check back later for new rewards!
+                          Keep earning points to unlock rewards.
                         </p>
                       </div>
                     )}
