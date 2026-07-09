@@ -97,7 +97,9 @@ export function BalanceSummaryCards() {
             href="/customer/gift-cards"
             className="text-primary mt-2 inline-flex items-center gap-1 text-sm font-medium hover:underline"
           >
-            {totalGiftCardBalance > 0 ? "Manage gift cards" : "Send a gift card"}
+            {totalGiftCardBalance > 0
+              ? "Manage gift cards"
+              : "Send a gift card"}
             <ArrowRight className="size-3.5" />
           </Link>
         </CardContent>

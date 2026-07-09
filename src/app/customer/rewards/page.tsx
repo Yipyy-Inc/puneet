@@ -1063,7 +1063,7 @@ export default function CustomerRewardsPage() {
                 ) : (
                   <div className="text-muted-foreground py-8 text-center">
                     <Users className="mx-auto mb-2 size-12 opacity-50" />
-                    <p className="max-w-sm mx-auto text-sm">
+                    <p className="mx-auto max-w-sm text-sm">
                       Share your referral link to earn bonus points when a
                       friend joins.
                     </p>
@@ -1429,8 +1429,9 @@ export default function CustomerRewardsPage() {
                     <DialogHeader>
                       <DialogTitle>{useRewardTarget.title}</DialogTitle>
                       <DialogDescription>
-                        Show this code at {selectedFacility?.name || "the front desk"}{" "}
-                        to redeem your reward.
+                        Show this code at{" "}
+                        {selectedFacility?.name || "the front desk"} to redeem
+                        your reward.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="flex flex-col items-center gap-4 py-2">
@@ -1443,8 +1444,10 @@ export default function CustomerRewardsPage() {
                         </p>
                         <button
                           type="button"
-                          onClick={() => copyToClipboard(code, useRewardTarget.id)}
-                          className="mt-1 inline-flex items-center gap-2 rounded-lg border px-3 py-2 font-mono text-lg font-semibold tracking-wider hover:bg-muted"
+                          onClick={() =>
+                            copyToClipboard(code, useRewardTarget.id)
+                          }
+                          className="hover:bg-muted mt-1 inline-flex items-center gap-2 rounded-lg border px-3 py-2 font-mono text-lg font-semibold tracking-wider"
                         >
                           {code}
                           {copiedCode === useRewardTarget.id ? (
@@ -1455,7 +1458,8 @@ export default function CustomerRewardsPage() {
                         </button>
                       </div>
                       <Badge variant="secondary" className="font-semibold">
-                        {useRewardTarget.valueChip} · {useRewardTarget.servicesText}
+                        {useRewardTarget.valueChip} ·{" "}
+                        {useRewardTarget.servicesText}
                       </Badge>
                     </div>
                     <DialogFooter>

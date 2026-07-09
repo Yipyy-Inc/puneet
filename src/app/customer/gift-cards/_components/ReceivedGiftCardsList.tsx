@@ -79,7 +79,8 @@ export function ReceivedGiftCardsList({
   const cardBal = loadCard ? balanceOf(loadCard) : 0;
   const partialNum = parseFloat(partialAmount) || 0;
   const amountToLoad = mode === "full" ? cardBal : partialNum;
-  const partialValid = mode === "full" || (partialNum > 0 && partialNum <= cardBal);
+  const partialValid =
+    mode === "full" || (partialNum > 0 && partialNum <= cardBal);
   const canConfirm = partialValid && amountToLoad > 0 && !loading;
 
   const handleConfirm = async () => {
@@ -264,9 +265,9 @@ export function ReceivedGiftCardsList({
                   <ArrowRight className="text-muted-foreground size-3.5" />
                   <span className="text-green-600">
                     $
-                    {(
-                      walletBalance + (canConfirm ? amountToLoad : 0)
-                    ).toFixed(2)}
+                    {(walletBalance + (canConfirm ? amountToLoad : 0)).toFixed(
+                      2,
+                    )}
                   </span>
                 </span>
               </div>
