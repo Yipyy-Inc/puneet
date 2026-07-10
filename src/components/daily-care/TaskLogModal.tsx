@@ -14,50 +14,75 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Camera } from "lucide-react";
+import { Camera, X, Image as ImageIcon } from "lucide-react";
 import { OUTCOME_OPTIONS, outcomeBadgeClass } from "./outcome-meta";
 import { metaFor } from "./task-type-meta";
 import { format12h } from "@/lib/care-log-scheduler";
-import type { ScheduledTask } from "@/types/care-log";
+import { LogMeta } from "./LogMeta";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import type { ScheduledTask, TaskExecution } from "@/types/care-log";
 
 type Props = {
   open: boolean;
   task: ScheduledTask | null;
-  /** Default staff initials (the logged-in user). */
-  defaultStaffInitials?: string;
+  /** When present, the modal opens pre-filled to edit this existing log. */
+  existing?: TaskExecution;
   onOpenChange: (open: boolean) => void;
   onSubmit: (entry: {
     outcome: string;
     notes?: string;
+    staffName: string;
     staffInitials: string;
+    /** Override log time as "HH:MM"; omitted means stamp the current time. */
+    executedAt?: string;
     servedAt?: string;
-    photoUrl?: string;
+    photoUrls?: string[];
   }) => void;
 };
 
 export function TaskLogModal({
   open,
   task,
-  defaultStaffInitials = "ME",
+  existing,
   onOpenChange,
   onSubmit,
 }: Props) {
+  // Single source for the logged-in staff member (replaces free-text initials).
+  const { user } = useCurrentUser();
   const [outcome, setOutcome] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
-  const [staff, setStaff] = useState(defaultStaffInitials);
   const [servedAt, setServedAt] = useState("");
-  const [photoCaptured, setPhotoCaptured] = useState(false);
+  const [photos, setPhotos] = useState<string[]>([]);
+  // Log time: "" = stamp the current time on submit; a value backdates it.
+  const [nowValue, setNowValue] = useState("");
+  const [logTime, setLogTime] = useState("");
 
-  // Reset on open
+  // On open: seed from the existing execution when editing, otherwise clear.
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    const now = new Date();
+    setNowValue(
+      `${String(now.getHours()).padStart(2, "0")}:${String(
+        now.getMinutes(),
+      ).padStart(2, "0")}`,
+    );
+    if (existing) {
+      setOutcome(String(existing.outcome));
+      setNotes(existing.notes ?? "");
+      setServedAt(existing.servedAt ?? "");
+      setPhotos(
+        existing.photoUrls ?? (existing.photoUrl ? [existing.photoUrl] : []),
+      );
+      // Preserve the original log time (still editable via the override input).
+      setLogTime(existing.executedAt);
+    } else {
       setOutcome(null);
       setNotes("");
-      setStaff(defaultStaffInitials);
       setServedAt("");
-      setPhotoCaptured(false);
+      setPhotos([]);
+      setLogTime("");
     }
-  }, [open, task?.id, defaultStaffInitials]);
+  }, [open, task?.id, existing]);
 
   if (!task) return null;
 
@@ -66,20 +91,32 @@ export function TaskLogModal({
   const options = OUTCOME_OPTIONS[task.taskType];
   const isFeeding = task.taskType === "feeding";
   const requiresPhoto = task.requiresPhotoProof === true;
+  const MAX_PHOTOS = 3;
 
-  const canSubmit =
-    outcome !== null &&
-    staff.trim().length > 0 &&
-    (!requiresPhoto || photoCaptured);
+  const addPhoto = () => {
+    // TODO: open the real camera / library picker; mock URL for now.
+    setPhotos((prev) =>
+      prev.length >= MAX_PHOTOS
+        ? prev
+        : [...prev, `mock://photo-${prev.length + 1}`],
+    );
+  };
+  const removePhoto = (index: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const canSubmit = outcome !== null && (!requiresPhoto || photos.length > 0);
 
   function handleSubmit() {
     if (!outcome) return;
     onSubmit({
       outcome,
       notes: notes.trim() || undefined,
-      staffInitials: staff.trim().toUpperCase(),
+      staffName: user.name,
+      staffInitials: user.initials,
+      executedAt: logTime || undefined,
       servedAt: isFeeding && servedAt ? servedAt : undefined,
-      photoUrl: photoCaptured ? "mock://photo-proof" : undefined,
+      photoUrls: photos.length > 0 ? photos : undefined,
     });
     onOpenChange(false);
   }
@@ -96,7 +133,7 @@ export function TaskLogModal({
             </div>
             <div className="min-w-0 flex-1">
               <DialogTitle className="text-base">
-                Log {meta.label.toLowerCase()}
+                {existing ? "Edit" : "Log"} {meta.label.toLowerCase()}
               </DialogTitle>
               <DialogDescription className="mt-0.5 truncate">
                 {task.petName} · {task.kennelName} ·{" "}
@@ -157,21 +194,47 @@ export function TaskLogModal({
             </div>
           </div>
 
-          {requiresPhoto && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Photo proof (required)</Label>
-              <Button
-                type="button"
-                variant={photoCaptured ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => setPhotoCaptured(true)}
-                className="w-full gap-2"
-              >
-                <Camera className="size-4" />
-                {photoCaptured ? "Photo captured ✓" : "Take photo"}
-              </Button>
+          <div className="space-y-1.5">
+            <Label className="text-xs">
+              Photos{" "}
+              <span className="text-muted-foreground font-normal">
+                {requiresPhoto ? "(required)" : "(optional)"}
+              </span>
+            </Label>
+            <div className="flex flex-wrap items-center gap-2">
+              {photos.map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-muted relative flex size-12 items-center justify-center rounded-md border"
+                >
+                  <ImageIcon className="text-muted-foreground size-5" />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    aria-label={`Remove photo ${i + 1}`}
+                    className="bg-destructive absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full text-white"
+                  >
+                    <X className="size-2.5" />
+                  </button>
+                </div>
+              ))}
+              {photos.length < MAX_PHOTOS && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addPhoto}
+                  className="h-12 gap-1.5"
+                >
+                  <Camera className="size-4" />
+                  Add photo
+                </Button>
+              )}
             </div>
-          )}
+            <p className="text-muted-foreground text-[11px]">
+              {photos.length}/{MAX_PHOTOS} · camera or library
+            </p>
+          </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="notes" className="text-xs">
@@ -187,18 +250,12 @@ export function TaskLogModal({
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="staff" className="text-xs">
-              Your initials
-            </Label>
-            <Input
-              id="staff"
-              value={staff}
-              onChange={(e) => setStaff(e.target.value.slice(0, 4))}
-              maxLength={4}
-              className="w-24 uppercase"
-            />
-          </div>
+          <LogMeta nowValue={nowValue} value={logTime} onChange={setLogTime} />
+
+          <p className="text-muted-foreground text-xs">
+            Logged by:{" "}
+            <span className="text-foreground font-medium">{user.name}</span>
+          </p>
         </div>
 
         <DialogFooter>
@@ -206,7 +263,7 @@ export function TaskLogModal({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit}>
-            Save log
+            {existing ? "Update log" : "Save log"}
           </Button>
         </DialogFooter>
       </DialogContent>

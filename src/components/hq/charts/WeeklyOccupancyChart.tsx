@@ -11,6 +11,7 @@ import {
   Legend,
 } from "recharts";
 import type { Location } from "@/types/location";
+import { locationHex } from "@/lib/hq/location-styles";
 
 interface Props {
   data: {
@@ -81,7 +82,7 @@ export function WeeklyOccupancyChart({
           <Bar
             key={loc.id}
             dataKey={loc.id}
-            fill={loc.color}
+            fill={locationHex(loc)}
             radius={[6, 6, 0, 0]}
           />
         ))}

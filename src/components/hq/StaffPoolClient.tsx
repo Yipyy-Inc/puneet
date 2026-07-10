@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  ArrowLeftRight,
   Users,
   MapPin,
   Clock,
@@ -11,7 +12,11 @@ import {
   Plus,
   Filter,
   Download,
+  FileSpreadsheet,
   CheckCircle2,
+  ChevronDown,
+  Star,
+  TrendingUp,
   Search,
   Network,
   CalendarDays,
@@ -30,21 +35,54 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import type { Location } from "@/types/location";
+import type { Location, LocationWeeklyHours } from "@/types/location";
 import {
   locationStyles,
   utilizationKey,
+  utilizationHealth,
   styleFromKey,
 } from "@/lib/hq/location-styles";
-import { MetricBar } from "@/components/hq/charts/MetricBar";
 import {
   findShiftConflicts,
   formatConflictWindow,
   type CrossLocationShift,
 } from "@/lib/hq/schedule-conflicts";
+import { ManageLocationsDialog } from "@/components/hq/ManageLocationsDialog";
+import {
+  SendToLocationDialog,
+  type DispatchPayload,
+} from "@/components/hq/SendToLocationDialog";
+import { PayrollExportDialog } from "@/components/hq/PayrollExportDialog";
+import { LastUpdated } from "@/components/hq/LastUpdated";
+import { staffCrossLocationPerformance } from "@/data/hq-analytics";
+import { getRatingDivergence } from "@/lib/hq/staff-performance";
 
-type Shift = { locationId: string; date: string; start: string; end: string };
+type Shift = {
+  locationId: string;
+  date: string;
+  start: string;
+  end: string;
+  /** True for a temporary cross-location dispatch (vs. a regular shift). */
+  dispatched?: boolean;
+};
+
+type StaffDispatch = {
+  id: string;
+  staffId: string;
+  staffName: string;
+  fromLocationId: string;
+  toLocationId: string;
+  date: string;
+  start: string;
+  end: string;
+  createdAt: string;
+};
 
 type StaffMember = {
   staffId: string;
@@ -63,20 +101,47 @@ interface Props {
   locations: Location[];
 }
 
-const ROLES = [
-  "Manager",
-  "Groomer",
-  "Trainer",
-  "Kennel Tech",
-  "Front Desk",
-] as const;
-
 const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+const WEEKDAY_HOURS_KEYS: (keyof LocationWeeklyHours)[] = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
 
 function getDayIndex(iso: string): number {
   // 0=Mon ... 6=Sun
   const day = new Date(iso).getUTCDay();
   return (day + 6) % 7;
+}
+
+function parseISODate(iso: string): Date {
+  return new Date(`${iso}T00:00:00Z`);
+}
+function addDaysISO(iso: string, n: number): string {
+  const d = parseISODate(iso);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function formatShortDate(iso: string): string {
+  return parseISODate(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+function weekdayShort(iso: string): string {
+  return parseISODate(iso).toLocaleDateString("en-US", {
+    weekday: "short",
+    timeZone: "UTC",
+  });
+}
+function hoursForDate(loc: Location, iso: string) {
+  return loc.hours[WEEKDAY_HOURS_KEYS[parseISODate(iso).getUTCDay()]];
 }
 
 function initialsOf(name: string) {
@@ -88,7 +153,48 @@ function initialsOf(name: string) {
     .toUpperCase();
 }
 
-export function StaffPoolClient({ staff, locations }: Props) {
+// Clean single-colour utilisation bar. Colour reflects health (teal ≥70 /
+// amber 50–70 / red <50) via utilizationHealth. Hover shows the hours used.
+function UtilizationBar({ rate }: { rate: number }) {
+  const health = utilizationHealth(rate);
+  const width = Math.max(0, Math.min(100, rate));
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          role="progressbar"
+          aria-valuenow={rate}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Used ${rate}% of available hours this period`}
+          className="bg-muted h-1.5 w-full cursor-default overflow-hidden rounded-full"
+        >
+          <div
+            className={cn("h-full rounded-full transition-all", health.bar)}
+            style={{ width: `${width}%` }}
+          />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        Used {rate}% of available hours this period.
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+export function StaffPoolClient({ staff: initialStaff, locations }: Props) {
+  const [members, setMembers] = useState(initialStaff);
+  const [managing, setManaging] = useState<StaffMember | null>(null);
+  const [dispatching, setDispatching] = useState<StaffMember | null>(null);
+  const [dispatches, setDispatches] = useState<StaffDispatch[]>([]);
+  const [payrollOpen, setPayrollOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Per-location performance (ratings, completion, revenue) keyed by staffId.
+  const perfById = useMemo(
+    () => new Map(staffCrossLocationPerformance.map((p) => [p.staffId, p])),
+    [],
+  );
   const [search, setSearch] = useState("");
   const [locationFilter, setLocationFilter] = useState<string>("all");
   const [view, setView] = useState<"cards" | "schedule" | "coverage">("cards");
@@ -99,7 +205,7 @@ export function StaffPoolClient({ staff, locations }: Props) {
 
   const filtered = useMemo(
     () =>
-      staff.filter((s) => {
+      members.filter((s) => {
         const matchesSearch =
           !search ||
           s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -110,50 +216,143 @@ export function StaffPoolClient({ staff, locations }: Props) {
           s.assignedLocations.includes(locationFilter);
         return matchesSearch && matchesLoc;
       }),
-    [staff, search, locationFilter],
+    [members, search, locationFilter],
   );
 
-  const sharedCount = staff.filter(isShared).length;
+  const sharedCount = members.filter(isShared).length;
   const avgUtilization = Math.round(
-    staff.reduce((sum, m) => sum + m.utilizationRate, 0) /
-      Math.max(staff.length, 1),
+    members.reduce((sum, m) => sum + m.utilizationRate, 0) /
+      Math.max(members.length, 1),
   );
 
-  // Coverage matrix: roles x locations
-  const coverage = useMemo(() => {
-    const matrix: Record<string, Record<string, number>> = {};
-    ROLES.forEach((role) => {
-      matrix[role] = {};
-      locations.forEach((l) => (matrix[role][l.id] = 0));
-    });
-    staff.forEach((m) => {
-      const role =
-        ROLES.find((r) => r.toLowerCase() === m.role.toLowerCase()) ?? m.role;
-      m.assignedLocations.forEach((locId) => {
-        if (!matrix[role]) matrix[role] = {};
-        matrix[role][locId] = (matrix[role][locId] ?? 0) + 1;
-      });
-    });
-    return matrix;
-  }, [staff, locations]);
+  // ── Cross-location shift model (reused for conflicts + coverage) ──
+  const allShifts = useMemo<CrossLocationShift[]>(
+    () =>
+      members.flatMap((m) =>
+        m.upcomingShifts.map((s, i) => ({
+          id: `${m.staffId}-${i}`,
+          staffId: m.staffId,
+          locationId: s.locationId,
+          date: s.date,
+          start: s.start,
+          end: s.end,
+        })),
+      ),
+    [members],
+  );
 
-  // Find coverage gaps (zero coverage where service is offered)
-  const gaps = useMemo(() => {
-    const out: { role: string; locationId: string; locationName: string }[] =
-      [];
-    locations.forEach((loc) => {
-      ROLES.forEach((role) => {
-        const count = coverage[role]?.[loc.id] ?? 0;
-        // Skip role if location doesn't offer the related service
-        if (role === "Groomer" && !loc.services.includes("grooming")) return;
-        if (role === "Trainer" && !loc.services.includes("training")) return;
-        if (count === 0) {
-          out.push({ role, locationId: loc.id, locationName: loc.name });
-        }
-      });
-    });
-    return out;
-  }, [coverage, locations]);
+  // Shifts flagged by cross-location conflict detection (schedule-conflicts.ts).
+  const conflictIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const sh of allShifts) {
+      if (findShiftConflicts(sh, allShifts, sh.id).length > 0) set.add(sh.id);
+    }
+    return set;
+  }, [allShifts]);
+
+  // Schedule week-view: every filtered member's shifts bucketed by weekday.
+  const shiftsByWeekday = useMemo(() => {
+    const byDay: {
+      id: string;
+      staffName: string;
+      role: string;
+      locationId: string;
+      start: string;
+      end: string;
+      dispatched: boolean;
+    }[][] = [[], [], [], [], [], [], []];
+    filtered.forEach((m) =>
+      m.upcomingShifts.forEach((s, i) =>
+        byDay[getDayIndex(s.date)].push({
+          id: `${m.staffId}-${i}`,
+          staffName: m.name,
+          role: m.role,
+          locationId: s.locationId,
+          start: s.start,
+          end: s.end,
+          dispatched: s.dispatched ?? false,
+        }),
+      ),
+    );
+    byDay.forEach((a) => a.sort((x, y) => x.start.localeCompare(y.start)));
+    return byDay;
+  }, [filtered]);
+
+  // Coverage: staffing gaps over the next 14 days from the pool's earliest shift.
+  const referenceToday = useMemo(() => {
+    const dates = members
+      .flatMap((m) => m.upcomingShifts.map((s) => s.date))
+      .sort();
+    return dates[0] ?? "2026-04-25";
+  }, [members]);
+
+  const { coverageRows, gaps } = useMemo(() => {
+    const days = Array.from({ length: 14 }, (_, i) =>
+      addDaysISO(referenceToday, i),
+    );
+    const rows = days.map((date) => ({
+      date,
+      cells: locations.map((loc) => {
+        const h = hoursForDate(loc, date);
+        const open = !h.closed;
+        const scheduled = members.reduce(
+          (n, m) =>
+            n +
+            m.upcomingShifts.filter(
+              (s) => s.date === date && s.locationId === loc.id,
+            ).length,
+          0,
+        );
+        const required = loc.isPrimary ? 2 : 1;
+        const status: "closed" | "zero" | "insufficient" | "ok" = !open
+          ? "closed"
+          : scheduled === 0
+            ? "zero"
+            : scheduled < required
+              ? "insufficient"
+              : "ok";
+        return {
+          loc,
+          scheduled,
+          required,
+          status,
+          window: open ? `${h.open}–${h.close}` : "",
+        };
+      }),
+    }));
+    const gapList = rows.flatMap((r) =>
+      r.cells
+        .filter((c) => c.status === "zero" || c.status === "insufficient")
+        .map((c) => ({
+          date: r.date,
+          locationId: c.loc.id,
+          locationName: c.loc.name,
+          shortCode: c.loc.shortCode,
+          scheduled: c.scheduled,
+          required: c.required,
+          window: c.window,
+        })),
+    );
+    return { coverageRows: rows, gaps: gapList };
+  }, [referenceToday, locations, members]);
+
+  // Urgent: open days in the next 7 with a location left with no staff at all.
+  const urgentGapCount = useMemo(
+    () =>
+      coverageRows
+        .slice(0, 7)
+        .reduce(
+          (n, r) => n + r.cells.filter((c) => c.status === "zero").length,
+          0,
+        ),
+    [coverageRows],
+  );
+
+  const coverageRef = useRef<HTMLDivElement>(null);
+  const goToCoverage = () => {
+    setView("coverage");
+    coverageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <div className="flex-1 space-y-7 p-4 pt-6 md:p-8">
@@ -180,12 +379,35 @@ export function StaffPoolClient({ staff, locations }: Props) {
               Shared Staff Pool
             </h1>
             <p className="text-muted-foreground text-sm">
-              Cross-location scheduling · {staff.length} active members ·
+              Cross-location scheduling · {members.length} active members ·
               Conflict detection on
+              {dispatches.length > 0 &&
+                ` · ${dispatches.length} active dispatch${dispatches.length === 1 ? "" : "es"}`}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <LastUpdated label="Last updated" className="mr-1" />
+          {urgentGapCount > 0 && (
+            <button
+              type="button"
+              onClick={goToCoverage}
+              aria-label={`${urgentGapCount} coverage gaps in the next 7 days`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-500/20 dark:text-red-400"
+            >
+              <AlertTriangle className="size-3.5" />
+              {urgentGapCount} coverage gap{urgentGapCount === 1 ? "" : "s"}
+            </button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setPayrollOpen(true)}
+          >
+            <FileSpreadsheet className="size-3.5" />
+            Payroll CSV
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -209,14 +431,14 @@ export function StaffPoolClient({ staff, locations }: Props) {
       {/* Stat banner */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="overflow-hidden">
-          <CardContent className="relative pt-4 pb-4">
+          <CardContent className="relative py-4">
             <div className="absolute inset-0 bg-linear-to-br from-sky-500/10 to-sky-500/0 opacity-70" />
             <div className="relative flex items-start justify-between gap-2">
               <div>
                 <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                   Total Pool
                 </p>
-                <p className="mt-1 text-2xl font-bold">{staff.length}</p>
+                <p className="mt-1 text-2xl font-bold">{members.length}</p>
                 <p className="text-muted-foreground text-[11px]">
                   across {locations.length} locations
                 </p>
@@ -229,7 +451,7 @@ export function StaffPoolClient({ staff, locations }: Props) {
         </Card>
 
         <Card className="overflow-hidden">
-          <CardContent className="relative pt-4 pb-4">
+          <CardContent className="relative py-4">
             <div className="absolute inset-0 bg-linear-to-br from-violet-500/10 to-violet-500/0 opacity-70" />
             <div className="relative flex items-start justify-between gap-2">
               <div>
@@ -238,7 +460,7 @@ export function StaffPoolClient({ staff, locations }: Props) {
                 </p>
                 <p className="mt-1 text-2xl font-bold">{sharedCount}</p>
                 <p className="text-muted-foreground text-[11px]">
-                  {((sharedCount / staff.length) * 100).toFixed(0)}% of pool
+                  {((sharedCount / members.length) * 100).toFixed(0)}% of pool
                 </p>
               </div>
               <div className="flex size-9 items-center justify-center rounded-xl bg-violet-500/15">
@@ -249,7 +471,7 @@ export function StaffPoolClient({ staff, locations }: Props) {
         </Card>
 
         <Card className="overflow-hidden">
-          <CardContent className="relative pt-4 pb-4">
+          <CardContent className="relative py-4">
             <div
               className={cn(
                 "absolute inset-0 bg-linear-to-br opacity-70",
@@ -263,14 +485,9 @@ export function StaffPoolClient({ staff, locations }: Props) {
                   Avg Utilization
                 </p>
                 <p className="mt-1 text-2xl font-bold">{avgUtilization}%</p>
-                <MetricBar
-                  percent={avgUtilization}
-                  fillClassName={
-                    styleFromKey(utilizationKey(avgUtilization)).bg
-                  }
-                  size="xs"
-                  className="mt-1.5"
-                />
+                <div className="mt-1.5">
+                  <UtilizationBar rate={avgUtilization} />
+                </div>
               </div>
               <div
                 className={cn(
@@ -295,7 +512,7 @@ export function StaffPoolClient({ staff, locations }: Props) {
             gaps.length > 0 && "border-amber-300/60 dark:border-amber-900/40",
           )}
         >
-          <CardContent className="relative pt-4 pb-4">
+          <CardContent className="relative py-4">
             <div
               className={cn(
                 "absolute inset-0 bg-linear-to-br opacity-70",
@@ -311,7 +528,7 @@ export function StaffPoolClient({ staff, locations }: Props) {
                 </p>
                 <p className="mt-1 text-2xl font-bold">{gaps.length}</p>
                 <p className="text-muted-foreground text-[11px]">
-                  {gaps.length === 0 ? "Fully covered" : "roles need attention"}
+                  {gaps.length === 0 ? "Fully covered" : "gaps · next 14 days"}
                 </p>
               </div>
               <div
@@ -332,7 +549,7 @@ export function StaffPoolClient({ staff, locations }: Props) {
       </div>
 
       {/* View switcher + filters */}
-      <Card>
+      <Card ref={coverageRef}>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b p-3">
           <div className="bg-muted/60 flex items-center gap-1 rounded-xl border p-1">
             {(
@@ -423,9 +640,7 @@ export function StaffPoolClient({ staff, locations }: Props) {
                 const primaryS = primaryLoc
                   ? locationStyles(primaryLoc)
                   : styleFromKey("sky");
-                const utilS = styleFromKey(
-                  utilizationKey(member.utilizationRate),
-                );
+                const utilHealth = utilizationHealth(member.utilizationRate);
                 const shared = isShared(member);
                 return (
                   <Card
@@ -505,15 +720,13 @@ export function StaffPoolClient({ staff, locations }: Props) {
                             <Clock className="mr-1 inline-block size-3" />
                             {member.hoursThisWeek}h this week
                           </span>
-                          <span className={cn("font-semibold", utilS.text)}>
+                          <span
+                            className={cn("font-semibold", utilHealth.text)}
+                          >
                             {member.utilizationRate}% utilization
                           </span>
                         </div>
-                        <MetricBar
-                          percent={member.utilizationRate}
-                          fillClassName={utilS.bg}
-                          size="xs"
-                        />
+                        <UtilizationBar rate={member.utilizationRate} />
                       </div>
 
                       <div>
@@ -608,16 +821,144 @@ export function StaffPoolClient({ staff, locations }: Props) {
                         </div>
                       )}
 
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 w-full gap-1.5 text-xs"
-                        onClick={() =>
-                          toast.info(`Managing ${member.name}'s locations`)
-                        }
-                      >
-                        Manage Locations
-                      </Button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1.5 text-xs"
+                          onClick={() => setManaging(member)}
+                        >
+                          <MapPin className="size-3.5" />
+                          Manage
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1.5 text-xs"
+                          onClick={() => setDispatching(member)}
+                        >
+                          <ArrowLeftRight className="size-3.5" />
+                          Send
+                        </Button>
+                      </div>
+
+                      {/* Cross-location performance (inline, expandable) */}
+                      {(() => {
+                        const perf = perfById.get(member.staffId);
+                        const isOpen = expandedId === member.staffId;
+                        return (
+                          <div className="border-t pt-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedId(isOpen ? null : member.staffId)
+                              }
+                              aria-expanded={isOpen}
+                              className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between text-[11px] font-medium"
+                            >
+                              Performance by location
+                              <ChevronDown
+                                className={cn(
+                                  "size-3.5 transition-transform",
+                                  isOpen && "rotate-180",
+                                )}
+                              />
+                            </button>
+                            {isOpen && (
+                              <div className="mt-2 space-y-1.5">
+                                {!perf ? (
+                                  <p className="text-muted-foreground text-[11px]">
+                                    No cross-location performance data for this
+                                    member.
+                                  </p>
+                                ) : (
+                                  <>
+                                    {(() => {
+                                      const div = getRatingDivergence(
+                                        perf,
+                                        locations,
+                                      );
+                                      return div ? (
+                                        <div className="flex items-start gap-1.5 rounded-md border border-amber-300/60 bg-amber-50/50 px-2 py-1.5 text-[10px] text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+                                          <AlertTriangle className="mt-px size-3 shrink-0 text-amber-500" />
+                                          <span>
+                                            Rating gap:{" "}
+                                            <strong>
+                                              {div.bestLocation?.shortCode}{" "}
+                                              {div.bestRating.toFixed(1)}★
+                                            </strong>{" "}
+                                            vs{" "}
+                                            <strong>
+                                              {div.worstLocation?.shortCode}{" "}
+                                              {div.worstRating.toFixed(1)}★
+                                            </strong>{" "}
+                                            — worth a look.
+                                          </span>
+                                        </div>
+                                      ) : null;
+                                    })()}
+                                    {perf.locations.map((lp) => {
+                                      const loc = getLocation(lp.locationId);
+                                      const ls = loc
+                                        ? locationStyles(loc)
+                                        : styleFromKey("sky");
+                                      return (
+                                        <div
+                                          key={lp.locationId}
+                                          className="rounded-md border p-2"
+                                        >
+                                          <div className="mb-1 flex items-center gap-1.5">
+                                            <span
+                                              className={cn(
+                                                "flex size-5 items-center justify-center rounded-sm text-[9px] font-bold text-white",
+                                                ls.bg,
+                                              )}
+                                            >
+                                              {loc?.shortCode ?? "?"}
+                                            </span>
+                                            <span className="truncate text-[11px] font-medium">
+                                              {loc?.name ?? lp.locationId}
+                                            </span>
+                                          </div>
+                                          <div className="grid grid-cols-3 gap-1 text-[10px]">
+                                            <div>
+                                              <p className="text-muted-foreground flex items-center gap-0.5">
+                                                <Star className="size-2.5 fill-amber-500 text-amber-500" />
+                                                Rating
+                                              </p>
+                                              <p className="font-semibold tabular-nums">
+                                                {lp.avgRating.toFixed(1)}★
+                                              </p>
+                                            </div>
+                                            <div>
+                                              <p className="text-muted-foreground">
+                                                Completion
+                                              </p>
+                                              <p className="font-semibold tabular-nums">
+                                                {lp.completionRate}%
+                                              </p>
+                                            </div>
+                                            <div>
+                                              <p className="text-muted-foreground flex items-center gap-0.5">
+                                                <TrendingUp className="size-2.5 text-emerald-500" />
+                                                Revenue
+                                              </p>
+                                              <p className="font-semibold tabular-nums">
+                                                $
+                                                {lp.revenueGenerated.toLocaleString()}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
                 );
@@ -634,79 +975,131 @@ export function StaffPoolClient({ staff, locations }: Props) {
           </CardContent>
         )}
 
-        {/* ── SCHEDULE VIEW ── */}
+        {/* ── SCHEDULE VIEW — week calendar, whole pool, by location colour ── */}
         {view === "schedule" && (
           <CardContent className="p-4">
             <div className="overflow-x-auto">
-              <div className="min-w-[780px]">
-                <div className="bg-border grid grid-cols-[200px_repeat(7,minmax(0,1fr))] gap-px overflow-hidden rounded-lg border">
-                  <div className="bg-muted/40 px-3 py-2 text-[10px] font-semibold tracking-wider uppercase">
-                    Staff member
-                  </div>
-                  {WEEK_DAYS.map((d) => (
+              <div className="grid min-w-[900px] grid-cols-7 gap-2">
+                {WEEK_DAYS.map((day, idx) => {
+                  const dayShifts = shiftsByWeekday[idx];
+                  return (
                     <div
-                      key={d}
-                      className="bg-muted/40 px-2 py-2 text-center text-[10px] font-semibold tracking-wider uppercase"
+                      key={day}
+                      className="overflow-hidden rounded-lg border"
                     >
-                      {d}
+                      <div className="bg-muted/40 flex items-center justify-between px-2 py-1.5">
+                        <span className="text-[11px] font-semibold tracking-wider uppercase">
+                          {day}
+                        </span>
+                        <span className="text-muted-foreground text-[10px] tabular-nums">
+                          {dayShifts.length}
+                        </span>
+                      </div>
+                      <div className="min-h-[130px] space-y-1.5 p-1.5">
+                        {dayShifts.length === 0 ? (
+                          <p className="text-muted-foreground/60 pt-8 text-center text-[10px]">
+                            No shifts
+                          </p>
+                        ) : (
+                          dayShifts.map((sh) => {
+                            const loc = getLocation(sh.locationId);
+                            const s = loc
+                              ? locationStyles(loc)
+                              : styleFromKey("sky");
+                            const conflict = conflictIds.has(sh.id);
+                            return (
+                              <div
+                                key={sh.id}
+                                className={cn(
+                                  "rounded-md border-l-2 px-1.5 py-1",
+                                  conflict
+                                    ? "border-red-500 bg-red-500/10"
+                                    : cn(s.borderSoft, s.bgSofter),
+                                  sh.dispatched && "border-dashed",
+                                )}
+                              >
+                                <div className="flex items-center justify-between gap-1">
+                                  <span
+                                    className={cn(
+                                      "text-[10px] font-bold",
+                                      conflict
+                                        ? "text-red-600 dark:text-red-400"
+                                        : s.text,
+                                    )}
+                                  >
+                                    {loc?.shortCode ?? "?"}
+                                  </span>
+                                  <span className="flex items-center gap-0.5">
+                                    {sh.dispatched && (
+                                      <span className="rounded-sm bg-amber-500/15 px-1 text-[8px] font-bold tracking-wide text-amber-700 uppercase dark:text-amber-400">
+                                        Temp
+                                      </span>
+                                    )}
+                                    {conflict && (
+                                      <AlertTriangle className="size-3 text-red-500" />
+                                    )}
+                                  </span>
+                                </div>
+                                <p className="truncate text-[11px] font-medium">
+                                  {sh.staffName}
+                                </p>
+                                <p className="text-muted-foreground text-[10px] tabular-nums">
+                                  {sh.start}–{sh.end}
+                                </p>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
-                  ))}
-
-                  {filtered.map((member) => {
-                    const primaryLoc = getLocation(member.primaryLocation);
-                    const primaryS = primaryLoc
-                      ? locationStyles(primaryLoc)
-                      : styleFromKey("sky");
-                    return (
-                      <Row
-                        key={member.staffId}
-                        member={member}
-                        getLocation={getLocation}
-                        primaryS={primaryS}
-                      />
-                    );
-                  })}
-
-                  {filtered.length === 0 && (
-                    <div className="bg-background col-span-8 px-4 py-12 text-center">
-                      <Users className="text-muted-foreground/40 mx-auto mb-3 size-10" />
-                      <p className="text-muted-foreground text-sm">
-                        No staff match your filters
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="text-muted-foreground mt-4 flex flex-wrap items-center gap-3 text-[11px]">
-                  <span className="font-semibold">Legend:</span>
-                  {locations.map((loc) => {
-                    const s = locationStyles(loc);
-                    return (
-                      <span
-                        key={loc.id}
-                        className="inline-flex items-center gap-1.5"
-                      >
-                        <span className={cn("size-2.5 rounded-sm", s.bg)} />
-                        {loc.shortCode} ·{" "}
-                        {loc.name.split("–")[1]?.trim() ?? loc.name}
-                      </span>
-                    );
-                  })}
-                </div>
+                  );
+                })}
               </div>
+            </div>
+
+            <div className="text-muted-foreground mt-4 flex flex-wrap items-center gap-3 text-[11px]">
+              <span className="font-semibold">Legend:</span>
+              {locations.map((loc) => {
+                const s = locationStyles(loc);
+                return (
+                  <span
+                    key={loc.id}
+                    className="inline-flex items-center gap-1.5"
+                  >
+                    <span className={cn("size-2.5 rounded-sm", s.bg)} />
+                    {loc.shortCode} ·{" "}
+                    {loc.name.split("–")[1]?.trim() ?? loc.name}
+                  </span>
+                );
+              })}
+              {conflictIds.size > 0 && (
+                <span className="inline-flex items-center gap-1.5 text-red-600 dark:text-red-400">
+                  <AlertTriangle className="size-3" /> Shift conflict
+                </span>
+              )}
             </div>
           </CardContent>
         )}
 
-        {/* ── COVERAGE VIEW ── */}
+        {/* ── COVERAGE VIEW — staffing gaps over the next 14 days ── */}
         {view === "coverage" && (
           <CardContent className="space-y-4 p-4">
+            <div>
+              <p className="text-sm font-semibold">
+                Staffing coverage · next 14 days
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Scheduled / required staff per open day. Red = no staff, amber =
+                understaffed, — = closed.
+              </p>
+            </div>
+
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+              <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr>
                     <th className="bg-muted/30 text-muted-foreground rounded-tl-lg border px-3 py-2 text-left text-[10px] font-semibold tracking-wider uppercase">
-                      Role / Location
+                      Date
                     </th>
                     {locations.map((loc) => {
                       const s = locationStyles(loc);
@@ -715,76 +1108,47 @@ export function StaffPoolClient({ staff, locations }: Props) {
                           key={loc.id}
                           className="bg-muted/30 border px-3 py-2 text-center text-[10px] font-semibold tracking-wider uppercase"
                         >
-                          <div className="flex flex-col items-center gap-1">
-                            <span
-                              className={cn(
-                                "flex size-6 items-center justify-center rounded-md text-[10px] text-white",
-                                s.bg,
-                              )}
-                            >
-                              {loc.shortCode}
-                            </span>
-                            <span className={cn("text-[10px]", s.text)}>
-                              {loc.name.split("–")[1]?.trim() ?? loc.name}
-                            </span>
-                          </div>
+                          <span
+                            className={cn(
+                              "inline-flex size-6 items-center justify-center rounded-md text-[10px] text-white",
+                              s.bg,
+                            )}
+                          >
+                            {loc.shortCode}
+                          </span>
                         </th>
                       );
                     })}
-                    <th className="bg-muted/30 text-muted-foreground rounded-tr-lg border px-3 py-2 text-center text-[10px] font-semibold tracking-wider uppercase">
-                      Total
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {ROLES.map((role) => {
-                    const total = locations.reduce(
-                      (sum, l) => sum + (coverage[role]?.[l.id] ?? 0),
-                      0,
-                    );
-                    return (
-                      <tr key={role}>
-                        <td className="border px-3 py-2.5 text-xs font-semibold">
-                          {role}
+                  {coverageRows.map((row) => (
+                    <tr key={row.date}>
+                      <td className="border px-3 py-2 text-xs font-medium whitespace-nowrap">
+                        {weekdayShort(row.date)} {formatShortDate(row.date)}
+                      </td>
+                      {row.cells.map((c) => (
+                        <td
+                          key={c.loc.id}
+                          className={cn(
+                            "border px-3 py-2 text-center text-xs font-bold tabular-nums",
+                            c.status === "closed" &&
+                              "text-muted-foreground/50 bg-muted/20",
+                            c.status === "zero" &&
+                              "bg-red-500/10 text-red-600 dark:text-red-400",
+                            c.status === "insufficient" &&
+                              "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+                            c.status === "ok" &&
+                              "text-emerald-600 dark:text-emerald-400",
+                          )}
+                        >
+                          {c.status === "closed"
+                            ? "—"
+                            : `${c.scheduled}/${c.required}`}
                         </td>
-                        {locations.map((loc) => {
-                          const count = coverage[role]?.[loc.id] ?? 0;
-                          const offered =
-                            (role === "Groomer" &&
-                              !loc.services.includes("grooming")) ||
-                            (role === "Trainer" &&
-                              !loc.services.includes("training"))
-                              ? false
-                              : true;
-                          return (
-                            <td
-                              key={loc.id}
-                              className={cn(
-                                "border px-3 py-2.5 text-center text-sm font-bold tabular-nums",
-                                !offered &&
-                                  "text-muted-foreground/60 bg-muted/20",
-                                offered &&
-                                  count === 0 &&
-                                  "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400",
-                                offered && count > 0 && "text-foreground",
-                              )}
-                            >
-                              {!offered ? (
-                                "—"
-                              ) : count === 0 ? (
-                                <AlertTriangle className="mx-auto size-3.5 text-amber-500" />
-                              ) : (
-                                count
-                              )}
-                            </td>
-                          );
-                        })}
-                        <td className="border px-3 py-2.5 text-center text-sm font-bold tabular-nums">
-                          {total}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -794,36 +1158,53 @@ export function StaffPoolClient({ staff, locations }: Props) {
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center gap-2 text-sm">
                     <AlertTriangle className="size-4 text-amber-500" />
-                    Coverage gaps detected
+                    Coverage gaps detected ({gaps.length})
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    These role/location pairs offer the service but currently
-                    have no assigned staff.
+                    Open days in the next 14 days where a location is unstaffed
+                    or understaffed.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-1.5">
+                  <ul className="max-h-72 space-y-1.5 overflow-y-auto">
                     {gaps.map((g, i) => {
                       const loc = getLocation(g.locationId);
                       const s = loc ? locationStyles(loc) : styleFromKey("sky");
+                      const zero = g.scheduled === 0;
                       return (
                         <li
-                          key={i}
-                          className="bg-background flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs"
+                          key={`${g.date}-${g.locationId}-${i}`}
+                          className="bg-background flex flex-wrap items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs"
                         >
                           <span className={cn("size-2 rounded-full", s.bg)} />
-                          <span className="font-semibold">{g.role}</span>
-                          <span className="text-muted-foreground">at</span>
+                          <span className="font-semibold whitespace-nowrap">
+                            {weekdayShort(g.date)} {formatShortDate(g.date)}
+                          </span>
                           <span className={cn("font-semibold", s.text)}>
                             {g.locationName}
                           </span>
+                          <span
+                            className={cn(
+                              "rounded-md px-1.5 py-px text-[10px] font-semibold tabular-nums",
+                              zero
+                                ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                                : "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+                            )}
+                          >
+                            {g.scheduled}/{g.required} staff
+                          </span>
+                          {g.window && (
+                            <span className="text-muted-foreground tabular-nums">
+                              {g.window}
+                            </span>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
                             className="ml-auto h-6 gap-1 text-[11px]"
                             onClick={() =>
                               toast.info(
-                                `Assigning a ${g.role} to ${g.locationName}`,
+                                `Assigning staff to ${g.locationName} on ${weekdayShort(g.date)} ${formatShortDate(g.date)}`,
                               )
                             }
                           >
@@ -837,13 +1218,14 @@ export function StaffPoolClient({ staff, locations }: Props) {
               </Card>
             ) : (
               <Card className="border-emerald-300/60 bg-emerald-50/40 dark:border-emerald-900/40 dark:bg-emerald-950/10">
-                <CardContent className="flex items-center gap-3 pt-4 pb-4">
+                <CardContent className="flex items-center gap-3 py-4">
                   <Shield className="size-5 text-emerald-500" />
                   <div>
-                    <p className="text-sm font-semibold">All roles covered</p>
+                    <p className="text-sm font-semibold">
+                      Fully staffed for the next 14 days
+                    </p>
                     <p className="text-muted-foreground text-xs">
-                      Every active service has at least one assigned staff
-                      member.
+                      Every open day meets its required staffing level.
                     </p>
                   </div>
                 </CardContent>
@@ -854,7 +1236,7 @@ export function StaffPoolClient({ staff, locations }: Props) {
       </Card>
 
       <Card className="border-amber-200/60 bg-amber-50/30 dark:border-amber-900/30 dark:bg-amber-950/10">
-        <CardContent className="flex items-start gap-3 pt-4 pb-4">
+        <CardContent className="flex items-start gap-3 py-4">
           <Filter className="mt-0.5 size-4 shrink-0 text-amber-500" />
           <div>
             <p className="text-sm font-medium">
@@ -871,72 +1253,102 @@ export function StaffPoolClient({ staff, locations }: Props) {
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
-}
 
-function Row({
-  member,
-  getLocation,
-  primaryS,
-}: {
-  member: StaffMember;
-  getLocation: (id: string) => Location | undefined;
-  primaryS: ReturnType<typeof locationStyles>;
-}) {
-  const cells: React.ReactNode[] = [];
-  for (let day = 0; day < 7; day++) {
-    const shifts = member.upcomingShifts.filter(
-      (s) => getDayIndex(s.date) === day,
-    );
-    cells.push(
-      <div
-        key={day}
-        className="bg-background min-h-[58px] space-y-1 px-1.5 py-1.5"
-      >
-        {shifts.length === 0 ? (
-          <div className="bg-muted/20 h-full rounded-md" />
-        ) : (
-          shifts.map((shift, i) => {
-            const loc = getLocation(shift.locationId);
-            const s = loc ? locationStyles(loc) : primaryS;
-            return (
-              <div
-                key={i}
-                className={cn(
-                  "rounded-md border-l-2 px-1.5 py-1 text-[10px]/tight",
-                  s.borderSoft,
-                  s.bgSofter,
-                )}
-              >
-                <p className={cn("font-semibold", s.text)}>{loc?.shortCode}</p>
-                <p className="text-muted-foreground tabular-nums">
-                  {shift.start}–{shift.end}
-                </p>
-              </div>
+      {managing && (
+        <ManageLocationsDialog
+          key={managing.staffId}
+          member={managing}
+          locations={locations}
+          onOpenChange={(o) => {
+            if (!o) setManaging(null);
+          }}
+          onSave={(assignedLocations, primaryLocationId) => {
+            const target = managing;
+            setMembers((prev) =>
+              prev.map((m) =>
+                m.staffId === target.staffId
+                  ? {
+                      ...m,
+                      assignedLocations,
+                      primaryLocation: primaryLocationId,
+                      primaryLocationName:
+                        locations.find((l) => l.id === primaryLocationId)
+                          ?.name ?? m.primaryLocationName,
+                    }
+                  : m,
+              ),
             );
-          })
-        )}
-      </div>,
-    );
-  }
-  return (
-    <>
-      <div className="bg-background flex items-center gap-2 px-3 py-2">
-        <div
-          className={cn(
-            "flex size-7 items-center justify-center rounded-full text-[10px] font-bold text-white",
-            primaryS.bg,
-          )}
-        >
-          {initialsOf(member.name)}
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-xs font-semibold">{member.name}</p>
-          <p className="text-muted-foreground text-[10px]">{member.role}</p>
-        </div>
-      </div>
-      {cells}
-    </>
+            setManaging(null);
+            toast.success(`${target.name}'s locations updated`);
+          }}
+        />
+      )}
+
+      {dispatching && (
+        <SendToLocationDialog
+          key={dispatching.staffId}
+          member={dispatching}
+          locations={locations}
+          onOpenChange={(o) => {
+            if (!o) setDispatching(null);
+          }}
+          onSend={(payload: DispatchPayload) => {
+            const target = dispatching;
+            const toName =
+              locations.find((l) => l.id === payload.toLocationId)?.name ??
+              payload.toLocationId;
+            // Transfer record for the dispatch.
+            setDispatches((prev) => [
+              {
+                id: `disp-${target.staffId}-${Date.now()}`,
+                staffId: target.staffId,
+                staffName: target.name,
+                fromLocationId: target.primaryLocation,
+                toLocationId: payload.toLocationId,
+                date: payload.date,
+                start: payload.start,
+                end: payload.end,
+                createdAt: new Date().toISOString(),
+              },
+              ...prev,
+            ]);
+            // Add the temporary shift so it shows on the Schedule tab.
+            setMembers((prev) =>
+              prev.map((m) =>
+                m.staffId === target.staffId
+                  ? {
+                      ...m,
+                      upcomingShifts: [
+                        ...m.upcomingShifts,
+                        {
+                          locationId: payload.toLocationId,
+                          date: payload.date,
+                          start: payload.start,
+                          end: payload.end,
+                          dispatched: true,
+                        },
+                      ],
+                    }
+                  : m,
+              ),
+            );
+            setDispatching(null);
+            toast.success(
+              `${target.name} dispatched to ${toName} on ${payload.date}`,
+            );
+          }}
+        />
+      )}
+
+      {payrollOpen && (
+        <PayrollExportDialog
+          members={members}
+          locations={locations}
+          onOpenChange={(o) => {
+            if (!o) setPayrollOpen(false);
+          }}
+        />
+      )}
+    </div>
   );
 }

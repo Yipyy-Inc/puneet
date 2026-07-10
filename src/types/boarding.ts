@@ -79,6 +79,18 @@ export type MedFrequencyRule = z.infer<typeof medFrequencyRuleSchema>;
 // Medication Schedule (boarding-specific, not the same as lib/types.ts meds)
 // ============================================================================
 
+/** How a medication is administered (route). Optional on the booking; the
+ *  daily-care modal defaults to "oral" when a booking doesn't specify. */
+export const medAdminMethodSchema = z.enum([
+  "oral",
+  "topical",
+  "injection",
+  "eye_drops",
+  "ear_drops",
+]);
+
+export type MedAdminMethod = z.infer<typeof medAdminMethodSchema>;
+
 export const medicationScheduleSchema = z.object({
   id: z.string(),
   medicationName: z.string(),
@@ -88,6 +100,7 @@ export const medicationScheduleSchema = z.object({
   instructions: z.string(),
   requiresPhotoProof: z.boolean(),
   frequencyRule: medFrequencyRuleSchema.optional(),
+  administrationMethod: medAdminMethodSchema.optional(),
 });
 
 export type MedicationSchedule = z.infer<typeof medicationScheduleSchema>;
@@ -721,17 +734,43 @@ export type DailyCareTaskType =
   | "bedding_change"
   | "custom";
 
+/** How a custom step is logged, chosen in the Step Creator (A7.5). Drives the
+ *  Custom log modal's minimal UI. Only meaningful when taskType === "custom". */
+export type CustomLogType = "confirm" | "chips" | "notes" | "photo";
+
 export type DailyCareStep = {
   id: string;
   name: string;
   time: string; // "HH:MM" 24h
   taskType: DailyCareTaskType;
   description?: string;
+  /** For custom steps: which log UI to render. Defaults to a simple confirm. */
+  logType?: CustomLogType;
   enabled: boolean;
   sortOrder: number;
+  /** Who is responsible for this step. Undefined = unassigned. */
+  assignedStaff?:
+    | { kind: "unassigned" }
+    | { kind: "role"; role: string }
+    | { kind: "person"; staffId: string; staffName: string };
+  /** When true, this step triggers the Last Call rollcall. */
+  requiresHeadCount?: boolean;
+  /** Days this step runs: 0–6 (Sun–Sat). Undefined = all 7 days. */
+  activeDays?: number[];
+  /** Which bookings this step applies to. Undefined = all. */
+  appliesTo?:
+    | { kind: "all" }
+    | { kind: "feeding_plan" }
+    | { kind: "medications" }
+    | { kind: "addon"; addonId?: string }
+    | { kind: "tags"; tags: string[] };
 };
 
 export type FacilityDailyCareConfig = {
   steps: DailyCareStep[];
   alertOverdueAfterMinutes: number;
+  /** Saved step templates the facility can switch between. */
+  templates?: { id: string; name: string; steps: DailyCareStep[] }[];
+  /** The currently-applied template id, if any. */
+  activeTemplateId?: string;
 };

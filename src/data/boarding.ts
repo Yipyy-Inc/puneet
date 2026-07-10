@@ -1101,12 +1101,15 @@ export const facilityDailyCareConfig: FacilityDailyCareConfig = {
     },
     {
       id: "step-evening-potty",
-      name: "Evening Potty Round",
+      name: "Evening Potty Round (Last Call)",
       time: "21:00",
       taskType: "potty",
       description: "Final bathroom break before lights out",
       enabled: true,
       sortOrder: 11,
+      // F1: the last potty step of the day is the Last Call rollcall — it
+      // requires a full head count before it can be marked complete.
+      requiresHeadCount: true,
     },
   ],
 };

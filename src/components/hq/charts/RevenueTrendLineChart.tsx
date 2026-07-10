@@ -11,6 +11,7 @@ import {
   Legend,
 } from "recharts";
 import type { Location } from "@/types/location";
+import { locationHex } from "@/lib/hq/location-styles";
 
 interface Props {
   data: { month: string; [locationId: string]: number | string }[];
@@ -66,9 +67,9 @@ export function RevenueTrendLineChart({
             key={loc.id}
             type="monotone"
             dataKey={loc.id}
-            stroke={loc.color}
+            stroke={locationHex(loc)}
             strokeWidth={2.5}
-            dot={{ r: 3, strokeWidth: 2, fill: loc.color }}
+            dot={{ r: 3, strokeWidth: 2, fill: locationHex(loc) }}
             activeDot={{ r: 5 }}
           />
         ))}

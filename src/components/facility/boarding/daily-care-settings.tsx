@@ -1,24 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
-  Plus,
-  Trash2,
-  Save,
-  Edit,
-  X,
-  ChevronUp,
-  ChevronDown,
-  PawPrint,
-  Utensils,
-  Pill,
-  Star,
-  Droplets,
-  SprayCan,
-  BedDouble,
-  Settings2,
-  Clock,
-} from "lucide-react";
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Plus, Trash2, Check, GripVertical, Clock, Pencil } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -32,77 +32,11 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { toast } from "sonner";
 import { useDailyCareConfig } from "@/hooks/use-daily-care-config";
-import type {
-  FacilityDailyCareConfig,
-  DailyCareStep,
-  DailyCareTaskType,
-} from "@/types/boarding";
-
-// ── Task type metadata ──────────────────────────────────────────────────────
-
-const TASK_TYPE_META: Record<
-  DailyCareTaskType,
-  { label: string; Icon: React.ElementType; color: string; bg: string }
-> = {
-  potty: {
-    label: "Potty Round",
-    Icon: PawPrint,
-    color: "text-green-600 dark:text-green-400",
-    bg: "bg-green-100 dark:bg-green-900/30",
-  },
-  feeding: {
-    label: "Feeding",
-    Icon: Utensils,
-    color: "text-amber-600 dark:text-amber-400",
-    bg: "bg-amber-100 dark:bg-amber-900/30",
-  },
-  medication: {
-    label: "Medications",
-    Icon: Pill,
-    color: "text-red-600 dark:text-red-400",
-    bg: "bg-red-100 dark:bg-red-900/30",
-  },
-  addon: {
-    label: "Add-Ons",
-    Icon: Star,
-    color: "text-purple-600 dark:text-purple-400",
-    bg: "bg-purple-100 dark:bg-purple-900/30",
-  },
-  water_refill: {
-    label: "Water Refill",
-    Icon: Droplets,
-    color: "text-blue-600 dark:text-blue-400",
-    bg: "bg-blue-100 dark:bg-blue-900/30",
-  },
-  kennel_clean: {
-    label: "Kennel Cleaning",
-    Icon: SprayCan,
-    color: "text-cyan-600 dark:text-cyan-400",
-    bg: "bg-cyan-100 dark:bg-cyan-900/30",
-  },
-  bedding_change: {
-    label: "Bedding Change",
-    Icon: BedDouble,
-    color: "text-indigo-600 dark:text-indigo-400",
-    bg: "bg-indigo-100 dark:bg-indigo-900/30",
-  },
-  custom: {
-    label: "Custom Task",
-    Icon: Settings2,
-    color: "text-slate-600 dark:text-slate-400",
-    bg: "bg-slate-100 dark:bg-slate-900/30",
-  },
-};
+import { TASK_TYPE_META } from "@/components/daily-care/task-type-meta";
+import { StepCreatorModal } from "./StepCreatorModal";
+import { ScheduleTemplates } from "./ScheduleTemplates";
+import type { FacilityDailyCareConfig, DailyCareStep } from "@/types/boarding";
 
 function fmt12(t: string): string {
   const [h, m] = t.split(":").map(Number);
@@ -114,31 +48,49 @@ function fmt12(t: string): string {
 
 function StepRow({
   step,
-  isFirst,
-  isLast,
   onToggle,
+  onEdit,
   onDelete,
-  onMoveUp,
-  onMoveDown,
-  isEditing,
 }: {
   step: DailyCareStep;
-  isFirst: boolean;
-  isLast: boolean;
   onToggle: () => void;
+  onEdit: () => void;
   onDelete: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-  isEditing: boolean;
 }) {
   const meta = TASK_TYPE_META[step.taskType];
   const Icon = meta.Icon;
 
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: step.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       data-disabled={!step.enabled}
-      className="flex items-center gap-3 rounded-lg border p-3 transition-colors data-[disabled=true]:opacity-50"
+      data-dragging={isDragging}
+      className="bg-card flex items-center gap-3 rounded-lg border p-3 transition-colors data-[disabled=true]:opacity-50 data-[dragging=true]:opacity-60 data-[dragging=true]:shadow-lg"
     >
+      <button
+        type="button"
+        className="text-muted-foreground hover:text-foreground shrink-0 cursor-grab touch-none active:cursor-grabbing"
+        aria-label={`Reorder ${step.name}`}
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-4" />
+      </button>
+
       <div
         className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${meta.bg}`}
       >
@@ -163,177 +115,68 @@ function StepRow({
         </div>
       </div>
 
-      {isEditing && (
-        <div className="flex shrink-0 items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            disabled={isFirst}
-            onClick={onMoveUp}
-            title="Move up"
-          >
-            <ChevronUp className="size-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            disabled={isLast}
-            onClick={onMoveDown}
-            title="Move down"
-          >
-            <ChevronDown className="size-3.5" />
-          </Button>
-          <Switch
-            checked={step.enabled}
-            onCheckedChange={onToggle}
-            className="scale-90"
-            title={step.enabled ? "Disable step" : "Enable step"}
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-destructive hover:text-destructive size-7"
-            onClick={onDelete}
-            title="Delete step"
-          >
-            <Trash2 className="size-3.5" />
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Add Step Form ──────────────────────────────────────────────────────────
-
-function AddStepForm({
-  onAdd,
-  onCancel,
-}: {
-  onAdd: (step: Omit<DailyCareStep, "id" | "sortOrder">) => void;
-  onCancel: () => void;
-}) {
-  const [name, setName] = useState("");
-  const [time, setTime] = useState("");
-  const [taskType, setTaskType] = useState<DailyCareTaskType>("potty");
-  const [description, setDescription] = useState("");
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim() || !time) return;
-    onAdd({
-      name: name.trim(),
-      time,
-      taskType,
-      description: description.trim() || undefined,
-      enabled: true,
-    });
-    setName("");
-    setTime("");
-    setTaskType("potty");
-    setDescription("");
-  }
-
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-3 rounded-lg border border-dashed p-4"
-    >
-      <p className="text-sm font-medium">New Step</p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="col-span-2 space-y-1.5">
-          <Label className="text-xs">Step Name</Label>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Morning Potty Round"
-            required
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Time</Label>
-          <Input
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            required
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Task Type</Label>
-          <Select
-            value={taskType}
-            onValueChange={(v) => setTaskType(v as DailyCareTaskType)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(TASK_TYPE_META) as DailyCareTaskType[]).map(
-                (type) => {
-                  const m = TASK_TYPE_META[type];
-                  const MIcon = m.Icon;
-                  return (
-                    <SelectItem key={type} value={type}>
-                      <span className="flex items-center gap-2">
-                        <MIcon className={`size-3.5 ${m.color}`} />
-                        {m.label}
-                      </span>
-                    </SelectItem>
-                  );
-                },
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="space-y-1.5">
-        <Label className="text-xs">Description (optional)</Label>
-        <Textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Staff instructions for this step..."
-          rows={2}
-          className="resize-none"
+      <div className="flex shrink-0 items-center gap-1">
+        <Switch
+          checked={step.enabled}
+          onCheckedChange={onToggle}
+          className="scale-90"
+          title={step.enabled ? "Disable step" : "Enable step"}
         />
-      </div>
-      <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={!name.trim() || !time}>
-          <Plus className="mr-1.5 size-3.5" />
-          Add Step
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7"
+          onClick={onEdit}
+          title="Edit step"
+        >
+          <Pencil className="size-3.5" />
         </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-destructive hover:text-destructive size-7"
+          onClick={onDelete}
+          title="Delete step"
+        >
+          <Trash2 className="size-3.5" />
         </Button>
       </div>
-    </form>
+    </div>
   );
 }
 
 // ── DailyCareSettings ──────────────────────────────────────────────────────
 
 export function DailyCareSettings() {
-  const {
-    config: savedConfig,
-    setConfig: persistConfig,
-    reset,
-  } = useDailyCareConfig();
-  const [draft, setDraft] = useState<FacilityDailyCareConfig>(savedConfig);
-  const [isEditing, setIsEditing] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const { config, setConfig: persistConfig, reset } = useDailyCareConfig();
+  // Step Creator modal (spec 4.3) — null editingStep means "create new".
+  const [stepModalOpen, setStepModalOpen] = useState(false);
+  const [editingStep, setEditingStep] = useState<DailyCareStep | null>(null);
 
-  // Active config is the live draft while editing, the saved store otherwise
-  const config = isEditing ? draft : savedConfig;
-  const setConfig = setDraft;
+  // Subtle "saved" affordance — every change persists immediately (the store
+  // re-renders the daily list live); this just flashes a brief confirmation.
+  const [justSaved, setJustSaved] = useState(false);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function markSaved() {
+    setJustSaved(true);
+    if (savedTimer.current) clearTimeout(savedTimer.current);
+    savedTimer.current = setTimeout(() => setJustSaved(false), 1500);
+  }
+
+  // Persist directly to the store on every edit — no draft, no Save button.
+  function updateConfig(
+    updater: (prev: FacilityDailyCareConfig) => FacilityDailyCareConfig,
+  ) {
+    persistConfig(updater(config));
+    markSaved();
+  }
 
   const sortedSteps = [...config.steps].sort(
     (a, b) => a.sortOrder - b.sortOrder,
   );
 
   function toggleStep(id: string) {
-    setConfig((prev) => ({
+    updateConfig((prev) => ({
       ...prev,
       steps: prev.steps.map((s) =>
         s.id === id ? { ...s, enabled: !s.enabled } : s,
@@ -342,68 +185,108 @@ export function DailyCareSettings() {
   }
 
   function deleteStep(id: string) {
-    setConfig((prev) => ({
+    updateConfig((prev) => ({
       ...prev,
       steps: prev.steps.filter((s) => s.id !== id),
     }));
   }
 
-  function moveStep(id: string, direction: "up" | "down") {
-    const sorted = [...config.steps].sort((a, b) => a.sortOrder - b.sortOrder);
-    const idx = sorted.findIndex((s) => s.id === id);
-    if (idx < 0) return;
-    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+  // Drag-to-reorder (keyboard-accessible via dnd-kit's KeyboardSensor).
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
-    const a = sorted[idx];
-    const b = sorted[swapIdx];
-    if (!a || !b) return;
-
-    const aOrder = a.sortOrder;
-    const bOrder = b.sortOrder;
-
-    setConfig((prev) => ({
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = sortedSteps.findIndex((s) => s.id === active.id);
+    const newIndex = sortedSteps.findIndex((s) => s.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    // Re-number sortOrder to the new positions and persist immediately.
+    const reordered = arrayMove(sortedSteps, oldIndex, newIndex);
+    const orderById = new Map(reordered.map((s, i) => [s.id, i]));
+    updateConfig((prev) => ({
       ...prev,
-      steps: prev.steps.map((s) => {
-        if (s.id === a.id) return { ...s, sortOrder: bOrder };
-        if (s.id === b.id) return { ...s, sortOrder: aOrder };
-        return s;
-      }),
+      steps: prev.steps.map((s) => ({
+        ...s,
+        sortOrder: orderById.get(s.id) ?? s.sortOrder,
+      })),
     }));
   }
 
-  function addStep(partial: Omit<DailyCareStep, "id" | "sortOrder">) {
-    const maxSort = Math.max(0, ...config.steps.map((s) => s.sortOrder));
-    setConfig((prev) => ({
+  function openCreate() {
+    setEditingStep(null);
+    setStepModalOpen(true);
+  }
+
+  function openEdit(step: DailyCareStep) {
+    setEditingStep(step);
+    setStepModalOpen(true);
+  }
+
+  // One handler for both create and edit (the modal is the single source).
+  function handleStepSubmit(data: Omit<DailyCareStep, "id" | "sortOrder">) {
+    if (editingStep) {
+      const id = editingStep.id;
+      updateConfig((prev) => ({
+        ...prev,
+        steps: prev.steps.map((s) => (s.id === id ? { ...s, ...data } : s)),
+      }));
+    } else {
+      const maxSort = Math.max(0, ...config.steps.map((s) => s.sortOrder));
+      updateConfig((prev) => ({
+        ...prev,
+        steps: [
+          ...prev.steps,
+          { id: `step-${Date.now()}`, sortOrder: maxSort + 1, ...data },
+        ],
+      }));
+    }
+    setStepModalOpen(false);
+    setEditingStep(null);
+  }
+
+  // ── Schedule templates (F1: config.templates) ──────────────────────────
+  function saveAsTemplate(name: string) {
+    updateConfig((prev) => ({
       ...prev,
-      steps: [
-        ...prev.steps,
+      templates: [
+        ...(prev.templates ?? []),
         {
-          id: `step-${Date.now()}`,
-          sortOrder: maxSort + 1,
-          ...partial,
+          id: `tpl-${Date.now()}`,
+          name,
+          steps: prev.steps.map((s) => structuredClone(s)),
         },
       ],
     }));
-    setShowAddForm(false);
   }
 
-  function handleStartEdit() {
-    setDraft(savedConfig);
-    setIsEditing(true);
+  function applyTemplate(steps: DailyCareStep[], days: number[] | null) {
+    // Restrict to specific weekdays when a subset is chosen (else run daily).
+    const restrictDays =
+      days && days.length > 0 && days.length < 7
+        ? [...days].sort((a, b) => a - b)
+        : null;
+    updateConfig((prev) => {
+      const now = Date.now();
+      const newSteps: DailyCareStep[] = steps.map((s, i) => ({
+        ...structuredClone(s),
+        id: `step-${now}-${i}`,
+        sortOrder: i,
+        ...(restrictDays ? { activeDays: restrictDays } : {}),
+      }));
+      return { ...prev, steps: newSteps };
+    });
   }
 
-  function handleSave() {
-    persistConfig(draft);
-    toast.success("Daily care schedule saved");
-    setIsEditing(false);
-    setShowAddForm(false);
-  }
-
-  function handleCancel() {
-    setDraft(savedConfig);
-    setIsEditing(false);
-    setShowAddForm(false);
+  function deleteTemplate(id: string) {
+    updateConfig((prev) => ({
+      ...prev,
+      templates: (prev.templates ?? []).filter((t) => t.id !== id),
+    }));
   }
 
   // Silence unused-binding warning for reset (exposed for future "reset to defaults" UI)
@@ -414,33 +297,13 @@ export function DailyCareSettings() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <CardTitle>Daily Care Schedule</CardTitle>
-            <CardDescription className="mt-1">
-              Configure the steps staff follow each day. Every section in the
-              Daily Care List comes from these settings — nothing is hard-coded.
-              Add, reorder, or disable steps to match how your facility actually
-              runs.
-            </CardDescription>
-          </div>
-          {!isEditing ? (
-            <Button variant="outline" size="sm" onClick={handleStartEdit}>
-              <Edit className="mr-2 size-4" />
-              Edit
-            </Button>
-          ) : (
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleSave}>
-                <Save className="mr-2 size-4" />
-                Save
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleCancel}>
-                <X className="mr-2 size-4" />
-                Cancel
-              </Button>
-            </div>
-          )}
+        <div>
+          <CardTitle>Daily Care Schedule</CardTitle>
+          <CardDescription className="mt-1">
+            Configure the steps staff follow each day. Every section in the
+            Daily Care List comes from these settings — nothing is hard-coded.
+            Changes save automatically and update the daily list live.
+          </CardDescription>
         </div>
         <div className="flex items-center gap-3 pt-1">
           <Badge variant="secondary">{sortedSteps.length} steps</Badge>
@@ -451,82 +314,104 @@ export function DailyCareSettings() {
           >
             {enabledCount} enabled
           </Badge>
+          <span
+            data-saved={justSaved}
+            className="text-muted-foreground ml-auto flex items-center gap-1 text-xs transition-colors data-[saved=true]:text-green-600 dark:data-[saved=true]:text-green-400"
+          >
+            <Check className="size-3.5" />
+            {justSaved ? "Saved" : "Autosaves"}
+          </span>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-2">
-        {sortedSteps.map((step, idx) => (
-          <StepRow
-            key={step.id}
-            step={step}
-            isFirst={idx === 0}
-            isLast={idx === sortedSteps.length - 1}
-            isEditing={isEditing}
-            onToggle={() => toggleStep(step.id)}
-            onDelete={() => deleteStep(step.id)}
-            onMoveUp={() => moveStep(step.id, "up")}
-            onMoveDown={() => moveStep(step.id, "down")}
-          />
-        ))}
-
-        {isEditing && (
-          <>
-            <Separator className="my-3" />
-            {showAddForm ? (
-              <AddStepForm
-                onAdd={addStep}
-                onCancel={() => setShowAddForm(false)}
-              />
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full border-dashed"
-                onClick={() => setShowAddForm(true)}
-              >
-                <Plus className="mr-2 size-4" />
-                Add Step
-              </Button>
-            )}
-          </>
-        )}
-
-        {isEditing && (
-          <>
-            <Separator className="my-3" />
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm font-medium">
-                  Overdue Alert Threshold
-                </Label>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  Alert the manager if a step is not completed within this many
-                  minutes past its scheduled time.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={5}
-                  max={120}
-                  value={config.alertOverdueAfterMinutes}
-                  onChange={(e) =>
-                    setConfig((prev) => ({
-                      ...prev,
-                      alertOverdueAfterMinutes:
-                        parseInt(e.target.value, 10) || 30,
-                    }))
-                  }
-                  className="w-20 text-right"
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={sortedSteps.map((s) => s.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-2">
+              {sortedSteps.map((step) => (
+                <StepRow
+                  key={step.id}
+                  step={step}
+                  onToggle={() => toggleStep(step.id)}
+                  onEdit={() => openEdit(step)}
+                  onDelete={() => deleteStep(step.id)}
                 />
-                <span className="text-muted-foreground text-sm whitespace-nowrap">
-                  min
-                </span>
-              </div>
+              ))}
             </div>
-          </>
-        )}
+          </SortableContext>
+        </DndContext>
+
+        <Separator className="my-3" />
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full border-dashed"
+          onClick={openCreate}
+        >
+          <Plus className="mr-2 size-4" />
+          Add Step
+        </Button>
+
+        <Separator className="my-3" />
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-sm font-medium">
+              Overdue Alert Threshold
+            </Label>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              Alert the manager if a step is not completed within this many
+              minutes past its scheduled time.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={5}
+              max={120}
+              value={config.alertOverdueAfterMinutes}
+              onChange={(e) =>
+                updateConfig((prev) => ({
+                  ...prev,
+                  alertOverdueAfterMinutes: parseInt(e.target.value, 10) || 30,
+                }))
+              }
+              className="w-20 text-right"
+            />
+            <span className="text-muted-foreground text-sm whitespace-nowrap">
+              min
+            </span>
+          </div>
+        </div>
+
+        <Separator className="my-3" />
+        <ScheduleTemplates
+          savedTemplates={config.templates ?? []}
+          hasSteps={config.steps.length > 0}
+          onSave={saveAsTemplate}
+          onApply={applyTemplate}
+          onDelete={deleteTemplate}
+        />
       </CardContent>
+
+      {stepModalOpen && (
+        <StepCreatorModal
+          open
+          onOpenChange={(o) => {
+            setStepModalOpen(o);
+            if (!o) setEditingStep(null);
+          }}
+          step={editingStep}
+          existingSteps={config.steps}
+          onSubmit={handleStepSubmit}
+        />
+      )}
     </Card>
   );
 }

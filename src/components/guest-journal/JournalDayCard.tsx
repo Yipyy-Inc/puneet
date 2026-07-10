@@ -3,7 +3,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, Pencil, Camera } from "lucide-react";
+import {
+  Check,
+  Pencil,
+  Camera,
+  AlertTriangle,
+  Image as ImageIcon,
+} from "lucide-react";
 import { format12h } from "@/lib/care-log-scheduler";
 import { metaFor } from "@/components/daily-care/task-type-meta";
 import {
@@ -73,6 +79,8 @@ export function JournalDayCard({
               ? getOutcomeOption(task.taskType, String(exec.outcome))
               : undefined;
             const isLogged = Boolean(exec);
+            const photos =
+              exec?.photoUrls ?? (exec?.photoUrl ? [exec.photoUrl] : []);
 
             return (
               <div
@@ -112,6 +120,12 @@ export function JournalDayCard({
                       {task.subDetails.join(" · ")}
                     </p>
                   )}
+                  {task.avoidList && task.avoidList.length > 0 && (
+                    <p className="mt-0.5 flex items-center gap-1 text-[10px] font-medium text-red-600 dark:text-red-400">
+                      <AlertTriangle className="size-2.5 shrink-0" />
+                      Avoid: {task.avoidList.join(", ")}
+                    </p>
+                  )}
                   {exec && (
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
                       {outcomeOpt && (
@@ -123,13 +137,26 @@ export function JournalDayCard({
                         </Badge>
                       )}
                       <span className="text-muted-foreground text-[10px]">
-                        {format12h(exec.executedAt)} · {exec.staffInitials}
+                        {format12h(exec.executedAt)} ·{" "}
+                        {exec.staffName ?? exec.staffInitials}
                       </span>
                       {exec.notes && (
                         <span className="text-muted-foreground text-[10px] italic">
                           &ldquo;{exec.notes}&rdquo;
                         </span>
                       )}
+                    </div>
+                  )}
+                  {exec && photos.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {photos.map((_, i) => (
+                        <div
+                          key={i}
+                          className="bg-muted flex size-8 items-center justify-center rounded-sm border"
+                        >
+                          <ImageIcon className="text-muted-foreground size-3.5" />
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

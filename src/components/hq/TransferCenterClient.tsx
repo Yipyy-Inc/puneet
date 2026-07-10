@@ -11,6 +11,7 @@ import {
   XCircle,
   AlertTriangle,
   Download,
+  Plus,
   Search,
   ChevronRight,
   TrendingUp,
@@ -25,6 +26,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import type { BookingTransfer, Location } from "@/types/location";
 import {
@@ -32,6 +43,8 @@ import {
   styleFromKey,
   type LocationColorClasses,
 } from "@/lib/hq/location-styles";
+import { InitiateTransferDialog } from "@/components/hq/InitiateTransferDialog";
+import { getTransferImpact } from "@/lib/hq/transfer-impact";
 
 interface Props {
   transfers: BookingTransfer[];
@@ -111,11 +124,17 @@ const BUCKETS: {
   { key: "older", label: "Earlier" },
 ];
 
-export function TransfersHistoryClient({ transfers, locations }: Props) {
+export function TransferCenterClient({
+  transfers: initialTransfers,
+  locations,
+}: Props) {
+  const [transfers, setTransfers] = useState(initialTransfers);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<
     BookingTransfer["status"] | "all"
   >("all");
+  const [confirmApproveAll, setConfirmApproveAll] = useState(false);
+  const [initiateOpen, setInitiateOpen] = useState(false);
 
   const getLocation = (id: string) => locations.find((l) => l.id === id);
 
@@ -200,6 +219,30 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
             100,
         );
 
+  // Split into transfers that need a decision vs. the completed/rejected log.
+  const actionable = useMemo(
+    () =>
+      [...filtered]
+        .filter(
+          (t) => t.status === "pending_approval" || t.status === "approved",
+        )
+        .sort((a, b) => +new Date(b.initiatedAt) - +new Date(a.initiatedAt)),
+    [filtered],
+  );
+  const history = useMemo(
+    () =>
+      filtered.filter(
+        (t) => t.status === "completed" || t.status === "rejected",
+      ),
+    [filtered],
+  );
+
+  // Transfers awaiting the owner's approval (the bulk-approvable subset).
+  const pendingApproval = useMemo(
+    () => actionable.filter((t) => t.status === "pending_approval"),
+    [actionable],
+  );
+
   const grouped = useMemo(() => {
     const today = new Date();
     const out: Record<
@@ -211,11 +254,28 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
       week: [],
       older: [],
     };
-    [...filtered]
+    [...history]
       .sort((a, b) => +new Date(b.initiatedAt) - +new Date(a.initiatedAt))
       .forEach((t) => out[bucketByRecency(t.initiatedAt, today)].push(t));
     return out;
-  }, [filtered]);
+  }, [history]);
+
+  const renderCard = (t: BookingTransfer) => {
+    const from = getLocation(t.fromLocationId);
+    const to = getLocation(t.toLocationId);
+    const fromS = from ? locationStyles(from) : styleFromKey("sky");
+    const toS = to ? locationStyles(to) : styleFromKey("sky");
+    return (
+      <TransferCard
+        key={t.id}
+        transfer={t}
+        from={from}
+        to={to}
+        fromS={fromS}
+        toS={toS}
+      />
+    );
+  };
 
   return (
     <div className="flex-1 space-y-7 p-4 pt-6 md:p-8">
@@ -236,14 +296,15 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
                 HQ
               </Link>
               <ChevronRight className="size-3" />
-              <span>Transfer History</span>
+              <span>Transfer Center</span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight">
-              Transfer History
+              Transfer Center
             </h1>
             <p className="text-muted-foreground text-sm">
-              All inter-location booking moves · {transfers.length} total ·{" "}
-              {counts.pending_approval} awaiting approval
+              Approve pending moves and review completed transfers ·{" "}
+              {counts.pending_approval + counts.approved} need action ·{" "}
+              {transfers.length} total
             </p>
           </div>
         </div>
@@ -252,10 +313,18 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
             variant="outline"
             size="sm"
             className="gap-1.5"
-            onClick={() => toast.success("Transfer log exported")}
+            onClick={() => toast.success("Transfer report exported")}
           >
             <Download className="size-3.5" />
             Export
+          </Button>
+          <Button
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setInitiateOpen(true)}
+          >
+            <Plus className="size-3.5" />
+            Initiate Transfer
           </Button>
         </div>
       </div>
@@ -459,10 +528,10 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
                 setStatusFilter(s.v as BookingTransfer["status"] | "all")
               }
               className={cn(
-                "rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all",
+                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                 statusFilter === s.v
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted/60",
+                  ? "bg-primary text-primary-foreground border-transparent shadow-sm"
+                  : "border-input bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground",
               )}
             >
               {s.label}
@@ -471,7 +540,7 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
         </div>
       </div>
 
-      {/* Timeline groups */}
+      {/* Action required + history */}
       {filtered.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-12">
@@ -482,46 +551,128 @@ export function TransfersHistoryClient({ transfers, locations }: Props) {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
-          {BUCKETS.map((b) => {
-            const list = grouped[b.key];
-            if (!list.length) return null;
-            return (
-              <section key={b.key} className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <CalendarRange className="text-muted-foreground size-3.5" />
-                  <h3 className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
-                    {b.label}
-                  </h3>
-                  <span className="text-muted-foreground text-[11px]">
-                    · {list.length}
-                  </span>
-                  <div className="bg-border ml-2 h-px flex-1" />
-                </div>
-                <div className="space-y-2.5">
-                  {list.map((t) => {
-                    const from = getLocation(t.fromLocationId);
-                    const to = getLocation(t.toLocationId);
-                    const fromS = from
-                      ? locationStyles(from)
-                      : styleFromKey("sky");
-                    const toS = to ? locationStyles(to) : styleFromKey("sky");
-                    return (
-                      <TransferCard
-                        key={t.id}
-                        transfer={t}
-                        from={from}
-                        to={to}
-                        fromS={fromS}
-                        toS={toS}
-                      />
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
+        <div className="space-y-8">
+          {/* Pending Actions — everything the owner needs to process */}
+          {actionable.length > 0 ? (
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <AlertTriangle className="size-4 text-amber-500" />
+                <h2 className="text-base font-semibold">Pending Actions</h2>
+                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                  {actionable.length}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  Require your approval or attention — process them all here
+                </span>
+                {pendingApproval.length > 0 && (
+                  <Button
+                    size="sm"
+                    className="ml-auto gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+                    onClick={() => setConfirmApproveAll(true)}
+                  >
+                    <CheckCircle2 className="size-4" />
+                    Approve all ({pendingApproval.length})
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-2.5">{actionable.map(renderCard)}</div>
+            </section>
+          ) : (
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="size-4 text-emerald-500" />
+                <h2 className="text-base font-semibold">Pending Actions</h2>
+              </div>
+              <p className="text-muted-foreground rounded-xl border px-4 py-8 text-center text-sm">
+                Nothing needs your attention — all transfers are processed.
+              </p>
+            </section>
+          )}
+
+          {/* Completed / rejected log */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <CalendarRange className="text-muted-foreground size-4" />
+              <h2 className="text-base font-semibold">History</h2>
+              <span className="text-muted-foreground text-xs">
+                Completed &amp; rejected transfers
+              </span>
+            </div>
+            {history.length === 0 ? (
+              <p className="text-muted-foreground rounded-xl border px-4 py-8 text-center text-sm">
+                No completed transfers match your filters.
+              </p>
+            ) : (
+              <div className="space-y-6">
+                {BUCKETS.map((b) => {
+                  const list = grouped[b.key];
+                  if (!list.length) return null;
+                  return (
+                    <div key={b.key} className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+                          {b.label}
+                        </h3>
+                        <span className="text-muted-foreground text-[11px]">
+                          · {list.length}
+                        </span>
+                        <div className="bg-border ml-2 h-px flex-1" />
+                      </div>
+                      <div className="space-y-2.5">{list.map(renderCard)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         </div>
+      )}
+
+      {/* Bulk approve confirmation */}
+      <AlertDialog open={confirmApproveAll} onOpenChange={setConfirmApproveAll}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Approve {pendingApproval.length} pending transfer
+              {pendingApproval.length === 1 ? "" : "s"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Every transfer currently awaiting your approval will be approved.
+              This can&apos;t be undone in bulk.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={() => {
+                const n = pendingApproval.length;
+                setConfirmApproveAll(false);
+                toast.success(
+                  `Approved ${n} pending transfer${n === 1 ? "" : "s"}`,
+                );
+              }}
+            >
+              Approve all
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {initiateOpen && (
+        <InitiateTransferDialog
+          locations={locations}
+          onOpenChange={(o) => {
+            if (!o) setInitiateOpen(false);
+          }}
+          onCreate={(transfer) => {
+            setTransfers((prev) => [transfer, ...prev]);
+            setInitiateOpen(false);
+            toast.success(
+              `Transfer created for booking #${transfer.bookingId}`,
+            );
+          }}
+        />
       )}
     </div>
   );
@@ -543,7 +694,7 @@ function KpiTile({
   const s = styleFromKey(tone);
   return (
     <Card className="overflow-hidden">
-      <CardContent className="relative pt-4 pb-4">
+      <CardContent className="relative py-4">
         <div
           className={cn(
             "absolute inset-0 bg-linear-to-br opacity-50",
@@ -588,6 +739,32 @@ function TransferCard({
 }) {
   const meta = STATUS_META[transfer.status];
   const StatusIcon = meta.icon;
+  const [confirm, setConfirm] = useState<
+    "approve" | "reject" | "finalize" | null
+  >(null);
+
+  const confirmMeta = {
+    approve: {
+      title: "Approve this transfer?",
+      body: `Booking #${transfer.bookingId} will move from ${from?.name ?? "origin"} to ${to?.name ?? "destination"}.`,
+      action: "Approve transfer",
+      run: () => toast.success(`Transfer #${transfer.bookingId} approved`),
+    },
+    reject: {
+      title: "Reject this transfer?",
+      body: `Booking #${transfer.bookingId} will stay at ${from?.name ?? "its current location"} and the requester will be notified.`,
+      action: "Reject transfer",
+      run: () => toast.info(`Transfer #${transfer.bookingId} rejected`),
+    },
+    finalize: {
+      title: "Finalize this transfer?",
+      body: `Booking #${transfer.bookingId}'s move to ${to?.name ?? "destination"} will be completed.`,
+      action: "Finalize transfer",
+      run: () => toast.success(`Transfer #${transfer.bookingId} finalized`),
+    },
+  } as const;
+
+  const active = confirm ? confirmMeta[confirm] : null;
 
   return (
     <Card className="overflow-hidden transition-all duration-200 hover:shadow-sm">
@@ -684,28 +861,24 @@ function TransferCard({
               )}
             </div>
 
-            <div className="flex gap-1.5">
+            <div className="flex gap-2">
               {transfer.status === "pending_approval" && (
                 <>
                   <Button
                     size="sm"
-                    className="h-7 gap-1 text-xs"
-                    onClick={() =>
-                      toast.success(`Transfer #${transfer.bookingId} approved`)
-                    }
+                    className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+                    onClick={() => setConfirm("approve")}
                   >
-                    <CheckCircle2 className="size-3" />
+                    <CheckCircle2 className="size-4" />
                     Approve
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-destructive h-7 gap-1 text-xs"
-                    onClick={() =>
-                      toast.info(`Transfer #${transfer.bookingId} rejected`)
-                    }
+                    className="gap-1.5 border-red-500/40 text-red-600 hover:bg-red-500/10 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                    onClick={() => setConfirm("reject")}
                   >
-                    <XCircle className="size-3" />
+                    <XCircle className="size-4" />
                     Reject
                   </Button>
                 </>
@@ -713,18 +886,83 @@ function TransferCard({
               {transfer.status === "approved" && (
                 <Button
                   size="sm"
-                  className="h-7 gap-1 text-xs"
-                  onClick={() =>
-                    toast.success(`Transfer #${transfer.bookingId} finalized`)
-                  }
+                  className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+                  onClick={() => setConfirm("finalize")}
                 >
-                  <CheckCircle2 className="size-3" />
+                  <CheckCircle2 className="size-4" />
                   Finalize
                 </Button>
               )}
             </div>
           </div>
         </div>
+
+        {/* Transfer impact — completed moves only */}
+        {transfer.status === "completed" &&
+          (() => {
+            const impact = getTransferImpact(transfer);
+            return (
+              <>
+                <Separator className="my-3" />
+                <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
+                  Transfer impact
+                </p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-md border p-2">
+                    <p className="text-muted-foreground text-[10px]">
+                      Price change
+                    </p>
+                    <p
+                      className={cn(
+                        "text-sm font-semibold tabular-nums",
+                        impact.priceDelta > 0 &&
+                          "text-emerald-600 dark:text-emerald-400",
+                        impact.priceDelta < 0 &&
+                          "text-rose-600 dark:text-rose-400",
+                      )}
+                    >
+                      {impact.priceLabel}
+                    </p>
+                  </div>
+                  <div className="rounded-md border p-2">
+                    <p className="text-muted-foreground text-[10px]">
+                      Customer
+                    </p>
+                    <p
+                      className={cn(
+                        "inline-flex items-center gap-1 text-sm font-semibold",
+                        impact.retained
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-amber-600 dark:text-amber-400",
+                      )}
+                    >
+                      {impact.retained ? (
+                        <>
+                          <CheckCircle2 className="size-3.5" />
+                          Retained
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="size-3.5" />
+                          At risk
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <div className="rounded-md border p-2">
+                    <p className="text-muted-foreground text-[10px]">
+                      Note · {impact.authorizedBy}
+                    </p>
+                    <p className="text-xs">
+                      {impact.note ?? (
+                        <span className="text-muted-foreground">No note</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
 
         {(transfer.completedAt || transfer.customerApprovedAt) && (
           <>
@@ -752,6 +990,33 @@ function TransferCard({
           </>
         )}
       </CardContent>
+
+      <AlertDialog
+        open={confirm !== null}
+        onOpenChange={(o) => !o && setConfirm(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{active?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{active?.body}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className={cn(
+                confirm === "reject" &&
+                  "bg-red-600 text-white hover:bg-red-700",
+              )}
+              onClick={() => {
+                active?.run();
+                setConfirm(null);
+              }}
+            >
+              {active?.action}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

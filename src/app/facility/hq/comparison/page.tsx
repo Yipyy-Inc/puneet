@@ -1,6 +1,6 @@
-import { locationComparisonData } from "@/data/hq-analytics";
-import { LocationComparisonClient } from "@/components/hq/LocationComparisonClient";
+import { redirect } from "next/navigation";
 
+// Location Comparison was rebuilt as the DataTable-based Performance page.
 export default function HQComparisonPage() {
-  return <LocationComparisonClient data={locationComparisonData} />;
+  redirect("/facility/hq/performance");
 }

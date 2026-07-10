@@ -1,12 +1,6 @@
-import { ClientActivityClient } from "@/components/hq/reports/ClientActivityClient";
-import { crossLocationClients } from "@/data/hq-analytics";
-import { getLocationsByFacility } from "@/data/locations";
+import { redirect } from "next/navigation";
 
+// Cross-Location Client Activity was moved to the Clients HQ page.
 export default function ClientActivityPage() {
-  return (
-    <ClientActivityClient
-      clients={crossLocationClients}
-      locations={getLocationsByFacility(11)}
-    />
-  );
+  redirect("/facility/hq/clients");
 }

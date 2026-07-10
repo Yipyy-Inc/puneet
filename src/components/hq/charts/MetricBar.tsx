@@ -16,7 +16,7 @@ const SIZE_CLASS = {
 
 export function MetricBar({
   percent,
-  fillClassName = "bg-sky-500",
+  fillClassName = "bg-slate-500",
   trackClassName = "bg-muted",
   className,
   size = "sm",

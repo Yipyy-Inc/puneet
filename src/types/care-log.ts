@@ -5,6 +5,8 @@
 // the other.
 // ============================================================================
 
+import type { MedAdminMethod, CustomLogType } from "@/types/boarding";
+
 export type ShiftType = "morning" | "afternoon" | "evening";
 
 export type CareTaskType =
@@ -34,17 +36,12 @@ export type PottyOutcome =
 
 export type FeedingOutcome =
   | "ate_all"
-  | "ate_half"
-  | "refused"
-  | "vomited_after"
-  | "slow_eater";
+  | "ate_most"
+  | "ate_some"
+  | "ate_little"
+  | "refused";
 
-export type MedicationOutcome =
-  | "administered"
-  | "refused"
-  | "spit_out"
-  | "delayed"
-  | "missed";
+export type MedicationOutcome = "given" | "skipped" | "refused" | "vomited";
 
 export type AddonOutcome =
   | "completed"
@@ -54,6 +51,67 @@ export type AddonOutcome =
   | "rescheduled";
 
 export type CareOutcome = "completed" | "skipped" | "issue_reported";
+
+// ── Health observation (raised from a log when a concern is noted) ──────────
+
+export type HealthObservationType =
+  | "limping"
+  | "lethargy"
+  | "abnormal_stool"
+  | "vomiting"
+  | "coughing"
+  | "eye"
+  | "ear"
+  | "skin"
+  | "other";
+
+export type HealthObservationSeverity =
+  | "monitoring"
+  | "needs_attention"
+  | "urgent";
+
+/** A health concern captured alongside a care log. Also raises a pet flag
+ *  (A4.3) and notifies the on-shift manager. */
+export type HealthObservation = {
+  type: HealthObservationType;
+  severity: HealthObservationSeverity;
+  notes?: string;
+};
+
+// ── Kennel cleaning detail (from the dedicated clean log) ───────────────────
+
+export type CleaningType = "full" | "quick" | "spot";
+
+/** Kennel-cleaning specifics captured by the clean log modal. The
+ *  `conditionNote`, when present, feeds the maintenance log. */
+export type CleaningDetail = {
+  type: CleaningType;
+  products?: string;
+  conditionNote?: string;
+};
+
+// ── Add-on delivery detail (from the dedicated add-on log) ──────────────────
+
+export type AddonGroupInteraction =
+  | "thrived"
+  | "good"
+  | "needed_monitoring"
+  | "separated";
+
+export type AddonEnergyLevel = "high" | "normal" | "low" | "lethargic";
+
+export type AddonIncidentSeverity = "minor" | "notable" | "serious";
+
+/** How an add-on service was actually delivered. Play-session-only fields
+ *  (group interaction, energy, incident) are present only for those services. */
+export type AddonLogDetail = {
+  actualMinutes?: number;
+  deliveredByStaffId?: string;
+  deliveredByName?: string;
+  groupInteraction?: AddonGroupInteraction;
+  energyLevel?: AddonEnergyLevel;
+  incident?: { severity: AddonIncidentSeverity; note: string };
+};
 
 export type AnyOutcome =
   | PottyOutcome
@@ -82,8 +140,33 @@ export type ScheduledTask = {
   frequencyNote?: string;
   behaviorTags: string[];
   alertTags: string[];
+  /** Allergens to avoid for this pet (from guest allergy data). Rendered as a
+   *  red "Avoid: …" line on every task row when non-empty. */
+  avoidList?: string[];
+  /** Per-pet care note that persists for the stay (from the guest record /
+   *  check-in, A6.6). Surfaced as a sticky-note indicator on the row. */
+  careNote?: string;
   /** Source step from FacilityDailyCareConfig, when applicable */
   sourceStepId?: string;
+  /** Structured medication detail for the dedicated medication log modal —
+   *  read-only, sourced from the booking. Present only on medication tasks. */
+  medDetail?: {
+    name: string;
+    dosage: string;
+    method: MedAdminMethod;
+    timingNote?: string;
+  };
+  /** Structured add-on detail for the dedicated add-on log modal — read-only,
+   *  from the booking. Present only on add-on tasks. */
+  addonDetail?: {
+    name: string;
+    bookedMinutes: number;
+    instructions?: string;
+    isPlaySession: boolean;
+  };
+  /** For custom steps: the declared Log Type (A7.5) that drives the Custom log
+   *  modal's minimal UI. Absent custom steps fall back to the enrichment log. */
+  customLogType?: CustomLogType;
 };
 
 // ── Task execution (the log record itself) ──────────────────────────────────
@@ -99,14 +182,41 @@ export type TaskExecution = {
   /** "HH:MM" — time within that day */
   executedAt: string;
   staffInitials: string;
+  /** Full display name of the staff member (single-source current user).
+   *  Optional for back-compat with legacy records that only carry initials. */
+  staffName?: string;
   outcome: AnyOutcome | string;
   /** For feeding: time food was served (separate from outcome time) */
   servedAt?: string;
   notes?: string;
   /** Reason the task was missed/skipped, if applicable */
   missedReason?: string;
-  /** Photo proof URL (e.g. for medications that require it) */
+  /** First attached photo — kept for back-compat; new writes also set photoUrls. */
   photoUrl?: string;
+  /** Up to 3 photos attached to the log (camera / library). */
+  photoUrls?: string[];
+  /** Health concern noted during this log — persisted with the record and
+   *  mirrored to a pet flag (A4.3). */
+  healthObservation?: HealthObservation;
+  /** Kennel-cleaning specifics (type, products, maintenance condition note). */
+  cleaning?: CleaningDetail;
+  /** Optional volume noted on a water-refill log (e.g. "Full bowl", "1 L"). */
+  waterVolume?: string;
+  /** Add-on delivery specifics (actual duration, deliverer, play-session
+   *  interaction/energy, incident). */
+  addon?: AddonLogDetail;
+  /** Enrichment / custom-care specifics (activity, duration, engagement). */
+  enrichment?: EnrichmentDetail;
+};
+
+// ── Enrichment / custom-care detail (from the dedicated enrichment log) ─────
+
+export type EngagementLevel = "high" | "normal" | "low";
+
+export type EnrichmentDetail = {
+  activityType?: string;
+  durationMinutes?: number;
+  engagement?: EngagementLevel;
 };
 
 // ── Alerts surfaced to the manager ──────────────────────────────────────────

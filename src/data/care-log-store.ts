@@ -45,7 +45,7 @@ const SEED_EXECUTIONS: TaskExecution[] = [
     date: "2026-04-22",
     executedAt: "08:05",
     staffInitials: "JS",
-    outcome: "administered",
+    outcome: "given",
     notes: "Hidden in pill pocket, no resistance",
   },
   {
@@ -69,7 +69,7 @@ const SEED_EXECUTIONS: TaskExecution[] = [
     executedAt: "07:55",
     servedAt: "07:40",
     staffInitials: "MK",
-    outcome: "ate_half",
+    outcome: "ate_some",
     notes: "Less interested today",
   },
   {
@@ -81,7 +81,7 @@ const SEED_EXECUTIONS: TaskExecution[] = [
     date: "2026-04-23",
     executedAt: "08:10",
     staffInitials: "MK",
-    outcome: "administered",
+    outcome: "given",
   },
   {
     id: "exec-bg001-d3-potty-1",
@@ -129,6 +129,17 @@ export const careLogStore = {
   },
 
   log(entry: Omit<TaskExecution, "id">): TaskExecution {
+    // Upsert by task + date: editing a mis-logged task corrects the existing
+    // record in place (same id) instead of appending a duplicate.
+    const prev = executions.find(
+      (e) => e.taskId === entry.taskId && e.date === entry.date,
+    );
+    if (prev) {
+      const updated: TaskExecution = { ...prev, ...entry };
+      executions = executions.map((e) => (e === prev ? updated : e));
+      notify();
+      return updated;
+    }
     const record: TaskExecution = {
       ...entry,
       id: `exec-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

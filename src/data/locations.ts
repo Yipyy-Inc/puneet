@@ -297,6 +297,9 @@ export const hqSettings: HQSettings = {
   sharedMedicalRecords: true,
   primaryLocationId: "loc-dv-main",
   delegatedHqAccess: [],
+  brandingNameScope: "both",
+  brandingLogoScope: "global",
+  brandingColorScope: "global",
 };
 
 export function getLocationById(id: string): Location | undefined {

@@ -113,6 +113,17 @@ export const locationComparisonData = [
     activeServices: 4,
     topService: "Boarding",
     nps: 92,
+    newBookings: 96,
+    noShowRate: 2.1,
+    avgLeadTimeDays: 9.2,
+    boardingOccupancy: 89,
+    daycareOccupancy: 91,
+    retentionRate: 92,
+    reviewCount: 148,
+    avgClientRating: 4.9,
+    outstandingInvoices: 14,
+    revPAK: 58,
+    servicesPerStaffHour: 0.39,
   },
   {
     locationId: "loc-dv-ouest",
@@ -137,6 +148,17 @@ export const locationComparisonData = [
     activeServices: 2,
     topService: "Grooming",
     nps: 88,
+    newBookings: 64,
+    noShowRate: 3.4,
+    avgLeadTimeDays: 6.5,
+    boardingOccupancy: 0,
+    daycareOccupancy: 81,
+    retentionRate: 88,
+    reviewCount: 96,
+    avgClientRating: 4.6,
+    outstandingInvoices: 8,
+    revPAK: 0,
+    servicesPerStaffHour: 0.41,
   },
   {
     locationId: "loc-dv-laval",
@@ -161,6 +183,17 @@ export const locationComparisonData = [
     activeServices: 3,
     topService: "Training",
     nps: 85,
+    newBookings: 88,
+    noShowRate: 4.0,
+    avgLeadTimeDays: 11.0,
+    boardingOccupancy: 84,
+    daycareOccupancy: 85,
+    retentionRate: 85,
+    reviewCount: 112,
+    avgClientRating: 4.7,
+    outstandingInvoices: 11,
+    revPAK: 52,
+    servicesPerStaffHour: 0.38,
   },
 ];
 
@@ -243,6 +276,88 @@ export const revenueTrend12Months: {
     "loc-dv-main": 48720,
     "loc-dv-ouest": 29450,
     "loc-dv-laval": 34890,
+  },
+];
+
+// ── NPS over time (12 months, per location) ──────────────────────────────
+// Trends up toward each location's current NPS (Plateau 92 / NDG 88 / Laval 85).
+export const npsTrend12Months: {
+  month: string;
+  "loc-dv-main": number;
+  "loc-dv-ouest": number;
+  "loc-dv-laval": number;
+}[] = [
+  {
+    month: "May 2025",
+    "loc-dv-main": 84,
+    "loc-dv-ouest": 80,
+    "loc-dv-laval": 78,
+  },
+  {
+    month: "Jun 2025",
+    "loc-dv-main": 85,
+    "loc-dv-ouest": 81,
+    "loc-dv-laval": 79,
+  },
+  {
+    month: "Jul 2025",
+    "loc-dv-main": 86,
+    "loc-dv-ouest": 82,
+    "loc-dv-laval": 80,
+  },
+  {
+    month: "Aug 2025",
+    "loc-dv-main": 86,
+    "loc-dv-ouest": 83,
+    "loc-dv-laval": 80,
+  },
+  {
+    month: "Sep 2025",
+    "loc-dv-main": 87,
+    "loc-dv-ouest": 84,
+    "loc-dv-laval": 81,
+  },
+  {
+    month: "Oct 2025",
+    "loc-dv-main": 88,
+    "loc-dv-ouest": 85,
+    "loc-dv-laval": 82,
+  },
+  {
+    month: "Nov 2025",
+    "loc-dv-main": 89,
+    "loc-dv-ouest": 85,
+    "loc-dv-laval": 82,
+  },
+  {
+    month: "Dec 2025",
+    "loc-dv-main": 90,
+    "loc-dv-ouest": 86,
+    "loc-dv-laval": 83,
+  },
+  {
+    month: "Jan 2026",
+    "loc-dv-main": 90,
+    "loc-dv-ouest": 87,
+    "loc-dv-laval": 84,
+  },
+  {
+    month: "Feb 2026",
+    "loc-dv-main": 91,
+    "loc-dv-ouest": 87,
+    "loc-dv-laval": 84,
+  },
+  {
+    month: "Mar 2026",
+    "loc-dv-main": 91,
+    "loc-dv-ouest": 88,
+    "loc-dv-laval": 85,
+  },
+  {
+    month: "Apr 2026",
+    "loc-dv-main": 92,
+    "loc-dv-ouest": 88,
+    "loc-dv-laval": 85,
   },
 ];
 
@@ -350,6 +465,74 @@ export const serviceMix: ServiceMixRow[] = [
       "loc-dv-laval": -1440,
     },
     color: "#64748b",
+  },
+];
+
+// ── Per-service performance (this month, network-wide) ───────────────────
+// Bookings + revenue per master service, keyed by service id. Per-service
+// revenue sums to the serviceMix category totals above. Powers the Service
+// Catalog's performance column (turns config into a BI view).
+export interface ServiceCatalogPerformance {
+  serviceId: string;
+  /** Times booked this month across all locations. */
+  bookings: number;
+  /** Revenue generated this month across all locations ($). */
+  revenue: number;
+}
+
+export const serviceCatalogPerformance: ServiceCatalogPerformance[] = [
+  { serviceId: "svc-boarding-standard", bookings: 168, revenue: 21740 },
+  { serviceId: "svc-boarding-luxury", bookings: 92, revenue: 16500 },
+  { serviceId: "svc-daycare-full", bookings: 421, revenue: 22100 },
+  { serviceId: "svc-daycare-half", bookings: 312, revenue: 10790 },
+  { serviceId: "svc-grooming-full", bookings: 132, revenue: 12240 },
+  { serviceId: "svc-grooming-bath", bookings: 96, revenue: 5580 },
+  { serviceId: "svc-training-puppy", bookings: 38, revenue: 9120 },
+  { serviceId: "svc-training-private", bookings: 48, revenue: 4560 },
+  { serviceId: "svc-addon-medication", bookings: 214, revenue: 1240 },
+  { serviceId: "svc-addon-walk", bookings: 278, revenue: 5000 },
+];
+
+export function getServicePerformance(
+  serviceId: string,
+): ServiceCatalogPerformance | undefined {
+  return serviceCatalogPerformance.find((p) => p.serviceId === serviceId);
+}
+
+// ── Outstanding payments (accounts receivable, per location) ─────────────
+// Current unpaid-invoice balances by location. A snapshot balance (not a
+// period-accumulated figure), summed into the Command Center's network total.
+export interface OutstandingPaymentsRow {
+  locationId: string;
+  locationName: string;
+  shortCode: string;
+  /** Current outstanding balance in CAD. */
+  outstanding: number;
+  /** Number of open (unpaid / partially paid) invoices. */
+  invoiceCount: number;
+}
+
+export const outstandingPaymentsByLocation: OutstandingPaymentsRow[] = [
+  {
+    locationId: "loc-dv-main",
+    locationName: "Plateau",
+    shortCode: "PLT",
+    outstanding: 4820,
+    invoiceCount: 14,
+  },
+  {
+    locationId: "loc-dv-ouest",
+    locationName: "NDG",
+    shortCode: "NDG",
+    outstanding: 2140,
+    invoiceCount: 8,
+  },
+  {
+    locationId: "loc-dv-laval",
+    locationName: "Laval",
+    shortCode: "LVL",
+    outstanding: 3675,
+    invoiceCount: 11,
   },
 ];
 

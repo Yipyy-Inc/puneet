@@ -17,19 +17,22 @@ export const OUTCOME_OPTIONS: Record<CareTaskType, OutcomeOption[]> = {
     { value: "diarrhea", label: "Diarrhea", tone: "danger" },
     { value: "vomit_noticed", label: "Vomit noticed", tone: "danger" },
   ],
+  // Matches the facility's Feeding Feedback Options (facility-config.ts
+  // careTaskFeedback.feeding): Ate all / most / some / little / Refused.
   feeding: [
     { value: "ate_all", label: "Ate all", tone: "success" },
-    { value: "ate_half", label: "Ate some", tone: "warning" },
+    { value: "ate_most", label: "Ate most", tone: "success" },
+    { value: "ate_some", label: "Ate some", tone: "warning" },
+    { value: "ate_little", label: "Ate little", tone: "warning" },
     { value: "refused", label: "Refused", tone: "danger" },
-    { value: "vomited_after", label: "Vomited after", tone: "danger" },
-    { value: "slow_eater", label: "Slow eater", tone: "neutral" },
   ],
+  // Matches the facility's Medication Feedback Options (facility-config.ts
+  // careTaskFeedback.medication): Given / Skipped / Refused / Vomited after.
   medication: [
-    { value: "administered", label: "Administered", tone: "success" },
-    { value: "delayed", label: "Delayed", tone: "warning" },
+    { value: "given", label: "Given", tone: "success" },
+    { value: "skipped", label: "Skipped", tone: "warning" },
     { value: "refused", label: "Refused", tone: "danger" },
-    { value: "spit_out", label: "Spit out", tone: "danger" },
-    { value: "missed", label: "Missed", tone: "danger" },
+    { value: "vomited", label: "Vomited after", tone: "danger" },
   ],
   addon: [
     { value: "completed", label: "Completed", tone: "success" },
@@ -60,4 +63,10 @@ export function outcomeBadgeClass(tone: OutcomeOption["tone"]): string {
 
 export function getOutcomeOption(taskType: CareTaskType, value: string) {
   return OUTCOME_OPTIONS[taskType].find((o) => o.value === value);
+}
+
+/** The default "mark as done" outcome for a task type — the first success
+ *  outcome. Used by the batch "Mark all as done" flow. */
+export function defaultOutcomeFor(taskType: CareTaskType) {
+  return OUTCOME_OPTIONS[taskType].find((o) => o.tone === "success");
 }
