@@ -1,9 +1,34 @@
 import type { BoardingGuest, MedicationSchedule } from "@/data/boarding";
 import type {
   FacilityDailyCareConfig,
+  DailyCareStep,
   MedFrequencyRule,
 } from "@/types/boarding";
 import type { ScheduledTask, ShiftType } from "@/types/care-log";
+
+// F1: whether a step's configured "Who This Task Applies To" rule includes a
+// given guest. Undefined / "all" = every current boarding guest (the default,
+// preserving the previous behaviour). Otherwise the booking-driven rule gates
+// the step's pet list.
+function guestMatchesAppliesTo(
+  guest: BoardingGuest,
+  appliesTo: DailyCareStep["appliesTo"],
+  guestTags: Set<string>,
+): boolean {
+  if (!appliesTo || appliesTo.kind === "all") return true;
+  switch (appliesTo.kind) {
+    case "feeding_plan":
+      return guest.feedingTimes.length > 0;
+    case "medications":
+      return guest.medications.length > 0;
+    case "addon":
+      return (guest.addOns ?? []).some(
+        (a) => !appliesTo.addonId || a.addonType === appliesTo.addonId,
+      );
+    case "tags":
+      return appliesTo.tags.some((t) => guestTags.has(t));
+  }
+}
 
 // ── Time helpers ────────────────────────────────────────────────────────────
 
@@ -104,9 +129,18 @@ export function generateScheduledTasks(
   guests: BoardingGuest[],
   dailyCareConfig: FacilityDailyCareConfig,
   today: Date = new Date(),
+  /** Per-pet stay-long care-note overrides (A4.5), keyed by guest id. When a
+   *  pet has an override it wins over its record's own notes. */
+  careNotes?: ReadonlyMap<string, string>,
 ): ScheduledTask[] {
   const tasks: ScheduledTask[] = [];
-  const enabledSteps = dailyCareConfig.steps.filter((s) => s.enabled);
+  // F1: honor step.activeDays (0–6, Sun–Sat). A step with activeDays runs only
+  // on those days; undefined activeDays runs every day.
+  const dayOfWeek = today.getDay();
+  const enabledSteps = dailyCareConfig.steps.filter(
+    (s) =>
+      s.enabled && (s.activeDays == null || s.activeDays.includes(dayOfWeek)),
+  );
 
   const pottySteps = enabledSteps.filter((s) => s.taskType === "potty");
   const feedingSteps = enabledSteps.filter((s) => s.taskType === "feeding");
@@ -122,6 +156,8 @@ export function generateScheduledTasks(
   for (const guest of guests) {
     const alertTags = buildAlertTags(guest);
     const behaviorTags: string[] = guest.tags ?? [];
+    // The guest's full tag set (alert + behavior) for appliesTo "tags" rules.
+    const guestTags = new Set<string>([...behaviorTags, ...alertTags]);
     const baseTask = {
       guestId: guest.id,
       bookingId: guest.bookingId,
@@ -130,10 +166,17 @@ export function generateScheduledTasks(
       kennelName: guest.kennelName,
       packageType: guest.packageType,
       behaviorTags,
+      // Allergens surfaced on every task (not just feeding) so the row can show
+      // a consistent red "Avoid: …" line.
+      avoidList: guest.allergies,
+      // Per-pet stay-long care note (A4.5) — the editable override wins, else
+      // the pet record's own notes. Surfaced as PetRow's sticky-note.
+      careNote: careNotes?.get(guest.id) ?? guest.notes ?? undefined,
     };
 
     // Potty rounds — one per configured potty step
     for (const step of pottySteps) {
+      if (!guestMatchesAppliesTo(guest, step.appliesTo, guestTags)) continue;
       tasks.push({
         ...baseTask,
         id: `potty-${guest.id}-${step.id}`,
@@ -152,6 +195,7 @@ export function generateScheduledTasks(
     // this guest regardless of facility schedule).
     const matchedTimes = new Set<string>();
     for (const step of feedingSteps) {
+      if (!guestMatchesAppliesTo(guest, step.appliesTo, guestTags)) continue;
       const time = guest.feedingTimes.find((t) => t === step.time) ?? step.time;
       // Only emit if guest actually has a meal at this time, OR step is a generic feeding step
       if (!guest.feedingTimes.includes(step.time)) continue;
@@ -187,6 +231,14 @@ export function generateScheduledTasks(
           frequencyNote,
           alertTags: ["Meds"],
           sourceStepId: matchedStep?.id,
+          // Structured detail for the dedicated med log modal. Route defaults to
+          // oral (the route for mg-dose tablet meds) when the booking omits it.
+          medDetail: {
+            name: med.medicationName,
+            dosage: med.dosage,
+            method: med.administrationMethod ?? "oral",
+            timingNote: med.instructions || undefined,
+          },
         });
       }
     }
@@ -210,21 +262,34 @@ export function generateScheduledTasks(
         ],
         alertTags,
         sourceStepId: matchedStep?.id,
+        // Structured detail for the dedicated add-on log modal. Group play and
+        // play sessions unlock the interaction / energy / incident fields.
+        addonDetail: {
+          name: addon.name,
+          bookedMinutes: addon.durationMinutes,
+          instructions: addon.notes || undefined,
+          isPlaySession:
+            addon.addonType === "play_session" ||
+            addon.addonType === "group_play",
+        },
       });
     }
 
     // Care tasks — water refills, kennel cleans, bedding changes, custom
     for (const step of waterSteps) {
+      if (!guestMatchesAppliesTo(guest, step.appliesTo, guestTags)) continue;
       tasks.push(
         careTask(baseTask, "water_refill", step, [guest.kennelName], alertTags),
       );
     }
     for (const step of cleanSteps) {
+      if (!guestMatchesAppliesTo(guest, step.appliesTo, guestTags)) continue;
       tasks.push(
         careTask(baseTask, "kennel_clean", step, [guest.kennelName], alertTags),
       );
     }
     for (const step of beddingSteps) {
+      if (!guestMatchesAppliesTo(guest, step.appliesTo, guestTags)) continue;
       tasks.push(
         careTask(
           baseTask,
@@ -236,15 +301,19 @@ export function generateScheduledTasks(
       );
     }
     for (const step of customSteps) {
-      tasks.push(
-        careTask(
+      if (!guestMatchesAppliesTo(guest, step.appliesTo, guestTags)) continue;
+      tasks.push({
+        ...careTask(
           baseTask,
           step.id,
           step,
           step.description ? [step.description] : [guest.kennelName],
           alertTags,
         ),
-      );
+        // A7.5: a declared Log Type routes to the Custom log modal; absent, the
+        // task falls back to the enrichment log.
+        customLogType: step.logType,
+      });
     }
   }
 
@@ -261,6 +330,8 @@ type BaseTaskFields = {
   kennelName: string;
   packageType?: string;
   behaviorTags: string[];
+  avoidList?: string[];
+  careNote?: string;
 };
 
 function feedingTask(
@@ -275,9 +346,8 @@ function feedingTask(
   const defaultLabel = h < 11 ? "Breakfast" : h < 15 ? "Lunch" : "Dinner";
   const subDetails: string[] = [`${guest.feedingAmount} ${guest.foodBrand}`];
   if (guest.feedingInstructions) subDetails.push(guest.feedingInstructions);
-  if (guest.allergies.length > 0) {
-    subDetails.push(`⚠ Avoid: ${guest.allergies.join(", ")}`);
-  }
+  // Allergens now render as a dedicated red "Avoid: …" line via task.avoidList
+  // (see baseTask), consistently across every task type.
   return {
     ...base,
     id: `feed-${guest.id}-${time}`,
@@ -286,6 +356,12 @@ function feedingTask(
     shift: getShiftForTime(time),
     details: stepLabel ?? defaultLabel,
     subDetails,
+    // Read-only "frequency" for the feeding log's plan zone (A4.4), derived
+    // from how many meals the booking schedules per day.
+    frequencyNote:
+      guest.feedingTimes.length > 0
+        ? `${guest.feedingTimes.length}× daily`
+        : undefined,
     alertTags:
       guest.allergies.length > 0
         ? ["Allergy", ...alertTags.filter((t) => t !== "Allergy")]

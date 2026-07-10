@@ -60,6 +60,9 @@ export interface ColumnDef<T> {
   defaultVisible?: boolean;
   sortable?: boolean;
   sortValue?: (item: T) => unknown;
+  /** Text alignment for the header + cells. Defaults to left. Use "right" for
+   *  numeric columns (also applies tabular-nums to the cells). */
+  align?: "left" | "right" | "center";
 }
 
 export interface FilterDef {
@@ -71,7 +74,7 @@ export interface FilterDef {
   filterFn?: (item: any, value: string) => boolean;
 }
 
-interface DataTableProps<T> {
+export interface DataTableProps<T> {
   data: T[];
   columns: ColumnDef<T>[];
   filters?: FilterDef[];
@@ -97,6 +100,10 @@ interface DataTableProps<T> {
   onSelectionChange?: (ids: Set<string | number>) => void;
   /** Extra content rendered at the end of the toolbar row */
   toolbarExtra?: React.ReactNode;
+  /** Stick the header row to the top on vertical scroll. Off by default. */
+  stickyHeader?: boolean;
+  /** Alternate row shading (white / very light grey). Off by default. */
+  zebra?: boolean;
   /**
    * Empty state shown when there are no rows at all. Falls back to a generic
    * "No data yet" state when omitted. A separate "no matching results" state is
@@ -130,6 +137,8 @@ export function DataTable<T extends object>({
   onSelectionChange,
   toolbarExtra,
   emptyState,
+  stickyHeader = false,
+  zebra = false,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterValues, setFilterValues] = useState<Record<string, string>>(
@@ -344,7 +353,12 @@ export function DataTable<T extends object>({
           <TableHeader>
             <TableRow>
               {selectable && getItemId && (
-                <TableHead className="w-10">
+                <TableHead
+                  className={cn(
+                    "w-10",
+                    stickyHeader && "bg-background sticky top-0 z-10",
+                  )}
+                >
                   <Checkbox
                     checked={
                       filteredData.length > 0 &&
@@ -370,9 +384,12 @@ export function DataTable<T extends object>({
               {visibleColumnDefs.map((col) => (
                 <TableHead
                   key={col.key}
-                  className={
-                    col.sortable !== false ? "cursor-pointer select-none" : ""
-                  }
+                  className={cn(
+                    col.sortable !== false && "cursor-pointer select-none",
+                    col.align === "right" && "text-right",
+                    col.align === "center" && "text-center",
+                    stickyHeader && "bg-background sticky top-0 z-10",
+                  )}
                   onClick={() => {
                     if (col.sortable === false) return;
                     if (sortKey === col.key) {
@@ -397,7 +414,16 @@ export function DataTable<T extends object>({
                     ))}
                 </TableHead>
               ))}
-              {actions && <TableHead className="text-right">Actions</TableHead>}
+              {actions && (
+                <TableHead
+                  className={cn(
+                    "text-right",
+                    stickyHeader && "bg-background sticky top-0 z-10",
+                  )}
+                >
+                  Actions
+                </TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -425,6 +451,7 @@ export function DataTable<T extends object>({
                 <TableRow
                   key={index}
                   className={cn(
+                    zebra && "even:bg-muted/40",
                     rowClassName?.(item),
                     onRowClick &&
                       "hover:bg-muted/50 cursor-pointer transition-colors",
@@ -461,9 +488,11 @@ export function DataTable<T extends object>({
                   {visibleColumnDefs.map((col) => (
                     <TableCell
                       key={col.key}
-                      className={
-                        col.key === columns[0].key ? "font-medium" : ""
-                      }
+                      className={cn(
+                        col.key === columns[0].key && "font-medium",
+                        col.align === "right" && "text-right tabular-nums",
+                        col.align === "center" && "text-center",
+                      )}
                     >
                       {col.render
                         ? col.render(item)

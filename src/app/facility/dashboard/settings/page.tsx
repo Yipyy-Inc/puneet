@@ -4515,7 +4515,6 @@ export default function SettingsPage() {
                         href: "/facility/hq/comparison",
                         label: "Compare Locations",
                       },
-                      { href: "/facility/hq/reports", label: "HQ Reports" },
                       {
                         href: "/facility/hq/services",
                         label: "Service Catalog",

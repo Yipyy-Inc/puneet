@@ -3,25 +3,28 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { CheckCircle2, AlertCircle } from "lucide-react";
 
 type Props = {
-  totalTasks: number;
-  completedTasks: number;
-  overdueTasks: number;
+  blockTotal: number;
+  blockComplete: number;
+  blockOverdue: number;
   guestCount: number;
   date: string;
+  /** Jump to the first overdue task card when the overdue chip is clicked. */
+  onOverdueClick?: () => void;
 };
 
 export function ProgressHeader({
-  totalTasks,
-  completedTasks,
-  overdueTasks,
+  blockTotal,
+  blockComplete,
+  blockOverdue,
   guestCount,
   date,
+  onOverdueClick,
 }: Props) {
   const pct =
-    totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+    blockTotal === 0 ? 0 : Math.round((blockComplete / blockTotal) * 100);
   const dateLabel = new Date(date + "T00:00:00").toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -43,21 +46,33 @@ export function ProgressHeader({
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="gap-1">
               <CheckCircle2 className="size-3 text-emerald-500" />
-              {completedTasks} done
+              {blockComplete} of {blockTotal} tasks complete
             </Badge>
-            <Badge variant="outline" className="gap-1">
-              <Clock className="text-muted-foreground size-3" />
-              {totalTasks - completedTasks} remaining
-            </Badge>
-            {overdueTasks > 0 && (
-              <Badge
-                variant="outline"
-                className="gap-1 border-red-300 bg-red-50 text-red-700"
-              >
-                <AlertCircle className="size-3" />
-                {overdueTasks} overdue
-              </Badge>
-            )}
+            {blockOverdue > 0 &&
+              (onOverdueClick ? (
+                <Badge
+                  asChild
+                  variant="outline"
+                  className="cursor-pointer gap-1 border-red-300 bg-red-50 text-red-700 transition-colors hover:bg-red-100"
+                >
+                  <button
+                    type="button"
+                    onClick={onOverdueClick}
+                    aria-label={`Jump to the first of ${blockOverdue} overdue tasks`}
+                  >
+                    <AlertCircle className="size-3" />
+                    {blockOverdue} overdue
+                  </button>
+                </Badge>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="gap-1 border-red-300 bg-red-50 text-red-700"
+                >
+                  <AlertCircle className="size-3" />
+                  {blockOverdue} overdue
+                </Badge>
+              ))}
           </div>
         </div>
 

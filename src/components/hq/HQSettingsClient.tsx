@@ -23,6 +23,12 @@ import {
   Network,
   Plus,
   Building2,
+  Type,
+  Image as ImageIcon,
+  Palette,
+  ClipboardCheck,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -34,6 +40,16 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import type { HQSettings, Location } from "@/types/location";
 import {
@@ -42,6 +58,7 @@ import {
   type LocationColorKey,
 } from "@/lib/hq/location-styles";
 import { AddLocationDialog } from "@/components/hq/AddLocationDialog";
+import { networkBilling } from "@/data/network-billing";
 
 interface Props {
   settings: HQSettings;
@@ -122,7 +139,7 @@ function ScopeSetting({
 }) {
   const s = styleFromKey(tone);
   return (
-    <div className="flex items-start justify-between gap-4 py-4">
+    <div className="py-4">
       <div className="flex items-start gap-3">
         <div
           className={cn(
@@ -139,21 +156,34 @@ function ScopeSetting({
           </p>
         </div>
       </div>
-      <div className="bg-muted/40 flex shrink-0 gap-1 rounded-lg p-0.5">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => onChange(opt.value)}
-            className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium transition-all",
-              value === opt.value
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {opt.label}
-          </button>
-        ))}
+      <div
+        role="radiogroup"
+        aria-label={label}
+        className={cn(
+          "bg-muted/30 mt-3 grid w-full gap-1 rounded-lg border p-1 sm:ml-11",
+          options.length === 3 ? "grid-cols-3 sm:w-96" : "grid-cols-2 sm:w-72",
+        )}
+      >
+        {options.map((opt) => {
+          const active = value === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => onChange(opt.value)}
+              className={cn(
+                "rounded-md px-3 py-2 text-xs font-semibold transition-all",
+                active
+                  ? cn(s.bg, "text-white shadow-sm")
+                  : "text-muted-foreground hover:bg-background hover:text-foreground",
+              )}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -207,6 +237,92 @@ function ChoiceCard({
   );
 }
 
+// Go-live readiness derived entirely from the Location record + related config.
+function onboardingSteps(loc: Location): { label: string; done: boolean }[] {
+  const capacityKeys = ["daycare", "boarding", "grooming", "training"] as const;
+  const hasCapacity = capacityKeys.some((k) => (loc.capacity[k] ?? 0) > 0);
+  const openSomeDay = Object.values(loc.hours).some((h) => !h.closed);
+  const hasManager = loc.staffAssignments.some(
+    (a) => a.isPrimary && a.role === "manager",
+  );
+  return [
+    {
+      label: "address & contact",
+      done: loc.address.trim() !== "" && loc.postalCode.trim() !== "",
+    },
+    {
+      label: "phone & email",
+      done: loc.phone.trim() !== "" && loc.email.trim() !== "",
+    },
+    { label: "services enabled", done: loc.services.length > 0 },
+    { label: "capacity configured", done: hasCapacity },
+    { label: "operating hours", done: openSomeDay },
+    {
+      label: "at least 1 staff member assigned",
+      done: loc.staffAssignments.length >= 1,
+    },
+    { label: "location manager designated", done: hasManager },
+    {
+      label: "taxes / payment configured",
+      done: loc.taxes.some((t) => t.enabled),
+    },
+  ];
+}
+
+function LocationOnboardingRow({ loc }: { loc: Location }) {
+  const steps = onboardingSteps(loc);
+  const done = steps.filter((step) => step.done).length;
+  const missing = steps.filter((step) => !step.done);
+  const total = steps.length;
+  const ready = missing.length === 0;
+  const s = locationStyles(loc);
+
+  return (
+    <div className="py-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={cn(
+            "flex size-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white",
+            s.bg,
+          )}
+        >
+          {loc.shortCode}
+        </span>
+        <span className="text-sm font-semibold">{loc.name}</span>
+        <span className="text-muted-foreground text-xs tabular-nums">
+          {done}/{total} steps
+        </span>
+        {ready ? (
+          <span className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="size-3.5" />
+            Ready to go live
+          </span>
+        ) : (
+          <span className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+            <AlertCircle className="size-3.5" />
+            {missing.length} step{missing.length === 1 ? "" : "s"} remaining
+          </span>
+        )}
+      </div>
+      <div className="bg-muted mt-2 h-1.5 w-full overflow-hidden rounded-full">
+        <div
+          className={cn(
+            "h-full rounded-full transition-all",
+            ready ? "bg-emerald-500" : "bg-amber-500",
+          )}
+          style={{ width: `${(done / total) * 100}%` }}
+        />
+      </div>
+      {!ready && (
+        <p className="text-muted-foreground mt-1.5 text-[11px]">
+          <span className="font-semibold">Missing:</span>{" "}
+          {missing.map((m) => m.label).join(", ")}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function HQSettingsClient({
   settings,
   locations: initialLocations,
@@ -215,6 +331,8 @@ export function HQSettingsClient({
   const [dirty, setDirty] = useState(false);
   const [locations, setLocations] = useState(initialLocations);
   const [addOpen, setAddOpen] = useState(false);
+  const [confirmDisableAutomations, setConfirmDisableAutomations] =
+    useState(false);
 
   const update = (patch: Partial<typeof s>) => {
     setS((prev) => ({ ...prev, ...patch }));
@@ -412,7 +530,7 @@ export function HQSettingsClient({
             value={s.agreementsScope}
             options={[
               { value: "global", label: "Global" },
-              { value: "per_location", label: "Per location" },
+              { value: "per_location", label: "Per-Location" },
             ]}
             onChange={(v) =>
               update({ agreementsScope: v as typeof s.agreementsScope })
@@ -426,7 +544,7 @@ export function HQSettingsClient({
             value={s.tagsScope}
             options={[
               { value: "global", label: "Global" },
-              { value: "per_location", label: "Per location" },
+              { value: "per_location", label: "Per-Location" },
             ]}
             onChange={(v) => update({ tagsScope: v as typeof s.tagsScope })}
             tone="amber"
@@ -438,7 +556,7 @@ export function HQSettingsClient({
             value={s.paymentMethodsScope}
             options={[
               { value: "global", label: "Global" },
-              { value: "per_location", label: "Per location" },
+              { value: "per_location", label: "Per-Location" },
             ]}
             onChange={(v) =>
               update({ paymentMethodsScope: v as typeof s.paymentMethodsScope })
@@ -447,7 +565,7 @@ export function HQSettingsClient({
           />
           <ScopeSetting
             label="Internal Notes"
-            description="Staff notes about customers or pets — choose between shared visibility or location-scoped privacy."
+            description="Staff notes about customers or pets. Shared = any staff at any location can see notes written by any other location's staff. Private = notes are visible only to staff at the location that wrote them."
             icon={StickyNote}
             value={s.internalNotesScope}
             options={[
@@ -461,6 +579,206 @@ export function HQSettingsClient({
           />
         </CardContent>
       </Card>
+
+      {/* Network Branding */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Palette className="size-4" />
+            Network Branding
+          </CardTitle>
+          <CardDescription>
+            Control which branding is shared across the network and which each
+            location sets for itself.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="divide-y">
+          <ScopeSetting
+            label="Name"
+            description="How the business name appears. Both = the network name with each location as a suffix (e.g. “Yipyy – Plateau”)."
+            icon={Type}
+            value={s.brandingNameScope}
+            options={[
+              { value: "network", label: "Network name" },
+              { value: "per_location", label: "Own name" },
+              { value: "both", label: "Both" },
+            ]}
+            onChange={(v) =>
+              update({ brandingNameScope: v as typeof s.brandingNameScope })
+            }
+            tone="violet"
+          />
+          <ScopeSetting
+            label="Logo"
+            description="One shared logo across every location, or a distinct logo per location."
+            icon={ImageIcon}
+            value={s.brandingLogoScope}
+            options={[
+              { value: "global", label: "One for all" },
+              { value: "per_location", label: "Per-Location" },
+            ]}
+            onChange={(v) =>
+              update({ brandingLogoScope: v as typeof s.brandingLogoScope })
+            }
+            tone="sky"
+          />
+          <ScopeSetting
+            label="Primary Colour"
+            description="One global brand colour, or let each location pick its own accent colour."
+            icon={Palette}
+            value={s.brandingColorScope}
+            options={[
+              { value: "global", label: "Global" },
+              { value: "per_location", label: "Per-Location" },
+            ]}
+            onChange={(v) =>
+              update({ brandingColorScope: v as typeof s.brandingColorScope })
+            }
+            tone="emerald"
+          />
+        </CardContent>
+      </Card>
+
+      {/* Location Onboarding Checklist */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <ClipboardCheck className="size-4" />
+            Location Onboarding Checklist
+          </CardTitle>
+          <CardDescription>
+            Configuration each location needs before it can go live — derived
+            from the location record.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="divide-y">
+          {locations.map((loc) => (
+            <LocationOnboardingRow key={loc.id} loc={loc} />
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Network Billing */}
+      {(() => {
+        const activeLocations = locations.filter((l) => l.isActive).length;
+        const extra = Math.max(
+          0,
+          activeLocations - networkBilling.includedLocations,
+        );
+        const cycleShort = {
+          monthly: "mo",
+          quarterly: "qtr",
+          yearly: "yr",
+        }[networkBilling.billingCycle];
+        const fmt = (n: number) =>
+          new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: networkBilling.currency,
+            maximumFractionDigits: 0,
+          }).format(n);
+        const bundle = networkBilling.billingMode === "network_bundle";
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <CreditCard className="size-4" />
+                Network Billing
+              </CardTitle>
+              <CardDescription>
+                How your multi-location subscription is billed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Billing model */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Billing model</p>
+                  <p className="text-muted-foreground text-xs">
+                    {bundle
+                      ? "One bundle covers your whole network."
+                      : "Each location is billed on its own subscription."}
+                  </p>
+                </div>
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold",
+                    bundle
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                      : "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
+                  )}
+                >
+                  {bundle ? "Network bundle" : "Per location"}
+                </span>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="bg-muted/40 rounded-lg border p-3">
+                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                    Current plan
+                  </p>
+                  <p className="mt-0.5 text-sm font-bold">
+                    {networkBilling.planName}
+                  </p>
+                  <p className="text-muted-foreground text-[11px] tabular-nums">
+                    {fmt(networkBilling.baseCost)} / {cycleShort} ·{" "}
+                    {networkBilling.billingCycle}
+                  </p>
+                </div>
+                <div className="bg-muted/40 rounded-lg border p-3">
+                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                    Locations included
+                  </p>
+                  <p className="mt-0.5 text-sm font-bold tabular-nums">
+                    {activeLocations} / {networkBilling.includedLocations}
+                  </p>
+                  <p
+                    className={cn(
+                      "text-[11px]",
+                      extra > 0
+                        ? "font-semibold text-amber-600 dark:text-amber-400"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {extra > 0 ? `${extra} over plan` : "active · within plan"}
+                  </p>
+                </div>
+                <div className="bg-muted/40 rounded-lg border p-3">
+                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                    Per extra location
+                  </p>
+                  <p className="mt-0.5 text-sm font-bold tabular-nums">
+                    {fmt(networkBilling.costPerAdditionalLocation)}
+                  </p>
+                  <p className="text-muted-foreground text-[11px]">
+                    per location / {cycleShort}
+                  </p>
+                </div>
+              </div>
+
+              {extra > 0 && (
+                <p className="rounded-lg border border-amber-300/60 bg-amber-50/50 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+                  {activeLocations} active locations exceed your included{" "}
+                  {networkBilling.includedLocations} —{" "}
+                  <span className="font-semibold tabular-nums">
+                    +{fmt(extra * networkBilling.costPerAdditionalLocation)} /{" "}
+                    {cycleShort}
+                  </span>{" "}
+                  in surcharges.
+                </p>
+              )}
+
+              <div className="flex justify-end">
+                <Link href="/facility/settings/billing">
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <CreditCard className="size-3.5" />
+                    Manage subscription
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Pricing model */}
       <Card>
@@ -595,7 +913,14 @@ export function HQSettingsClient({
             description="Automation rules (reminders, follow-ups) are shared globally. Disabling creates separate automation configs per location."
             icon={Zap}
             value={s.sharedAutomations}
-            onChange={(v) => update({ sharedAutomations: v })}
+            onChange={(v) => {
+              if (v) {
+                update({ sharedAutomations: true });
+              } else {
+                // Turning off is disruptive — confirm before applying.
+                setConfirmDisableAutomations(true);
+              }
+            }}
             tone="violet"
           />
         </CardContent>
@@ -731,6 +1056,30 @@ export function HQSettingsClient({
         onOpenChange={setAddOpen}
         onCreate={handleAddLocation}
       />
+
+      <AlertDialog
+        open={confirmDisableAutomations}
+        onOpenChange={setConfirmDisableAutomations}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disable shared automations?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Disabling shared automations means you will need to configure
+              reminder and follow-up rules separately for each location. Are you
+              sure?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => update({ sharedAutomations: false })}
+            >
+              Disable
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

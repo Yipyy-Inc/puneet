@@ -55,6 +55,9 @@ export interface Location {
   phone: string;
   email: string;
   isActive: boolean;
+  /** Lifecycle status. Falls back to isActive (active/inactive) when unset;
+   *  "coming_soon" marks a branch that is announced but not yet operating. */
+  status?: "active" | "inactive" | "coming_soon";
   isPrimary: boolean;
   services: string[];
   capacity: {
@@ -93,6 +96,32 @@ export interface LocationMetrics {
   groomingVolume: number;
   boardingNights: number;
   trainingSessionsCompleted: number;
+  // ── Extended comparison metrics (Table 27) — optional so existing mock
+  //    LocationMetrics remain valid; populated in hq-analytics comparison data.
+  /** Net Promoter Score (0–100). */
+  nps?: number;
+  /** New bookings in period. */
+  newBookings?: number;
+  /** No-show rate (%). */
+  noShowRate?: number;
+  /** Average booking lead time in days. */
+  avgLeadTimeDays?: number;
+  /** Boarding occupancy (%). */
+  boardingOccupancy?: number;
+  /** Daycare occupancy (%). */
+  daycareOccupancy?: number;
+  /** Client retention rate (%). */
+  retentionRate?: number;
+  /** Published review count. */
+  reviewCount?: number;
+  /** Average client rating (0–5). */
+  avgClientRating?: number;
+  /** Open/outstanding invoice count. */
+  outstandingInvoices?: number;
+  /** Revenue per available kennel-night ($). */
+  revPAK?: number;
+  /** Services delivered per staff-hour. */
+  servicesPerStaffHour?: number;
 }
 
 export interface HQOverviewMetrics {
@@ -180,4 +209,13 @@ export interface HQSettings {
   primaryLocationId: string;
   /** User IDs (other than owner) that can access HQ-level views */
   delegatedHqAccess: string[];
+
+  // ── Network branding ────────────────────────────────────────────────────
+  /** Business-name policy: one network name, each location's own name, or
+   *  both (network name with the location as a suffix). */
+  brandingNameScope: "network" | "per_location" | "both";
+  /** Logo policy: one shared logo across all locations, or per-location logos. */
+  brandingLogoScope: "global" | "per_location";
+  /** Primary brand colour policy: one global colour, or per-location. */
+  brandingColorScope: "global" | "per_location";
 }

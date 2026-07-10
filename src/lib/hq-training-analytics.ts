@@ -51,6 +51,24 @@ export interface HqTrainingInstructorRow {
   totalSessions: number;
   /** Number of distinct students this instructor has taught. */
   uniqueStudents: number;
+  /** Revenue from this instructor's enrolments (paid + deposit). */
+  revenue: number;
+}
+
+/** Network-wide performance for one training program (course type). */
+export interface HqTrainingProgramRow {
+  programId: string;
+  programName: string;
+  /** Non-waitlisted enrolments across every series of this program. */
+  enrollments: number;
+  /** completed ÷ enrolled (0-1). */
+  completionRate: number;
+  /** graduated (completed with full progress) ÷ enrolled (0-1). */
+  graduationRate: number;
+  /** Revenue (paid + deposit) across this program's enrolments. */
+  revenue: number;
+  /** Distinct locations that offer this program. */
+  locationIds: string[];
 }
 
 export interface HqTrainingOverview {
@@ -64,9 +82,15 @@ export interface HqTrainingOverview {
   /** Top 5 instructors by average rating (filtered to ones with ≥3
    *  ratings so a single 5-star reading doesn't crown a brand-new hire). */
   topInstructors: HqTrainingInstructorRow[];
+  /** Weighted network-wide average student rating (0-5, one decimal) across
+   *  every rated session — the baseline each instructor is compared against.
+   *  `null` when no ratings are on file. */
+  networkAverageRating: number | null;
   /** Per-location breakdown — every accessible location, ordered by
    *  studentsEnrolled descending. */
   locationBreakdown: HqTrainingLocationRow[];
+  /** Per-program performance across the network, ordered by enrolments. */
+  programPerformance: HqTrainingProgramRow[];
   /** ISO month key (YYYY-MM) the "this month" rollups were computed against. */
   monthKey: string;
 }
@@ -220,6 +244,36 @@ export function aggregateHqTrainingOverview(
     }
     instructorTally.set(instructorId, stats);
   }
+  // Revenue attributed to each instructor via their series' enrolments.
+  const revenueByInstructor = new Map<string, number>();
+  for (const enrollment of input.enrollments) {
+    const series = seriesById.get(enrollment.seriesId);
+    const instructorId = series?.instructorId;
+    if (!instructorId) continue;
+    if (
+      enrollment.paymentStatus === "paid" ||
+      enrollment.paymentStatus === "deposit"
+    ) {
+      revenueByInstructor.set(
+        instructorId,
+        (revenueByInstructor.get(instructorId) ?? 0) +
+          priceForEnrollment(enrollment, series, input.packages),
+      );
+    }
+  }
+
+  // Weighted network-wide average rating — the baseline for comparisons.
+  let netRatingSum = 0;
+  let netRatingCount = 0;
+  for (const stats of instructorTally.values()) {
+    netRatingSum += stats.ratingSum;
+    netRatingCount += stats.ratingCount;
+  }
+  const networkAverageRating =
+    netRatingCount > 0
+      ? Math.round((netRatingSum / netRatingCount) * 10) / 10
+      : null;
+
   const trainerById = new Map(input.trainers.map((t) => [t.id, t]));
   const allInstructorRows: HqTrainingInstructorRow[] = [];
   for (const [instructorId, stats] of instructorTally) {
@@ -235,6 +289,7 @@ export function aggregateHqTrainingOverview(
       ratingsCount: stats.ratingCount,
       totalSessions: stats.sessionCount,
       uniqueStudents: stats.students.size,
+      revenue: revenueByInstructor.get(instructorId) ?? 0,
     });
   }
   // Need ≥3 ratings to land on the leaderboard so a single 5-star read
@@ -278,6 +333,72 @@ export function aggregateHqTrainingOverview(
         return a.locationName.localeCompare(b.locationName);
       })[0] ?? null;
 
+  // ── Program performance across the network ───────────────────────────
+  const programMap = new Map<
+    string,
+    {
+      name: string;
+      started: number;
+      completed: number;
+      graduated: number;
+      revenue: number;
+      locations: Set<string>;
+    }
+  >();
+  const ensureProgram = (key: string, name: string) => {
+    let p = programMap.get(key);
+    if (!p) {
+      p = {
+        name,
+        started: 0,
+        completed: 0,
+        graduated: 0,
+        revenue: 0,
+        locations: new Set<string>(),
+      };
+      programMap.set(key, p);
+    }
+    return p;
+  };
+  // Series contribute location coverage (even with zero enrolments).
+  for (const s of input.seriesList) {
+    const p = ensureProgram(s.courseTypeName, s.courseTypeName);
+    if (s.locationId) p.locations.add(s.locationId);
+  }
+  for (const enrollment of input.enrollments) {
+    const p = ensureProgram(
+      enrollment.courseTypeName,
+      enrollment.courseTypeName,
+    );
+    const series = seriesById.get(enrollment.seriesId);
+    if (series?.locationId) p.locations.add(series.locationId);
+    if (enrollment.status === "waitlisted") continue;
+    p.started += 1;
+    if (enrollment.status === "completed") {
+      p.completed += 1;
+      if (enrollment.progress >= 100) p.graduated += 1;
+    }
+    if (
+      enrollment.paymentStatus === "paid" ||
+      enrollment.paymentStatus === "deposit"
+    ) {
+      p.revenue += priceForEnrollment(enrollment, series, input.packages);
+    }
+  }
+  const programPerformance: HqTrainingProgramRow[] = Array.from(
+    programMap.entries(),
+  )
+    .map(([key, p]) => ({
+      programId: key,
+      programName: p.name,
+      enrollments: p.started,
+      completionRate: p.started > 0 ? p.completed / p.started : 0,
+      graduationRate: p.started > 0 ? p.graduated / p.started : 0,
+      revenue: p.revenue,
+      locationIds: Array.from(p.locations),
+    }))
+    .sort((a, b) => b.enrollments - a.enrollments);
+
   return {
     totalStudentsEnrolled,
     totalSessionsThisMonth,
@@ -285,7 +406,9 @@ export function aggregateHqTrainingOverview(
     activeSeriesCount,
     topLocation,
     topInstructors,
+    networkAverageRating,
     locationBreakdown,
+    programPerformance,
     monthKey: monthKeyStr,
   };
 }

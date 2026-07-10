@@ -13,8 +13,8 @@ interface SparklineProps {
 export function Sparkline({
   values,
   className,
-  strokeClassName = "stroke-sky-500",
-  fillClassName = "fill-sky-500/15",
+  strokeClassName = "stroke-slate-500",
+  fillClassName = "fill-slate-500/15",
   width = 80,
   height = 24,
   showDots = false,

@@ -11,6 +11,7 @@ import {
   Cell,
 } from "recharts";
 import type { Location } from "@/types/location";
+import { locationHex } from "@/lib/hq/location-styles";
 
 interface Props {
   data: { locationId: string; locationName: string; revenue: number }[];
@@ -55,7 +56,7 @@ export function RevenueByLocationBar({ data, locations, height = 240 }: Props) {
           {data.map((entry) => {
             const loc = locations.find((l) => l.id === entry.locationId);
             return (
-              <Cell key={entry.locationId} fill={loc?.color ?? "#0ea5e9"} />
+              <Cell key={entry.locationId} fill={locationHex(loc ?? {})} />
             );
           })}
         </Bar>
