@@ -1,186 +1,63 @@
 "use client";
 
-import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { clients } from "@/data/clients";
-import { reportCards } from "@/data/pet-data";
+import { reportCards, markReportCardViewed } from "@/data/pet-data";
 import { bookings } from "@/data/bookings";
 import { facilities } from "@/data/facilities";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
-  Calendar,
   Dog,
   FileText,
-  Clock,
-  Utensils,
-  Droplets,
   Search,
   X,
-  Star,
-  Bell,
-  Ghost,
-  Egg,
-  PartyPopper,
-  Heart,
-  ClipboardCheck,
-  Stethoscope,
   ArrowUpDown,
   ArrowDownUp,
+  Heart,
 } from "lucide-react";
-import { ReportCardPhotoGallery } from "@/components/customer/ReportCardPhotoGallery";
-import { ReportCardQuickReply } from "@/components/customer/ReportCardQuickReply";
-import { ReportCardBrandedHeader } from "@/components/shared/ReportCardBrandedHeader";
-import { ReportCardBrandedFooter } from "@/components/shared/ReportCardBrandedFooter";
-import { businessProfile, reportCardConfig } from "@/data/settings";
-
-/* ── Daily summary builder ────────────────────────────────────────── */
-function buildDailySummary(item: {
-  petName: string;
-  mood: string;
-  activities: string[];
-  meals: Array<{ consumed: string }>;
-  staffNotes?: string;
-  serviceType: string;
-}): string {
-  const { petName, mood, activities, meals, staffNotes } = item;
-  const moodMap: Record<string, string> = {
-    happy: "in wonderful spirits",
-    excited: "full of excitement",
-    calm: "calm and relaxed",
-    anxious: "a little nervous at first but settled in well",
-    tired: "on the mellow side",
-    playful: "super playful all day",
-    energetic: "full of energy",
-  };
-  const moodText = moodMap[mood] || "in good spirits";
-  const actText =
-    activities.length > 0
-      ? ` Highlights included ${activities.slice(0, 3).join(", ")}.`
-      : "";
-  const mealCount = meals.filter(
-    (m) => m.consumed === "all" || m.consumed === "most",
-  ).length;
-  const mealText =
-    mealCount > 0
-      ? ` ${petName} had a healthy appetite and enjoyed ${mealCount === 1 ? "a meal" : `${mealCount} meals`}.`
-      : "";
-  const noteText = staffNotes ? ` ${staffNotes}` : "";
-  return `${petName} was ${moodText} today!${actText}${mealText}${noteText}`;
-}
-
-/* ── Report-card theme visuals ────────────────────────────────────── */
-const themeStyles: Record<
-  string,
-  {
-    label: string;
-    emoji: string;
-    cardBg: string;
-    accentBg: string;
-    accentText: string;
-    DecorativeIcon: React.ComponentType<{ className?: string }>;
-    iconPos: string;
-  }
-> = {
-  everyday: {
-    label: "Everyday",
-    emoji: "✨",
-    cardBg: "bg-slate-50",
-    accentBg: "bg-slate-600",
-    accentText: "text-white",
-    DecorativeIcon: Star,
-    iconPos: "-top-1 -right-1",
-  },
-  christmas: {
-    label: "Christmas",
-    emoji: "🎄",
-    cardBg: "bg-red-50",
-    accentBg: "bg-red-600",
-    accentText: "text-white",
-    DecorativeIcon: Bell,
-    iconPos: "-top-1 -right-1",
-  },
-  halloween: {
-    label: "Halloween",
-    emoji: "🎃",
-    cardBg: "bg-orange-50",
-    accentBg: "bg-violet-700",
-    accentText: "text-white",
-    DecorativeIcon: Ghost,
-    iconPos: "-top-1 -right-1",
-  },
-  easter: {
-    label: "Easter",
-    emoji: "🐣",
-    cardBg: "bg-pink-50",
-    accentBg: "bg-pink-500",
-    accentText: "text-white",
-    DecorativeIcon: Egg,
-    iconPos: "-bottom-1 -right-1",
-  },
-  thanksgiving: {
-    label: "Thanksgiving",
-    emoji: "🦃",
-    cardBg: "bg-amber-50",
-    accentBg: "bg-amber-600",
-    accentText: "text-white",
-    DecorativeIcon: Star,
-    iconPos: "-top-1 -right-1",
-  },
-  new_year: {
-    label: "New Year",
-    emoji: "🎉",
-    cardBg: "bg-indigo-50",
-    accentBg: "bg-indigo-600",
-    accentText: "text-white",
-    DecorativeIcon: PartyPopper,
-    iconPos: "-top-1 -right-1",
-  },
-  valentines: {
-    label: "Valentine's",
-    emoji: "💘",
-    cardBg: "bg-rose-50",
-    accentBg: "bg-rose-500",
-    accentText: "text-white",
-    DecorativeIcon: Heart,
-    iconPos: "-top-1 -right-1",
-  },
-  summer: {
-    label: "Summer",
-    emoji: "☀️",
-    cardBg: "bg-sky-50",
-    accentBg: "bg-sky-500",
-    accentText: "text-white",
-    DecorativeIcon: Star,
-    iconPos: "-top-1 -right-1",
-  },
-  winter: {
-    label: "Winter",
-    emoji: "❄️",
-    cardBg: "bg-blue-50",
-    accentBg: "bg-blue-600",
-    accentText: "text-white",
-    DecorativeIcon: Star,
-    iconPos: "-top-1 -right-1",
-  },
-};
+import { ReportCardSummary } from "@/components/customer/report-cards/report-card-summary";
+import { ReportCardDetail } from "@/components/customer/report-cards/report-card-detail";
+import type { ReportCardTimelineItem } from "@/components/customer/report-cards/report-card-shared";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
+
+// Service-type filter chips — value matches ReportCard.serviceType.
+const SERVICE_FILTERS = [
+  { value: "all", label: "All" },
+  { value: "boarding", label: "Boarding" },
+  { value: "daycare", label: "Daycare" },
+  { value: "grooming", label: "Grooming" },
+  { value: "training", label: "Training" },
+] as const;
 
 type Client = (typeof clients)[number];
 
 export default function CustomerReportCardsPage() {
   const { selectedFacility } = useCustomerFacility();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPetId, setSelectedPetId] = useState<string>("all");
+  const [selectedService, setSelectedService] = useState<string>("all");
+  const [favOnly, setFavOnly] = useState(false);
   const [sortBy, setSortBy] = useState<"date-desc" | "date-asc">("date-desc");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [favIds, setFavIds] = useState<Set<string>>(
+    () => new Set(reportCards.filter((c) => c.favourite).map((c) => c.id)),
+  );
 
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
@@ -194,9 +71,7 @@ export default function CustomerReportCardsPage() {
 
   const customerReportCards = useMemo(() => {
     if (!customer) return [] as typeof reportCards;
-
-    // Show all report cards for this customer's pets,
-    // regardless of facility, so examples are always visible.
+    // Show all report cards for this customer's pets, regardless of facility.
     return reportCards.filter((card) => customerPetIds.includes(card.petId));
   }, [customer, customerPetIds]);
 
@@ -214,14 +89,23 @@ export default function CustomerReportCardsPage() {
   const filteredAndSortedCards = useMemo(() => {
     let filtered = [...customerReportCards];
 
-    // Filter by pet
     if (selectedPetId !== "all") {
       filtered = filtered.filter(
         (card) => card.petId === parseInt(selectedPetId),
       );
     }
 
-    // Search by keyword
+    if (selectedService !== "all") {
+      filtered = filtered.filter(
+        (card) => card.serviceType === selectedService,
+      );
+    }
+
+    // Favourites only — reflects the live (heart-toggled) favourite state.
+    if (favOnly) {
+      filtered = filtered.filter((card) => favIds.has(card.id));
+    }
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((card) => {
@@ -240,7 +124,6 @@ export default function CustomerReportCardsPage() {
       });
     }
 
-    // Sort
     filtered.sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
@@ -248,9 +131,18 @@ export default function CustomerReportCardsPage() {
     });
 
     return filtered;
-  }, [customerReportCards, selectedPetId, searchQuery, sortBy, petById]);
+  }, [
+    customerReportCards,
+    selectedPetId,
+    selectedService,
+    favOnly,
+    favIds,
+    searchQuery,
+    sortBy,
+    petById,
+  ]);
 
-  const timelineItems = useMemo(() => {
+  const timelineItems = useMemo<ReportCardTimelineItem[]>(() => {
     return filteredAndSortedCards.map((card) => {
       const pet = petById.get(card.petId);
       const booking = bookings.find((b) => b.id === card.bookingId);
@@ -280,26 +172,57 @@ export default function CustomerReportCardsPage() {
     });
   }, [filteredAndSortedCards, petById, facilityName]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+  const openItem = useMemo(
+    () => timelineItems.find((i) => i.id === openId) ?? null,
+    [timelineItems, openId],
+  );
+
+  const openDetail = (id: string) => {
+    setOpenId(id);
+    // Persist "viewed" (F1) so dashboard/sidebar notifications auto-dismiss.
+    markReportCardViewed(id);
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
     });
   };
 
-  const formatTime = (dateString: string) => {
-    const d = new Date(dateString);
-    return d.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
+  // Deep link: ?report=<id> opens that report directly (from a notification).
+  const deepLinkId = searchParams.get("report");
+  const appliedDeepLink = useRef(false);
+  useEffect(() => {
+    if (appliedDeepLink.current || !deepLinkId) return;
+    if (!customerReportCards.some((c) => c.id === deepLinkId)) return;
+    appliedDeepLink.current = true;
+    setOpenId(deepLinkId);
+    markReportCardViewed(deepLinkId);
+    setReadIds((prev) => new Set(prev).add(deepLinkId));
+  }, [deepLinkId, customerReportCards]);
+
+  const toggleFavourite = (id: string) => {
+    const nowFavourite = !favIds.has(id);
+    // Persist to the report card (F1) so it survives navigation, mock-store style.
+    const card = reportCards.find((c) => c.id === id);
+    if (card) card.favourite = nowFavourite;
+    setFavIds((prev) => {
+      const next = new Set(prev);
+      if (nowFavourite) next.add(id);
+      else next.delete(id);
+      return next;
     });
   };
 
-  const hasActiveFilters = selectedPetId !== "all" || searchQuery;
+  const hasActiveFilters =
+    selectedPetId !== "all" ||
+    selectedService !== "all" ||
+    favOnly ||
+    searchQuery;
 
   const clearFilters = () => {
     setSelectedPetId("all");
+    setSelectedService("all");
+    setFavOnly(false);
     setSearchQuery("");
   };
 
@@ -376,6 +299,37 @@ export default function CustomerReportCardsPage() {
                 ))}
               </div>
             )}
+
+            {/* Service type */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-muted-foreground w-14 shrink-0 text-[10px] font-semibold tracking-widest uppercase">
+                Service
+              </span>
+              {SERVICE_FILTERS.map((svc) => (
+                <button
+                  key={svc.value}
+                  onClick={() => setSelectedService(svc.value)}
+                  className={pillClass(selectedService === svc.value)}
+                >
+                  {svc.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Show */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-muted-foreground w-14 shrink-0 text-[10px] font-semibold tracking-widest uppercase">
+                Show
+              </span>
+              <button
+                onClick={() => setFavOnly((v) => !v)}
+                className={pillClass(favOnly)}
+                aria-pressed={favOnly}
+              >
+                <Heart className={cn("size-3", favOnly && "fill-current")} />
+                Favourites
+              </button>
+            </div>
           </div>
 
           {/* Active filter footer */}
@@ -430,259 +384,51 @@ export default function CustomerReportCardsPage() {
             </CardContent>
           </Card>
         ) : (
-          <ScrollArea className="pr-4">
-            <div className="relative pl-4">
-              {/* Vertical timeline line */}
-              <div
-                className="bg-border/60 absolute top-0 bottom-0 left-4 w-px"
-                aria-hidden="true"
+          <div className="grid gap-4 sm:grid-cols-2">
+            {timelineItems.map((item) => (
+              <ReportCardSummary
+                key={item.id}
+                item={item}
+                favourite={favIds.has(item.id)}
+                unread={
+                  item.reportCard.viewedByCustomer === false &&
+                  !readIds.has(item.id)
+                }
+                onToggleFavourite={() => toggleFavourite(item.id)}
+                onOpen={() => openDetail(item.id)}
               />
-
-              <div className="space-y-6">
-                {timelineItems.map((item, index) => (
-                  <div key={item.id} className="relative flex gap-4">
-                    {/* Timeline dot */}
-                    <div className="flex flex-col items-center pt-3">
-                      <div className="bg-primary size-3 rounded-full shadow-sm" />
-                      {index !== timelineItems.length - 1 && (
-                        <div className="bg-border/40 w-px flex-1" />
-                      )}
-                    </div>
-
-                    {/* Themed Card */}
-                    {(() => {
-                      const ts =
-                        themeStyles[item.theme || "everyday"] ??
-                        themeStyles.everyday;
-                      const { DecorativeIcon } = ts;
-                      return (
-                        <div
-                          className={`relative flex-1 overflow-hidden rounded-xl border ${ts.cardBg} `}
-                        >
-                          {/* Decorative corner icon */}
-                          <DecorativeIcon
-                            className={`absolute h-20 w-20 text-gray-900 opacity-[0.06] ${ts.iconPos} `}
-                          />
-
-                          {/* Branded header */}
-                          {reportCardConfig.brand && (
-                            <ReportCardBrandedHeader
-                              brandConfig={reportCardConfig.brand}
-                              profile={businessProfile}
-                              title={`${item.petName}'s ${item.serviceType} Report`}
-                              subtitle={`${formatDate(item.date)} · ${item.facilityName}`}
-                            />
-                          )}
-
-                          {/* Themed accent header */}
-                          <div
-                            className={`relative px-5 py-3 ${ts.accentBg} ${ts.accentText} flex items-start justify-between gap-4`}
-                          >
-                            <div className="min-w-0 space-y-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-lg">{ts.emoji}</span>
-                                <p className="text-base font-bold">
-                                  {item.petName}&apos;s {item.serviceType} day
-                                </p>
-                                <Badge className="border-0 bg-white/20 text-xs text-white capitalize">
-                                  {item.mood}
-                                </Badge>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-3 text-xs opacity-80">
-                                <span className="inline-flex items-center gap-1">
-                                  <Calendar className="size-3" />{" "}
-                                  {formatDate(item.date)}
-                                </span>
-                                <span className="inline-flex items-center gap-1">
-                                  <Clock className="size-3" />{" "}
-                                  {formatTime(item.timeLabel)}
-                                </span>
-                                <span className="inline-flex items-center gap-1">
-                                  <Dog className="size-3" /> {item.facilityName}
-                                </span>
-                              </div>
-                            </div>
-
-                            {item.petImage && (
-                              <div className="hidden h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-white/30 bg-white/20 sm:block">
-                                <Image
-                                  src={item.petImage}
-                                  alt={item.petName}
-                                  width={56}
-                                  height={56}
-                                  className="size-full object-cover"
-                                />
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Card body */}
-                          <div className="relative space-y-4 p-4">
-                            {/* AI daily summary */}
-                            <div className="rounded-lg bg-slate-50 px-4 py-3">
-                              <p className="text-sm/relaxed text-slate-600">
-                                {buildDailySummary(item)}
-                              </p>
-                            </div>
-
-                            {item.photos.length > 0 && (
-                              <ReportCardPhotoGallery
-                                photos={item.photos}
-                                petName={item.petName}
-                                reportCardId={item.id}
-                                serviceType={item.serviceType}
-                                date={item.date}
-                              />
-                            )}
-
-                            {item.meals && item.meals.length > 0 && (
-                              <div className="space-y-2">
-                                <p className="flex items-center gap-2 text-sm font-medium">
-                                  <Utensils className="size-4" /> Meals
-                                </p>
-                                <div className="text-muted-foreground space-y-1 text-xs md:text-sm">
-                                  {item.meals.map((meal, idx) => (
-                                    <div
-                                      key={`${item.id}-meal-${idx}`}
-                                      className="flex flex-wrap items-center justify-between gap-2"
-                                    >
-                                      <span className="font-medium">
-                                        {meal.time}
-                                      </span>
-                                      <span className="min-w-35 flex-1">
-                                        {meal.food}
-                                      </span>
-                                      <span>{meal.amount}</span>
-                                      <span className="rounded-full bg-white px-2 py-0.5 text-[0.7rem] capitalize">
-                                        Ate {meal.consumed}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {item.pottyBreaks &&
-                              item.pottyBreaks.length > 0 && (
-                                <div className="space-y-2">
-                                  <p className="flex items-center gap-2 text-sm font-medium">
-                                    <Droplets className="size-4" /> Potty breaks
-                                  </p>
-                                  <div className="flex flex-wrap gap-2">
-                                    {item.pottyBreaks.map((pb, idx) => (
-                                      <Badge
-                                        key={`${item.id}-potty-${idx}`}
-                                        variant={
-                                          pb.type === "accident"
-                                            ? "destructive"
-                                            : "secondary"
-                                        }
-                                        className="text-xs"
-                                      >
-                                        {pb.time} •{" "}
-                                        {pb.type === "success"
-                                          ? "Success"
-                                          : "Accident"}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                            {item.activities.length > 0 && (
-                              <div className="space-y-2">
-                                <p className="text-sm font-medium">
-                                  Highlights from the day
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                  {item.activities.map((activity, idx) => (
-                                    <Badge
-                                      key={`${item.id}-activity-${idx}`}
-                                      variant="secondary"
-                                    >
-                                      {activity}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {item.overallFeedback && (
-                              <div className="space-y-2">
-                                <p className="flex items-center gap-2 text-sm font-medium">
-                                  <ClipboardCheck className="size-4" /> Overall
-                                  Feedback
-                                </p>
-                                <Badge variant="outline" className="text-xs">
-                                  {item.overallFeedback}
-                                </Badge>
-                              </div>
-                            )}
-
-                            {item.petConditions &&
-                              Object.keys(item.petConditions).length > 0 && (
-                                <div className="space-y-2">
-                                  <p className="flex items-center gap-2 text-sm font-medium">
-                                    <Stethoscope className="size-4" /> Pet
-                                    Condition
-                                  </p>
-                                  <div className="grid grid-cols-2 gap-2 text-xs">
-                                    {Object.entries(item.petConditions).map(
-                                      ([category, value]) => (
-                                        <div
-                                          key={`${item.id}-condition-${category}`}
-                                          className="flex items-center justify-between rounded-md bg-white/60 px-2 py-1.5"
-                                        >
-                                          <span className="text-muted-foreground capitalize">
-                                            {category}
-                                          </span>
-                                          <span className="font-medium">
-                                            {value}
-                                          </span>
-                                        </div>
-                                      ),
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-
-                            {/* Quick Reply */}
-                            <ReportCardQuickReply
-                              reportCardId={item.id}
-                              petName={item.petName}
-                              serviceType={item.serviceType}
-                              onReplySent={(message) => {
-                                console.log("Reply sent:", message);
-                              }}
-                            />
-
-                            {/* Theme label */}
-                            <div className="flex justify-end pt-1">
-                              <span className="text-xs text-gray-400">
-                                {ts.emoji} {ts.label} Theme
-                              </span>
-                            </div>
-
-                            {/* Branded footer */}
-                            {reportCardConfig.brand && (
-                              <div className="mt-3 border-t pt-2">
-                                <ReportCardBrandedFooter
-                                  brandConfig={reportCardConfig.brand}
-                                  profile={businessProfile}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </ScrollArea>
+            ))}
+          </div>
         )}
       </div>
+
+      {/* Detail slide-over */}
+      <Sheet
+        open={openId !== null}
+        onOpenChange={(o) => {
+          if (!o) setOpenId(null);
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="w-full gap-0 overflow-y-auto p-0 sm:max-w-lg"
+        >
+          <SheetHeader className="border-b px-4 py-3">
+            <SheetTitle>
+              {openItem ? `${openItem.petName}'s report card` : "Report card"}
+            </SheetTitle>
+          </SheetHeader>
+          {openItem && (
+            <div className="p-4">
+              <ReportCardDetail
+                item={openItem}
+                favourite={favIds.has(openItem.id)}
+                onToggleFavourite={() => toggleFavourite(openItem.id)}
+              />
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

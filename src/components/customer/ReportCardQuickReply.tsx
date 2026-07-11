@@ -1,24 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Heart, MessageCircle, Calendar } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 
 interface ReportCardQuickReplyProps {
   reportCardId: string;
   petName: string;
   serviceType: string;
+  /** Report date — referenced in the pre-filled message subject. */
+  date?: string;
   onReplySent?: (message: string) => void;
 }
 
@@ -50,10 +43,10 @@ export function ReportCardQuickReply({
   reportCardId: _reportCardId,
   petName,
   serviceType,
+  date,
   onReplySent,
 }: ReportCardQuickReplyProps) {
-  const [isCustomReplyOpen, setIsCustomReplyOpen] = useState(false);
-  const [customMessage, setCustomMessage] = useState("");
+  const router = useRouter();
   const [selectedQuickReply, setSelectedQuickReply] = useState<string | null>(
     null,
   );
@@ -80,25 +73,15 @@ export function ReportCardQuickReply({
     }
   };
 
-  const handleCustomReply = async () => {
-    if (!customMessage.trim()) {
-      toast.error("Please enter a message");
-      return;
-    }
-
-    try {
-      // TODO: API call to send custom reply
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      toast.success("Reply sent!");
-      onReplySent?.(customMessage);
-      setIsCustomReplyOpen(false);
-      setCustomMessage("");
-    } catch (error: unknown) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to send reply",
-      );
-    }
+  // "Custom message" opens the Messages interface (pre-addressed to the
+  // facility) with the report referenced in a pre-filled subject line.
+  const handleCustomMessage = () => {
+    const subject = date
+      ? `Re: ${petName}'s ${serviceType} report (${date})`
+      : `Re: ${petName}'s ${serviceType} report`;
+    router.push(
+      `/customer/messages?compose=${encodeURIComponent(`${subject}\n\n`)}`,
+    );
   };
 
   return (
@@ -124,47 +107,13 @@ export function ReportCardQuickReply({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setIsCustomReplyOpen(true)}
+          onClick={handleCustomMessage}
           className="text-xs"
         >
           <MessageCircle className="mr-1 size-3" />
           Custom message
         </Button>
       </div>
-
-      {/* Custom Reply Dialog */}
-      <Dialog open={isCustomReplyOpen} onOpenChange={setIsCustomReplyOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Send a Custom Reply</DialogTitle>
-            <DialogDescription>
-              Send a personalized message about {petName}&apos;s {serviceType}{" "}
-              visit
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="message">Message</Label>
-              <Textarea
-                id="message"
-                placeholder="Type your message here..."
-                value={customMessage}
-                onChange={(e) => setCustomMessage(e.target.value)}
-                rows={4}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsCustomReplyOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleCustomReply}>Send Reply</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -31,8 +31,11 @@ export function ReportCardBrandedHeader({
   const color = accentColor || brandConfig.accentColor || "#6366f1";
   const style = brandConfig.headerStyle ?? "centered";
   const logoPos = brandConfig.logoPosition ?? "top_center";
-  const showLogo = brandConfig.showFacilityLogo && profile.logo;
-  const showName = brandConfig.showFacilityName !== false;
+  // Only render the logo <Image> when we actually have a logo URL — never a
+  // broken image. When there's no logo, always fall back to the facility-name
+  // typography (even if the name was otherwise hidden).
+  const hasLogo = Boolean(brandConfig.showFacilityLogo && profile.logo);
+  const showName = brandConfig.showFacilityName !== false || !hasLogo;
 
   if (style === "minimal") {
     return (
@@ -59,7 +62,7 @@ export function ReportCardBrandedHeader({
           style={{ backgroundColor: `${color}10` }}
         >
           <div className="flex items-center gap-3">
-            {showLogo && (
+            {hasLogo && (
               <div className="relative size-10 shrink-0 overflow-hidden rounded-lg">
                 <Image
                   src={profile.logo}
@@ -110,7 +113,7 @@ export function ReportCardBrandedHeader({
   // "centered" (default)
   return (
     <div className="flex flex-col items-center px-6 pt-5 pb-4 text-center">
-      {showLogo && (
+      {hasLogo && (
         <div
           className={cn(
             "relative mb-2 size-16 overflow-hidden rounded-xl",

@@ -46,6 +46,16 @@ interface BookingModalConfig {
   onCreateBooking: (booking: BookingData) => void;
   isEstimateMode?: boolean;
   isCustomerMode?: boolean;
+  /** Pass-redemption mode: no payment step; on confirm the pass is auto-applied
+   *  via `onRedeem`, which returns how many passes remain. */
+  passRedemption?: {
+    serviceLabel: string;
+    category: string;
+    onRedeem: (ctx: { petId?: number; petName?: string }) => {
+      ok: boolean;
+      passesLeft: number;
+    };
+  };
 }
 
 interface BookingModalContextValue {
@@ -111,6 +121,7 @@ export function BookingModalProvider({ children }: { children: ReactNode }) {
           preSelectedNotificationSMS={config.preSelectedNotificationSMS}
           estimateMode={config.isEstimateMode ?? false}
           isCustomerMode={config.isCustomerMode ?? false}
+          passRedemption={config.passRedemption}
         />
       )}
     </BookingModalContext.Provider>

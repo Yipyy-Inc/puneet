@@ -382,6 +382,13 @@ export const reportCards: ReportCard[] = [
     sentAt: "2024-01-15T17:00:00Z",
     theme: "everyday",
     overallFeedback: "Excellent",
+    favourite: true,
+    viewedByCustomer: true,
+    customerRating: {
+      stars: 5,
+      comment: "Love seeing Buddy make new friends!",
+      submittedAt: "2024-01-15T18:20:00Z",
+    },
     petConditions: {
       coat: "Normal",
       skin: "Normal",
@@ -410,9 +417,14 @@ export const reportCards: ReportCard[] = [
       },
     ],
     pottyBreaks: [
-      { time: "08:30 AM", type: "success" },
-      { time: "01:00 PM", type: "success" },
-      { time: "04:00 PM", type: "success" },
+      { time: "08:30 AM", type: "success", outcome: "success" },
+      {
+        time: "01:00 PM",
+        type: "success",
+        outcome: "soft_stool",
+        notes: "Slightly soft — monitoring, likely from all the activity.",
+      },
+      { time: "04:00 PM", type: "success", outcome: "success" },
     ],
     mood: "energetic",
     photos: ["/photos/reports/buddy-daycare-3.jpg"],
@@ -423,6 +435,7 @@ export const reportCards: ReportCard[] = [
     sentToOwner: true,
     sentAt: "2024-03-01T17:30:00Z",
     theme: "summer",
+    viewedByCustomer: false,
     overallFeedback: "Good",
     petConditions: {
       coat: "Normal",
@@ -496,6 +509,12 @@ export const reportCards: ReportCard[] = [
     sentToOwner: true,
     sentAt: "2024-01-25T12:30:00Z",
     theme: "valentines",
+    photoPairs: [
+      {
+        before: "/photos/reports/whiskers-grooming-before.jpg",
+        after: "/photos/reports/whiskers-grooming-after.jpg",
+      },
+    ],
   },
   {
     id: "report-005",
@@ -532,6 +551,25 @@ export const reportCards: ReportCard[] = [
     theme: "easter",
   },
 ];
+
+/**
+ * Persists a customer's star rating onto a report card (F1). Mutates the
+ * `reportCards` array in place, matching the mock-data-as-store pattern.
+ */
+export function setReportCardCustomerRating(
+  reportCardId: string,
+  rating: { stars: number; comment?: string; submittedAt: string },
+): void {
+  const card = reportCards.find((c) => c.id === reportCardId);
+  if (card) card.customerRating = rating;
+}
+
+/** Marks a report card as viewed by the customer (F1) — dismisses "new report"
+ *  notifications. Mutates the `reportCards` array in place (mock-store). */
+export function markReportCardViewed(reportCardId: string): void {
+  const card = reportCards.find((c) => c.id === reportCardId);
+  if (card) card.viewedByCustomer = true;
+}
 
 // Pet Tags - predefined tags that can be assigned to pets
 export const petTags: PetTag[] = [

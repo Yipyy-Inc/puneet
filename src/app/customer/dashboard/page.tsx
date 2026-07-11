@@ -41,6 +41,8 @@ import {
 import Link from "next/link";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
+import { estimates } from "@/data/estimates";
+import { businessProfile } from "@/data/settings";
 import { vaccinationRecords } from "@/data/pet-data";
 import { payments, invoices } from "@/data/payments";
 import { facilityConfig } from "@/data/facility-config";
@@ -48,6 +50,7 @@ import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { getYipyyGoDisplayStatus } from "@/data/yipyygo-forms";
 import { clientCommunications } from "@/data/communications";
 import { reportCards } from "@/data/pet-data";
+import { mockCustomerPackages } from "@/data/customer-packages";
 import { customerLoyaltyData, loyaltySettings } from "@/data/marketing";
 import {
   getUnfinishedBookingsForCustomer,
@@ -58,10 +61,22 @@ import { CustomerTrainingCreditsBanner } from "@/components/customer/training/cu
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
 
+// Mood → tinted thumbnail tone for the "new report card" notification.
+const MOOD_TONE: Record<string, string> = {
+  happy: "bg-amber-100 text-amber-700",
+  excited: "bg-pink-100 text-pink-700",
+  playful: "bg-green-100 text-green-700",
+  energetic: "bg-orange-100 text-orange-700",
+  calm: "bg-sky-100 text-sky-700",
+  anxious: "bg-slate-100 text-slate-600",
+  tired: "bg-indigo-100 text-indigo-700",
+};
+
 export default function CustomerDashboardPage() {
   const { selectedFacility } = useCustomerFacility();
   const isMounted = useHydrated();
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
+  const [nowMs] = useState(() => Date.now());
 
   // Get customer data
   const customer = useMemo(
@@ -190,6 +205,55 @@ export default function CustomerDashboardPage() {
       progressPercentage: Math.min(100, Math.max(0, progressPercentage)),
     };
   }, []);
+
+  // Pending (Awaiting Response) estimates for this customer.
+  const pendingEstimates = useMemo(
+    () =>
+      estimates.filter(
+        (e) => e.clientId === MOCK_CUSTOMER_ID && e.status === "sent",
+      ),
+    [],
+  );
+
+  // Passes expiring within 14 days (with passes remaining), soonest first.
+  const expiringPasses = useMemo(
+    () =>
+      mockCustomerPackages
+        .filter(
+          (p) =>
+            p.customerId === MOCK_CUSTOMER_ID &&
+            p.status === "active" &&
+            p.expiresAt,
+        )
+        .map((p) => ({
+          pkg: p,
+          daysLeft: Math.ceil(
+            (new Date(p.expiresAt as string).getTime() - nowMs) / 86_400_000,
+          ),
+          remaining: p.passesTotal - p.passesUsed,
+        }))
+        .filter((x) => x.daysLeft > 0 && x.daysLeft <= 14 && x.remaining > 0)
+        .sort((a, b) => a.daysLeft - b.daysLeft),
+    [nowMs],
+  );
+
+  // Newest unread report card for this customer's pets (viewedByCustomer=false).
+  const newReportCard = useMemo(() => {
+    const petIds = new Set(customerPets.map((p) => p.id));
+    const card = reportCards
+      .filter((rc) => petIds.has(rc.petId) && rc.viewedByCustomer === false)
+      .sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      )[0];
+    if (!card) return null;
+    const pet = customerPets.find((p) => p.id === card.petId);
+    return {
+      petName: pet?.name ?? "Your pet",
+      petImage: pet?.imageUrl,
+      photo: card.photos[0],
+      mood: card.mood,
+    };
+  }, [customerPets]);
 
   // Get unfinished bookings for this customer + facility
   const unfinishedBookings = useMemo(() => {
@@ -447,8 +511,8 @@ export default function CustomerDashboardPage() {
   return (
     <div className="from-background via-muted/20 to-background relative min-h-screen overflow-hidden bg-linear-to-br p-4 md:p-6">
       <div className="pointer-events-none absolute inset-0">
-        <div className="bg-primary/10 absolute -top-32 right-0 h-80 w-80 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 left-0 h-72 w-72 rounded-full bg-sky-300/20 blur-3xl" />
+        <div className="bg-primary/10 absolute -top-32 right-0 size-80 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 left-0 size-72 rounded-full bg-sky-300/20 blur-3xl" />
       </div>
       <div className="relative mx-auto max-w-7xl space-y-6">
         {/* Unfinished Bookings Dropdown */}
@@ -655,6 +719,127 @@ export default function CustomerDashboardPage() {
             </Card>
           </Link>
         </div>
+
+        {/* New report card notification */}
+        {newReportCard && (
+          <Link href="/customer/report-cards" className="group block">
+            <div className="flex items-center gap-3 rounded-2xl border border-emerald-300/70 bg-emerald-50/90 px-4 py-3 shadow-md shadow-emerald-100/60 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:shadow-lg dark:border-emerald-800 dark:bg-emerald-950/30">
+              {/* Mood-colour thumbnail */}
+              <div
+                className={`flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl ${
+                  MOOD_TONE[newReportCard.mood] ?? "bg-slate-100 text-slate-600"
+                }`}
+              >
+                {newReportCard.petImage ? (
+                  <Image
+                    src={newReportCard.petImage}
+                    alt={newReportCard.petName}
+                    width={48}
+                    height={48}
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <Dog className="size-6" />
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-emerald-900 dark:text-emerald-200">
+                  New report card from{" "}
+                  <span className="font-semibold">
+                    {isMounted && selectedFacility
+                      ? selectedFacility.name
+                      : businessProfile.businessName}
+                  </span>{" "}
+                  —{" "}
+                  <span className="font-semibold">{newReportCard.petName}</span>{" "}
+                  had a <span className="capitalize">{newReportCard.mood}</span>{" "}
+                  day! 🐶
+                </p>
+                <span className="text-primary mt-0.5 inline-flex items-center gap-1 text-xs font-medium group-hover:underline">
+                  View {newReportCard.petName}&apos;s Report
+                  <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </div>
+
+              {/* One photo thumbnail */}
+              {newReportCard.photo && (
+                <div className="relative hidden size-12 shrink-0 overflow-hidden rounded-lg sm:block">
+                  <Image
+                    src={newReportCard.photo}
+                    alt=""
+                    fill
+                    sizes="48px"
+                    className="object-cover"
+                  />
+                </div>
+              )}
+            </div>
+          </Link>
+        )}
+
+        {/* Estimates awaiting response */}
+        {pendingEstimates.length > 0 && (
+          <Link href="/customer/estimates" className="group block">
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-blue-300/70 bg-blue-50/90 px-5 py-3.5 shadow-md shadow-blue-100/60 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:shadow-lg dark:border-blue-800 dark:bg-blue-950/30">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <FileText className="size-4 shrink-0 text-blue-600" />
+                <span className="text-sm text-blue-900 dark:text-blue-200">
+                  {pendingEstimates.length === 1 ? (
+                    <>
+                      {isMounted && selectedFacility
+                        ? selectedFacility.name
+                        : businessProfile.businessName}{" "}
+                      sent you an estimate for{" "}
+                      <span className="font-semibold">
+                        {pendingEstimates[0].petNames[0] ??
+                          pendingEstimates[0].guestPetInfo?.name ??
+                          "your pet"}
+                        &apos;s{" "}
+                        <span className="capitalize">
+                          {pendingEstimates[0].service}
+                        </span>
+                      </span>{" "}
+                      — ${pendingEstimates[0].total.toFixed(2)}. Accept or
+                      decline
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-semibold">
+                        {pendingEstimates.length} estimates
+                      </span>{" "}
+                      awaiting your response
+                    </>
+                  )}
+                </span>
+              </div>
+              <ArrowRight className="size-4 shrink-0 text-blue-600 transition-transform group-hover:translate-x-0.5" />
+            </div>
+          </Link>
+        )}
+
+        {/* Pass expiring soon */}
+        {expiringPasses.length > 0 && (
+          <Link href="/customer/packages" className="group block">
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-300/70 bg-amber-50/90 px-5 py-3.5 shadow-md shadow-amber-100/60 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:shadow-lg dark:border-amber-800 dark:bg-amber-950/30">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <Clock className="size-4 shrink-0 text-amber-600" />
+                <span className="text-sm text-amber-900 dark:text-amber-200">
+                  Your{" "}
+                  <span className="font-semibold">
+                    {expiringPasses[0].pkg.packageName}
+                  </span>{" "}
+                  expires in {expiringPasses[0].daysLeft} day
+                  {expiringPasses[0].daysLeft === 1 ? "" : "s"}. You have{" "}
+                  {expiringPasses[0].remaining} pass
+                  {expiringPasses[0].remaining === 1 ? "" : "es"} remaining —
+                  book your next visit now.
+                </span>
+              </div>
+              <ArrowRight className="size-4 shrink-0 text-amber-600 transition-transform group-hover:translate-x-0.5" />
+            </div>
+          </Link>
+        )}
 
         <CustomerTrainingCreditsBanner customerId={MOCK_CUSTOMER_ID} />
 

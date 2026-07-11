@@ -188,6 +188,15 @@ export const mealConsumedEnum = z.enum(["all", "most", "some", "none"]);
 
 export const pottyTypeEnum = z.enum(["success", "accident"]);
 
+export const pottyOutcomeEnum = z.enum([
+  "success",
+  "soft_stool",
+  "diarrhea",
+  "vomit",
+  "accident",
+]);
+export type PottyOutcome = z.infer<typeof pottyOutcomeEnum>;
+
 export const petMoodEnum = z.enum([
   "happy",
   "calm",
@@ -226,6 +235,7 @@ export const reportCardSchema = z.object({
     z.object({
       time: z.string(),
       type: pottyTypeEnum,
+      outcome: pottyOutcomeEnum.optional(),
       notes: z.string().optional(),
     }),
   ),
@@ -242,6 +252,23 @@ export const reportCardSchema = z.object({
   overallFeedback: z.string().optional(),
   customAnswers: z.record(z.string(), z.string()).optional(),
   petConditions: z.record(z.string(), z.string()).optional(),
+  favourite: z.boolean().optional(),
+  viewedByCustomer: z.boolean().optional(),
+  customerRating: z
+    .object({
+      stars: z.number(),
+      comment: z.string().optional(),
+      submittedAt: z.string(),
+    })
+    .optional(),
+  photoPairs: z
+    .array(
+      z.object({
+        before: z.string(),
+        after: z.string(),
+      }),
+    )
+    .optional(),
 });
 
 export type ReportCard = z.infer<typeof reportCardSchema>;

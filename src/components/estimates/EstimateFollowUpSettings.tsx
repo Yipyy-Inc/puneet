@@ -49,7 +49,7 @@ function renderMergePreview(message: string): string {
 }
 
 type FollowUpChannel = "email" | "sms" | "both";
-type StopCondition = "accepted" | "expires" | "books_different";
+type StopCondition = "accepted" | "declined" | "expires" | "books_different";
 type ExpiryAction = "declined" | "archive" | "none";
 
 interface EstimateExpiryConfig {
@@ -70,6 +70,8 @@ interface ReminderRule {
   delayDays: number;
   channel: FollowUpChannel;
   message: string;
+  /** Shorter template used when the channel includes SMS. */
+  smsMessage: string;
   /** Send at most this many follow-ups for this rule, then stop. */
   maxFollowUps: number;
   /** Condition that halts follow-ups early, before the max is reached. */
@@ -85,8 +87,18 @@ interface FollowUpConfig {
 
 const STOP_CONDITION_OPTIONS: { value: StopCondition; label: string }[] = [
   { value: "accepted", label: "Estimate is accepted" },
+  { value: "declined", label: "Estimate is declined" },
   { value: "expires", label: "Estimate expires" },
   { value: "books_different", label: "Customer books a different service" },
+];
+
+// Merge tags — the {{...}} syntax matches what's used in the message templates.
+const MERGE_TAGS = [
+  "{{customer_name}}",
+  "{{pet_name}}",
+  "{{service_name}}",
+  "{{estimate_total}}",
+  "{{estimate_link}}",
 ];
 
 const DEFAULT_CONFIG: FollowUpConfig = {
@@ -101,6 +113,8 @@ const DEFAULT_CONFIG: FollowUpConfig = {
     channel: "email",
     message:
       "Hi {{customer_name}}, we sent you an estimate for {{service_name}} a few days ago. Just wanted to make sure you received it! Let us know if you have any questions.",
+    smsMessage:
+      "Hi {{customer_name}}, just checking you got our estimate for {{service_name}}. View & book: {{estimate_link}}",
     maxFollowUps: 2,
     stopCondition: "accepted",
   },
@@ -110,6 +124,8 @@ const DEFAULT_CONFIG: FollowUpConfig = {
     channel: "email",
     message:
       "Hi {{customer_name}}, we noticed you checked out the estimate for {{pet_name}}. We'd love to help you get booked! Is there anything we can answer or adjust?",
+    smsMessage:
+      "Hi {{customer_name}}, ready to book {{pet_name}}'s {{service_name}}? {{estimate_link}}",
     maxFollowUps: 1,
     stopCondition: "accepted",
   },
@@ -145,7 +161,9 @@ export function EstimateFollowUpSettings() {
   });
 
   const [previewNotViewed, setPreviewNotViewed] = useState(false);
+  const [previewNotViewedSms, setPreviewNotViewedSms] = useState(false);
   const [previewViewed, setPreviewViewed] = useState(false);
+  const [previewViewedSms, setPreviewViewedSms] = useState(false);
 
   const handleSave = () => {
     localStorage.setItem("estimate-followup-config", JSON.stringify(config));
@@ -359,56 +377,117 @@ export function EstimateFollowUpSettings() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1.5 md:col-span-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs">Message template</Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 gap-1.5 px-2 text-xs"
-                        onClick={() => setPreviewNotViewed((v) => !v)}
-                      >
+                  <div className="space-y-3 md:col-span-2">
+                    {/* Email template — when the channel includes email */}
+                    {(config.notViewedReminder.channel === "email" ||
+                      config.notViewedReminder.channel === "both") && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs">
+                            {config.notViewedReminder.channel === "both"
+                              ? "Email message"
+                              : "Message template"}
+                          </Label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 gap-1.5 px-2 text-xs"
+                            onClick={() => setPreviewNotViewed((v) => !v)}
+                          >
+                            {previewNotViewed ? (
+                              <>
+                                <Pencil className="size-3" />
+                                Edit
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="size-3" />
+                                Preview
+                              </>
+                            )}
+                          </Button>
+                        </div>
                         {previewNotViewed ? (
-                          <>
-                            <Pencil className="size-3" />
-                            Edit
-                          </>
+                          <div className="bg-muted/30 text-foreground min-h-[76px] rounded-lg border p-3 text-xs whitespace-pre-line">
+                            {renderMergePreview(
+                              config.notViewedReminder.message,
+                            )}
+                          </div>
                         ) : (
-                          <>
-                            <Eye className="size-3" />
-                            Preview rendered message
-                          </>
+                          <Textarea
+                            value={config.notViewedReminder.message}
+                            onChange={(e) =>
+                              setConfig({
+                                ...config,
+                                notViewedReminder: {
+                                  ...config.notViewedReminder,
+                                  message: e.target.value,
+                                },
+                              })
+                            }
+                            rows={3}
+                            className="text-xs"
+                          />
                         )}
-                      </Button>
-                    </div>
-                    {previewNotViewed ? (
-                      <div className="bg-muted/30 text-foreground min-h-[76px] rounded-lg border p-3 text-xs whitespace-pre-line">
-                        {renderMergePreview(config.notViewedReminder.message)}
                       </div>
-                    ) : (
-                      <Textarea
-                        value={config.notViewedReminder.message}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            notViewedReminder: {
-                              ...config.notViewedReminder,
-                              message: e.target.value,
-                            },
-                          })
-                        }
-                        rows={3}
-                        className="text-xs"
-                      />
                     )}
+
+                    {/* Shorter SMS template — when the channel includes SMS */}
+                    {(config.notViewedReminder.channel === "sms" ||
+                      config.notViewedReminder.channel === "both") && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs">
+                            SMS message (shorter)
+                          </Label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 gap-1.5 px-2 text-xs"
+                            onClick={() => setPreviewNotViewedSms((v) => !v)}
+                          >
+                            {previewNotViewedSms ? (
+                              <>
+                                <Pencil className="size-3" />
+                                Edit
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="size-3" />
+                                Preview
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        {previewNotViewedSms ? (
+                          <div className="bg-muted/30 text-foreground rounded-lg border p-3 text-xs whitespace-pre-line">
+                            {renderMergePreview(
+                              config.notViewedReminder.smsMessage,
+                            )}
+                          </div>
+                        ) : (
+                          <Textarea
+                            value={config.notViewedReminder.smsMessage}
+                            onChange={(e) =>
+                              setConfig({
+                                ...config,
+                                notViewedReminder: {
+                                  ...config.notViewedReminder,
+                                  smsMessage: e.target.value,
+                                },
+                              })
+                            }
+                            rows={2}
+                            className="text-xs"
+                          />
+                        )}
+                      </div>
+                    )}
+
                     <div className="flex flex-wrap gap-1">
-                      {[
-                        "{{customer_name}}",
-                        "{{pet_name}}",
-                        "{{service_name}}",
-                        "{{estimate_total}}",
-                      ].map((v) => (
+                      {MERGE_TAGS.map((v) => (
                         <Badge
                           key={v}
                           variant="outline"
@@ -550,49 +629,124 @@ export function EstimateFollowUpSettings() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1.5 md:col-span-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs">Message template</Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 gap-1.5 px-2 text-xs"
-                        onClick={() => setPreviewViewed((v) => !v)}
-                      >
+                  <div className="space-y-3 md:col-span-2">
+                    {/* Email template — when the channel includes email */}
+                    {(config.viewedNotBooked.channel === "email" ||
+                      config.viewedNotBooked.channel === "both") && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs">
+                            {config.viewedNotBooked.channel === "both"
+                              ? "Email message"
+                              : "Message template"}
+                          </Label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 gap-1.5 px-2 text-xs"
+                            onClick={() => setPreviewViewed((v) => !v)}
+                          >
+                            {previewViewed ? (
+                              <>
+                                <Pencil className="size-3" />
+                                Edit
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="size-3" />
+                                Preview
+                              </>
+                            )}
+                          </Button>
+                        </div>
                         {previewViewed ? (
-                          <>
-                            <Pencil className="size-3" />
-                            Edit
-                          </>
+                          <div className="bg-muted/30 text-foreground min-h-[76px] rounded-lg border p-3 text-xs whitespace-pre-line">
+                            {renderMergePreview(config.viewedNotBooked.message)}
+                          </div>
                         ) : (
-                          <>
-                            <Eye className="size-3" />
-                            Preview rendered message
-                          </>
+                          <Textarea
+                            value={config.viewedNotBooked.message}
+                            onChange={(e) =>
+                              setConfig({
+                                ...config,
+                                viewedNotBooked: {
+                                  ...config.viewedNotBooked,
+                                  message: e.target.value,
+                                },
+                              })
+                            }
+                            rows={3}
+                            className="text-xs"
+                          />
                         )}
-                      </Button>
-                    </div>
-                    {previewViewed ? (
-                      <div className="bg-muted/30 text-foreground min-h-[76px] rounded-lg border p-3 text-xs whitespace-pre-line">
-                        {renderMergePreview(config.viewedNotBooked.message)}
                       </div>
-                    ) : (
-                      <Textarea
-                        value={config.viewedNotBooked.message}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            viewedNotBooked: {
-                              ...config.viewedNotBooked,
-                              message: e.target.value,
-                            },
-                          })
-                        }
-                        rows={3}
-                        className="text-xs"
-                      />
                     )}
+
+                    {/* Shorter SMS template — when the channel includes SMS */}
+                    {(config.viewedNotBooked.channel === "sms" ||
+                      config.viewedNotBooked.channel === "both") && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs">
+                            SMS message (shorter)
+                          </Label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 gap-1.5 px-2 text-xs"
+                            onClick={() => setPreviewViewedSms((v) => !v)}
+                          >
+                            {previewViewedSms ? (
+                              <>
+                                <Pencil className="size-3" />
+                                Edit
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="size-3" />
+                                Preview
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        {previewViewedSms ? (
+                          <div className="bg-muted/30 text-foreground rounded-lg border p-3 text-xs whitespace-pre-line">
+                            {renderMergePreview(
+                              config.viewedNotBooked.smsMessage,
+                            )}
+                          </div>
+                        ) : (
+                          <Textarea
+                            value={config.viewedNotBooked.smsMessage}
+                            onChange={(e) =>
+                              setConfig({
+                                ...config,
+                                viewedNotBooked: {
+                                  ...config.viewedNotBooked,
+                                  smsMessage: e.target.value,
+                                },
+                              })
+                            }
+                            rows={2}
+                            className="text-xs"
+                          />
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-1">
+                      {MERGE_TAGS.map((v) => (
+                        <Badge
+                          key={v}
+                          variant="outline"
+                          className="cursor-default text-[9px]"
+                        >
+                          {v}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}

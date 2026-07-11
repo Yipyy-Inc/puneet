@@ -23,6 +23,13 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const facilityParam = searchParams.get("facility");
+  // Where to land after login (e.g. the estimate that sent them here). Only
+  // same-app relative paths are honored — never an open redirect.
+  const redirectParam = searchParams.get("redirect");
+  const safeRedirect =
+    redirectParam && redirectParam.startsWith("/customer/")
+      ? redirectParam
+      : "/customer/dashboard";
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -61,7 +68,7 @@ export default function LoginPage() {
       // TODO: Replace with actual API call
       await login(formData.email, formData.password);
       toast.success("Welcome back!");
-      router.push("/customer/dashboard");
+      router.push(safeRedirect);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error) || "Invalid email or password");
     } finally {
@@ -82,7 +89,7 @@ export default function LoginPage() {
         // Link Google account to existing customer if not already linked
         await linkGoogleAccount(googleUser);
         toast.success("Signed in successfully!");
-        router.push("/customer/dashboard");
+        router.push(safeRedirect);
       } else {
         // New users must complete signup so they can select preferred language.
         const signupParams = new URLSearchParams({

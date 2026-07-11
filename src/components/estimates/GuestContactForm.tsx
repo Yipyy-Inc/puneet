@@ -143,7 +143,7 @@ export function GuestContactForm({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 text-slate-400 hover:text-red-500"
+                className="size-9 text-slate-400 hover:text-red-500"
                 disabled={resolvedGuestPetNames.length <= 1}
                 onClick={() => removeGuestPetField(index)}
               >

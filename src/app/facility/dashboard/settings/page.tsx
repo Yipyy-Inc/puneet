@@ -14,9 +14,15 @@ import type {
   ScheduleTimeOverride,
   DropOffPickUpOverride,
 } from "@/types/facility";
+import { toast } from "sonner";
 import { SettingsBlock } from "@/components/ui/settings-block";
 import { ReportCardBrandedHeader } from "@/components/shared/ReportCardBrandedHeader";
 import { ReportCardBrandedFooter } from "@/components/shared/ReportCardBrandedFooter";
+import { ReportCardSmsPreview } from "@/components/facility/report-cards/notifications/ReportCardNotificationPreviews";
+import {
+  buildReportCardNotificationData,
+  sendReportCardNotifications,
+} from "@/lib/report-cards/report-notifications";
 import { businessProfile } from "@/data/settings";
 import {
   getApprovalConfig,
@@ -46,6 +52,7 @@ import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
 import { EvaluationReportCardBuilder } from "@/components/evaluations/EvaluationReportCardBuilder";
 import { EvaluationFormBuilder } from "@/components/evaluations/EvaluationFormBuilder";
 import { EstimateFollowUpSettings } from "@/components/estimates/EstimateFollowUpSettings";
+import { EstimateDefaultsSettings } from "@/components/estimates/EstimateDefaultsSettings";
 import { StatusColorSettings } from "@/components/facility/StatusColorSettings";
 import { ServiceColorCard } from "@/components/facility/ServiceColorCard";
 import { ExerciseLibrarySection } from "@/components/facility/training/exercise-library-section";
@@ -114,6 +121,8 @@ import {
   Plus,
   Timer,
   Trash2,
+  Check,
+  Send,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -2064,6 +2073,21 @@ function ReportCardSettingsCard() {
     Record<string, string>
   >({});
   const [newFeedbackOption, setNewFeedbackOption] = useState("");
+  const [previewMode, setPreviewMode] = useState<"portal" | "sms">("portal");
+
+  // Sample data for the live SMS preview + "send test" action.
+  const buildSampleNotification = () =>
+    buildReportCardNotificationData({
+      reportId: "preview",
+      petName: "Buddy",
+      ownerName: "you",
+      facilityName: businessProfile.businessName,
+      serviceType: sectionServiceId,
+      mood: "happy",
+      photos: [],
+      summaryText:
+        "Buddy had a wonderful, playful day — full of zoomies, new friends, and a great appetite!",
+    });
 
   const themeOptions = [
     { id: "everyday", label: "Everyday" },
@@ -2524,26 +2548,106 @@ function ReportCardSettingsCard() {
 
                 {/* Live Preview */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-semibold">Live Preview</Label>
-                  <div className="overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-white">
-                    <ReportCardBrandedHeader
-                      brandConfig={brand}
-                      profile={businessProfile}
-                      title="Buddy's Daily Report"
-                      subtitle="Daycare · Mon, April 5, 2026"
-                    />
-                    <div className="px-6 py-4">
-                      <p className="text-muted-foreground text-center text-xs italic">
-                        — report card content would appear here —
-                      </p>
-                    </div>
-                    <div className="border-t">
-                      <ReportCardBrandedFooter
-                        brandConfig={brand}
-                        profile={businessProfile}
-                      />
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold">
+                      Live Preview
+                    </Label>
+                    {/* In-portal ↔ SMS switch */}
+                    <div className="flex rounded-md border p-0.5 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewMode("portal")}
+                        className={`rounded-sm px-2.5 py-1 font-medium ${
+                          previewMode === "portal"
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        In-portal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewMode("sms")}
+                        className={`rounded-sm px-2.5 py-1 font-medium ${
+                          previewMode === "sms"
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        SMS
+                      </button>
                     </div>
                   </div>
+
+                  {previewMode === "portal" ? (
+                    <div className="overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-white">
+                      <ReportCardBrandedHeader
+                        brandConfig={brand}
+                        profile={businessProfile}
+                        title={`${brand.reportTitle || "Daily Report"} — Buddy`}
+                        subtitle="Daycare · Mon, April 5, 2026"
+                      />
+                      <div className="space-y-1.5 px-6 py-4">
+                        {/* Reflects the section toggles for the selected service */}
+                        {getServiceConfig(
+                          localConfig,
+                          sectionServiceId,
+                        ).enabledSections.map((sid) => (
+                          <div
+                            key={sid}
+                            className="flex items-center gap-2 text-xs text-slate-600"
+                          >
+                            <Check className="size-3 text-emerald-500" />
+                            {reportCardSectionMeta[sid]?.label ?? sid}
+                          </div>
+                        ))}
+                        {sectionServiceId === "grooming" &&
+                          localConfig.groomingBeforeAfter && (
+                            <div className="flex items-center gap-2 text-xs text-slate-600">
+                              <Check className="size-3 text-emerald-500" />
+                              Before / After slider
+                            </div>
+                          )}
+                        {getServiceConfig(localConfig, sectionServiceId)
+                          .enabledSections.length === 0 && (
+                          <p className="text-muted-foreground text-center text-xs italic">
+                            No sections enabled for this service.
+                          </p>
+                        )}
+                      </div>
+                      <div className="border-t">
+                        <ReportCardBrandedFooter
+                          brandConfig={brand}
+                          profile={businessProfile}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <ReportCardSmsPreview data={buildSampleNotification()} />
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-2"
+                    onClick={() => {
+                      const ch = localConfig.autoSend.channels;
+                      const sent = sendReportCardNotifications(
+                        buildSampleNotification(),
+                        { email: ch.email, sms: ch.sms, push: ch.message },
+                      );
+                      toast.success("Test report sent to you", {
+                        description:
+                          sent.length > 0
+                            ? `Delivered via ${sent.join(", ")}.`
+                            : "Enable a delivery channel to receive it.",
+                      });
+                    }}
+                  >
+                    <Send className="size-4" />
+                    Send test report to myself
+                  </Button>
                 </div>
               </div>
 
@@ -2671,6 +2775,29 @@ function ReportCardSettingsCard() {
                   );
                 })}
               </div>
+
+              {/* Grooming-only: Before/After photo pair */}
+              {sectionServiceId === "grooming" && (
+                <div className="flex items-center justify-between rounded-lg border border-pink-200 bg-pink-50/60 px-4 py-3 dark:border-pink-900 dark:bg-pink-950/20">
+                  <div>
+                    <p className="text-sm font-medium">Before / After photos</p>
+                    <p className="text-muted-foreground text-xs">
+                      Prompt the groomer to upload a before + after pair — the
+                      customer sees a drag-to-reveal slider.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={localConfig.groomingBeforeAfter ?? false}
+                    disabled={!isEditing}
+                    onCheckedChange={(checked) =>
+                      setLocalConfig({
+                        ...localConfig,
+                        groomingBeforeAfter: checked === true,
+                      })
+                    }
+                  />
+                </div>
+              )}
             </TabsContent>
 
             {/* ── Feedback Tab ─────────────────────────────── */}
@@ -3213,6 +3340,35 @@ function ReportCardSettingsCard() {
                     }
                   />
                 </div>
+
+                {/* Optional per-platform review links (feed the facility Reviews) */}
+                <div className="grid gap-4 md:grid-cols-3">
+                  {(
+                    [
+                      { key: "googleUrl", label: "Google review link" },
+                      { key: "yelpUrl", label: "Yelp review link" },
+                      { key: "facebookUrl", label: "Facebook review link" },
+                    ] as const
+                  ).map((p) => (
+                    <div key={p.key} className="space-y-2">
+                      <Label className="text-xs">{p.label}</Label>
+                      <Input
+                        placeholder="https://…"
+                        value={reviewBooster[p.key] ?? ""}
+                        readOnly={!isEditing}
+                        onChange={(e) =>
+                          setLocalConfig({
+                            ...localConfig,
+                            reviewBooster: {
+                              ...reviewBooster,
+                              [p.key]: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -3728,6 +3884,19 @@ export default function SettingsPage() {
           {/* Estimate Settings */}
           {activeSection === "estimate-settings" && (
             <div className="space-y-6">
+              <div className="bg-muted/30 rounded-lg border px-4 py-3 text-sm">
+                <p className="text-muted-foreground">
+                  Estimate emails use your Invoice Template branding.{" "}
+                  <button
+                    type="button"
+                    onClick={() => handleSectionChange("invoice-template")}
+                    className="text-primary font-medium hover:underline"
+                  >
+                    Configure branding in Invoice Settings →
+                  </button>
+                </p>
+              </div>
+              <EstimateDefaultsSettings />
               <EstimateFollowUpSettings />
             </div>
           )}

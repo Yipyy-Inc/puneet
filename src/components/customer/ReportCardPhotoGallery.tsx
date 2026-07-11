@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { facilityConfig } from "@/data/facility-config";
 
 interface ReportCardPhotoGalleryProps {
@@ -26,6 +27,46 @@ interface ReportCardPhotoGalleryProps {
   reportCardId: string;
   serviceType: string;
   date: string;
+}
+
+/** next/image with a pulsing skeleton until it loads. Requires a positioned parent. */
+function GalleryImage({
+  src,
+  alt,
+  sizes,
+  priority = false,
+  className,
+}: {
+  src: string;
+  alt: string;
+  sizes: string;
+  priority?: boolean;
+  className?: string;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <>
+      {!loaded && (
+        <div
+          className="bg-muted absolute inset-0 animate-pulse"
+          aria-hidden="true"
+        />
+      )}
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes={sizes}
+        priority={priority}
+        onLoad={() => setLoaded(true)}
+        className={cn(
+          "transition-opacity duration-300",
+          loaded ? "opacity-100" : "opacity-0",
+          className,
+        )}
+      />
+    </>
+  );
 }
 
 export function ReportCardPhotoGallery({
@@ -37,6 +78,7 @@ export function ReportCardPhotoGallery({
 }: ReportCardPhotoGalleryProps) {
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+  const touchStartX = useRef<number | null>(null);
 
   // Check if photo download/share is enabled (facility-controlled)
   const photoSharingEnabled =
@@ -44,12 +86,50 @@ export function ReportCardPhotoGallery({
   const photoDownloadEnabled =
     facilityConfig.reports?.photoSharing?.allowDownload ?? true;
 
+  const goNext = useCallback(
+    () =>
+      setSelectedPhotoIndex((prev) =>
+        prev < photos.length - 1 ? prev + 1 : 0,
+      ),
+    [photos.length],
+  );
+  const goPrev = useCallback(
+    () =>
+      setSelectedPhotoIndex((prev) =>
+        prev > 0 ? prev - 1 : photos.length - 1,
+      ),
+    [photos.length],
+  );
+
+  // Keyboard arrow navigation while the lightbox is open.
+  useEffect(() => {
+    if (!isGalleryOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") goPrev();
+      else if (e.key === "ArrowRight") goNext();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isGalleryOpen, goNext, goPrev]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > 40 && photos.length > 1) {
+      if (dx < 0) goNext();
+      else goPrev();
+    }
+    touchStartX.current = null;
+  };
+
   const handleDownloadPhoto = (photoUrl: string, index: number) => {
     if (!photoDownloadEnabled) {
       toast.error("Photo downloads are not available");
       return;
     }
-
     // Create a temporary link to download the photo
     const link = document.createElement("a");
     link.href = photoUrl;
@@ -65,7 +145,6 @@ export function ReportCardPhotoGallery({
       toast.error("Photo sharing is not available");
       return;
     }
-
     try {
       if (navigator.share) {
         const response = await fetch(photoUrl);
@@ -73,25 +152,40 @@ export function ReportCardPhotoGallery({
         const file = new File([blob], `${petName}-photo.jpg`, {
           type: blob.type,
         });
-
-        await navigator.share({
-          title: `${petName}'s ${serviceType} photos`,
-          text: `Check out ${petName}'s photos from ${date}!`,
-          files: [file],
-        });
+        // Prefer sharing the image file; fall back to a text/title share.
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({
+            title: `${petName}'s ${serviceType} photos`,
+            text: `Check out ${petName}'s photos from ${date}!`,
+            files: [file],
+          });
+        } else {
+          await navigator.share({
+            title: `${petName}'s ${serviceType} photos`,
+            text: `Check out ${petName}'s photos from ${date}!`,
+            url: photoUrl,
+          });
+        }
         toast.success("Photo shared");
       } else {
-        // Fallback: copy link to clipboard
+        // Desktop fallback: copy link to clipboard
         await navigator.clipboard.writeText(photoUrl);
         toast.success("Photo link copied to clipboard");
       }
     } catch (error) {
+      // AbortError = user dismissed the share sheet; don't surface an error.
+      if (error instanceof Error && error.name === "AbortError") return;
       console.error("Error sharing photo:", error);
       toast.error("Failed to share photo");
     }
   };
 
   if (photos.length === 0) return null;
+
+  const openAt = (idx: number) => {
+    setSelectedPhotoIndex(idx);
+    setIsGalleryOpen(true);
+  };
 
   return (
     <>
@@ -104,7 +198,7 @@ export function ReportCardPhotoGallery({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setIsGalleryOpen(true)}
+              onClick={() => openAt(0)}
               className="text-xs"
             >
               View all {photos.length} photos
@@ -113,32 +207,31 @@ export function ReportCardPhotoGallery({
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
           {photos.slice(0, 4).map((photo, idx) => (
-            <div
+            <button
+              type="button"
               key={`${reportCardId}-photo-${idx}`}
               className="bg-muted relative aspect-4/3 cursor-pointer overflow-hidden rounded-lg transition-opacity hover:opacity-90"
-              onClick={() => {
-                setSelectedPhotoIndex(idx);
-                setIsGalleryOpen(true);
-              }}
+              onClick={() => openAt(idx)}
+              aria-label={`Open photo ${idx + 1} of ${petName}`}
             >
-              <Image
+              <GalleryImage
                 src={photo}
                 alt={`${petName} at the facility`}
-                fill
+                sizes="(max-width: 768px) 50vw, 200px"
                 className="object-cover"
               />
-            </div>
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Gallery Modal */}
+      {/* Full-screen lightbox */}
       <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
-        <DialogContent className="max-h-[90vh] max-w-6xl p-0">
+        <DialogContent className="flex h-[95vh] w-[96vw] max-w-6xl flex-col overflow-hidden p-0">
           <DialogHeader className="px-6 pt-6 pb-4">
-            <DialogTitle className="flex items-center justify-between">
-              <span>
-                {petName}&apos;s {serviceType} photos - {date}
+            <DialogTitle className="flex items-center justify-between gap-4">
+              <span className="truncate">
+                {petName}&apos;s {serviceType} photos — {date}
               </span>
               <Button
                 variant="ghost"
@@ -146,17 +239,24 @@ export function ReportCardPhotoGallery({
                 onClick={() => setIsGalleryOpen(false)}
               >
                 <X className="size-4" />
+                <span className="sr-only">Close</span>
               </Button>
             </DialogTitle>
           </DialogHeader>
 
           <div className="relative flex-1 overflow-hidden">
             {/* Main Photo */}
-            <div className="bg-muted relative aspect-video">
-              <Image
+            <div
+              className="relative size-full bg-black"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
+              <GalleryImage
+                key={selectedPhotoIndex}
                 src={photos[selectedPhotoIndex]}
                 alt={`${petName} photo ${selectedPhotoIndex + 1}`}
-                fill
+                sizes="96vw"
+                priority
                 className="object-contain"
               />
             </div>
@@ -194,29 +294,26 @@ export function ReportCardPhotoGallery({
             {photos.length > 1 && (
               <>
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   size="icon"
-                  className="absolute top-1/2 left-4 -translate-y-1/2"
-                  onClick={() =>
-                    setSelectedPhotoIndex((prev) =>
-                      prev > 0 ? prev - 1 : photos.length - 1,
-                    )
-                  }
+                  className="absolute top-1/2 left-4 -translate-y-1/2 rounded-full opacity-90"
+                  onClick={goPrev}
+                  aria-label="Previous photo"
                 >
                   <ChevronLeft className="size-4" />
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   size="icon"
-                  className="absolute top-1/2 right-4 -translate-y-1/2"
-                  onClick={() =>
-                    setSelectedPhotoIndex((prev) =>
-                      prev < photos.length - 1 ? prev + 1 : 0,
-                    )
-                  }
+                  className="absolute top-1/2 right-4 -translate-y-1/2 rounded-full opacity-90"
+                  onClick={goNext}
+                  aria-label="Next photo"
                 >
                   <ChevronRight className="size-4" />
                 </Button>
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white">
+                  {selectedPhotoIndex + 1} / {photos.length}
+                </div>
               </>
             )}
           </div>
@@ -229,18 +326,19 @@ export function ReportCardPhotoGallery({
                   <button
                     key={idx}
                     onClick={() => setSelectedPhotoIndex(idx)}
-                    className={`h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
+                    className={cn(
+                      "relative size-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all",
                       selectedPhotoIndex === idx
                         ? "border-primary"
-                        : `border-transparent opacity-60 hover:opacity-100`
-                    } `}
+                        : "border-transparent opacity-60 hover:opacity-100",
+                    )}
+                    aria-label={`View photo ${idx + 1}`}
                   >
-                    <Image
+                    <GalleryImage
                       src={photo}
                       alt={`Thumbnail ${idx + 1}`}
-                      width={80}
-                      height={80}
-                      className="size-full object-cover"
+                      sizes="80px"
+                      className="object-cover"
                     />
                   </button>
                 ))}

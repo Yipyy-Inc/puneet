@@ -138,6 +138,38 @@ export const mockCustomerPackages: CustomerPackageRecord[] = [
       },
     ],
   },
+  {
+    // Urgency case: expires within 14 days (today is 2026-07-11) with only
+    // 2 passes left — drives the "expiring soon" / "almost used up" states.
+    id: "cp-004",
+    customerId: 15,
+    packageId: "gpp-002",
+    packageName: "3x Bath & Brush Pack",
+    purchasedAt: "2026-01-22T11:00:00Z",
+    expiresAt: "2026-07-22T11:00:00Z",
+    passesTotal: 3,
+    passesUsed: 1,
+    passes: [
+      {
+        moduleId: "grooming",
+        packageId: "groom-pkg-001",
+        serviceName: "Bath & Brush",
+        totalPasses: 3,
+        usedPasses: 1,
+      },
+    ],
+    status: "active",
+    redemptions: [
+      {
+        id: "red-007",
+        date: "2026-03-02T10:00:00Z",
+        petId: 1,
+        petName: "Buddy",
+        serviceLabel: "Bath & Brush",
+        passNumber: 1,
+      },
+    ],
+  },
 ];
 
 /**

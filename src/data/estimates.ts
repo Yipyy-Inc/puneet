@@ -1,3 +1,4 @@
+import { getEstimateSettings } from "@/data/estimate-settings";
 import type { Estimate } from "@/types/booking";
 
 export const estimates: Estimate[] = [
@@ -52,6 +53,33 @@ export const estimates: Estimate[] = [
     expiresAt: "2026-04-12T23:59:59Z",
     createdAt: "2026-04-02T14:00:00Z",
     createdBy: "Manager One",
+    viewedAt: "2026-04-03T18:42:00Z",
+    internalNotes:
+      "Repeat customer — flag for loyalty pricing if she books the full 5 nights.",
+    activityLog: [
+      {
+        at: "2026-04-02T14:00:00Z",
+        type: "Created",
+        actor: "Manager One",
+      },
+      {
+        at: "2026-04-02T14:30:00Z",
+        type: "Sent",
+        actor: "Manager One",
+        detail: "via email",
+      },
+      {
+        at: "2026-04-03T09:15:00Z",
+        type: "Version",
+        actor: "Manager One",
+        detail: "Revised to v2 — applied 5% loyalty discount",
+      },
+      {
+        at: "2026-04-03T18:42:00Z",
+        type: "Viewed",
+        actor: "Alice Johnson",
+      },
+    ],
     currentVersion: 2,
     revisions: [
       {
@@ -119,6 +147,39 @@ export const estimates: Estimate[] = [
     sentVia: "both",
     createdAt: "2026-03-28T09:30:00Z",
     createdBy: "Emily Davis",
+    viewedAt: "2026-03-28T12:05:00Z",
+    acceptedAt: "2026-03-28T12:11:00Z",
+    acceptedBy: "John Doe",
+    acceptedOnBehalf: false,
+    activityLog: [
+      {
+        at: "2026-03-28T09:30:00Z",
+        type: "Created",
+        actor: "Emily Davis",
+      },
+      {
+        at: "2026-03-28T10:00:00Z",
+        type: "Sent",
+        actor: "Emily Davis",
+        detail: "via email + SMS",
+      },
+      {
+        at: "2026-03-28T12:05:00Z",
+        type: "Viewed",
+        actor: "John Doe",
+      },
+      {
+        at: "2026-03-28T12:11:00Z",
+        type: "Accepted",
+        actor: "John Doe",
+      },
+      {
+        at: "2026-03-28T12:12:00Z",
+        type: "Converted",
+        actor: "System",
+        detail: "Booking #1001 created",
+      },
+    ],
     convertedBookingId: 1001,
   },
   {
@@ -354,14 +415,24 @@ const ESTIMATE_ID_PREFIX = "E";
 const ESTIMATE_ID_MIN_DIGITS = 5;
 const ESTIMATE_ID_START = 10001;
 
+// Sequential estimate-number generator. The prefix + digit padding come from the
+// facility's Estimate Defaults (F2), so "E" → "E10008" or "DGV-E-" → "DGV-E-0001".
 export function getNextEstimateId(existing: Estimate[] = estimates): string {
+  const settings = getEstimateSettings();
+  const prefix = settings.estimateNumberPrefix || ESTIMATE_ID_PREFIX;
+  const minDigits = settings.minDigits || ESTIMATE_ID_MIN_DIGITS;
+  const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`^${escaped}(\\d+)$`);
+  // Preserve the historical E10001 start for the default prefix; custom prefixes
+  // begin their own sequence at 1.
+  const floor = prefix === ESTIMATE_ID_PREFIX ? ESTIMATE_ID_START - 1 : 0;
   const maxNumber = existing.reduce((max, e) => {
-    const match = e.estimateId.match(/^E(\d+)$/);
+    const match = e.estimateId.match(re);
     if (!match) return max;
     const n = Number(match[1]);
     return Number.isFinite(n) && n > max ? n : max;
-  }, ESTIMATE_ID_START - 1);
+  }, floor);
   const next = maxNumber + 1;
-  const padded = String(next).padStart(ESTIMATE_ID_MIN_DIGITS, "0");
-  return `${ESTIMATE_ID_PREFIX}${padded}`;
+  const padded = String(next).padStart(minDigits, "0");
+  return `${prefix}${padded}`;
 }
