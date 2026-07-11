@@ -30,9 +30,11 @@ export default async function FacilityLayout({
   const cookieStore = await cookies();
   const userRole = cookieStore.get("user_role")?.value;
 
-  // If user is not facility_admin, redirect to main dashboard
-  // Allow access in development or if no role is set (defaults to facility_admin for testing)
-  if (userRole && userRole !== "facility_admin") {
+  // Gate the facility portal to facility_admin. Super admins are also allowed
+  // through so they can review facility/HQ features without switching roles.
+  // No role set (undefined) defaults to facility_admin for testing.
+  const allowedRoles = ["facility_admin", "super_admin"];
+  if (userRole && !allowedRoles.includes(userRole)) {
     redirect("/dashboard");
   }
 
