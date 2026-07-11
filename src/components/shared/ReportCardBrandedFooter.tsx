@@ -21,12 +21,16 @@ export interface ReportCardBrandedFooterProps {
   brandConfig: ReportCardBrandConfig;
   profile: BusinessProfile;
   accentColor?: string;
+  /** When provided, the booking CTA opens the booking flow (pre-filtered)
+   *  instead of navigating to the generic `bookingCtaUrl`. */
+  onBookVisit?: () => void;
 }
 
 export function ReportCardBrandedFooter({
   brandConfig,
   profile,
   accentColor,
+  onBookVisit,
 }: ReportCardBrandedFooterProps) {
   const color = accentColor || brandConfig.accentColor || "#6366f1";
   const social = profile.socialMedia;
@@ -51,13 +55,24 @@ export function ReportCardBrandedFooter({
       {/* Booking CTA */}
       {brandConfig.showBookingCta && brandConfig.bookingCtaText && (
         <div className="flex justify-center">
-          <a
-            href={brandConfig.bookingCtaUrl || "#"}
-            className="inline-block rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-            style={{ backgroundColor: color }}
-          >
-            {brandConfig.bookingCtaText}
-          </a>
+          {onBookVisit ? (
+            <button
+              type="button"
+              onClick={onBookVisit}
+              className="inline-block rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              style={{ backgroundColor: color }}
+            >
+              {brandConfig.bookingCtaText}
+            </button>
+          ) : (
+            <a
+              href={brandConfig.bookingCtaUrl || "#"}
+              className="inline-block rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              style={{ backgroundColor: color }}
+            >
+              {brandConfig.bookingCtaText}
+            </a>
+          )}
         </div>
       )}
 
@@ -93,12 +108,8 @@ export function ReportCardBrandedFooter({
         />
       )}
 
-      {/* Powered by */}
-      {brandConfig.showPoweredBy && (
-        <p className="text-muted-foreground/50 mt-4 text-center text-[10px]">
-          Powered by Yipyy
-        </p>
-      )}
+      {/* "Powered by Yipyy" attribution intentionally omitted — Yipyy branding
+          belongs in the overall portal footer, not inside a report card. */}
     </div>
   );
 }

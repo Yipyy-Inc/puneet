@@ -37,6 +37,7 @@ import {
 import { BookingDetailActionBar } from "@/components/bookings/BookingDetailActionBar";
 import { Separator } from "@/components/ui/separator";
 import { bookings as initialBookings } from "@/data/bookings";
+import { estimates } from "@/data/estimates";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import { boardingGuests, type BoardingGuest } from "@/data/boarding";
@@ -153,6 +154,14 @@ export default function ClientBookingDetailPage({
   useEffect(() => {
     setBooking(initialBooking);
   }, [initialBooking]);
+  // Traceability: the estimate this booking was converted from, if any.
+  const sourceEstimate = useMemo(
+    () =>
+      booking
+        ? estimates.find((e) => e.convertedBookingId === booking.id)
+        : undefined,
+    [booking],
+  );
   const { discount: loyaltyDiscount, consume: consumeLoyaltyDiscount } =
     useActiveLoyaltyDiscount({
       customerId: clientId,
@@ -683,6 +692,18 @@ export default function ClientBookingDetailPage({
                 />
                 <TagsButton entityType="booking" entityId={booking.id} />
                 <NotesButton entityType="booking" entityId={booking.id} />
+                {sourceEstimate && (
+                  <Link
+                    href={`/facility/dashboard/estimates?q=${sourceEstimate.estimateId}`}
+                  >
+                    <Badge
+                      variant="outline"
+                      className="hover:bg-muted gap-1 text-xs"
+                    >
+                      From Estimate {sourceEstimate.estimateId}
+                    </Badge>
+                  </Link>
+                )}
               </div>
               <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                 <span className="flex items-center gap-1.5">

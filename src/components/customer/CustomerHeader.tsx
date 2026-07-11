@@ -19,6 +19,7 @@ import {
   Building2,
   Shield,
   Package,
+  Calendar,
 } from "lucide-react";
 import { useTransition } from "react";
 import { setUserRole } from "@/lib/role-utils";
@@ -34,6 +35,25 @@ import Image from "next/image";
 import Link from "next/link";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useUiText } from "@/hooks/use-ui-text";
+import { mockCustomerPackages } from "@/data/customer-packages";
+import { memberships } from "@/data/services-pricing";
+
+// Mock customer ID - TODO: Get from auth context
+const MOCK_CUSTOMER_ID = 15;
+
+// Total redeemable credits the customer can spend right now: unused package
+// passes (active packs) plus remaining membership credits.
+const availablePackagePasses = mockCustomerPackages
+  .filter((p) => p.customerId === MOCK_CUSTOMER_ID && p.status === "active")
+  .reduce((sum, p) => sum + Math.max(0, p.passesTotal - p.passesUsed), 0);
+
+const availableMembershipCredits = memberships
+  .filter(
+    (m) => m.customerId === String(MOCK_CUSTOMER_ID) && m.status === "active",
+  )
+  .reduce((sum, m) => sum + Math.max(0, m.creditsRemaining), 0);
+
+const availableCredits = availablePackagePasses + availableMembershipCredits;
 
 export function CustomerHeader() {
   const { selectedFacility } = useCustomerFacility();
@@ -124,13 +144,20 @@ export function CustomerHeader() {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Buy Packages / Memberships */}
-        <Button variant="outline" className="hidden gap-2 sm:flex" asChild>
-          <Link href="/customer/packages">
-            <Package className="size-4" />
-            <span>Packages</span>
-          </Link>
-        </Button>
+        {/* Available credits pill — only shown when the customer has any */}
+        {availableCredits > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="hidden gap-1.5 rounded-full sm:flex"
+            asChild
+          >
+            <Link href="/customer/packages">
+              <Package className="size-4" />
+              <span>{availableCredits} credits available</span>
+            </Link>
+          </Button>
+        )}
 
         {/* Quick Book Button */}
         <QuickBookButton />
@@ -177,6 +204,24 @@ export function CustomerHeader() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
+              <Link href="/customer/pets" className="cursor-pointer">
+                <Dog className="mr-2 size-4" />
+                {t("My Pets")}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/customer/bookings" className="cursor-pointer">
+                <Calendar className="mr-2 size-4" />
+                {t("My Bookings")}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/customer/packages" className="cursor-pointer">
+                <Package className="mr-2 size-4" />
+                {t("Packages & Memberships")}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
               <Link href="/customer/report-cards" className="cursor-pointer">
                 <FileText className="mr-2 size-4" />
                 {t("Report Cards")}
@@ -186,12 +231,6 @@ export function CustomerHeader() {
               <Link href="/customer/billing" className="cursor-pointer">
                 <CreditCard className="mr-2 size-4" />
                 {t("Billing & Payments")}
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/customer/pets" className="cursor-pointer">
-                <Dog className="mr-2 size-4" />
-                {t("My Pets")}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

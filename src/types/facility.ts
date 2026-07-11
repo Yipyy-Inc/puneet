@@ -864,6 +864,10 @@ export const reportCardReviewBoosterConfigSchema = z.object({
   ratingThreshold: z.number(),
   reviewUrl: z.string(),
   reviewPromptText: z.string(),
+  // Optional per-platform external review links (Table 74).
+  googleUrl: z.string().optional(),
+  yelpUrl: z.string().optional(),
+  facebookUrl: z.string().optional(),
 });
 export type ReportCardReviewBoosterConfig = z.infer<
   typeof reportCardReviewBoosterConfigSchema
@@ -888,6 +892,9 @@ export const reportCardConfigSchema = z.object({
   customQuestions: z.array(reportCardCustomQuestionSchema).optional(),
   petCondition: reportCardPetConditionConfigSchema.optional(),
   reviewBooster: reportCardReviewBoosterConfigSchema.optional(),
+  /** Grooming only: prompt the groomer to upload before + after photos so the
+   *  customer sees the before/after slider (Table 67). */
+  groomingBeforeAfter: z.boolean().optional(),
 });
 export type ReportCardConfig = z.infer<typeof reportCardConfigSchema>;
 

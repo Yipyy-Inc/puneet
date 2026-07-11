@@ -187,6 +187,9 @@ export function MessageCenter({
   const searchParams = useSearchParams();
   const sourceParam = mode === "facility" ? searchParams.get("source") : null;
   const toParam = mode === "facility" ? searchParams.get("to") : null;
+  // Customer deep-link: ?compose=<text> pre-fills the composer of the facility
+  // conversation (e.g. "Custom message" from a report card).
+  const composeParam = mode === "customer" ? searchParams.get("compose") : null;
   const [composePrefill, setComposePrefill] = useState<{
     key: string;
     text: string;
@@ -208,6 +211,13 @@ export function MessageCenter({
       text: `Hi ${firstName}, sorry we missed your call at Yipyy. How can we help? Reply here or call us back at ${callbackNumber}.`,
     });
   }, [mode, sourceParam, toParam]);
+
+  useEffect(() => {
+    if (mode !== "customer" || !composeParam) return;
+    if (prefillAppliedRef.current === composeParam) return;
+    prefillAppliedRef.current = composeParam;
+    setComposePrefill({ key: composeParam, text: composeParam });
+  }, [mode, composeParam]);
 
   useEffect(() => {
     if (localStorage.getItem(detailStorageKey) === "false") {

@@ -2,23 +2,23 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-  Package,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Calendar,
   ChevronDown,
   ArrowRight,
@@ -30,6 +30,14 @@ import {
   Share2,
   CalendarPlus,
   Info,
+  MoreHorizontal,
+  Scissors,
+  Home,
+  Sun,
+  GraduationCap,
+  AlertTriangle,
+  MessageSquare,
+  type LucideIcon,
 } from "lucide-react";
 import type {
   CustomerPackagePurchase,
@@ -37,8 +45,17 @@ import type {
   ServicePackage,
   PassUsage,
 } from "@/data/services-pricing";
-import { defaultPackagePolicy } from "@/data/services-pricing";
+import {
+  defaultPackagePolicy,
+  redeemPurchasePass,
+} from "@/data/services-pricing";
 import type { Booking } from "@/types/booking";
+import { useBookingModal } from "@/hooks/use-booking-modal";
+import { useCustomerFacility } from "@/hooks/use-customer-facility";
+import { clients } from "@/data/clients";
+
+// Mock customer ID - TODO: Get from auth context
+const MOCK_CUSTOMER_ID = 15;
 
 interface Props {
   purchase: CustomerPackagePurchase;
@@ -54,6 +71,9 @@ interface Props {
   onRequestExtension?: () => void;
   onRequestTransfer?: () => void;
   onRequestRefund?: () => void;
+  /** Called after a pass is redeemed via "Book with Pass" so the parent can
+   *  re-render the updated remaining count. */
+  onRedeemed?: () => void;
 }
 
 const formatDate = (iso: string) =>
@@ -67,6 +87,18 @@ function daysUntilFrom(iso: string, nowMs: number): number {
   return Math.ceil((new Date(iso).getTime() - nowMs) / 86_400_000);
 }
 
+/** Left-edge accent + icon keyed off the pass's service category. */
+function getServiceTheme(category: string): {
+  accent: string;
+  icon: LucideIcon;
+} {
+  const key = category.toLowerCase();
+  if (key.includes("groom")) return { accent: "#7c3aed", icon: Scissors }; // purple
+  if (key.includes("board")) return { accent: "#1e3a8a", icon: Home }; // navy
+  if (key.includes("train")) return { accent: "#b45309", icon: GraduationCap }; // amber
+  return { accent: "#0d9488", icon: Sun }; // teal — daycare / default
+}
+
 export function PurchasedPackageCard({
   purchase,
   pkg,
@@ -77,8 +109,10 @@ export function PurchasedPackageCard({
   onRequestExtension,
   onRequestTransfer,
   onRequestRefund,
+  onRedeemed,
 }: Props) {
-  const [expanded, setExpanded] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [policyOpen, setPolicyOpen] = useState(false);
   const [nowMs] = useState(() => Date.now());
 
   const policy: PackagePolicy = pkg?.policy ?? defaultPackagePolicy;
@@ -91,21 +125,13 @@ export function PurchasedPackageCard({
   const available = purchase.passes.filter(
     (p) => p.status === "available",
   ).length;
-  const consumedPct = Math.round(
-    ((used + refunded + expired) / purchase.totalPasses) * 100,
-  );
 
   const daysLeft = daysUntilFrom(purchase.expiresAt, nowMs);
-  const purchasedMs = new Date(purchase.purchaseDate).getTime();
-  const expiresMs = new Date(purchase.expiresAt).getTime();
-  const totalMs = Math.max(1, expiresMs - purchasedMs);
-  const remainingMs = expiresMs - nowMs;
-  const validityPct = Math.round(
-    Math.max(0, Math.min(100, (remainingMs / totalMs) * 100)),
-  );
-
   const isExpiringSoon = daysLeft > 0 && daysLeft <= 30;
   const isExpired = daysLeft <= 0 && available > 0;
+
+  const theme = getServiceTheme(purchase.category);
+  const Icon = theme.icon;
 
   const passesDisplay = useMemo(() => {
     return purchase.passes
@@ -117,96 +143,234 @@ export function PurchasedPackageCard({
   }, [purchase.passes, getBooking]);
 
   const usedCount = used + refunded + expired;
+  const hasHistory = usedCount > 0 || (purchase.adjustments?.length ?? 0) > 0;
+
+  const canExtend =
+    showFacilityActions && policy.allowExtension && available > 0;
+  const canTransfer =
+    showFacilityActions && policy.allowTransfer && available > 0;
+  const canRefund =
+    showFacilityActions && policy.allowRefundUnused && available > 0;
+  const hasMenu = canExtend || canTransfer || canRefund;
+
+  const expiryColor = isExpiringSoon
+    ? "text-amber-600 dark:text-amber-400"
+    : "text-muted-foreground";
 
   return (
-    <Card className={isExpired ? "border-red-300" : ""}>
+    <Card
+      className={
+        isExpired
+          ? "bg-muted/40 border-muted relative overflow-hidden"
+          : "overflow-hidden"
+      }
+      style={
+        isExpired
+          ? undefined
+          : { borderLeftColor: theme.accent, borderLeftWidth: 4 }
+      }
+    >
+      {/* EXPIRED watermark */}
+      {isExpired && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+          <span className="text-muted-foreground/25 rotate-[-14deg] rounded-md border-2 border-current px-5 py-1.5 text-3xl font-black tracking-[0.2em]">
+            EXPIRED
+          </span>
+        </div>
+      )}
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <CardTitle className="flex items-center gap-2">
-              <Package className="size-5" />
-              {purchase.packageName}
-            </CardTitle>
-            <CardDescription>
-              {purchase.serviceLabel} · Purchased{" "}
-              {formatDate(purchase.purchaseDate)}
-            </CardDescription>
+          <div className="flex min-w-0 items-start gap-3">
+            <div
+              className={
+                isExpired
+                  ? "bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl"
+                  : "flex size-10 shrink-0 items-center justify-center rounded-xl"
+              }
+              style={
+                isExpired
+                  ? undefined
+                  : {
+                      backgroundColor: `${theme.accent}1a`,
+                      color: theme.accent,
+                    }
+              }
+            >
+              <Icon className="size-5" />
+            </div>
+            <div className="min-w-0">
+              <h3
+                className={
+                  isExpired
+                    ? "text-muted-foreground truncate font-semibold"
+                    : "truncate font-semibold"
+                }
+              >
+                {purchase.packageName}
+              </h3>
+              <span
+                className={
+                  isExpired
+                    ? "bg-muted text-muted-foreground mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium capitalize"
+                    : "mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium capitalize"
+                }
+                style={
+                  isExpired
+                    ? undefined
+                    : {
+                        backgroundColor: `${theme.accent}14`,
+                        color: theme.accent,
+                      }
+                }
+              >
+                {purchase.category}
+              </span>
+            </div>
           </div>
-          <Badge
-            variant={isExpired ? "destructive" : "outline"}
-            className="shrink-0 capitalize"
-          >
-            {purchase.category}
-          </Badge>
+
+          {hasMenu && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground size-8 shrink-0"
+                >
+                  <MoreHorizontal className="size-5" />
+                  <span className="sr-only">Pass actions</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Manage pass</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {canExtend && (
+                  <DropdownMenuItem onSelect={onRequestExtension}>
+                    <CalendarPlus className="mr-2 size-4" />
+                    Extend validity
+                    {policy.extensionFee > 0 && (
+                      <span className="text-muted-foreground ml-auto text-[11px]">
+                        ${policy.extensionFee}
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                )}
+                {canTransfer && (
+                  <DropdownMenuItem onSelect={onRequestTransfer}>
+                    <Share2 className="mr-2 size-4" />
+                    Transfer
+                  </DropdownMenuItem>
+                )}
+                {canRefund && (
+                  <DropdownMenuItem
+                    onSelect={onRequestRefund}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <RotateCcw className="mr-2 size-4" />
+                    Refund unused
+                    {policy.refundPerUnusedPass !== undefined && (
+                      <span className="text-muted-foreground ml-auto text-[11px]">
+                        ${policy.refundPerUnusedPass}/pass
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Passes remaining */}
+        {/* Expiry urgency banner */}
+        {isExpired ? (
+          <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-lg border p-2.5 text-sm font-medium">
+            <AlertTriangle className="size-4 shrink-0" />
+            This pass has expired
+          </div>
+        ) : available > 0 && daysLeft <= 14 ? (
+          <div
+            className={
+              daysLeft <= 7
+                ? "flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 p-2.5 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+                : "flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-sm font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
+            }
+          >
+            <AlertTriangle className="size-4 shrink-0" />
+            Expiring in {daysLeft} day{daysLeft === 1 ? "" : "s"}
+          </div>
+        ) : null}
+
+        {/* Prominent credit display */}
         <div>
-          <div className="mb-1.5 flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Passes used</span>
-            <span className="font-semibold">
-              {used + refunded + expired} of {purchase.totalPasses}
-              <span className="text-muted-foreground ml-2 font-normal">
-                ({available} left)
+          <div className="flex items-baseline gap-1.5">
+            <span
+              className={
+                isExpired
+                  ? "text-muted-foreground text-4xl font-bold tabular-nums"
+                  : "text-4xl font-bold tabular-nums"
+              }
+              style={{ color: isExpired ? undefined : theme.accent }}
+            >
+              {available}
+            </span>
+            <span className="text-muted-foreground text-sm">
+              of {purchase.totalPasses} passes left
+            </span>
+          </div>
+          {/* Dot row — filled = remaining, empty = consumed */}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {Array.from({ length: purchase.totalPasses }).map((_, i) => {
+              const filled = i < available;
+              return (
+                <span
+                  key={i}
+                  className={
+                    filled && !isExpired
+                      ? "size-2.5 rounded-full"
+                      : isExpired && filled
+                        ? "bg-muted-foreground/40 size-2.5 rounded-full"
+                        : "bg-muted size-2.5 rounded-full"
+                  }
+                  style={
+                    filled && !isExpired
+                      ? { backgroundColor: theme.accent }
+                      : undefined
+                  }
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Expiry status */}
+        <div className={`flex items-center gap-1.5 text-sm ${expiryColor}`}>
+          <Clock className="size-4 shrink-0" />
+          {isExpired ? (
+            <span className="font-medium">
+              Expired on {formatDate(purchase.expiresAt)}
+            </span>
+          ) : (
+            <span>
+              Expires {formatDate(purchase.expiresAt)} ·{" "}
+              <span className="font-medium">
+                {daysLeft} day{daysLeft === 1 ? "" : "s"} left
               </span>
             </span>
-          </div>
-          <Progress value={consumedPct} className="h-2" />
+          )}
         </div>
 
-        {/* Validity */}
-        <div>
-          <div className="mb-1.5 flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Validity</span>
-            <span
-              className={`font-medium ${
-                isExpired
-                  ? "text-red-600"
-                  : isExpiringSoon
-                    ? "text-amber-600"
-                    : ""
-              }`}
-            >
-              {isExpired ? (
-                `Expired on ${formatDate(purchase.expiresAt)}`
-              ) : (
-                <>
-                  Expires {formatDate(purchase.expiresAt)}
-                  <span className="text-muted-foreground ml-1.5 font-normal">
-                    ({daysLeft} day{daysLeft === 1 ? "" : "s"} left)
-                  </span>
-                </>
-              )}
-            </span>
-          </div>
-          <Progress
-            value={validityPct}
-            className={`h-2 ${
-              isExpired
-                ? "[&>div]:bg-red-500"
-                : isExpiringSoon
-                  ? "[&>div]:bg-amber-500"
-                  : ""
-            }`}
-          />
-        </div>
-
-        {/* Pass breakdown — collapsible, only shows used/refunded/expired passes */}
-        {usedCount > 0 && (
-          <Collapsible open={expanded} onOpenChange={setExpanded}>
+        {/* View history — collapsed by default */}
+        {hasHistory && (
+          <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
             <CollapsibleTrigger asChild>
               <button
                 type="button"
                 className="hover:bg-muted/30 flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors"
               >
-                <span className="font-medium">
-                  View {usedCount} used pass{usedCount === 1 ? "" : "es"}
-                </span>
+                <span className="font-medium">View history</span>
                 <ChevronDown
                   className={`size-4 transition-transform ${
-                    expanded ? "rotate-180" : ""
+                    historyOpen ? "rotate-180" : ""
                   }`}
                 />
               </button>
@@ -220,100 +384,133 @@ export function PurchasedPackageCard({
                   bookingLinkPrefix={bookingLinkPrefix}
                 />
               ))}
+              {purchase.adjustments && purchase.adjustments.length > 0 && (
+                <div className="bg-muted/20 space-y-1 rounded-lg border p-3 text-xs">
+                  {purchase.adjustments.map((adj) => (
+                    <div key={adj.id} className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {formatDate(adj.date)} · {adj.description}
+                      </span>
+                      {adj.amount !== undefined && (
+                        <span className="font-medium">
+                          {adj.amount > 0 ? "+" : ""}${adj.amount}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </CollapsibleContent>
           </Collapsible>
         )}
 
-        {/* Adjustments history */}
-        {purchase.adjustments && purchase.adjustments.length > 0 && (
-          <div className="bg-muted/20 space-y-1 rounded-lg border p-3 text-xs">
-            <div className="mb-1 flex items-center gap-1.5 font-medium">
-              <Clock className="size-3.5" />
-              History
-            </div>
-            {purchase.adjustments.map((adj) => (
-              <div key={adj.id} className="flex justify-between">
-                <span className="text-muted-foreground">
-                  {formatDate(adj.date)} · {adj.description}
-                </span>
-                {adj.amount !== undefined && (
-                  <span className="font-medium">
-                    {adj.amount > 0 ? "+" : ""}${adj.amount}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        {/* View package policy — collapsed by default */}
+        <Collapsible open={policyOpen} onOpenChange={setPolicyOpen}>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="hover:bg-muted/30 flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors"
+            >
+              <span className="flex items-center gap-1.5 font-medium">
+                <Info className="size-4" />
+                View package policy
+              </span>
+              <ChevronDown
+                className={`size-4 transition-transform ${
+                  policyOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <p className="text-muted-foreground bg-muted/20 rounded-lg border p-3 text-xs">
+              {policy.policyNotes ??
+                "Refer to facility policies for refunds and extensions."}
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
 
-        {/* Policy summary */}
-        <div className="bg-muted/20 rounded-lg border p-3 text-xs">
-          <div className="mb-1 flex items-center gap-1.5 font-medium">
-            <Info className="size-3.5" />
-            Package policy
-          </div>
-          <p className="text-muted-foreground">
-            {policy.policyNotes ??
-              "Refer to facility policies for refunds and extensions."}
-          </p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-wrap gap-2 pt-1">
-          {showFacilityActions && policy.allowExtension && available > 0 && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
-              onClick={onRequestExtension}
-            >
-              <CalendarPlus className="size-3.5" />
-              Extend validity
-              {policy.extensionFee > 0 && (
-                <span className="text-muted-foreground ml-1 text-[11px]">
-                  (${policy.extensionFee})
-                </span>
-              )}
-            </Button>
-          )}
-          {showFacilityActions && policy.allowTransfer && available > 0 && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
-              onClick={onRequestTransfer}
-            >
-              <Share2 className="size-3.5" />
-              Transfer
-            </Button>
-          )}
-          {showFacilityActions && policy.allowRefundUnused && available > 0 && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
-              onClick={onRequestRefund}
-            >
-              <RotateCcw className="size-3.5" />
-              Refund unused
-              {policy.refundPerUnusedPass !== undefined && (
-                <span className="text-muted-foreground ml-1 text-[11px]">
-                  (${policy.refundPerUnusedPass}/pass)
-                </span>
-              )}
-            </Button>
-          )}
-          {showBookingCta && (
-            <Button size="sm" className="ml-auto gap-1.5" asChild>
-              <Link href="/customer/bookings/new">
-                <Calendar className="size-3.5" />
-                Book with pass
+        {/* Single primary CTA */}
+        {showBookingCta &&
+          (isExpired ? (
+            <Button variant="outline" className="w-full gap-2" asChild>
+              <Link href="/customer/messages">
+                <MessageSquare className="size-4" />
+                Contact us to extend
               </Link>
             </Button>
-          )}
-        </div>
+          ) : (
+            <BookWithPassButton
+              purchase={purchase}
+              disabled={available <= 0}
+              onRedeemed={onRedeemed}
+            />
+          ))}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * "Book with Pass" — opens the booking modal pre-filtered to the pass's service
+ * (no payment), and redeems one pass on confirm. Isolated into its own component
+ * so `useBookingModal` is only called in the customer view (the facility view
+ * hides the CTA and isn't wrapped by the BookingModalProvider).
+ */
+function BookWithPassButton({
+  purchase,
+  disabled,
+  onRedeemed,
+}: {
+  purchase: CustomerPackagePurchase;
+  disabled?: boolean;
+  onRedeemed?: () => void;
+}) {
+  const { selectedFacility } = useCustomerFacility();
+  const { openBookingModal } = useBookingModal();
+  const customer = useMemo(
+    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
+    [],
+  );
+
+  const handleBook = () => {
+    if (!selectedFacility || !customer) return;
+    openBookingModal({
+      clients: [customer],
+      facilityId: selectedFacility.id,
+      facilityName: selectedFacility.name,
+      preSelectedClientId: customer.id,
+      // Pre-filter the flow to the service the pass is valid for.
+      preSelectedService: purchase.category,
+      lockService: true,
+      isCustomerMode: true,
+      passRedemption: {
+        serviceLabel: purchase.serviceLabel,
+        category: purchase.category,
+        onRedeem: (ctx) => {
+          const result = redeemPurchasePass(purchase.id, ctx);
+          if (result.ok) {
+            onRedeemed?.();
+            return { ok: true, passesLeft: result.passesLeft };
+          }
+          return { ok: false, passesLeft: 0 };
+        },
+      },
+      onCreateBooking: () => {
+        // Modal shows its own pass-confirmation screen.
+      },
+    });
+  };
+
+  return (
+    <Button
+      className="w-full gap-2"
+      onClick={handleBook}
+      disabled={disabled || !selectedFacility || !customer}
+    >
+      <Calendar className="size-4" />
+      Book with Pass
+    </Button>
   );
 }
 

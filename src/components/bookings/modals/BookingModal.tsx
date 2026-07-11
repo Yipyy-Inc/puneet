@@ -99,6 +99,7 @@ import {
   type DepositPromptValue,
 } from "./BookingDepositPrompt";
 import { CustomerDepositPanel } from "./CustomerDepositPanel";
+import { MembershipCreditPanel } from "./MembershipCreditPanel";
 import {
   TrainingEnrollmentCartPanel,
   type TrainingCartItem,
@@ -165,6 +166,16 @@ export interface NewBookingModalProps {
   estimateMode?: boolean;
   /** When true, opens the wizard in edit mode — hides service/client-pet steps and changes labels. */
   editMode?: boolean;
+  /** Pass-redemption mode (customer): skips the payment step and redeems a
+   *  prepaid pass on confirm instead of charging. */
+  passRedemption?: {
+    serviceLabel: string;
+    category: string;
+    onRedeem: (ctx: { petId?: number; petName?: string }) => {
+      ok: boolean;
+      passesLeft: number;
+    };
+  };
 }
 
 interface EstimatePricingSnapshot {
@@ -254,6 +265,7 @@ export function BookingModal({
   bookingRequestMessage,
   estimateMode = false,
   editMode = false,
+  passRedemption,
 }: NewBookingModalProps) {
   const {
     daycare,
@@ -1882,7 +1894,8 @@ export function BookingModal({
         if (pending.length > 0) return false;
         // Customer-mode deposit: when a rule applies and a deposit > 0 is
         // required, the customer must pick a card before they can submit.
-        if (isCustomerMode && applicableDepositRule) {
+        // Pass-redemption bookings skip payment entirely.
+        if (isCustomerMode && applicableDepositRule && !passRedemption) {
           const required = computeDepositAmount(
             applicableDepositRule,
             calculatePrice.total,
@@ -1917,6 +1930,7 @@ export function BookingModal({
     customerPaymentMethodId,
     calculatePrice.total,
     isCustomerMode,
+    passRedemption,
   ]);
 
   const applicablePackages = useMemo(() => {
@@ -2443,6 +2457,23 @@ export function BookingModal({
     }
 
     if (isCustomerMode) {
+      // Pass-redemption booking: auto-apply one prepaid pass (no payment) and
+      // surface the remaining count.
+      if (passRedemption) {
+        const primaryPetId = Array.isArray(petId) ? petId[0] : petId;
+        const primaryPet = selectedPets.find((p) => p.id === primaryPetId);
+        const result = passRedemption.onRedeem({
+          petId: primaryPetId,
+          petName: primaryPet?.name,
+        });
+        if (result.ok) {
+          toast.success("Booking confirmed", {
+            description: `1 ${passRedemption.category} pass used. ${
+              result.passesLeft
+            } pass${result.passesLeft === 1 ? "" : "es"} remaining.`,
+          });
+        }
+      }
       onCreateBooking(booking);
       setBookingRequested(true);
       return;
@@ -3104,7 +3135,7 @@ export function BookingModal({
                 {tasks.length === 0 ? (
                   <Card>
                     <CardContent className="flex flex-col items-center justify-center py-16">
-                      <Check className="text-muted-foreground/50 mb-4 h-16 w-16" />
+                      <Check className="text-muted-foreground/50 mb-4 size-16" />
                       <h3 className="mb-2 text-lg font-semibold">No Tasks</h3>
                       <p className="text-muted-foreground text-center">
                         This booking does not have any scheduled tasks.
@@ -3822,6 +3853,7 @@ export function BookingModal({
                     displayedSteps[currentStep]?.id === "confirm" &&
                     !bookingRequested &&
                     applicableDepositRule &&
+                    !passRedemption &&
                     selectedClientId !== null &&
                     selectedClientId > 0 &&
                     (() => {
@@ -3844,6 +3876,24 @@ export function BookingModal({
                       );
                     })()}
 
+                  {/* Membership-credit summary (Table 30/31) */}
+                  {isCustomerMode &&
+                    !passRedemption &&
+                    !showingTipStep &&
+                    displayedSteps[currentStep]?.id === "confirm" &&
+                    !bookingRequested &&
+                    selectedClientId !== null &&
+                    selectedClientId > 0 &&
+                    !!selectedService && (
+                      <div className="mx-1 mb-4">
+                        <MembershipCreditPanel
+                          clientId={selectedClientId}
+                          service={selectedService}
+                          onClose={() => onOpenChange(false)}
+                        />
+                      </div>
+                    )}
+
                   {/* Customer booking request confirmation state */}
                   {isCustomerMode && bookingRequested && (
                     <div className="flex flex-col items-center px-6 py-12 text-center">
@@ -3851,12 +3901,16 @@ export function BookingModal({
                         <Check className="size-7 text-emerald-600" />
                       </div>
                       <h3 className="mt-4 text-lg font-bold text-slate-800">
-                        Booking Request Received!
+                        {passRedemption
+                          ? "Booking Confirmed!"
+                          : "Booking Request Received!"}
                       </h3>
                       <p className="text-muted-foreground mt-3 max-w-sm text-sm/relaxed">
-                        {bookingRequestMessage ||
-                          bookingFlow.bookingRequestConfirmationMessage ||
-                          "Thank you! We've received your booking request and will verify all the details. You'll receive a confirmation email shortly once everything is reviewed and approved."}
+                        {passRedemption
+                          ? `Your ${passRedemption.serviceLabel} booking is confirmed and 1 pass has been applied — no payment needed.`
+                          : bookingRequestMessage ||
+                            bookingFlow.bookingRequestConfirmationMessage ||
+                            "Thank you! We've received your booking request and will verify all the details. You'll receive a confirmation email shortly once everything is reviewed and approved."}
                       </p>
                       <Button
                         className="mt-6"

@@ -500,6 +500,30 @@ export const estimateSchema = z.object({
   followUpSentAt: z.string().optional(),
   followUpType: z.enum(["not_viewed", "viewed_not_booked"]).optional(),
   duplicatedFrom: z.string().optional(),
+  // Acceptance / decline attribution (staff-on-behalf vs customer)
+  acceptedAt: z.string().optional(),
+  acceptedBy: z.string().optional(),
+  acceptedOnBehalf: z.boolean().optional(),
+  declinedAt: z.string().optional(),
+  declineReason: z.string().optional(),
+  // Auto-creation activation tracking
+  accountActivatedAt: z.string().optional(),
+  magicLinkExpiresAt: z.string().optional(),
+  // Staff-only note (distinct from the customer-facing `publicNote`).
+  // `notes` and the existing `internalNote` are also staff-only.
+  internalNotes: z.string().optional(),
+  // Chronological lifecycle trail:
+  // Created/Sent/Viewed/Reminder/Resent/Version/Accepted/Declined/Expired/Converted
+  activityLog: z
+    .array(
+      z.object({
+        at: z.string(),
+        type: z.string(),
+        actor: z.string(),
+        detail: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 export type Estimate = z.infer<typeof estimateSchema>;
 

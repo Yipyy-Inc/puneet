@@ -314,6 +314,16 @@ export interface Membership {
   pauseDetails?: PauseDetails;
   failedPaymentAt?: string;
   graceEndsAt?: string;
+  autoPayment?: {
+    methodBrand: string;
+    last4: string;
+    nextRenewalDate: string;
+    renewalAmount: number;
+    status: "active" | "failed";
+  };
+  rolloverCredits?: number;
+  creditsUsedThisCycle?: number;
+  creditsPerCycle?: number;
 }
 
 export interface MembershipPlan {
@@ -1206,6 +1216,16 @@ export const memberships: Membership[] = [
     discountPercentage: 15,
     autoRenew: true,
     createdAt: "2025-10-01T10:00:00Z",
+    autoPayment: {
+      methodBrand: "Visa",
+      last4: "4242",
+      nextRenewalDate: "2026-05-01",
+      renewalAmount: 179,
+      status: "active",
+    },
+    rolloverCredits: 2,
+    creditsPerCycle: 8,
+    creditsUsedThisCycle: 3,
     activityLog: [
       {
         id: "act-000-1",
@@ -1686,6 +1706,30 @@ export const customerPackagePurchases: CustomerPackagePurchase[] = [
     ],
   },
 ];
+
+/**
+ * Redeems one available pass from a `customerPackagePurchases` entry: flips the
+ * lowest-numbered available pass to "used" and returns how many remain. Mutates
+ * the array in place to match the mock-data-as-store pattern. Called from an
+ * event handler (Book with Pass), so `new Date()` here is fine.
+ */
+export function redeemPurchasePass(
+  purchaseId: string,
+  redemption: { petId?: number; petName?: string; bookingId?: number } = {},
+): { ok: true; passesLeft: number } | { ok: false; reason: string } {
+  const pkg = customerPackagePurchases.find((p) => p.id === purchaseId);
+  if (!pkg) return { ok: false, reason: "Package not found" };
+  const nextPass = pkg.passes.find((p) => p.status === "available");
+  if (!nextPass) return { ok: false, reason: "No passes remaining" };
+  nextPass.status = "used";
+  nextPass.usedAt = new Date().toISOString();
+  nextPass.bookingId = redemption.bookingId;
+  nextPass.notes = redemption.petName
+    ? `${pkg.serviceLabel} — ${redemption.petName}`
+    : pkg.serviceLabel;
+  const passesLeft = pkg.passes.filter((p) => p.status === "available").length;
+  return { ok: true, passesLeft };
+}
 
 export const prepaidCredits: PrepaidCredits[] = [
   {

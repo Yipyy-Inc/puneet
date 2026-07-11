@@ -27,6 +27,9 @@ import {
 } from "@/components/ui/generic-sidebar";
 import { petCams, mobileAppSettings } from "@/data/additional-features";
 import { bookings } from "@/data/bookings";
+import { estimates } from "@/data/estimates";
+import { reportCards } from "@/data/pet-data";
+import { clients } from "@/data/clients";
 import {
   cameraIntegrationConfig,
   petCamAccessConfigs,
@@ -39,6 +42,19 @@ import type {
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
+
+// Estimates awaiting the customer's response (sent, not yet accepted/declined).
+const awaitingEstimateCount = estimates.filter(
+  (e) => e.clientId === MOCK_CUSTOMER_ID && e.status === "sent",
+).length;
+
+// Unread report cards for this customer's pets (viewedByCustomer === false).
+const customerPetIds = new Set(
+  clients.find((c) => c.id === MOCK_CUSTOMER_ID)?.pets.map((p) => p.id) ?? [],
+);
+const unreadReportCardCount = reportCards.filter(
+  (rc) => customerPetIds.has(rc.petId) && rc.viewedByCustomer === false,
+).length;
 
 export function CustomerSidebar() {
   const { selectedFacility } = useCustomerFacility();
@@ -185,6 +201,12 @@ export function CustomerSidebar() {
             icon: Calendar,
           },
           {
+            title: "Estimates",
+            url: "/customer/estimates",
+            icon: FileText,
+            count: awaitingEstimateCount,
+          },
+          {
             title: "Packages & Memberships",
             url: "/customer/packages",
             icon: Package,
@@ -198,6 +220,7 @@ export function CustomerSidebar() {
             title: "Report Cards",
             url: "/customer/report-cards",
             icon: FileText,
+            count: unreadReportCardCount,
           },
         ],
       },

@@ -2,9 +2,15 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { useAiSummary } from "@/hooks/use-ai-summary";
 import { businessProfile } from "@/data/settings";
+import {
+  buildReportCardNotificationData,
+  sendReportCardNotifications,
+} from "@/lib/report-cards/report-notifications";
+import { ReportCardNotificationPreviews } from "@/components/facility/report-cards/notifications/ReportCardNotificationPreviews";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -602,14 +608,79 @@ export function ReportCardsModule({
 
     setReportCards((prev) => [newEntry, ...prev]);
     setIsModalOpen(false);
+    if (status === "sent") fireNotifications(newEntry);
+  };
+
+  const toNotificationData = (rc: ReportCardEntry) =>
+    buildReportCardNotificationData({
+      reportId: rc.id,
+      petName: rc.petName,
+      ownerName: rc.ownerName,
+      facilityName: rc.facilityName,
+      serviceType: rc.serviceType,
+      mood: rc.input.mood,
+      photos: rc.photos,
+      summaryText: rc.generated.todaysVibe,
+    });
+
+  const fireNotifications = (
+    rc: ReportCardEntry,
+    options?: { silent?: boolean },
+  ) => {
+    const ch = reportCardConfig.autoSend.channels;
+    const sent = sendReportCardNotifications(toNotificationData(rc), {
+      email: ch.email,
+      sms: ch.sms,
+      push: ch.message,
+    });
+    if (!options?.silent && sent.length > 0) {
+      toast.success(`Report card sent to ${rc.ownerName}`, {
+        description: `Delivered via ${sent.join(", ")}.`,
+      });
+    }
+    return sent.length;
   };
 
   const handleSendNow = (cardId: string) => {
     const sentAt = new Date().toISOString();
+    const card = reportCards.find((rc) => rc.id === cardId);
     setReportCards((prev) =>
       prev.map((rc) =>
         rc.id === cardId ? { ...rc, delivery: { status: "sent", sentAt } } : rc,
       ),
+    );
+    if (card) fireNotifications(card);
+  };
+
+  // Bulk send (Daily Care flow, Table 74): send every completed-but-unsent
+  // boarding/daycare report card for today in one action, via the same path.
+  const isDailyCareService = (s: ServiceType) =>
+    s === "daycare" || s === "hotel";
+
+  const handleBulkSendDailyCare = () => {
+    const targets = reportCards.filter(
+      (rc) =>
+        rc.visitDate === today &&
+        isDailyCareService(rc.serviceType) &&
+        rc.delivery.status !== "sent",
+    );
+    if (targets.length === 0) {
+      toast.info("No completed boarding or daycare reports to send today.");
+      return;
+    }
+    const sentAt = new Date().toISOString();
+    const ids = new Set(targets.map((t) => t.id));
+    setReportCards((prev) =>
+      prev.map((rc) =>
+        ids.has(rc.id) ? { ...rc, delivery: { status: "sent", sentAt } } : rc,
+      ),
+    );
+    targets.forEach((rc) => fireNotifications(rc, { silent: true }));
+    toast.success(
+      `Sent ${targets.length} report card${
+        targets.length === 1 ? "" : "s"
+      } to owners`,
+      { description: "All completed boarding & daycare reports for today." },
     );
   };
 
@@ -694,6 +765,12 @@ export function ReportCardsModule({
   const scheduledCards = reportCards.filter(
     (rc) => rc.delivery.status === "scheduled",
   ).length;
+  const pendingDailyCareToday = reportCards.filter(
+    (rc) =>
+      rc.visitDate === today &&
+      isDailyCareService(rc.serviceType) &&
+      rc.delivery.status !== "sent",
+  ).length;
   const viewingThemeMeta =
     themeMeta[viewingCard?.theme ?? "everyday"] ?? themeMeta.everyday;
 
@@ -760,12 +837,24 @@ export function ReportCardsModule({
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle>Daily Report Cards</CardTitle>
-            <Button onClick={handleAddNew}>
-              <Plus className="mr-2 size-4" />
-              Create Report Card
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleBulkSendDailyCare}
+                disabled={pendingDailyCareToday === 0}
+                title="Send all completed boarding & daycare reports for today"
+              >
+                <Send className="mr-2 size-4" />
+                Send today&apos;s Daily Care
+                {pendingDailyCareToday > 0 && ` (${pendingDailyCareToday})`}
+              </Button>
+              <Button onClick={handleAddNew}>
+                <Plus className="mr-2 size-4" />
+                Create Report Card
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -1817,6 +1906,15 @@ export function ReportCardsModule({
                     No photos attached.
                   </p>
                 )}
+              </div>
+
+              <div className="border-t pt-4">
+                <div className="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
+                  How {viewingCard.petName}&apos;s owner is notified
+                </div>
+                <ReportCardNotificationPreviews
+                  data={toNotificationData(viewingCard)}
+                />
               </div>
 
               <div className="border-t pt-4">

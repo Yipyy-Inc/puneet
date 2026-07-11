@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,10 +11,13 @@ import {
   UserPlus,
   CalendarCheck,
   LogIn,
+  Check,
 } from "lucide-react";
 import { estimates } from "@/data/estimates";
 import { businessProfile } from "@/data/settings";
 import { EstimatePdfDownload } from "@/components/estimates/EstimatePdfDownload";
+import { AcceptEstimateDialog } from "@/components/customer/estimates/AcceptEstimateDialog";
+import { DeclineEstimateDialog } from "@/components/customer/estimates/DeclineEstimateDialog";
 import Link from "next/link";
 
 function fmtDate(d: string) {
@@ -37,9 +40,18 @@ export default function CustomerEstimateViewPage() {
   const token = params.token as string;
 
   const estimate = useMemo(
-    () => estimates.find((e) => e.estimateToken === token),
+    () =>
+      estimates.find(
+        (e) =>
+          e.estimateToken === token || e.id === token || e.estimateId === token,
+      ),
     [token],
   );
+
+  const [acceptOpen, setAcceptOpen] = useState(false);
+  const [justAccepted, setJustAccepted] = useState(false);
+  const [declineOpen, setDeclineOpen] = useState(false);
+  const [justDeclined, setJustDeclined] = useState(false);
 
   if (!estimate) {
     return (
@@ -54,8 +66,15 @@ export default function CustomerEstimateViewPage() {
     );
   }
 
+  // Portal login that returns the customer to this estimate after signing in.
+  const loginHref = `/customer/auth/login?from=estimate&redirect=${encodeURIComponent(
+    `/customer/estimates/${token}`,
+  )}`;
+
   const isExpired =
     estimate.expiresAt && new Date(estimate.expiresAt) < new Date();
+  // Awaiting the customer's response — Accept/Decline are available.
+  const awaiting = estimate.status === "sent" && !justAccepted && !justDeclined;
   const nights =
     estimate.service === "boarding" && estimate.startDate && estimate.endDate
       ? Math.max(
@@ -216,13 +235,30 @@ export default function CustomerEstimateViewPage() {
             <div className="border-t bg-slate-50 px-6 py-5">
               <div className="space-y-3 text-center">
                 <p className="text-sm font-semibold text-slate-700">
-                  Ready to book?
+                  {awaiting ? "Ready to accept?" : "Ready to book?"}
                 </p>
 
-                {/* Primary: Book Now — pre-fills booking from estimate */}
+                {/* Primary: Accept this estimate (awaiting response) */}
+                {awaiting && (
+                  <Button
+                    className="w-full gap-2 bg-emerald-500 hover:bg-emerald-600"
+                    size="lg"
+                    onClick={() => setAcceptOpen(true)}
+                  >
+                    <Check className="size-4" />
+                    Accept Estimate
+                  </Button>
+                )}
+
+                {/* Book Now — pre-fills a booking from the estimate */}
                 <Button
                   asChild
-                  className="w-full gap-2 bg-emerald-500 hover:bg-emerald-600"
+                  variant={awaiting ? "outline" : "default"}
+                  className={
+                    awaiting
+                      ? "w-full gap-2"
+                      : "w-full gap-2 bg-emerald-500 hover:bg-emerald-600"
+                  }
                   size="lg"
                 >
                   <Link
@@ -233,28 +269,46 @@ export default function CustomerEstimateViewPage() {
                   </Link>
                 </Button>
 
-                {/* Secondary: Set up account first */}
-                {estimate.isGuestEstimate && (
+                {awaiting && (
+                  <button
+                    type="button"
+                    onClick={() => setDeclineOpen(true)}
+                    className="text-muted-foreground w-full text-center text-xs hover:text-red-600"
+                  >
+                    Decline this estimate
+                  </button>
+                )}
+
+                {estimate.accountCreated ? (
+                  <>
+                    {/* New auto-created account → set a password via the magic link */}
+                    <Button asChild variant="outline" className="w-full gap-2">
+                      <Link href={`/customer/estimates/${token}/setup`}>
+                        <UserPlus className="size-4" />
+                        Set Up Your Account &amp; View Estimate
+                      </Link>
+                    </Button>
+                    <p className="text-muted-foreground text-xs">
+                      Already have an account?{" "}
+                      <Link
+                        href={loginHref}
+                        className="text-primary font-medium hover:underline"
+                      >
+                        <LogIn className="mr-1 inline-block size-3" />
+                        Log in
+                      </Link>
+                    </p>
+                  </>
+                ) : (
+                  /* Existing account (spec 5.4) → log in to the portal; a
+                     logged-in session lands straight on the estimate. */
                   <Button asChild variant="outline" className="w-full gap-2">
-                    <Link
-                      href={`/customer/auth/signup?email=${encodeURIComponent(estimate.guestEmail ?? estimate.clientEmail)}&from=estimate&token=${token}`}
-                    >
-                      <UserPlus className="size-4" />
-                      Set Up Your Account First
+                    <Link href={loginHref}>
+                      <LogIn className="size-4" />
+                      View Estimate in Your Account
                     </Link>
                   </Button>
                 )}
-
-                <p className="text-muted-foreground text-xs">
-                  Already have an account?{" "}
-                  <Link
-                    href={`/customer/auth/login?from=estimate&token=${token}`}
-                    className="text-primary font-medium hover:underline"
-                  >
-                    <LogIn className="mr-1 inline-block size-3" />
-                    Log in
-                  </Link>
-                </p>
               </div>
             </div>
           )}
@@ -278,6 +332,22 @@ export default function CustomerEstimateViewPage() {
           </div>
         </div>
       </div>
+
+      <AcceptEstimateDialog
+        estimate={estimate}
+        facilityName={businessProfile.businessName}
+        open={acceptOpen}
+        onOpenChange={setAcceptOpen}
+        onAccepted={() => setJustAccepted(true)}
+      />
+
+      <DeclineEstimateDialog
+        estimate={estimate}
+        facilityName={businessProfile.businessName}
+        open={declineOpen}
+        onOpenChange={setDeclineOpen}
+        onDeclined={() => setJustDeclined(true)}
+      />
     </div>
   );
 }
