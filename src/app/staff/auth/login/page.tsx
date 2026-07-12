@@ -36,7 +36,7 @@ export default function StaffLoginPage() {
       // Set user ID
       setCurrentUserId(staffMember.id.toString());
       toast.success(`Welcome back, ${staffMember.name}!`);
-      router.push("/staff");
+      router.push("/employee/schedule");
     } else {
       toast.error("Invalid email or password");
     }
@@ -50,7 +50,7 @@ export default function StaffLoginPage() {
     const staffMember = users.find((u) => u.id.toString() === staffId);
     if (staffMember) {
       toast.success(`Welcome, ${staffMember.name}!`);
-      router.push("/staff");
+      router.push("/employee/schedule");
     }
   };
 

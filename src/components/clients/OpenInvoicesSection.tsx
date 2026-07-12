@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Booking } from "@/types/booking";
+import { useFieldMask } from "@/lib/staff/mask";
 
 interface OpenInvoicesSectionProps {
   clientId: number;
@@ -77,7 +78,12 @@ export function OpenInvoicesSection({
   const [method, setMethod] = useState<Method>("card");
   const [sendReceipt, setSendReceipt] = useState(true);
 
+  // Table 21: hide outstanding balances entirely from staff without
+  // financial_view_amounts. TODO: also strip server-side when a backend exists.
+  const { canSee } = useFieldMask();
+
   if (openInvoices.length === 0) return null;
+  if (!canSee("financial_amounts")) return null;
 
   const allSelected = selected.size === openInvoices.length;
   const someSelected = selected.size > 0 && !allSelected;

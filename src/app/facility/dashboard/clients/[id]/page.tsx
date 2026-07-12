@@ -41,6 +41,7 @@ import {
   customerCredits,
 } from "@/data/payments";
 import { getClientRetailPurchases } from "@/data/retail";
+import { useFieldMask } from "@/lib/staff/mask";
 import type { Evaluation } from "@/types/pet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
@@ -136,6 +137,9 @@ export default function ClientDetailPage({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { openBookingModal } = useBookingModal();
+  // Field masking (spec Table 21): hide contact info, LTV, and financial amounts
+  // from staff without the required permission. TODO: also strip server-side.
+  const { maskContact, maskAmount, canSee } = useFieldMask();
   const resumedBookingRef = useRef<string | null>(null);
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const [petActiveTab, setPetActiveTab] = useState("overview");
@@ -587,7 +591,7 @@ export default function ClientDetailPage({
         />
         <KpiTile
           label="Total Spent"
-          value={`$${totalSpent}`}
+          value={maskAmount(`$${totalSpent}`, "client_financial")}
           icon={DollarSign}
           tone="emerald"
         />
@@ -599,7 +603,10 @@ export default function ClientDetailPage({
         />
         <KpiTile
           label="Retail Purchases"
-          value={`$${totalRetailSpent.toFixed(2)}`}
+          value={maskAmount(
+            `$${totalRetailSpent.toFixed(2)}`,
+            "client_financial",
+          )}
           hint={`${clientRetailPurchases.length} purchases`}
           icon={ShoppingBag}
           tone="amber"
@@ -697,14 +704,14 @@ export default function ClientDetailPage({
                     <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-2.5">
                       <Mail className="text-muted-foreground size-4" />
                       <span className="text-sm font-medium">
-                        {client.email}
+                        {maskContact(client.email)}
                       </span>
                     </div>
                     {client.phone && (
                       <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-2.5">
                         <Phone className="text-muted-foreground size-4" />
                         <span className="text-sm font-medium">
-                          {client.phone}
+                          {maskContact(client.phone)}
                         </span>
                       </div>
                     )}
@@ -814,6 +821,12 @@ export default function ClientDetailPage({
                       </div>
                     </div>
                   </>
+                ) : client.address && !canSee("client_address") ? (
+                  <div className="bg-muted/50 rounded-lg p-2.5">
+                    <p className="text-muted-foreground text-sm font-medium">
+                      Hidden
+                    </p>
+                  </div>
                 ) : client.address ? (
                   <div className="bg-muted/50 rounded-lg p-2.5">
                     <p className="text-sm font-medium">
@@ -1397,7 +1410,7 @@ export default function ClientDetailPage({
               <div className="grid grid-cols-4 gap-4">
                 <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-xl font-bold text-green-600">
-                    ${totalRevenue.toFixed(2)}
+                    {maskAmount(`$${totalRevenue.toFixed(2)}`)}
                   </div>
                   <div className="text-muted-foreground text-xs">
                     Total Paid
@@ -1405,7 +1418,7 @@ export default function ClientDetailPage({
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-xl font-bold text-amber-600">
-                    ${totalOutstanding.toFixed(2)}
+                    {maskAmount(`$${totalOutstanding.toFixed(2)}`)}
                   </div>
                   <div className="text-muted-foreground text-xs">
                     Outstanding
@@ -1413,7 +1426,7 @@ export default function ClientDetailPage({
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-xl font-bold text-green-600">
-                    ${totalCredits.toFixed(2)}
+                    {maskAmount(`$${totalCredits.toFixed(2)}`)}
                   </div>
                   <div className="text-muted-foreground text-xs">
                     Credit Balance

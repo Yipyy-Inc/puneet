@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,7 @@ import {
   UserPlus,
   ArrowLeftRight,
   Eye,
+  ExternalLink,
   Pencil,
   Trash2,
   RefreshCw,
@@ -111,6 +113,11 @@ export function StaffCard({
                 >
                   <DropdownMenuItem onClick={() => onView(profile)}>
                     <Eye className="size-4" /> View details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/facility/dashboard/staff/${profile.id}`}>
+                      <ExternalLink className="size-4" /> Open full profile
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onEdit(profile)}>
                     <Pencil className="size-4" /> Edit profile

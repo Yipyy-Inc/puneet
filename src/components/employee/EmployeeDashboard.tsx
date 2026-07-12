@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +32,21 @@ import {
   RefreshCw,
 } from "lucide-react";
 import type { StaffProfile, FacilityStaffRole } from "@/types/facility-staff";
+import {
+  isOnboarded,
+  timeOfDayGreeting,
+  TodaySummary,
+  MyScheduleWidget,
+  MyTasksWidget,
+  MyAlertsWidget,
+  QuickActionsBar,
+  OnboardingProgress,
+} from "./employee-dashboard-widgets";
+import {
+  useOnboarding,
+  getOnboarding,
+  initOnboarding,
+} from "@/data/staff-onboarding";
 
 // Quick-action cards per role
 const ROLE_ACTIONS: Record<
@@ -43,6 +60,29 @@ const ROLE_ACTIONS: Record<
   }[]
 > = {
   owner: [
+    {
+      title: "My Schedule",
+      description: "Personal schedule view",
+      href: "/employee/schedule",
+      icon: Calendar,
+      accent: "text-amber-600",
+    },
+    {
+      title: "Bookings",
+      description: "All facility bookings",
+      href: "/employee/bookings",
+      icon: ClipboardList,
+      accent: "text-amber-600",
+    },
+    {
+      title: "Clients",
+      description: "Client directory",
+      href: "/employee/clients",
+      icon: Users,
+      accent: "text-amber-600",
+    },
+  ],
+  admin: [
     {
       title: "My Schedule",
       description: "Personal schedule view",
@@ -86,6 +126,29 @@ const ROLE_ACTIONS: Record<
       href: "/employee/clients",
       icon: Users,
       accent: "text-violet-600",
+    },
+  ],
+  supervisor: [
+    {
+      title: "My Schedule",
+      description: "Personal schedule",
+      href: "/employee/schedule",
+      icon: Calendar,
+      accent: "text-purple-600",
+    },
+    {
+      title: "Bookings",
+      description: "Today's appointments",
+      href: "/employee/bookings",
+      icon: ClipboardList,
+      accent: "text-purple-600",
+    },
+    {
+      title: "Clients",
+      description: "Client directory",
+      href: "/employee/clients",
+      icon: Users,
+      accent: "text-purple-600",
     },
   ],
   reception: [
@@ -164,6 +227,29 @@ const ROLE_ACTIONS: Record<
       accent: "text-emerald-600",
     },
   ],
+  caretaker: [
+    {
+      title: "Boarding Guests",
+      description: "Overnight pets in care",
+      href: "/employee/boarding",
+      icon: Moon,
+      accent: "text-cyan-600",
+    },
+    {
+      title: "Daycare Board",
+      description: "Check-in and care logs",
+      href: "/employee/daycare",
+      icon: Sun,
+      accent: "text-cyan-600",
+    },
+    {
+      title: "My Schedule",
+      description: "Your care shifts",
+      href: "/employee/schedule",
+      icon: Calendar,
+      accent: "text-cyan-600",
+    },
+  ],
   daycare_attendant: [
     {
       title: "Daycare Board",
@@ -210,6 +296,45 @@ const ROLE_ACTIONS: Record<
       accent: "text-indigo-600",
     },
   ],
+  retail: [
+    {
+      title: "Retail POS",
+      description: "Process a sale",
+      href: "/employee/retail",
+      icon: ShoppingBag,
+      accent: "text-fuchsia-600",
+    },
+    {
+      title: "Clients",
+      description: "Find a client",
+      href: "/employee/clients",
+      icon: Users,
+      accent: "text-fuchsia-600",
+    },
+    {
+      title: "My Schedule",
+      description: "Your shifts",
+      href: "/employee/schedule",
+      icon: Calendar,
+      accent: "text-fuchsia-600",
+    },
+  ],
+  accountant: [
+    {
+      title: "Bookings",
+      description: "Facility bookings",
+      href: "/employee/bookings",
+      icon: ClipboardList,
+      accent: "text-lime-600",
+    },
+    {
+      title: "My Schedule",
+      description: "Your shifts",
+      href: "/employee/schedule",
+      icon: Calendar,
+      accent: "text-lime-600",
+    },
+  ],
   sanitation: [
     {
       title: "My Tasks",
@@ -230,46 +355,66 @@ const ROLE_ACTIONS: Record<
 
 const ROLE_LABEL: Record<FacilityStaffRole, string> = {
   owner: "Owner / Admin",
+  admin: "Admin",
   manager: "Manager",
+  supervisor: "Supervisor",
   reception: "Reception / Front Desk",
   groomer: "Groomer",
   trainer: "Trainer",
+  caretaker: "Caretaker",
   daycare_attendant: "Daycare Attendant",
   boarding_attendant: "Boarding / Back of House",
+  retail: "Retail Associate",
+  accountant: "Accountant",
   sanitation: "Sanitation",
 };
 
 const ROLE_DESCRIPTION: Record<FacilityStaffRole, string> = {
   owner:
     "Full facility access — configuration, financials, and team management.",
+  admin: "Administrative access — configuration, financials, and team.",
   manager: "Operational oversight — bookings, staff, and reports.",
+  supervisor: "Shift lead — floor oversight, swaps, and approvals.",
   reception: "Client-facing operations — check-in/out, bookings, payments.",
   groomer: "Grooming appointments and notes for your assigned pets.",
   trainer: "Training sessions and progress tracking for enrolled pets.",
+  caretaker: "General animal care across boarding and daycare.",
   daycare_attendant: "Daycare check-in, feeding rounds, and play logs.",
   boarding_attendant: "Overnight kennel care, medications, and health checks.",
+  retail: "Point of sale, products, returns, and stock.",
+  accountant: "Financials, invoices, and reporting — no floor operations.",
   sanitation: "Facility cleaning tasks and sanitation log.",
 };
 
 const ROLE_ICON: Record<FacilityStaffRole, React.ElementType> = {
   owner: UserCog,
+  admin: UserCog,
   manager: Users,
+  supervisor: Users,
   reception: MonitorSpeaker,
   groomer: Scissors,
   trainer: Dumbbell,
+  caretaker: Moon,
   daycare_attendant: Sun,
   boarding_attendant: Moon,
+  retail: Sparkles,
+  accountant: MonitorSpeaker,
   sanitation: Sparkles,
 };
 
 const ROLE_GRADIENT: Record<FacilityStaffRole, string> = {
   owner: "from-amber-500 to-orange-500",
+  admin: "from-amber-500 to-orange-500",
   manager: "from-violet-500 to-purple-600",
+  supervisor: "from-purple-500 to-violet-600",
   reception: "from-sky-500 to-blue-600",
   groomer: "from-rose-500 to-pink-600",
   trainer: "from-emerald-500 to-green-600",
+  caretaker: "from-cyan-500 to-teal-600",
   daycare_attendant: "from-orange-400 to-amber-500",
   boarding_attendant: "from-indigo-500 to-blue-700",
+  retail: "from-fuchsia-500 to-pink-600",
+  accountant: "from-lime-500 to-green-600",
   sanitation: "from-teal-500 to-cyan-600",
 };
 
@@ -281,6 +426,33 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
   const role = staff.primaryRole;
   const actions = ROLE_ACTIONS[role] ?? ROLE_ACTIONS.reception;
   const RoleIcon = ROLE_ICON[role];
+  // Read the clock once at mount (purity: no argless Date in render body).
+  const [greeting] = useState(() => timeOfDayGreeting(new Date().getHours()));
+
+  // Onboarding checklist (store-backed, Area F). Seed a role-appropriate default
+  // for a new hire who doesn't have one yet.
+  const onboarding = useOnboarding(staff.id);
+  useEffect(() => {
+    if (staff.status === "invited" && getOnboarding(staff.id).length === 0) {
+      initOnboarding(staff.id, staff.primaryRole, staff.employment.hireDate);
+    }
+  }, [staff.id, staff.status, staff.primaryRole, staff.employment.hireDate]);
+
+  const onboardingTotal = onboarding.length;
+  const onboardingDone = onboarding.filter((t) => !!t.completedAt).length;
+  const onboardingComplete =
+    onboardingTotal === 0
+      ? isOnboarded(staff)
+      : onboardingDone === onboardingTotal;
+
+  // One-time congrats when the checklist flips to complete this session.
+  const prevComplete = useRef(onboardingComplete);
+  useEffect(() => {
+    if (!prevComplete.current && onboardingComplete && onboardingTotal > 0) {
+      toast.success("🎉 Onboarding complete — welcome to the team!");
+    }
+    prevComplete.current = onboardingComplete;
+  }, [onboardingComplete, onboardingTotal]);
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6">
@@ -302,7 +474,7 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-white/80">Welcome back,</p>
+            <p className="text-sm font-medium text-white/80">{greeting},</p>
             <h1 className="text-2xl font-bold tracking-tight">
               {staff.firstName} {staff.lastName}
             </h1>
@@ -323,6 +495,14 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
                   +{r.replace(/_/g, " ")}
                 </Badge>
               ))}
+              {onboardingComplete && (
+                <Badge
+                  variant="secondary"
+                  className="border-white/20 bg-white/20 text-xs text-white"
+                >
+                  Onboarding complete ✓
+                </Badge>
+              )}
             </div>
           </div>
           <div className="hidden text-right text-sm text-white/70 sm:block">
@@ -340,6 +520,22 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
         {/* decorative */}
         <div className="pointer-events-none absolute -top-8 -right-8 size-40 rounded-full bg-white/5" />
         <div className="pointer-events-none absolute right-20 -bottom-10 size-32 rounded-full bg-white/5" />
+      </div>
+
+      {/* Onboarding Progress — prominent until complete (Area F) */}
+      {!onboardingComplete && <OnboardingProgress staff={staff} />}
+
+      {/* Today's Summary — time-of-day greeting + the day's chips */}
+      <TodaySummary staff={staff} greeting={greeting} />
+
+      {/* Quick Actions — the one role-contextual primary action */}
+      <QuickActionsBar role={role} />
+
+      {/* My Schedule · My Tasks · My Alerts */}
+      <div className="grid gap-3 md:grid-cols-3">
+        <MyScheduleWidget staff={staff} />
+        <MyTasksWidget staff={staff} />
+        <MyAlertsWidget staff={staff} />
       </div>
 
       {/* Stats row */}

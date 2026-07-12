@@ -11,12 +11,16 @@ import {
 } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  ALL_PERMISSION_KEYS,
+  resolveAllPermissions,
   resolvePermission,
   type AccessScope,
   type CustomFacilityRole,
   type CustomRolesById,
+  type EffectivePermissions,
   type FacilityStaffRole,
   type PermissionKey,
+  type PermissionSetting,
   type RolePresetOverrides,
   type StaffProfile,
 } from "@/types/facility-staff";
@@ -34,9 +38,16 @@ import {
 // Types
 // ============================================================================
 
+/** Per-staff permission overrides layered over the profile's baked seed. */
+type StaffOverrides = Record<
+  string,
+  Partial<Record<PermissionKey, PermissionSetting>>
+>;
+
 interface RbacState {
   viewerId: string;
   presetOverrides: RolePresetOverrides;
+  staffOverrides: StaffOverrides;
 }
 
 interface RbacContextValue {
@@ -54,6 +65,12 @@ interface RbacContextValue {
     staff: StaffProfile,
     key: PermissionKey,
   ) => { granted: boolean; scope: AccessScope };
+  /**
+   * Resolve the FULL effective permission map for a staff member by id — the
+   * one resolver every guard / sidebar / mask ultimately calls. Missing staff
+   * resolve to an all-denied map.
+   */
+  resolvePermissions: (staffId: string) => EffectivePermissions;
   /** Custom role CRUD. */
   createCustomRole: (
     role: Omit<CustomFacilityRole, "id" | "createdAt">,
@@ -73,6 +90,24 @@ interface RbacContextValue {
   ) => void;
   resetPresetRole: (role: FacilityStaffRole) => void;
   resetAllPresets: () => void;
+  /**
+   * A staff member's effective override map — the provider's edited overrides if
+   * any exist for that staff, else the profile's baked `permissionOverrides`.
+   */
+  staffOverridesFor: (
+    staffId: string,
+  ) => Partial<Record<PermissionKey, PermissionSetting>>;
+  /**
+   * Set one per-staff override. `setting = null` clears the key (inherit the
+   * role default); a PermissionSetting GRANTs or REVOKEs it.
+   */
+  setStaffPermission: (
+    staffId: string,
+    key: PermissionKey,
+    setting: PermissionSetting | null,
+  ) => void;
+  /** Clear all of a staff member's overrides → inherit the role defaults. */
+  resetStaffOverrides: (staffId: string) => void;
 }
 
 const STORAGE_KEY = "facility-rbac-state-v1";
@@ -81,6 +116,7 @@ const DEFAULT_STATE: RbacState = {
   // Default to the owner profile so everything is visible out of the box.
   viewerId: "fs-owner-01",
   presetOverrides: {},
+  staffOverrides: {},
 };
 
 // Custom roles now live in the TanStack Query cache (see @/lib/api/roles); a
@@ -118,6 +154,7 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
         setState((prev) => ({
           viewerId: parsed.viewerId ?? prev.viewerId,
           presetOverrides: parsed.presetOverrides ?? prev.presetOverrides,
+          staffOverrides: parsed.staffOverrides ?? prev.staffOverrides,
         }));
       }
     } catch {
@@ -149,19 +186,94 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
     setFacilityRoleCookie(viewer.primaryRole);
   }, [viewer.primaryRole, hydrated]);
 
+  // A staff member's effective override map: the provider's edited overrides if
+  // an entry exists, otherwise the profile's baked seed.
+  const staffOverridesFor = useCallback(
+    (staffId: string): Partial<Record<PermissionKey, PermissionSetting>> => {
+      const edited = state.staffOverrides[staffId];
+      if (edited) return edited;
+      return (
+        facilityStaff.find((s) => s.id === staffId)?.permissionOverrides ?? {}
+      );
+    },
+    [state.staffOverrides],
+  );
+
+  // Overlay the provider's per-staff overrides onto the profile before resolving
+  // so guards/sidebar/masks reflect per-staff edits, not just the baked seed.
+  const withOverrides = useCallback(
+    (staff: StaffProfile): StaffProfile => ({
+      ...staff,
+      permissionOverrides: staffOverridesFor(staff.id),
+    }),
+    [staffOverridesFor],
+  );
+
   const resolveFor = useCallback(
     (staff: StaffProfile, key: PermissionKey) =>
-      resolvePermission(staff, key, {
+      resolvePermission(withOverrides(staff), key, {
         customRoles,
         presetOverrides: state.presetOverrides,
       }),
-    [customRoles, state.presetOverrides],
+    [customRoles, state.presetOverrides, withOverrides],
   );
 
   const can = useCallback(
     (key: PermissionKey) => resolveFor(viewer, key).granted,
     [viewer, resolveFor],
   );
+
+  // TODO: move to server/JWT — resolve against the mock stores for now.
+  const resolvePermissions = useCallback(
+    (staffId: string): EffectivePermissions => {
+      const staff = facilityStaff.find((s) => s.id === staffId);
+      if (!staff) {
+        return Object.fromEntries(
+          ALL_PERMISSION_KEYS.map((k) => [k, false]),
+        ) as EffectivePermissions;
+      }
+      return resolveAllPermissions(withOverrides(staff), {
+        customRoles,
+        presetOverrides: state.presetOverrides,
+      });
+    },
+    [customRoles, state.presetOverrides, withOverrides],
+  );
+
+  const setStaffPermission = useCallback(
+    (
+      staffId: string,
+      key: PermissionKey,
+      setting: PermissionSetting | null,
+    ) => {
+      setState((prev) => {
+        // Seed a fresh entry from the profile's baked overrides so edits build
+        // on top of any pre-existing seed rather than wiping it.
+        const base =
+          prev.staffOverrides[staffId] ??
+          facilityStaff.find((s) => s.id === staffId)?.permissionOverrides ??
+          {};
+        const current = { ...base };
+        if (setting === null) {
+          delete current[key];
+        } else {
+          current[key] = setting;
+        }
+        return {
+          ...prev,
+          staffOverrides: { ...prev.staffOverrides, [staffId]: current },
+        };
+      });
+    },
+    [],
+  );
+
+  const resetStaffOverrides = useCallback((staffId: string) => {
+    setState((prev) => ({
+      ...prev,
+      staffOverrides: { ...prev.staffOverrides, [staffId]: {} },
+    }));
+  }, []);
 
   const createCustomRole = useCallback(
     (
@@ -254,6 +366,7 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
       presetOverrides: state.presetOverrides,
       can,
       resolveFor,
+      resolvePermissions,
       createCustomRole,
       updateCustomRole,
       deleteCustomRole,
@@ -261,6 +374,9 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
       setPresetPermission,
       resetPresetRole,
       resetAllPresets,
+      staffOverridesFor,
+      setStaffPermission,
+      resetStaffOverrides,
     }),
     [
       viewer,
@@ -270,6 +386,7 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
       setViewerId,
       can,
       resolveFor,
+      resolvePermissions,
       createCustomRole,
       updateCustomRole,
       deleteCustomRole,
@@ -277,6 +394,9 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
       setPresetPermission,
       resetPresetRole,
       resetAllPresets,
+      staffOverridesFor,
+      setStaffPermission,
+      resetStaffOverrides,
     ],
   );
 
@@ -306,6 +426,7 @@ export function useFacilityRbac(): RbacContextValue {
           customRoles: {},
           presetOverrides: {},
         }),
+      resolvePermissions: () => resolveAllPermissions(owner, {}),
       createCustomRole: () => {
         throw new Error("FacilityRbacProvider missing");
       },
@@ -315,6 +436,10 @@ export function useFacilityRbac(): RbacContextValue {
       setPresetPermission: () => {},
       resetPresetRole: () => {},
       resetAllPresets: () => {},
+      staffOverridesFor: (staffId) =>
+        facilityStaff.find((s) => s.id === staffId)?.permissionOverrides ?? {},
+      setStaffPermission: () => {},
+      resetStaffOverrides: () => {},
     };
   }
   return ctx;
@@ -323,4 +448,36 @@ export function useFacilityRbac(): RbacContextValue {
 export function useFacilityViewer() {
   const { viewer, viewerId, setViewerId, can } = useFacilityRbac();
   return { viewer, viewerId, setViewerId, can };
+}
+
+/**
+ * The full effective permission map for the acting viewer. Guards, the dynamic
+ * sidebar, and field-masking read from this single source of truth.
+ */
+export function useEffectivePermissions(): EffectivePermissions {
+  const { viewer, resolvePermissions } = useFacilityRbac();
+  return useMemo(
+    () => resolvePermissions(viewer.id),
+    [resolvePermissions, viewer.id],
+  );
+}
+
+/**
+ * Does the acting viewer have `key` (with any scope)? The ergonomic check every
+ * guard/sidebar/mask should call. Delegates to the provider's single resolver.
+ */
+export function usePermission(key: PermissionKey): boolean {
+  const { can } = useFacilityRbac();
+  return can(key);
+}
+
+/**
+ * The acting viewer's effective ACCESS SCOPE for `key` — the granted
+ * {@link AccessScope} (e.g. "assigned_shifts") or `false` when not granted.
+ * Use when a caller needs the scope, not just a yes/no.
+ */
+export function useCan(key: PermissionKey): AccessScope | false {
+  const { viewer, resolveFor } = useFacilityRbac();
+  const { granted, scope } = resolveFor(viewer, key);
+  return granted ? scope : false;
 }

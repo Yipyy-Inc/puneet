@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { Client } from "@/types/client";
 import { cn } from "@/lib/utils";
+import { HIDDEN, useFieldMask } from "@/lib/staff/mask";
 
 interface ClientInfoStripProps {
   client: Client;
@@ -26,6 +27,11 @@ export function ClientInfoStrip({
   backHref,
   currentContext,
 }: ClientInfoStripProps) {
+  // Hide contact details from staff without view_client_contact_info (Table 21).
+  // TODO: also strip server-side when a backend exists.
+  const { canSee } = useFieldMask();
+  const showContact = canSee("client_contact");
+
   const hasMembership =
     client.membership?.status === "active" && client.membership.plan;
   const isActive = client.status === "active";
@@ -106,24 +112,36 @@ export function ClientInfoStrip({
 
           {/* Contact row */}
           <div className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1">
-            {client.email && (
-              <a
-                href={`mailto:${client.email}`}
-                className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm transition-colors"
-              >
-                <Mail className="size-3.5" />
-                {client.email}
-              </a>
-            )}
-            {client.phone && (
-              <a
-                href={`tel:${client.phone}`}
-                className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm transition-colors"
-              >
-                <Phone className="size-3.5" />
-                {client.phone}
-              </a>
-            )}
+            {client.email &&
+              (showContact ? (
+                <a
+                  href={`mailto:${client.email}`}
+                  className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm transition-colors"
+                >
+                  <Mail className="size-3.5" />
+                  {client.email}
+                </a>
+              ) : (
+                <span className="text-muted-foreground flex items-center gap-1.5 text-sm">
+                  <Mail className="size-3.5" />
+                  {HIDDEN}
+                </span>
+              ))}
+            {client.phone &&
+              (showContact ? (
+                <a
+                  href={`tel:${client.phone}`}
+                  className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm transition-colors"
+                >
+                  <Phone className="size-3.5" />
+                  {client.phone}
+                </a>
+              ) : (
+                <span className="text-muted-foreground flex items-center gap-1.5 text-sm">
+                  <Phone className="size-3.5" />
+                  {HIDDEN}
+                </span>
+              ))}
           </div>
         </div>
 

@@ -38,6 +38,8 @@ import {
   Users,
   Lock,
   ArrowRight,
+  ChevronDown,
+  Copy,
 } from "lucide-react";
 import {
   FacilityRbacProvider,
@@ -171,6 +173,17 @@ function StudioInner() {
     toast.success(`${role.label} role deleted`);
   }
 
+  // Duplicate any role (preset or custom) into a new custom role — persisted via
+  // createCustomRole → lib/api/roles → facility-roles-store. Select it so the
+  // user can immediately rename it.
+  function handleDuplicate(
+    profile: Omit<CustomFacilityRole, "id" | "createdAt">,
+  ): void {
+    const created = createCustomRole(profile);
+    setSelected({ type: "custom", id: created.id });
+    toast.success(`${profile.label} created — rename it via Edit`);
+  }
+
   return (
     <Card className="border-border/60 overflow-hidden shadow-sm">
       <CardHeader className="bg-card relative space-y-4 border-b pb-5">
@@ -294,7 +307,10 @@ function StudioInner() {
           {/* Editor */}
           <div className="min-w-0 p-4">
             {selected.type === "preset" ? (
-              <PresetRoleEditor role={selected.id} />
+              <PresetRoleEditor
+                role={selected.id}
+                onDuplicate={handleDuplicate}
+              />
             ) : (
               <CustomRoleEditor
                 roleId={selected.id}
@@ -302,6 +318,7 @@ function StudioInner() {
                   const role = customRoles[selected.id];
                   if (role) setPendingDelete(role);
                 }}
+                onDuplicate={handleDuplicate}
               />
             )}
           </div>
@@ -477,11 +494,44 @@ function CustomRoleButton({
 // Preset editor — shows effective scope, allows override
 // ============================================================================
 
-function PresetRoleEditor({ role }: { role: FacilityStaffRole }) {
+function PresetRoleEditor({
+  role,
+  onDuplicate,
+}: {
+  role: FacilityStaffRole;
+  onDuplicate: (profile: Omit<CustomFacilityRole, "id" | "createdAt">) => void;
+}) {
   const { presetOverrides, setPresetPermission, resetPresetRole } =
     useFacilityRbac();
   const meta = ROLE_META[role];
   const overrides = presetOverrides[role] ?? {};
+
+  // Confirmation before saving a default change (spec 6.4b). We ask once per
+  // role per editing session, then apply this and subsequent edits directly.
+  const [acknowledged, setAcknowledged] = useState<Set<FacilityStaffRole>>(
+    new Set(),
+  );
+  const [pendingAction, setPendingAction] = useState<{
+    run: () => void;
+  } | null>(null);
+
+  const affectedStaff = useMemo(
+    () =>
+      facilityStaff.filter(
+        (s) => s.primaryRole === role || s.additionalRoles.includes(role),
+      ).length,
+    [role],
+  );
+
+  // Route a mutating action through the confirmation gate the first time a
+  // preset role is edited this session; afterwards apply directly.
+  function guarded(run: () => void) {
+    if (acknowledged.has(role)) {
+      run();
+    } else {
+      setPendingAction({ run });
+    }
+  }
 
   function effectiveScope(key: PermissionKey): AccessScope | null {
     const override = overrides[key];
@@ -524,18 +574,45 @@ function PresetRoleEditor({ role }: { role: FacilityStaffRole }) {
               </p>
             </div>
           </div>
-          {Object.keys(overrides).length > 0 && (
+          <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                resetPresetRole(role);
-                toast.success(`${meta.label} reset to defaults`);
-              }}
+              onClick={() =>
+                onDuplicate({
+                  label: `${meta.label} (Copy)`,
+                  description: meta.tagline,
+                  accent: meta.accent,
+                  ring: meta.ring,
+                  icon: meta.icon,
+                  permissions: PERMISSION_GROUPS.reduce(
+                    (acc, g) => {
+                      for (const p of g.permissions) {
+                        const scope = effectiveScope(p.key);
+                        if (scope) acc[p.key] = scope;
+                      }
+                      return acc;
+                    },
+                    {} as Partial<Record<PermissionKey, AccessScope>>,
+                  ),
+                })
+              }
             >
-              <RotateCcw className="size-3.5" /> Reset defaults
+              <Copy className="size-3.5" /> Duplicate
             </Button>
-          )}
+            {Object.keys(overrides).length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  resetPresetRole(role);
+                  toast.success(`${meta.label} reset to defaults`);
+                }}
+              >
+                <RotateCcw className="size-3.5" /> Reset defaults
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="bg-background/80 mt-3 grid gap-2 rounded-xl p-2 backdrop-blur-sm sm:grid-cols-3">
@@ -577,16 +654,54 @@ function PresetRoleEditor({ role }: { role: FacilityStaffRole }) {
           return preset ? preset[1] : null;
         }}
         onChange={(key, value) => {
-          if (value === "preset") {
-            setPresetPermission(role, key, null);
-          } else if (value === "revoked") {
-            setPresetPermission(role, key, "revoked");
-          } else {
-            setPresetPermission(role, key, value);
-          }
+          guarded(() => {
+            if (value === "preset") {
+              setPresetPermission(role, key, null);
+            } else if (value === "revoked") {
+              setPresetPermission(role, key, "revoked");
+            } else {
+              setPresetPermission(role, key, value);
+            }
+          });
+        }}
+        onGrantAll={(keys) => {
+          guarded(() => {
+            for (const key of keys) setPresetPermission(role, key, "anytime");
+          });
         }}
         showPresetOption
       />
+
+      {/* Confirm before changing a preset role's defaults (spec 6.4b). */}
+      <Dialog
+        open={!!pendingAction}
+        onOpenChange={(v) => !v && setPendingAction(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change default permissions?</DialogTitle>
+            <DialogDescription>
+              This will change default permissions for {affectedStaff} staff
+              member{affectedStaff === 1 ? "" : "s"} who have this role.
+              Individual overrides will not be affected.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingAction(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                pendingAction?.run();
+                setAcknowledged((prev) => new Set(prev).add(role));
+                setPendingAction(null);
+              }}
+            >
+              Change defaults
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -598,9 +713,11 @@ function PresetRoleEditor({ role }: { role: FacilityStaffRole }) {
 function CustomRoleEditor({
   roleId,
   onDelete,
+  onDuplicate,
 }: {
   roleId: string;
   onDelete: () => void;
+  onDuplicate: (profile: Omit<CustomFacilityRole, "id" | "createdAt">) => void;
 }) {
   const { customRoles, updateCustomRole, setCustomRolePermission } =
     useFacilityRbac();
@@ -682,6 +799,22 @@ function CustomRoleEditor({
             <Button variant="outline" size="sm" onClick={openEdit}>
               <Pencil className="size-3.5" /> Edit
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                onDuplicate({
+                  label: `${role.label} (Copy)`,
+                  description: role.description,
+                  accent: role.accent,
+                  ring: role.ring,
+                  icon: role.icon,
+                  permissions: { ...role.permissions },
+                })
+              }
+            >
+              <Copy className="size-3.5" /> Duplicate
+            </Button>
             <Button variant="outline" size="sm" onClick={onDelete}>
               <Trash2 className="size-3.5 text-rose-600" />
             </Button>
@@ -717,6 +850,10 @@ function CustomRoleEditor({
           } else {
             setCustomRolePermission(role.id, key, value);
           }
+        }}
+        onGrantAll={(keys) => {
+          for (const key of keys)
+            setCustomRolePermission(role.id, key, "anytime");
         }}
       />
 
@@ -778,17 +915,34 @@ export function PermissionsGrid({
   getValue,
   getPresetDefault,
   onChange,
+  onGrantAll,
   showPresetOption,
 }: {
   getValue: (key: PermissionKey) => GridValue;
   getPresetDefault?: (key: PermissionKey) => AccessScope | null;
   onChange: (key: PermissionKey, value: GridValue) => void;
+  /** "Grant all in category" — receives the group's grantable (non always-on) keys. */
+  onGrantAll?: (keys: PermissionKey[]) => void;
   showPresetOption?: boolean;
 }) {
+  // Categories are accordions — collapse state per group id.
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const toggleCollapse = (id: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   return (
     <div className="space-y-3">
       {PERMISSION_GROUPS.map((group) => {
         const isCore = group.id === "core";
+        const isCollapsed = collapsed.has(group.id);
+        const grantableKeys = group.permissions
+          .filter((p) => !ALWAYS_ON_PERMISSIONS.includes(p.key))
+          .map((p) => p.key);
         const groupGranted = group.permissions.filter((p) => {
           const v = getValue(p.key);
           if (v === "preset" && getPresetDefault) {
@@ -802,21 +956,48 @@ export function PermissionsGrid({
             key={group.id}
             className="border-border/60 overflow-hidden rounded-xl border"
           >
-            <div className="bg-muted/40 flex items-center justify-between border-b px-3 py-2">
-              <div>
-                <div className="text-xs font-semibold">{group.label}</div>
-                <div className="text-muted-foreground text-[10px]">
-                  {group.description}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {isCore && (
+            <div className="bg-muted/40 flex items-center justify-between gap-2 border-b px-3 py-2">
+              <button
+                type="button"
+                onClick={() => toggleCollapse(group.id)}
+                className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                aria-expanded={!isCollapsed}
+              >
+                <ChevronDown
+                  className={cn(
+                    "size-3.5 shrink-0 transition-transform",
+                    isCollapsed && "-rotate-90",
+                  )}
+                />
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-semibold">
+                    {group.label}
+                  </span>
+                  <span className="text-muted-foreground block truncate text-[10px]">
+                    {group.description}
+                  </span>
+                </span>
+              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                {isCore ? (
                   <Badge
                     variant="outline"
                     className="h-5 border-slate-300 bg-slate-100 px-1 text-[9px] text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300"
                   >
                     <Lock className="mr-0.5 size-2.5" /> Always on
                   </Badge>
+                ) : (
+                  onGrantAll &&
+                  grantableKeys.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 gap-1 px-2 text-[10px]"
+                      onClick={() => onGrantAll(grantableKeys)}
+                    >
+                      <CheckCheck className="size-3" /> Grant all
+                    </Button>
+                  )
                 )}
                 <Badge variant="secondary" className="h-5 px-1 text-[10px]">
                   {groupGranted}/{group.permissions.length}
@@ -824,37 +1005,39 @@ export function PermissionsGrid({
               </div>
             </div>
 
-            <div className="divide-y">
-              {group.permissions.map((p) => {
-                const value = getValue(p.key);
-                const presetDefault = getPresetDefault?.(p.key) ?? null;
-                const alwaysOn = ALWAYS_ON_PERMISSIONS.includes(p.key);
-                return (
-                  <div
-                    key={p.key}
-                    className="flex items-center justify-between gap-3 px-3 py-2"
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate text-xs font-medium">
-                        {p.label}
-                      </div>
-                      {p.hint && (
-                        <div className="text-muted-foreground truncate text-[10px]">
-                          {p.hint}
+            {!isCollapsed && (
+              <div className="divide-y">
+                {group.permissions.map((p) => {
+                  const value = getValue(p.key);
+                  const presetDefault = getPresetDefault?.(p.key) ?? null;
+                  const alwaysOn = ALWAYS_ON_PERMISSIONS.includes(p.key);
+                  return (
+                    <div
+                      key={p.key}
+                      className="flex items-center justify-between gap-3 px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-xs font-medium">
+                          {p.label}
                         </div>
-                      )}
+                        {p.hint && (
+                          <div className="text-muted-foreground truncate text-[10px]">
+                            {p.hint}
+                          </div>
+                        )}
+                      </div>
+                      <PermissionValueSelect
+                        value={value}
+                        presetDefault={presetDefault}
+                        alwaysOn={alwaysOn}
+                        showPresetOption={showPresetOption}
+                        onChange={(v) => onChange(p.key, v)}
+                      />
                     </div>
-                    <PermissionValueSelect
-                      value={value}
-                      presetDefault={presetDefault}
-                      alwaysOn={alwaysOn}
-                      showPresetOption={showPresetOption}
-                      onChange={(v) => onChange(p.key, v)}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       })}

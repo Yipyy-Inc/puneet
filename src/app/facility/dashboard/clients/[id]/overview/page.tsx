@@ -13,6 +13,7 @@ import {
   servicePackages,
 } from "@/data/services-pricing";
 import { mockCustomerPackages } from "@/data/customer-packages";
+import { useFieldMask } from "@/lib/staff/mask";
 import { PurchasedPackageCard } from "@/components/customer/billing/packages/PurchasedPackageCard";
 import { ActiveMembershipCard } from "@/components/customer/billing/packages/ActiveMembershipCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,6 +58,8 @@ export default function ClientOverviewPage({
   const { id } = use(params);
   const clientId = parseInt(id, 10);
   const client = clients.find((c) => c.id === clientId);
+  // Table 21 masking. TODO: also strip server-side when a backend exists.
+  const { maskContact, maskAmount, canSee } = useFieldMask();
   const [noteText, setNoteText] = useState("");
   const [now] = useState(() => Date.now());
   const [bulkPayOpen, setBulkPayOpen] = useState(false);
@@ -187,7 +190,7 @@ export default function ClientOverviewPage({
               <p className="text-sm font-medium text-red-800">
                 Outstanding Balance:{" "}
                 <span className="font-[tabular-nums]">
-                  ${totalOverdue.toFixed(2)}
+                  {maskAmount(`$${totalOverdue.toFixed(2)}`)}
                 </span>
               </p>
               <p className="text-xs text-red-600">
@@ -237,7 +240,7 @@ export default function ClientOverviewPage({
               </div>
               <div>
                 <p className="font-[tabular-nums] text-2xl font-bold">
-                  ${totalSpent.toFixed(0)}
+                  {maskAmount(`$${totalSpent.toFixed(0)}`, "client_financial")}
                 </p>
                 <p className="text-muted-foreground text-xs">Total Spent</p>
               </div>
@@ -264,7 +267,7 @@ export default function ClientOverviewPage({
             </div>
             <div>
               <p className="font-[tabular-nums] text-2xl font-bold">
-                ${avgSpent.toFixed(0)}
+                {maskAmount(`$${avgSpent.toFixed(0)}`, "client_financial")}
               </p>
               <p className="text-muted-foreground text-xs">Avg per Booking</p>
             </div>
@@ -592,21 +595,22 @@ export default function ClientOverviewPage({
               {client.email && (
                 <div className="flex items-center gap-3 text-sm">
                   <Mail className="text-muted-foreground size-4 shrink-0" />
-                  <span className="truncate">{client.email}</span>
+                  <span className="truncate">{maskContact(client.email)}</span>
                 </div>
               )}
               {client.phone && (
                 <div className="flex items-center gap-3 text-sm">
                   <Phone className="text-muted-foreground size-4 shrink-0" />
-                  {client.phone}
+                  {maskContact(client.phone)}
                 </div>
               )}
               {client.address?.street && (
                 <div className="flex items-center gap-3 text-sm">
                   <MapPin className="text-muted-foreground size-4 shrink-0" />
                   <span>
-                    {client.address.street}, {client.address.city},{" "}
-                    {client.address.state}
+                    {canSee("client_address")
+                      ? `${client.address.street}, ${client.address.city}, ${client.address.state}`
+                      : "Hidden"}
                   </span>
                 </div>
               )}

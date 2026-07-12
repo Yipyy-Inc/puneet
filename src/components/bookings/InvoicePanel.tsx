@@ -30,6 +30,7 @@ import { InvoiceActivityLog } from "@/components/bookings/InvoiceActivityLog";
 import { AutoAppliedBenefits } from "@/components/bookings/AutoAppliedBenefits";
 import { CareCompletionInlineBanner } from "@/components/bookings/CareCompletionWarning";
 import type { PendingCareItem } from "@/lib/care-completion";
+import { DASH, useFieldMask } from "@/lib/staff/mask";
 
 const STATUS_CONFIG: Record<
   string,
@@ -71,6 +72,12 @@ export function InvoicePanel({
   pendingCare?: PendingCareItem[];
   hasCriticalCare?: boolean;
 }) {
+  // Table 21: staff without financial_view_amounts must not see invoice totals.
+  // The whole panel is monetary, so gate it wholesale. TODO: also strip
+  // server-side when a backend exists.
+  const { canSee } = useFieldMask();
+  const showAmounts = canSee("financial_amounts");
+
   const status = STATUS_CONFIG[invoice.status] ?? STATUS_CONFIG.estimate;
   const canEditBase = canEditInvoice(invoice.status, "base");
   const canEditAddon = canEditInvoice(invoice.status, "addon");
@@ -103,6 +110,28 @@ export function InvoicePanel({
     });
     toast.success(`Manager override granted — "${itemName}" unlocked`);
   };
+
+  if (!showAmounts) {
+    return (
+      <Card className="sticky top-20 overflow-hidden">
+        <CardHeader className="flex-row items-center gap-2 border-b py-3">
+          <FileText className="text-muted-foreground size-4" />
+          <span className="text-sm font-medium">Invoice</span>
+          <Badge className={cn("ml-auto", status.badgeClass)}>
+            {status.label}
+          </Badge>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center gap-2 py-8 text-center">
+          <Lock className="text-muted-foreground size-5" />
+          <p className="text-sm font-medium">{DASH}</p>
+          <p className="text-muted-foreground max-w-[16rem] text-xs">
+            Invoice amounts are hidden. You don&apos;t have permission to view
+            billing totals.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="sticky top-20 overflow-hidden">

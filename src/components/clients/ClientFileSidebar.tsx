@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { getCustomerLanguageLabel } from "@/lib/language-settings";
 import { bookings } from "@/data/bookings";
 import type { Client } from "@/types/client";
+import { useFieldMask } from "@/lib/staff/mask";
 
 interface ClientFileSidebarProps {
   client: Client;
@@ -59,6 +60,9 @@ export function ClientFileSidebar({
   bookingCount,
 }: ClientFileSidebarProps) {
   const pathname = usePathname();
+  // Table 21 masking: hide contact + per-booking amounts from staff who lack the
+  // permission. TODO: also strip server-side when a backend exists.
+  const { maskContact, maskAmount } = useFieldMask();
   const base = `/facility/dashboard/clients/${client.id}`;
   const onBookingDetail = !!pathname.match(/\/clients\/\d+\/bookings\/(\d+)/);
   const onPetDetail = !!pathname.match(/\/clients\/\d+\/pets\/(\d+)/);
@@ -290,13 +294,13 @@ export function ClientFileSidebar({
           {client.email && (
             <div className="flex items-center gap-2.5 text-sm">
               <Mail className="text-muted-foreground size-4 shrink-0" />
-              <span className="truncate">{client.email}</span>
+              <span className="truncate">{maskContact(client.email)}</span>
             </div>
           )}
           {client.phone && (
             <div className="flex items-center gap-2.5 text-sm">
               <Phone className="text-muted-foreground size-4 shrink-0" />
-              {client.phone}
+              {maskContact(client.phone)}
             </div>
           )}
         </div>
@@ -432,7 +436,7 @@ export function ClientFileSidebar({
                       </p>
                     </div>
                     <span className="font-[tabular-nums] text-sm font-medium">
-                      ${b.totalCost}
+                      {maskAmount(`$${b.totalCost}`, "booking_financials")}
                     </span>
                   </Link>
                 );

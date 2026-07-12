@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { Location } from "@/types/location";
 import { DatePicker } from "@/components/ui/date-picker";
 import { HqKpiTile } from "@/components/hq/HqKpiTile";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import {
   buildCommandCenterKpis,
   type CommandCenterRange,
@@ -40,6 +41,10 @@ interface Props {
  */
 export function CommandCenterKpis({ locations }: Props) {
   const router = useRouter();
+  // Revenue/financial tiles are Manager+ only (spec A5 / F0.2). Lower roles get
+  // the tiles absent, not blurred. TODO: also strip server-side when a backend
+  // exists — the client shouldn't receive figures it can't show.
+  const canSeeRevenue = usePermission("financial_view_revenue");
   const [range, setRange] = useState<CommandCenterRange>("today");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
@@ -100,14 +105,16 @@ export function CommandCenterKpis({ locations }: Props) {
         )}
       </div>
 
-      {/* Four KPI tiles */}
+      {/* KPI tiles — revenue/financial tiles gated to Manager+ (financial_view_revenue) */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <HqKpiTile
-          label={`Network Revenue · ${kpis.rangeLabel}`}
-          value={`$${kpis.revenue.value.toLocaleString()}`}
-          delta={kpis.revenue.deltaPct}
-          sublabel={`vs. prior ${kpis.priorNoun}`}
-        />
+        {canSeeRevenue && (
+          <HqKpiTile
+            label={`Network Revenue · ${kpis.rangeLabel}`}
+            value={`$${kpis.revenue.value.toLocaleString()}`}
+            delta={kpis.revenue.deltaPct}
+            sublabel={`vs. prior ${kpis.priorNoun}`}
+          />
+        )}
         <HqKpiTile
           label={`Total Bookings · ${kpis.rangeLabel}`}
           value={kpis.bookings.total.toLocaleString()}
@@ -119,14 +126,16 @@ export function CommandCenterKpis({ locations }: Props) {
           unit="%"
           sublabel={occupancySub}
         />
-        <HqKpiTile
-          label="Outstanding Payments"
-          value={`$${kpis.outstanding.total.toLocaleString()}`}
-          sublabel={`${kpis.outstanding.invoiceCount} open invoices · manage`}
-          onClick={() =>
-            router.push("/facility/dashboard/settings?section=financial")
-          }
-        />
+        {canSeeRevenue && (
+          <HqKpiTile
+            label="Outstanding Payments"
+            value={`$${kpis.outstanding.total.toLocaleString()}`}
+            sublabel={`${kpis.outstanding.invoiceCount} open invoices · manage`}
+            onClick={() =>
+              router.push("/facility/dashboard/settings?section=financial")
+            }
+          />
+        )}
       </div>
     </div>
   );

@@ -25,6 +25,7 @@ import { CommandCenterKpis } from "@/components/hq/command-center/CommandCenterK
 import { LocationCard } from "@/components/hq/command-center/LocationCard";
 import { NetworkActivityFeed } from "@/components/hq/command-center/NetworkActivityFeed";
 import { LastUpdated } from "@/components/hq/LastUpdated";
+import { usePermission } from "@/hooks/use-facility-rbac";
 
 interface Props {
   metrics: HQOverviewMetrics;
@@ -32,6 +33,10 @@ interface Props {
 }
 
 export function HQOverviewClient({ metrics, locations }: Props) {
+  // Revenue figures are Manager+ only (spec A5 / F0.2). TODO: also strip
+  // server-side when a backend exists.
+  const canSeeRevenue = usePermission("financial_view_revenue");
+
   return (
     <div className="flex-1 space-y-7 p-4 pt-6 md:p-8">
       {/* Network status bar — live per-location status at the very top */}
@@ -66,59 +71,61 @@ export function HQOverviewClient({ metrics, locations }: Props) {
       {/* KPI tiles + date-range selector */}
       <CommandCenterKpis locations={locations} />
 
-      {/* Revenue distribution */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="overflow-hidden">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold">
-              Revenue distribution
-            </CardTitle>
-            <p className="text-muted-foreground text-[11px]">
-              By location · this month
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <StackedDistribution
-              segments={metrics.revenueByLocation.map((r) => {
-                const loc = locations.find((l) => l.id === r.locationId);
-                const s = loc ? locationStyles(loc) : styleFromKey("sky");
-                return {
-                  key: r.locationId,
-                  value: r.revenue,
-                  className: s.bg,
-                  label: `${r.locationName}: $${r.revenue.toLocaleString()}`,
-                };
-              })}
-              size="md"
-            />
-            <ul className="space-y-1.5">
-              {metrics.revenueByLocation.map((r) => {
-                const loc = locations.find((l) => l.id === r.locationId);
-                const s = loc ? locationStyles(loc) : styleFromKey("sky");
-                return (
-                  <li
-                    key={r.locationId}
-                    className="flex items-center justify-between gap-2 text-[11px]"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className={cn("size-2.5 rounded-sm", s.bg)} />
-                      <span className="font-semibold">{r.locationName}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground tabular-nums">
-                        ${r.revenue.toLocaleString()}
-                      </span>
-                      <span className={cn("font-bold tabular-nums", s.text)}>
-                        {r.percentage.toFixed(1)}%
-                      </span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Revenue distribution — Manager+ only (financial_view_revenue) */}
+      {canSeeRevenue && (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold">
+                Revenue distribution
+              </CardTitle>
+              <p className="text-muted-foreground text-[11px]">
+                By location · this month
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <StackedDistribution
+                segments={metrics.revenueByLocation.map((r) => {
+                  const loc = locations.find((l) => l.id === r.locationId);
+                  const s = loc ? locationStyles(loc) : styleFromKey("sky");
+                  return {
+                    key: r.locationId,
+                    value: r.revenue,
+                    className: s.bg,
+                    label: `${r.locationName}: $${r.revenue.toLocaleString()}`,
+                  };
+                })}
+                size="md"
+              />
+              <ul className="space-y-1.5">
+                {metrics.revenueByLocation.map((r) => {
+                  const loc = locations.find((l) => l.id === r.locationId);
+                  const s = loc ? locationStyles(loc) : styleFromKey("sky");
+                  return (
+                    <li
+                      key={r.locationId}
+                      className="flex items-center justify-between gap-2 text-[11px]"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={cn("size-2.5 rounded-sm", s.bg)} />
+                        <span className="font-semibold">{r.locationName}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground tabular-nums">
+                          ${r.revenue.toLocaleString()}
+                        </span>
+                        <span className={cn("font-bold tabular-nums", s.text)}>
+                          {r.percentage.toFixed(1)}%
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Location grid */}
       <div>

@@ -50,11 +50,10 @@ import {
   type StaffStatus,
 } from "@/lib/facility-staff-store";
 import { cn } from "@/lib/utils";
+import { ROLE_META, type StaffProfile } from "@/types/facility-staff";
+import { initOnboarding } from "@/data/staff-onboarding";
 
-import {
-  AddStaffAccountModal,
-  type NewStaffInput,
-} from "./AddStaffAccountModal";
+import { AddStaffAccountModal } from "./AddStaffAccountModal";
 
 const ROLES = ["Admin", "Manager", "Staff"];
 
@@ -185,17 +184,28 @@ export function StaffTab({
     toast.success(`${s.name}'s account was deactivated.`);
   }
 
-  function handleAddStaff(input: NewStaffInput) {
+  // The modal builds a full StaffProfile (invited + invitationSentAt) and fires
+  // the invitation toast. Persist a StaffAccount projection into the store so it
+  // shows in this roster table.
+  function handleAddStaff(profile: StaffProfile) {
+    const roleLabel = profile.customRoleIds?.length
+      ? "Custom"
+      : ROLE_META[profile.primaryRole].label;
     addStaffAccount(facilityId, {
-      id: `new-${Date.now()}`,
-      name: `${input.firstName} ${input.lastName}`.trim(),
-      email: input.email,
-      role: input.role,
+      id: profile.id,
+      name: `${profile.firstName} ${profile.lastName}`.trim(),
+      email: profile.email,
+      role: roleLabel,
       status: "invited",
       lastLogin: null,
     });
+    // Auto-populate a role-appropriate onboarding checklist (spec F1).
+    initOnboarding(
+      profile.id,
+      profile.primaryRole,
+      profile.employment.hireDate,
+    );
     setAddOpen(false);
-    toast.success(`Invitation email sent to ${input.email}.`);
   }
 
   const columns: ColumnDef<StaffAccount>[] = [
