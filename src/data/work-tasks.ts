@@ -109,6 +109,10 @@ export type StandaloneTask = {
     recordingUrl?: string;
     /** When generated from a negative-review escalation (the dedup key). */
     reputationRequestId?: string;
+    /** Lead-capture context (external calendar → lead → follow-up). */
+    leadCustomerId?: number;
+    externalEventId?: string;
+    leadSource?: string;
   };
 };
 

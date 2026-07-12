@@ -25,6 +25,7 @@ import {
   OperationsCalendarEventDrawer,
 } from "@/components/facility/operations/OperationsCalendarEventDrawer";
 import { OperationsCalendarFiltersPanel } from "@/components/facility/operations/OperationsCalendarFiltersPanel";
+import { ExternalCalendarWizard } from "@/components/facility/operations/ExternalCalendarWizard";
 import {
   activeFiltersCount,
   canAccessSavedView,
@@ -46,8 +47,31 @@ import {
 } from "@/components/facility/operations/OperationsCalendarNewEventMenu";
 import { OperationsCalendarToolbar } from "@/components/facility/operations/OperationsCalendarToolbar";
 import { useSettings } from "@/hooks/use-settings";
-import { OperationsCalendarSidePanel } from "@/components/facility/operations/OperationsCalendarSidePanel";
+import {
+  OperationsCalendarSidePanel,
+  type SidePanelTile,
+} from "@/components/facility/operations/OperationsCalendarSidePanel";
 import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
+import {
+  ingestExternalEventsForLeads,
+  useConvertedLeadBookings,
+  useConvertedLeadEventIds,
+} from "@/lib/lead-capture";
+import {
+  isOccurrenceCancelled,
+  useRecurringCancellations,
+} from "@/lib/recurring-events";
+import {
+  findWaitlistCandidate,
+  notifyWaitlistEntry,
+} from "@/lib/calendar-waitlist";
+import { facilityConfig } from "@/data/facility-config";
+import {
+  OperationsCalendarPrintSheet,
+  buildDayPrintRows,
+  buildDayPdfLines,
+} from "@/components/facility/operations/OperationsCalendarPrintSheet";
+import { downloadReportPdf } from "@/lib/report-export";
 import {
   type CalendarCardFieldKey,
   type CalendarAxisMode,
@@ -73,11 +97,21 @@ import {
   getDaysForView,
   getTimelineSlotHeight,
   getViewWindow,
+  isGroupFull,
   isSameDay,
   parseDateKey,
   sortEvents,
   stepAnchorDate,
 } from "@/lib/operations-calendar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 const FACILITY_ID = 11;
 const VISUAL_CONFIG_KEY = `operations-calendar-visual-config-${FACILITY_ID}`;
@@ -582,6 +616,11 @@ export function OperationsCalendar() {
     return "master";
   });
 
+  // Staff View (spec Task 7): resource-axis mode with staff as the columns.
+  const [staffView, setStaffView] = useState(false);
+  const [capacityView, setCapacityView] = useState(false);
+  const [hiddenStaff, setHiddenStaff] = useState<string[]>([]);
+
   const [selectedResourceType, setSelectedResourceType] = useState<string>(
     () => {
       const incoming = searchParams.get("resourceType");
@@ -691,6 +730,11 @@ export function OperationsCalendar() {
     time: "09:00",
   });
   const [quickCreateNonce, setQuickCreateNonce] = useState(0);
+  const [quickCreateAnchor, setQuickCreateAnchor] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [externalCalWizardOpen, setExternalCalWizardOpen] = useState(false);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState("");
@@ -782,6 +826,9 @@ export function OperationsCalendar() {
     return new Map(clients.map((client) => [client.id, client]));
   }, []);
 
+  const convertedLeadBookings = useConvertedLeadBookings();
+  const convertedLeadEventIds = useConvertedLeadEventIds();
+
   const allEvents = useMemo(() => {
     const merged = buildUnifiedEvents({
       bookings: bookingRecords,
@@ -799,7 +846,15 @@ export function OperationsCalendar() {
       resources,
     });
 
-    return sortEvents(merged);
+    // Flip converted leads: hide the source external event, add its booking.
+    const withoutConverted = merged.filter(
+      (event) =>
+        !(
+          event.type === "external" && convertedLeadEventIds.includes(event.id)
+        ),
+    );
+
+    return sortEvents([...withoutConverted, ...convertedLeadBookings]);
   }, [
     activeModules,
     bookingRecords,
@@ -810,7 +865,16 @@ export function OperationsCalendar() {
     view,
     visualConfig.addOnDisplayMode,
     resources,
+    convertedLeadBookings,
+    convertedLeadEventIds,
   ]);
+
+  // Lead capture (Tasks 9–10): ingest external-calendar events → dedupe →
+  // create a "Lead — Unverified" customer + a Reception follow-up task.
+  // Idempotent per event id, so re-running on re-render is safe.
+  useEffect(() => {
+    ingestExternalEventsForLeads(allEvents);
+  }, [allEvents]);
 
   const eventLookup = useMemo(() => {
     return new Map(allEvents.map((event) => [event.id, event]));
@@ -841,6 +905,22 @@ export function OperationsCalendar() {
       ),
     ).sort((first, second) => first.localeCompare(second));
   }, [filterOptions.staffRoles]);
+
+  // Staff-as-resources for Staff View (one column per visible staff member).
+  const staffResources = useMemo(
+    () =>
+      staffOptions
+        .filter((name) => !hiddenStaff.includes(name))
+        .map((name) => ({ id: `staff-${name}`, name, type: "staff" })),
+    [staffOptions, hiddenStaff],
+  );
+
+  const toggleStaffVisibility = (name: string) =>
+    setHiddenStaff((previous) =>
+      previous.includes(name)
+        ? previous.filter((item) => item !== name)
+        : [...previous, name],
+    );
 
   const builtInColorSettings = useMemo<Record<string, string>>(() => {
     const map: Record<string, string> = {};
@@ -915,10 +995,33 @@ export function OperationsCalendar() {
     [filters, scopedEvents, searchTerm],
   );
 
+  // Re-render when a recurring occurrence / series is cancelled.
+  const recurringCancellationsVersion = useRecurringCancellations();
+
   const filteredEvents = useMemo(
     () =>
       searchFilteredEvents.filter((event) => {
+        // Hide cancelled recurring occurrences / series (spec Table 84).
+        // The version read keeps this memo reactive to store changes.
+        if (
+          recurringCancellationsVersion >= 0 &&
+          isOccurrenceCancelled(event)
+        ) {
+          return false;
+        }
+
+        // Explicit event-type filter (e.g. the sidebar "Tasks" tile) narrows to
+        // those types — this is what surfaces task events on the calendar.
+        if (filters.types.length > 0) {
+          return filters.types.includes(event.type);
+        }
+
         if (event.type === "booking" || event.type === "add-on") {
+          return true;
+        }
+
+        // Synced external-calendar events render distinctly (spec Table 66).
+        if (event.type === "external") {
           return true;
         }
 
@@ -928,8 +1031,43 @@ export function OperationsCalendar() {
 
         return false;
       }),
-    [searchFilteredEvents],
+    [searchFilteredEvents, filters.types, recurringCancellationsVersion],
   );
+
+  // Revenue Today (spec Table 54): collected vs expected across today's
+  // non-cancelled bookings. Expected = billed total (service + add-ons);
+  // collected = amount paid so far (total − remaining due).
+  const revenueToday = useMemo(() => {
+    const todayKey = formatDateKey(new Date());
+    const bookingById = new Map(
+      bookingRecords.map((entry) => [entry.id, entry]),
+    );
+    const seen = new Set<number>();
+    let collected = 0;
+    let expected = 0;
+
+    for (const event of allEvents) {
+      if (event.type !== "booking" || !event.bookingId) continue;
+      if (formatDateKey(event.start) !== todayKey) continue;
+      if (seen.has(event.bookingId)) continue;
+      seen.add(event.bookingId);
+
+      const booking = bookingById.get(event.bookingId);
+      if (!booking || booking.status === "cancelled") continue;
+
+      const invoice = booking.invoice;
+      if (invoice) {
+        expected += invoice.total;
+        collected += Math.max(0, invoice.total - invoice.remainingDue);
+      } else {
+        const amount = booking.totalCost || booking.basePrice || 0;
+        expected += amount;
+        collected += booking.paymentStatus === "paid" ? amount : 0;
+      }
+    }
+
+    return { collected, expected };
+  }, [allEvents, bookingRecords]);
 
   const selectedResourceOption = useMemo(
     () =>
@@ -1702,8 +1840,22 @@ export function OperationsCalendar() {
     toast.success(`Exported ${scope} report`);
   };
 
-  const updateFilterGroup = (group: "modules", value: string) => {
+  const updateFilterGroup = (
+    group:
+      | "modules"
+      | "addOns"
+      | "statuses"
+      | "staff"
+      | "bookingSources"
+      | "locations",
+    value: string,
+  ) => {
     setFilters((previous) => {
+      // Location is a radio: "" = All Locations, otherwise select exclusively.
+      if (group === "locations") {
+        return { ...previous, locations: value ? [value] : [] };
+      }
+
       const selected = previous[group] as string[];
       const nextValues = selected.includes(value)
         ? selected.filter((item) => item !== value)
@@ -1719,6 +1871,33 @@ export function OperationsCalendar() {
   const clearAllFilters = () => {
     setFilters(OPERATIONS_CALENDAR_EMPTY_FILTERS);
   };
+
+  // Today's Overview tiles → quick calendar filters (drives the filters model).
+  const applyTileFilter = (tile: SidePanelTile) => {
+    setFilters((previous) => {
+      if (tile === "confirmed") {
+        return { ...previous, statuses: ["Confirmed"], types: [] };
+      }
+      if (tile === "completed") {
+        return { ...previous, statuses: ["Completed"], types: [] };
+      }
+      if (tile === "tasks") {
+        return { ...previous, statuses: [], types: ["task"] };
+      }
+      // "all" (Bookings): clear the status/type narrowing.
+      return { ...previous, statuses: [], types: [] };
+    });
+  };
+
+  const activeTile: SidePanelTile | null = filters.types.includes("task")
+    ? "tasks"
+    : filters.statuses.length === 1 && filters.statuses[0] === "Confirmed"
+      ? "confirmed"
+      : filters.statuses.length === 1 && filters.statuses[0] === "Completed"
+        ? "completed"
+        : filters.statuses.length === 0 && filters.types.length === 0
+          ? "all"
+          : null;
 
   const setToday = () => {
     setAnchorDate(new Date());
@@ -1977,6 +2156,12 @@ export function OperationsCalendar() {
       return;
     }
 
+    // Booking events — completing a booking means checking it out
+    if (event.type === "booking" && event.bookingId) {
+      checkOutBooking(event.bookingId);
+      return;
+    }
+
     // Add-on events — find the matching add-on in bookingAddOnState and mark complete
     if (event.type === "add-on" && event.bookingId) {
       const addOnName =
@@ -2218,6 +2403,26 @@ export function OperationsCalendar() {
     if (!permissions.canCheckInOut) {
       toast.error("You do not have permission to check in from calendar");
       return;
+    }
+
+    // Strict-enforcement facilities block check-in on an expired vaccination
+    // (spec 8.5 / Task 45). A manager may override with confirmation.
+    if (facilityConfig.vaccinationRequirements.mandatoryRecords) {
+      const warning = allEvents.find((event) => event.bookingId === bookingId)
+        ?.decorations?.vaccinationWarning;
+      if (warning && warning.daysLeft < 0) {
+        const override = window.confirm(
+          `Check-in blocked — ${warning.label}. Vaccination records are mandatory at this facility. Override and check in anyway?`,
+        );
+        if (!override) {
+          toast.error("Check-in blocked — vaccination expired");
+          return;
+        }
+        appendAuditEntry("booking_checkin", {
+          bookingId,
+          vaccinationOverride: warning.label,
+        });
+      }
     }
 
     setBookingRecords((previous) =>
@@ -2629,6 +2834,43 @@ export function OperationsCalendar() {
       source: "calendar-drawer",
     });
     toast.success("Booking cancelled");
+
+    // A freed slot may unblock the top waitlist entry (spec 8.4 / Table 89).
+    const cancelledEvent = allEvents.find(
+      (event) => event.bookingId === bookingId,
+    );
+    if (cancelledEvent) {
+      const candidate = findWaitlistCandidate(
+        cancelledEvent.start,
+        cancelledEvent.service,
+      );
+      if (candidate) {
+        const timeLabel = cancelledEvent.start.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+        });
+        toast.info(
+          `Slot available! ${candidate.clientName} is #1 on the waitlist for ${timeLabel} ${candidate.service}. Notify them?`,
+          {
+            duration: 12000,
+            action: {
+              label: "Send Notification",
+              onClick: () => {
+                notifyWaitlistEntry(candidate.id);
+                appendAuditEntry("booking_cancelled", {
+                  bookingId,
+                  waitlistNotified: candidate.clientName,
+                  source: "calendar-waitlist-promotion",
+                });
+                toast.success(
+                  `${candidate.clientName} notified — slot offered via SMS/email`,
+                );
+              },
+            },
+          },
+        );
+      }
+    }
   };
 
   const updateManualEvent = (
@@ -2716,12 +2958,88 @@ export function OperationsCalendar() {
     openEventDrawer(bookingEvent);
   };
 
-  const onSlotCreate = (slot: Date) => {
+  const onSlotCreate = (slot: Date, anchor?: { x: number; y: number }) => {
     setNewEventSeed({
       date: formatDateKey(slot),
       time: `${`${slot.getHours()}`.padStart(2, "0")}:${`${slot.getMinutes()}`.padStart(2, "0")}`,
     });
+    setQuickCreateAnchor(anchor ?? null);
     setQuickCreateNonce((current) => current + 1);
+  };
+
+  // Drag-to-reschedule (spec 8.1 / Task 42, Tables 85–86).
+  const [pendingReschedule, setPendingReschedule] = useState<{
+    event: OperationsCalendarEvent;
+    newStart: Date;
+    newStaff?: string;
+  } | null>(null);
+
+  const handleEventReschedule = (
+    event: OperationsCalendarEvent,
+    newStart: Date,
+    newStaff?: string,
+  ) => {
+    const timeChanged = newStart.getTime() !== event.start.getTime();
+    const staffChanged = Boolean(newStaff) && newStaff !== event.staff;
+    if (!timeChanged && !staffChanged) return; // dropped on the same slot
+
+    // Full-slot guard: a full capacity/group event overlapping the target.
+    const targetFull = allEvents.some(
+      (other) =>
+        other.id !== event.id &&
+        isGroupFull(other.capacity) &&
+        other.start.getTime() <= newStart.getTime() &&
+        other.end.getTime() > newStart.getTime() &&
+        (newStaff ? other.staff === newStaff : true),
+    );
+    if (targetFull) {
+      toast.error("This slot is full.");
+      return;
+    }
+
+    setPendingReschedule({ event, newStart, newStaff });
+  };
+
+  const applyReschedule = (notify: boolean) => {
+    if (!pendingReschedule) return;
+    const { event, newStart, newStaff } = pendingReschedule;
+
+    if (event.bookingId) {
+      const durationMs = event.end.getTime() - event.start.getTime();
+      const newEnd = new Date(newStart.getTime() + durationMs);
+      const toTime = (date: Date) =>
+        `${`${date.getHours()}`.padStart(2, "0")}:${`${date.getMinutes()}`.padStart(2, "0")}`;
+
+      setBookingRecords((previous) =>
+        previous.map((booking) => {
+          if (booking.id !== event.bookingId) return booking;
+          const next = {
+            ...booking,
+            startDate: formatDateKey(newStart),
+            endDate: formatDateKey(newEnd),
+            checkInTime: toTime(newStart),
+            checkOutTime: toTime(newEnd),
+          };
+          if (newStaff) {
+            next.stylistPreference =
+              newStaff === "Unassigned" ? undefined : newStaff;
+          }
+          return next;
+        }),
+      );
+    }
+
+    appendAuditEntry("booking_rescheduled", {
+      bookingId: event.bookingId,
+      source: "calendar-drag-drop",
+      notify,
+    });
+    toast.success(
+      notify
+        ? "Rescheduled — owner notified via SMS/email"
+        : "Rescheduled silently",
+    );
+    setPendingReschedule(null);
   };
 
   const onCreateBookingShortcut = (seed: NewEventSeed) => {
@@ -2798,6 +3116,37 @@ export function OperationsCalendar() {
 
   const rangeLabel = formatRangeLabel(anchorDate, view);
 
+  // Print Day (spec 8.8 / Task 48 / Table 93): a print-optimised table of the
+  // current day's bookings, plus an "Export as PDF" download.
+  const [printedAt, setPrintedAt] = useState("");
+  const dayPrintRows = useMemo(
+    () => buildDayPrintRows(visibleEvents, anchorDate),
+    [visibleEvents, anchorDate],
+  );
+  const dayPrintDateLabel = anchorDate.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+  const handlePrintDay = () => {
+    setPrintedAt(
+      new Date().toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+    );
+    window.setTimeout(() => window.print(), 0);
+  };
+  const handleExportDayPdf = () => {
+    downloadReportPdf(
+      `daily-schedule-${formatDateKey(anchorDate)}`,
+      `Yipyy · Daily Schedule · ${dayPrintDateLabel}`,
+      buildDayPdfLines(dayPrintRows),
+    );
+    toast.success("Day schedule exported as PDF");
+  };
+
   return (
     <div className="animate-in fade-in flex min-h-[calc(100vh-4rem)] bg-slate-50 duration-700 ease-in-out">
       {/* Left sidebar: mini calendar + stats */}
@@ -2808,6 +3157,12 @@ export function OperationsCalendar() {
         visibleEvents={visibleEvents}
         serviceColorMap={serviceColorMap}
         onDateChange={onDateChange}
+        onTileSelect={applyTileFilter}
+        activeTile={activeTile}
+        revenueToday={revenueToday}
+        onEventClick={openEventDrawer}
+        onCompleteTask={handleMarkEventComplete}
+        onAddTask={() => setNewEventMenuOpen(true)}
       />
 
       {/* Main calendar area */}
@@ -2826,12 +3181,23 @@ export function OperationsCalendar() {
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters((previous) => !previous)}
           activeFilterCount={activeCount}
+          staffView={staffView}
+          onToggleStaffView={() => setStaffView((previous) => !previous)}
+          capacityView={capacityView}
+          onToggleCapacityView={() => setCapacityView((previous) => !previous)}
+          staffOptions={staffOptions}
+          hiddenStaff={hiddenStaff}
+          onToggleStaffVisibility={toggleStaffVisibility}
+          onConnectCalendar={() => setExternalCalWizardOpen(true)}
+          onPrintDay={handlePrintDay}
+          onExportDayPdf={handleExportDayPdf}
           newEventMenu={
             <OperationsCalendarNewEventMenu
               open={newEventMenuOpen}
               onOpenChange={setNewEventMenuOpen}
               seed={newEventSeed}
               quickCreateNonce={quickCreateNonce}
+              quickCreateAnchor={quickCreateAnchor}
               canCreateCustomEvent={permissions.canCreateCustomEvents}
               canCreateBlockTime={false}
               canCreateBooking={false}
@@ -2853,18 +3219,94 @@ export function OperationsCalendar() {
           onToggleGroupValue={updateFilterGroup}
           onClearAll={clearAllFilters}
           onClose={() => setShowFilters(false)}
+          onConnectCalendar={() => setExternalCalWizardOpen(true)}
         />
 
+        <ExternalCalendarWizard
+          open={externalCalWizardOpen}
+          onOpenChange={setExternalCalWizardOpen}
+          staffOptions={staffOptions}
+        />
+
+        <Dialog
+          open={Boolean(pendingReschedule)}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) setPendingReschedule(null);
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            {pendingReschedule && (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Reschedule appointment?</DialogTitle>
+                  <DialogDescription>
+                    Reschedule{" "}
+                    <span className="font-medium text-slate-700">
+                      {pendingReschedule.event.petNames[0] ??
+                        pendingReschedule.event.customerName ??
+                        pendingReschedule.event.title}
+                      &apos;s {pendingReschedule.event.service}
+                    </span>{" "}
+                    from{" "}
+                    {pendingReschedule.event.start.toLocaleString("en-US", {
+                      weekday: "short",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}{" "}
+                    to{" "}
+                    {pendingReschedule.newStart.toLocaleString("en-US", {
+                      weekday: "short",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                    ?
+                    {pendingReschedule.newStaff
+                      ? ` Assigned to ${pendingReschedule.newStaff}.`
+                      : ""}{" "}
+                    The owner will be notified.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2 sm:justify-between">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setPendingReschedule(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => applyReschedule(false)}
+                    >
+                      Reschedule Silently
+                    </Button>
+                    <Button
+                      className="bg-emerald-600 text-white hover:bg-emerald-700"
+                      onClick={() => applyReschedule(true)}
+                    >
+                      Reschedule &amp; Notify
+                    </Button>
+                  </div>
+                </DialogFooter>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
         <OperationsCalendarContent
-          axisMode={axisMode}
-          resourceTypeLabel={selectedResourceOption?.label}
+          axisMode={staffView ? "resource" : axisMode}
+          resourceTypeLabel={
+            staffView ? "Staff" : selectedResourceOption?.label
+          }
           resourceResources={
-            selectedResourceOption
-              ? selectedResourceOption.resources.map((resource) => ({
-                  ...resource,
-                  type: selectedResourceOption.type,
-                }))
-              : []
+            staffView
+              ? staffResources
+              : selectedResourceOption
+                ? selectedResourceOption.resources.map((resource) => ({
+                    ...resource,
+                    type: selectedResourceOption.type,
+                  }))
+                : []
           }
           view={view}
           anchorDate={anchorDate}
@@ -2877,6 +3319,8 @@ export function OperationsCalendar() {
           onEventClick={openEventDrawer}
           onMarkEventComplete={handleMarkEventComplete}
           onSlotCreate={onSlotCreate}
+          onEventReschedule={handleEventReschedule}
+          showCapacityHeat={capacityView}
         />
       </div>
 
@@ -2941,6 +3385,14 @@ export function OperationsCalendar() {
         onCancelBooking={cancelBooking}
         onUpdateManualEvent={updateManualEvent}
         onDeleteManualEvent={deleteManualEvent}
+      />
+
+      <OperationsCalendarPrintSheet
+        facilityName="Yipyy"
+        day={anchorDate}
+        printedAt={printedAt}
+        printedBy={userName}
+        rows={dayPrintRows}
       />
     </div>
   );

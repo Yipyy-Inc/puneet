@@ -33,7 +33,13 @@ interface OperationsCalendarContentProps {
   onClearAllFilters: () => void;
   onEventClick?: (event: OperationsCalendarEvent) => void;
   onMarkEventComplete?: (event: OperationsCalendarEvent) => void;
-  onSlotCreate?: (slot: Date) => void;
+  onSlotCreate?: (slot: Date, anchor?: { x: number; y: number }) => void;
+  onEventReschedule?: (
+    event: OperationsCalendarEvent,
+    newStart: Date,
+    newStaff?: string,
+  ) => void;
+  showCapacityHeat?: boolean;
 }
 
 export function OperationsCalendarContent({
@@ -51,6 +57,8 @@ export function OperationsCalendarContent({
   onEventClick,
   onMarkEventComplete,
   onSlotCreate,
+  onEventReschedule,
+  showCapacityHeat,
 }: OperationsCalendarContentProps) {
   return (
     <Card className="animate-in slide-in-from-bottom-6 fade-in overflow-hidden rounded-3xl border border-white/80 bg-white/70 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.05)] ring-1 ring-slate-900/5 backdrop-blur-xl transition-all duration-700 ease-out">
@@ -131,6 +139,7 @@ export function OperationsCalendarContent({
                 onEventClick={onEventClick}
                 onMarkEventComplete={onMarkEventComplete}
                 onSlotCreate={onSlotCreate}
+                onEventReschedule={onEventReschedule}
               />
             ) : (
               <>
@@ -143,6 +152,8 @@ export function OperationsCalendarContent({
                     onEventClick={onEventClick}
                     onMarkEventComplete={onMarkEventComplete}
                     onSlotCreate={onSlotCreate}
+                    onEventReschedule={onEventReschedule}
+                    showCapacityHeat={showCapacityHeat}
                   />
                 )}
                 {view === "week" && (
@@ -153,6 +164,8 @@ export function OperationsCalendarContent({
                     onEventClick={onEventClick}
                     onMarkEventComplete={onMarkEventComplete}
                     onSlotCreate={onSlotCreate}
+                    onEventReschedule={onEventReschedule}
+                    showCapacityHeat={showCapacityHeat}
                   />
                 )}
                 {view === "two-week" && (
@@ -163,6 +176,8 @@ export function OperationsCalendarContent({
                     onEventClick={onEventClick}
                     onMarkEventComplete={onMarkEventComplete}
                     onSlotCreate={onSlotCreate}
+                    onEventReschedule={onEventReschedule}
+                    showCapacityHeat={showCapacityHeat}
                   />
                 )}
                 {view === "month" && (
@@ -175,6 +190,8 @@ export function OperationsCalendarContent({
                     onEventClick={onEventClick}
                     onMarkEventComplete={onMarkEventComplete}
                     onSlotCreate={onSlotCreate}
+                    onEventReschedule={onEventReschedule}
+                    showCapacityHeat={showCapacityHeat}
                   />
                 )}
               </>

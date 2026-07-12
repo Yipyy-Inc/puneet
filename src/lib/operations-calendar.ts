@@ -3,6 +3,7 @@ import {
   getModuleWorkflowQuestionnaire,
 } from "@/data/custom-services";
 import { getTagsByType, getTagsForEntity } from "@/data/tags-notes";
+import { vaccinationRecords } from "@/data/pet-data";
 import { users } from "@/data/users";
 import { defaultServiceAddOns } from "@/data/service-addons";
 import { daycareRates } from "@/data/daycare";
@@ -24,7 +25,75 @@ export type OperationsCalendarEventType =
   | "add-on"
   | "task"
   | "facility-event"
-  | "retail-pos";
+  | "retail-pos"
+  | "external";
+
+export type OperationsCalendarBookingSource =
+  | "online"
+  | "walk_in"
+  | "phone"
+  | "staff"
+  | "integration";
+
+/** Canonical booking-source options, in the order the filter panel lists them. */
+export const OPERATIONS_CALENDAR_BOOKING_SOURCES: OperationsCalendarBookingSource[] =
+  ["online", "walk_in", "phone", "staff", "integration"];
+
+/** Human-readable labels for each booking source (filter panel display). */
+export const BOOKING_SOURCE_LABELS: Record<
+  OperationsCalendarBookingSource,
+  string
+> = {
+  online: "Online",
+  walk_in: "Walk-In",
+  phone: "Phone",
+  staff: "Staff",
+  integration: "Calendar Integration",
+};
+
+export type CalendarExternalProvider =
+  | "google"
+  | "ical"
+  | "outlook"
+  | "calendly"
+  | "acuity"
+  | "facebook";
+
+export interface CalendarExternalMeta {
+  provider: CalendarExternalProvider;
+  sourceLabel: string;
+  readOnly: boolean;
+  leadCaptured?: boolean;
+  customerId?: number;
+}
+
+export interface CalendarEventDecorations {
+  vaccinationWarning?: { label: string; daysLeft: number };
+  birthday?: boolean;
+  clientAnniversary?: boolean;
+}
+
+export interface CalendarEventCapacity {
+  used: number;
+  total: number;
+}
+
+/** One dog in a group / multi-pet custom-module event (spec Tables 81–82). */
+export interface GroupAttendee {
+  id: string;
+  petName: string;
+  ownerName?: string;
+  breed?: string;
+}
+
+/** One stop on a shuttle / transport custom-module route (spec Table 83). */
+export interface RouteStop {
+  id: string;
+  kind: "pickup" | "dropoff";
+  petName: string;
+  address: string;
+  eta: string;
+}
 
 export type OperationsCalendarView =
   | "day"
@@ -103,6 +172,16 @@ export interface CalendarAddOn {
   colorCode?: string;
 }
 
+export type RecurrenceIntervalUnit = "days" | "weeks" | "months";
+
+export type RecurrenceEnd =
+  | { type: "never" }
+  | { type: "on"; date: string }
+  | { type: "after"; count: number };
+
+/** How far before the event a reminder fires (Task 29). */
+export type EventReminder = "none" | "15m" | "30m" | "1h" | "1d";
+
 export interface ManualFacilityEvent {
   id: string;
   title: string;
@@ -125,11 +204,22 @@ export interface ManualFacilityEvent {
   linkedCustomerName?: string;
   linkedPetName?: string;
   recurrence?: "none" | "daily" | "weekly" | "biweekly" | "monthly" | "custom";
+  /** For recurrence === "custom": repeat every N of the given unit. */
+  recurrenceInterval?: number;
+  recurrenceIntervalUnit?: RecurrenceIntervalUnit;
+  /** End condition for any repeating event (recurrence !== "none"). */
+  recurrenceEnd?: RecurrenceEnd;
   affects?: "facility" | "resource" | "staff";
   affectedResource?: string;
   affectedStaff?: string;
   visibility?: "internal-only" | "all-staff" | "selected-roles";
   visibleRoles?: string[];
+  /** Staff-chosen colour code for the event chip (Task 28). */
+  color?: string;
+  /** Reminder lead time; fires as a bell notification (Task 29). */
+  reminder?: EventReminder;
+  /** When true, the reminder also SMSes the assigned staff (Table 94). */
+  reminderSmsStaff?: boolean;
   createdAt?: string;
   createdByName?: string;
   createdByRole?: string;
@@ -164,6 +254,7 @@ export interface OperationsCalendarEvent {
   clientId?: number;
   taskId?: string;
   bookingRawStatus?: string;
+  bookingSource?: OperationsCalendarBookingSource;
   petNames: string[];
   customerName?: string;
   details?: string;
@@ -175,7 +266,21 @@ export interface OperationsCalendarEvent {
   createdByName?: string;
   createdByRole?: string;
   recurrence?: ManualFacilityEvent["recurrence"];
+  recurrenceSeriesId?: string;
   visibility?: ManualFacilityEvent["visibility"];
+  /** Set on events synced from a third-party calendar/booking provider. */
+  external?: CalendarExternalMeta;
+  /** Waitlisted requests awaiting a freed slot. */
+  isWaitlist?: boolean;
+  waitlistPosition?: number;
+  /** Contextual badges (expiring vaccination, pet birthday, client anniversary). */
+  decorations?: CalendarEventDecorations;
+  /** Utilization for group / module events (e.g. 6 of 12 daycare spots). */
+  capacity?: CalendarEventCapacity;
+  /** Roster for group / multi-pet custom-module events (spec Tables 81–82). */
+  attendees?: GroupAttendee[];
+  /** Ordered stops for shuttle / transport custom-module events (Table 83). */
+  stops?: RouteStop[];
   calendarCardDisplayMode?: "full-block" | "compact-block" | "icon-only";
   requiresCheckInOut?: boolean;
   allowsAddOns?: boolean;
@@ -205,6 +310,8 @@ export interface OperationsCalendarFilters {
   statuses: string[];
   bookingStatuses: string[];
   taskStatuses: string[];
+  addOns: string[];
+  bookingSources: string[];
   petTags: string[];
   customerTags: string[];
   unassignedOnly: boolean;
@@ -228,6 +335,8 @@ export interface OperationsCalendarFilterOptions {
   statuses: FilterOption[];
   bookingStatuses: FilterOption[];
   taskStatuses: FilterOption[];
+  addOns: FilterOption[];
+  bookingSources: FilterOption[];
   petTags: FilterOption[];
   customerTags: FilterOption[];
 }
@@ -469,6 +578,8 @@ export const OPERATIONS_CALENDAR_EMPTY_FILTERS: OperationsCalendarFilters = {
   statuses: [],
   bookingStatuses: [],
   taskStatuses: [],
+  addOns: [],
+  bookingSources: [],
   petTags: [],
   customerTags: [],
   unassignedOnly: false,
@@ -495,6 +606,29 @@ function hashString(value: string): number {
     hash |= 0;
   }
   return Math.abs(hash);
+}
+
+/**
+ * Derives a stable booking source for an event. Bookings carry no channel
+ * field in the mock data, so we hash the source id into one of the four
+ * canonical sources — deterministic so the filter narrows consistently.
+ * TODO: replace with a real `booking.source` field when the API exists.
+ */
+// "integration" is reserved for synced external-calendar events, so regular
+// bookings only derive from the in-house sources — this keeps the
+// "Booking Source: Calendar Integration" filter exclusive to external events.
+const DERIVABLE_BOOKING_SOURCES: OperationsCalendarBookingSource[] = [
+  "online",
+  "walk_in",
+  "phone",
+  "staff",
+];
+
+function deriveBookingSource(
+  sourceId: string,
+): OperationsCalendarBookingSource {
+  const index = hashString(sourceId) % DERIVABLE_BOOKING_SOURCES.length;
+  return DERIVABLE_BOOKING_SOURCES[index];
 }
 
 function normalizeHexColor(value: string): string {
@@ -846,6 +980,151 @@ function buildClientLookups(clients: Client[]) {
   return { petLookup, clientLookup };
 }
 
+// ── Event chip decorations (spec 8.5 / 8.6, Tasks 45–46) ────────────────────
+// Icon-only badges sourced from the pet profile + first-booking date (F0.2
+// decorations): vaccination warning, birthday, client booking anniversary.
+
+const DECORATION_DAY_MS = 86_400_000;
+
+type VaccinationWarning = { label: string; daysLeft: number };
+
+interface DecorationContext {
+  vaccinationWarnings: Map<number, VaccinationWarning>;
+  birthdays: Map<number, { month: number; day: number }>;
+  firstBookings: Map<number, Date>;
+}
+
+// Per pet, the soonest-expiring *current* record (renewals supersede earlier
+// records for the same vaccine); warn when it is expired or within 30 days.
+function buildVaccinationWarnings(now: Date): Map<number, VaccinationWarning> {
+  const latestPerVaccine = new Map<
+    string,
+    (typeof vaccinationRecords)[number]
+  >();
+  for (const record of vaccinationRecords) {
+    const key = `${record.petId}::${record.vaccineName}`;
+    const existing = latestPerVaccine.get(key);
+    if (
+      !existing ||
+      new Date(record.expiryDate) > new Date(existing.expiryDate)
+    ) {
+      latestPerVaccine.set(key, record);
+    }
+  }
+
+  const today = startOfDay(now);
+  const soonestPerPet = new Map<number, (typeof vaccinationRecords)[number]>();
+  for (const record of latestPerVaccine.values()) {
+    const existing = soonestPerPet.get(record.petId);
+    if (
+      !existing ||
+      new Date(record.expiryDate) < new Date(existing.expiryDate)
+    ) {
+      soonestPerPet.set(record.petId, record);
+    }
+  }
+
+  const warnings = new Map<number, VaccinationWarning>();
+  for (const [petId, record] of soonestPerPet) {
+    const expiry = new Date(record.expiryDate);
+    const daysLeft = Math.ceil(
+      (startOfDay(expiry).getTime() - today.getTime()) / DECORATION_DAY_MS,
+    );
+    if (daysLeft > 30) continue;
+    const dateLabel = expiry.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    const label =
+      daysLeft < 0
+        ? `${record.vaccineName} vaccination expired ${dateLabel} — ${Math.abs(daysLeft)} days ago`
+        : `${record.vaccineName} vaccination expires ${dateLabel} — ${daysLeft} days remaining`;
+    warnings.set(petId, { label, daysLeft });
+  }
+  return warnings;
+}
+
+// Pet birthdays (month/day) from the pet profile's dateOfBirth.
+function buildPetBirthdays(
+  clients: Client[],
+): Map<number, { month: number; day: number }> {
+  const birthdays = new Map<number, { month: number; day: number }>();
+  for (const client of clients) {
+    for (const pet of client.pets) {
+      if (!pet.dateOfBirth) continue;
+      const dob = new Date(pet.dateOfBirth);
+      if (Number.isNaN(dob.getTime())) continue;
+      birthdays.set(pet.id, { month: dob.getMonth(), day: dob.getDate() });
+    }
+  }
+  return birthdays;
+}
+
+// Earliest booking date per client → drives the booking-anniversary badge.
+function buildFirstBookingDates(bookings: Booking[]): Map<number, Date> {
+  const firsts = new Map<number, Date>();
+  for (const booking of bookings) {
+    const start = new Date(booking.startDate);
+    if (Number.isNaN(start.getTime())) continue;
+    const existing = firsts.get(booking.clientId);
+    if (!existing || start < existing) firsts.set(booking.clientId, start);
+  }
+  return firsts;
+}
+
+function buildDecorationContext(
+  now: Date,
+  clients: Client[],
+  bookings: Booking[],
+): DecorationContext {
+  return {
+    vaccinationWarnings: buildVaccinationWarnings(now),
+    birthdays: buildPetBirthdays(clients),
+    firstBookings: buildFirstBookingDates(bookings),
+  };
+}
+
+function computeEventDecorations(
+  context: DecorationContext,
+  eventStart: Date,
+  petId?: number,
+  clientId?: number,
+): CalendarEventDecorations | undefined {
+  const decorations: CalendarEventDecorations = {};
+
+  if (petId !== undefined) {
+    const warning = context.vaccinationWarnings.get(petId);
+    if (warning) decorations.vaccinationWarning = warning;
+    const birthday = context.birthdays.get(petId);
+    if (
+      birthday &&
+      birthday.month === eventStart.getMonth() &&
+      birthday.day === eventStart.getDate()
+    ) {
+      decorations.birthday = true;
+    }
+  }
+
+  if (clientId !== undefined) {
+    const first = context.firstBookings.get(clientId);
+    // Only an anniversary if the first booking was in a prior year.
+    if (
+      first &&
+      first.getMonth() === eventStart.getMonth() &&
+      first.getDate() === eventStart.getDate() &&
+      first.getFullYear() < eventStart.getFullYear()
+    ) {
+      decorations.clientAnniversary = true;
+    }
+  }
+
+  return decorations.vaccinationWarning ||
+    decorations.birthday ||
+    decorations.clientAnniversary
+    ? decorations
+    : undefined;
+}
+
 function buildTagNames(
   entityType: "pet" | "customer" | "booking",
   entityId?: number,
@@ -858,6 +1137,7 @@ function buildBookingEvents(
   inputBookings: Booking[],
   clients: Client[],
   facilityId: number,
+  decorationContext: DecorationContext,
 ): OperationsCalendarEvent[] {
   const { petLookup } = buildClientLookups(clients);
 
@@ -908,10 +1188,17 @@ function buildBookingEvents(
         petId: primaryPetId,
         clientId: booking.clientId,
         bookingRawStatus: booking.status,
+        bookingSource: deriveBookingSource(String(booking.id)),
         petNames: petContext?.petName ? [petContext.petName] : [],
         customerName: petContext?.ownerName,
         bookingId: booking.id,
         confirmationNumber: booking.invoice?.id,
+        decorations: computeEventDecorations(
+          decorationContext,
+          start,
+          primaryPetId,
+          booking.clientId,
+        ),
         petTags: buildTagNames("pet", primaryPetId),
         customerTags: buildTagNames("customer", booking.clientId),
         bookingTags: buildTagNames("booking", booking.id),
@@ -931,6 +1218,7 @@ function buildEvaluationEvents(
   inputBookings: Booking[],
   clients: Client[],
   facilityId: number,
+  decorationContext: DecorationContext,
 ): OperationsCalendarEvent[] {
   const { petLookup } = buildClientLookups(clients);
 
@@ -977,10 +1265,17 @@ function buildEvaluationEvents(
         petId: primaryPetId,
         clientId: booking.clientId,
         bookingRawStatus: booking.status,
+        bookingSource: deriveBookingSource(String(booking.id)),
         petNames: petContext?.petName ? [petContext.petName] : [],
         customerName: petContext?.ownerName,
         bookingId: booking.id,
         confirmationNumber: booking.invoice?.id,
+        decorations: computeEventDecorations(
+          decorationContext,
+          start,
+          primaryPetId,
+          booking.clientId,
+        ),
         petTags: buildTagNames("pet", primaryPetId),
         customerTags: buildTagNames("customer", booking.clientId),
         bookingTags: buildTagNames("booking", booking.id),
@@ -1066,6 +1361,7 @@ function buildCustomServiceEvents(
         unassigned: staff === "Unassigned",
         petId: checkIn.petId,
         clientId: checkIn.ownerId,
+        bookingSource: deriveBookingSource(checkIn.id),
         petNames: [checkIn.petName],
         customerName: checkIn.ownerName,
         bookingRawStatus: checkIn.status,
@@ -1257,6 +1553,8 @@ function buildFacilityEvents(
         customerTags: [],
         bookingTags: [],
         addOns: [],
+        // Staff-chosen colour drives the chip (service-type colour mode).
+        rateColor: event.color,
         affectsCapacityHeatmap: false,
         href: "/facility/dashboard/notifications",
       };
@@ -1297,6 +1595,7 @@ function buildRetailPosEvents(
         location: transaction.locationId ?? "Front Desk",
         resource: transaction.locationId ?? "Front Desk",
         unassigned: false,
+        bookingSource: "walk_in",
         petNames: transaction.petName ? [transaction.petName] : [],
         customerName: transaction.customerName,
         bookingId: transaction.bookingId,
@@ -1357,6 +1656,7 @@ function buildAddOnSubEvents(
           completedAt: completionEntry?.completedAt,
           completedByName: completionEntry?.completedByName,
           completedByStaffId: completionEntry?.completedByStaffId,
+          bookingSource: event.bookingSource,
           service: event.service,
           module: event.module,
           staff: event.staff,
@@ -1475,6 +1775,7 @@ function buildStayAddOnCalendarEvents(
           petId: primaryPetId,
           clientId: booking.clientId,
           bookingRawStatus: booking.status,
+          bookingSource: deriveBookingSource(String(booking.id)),
           petNames: petContext?.petName ? [petContext.petName] : [],
           customerName: petContext?.ownerName,
           bookingId: booking.id,
@@ -1491,6 +1792,238 @@ function buildStayAddOnCalendarEvents(
     });
 }
 
+/**
+ * Mock events synced from third-party calendars / booking providers. These
+ * render distinctly (read-only, provider-badged) — see Part G. Times are
+ * anchored relative to `anchorDate` so they land in the current view window.
+ * TODO: replace with a real integration sync when the API exists.
+ */
+function buildExternalEvents(anchorDate: Date): OperationsCalendarEvent[] {
+  const day = startOfDay(anchorDate);
+  const at = (hour: number, minute = 0) =>
+    new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute);
+
+  return [
+    {
+      id: "external-google-1",
+      sourceId: "gcal-evt-8842",
+      type: "external",
+      subtype: "external-appointment",
+      title: "Vet Conference — Dr. Alvarez (busy)",
+      start: at(13, 0),
+      end: at(15, 0),
+      allDay: false,
+      status: "Confirmed",
+      service: "External",
+      module: "External",
+      staff: "Dr. Alvarez",
+      location: "Off-site",
+      unassigned: false,
+      bookingSource: "integration",
+      external: {
+        // Google is two-way (Table 68) → editable.
+        provider: "google",
+        sourceLabel: "Google Calendar · Ops",
+        readOnly: false,
+      },
+      petNames: [],
+      petTags: [],
+      customerTags: [],
+      bookingTags: [],
+      addOns: [],
+      href: "/facility/dashboard/settings/integrations",
+    },
+    {
+      id: "external-calendly-1",
+      sourceId: "calendly-evt-3310",
+      type: "external",
+      subtype: "external-lead",
+      title: "New-Client Consult — Jamie Rivera",
+      start: addDays(at(10, 30), 1),
+      end: addDays(at(11, 0), 1),
+      allDay: false,
+      status: "Confirmed",
+      service: "External",
+      module: "External",
+      staff: "Front Desk",
+      location: "Phone",
+      unassigned: false,
+      bookingSource: "integration",
+      external: {
+        provider: "calendly",
+        sourceLabel: "Calendly · Intake",
+        readOnly: true,
+        leadCaptured: true,
+      },
+      customerName: "Jamie Rivera",
+      // Structured contact block the lead-capture parser reads (Tasks 9–10).
+      details:
+        "New-client boarding enquiry · jamie.rivera@example.com · (514) 555-0198 · Pet: Biscuit (Beagle)",
+      petNames: [],
+      petTags: [],
+      customerTags: [],
+      bookingTags: [],
+      addOns: [],
+      href: "/facility/dashboard/settings/integrations",
+    },
+  ];
+}
+
+/**
+ * Group / multi-pet custom-module events (spec 7.3 / Tables 81–82). Capacity
+ * total is read from the module config (`capacity.maxPerSlot`); `used` is the
+ * roster size. Mocked group sessions — TODO: derive from real slot check-ins.
+ */
+function buildGroupModuleEvents(
+  anchorDate: Date,
+  customModules: CustomServiceModule[],
+): OperationsCalendarEvent[] {
+  const day = startOfDay(anchorDate);
+  const at = (hour: number, minute = 0) =>
+    new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute);
+  const moduleCapacity = (id: string, fallback: number) =>
+    customModules.find((mod) => mod.id === id)?.capacity?.maxPerSlot ??
+    fallback;
+
+  const groups = [
+    {
+      key: "paws-express",
+      moduleId: "csm-paws-express",
+      moduleName: "Paws Express",
+      start: at(9, 0),
+      end: at(10, 30),
+      total: moduleCapacity("csm-paws-express", 6),
+      staff: "Marcus Lee",
+      location: "Van #1",
+      recurrence: "daily" as const,
+      seriesId: "series-paws-express",
+      stops: [
+        {
+          id: "stop-1",
+          kind: "pickup" as const,
+          petName: "Bella",
+          address: "142 Maple Ave",
+          eta: "9:05 AM",
+        },
+        {
+          id: "stop-2",
+          kind: "pickup" as const,
+          petName: "Cooper",
+          address: "88 Rue St-Denis",
+          eta: "9:14 AM",
+        },
+        {
+          id: "stop-3",
+          kind: "pickup" as const,
+          petName: "Daisy",
+          address: "27 Park Lane",
+          eta: "9:22 AM",
+        },
+        {
+          id: "stop-4",
+          kind: "pickup" as const,
+          petName: "Max",
+          address: "310 Sherbrooke W",
+          eta: "9:31 AM",
+        },
+        {
+          id: "stop-5",
+          kind: "dropoff" as const,
+          petName: "All dogs",
+          address: "Yipyy Plateau",
+          eta: "9:45 AM",
+        },
+      ] as RouteStop[],
+      groupAddOns: [
+        { id: "sa-1", name: "Extra Stop", iconKey: "custom" as const },
+        {
+          id: "sa-2",
+          name: "Live GPS Updates",
+          iconKey: "video-call" as const,
+        },
+      ] as CalendarAddOn[],
+      attendees: [
+        { id: "att-1", petName: "Bella", ownerName: "Sofia R.", breed: "Lab" },
+        {
+          id: "att-2",
+          petName: "Cooper",
+          ownerName: "James T.",
+          breed: "Beagle",
+        },
+        {
+          id: "att-3",
+          petName: "Daisy",
+          ownerName: "Nina P.",
+          breed: "Poodle",
+        },
+        { id: "att-4", petName: "Max", ownerName: "Owen K.", breed: "Boxer" },
+      ],
+    },
+    {
+      key: "yodas-splash",
+      moduleId: "csm-yodas-splash",
+      moduleName: "Yoda's Splash",
+      start: at(14, 0),
+      end: at(14, 45),
+      total: moduleCapacity("csm-yodas-splash", 3),
+      staff: "Priya Shah",
+      location: "Main Pool",
+      recurrence: "weekly" as const,
+      seriesId: "series-yodas-splash",
+      stops: [] as RouteStop[],
+      groupAddOns: [] as CalendarAddOn[],
+      attendees: [
+        {
+          id: "att-5",
+          petName: "Rocky",
+          ownerName: "Ali H.",
+          breed: "Retriever",
+        },
+        { id: "att-6", petName: "Luna", ownerName: "Mia C.", breed: "Husky" },
+        { id: "att-7", petName: "Scout", ownerName: "Ben D.", breed: "Collie" },
+      ],
+    },
+  ];
+
+  return groups.map((group) => ({
+    id: `group-${group.key}`,
+    sourceId: group.key,
+    type: "booking" as const,
+    subtype: "custom-service",
+    title: group.moduleName,
+    start: group.start,
+    end: group.end,
+    allDay: false,
+    status: "Confirmed",
+    service: group.moduleName,
+    module: group.moduleName,
+    moduleId: group.moduleId,
+    staff: group.staff,
+    location: group.location,
+    resource: group.location,
+    unassigned: false,
+    petNames: group.attendees.map((attendee) => attendee.petName),
+    customerName: `${group.attendees.length} dogs`,
+    capacity: { used: group.attendees.length, total: group.total },
+    attendees: group.attendees,
+    stops: group.stops.length > 0 ? group.stops : undefined,
+    recurrence: group.recurrence,
+    recurrenceSeriesId: group.seriesId,
+    requiresCheckInOut: true,
+    allowsAddOns: true,
+    petTags: [],
+    customerTags: [],
+    bookingTags: [],
+    addOns: group.groupAddOns,
+    href: `/facility/dashboard/services/custom-modules/${group.key}`,
+  }));
+}
+
+/** True when a group / capacity-limited slot is at (or over) capacity. */
+export function isGroupFull(capacity?: CalendarEventCapacity): boolean {
+  return Boolean(capacity && capacity.used >= capacity.total);
+}
+
 export function buildUnifiedEvents(
   input: BuildUnifiedEventsInput,
 ): OperationsCalendarEvent[] {
@@ -1503,10 +2036,29 @@ export function buildUnifiedEvents(
     (b) => !STAY_SERVICES.has(b.service.toLowerCase()),
   );
 
+  // Chip decorations (spec 8.5 / 8.6): vaccination warnings, birthdays,
+  // anniversaries — sourced from pet profiles + first-booking dates (all
+  // bookings, so anniversaries predate the current schedule window).
+  const decorationContext = buildDecorationContext(
+    new Date(),
+    input.clients,
+    input.bookings,
+  );
+
   const bookingEvents = [
-    ...buildBookingEvents(schedulableBookings, input.clients, input.facilityId),
+    ...buildBookingEvents(
+      schedulableBookings,
+      input.clients,
+      input.facilityId,
+      decorationContext,
+    ),
     // Evaluations still surface for ALL bookings (including boarding/daycare)
-    ...buildEvaluationEvents(input.bookings, input.clients, input.facilityId),
+    ...buildEvaluationEvents(
+      input.bookings,
+      input.clients,
+      input.facilityId,
+      decorationContext,
+    ),
     ...buildCustomServiceEvents(
       input.customServiceCheckIns,
       input.customModules,
@@ -1536,6 +2088,8 @@ export function buildUnifiedEvents(
     input.viewerKey,
   );
   const retailEvents = buildRetailPosEvents(input.transactions);
+  const externalEvents = buildExternalEvents(new Date());
+  const groupEvents = buildGroupModuleEvents(new Date(), input.customModules);
 
   return sortEvents([
     ...bookingEvents,
@@ -1544,6 +2098,8 @@ export function buildUnifiedEvents(
     ...taskEvents,
     ...facilityEvents,
     ...retailEvents,
+    ...externalEvents,
+    ...groupEvents,
   ]);
 }
 
@@ -1812,12 +2368,57 @@ export function filterEvents(
 ): OperationsCalendarEvent[] {
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const selectedModules = filters.modules;
+  const {
+    statuses: selectedStatuses,
+    staff: selectedStaff,
+    locations: selectedLocations,
+    addOns: selectedAddOns,
+    bookingSources: selectedBookingSources,
+  } = filters;
 
   return events.filter((event) => {
     if (
       selectedModules.length > 0 &&
       !selectedModules.includes(event.module) &&
       !selectedModules.includes(event.service)
+    ) {
+      return false;
+    }
+
+    // Status (Confirmed / Checked-in / Completed / Cancelled …)
+    if (
+      selectedStatuses.length > 0 &&
+      !selectedStatuses.includes(event.status)
+    ) {
+      return false;
+    }
+
+    // Assigned staff (multi-select of active staff)
+    if (selectedStaff.length > 0 && !selectedStaff.includes(event.staff)) {
+      return false;
+    }
+
+    // Location (radio; "All" is represented by an empty selection)
+    if (
+      selectedLocations.length > 0 &&
+      !selectedLocations.includes(event.location)
+    ) {
+      return false;
+    }
+
+    // Add-on type — keep events carrying at least one selected add-on
+    if (
+      selectedAddOns.length > 0 &&
+      !event.addOns.some((addOn) => selectedAddOns.includes(addOn.name))
+    ) {
+      return false;
+    }
+
+    // Booking source (Online / Walk-In / Phone / Calendar Integration)
+    if (
+      selectedBookingSources.length > 0 &&
+      (!event.bookingSource ||
+        !selectedBookingSources.includes(event.bookingSource))
     ) {
       return false;
     }
@@ -1904,6 +2505,10 @@ export function deriveFilterOptions(
     ),
   ).filter(Boolean);
 
+  const addOnNames = Array.from(
+    new Set(events.flatMap((event) => event.addOns.map((addOn) => addOn.name))),
+  );
+
   const petTags = getTagsByType("pet").map((tag) => tag.name);
   const customerTags = getTagsByType("customer").map((tag) => tag.name);
 
@@ -1923,6 +2528,12 @@ export function deriveFilterOptions(
     ),
     bookingStatuses: mapOptions(bookingStatuses),
     taskStatuses: mapOptions(taskStatuses),
+    addOns: mapOptions(addOnNames),
+    // Booking sources are a fixed, ordered taxonomy — not derived from events.
+    bookingSources: OPERATIONS_CALENDAR_BOOKING_SOURCES.map((source) => ({
+      value: source,
+      label: BOOKING_SOURCE_LABELS[source],
+    })),
     petTags: mapOptions(petTags),
     customerTags: mapOptions(customerTags),
   };
