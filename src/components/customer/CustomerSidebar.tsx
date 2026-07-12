@@ -14,7 +14,6 @@ import {
   Settings,
   Camera,
   GraduationCap,
-  Users,
   Gift,
   UserPlus,
   Package,
@@ -282,11 +281,6 @@ export function CustomerSidebar() {
           title: "Documents & Agreements",
           url: "/customer/documents",
           icon: FileText,
-        },
-        {
-          title: "Household & Contacts",
-          url: "/customer/household",
-          icon: Users,
         },
         {
           title: "Settings",
