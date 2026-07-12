@@ -716,6 +716,21 @@ export function ModulePackagesPage({ category, label }: Props) {
                     })
                   }
                 />
+                <PackagePolicyToggle
+                  label={'Show "Contact us to extend" on expired passes'}
+                  checked={
+                    formData.policy.allowCustomerExtensionRequest ?? false
+                  }
+                  onChange={(v) =>
+                    setFormData({
+                      ...formData,
+                      policy: {
+                        ...formData.policy,
+                        allowCustomerExtensionRequest: v,
+                      },
+                    })
+                  }
+                />
               </div>
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="space-y-1.5">
