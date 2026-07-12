@@ -4,21 +4,54 @@ import { useState, useMemo, useEffect } from "react";
 import {
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Clock,
+  DollarSign,
+  PanelLeftClose,
   Sparkles,
   TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   type OperationsCalendarEvent,
   type OperationsCalendarView,
   formatDateKey,
   formatTimeLabel,
   getEventsForDay,
-  hexToRgba,
 } from "@/lib/operations-calendar";
+import { formatCurrency } from "@/components/facility/operations/OperationsCalendarDrawerHelpers";
+import { defaultServiceAddOns } from "@/data/service-addons";
+
+const ADD_ON_PRICE_BY_NAME = new Map(
+  defaultServiceAddOns.map((addOn) => [addOn.name.toLowerCase(), addOn.price]),
+);
+
+// Booking statuses that drop out of the "Upcoming Today" active list.
+const FINISHED_STATUSES = new Set(["Checked-out", "Completed", "Cancelled"]);
+
+const SIDEPANEL_COLLAPSE_KEY = "operations-calendar-sidepanel-collapsed";
+
+/** Two-letter initials for an assignee name ("—" when unassigned). */
+function getStaffInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0 || name === "Unassigned") return "—";
+  return parts
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
+
+/** Price for an add-on by name (from service-addons); 0 for unknown/custom. */
+function addOnPrice(name: string): number {
+  return ADD_ON_PRICE_BY_NAME.get(name.toLowerCase()) ?? 0;
+}
+
+/** Today's Overview tile → calendar-filter target. */
+export type SidePanelTile = "all" | "confirmed" | "completed" | "tasks";
 
 interface OperationsCalendarSidePanelProps {
   anchorDate: Date;
@@ -27,21 +60,47 @@ interface OperationsCalendarSidePanelProps {
   visibleEvents: OperationsCalendarEvent[];
   serviceColorMap: Record<string, string>;
   onDateChange: (date: string) => void;
+  onTileSelect: (tile: SidePanelTile) => void;
+  activeTile: SidePanelTile | null;
+  revenueToday: { collected: number; expected: number };
+  onEventClick: (event: OperationsCalendarEvent) => void;
+  onCompleteTask: (event: OperationsCalendarEvent) => void;
+  onAddTask: () => void;
 }
 
 const DAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
 
 export function OperationsCalendarSidePanel({
   anchorDate,
-  view,
   allEvents,
   visibleEvents,
   serviceColorMap,
   onDateChange,
+  onTileSelect,
+  activeTile,
+  revenueToday,
+  onEventClick,
+  onCompleteTask,
+  onAddTask,
 }: OperationsCalendarSidePanelProps) {
   const [displayMonth, setDisplayMonth] = useState(
     () => new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1),
   );
+
+  // Collapse state (persisted) — gives the grid maximum width on busy days.
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(SIDEPANEL_COLLAPSE_KEY) === "1";
+  });
+  useEffect(() => {
+    localStorage.setItem(SIDEPANEL_COLLAPSE_KEY, collapsed ? "1" : "0");
+  }, [collapsed]);
+
+  const shiftAnchorDay = (delta: number) => {
+    const next = new Date(anchorDate);
+    next.setDate(next.getDate() + delta);
+    onDateChange(formatDateKey(next));
+  };
 
   useEffect(() => {
     setDisplayMonth((prev) => {
@@ -85,32 +144,59 @@ export function OperationsCalendarSidePanel({
     [allEvents, today],
   );
 
-  const upcomingEvents = useMemo(() => {
-    const now = new Date();
-    return todayEvents
-      .filter((ev) => ev.type === "booking" && ev.start >= now)
-      .sort((a, b) => a.start.getTime() - b.start.getTime())
-      .slice(0, 4);
-  }, [todayEvents]);
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false);
 
-  const serviceBreakdown = useMemo(() => {
-    const map: Record<string, { count: number; color: string }> = {};
-    for (const ev of visibleEvents) {
-      if (ev.type !== "booking") continue;
-      const svc = ev.service ?? "Other";
-      const color = serviceColorMap[svc] ?? "#64748b";
-      if (!map[svc]) map[svc] = { count: 0, color };
-      map[svc].count++;
-    }
-    return Object.entries(map)
-      .sort((a, b) => b[1].count - a[1].count)
-      .slice(0, 7);
-  }, [visibleEvents, serviceColorMap]);
-
-  const totalVisible = serviceBreakdown.reduce(
-    (s, [, { count }]) => s + count,
-    0,
+  // Today's active bookings (not finished/cancelled), soonest first. Includes
+  // past-due-not-checked-in ones so the status dot can flag them.
+  const upcomingAll = useMemo(
+    () =>
+      todayEvents
+        .filter(
+          (ev) => ev.type === "booking" && !FINISHED_STATUSES.has(ev.status),
+        )
+        .sort((a, b) => a.start.getTime() - b.start.getTime()),
+    [todayEvents],
   );
+  const shownUpcoming = showAllUpcoming ? upcomingAll : upcomingAll.slice(0, 5);
+  const remainingUpcoming = upcomingAll.length - 5;
+
+  // Today's open staff tasks, overdue first then by time.
+  const openTasks = useMemo(
+    () =>
+      todayEvents
+        .filter((ev) => ev.type === "task" && ev.status !== "Completed")
+        .sort((a, b) => {
+          const aOverdue = a.status === "Overdue" ? 0 : 1;
+          const bOverdue = b.status === "Overdue" ? 0 : 1;
+          if (aOverdue !== bOverdue) return aOverdue - bOverdue;
+          return a.start.getTime() - b.start.getTime();
+        }),
+    [todayEvents],
+  );
+
+  // Add-Ons Today (spec Table 40): every add-on across the viewed day's
+  // bookings, with counts + total revenue. Deduped by booking + add-on so a
+  // nested add-on and its "separate"-mode sub-event aren't double-counted.
+  const addOnsToday = useMemo(() => {
+    const seen = new Set<string>();
+    const counts = new Map<string, number>();
+    let revenue = 0;
+    for (const ev of visibleEvents) {
+      if (formatDateKey(ev.start) !== selectedKey) continue;
+      if (ev.type !== "booking" && ev.type !== "add-on") continue;
+      for (const addOn of ev.addOns) {
+        const key = `${ev.bookingId ?? ev.sourceId}::${addOn.name.toLowerCase()}::${addOn.scheduledAt ?? ""}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        counts.set(addOn.name, (counts.get(addOn.name) ?? 0) + 1);
+        revenue += addOnPrice(addOn.name);
+      }
+    }
+    const rows = Array.from(counts.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    return { rows, revenue };
+  }, [visibleEvents, selectedKey]);
 
   const monthLabel = displayMonth.toLocaleDateString("en-US", {
     month: "long",
@@ -135,8 +221,19 @@ export function OperationsCalendarSidePanel({
   ).length;
   const taskCount = todayEvents.filter((e) => e.type === "task").length;
 
-  const stats = [
+  const stats: Array<{
+    kind: SidePanelTile;
+    label: string;
+    value: number;
+    icon: typeof CalendarDays;
+    textColor: string;
+    bg: string;
+    ring: string;
+    iconColor: string;
+    dot: string;
+  }> = [
     {
+      kind: "all",
       label: "Bookings",
       value: bookingCount,
       icon: CalendarDays,
@@ -144,8 +241,10 @@ export function OperationsCalendarSidePanel({
       bg: "bg-sky-50",
       ring: "ring-sky-100",
       iconColor: "text-sky-500",
+      dot: "bg-sky-500",
     },
     {
+      kind: "confirmed",
       label: "Confirmed",
       value: confirmedCount,
       icon: CheckCircle2,
@@ -153,8 +252,10 @@ export function OperationsCalendarSidePanel({
       bg: "bg-emerald-50",
       ring: "ring-emerald-100",
       iconColor: "text-emerald-500",
+      dot: "bg-emerald-500",
     },
     {
+      kind: "completed",
       label: "Completed",
       value: completedCount,
       icon: TrendingUp,
@@ -162,8 +263,10 @@ export function OperationsCalendarSidePanel({
       bg: "bg-indigo-50",
       ring: "ring-indigo-100",
       iconColor: "text-indigo-500",
+      dot: "bg-indigo-500",
     },
     {
+      kind: "tasks",
       label: "Tasks",
       value: taskCount,
       icon: Clock,
@@ -171,8 +274,121 @@ export function OperationsCalendarSidePanel({
       bg: "bg-amber-50",
       ring: "ring-amber-100",
       iconColor: "text-amber-500",
+      dot: "bg-amber-500",
     },
   ];
+
+  // Revenue Today colour: green > 80% collected, amber 50–80%, red < 50%.
+  const revenuePct =
+    revenueToday.expected > 0
+      ? revenueToday.collected / revenueToday.expected
+      : 0;
+  const revenueTone =
+    revenueToday.expected === 0
+      ? {
+          bg: "bg-slate-50",
+          ring: "ring-slate-100",
+          icon: "text-slate-400",
+          text: "text-slate-500",
+        }
+      : revenuePct > 0.8
+        ? {
+            bg: "bg-emerald-50",
+            ring: "ring-emerald-100",
+            icon: "text-emerald-500",
+            text: "text-emerald-600",
+          }
+        : revenuePct >= 0.5
+          ? {
+              bg: "bg-amber-50",
+              ring: "ring-amber-100",
+              icon: "text-amber-500",
+              text: "text-amber-600",
+            }
+          : {
+              bg: "bg-red-50",
+              ring: "ring-red-100",
+              icon: "text-red-500",
+              text: "text-red-600",
+            };
+  const revenueDot =
+    revenueToday.expected === 0
+      ? "bg-slate-300"
+      : revenuePct > 0.8
+        ? "bg-emerald-500"
+        : revenuePct >= 0.5
+          ? "bg-amber-500"
+          : "bg-red-500";
+
+  if (collapsed) {
+    return (
+      <aside className="flex w-14 shrink-0 flex-col items-center gap-3 overflow-y-auto border-r border-slate-200/60 bg-white py-4">
+        {/* Expand arrow */}
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          aria-label="Expand sidebar"
+          className="flex size-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-800"
+        >
+          <ChevronRight className="size-4" />
+        </button>
+
+        {/* Mini-calendar nav (prev / today / next day) */}
+        <div className="flex flex-col items-center gap-1">
+          <button
+            type="button"
+            onClick={() => shiftAnchorDay(-1)}
+            title="Previous day"
+            className="flex size-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+          >
+            <ChevronUp className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onDateChange(formatDateKey(new Date()))}
+            title="Jump to today"
+            className="flex size-7 items-center justify-center rounded-lg text-sky-600 transition-colors hover:bg-sky-50"
+          >
+            <CalendarDays className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => shiftAnchorDay(1)}
+            title="Next day"
+            className="flex size-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+          >
+            <ChevronDown className="size-4" />
+          </button>
+        </div>
+
+        <div className="h-px w-6 bg-slate-200" />
+
+        {/* Today's Overview dot indicators */}
+        <div className="flex flex-col items-center gap-2.5">
+          {stats.map((s) => (
+            <div
+              key={s.label}
+              title={`${s.label}: ${s.value}`}
+              className="relative flex size-6 items-center justify-center"
+            >
+              <span className={cn("size-2.5 rounded-full", s.dot)} />
+              {s.value > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-3 min-w-3 items-center justify-center rounded-full bg-slate-900 px-0.5 text-[8px] font-bold text-white tabular-nums">
+                  {s.value > 99 ? "99+" : s.value}
+                </span>
+              )}
+            </div>
+          ))}
+          <div
+            title={`Revenue: ${formatCurrency(revenueToday.collected)} / ${formatCurrency(revenueToday.expected)}`}
+            className="flex size-6 items-center justify-center"
+          >
+            <span className={cn("size-2.5 rounded-full", revenueDot)} />
+          </div>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-r border-slate-200/60 bg-white">
@@ -180,7 +396,7 @@ export function OperationsCalendarSidePanel({
       <div className="relative overflow-hidden border-b border-slate-100 px-5 pt-5 pb-4">
         <div className="pointer-events-none absolute inset-0 bg-slate-50/50" />
 
-        <div className="relative">
+        <div className="relative flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
             <div className="flex size-8 items-center justify-center rounded-xl bg-sky-100 ring-1 ring-sky-200/60">
               <Sparkles className="size-4 text-sky-600" />
@@ -194,6 +410,15 @@ export function OperationsCalendarSidePanel({
               </span>
             </div>
           </div>
+          {/* Collapse toggle (right edge of the sidebar header) */}
+          <button
+            type="button"
+            onClick={() => setCollapsed(true)}
+            aria-label="Collapse sidebar"
+            className="flex size-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+          >
+            <PanelLeftClose className="size-4" />
+          </button>
         </div>
       </div>
 
@@ -287,13 +512,17 @@ export function OperationsCalendarSidePanel({
         </p>
         <div className="grid grid-cols-2 gap-2">
           {stats.map((s) => (
-            <div
+            <button
               key={s.label}
+              type="button"
+              onClick={() => onTileSelect(s.kind)}
+              aria-pressed={activeTile === s.kind}
               className={cn(
-                "group flex cursor-default items-center gap-2.5 rounded-xl border px-3 py-2.5 transition-all duration-200 hover:shadow-sm",
+                "group flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0",
                 s.bg,
-                `ring-1 ${s.ring}`,
-                "border-transparent",
+                activeTile === s.kind
+                  ? "border-slate-300 ring-2 ring-slate-400/50"
+                  : cn("border-transparent", `ring-1 ${s.ring}`),
               )}
             >
               <div
@@ -316,13 +545,43 @@ export function OperationsCalendarSidePanel({
                   {s.label}
                 </span>
               </div>
-            </div>
+            </button>
           ))}
+        </div>
+
+        {/* Revenue Today (spec Table 54) */}
+        <div
+          className={cn(
+            "mt-2 flex items-center justify-between rounded-xl border border-transparent px-3 py-2.5",
+            revenueTone.bg,
+            `ring-1 ${revenueTone.ring}`,
+          )}
+        >
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
+              <DollarSign className={cn("size-3.5", revenueTone.icon)} />
+            </div>
+            <span className="text-[10px] font-medium text-slate-500">
+              Revenue Today
+            </span>
+          </div>
+          <span
+            className={cn(
+              "shrink-0 text-sm font-black tabular-nums",
+              revenueTone.text,
+            )}
+          >
+            {formatCurrency(revenueToday.collected)}
+            <span className="font-semibold text-slate-400">
+              {" / "}
+              {formatCurrency(revenueToday.expected)}
+            </span>
+          </span>
         </div>
       </div>
 
-      {/* Upcoming today */}
-      {upcomingEvents.length > 0 && (
+      {/* Upcoming today (spec Tables 55–57) */}
+      {upcomingAll.length > 0 && (
         <>
           <div className="mx-4 mt-2 mb-0 h-px bg-slate-200/70" />
           <div className="px-4 pt-3 pb-2">
@@ -330,26 +589,107 @@ export function OperationsCalendarSidePanel({
               Upcoming Today
             </p>
             <div className="space-y-1.5">
-              {upcomingEvents.map((ev) => {
+              {shownUpcoming.map((ev) => {
                 const svc = ev.service ?? "Other";
                 const color = serviceColorMap[svc] ?? "#64748b";
                 const petName = ev.petNames?.[0] ?? ev.title;
+                const raw = ev.bookingRawStatus ?? "";
+                const checkedIn =
+                  raw === "checked_in" ||
+                  raw === "in_progress" ||
+                  ev.status === "Checked-in";
+                const overdue = !checkedIn && ev.start < today;
+                const statusDot = checkedIn
+                  ? { color: "bg-emerald-500", label: "Checked in" }
+                  : overdue
+                    ? { color: "bg-red-500", label: "Overdue — not checked in" }
+                    : { color: "bg-sky-500", label: "Confirmed" };
                 return (
-                  <div
+                  <button
                     key={ev.id}
-                    className="flex items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50/80 px-2.5 py-2 transition-all duration-150 hover:bg-white hover:shadow-sm"
+                    type="button"
+                    onClick={() => onEventClick(ev)}
+                    className="flex w-full items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50/80 px-2.5 py-2 text-left transition-all duration-150 hover:-translate-y-px hover:bg-white hover:shadow-sm"
                     style={{ borderLeftColor: color, borderLeftWidth: 3 }}
                   >
+                    <span
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: color }}
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[11px] leading-tight font-bold text-slate-800">
                         {petName}
                       </p>
-                      <p className="truncate text-[10px] text-slate-500 capitalize">
-                        {svc}
+                      <p className="truncate text-[10px] text-slate-500">
+                        <span className="capitalize">{svc}</span>
+                        {ev.customerName ? ` · ${ev.customerName}` : ""}
                       </p>
                     </div>
-                    <span className="shrink-0 text-[10px] font-semibold text-slate-500 tabular-nums">
-                      {formatTimeLabel(ev.start)}
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span className="text-[10px] font-semibold text-slate-500 tabular-nums">
+                        {formatTimeLabel(ev.start)}
+                      </span>
+                      <span
+                        className={cn("size-2 rounded-full", statusDot.color)}
+                        title={statusDot.label}
+                      />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {!showAllUpcoming && remainingUpcoming > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAllUpcoming(true)}
+                className="mt-2 w-full text-center text-[10px] font-semibold text-sky-600 hover:underline"
+              >
+                View all {remainingUpcoming} remaining
+              </button>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Tasks (spec Table 58) — hidden when there are no open tasks */}
+      {openTasks.length > 0 && (
+        <>
+          <div className="mx-4 mt-2 h-px bg-slate-200/70" />
+          <div className="px-4 pt-3 pb-2">
+            <div className="mb-2.5 flex items-center justify-between">
+              <p className="text-[9px] font-black tracking-widest text-slate-400 uppercase">
+                Tasks
+              </p>
+              <button
+                type="button"
+                onClick={onAddTask}
+                className="text-[10px] font-semibold text-sky-600 hover:underline"
+              >
+                + Add Task
+              </button>
+            </div>
+            <div className="space-y-1.5">
+              {openTasks.map((task) => {
+                const overdue = task.status === "Overdue";
+                return (
+                  <div key={task.id} className="flex items-center gap-2.5">
+                    <Checkbox
+                      className="size-3.5"
+                      checked={false}
+                      onCheckedChange={() => onCompleteTask(task)}
+                    />
+                    <span
+                      className={cn(
+                        "min-w-0 flex-1 truncate text-[11px]",
+                        overdue
+                          ? "font-semibold text-red-600"
+                          : "text-slate-600",
+                      )}
+                    >
+                      {task.title}
+                    </span>
+                    <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500">
+                      {getStaffInitials(task.staff)}
                     </span>
                   </div>
                 );
@@ -359,49 +699,40 @@ export function OperationsCalendarSidePanel({
         </>
       )}
 
-      {/* Service breakdown */}
-      {serviceBreakdown.length > 0 && (
+      {/* Add-Ons Today (spec Table 40) */}
+      {addOnsToday.rows.length > 0 && (
         <>
           <div className="mx-4 mt-2 h-px bg-slate-200/70" />
           <div className="px-4 pt-3 pb-5">
             <p className="mb-2.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
-              {view === "day" ? "Today's Services" : "Services in View"}
+              Add-Ons Today
             </p>
-            <div className="space-y-2.5">
-              {serviceBreakdown.map(([service, { count, color }]) => {
-                const pct = totalVisible > 0 ? (count / totalVisible) * 100 : 0;
-                return (
-                  <div key={service}>
-                    <div className="mb-1 flex items-center justify-between">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span
-                          className="size-2.5 shrink-0 rounded-full shadow-sm"
-                          style={{
-                            backgroundColor: color,
-                            boxShadow: `0 0 4px ${hexToRgba(color, 0.5)}`,
-                          }}
-                        />
-                        <span className="truncate text-[11px] font-semibold text-slate-600 capitalize">
-                          {service}
-                        </span>
-                      </div>
-                      <span className="ml-2 shrink-0 text-[11px] font-bold text-slate-800 tabular-nums">
-                        {count}
-                      </span>
-                    </div>
-                    {/* Progress bar */}
-                    <div
-                      className="h-1.5 w-full overflow-hidden rounded-full"
-                      style={{ backgroundColor: hexToRgba(color, 0.12) }}
-                    >
-                      <div
-                        className="h-full rounded-full transition-all duration-700"
-                        style={{ width: `${pct}%`, backgroundColor: color }}
-                      />
-                    </div>
+            <div className="space-y-1.5">
+              {addOnsToday.rows.map((row) => (
+                <div
+                  key={row.name}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Sparkles className="size-3 shrink-0 text-sky-400" />
+                    <span className="truncate text-[11px] font-semibold text-slate-600">
+                      {row.name}
+                    </span>
                   </div>
-                );
-              })}
+                  <span className="ml-2 shrink-0 text-[11px] font-bold text-slate-800 tabular-nums">
+                    × {row.count}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {/* Total add-on revenue */}
+            <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">
+              <span className="text-[10px] font-medium text-slate-500">
+                Add-on revenue today
+              </span>
+              <span className="text-[11px] font-black text-emerald-600 tabular-nums">
+                {formatCurrency(addOnsToday.revenue)}
+              </span>
             </div>
           </div>
         </>

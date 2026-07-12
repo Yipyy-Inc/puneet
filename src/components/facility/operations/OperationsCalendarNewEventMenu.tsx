@@ -28,6 +28,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from "@/components/ui/popover";
 import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import {
   Select,
@@ -38,14 +43,49 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import type { ManualFacilityEvent } from "@/lib/operations-calendar";
+import { cn } from "@/lib/utils";
+import type {
+  EventReminder,
+  ManualFacilityEvent,
+  RecurrenceEnd,
+  RecurrenceIntervalUnit,
+} from "@/lib/operations-calendar";
+
+// Curated 8-swatch palette for colour-coding custom events (Task 28).
+const EVENT_COLOR_SWATCHES = [
+  "#0284c7", // Sky
+  "#8b5cf6", // Violet
+  "#ec4899", // Pink
+  "#f97316", // Orange
+  "#22c55e", // Green
+  "#14b8a6", // Teal
+  "#eab308", // Gold
+  "#64748b", // Slate
+];
 
 export interface NewEventSeed {
   date: string;
   time: string;
 }
 
-interface CustomEventDraft {
+/** Shared recurrence interval + end-condition draft fields (Tasks 26/27). */
+interface RecurrenceDraft {
+  recurrenceInterval: number;
+  recurrenceIntervalUnit: RecurrenceIntervalUnit;
+  recurrenceEndType: RecurrenceEnd["type"];
+  recurrenceEndDate: string;
+  recurrenceEndCount: number;
+}
+
+const RECURRENCE_DRAFT_DEFAULTS: RecurrenceDraft = {
+  recurrenceInterval: 1,
+  recurrenceIntervalUnit: "weeks",
+  recurrenceEndType: "never",
+  recurrenceEndDate: "",
+  recurrenceEndCount: 10,
+};
+
+interface CustomEventDraft extends RecurrenceDraft {
   title: string;
   details: string;
   date: string;
@@ -60,9 +100,12 @@ interface CustomEventDraft {
   location: string;
   visibility: NonNullable<ManualFacilityEvent["visibility"]>;
   selectedRoles: string[];
+  color: string;
+  reminder: EventReminder;
+  reminderSmsStaff: boolean;
 }
 
-interface BlockTimeDraft {
+interface BlockTimeDraft extends RecurrenceDraft {
   title: string;
   date: string;
   startTime: string;
@@ -73,6 +116,32 @@ interface BlockTimeDraft {
   staff: string;
 }
 
+/** Builds the ManualFacilityEvent recurrence fields from a draft. */
+function buildRecurrenceFields(
+  draft: RecurrenceDraft & { recurrence: string },
+) {
+  if (draft.recurrence === "none") {
+    return {
+      recurrenceInterval: undefined,
+      recurrenceIntervalUnit: undefined,
+      recurrenceEnd: undefined,
+    };
+  }
+  const recurrenceEnd: RecurrenceEnd =
+    draft.recurrenceEndType === "on"
+      ? { type: "on", date: draft.recurrenceEndDate }
+      : draft.recurrenceEndType === "after"
+        ? { type: "after", count: draft.recurrenceEndCount }
+        : { type: "never" };
+  return {
+    recurrenceInterval:
+      draft.recurrence === "custom" ? draft.recurrenceInterval : undefined,
+    recurrenceIntervalUnit:
+      draft.recurrence === "custom" ? draft.recurrenceIntervalUnit : undefined,
+    recurrenceEnd,
+  };
+}
+
 type CreateMode = "custom-event" | "block-time" | null;
 
 interface OperationsCalendarNewEventMenuProps {
@@ -80,6 +149,7 @@ interface OperationsCalendarNewEventMenuProps {
   onOpenChange: (open: boolean) => void;
   seed: NewEventSeed;
   quickCreateNonce?: number;
+  quickCreateAnchor?: { x: number; y: number } | null;
   canCreateCustomEvent: boolean;
   canCreateBlockTime: boolean;
   canCreateBooking: boolean;
@@ -97,6 +167,7 @@ export function OperationsCalendarNewEventMenu({
   onOpenChange,
   seed,
   quickCreateNonce,
+  quickCreateAnchor,
   canCreateCustomEvent,
   canCreateBlockTime,
   canCreateBooking,
@@ -110,6 +181,7 @@ export function OperationsCalendarNewEventMenu({
 }: OperationsCalendarNewEventMenuProps) {
   const [mode, setMode] = useState<CreateMode>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
 
   const [customDraft, setCustomDraft] = useState<CustomEventDraft>({
     title: "",
@@ -126,6 +198,10 @@ export function OperationsCalendarNewEventMenu({
     location: "",
     visibility: "all-staff",
     selectedRoles: [],
+    color: EVENT_COLOR_SWATCHES[0],
+    reminder: "none",
+    reminderSmsStaff: false,
+    ...RECURRENCE_DRAFT_DEFAULTS,
   });
 
   const [blockDraft, setBlockDraft] = useState<BlockTimeDraft>({
@@ -137,6 +213,7 @@ export function OperationsCalendarNewEventMenu({
     affects: "facility",
     resource: "",
     staff: "",
+    ...RECURRENCE_DRAFT_DEFAULTS,
   });
 
   const staffOptionsWithEmpty = useMemo(() => {
@@ -150,6 +227,8 @@ export function OperationsCalendarNewEventMenu({
     if (!quickCreateNonce) return;
 
     if (canCreateCustomEvent) {
+      // Seed a fresh custom draft from the clicked slot, then show the
+      // lightweight quick-create popover (not the full modal).
       setCustomDraft((previous) => ({
         ...previous,
         title: "",
@@ -172,8 +251,8 @@ export function OperationsCalendarNewEventMenu({
         resource: "",
         staff: "",
       }));
-      setMode("custom-event");
-      setDialogOpen(true);
+      setDialogOpen(false);
+      setQuickOpen(true);
       onOpenChange(false);
       return;
     }
@@ -241,6 +320,14 @@ export function OperationsCalendarNewEventMenu({
       linkedCustomerName: customDraft.linkedCustomerName.trim() || undefined,
       linkedPetName: customDraft.linkedPetName.trim() || undefined,
       recurrence: customDraft.recurrence,
+      ...buildRecurrenceFields(customDraft),
+      color: customDraft.color || undefined,
+      reminder:
+        customDraft.reminder === "none" ? undefined : customDraft.reminder,
+      reminderSmsStaff:
+        customDraft.reminder === "none"
+          ? undefined
+          : customDraft.reminderSmsStaff,
       visibility: customDraft.visibility,
       visibleRoles:
         customDraft.visibility === "selected-roles"
@@ -250,6 +337,20 @@ export function OperationsCalendarNewEventMenu({
 
     setDialogOpen(false);
     setMode(null);
+  };
+
+  // Quick-create popover → save the minimal event straight away.
+  const saveQuickEvent = () => {
+    if (!customDraft.title.trim()) return;
+    createCustomEvent();
+    setQuickOpen(false);
+  };
+
+  // Quick-create popover → escalate to the full modal (keeps the typed name).
+  const openFullFromQuick = () => {
+    setQuickOpen(false);
+    setMode("custom-event");
+    setDialogOpen(true);
   };
 
   const createBlockTime = () => {
@@ -276,6 +377,7 @@ export function OperationsCalendarNewEventMenu({
           : "Operations",
       status: "Planned",
       recurrence: blockDraft.recurrence,
+      ...buildRecurrenceFields(blockDraft),
       affects: blockDraft.affects,
       affectedResource:
         blockDraft.affects === "resource" ? blockDraft.resource : undefined,
@@ -463,20 +565,26 @@ export function OperationsCalendarNewEventMenu({
                   placeholder="Pet (optional)"
                 />
 
-                <Input
-                  type="number"
-                  min={15}
-                  step={15}
-                  value={customDraft.durationMinutes}
-                  onChange={(event) =>
-                    setCustomDraft((previous) => ({
-                      ...previous,
-                      durationMinutes: Number(event.target.value),
-                    }))
-                  }
-                  placeholder="Duration (minutes)"
-                  disabled={customDraft.allDay}
-                />
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min={15}
+                    step={15}
+                    value={customDraft.durationMinutes}
+                    onChange={(event) =>
+                      setCustomDraft((previous) => ({
+                        ...previous,
+                        durationMinutes: Number(event.target.value),
+                      }))
+                    }
+                    placeholder="Duration"
+                    disabled={customDraft.allDay}
+                    className="pr-16"
+                  />
+                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-500">
+                    minutes
+                  </span>
+                </div>
 
                 <Textarea
                   value={customDraft.notes}
@@ -511,6 +619,81 @@ export function OperationsCalendarNewEventMenu({
                     <SelectItem value="custom">Custom interval</SelectItem>
                   </SelectContent>
                 </Select>
+
+                <RecurrenceExtras
+                  recurrence={customDraft.recurrence}
+                  interval={customDraft.recurrenceInterval}
+                  intervalUnit={customDraft.recurrenceIntervalUnit}
+                  endType={customDraft.recurrenceEndType}
+                  endDate={customDraft.recurrenceEndDate}
+                  endCount={customDraft.recurrenceEndCount}
+                  onPatch={(patch) =>
+                    setCustomDraft((previous) => ({ ...previous, ...patch }))
+                  }
+                />
+
+                {/* Colour picker — chosen colour drives the chip (Task 28) */}
+                <div className="space-y-1.5 md:col-span-2">
+                  <p className="text-xs font-medium text-slate-600">Colour</p>
+                  <div className="flex flex-wrap gap-2">
+                    {EVENT_COLOR_SWATCHES.map((swatch) => (
+                      <button
+                        key={swatch}
+                        type="button"
+                        aria-label={`Colour ${swatch}`}
+                        onClick={() =>
+                          setCustomDraft((previous) => ({
+                            ...previous,
+                            color: swatch,
+                          }))
+                        }
+                        className={cn(
+                          "size-6 rounded-full ring-offset-1 transition-transform hover:scale-110",
+                          customDraft.color === swatch &&
+                            "ring-2 ring-slate-900",
+                        )}
+                        style={{ backgroundColor: swatch }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Reminder — bell notification + optional staff SMS (Task 29) */}
+                <Select
+                  value={customDraft.reminder}
+                  onValueChange={(value) =>
+                    setCustomDraft((previous) => ({
+                      ...previous,
+                      reminder: value as EventReminder,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Reminder" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No reminder</SelectItem>
+                    <SelectItem value="15m">15 minutes before</SelectItem>
+                    <SelectItem value="30m">30 minutes before</SelectItem>
+                    <SelectItem value="1h">1 hour before</SelectItem>
+                    <SelectItem value="1d">1 day before</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {customDraft.reminder !== "none" && (
+                  <label className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-700">
+                    Also SMS assigned staff
+                    <Switch
+                      checked={customDraft.reminderSmsStaff}
+                      onCheckedChange={(checked) =>
+                        setCustomDraft((previous) => ({
+                          ...previous,
+                          reminderSmsStaff: checked,
+                        }))
+                      }
+                    />
+                  </label>
+                )}
 
                 <Input
                   value={customDraft.location}
@@ -663,6 +846,18 @@ export function OperationsCalendarNewEventMenu({
                   </SelectContent>
                 </Select>
 
+                <RecurrenceExtras
+                  recurrence={blockDraft.recurrence}
+                  interval={blockDraft.recurrenceInterval}
+                  intervalUnit={blockDraft.recurrenceIntervalUnit}
+                  endType={blockDraft.recurrenceEndType}
+                  endDate={blockDraft.recurrenceEndDate}
+                  endCount={blockDraft.recurrenceEndCount}
+                  onPatch={(patch) =>
+                    setBlockDraft((previous) => ({ ...previous, ...patch }))
+                  }
+                />
+
                 <TimePickerLux
                   value={blockDraft.startTime}
                   onValueChange={(next) =>
@@ -750,7 +945,196 @@ export function OperationsCalendarNewEventMenu({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Lightweight quick-create popover (Task 30 / Table 25) */}
+      <Popover open={quickOpen} onOpenChange={setQuickOpen}>
+        <PopoverAnchor asChild>
+          <div
+            aria-hidden
+            className="pointer-events-none fixed h-0 w-0"
+            style={{
+              left: quickCreateAnchor?.x ?? 0,
+              top: quickCreateAnchor?.y ?? 0,
+            }}
+          />
+        </PopoverAnchor>
+        <PopoverContent
+          align="start"
+          side="right"
+          sideOffset={10}
+          className="w-72 space-y-2.5"
+        >
+          <p className="text-xs font-semibold text-slate-700">
+            Quick add event
+          </p>
+          <Input
+            autoFocus
+            value={customDraft.title}
+            onChange={(event) =>
+              setCustomDraft((previous) => ({
+                ...previous,
+                title: event.target.value,
+              }))
+            }
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                saveQuickEvent();
+              }
+            }}
+            placeholder="Event name"
+          />
+          <p className="flex items-center gap-1.5 text-[11px] text-slate-500">
+            <CalendarClock className="size-3.5" />
+            {formatQuickWhen(customDraft.date, customDraft.startTime)}
+          </p>
+          <div className="flex items-center justify-between pt-0.5">
+            <button
+              type="button"
+              onClick={openFullFromQuick}
+              className="text-xs font-medium text-sky-600 hover:underline"
+            >
+              More options
+            </button>
+            <Button
+              size="sm"
+              onClick={saveQuickEvent}
+              disabled={!customDraft.title.trim()}
+            >
+              Save
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
     </>
+  );
+}
+
+function formatQuickWhen(date: string, time: string): string {
+  const parsed = new Date(`${date}T${time || "09:00"}:00`);
+  if (Number.isNaN(parsed.getTime())) return `${date} ${time}`;
+  const dateLabel = parsed.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const timeLabel = parsed.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return `${dateLabel} · ${timeLabel}`;
+}
+
+function RecurrenceExtras({
+  recurrence,
+  interval,
+  intervalUnit,
+  endType,
+  endDate,
+  endCount,
+  onPatch,
+}: {
+  recurrence: ManualFacilityEvent["recurrence"];
+  interval: number;
+  intervalUnit: RecurrenceIntervalUnit;
+  endType: RecurrenceEnd["type"];
+  endDate: string;
+  endCount: number;
+  onPatch: (patch: Partial<RecurrenceDraft>) => void;
+}) {
+  if (!recurrence || recurrence === "none") return null;
+
+  return (
+    <div className="space-y-3 rounded-md border border-slate-200 p-3 md:col-span-2">
+      {/* Custom interval — "Every [X] [Days/Weeks/Months]" (Task 26) */}
+      {recurrence === "custom" && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-slate-600">Every</span>
+          <Input
+            type="number"
+            min={1}
+            value={interval}
+            onChange={(event) =>
+              onPatch({
+                recurrenceInterval: Math.max(
+                  1,
+                  Number(event.target.value) || 1,
+                ),
+              })
+            }
+            className="w-20"
+          />
+          <Select
+            value={intervalUnit}
+            onValueChange={(value) =>
+              onPatch({
+                recurrenceIntervalUnit: value as RecurrenceIntervalUnit,
+              })
+            }
+          >
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="days">Days</SelectItem>
+              <SelectItem value="weeks">Weeks</SelectItem>
+              <SelectItem value="months">Months</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* End Repeat — Never / On date / After N occurrences (Task 27) */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-slate-700">End repeat</p>
+        <Select
+          value={endType}
+          onValueChange={(value) =>
+            onPatch({ recurrenceEndType: value as RecurrenceEnd["type"] })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="never">Never</SelectItem>
+            <SelectItem value="on">On date</SelectItem>
+            <SelectItem value="after">After N occurrences</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {endType === "on" && (
+          <DatePicker
+            value={endDate}
+            onValueChange={(next) => onPatch({ recurrenceEndDate: next })}
+            displayMode="dialog"
+            showQuickPresets={false}
+            popoverClassName="!w-[300px]"
+            calendarClassName="p-1 text-xs"
+          />
+        )}
+        {endType === "after" && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-600">After</span>
+            <Input
+              type="number"
+              min={1}
+              value={endCount}
+              onChange={(event) =>
+                onPatch({
+                  recurrenceEndCount: Math.max(
+                    1,
+                    Number(event.target.value) || 1,
+                  ),
+                })
+              }
+              className="w-20"
+            />
+            <span className="text-xs text-slate-600">occurrences</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

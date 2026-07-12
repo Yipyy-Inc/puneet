@@ -37,7 +37,16 @@ export function isManagerOrAdmin(role: string): boolean {
 }
 
 export function activeFiltersCount(filters: OperationsCalendarFilters): number {
-  return new Set(filters.modules).size;
+  // Count every active selection across the panel's filter dimensions
+  // (Service Type + Status/Staff/Location/Source (D1) + Add-Ons (B4)).
+  return (
+    new Set(filters.modules).size +
+    new Set(filters.statuses).size +
+    new Set(filters.staff).size +
+    new Set(filters.locations).size +
+    new Set(filters.addOns).size +
+    new Set(filters.bookingSources).size
+  );
 }
 
 export function canAccessSavedView(
