@@ -4,12 +4,17 @@
 
 export type FacilityStaffRole =
   | "owner"
+  | "admin"
   | "manager"
-  | "reception"
+  | "supervisor"
+  | "reception" // spec "Receptionist"
   | "groomer"
   | "trainer"
+  | "caretaker"
   | "daycare_attendant"
   | "boarding_attendant"
+  | "retail"
+  | "accountant"
   | "sanitation";
 
 export type ServiceModule =
@@ -29,25 +34,138 @@ export type AccessScope =
   | "none";
 
 export type PermissionKey =
-  // Always-on (every account)
+  // ── Personal / always-on (every account, non-removable) ──────────────────
   | "view_own_schedule"
   | "view_team_schedule"
   | "view_own_documents"
   | "view_onboarding"
   | "view_training_materials"
   | "manage_own_tasks"
-  // Clients & pets
+  | "view_own_profile"
+  | "edit_own_profile"
+  | "clock_in_out"
+  | "request_time_off"
+  | "request_shift_swap"
+  | "submit_availability"
+  | "view_own_performance"
+  | "view_own_writeups"
+  | "message_manager"
+  // ── Customer data ────────────────────────────────────────────────────────
+  | "view_client_list"
   | "view_clients"
+  | "view_client_contact_info"
+  | "view_client_address"
+  | "view_client_financial"
+  | "create_clients"
   | "edit_clients"
+  | "delete_clients"
+  | "merge_clients"
+  | "export_clients"
   | "view_pet_records"
   | "edit_pet_records"
   | "add_pet_notes"
-  // Bookings
+  | "view_pet_medical"
+  | "edit_pet_medical"
+  | "view_client_documents"
+  // ── Bookings & scheduling ────────────────────────────────────────────────
   | "view_bookings"
   | "create_bookings"
   | "edit_bookings"
   | "cancel_bookings"
-  // Operational logs
+  | "reschedule_bookings"
+  | "view_booking_financials"
+  | "view_all_calendars"
+  | "manage_booking_calendar"
+  | "manage_waitlist"
+  | "override_booking_capacity"
+  // ── Grooming ─────────────────────────────────────────────────────────────
+  | "view_grooming_queue"
+  | "grooming_view_own_calendar"
+  | "grooming_view_all_calendars"
+  | "perform_grooming"
+  | "add_grooming_notes"
+  | "grooming_upload_photos"
+  | "grooming_manage_styles"
+  | "grooming_edit_pricing"
+  // ── Boarding ─────────────────────────────────────────────────────────────
+  | "boarding_view_dashboard"
+  | "boarding_daily_care_log"
+  | "boarding_assign_kennels"
+  | "boarding_log_feeding"
+  | "boarding_log_medication"
+  | "boarding_manage_belongings"
+  | "boarding_send_updates"
+  // ── Daycare ──────────────────────────────────────────────────────────────
+  | "daycare_view_dashboard"
+  | "daycare_check_in_out"
+  | "daycare_log_activity"
+  | "daycare_manage_groups"
+  | "daycare_incident_report"
+  | "daycare_send_updates"
+  // ── Training ─────────────────────────────────────────────────────────────
+  | "view_training_queue"
+  | "training_view_own_calendar"
+  | "run_training_sessions"
+  | "add_training_notes"
+  | "training_manage_programs"
+  | "training_log_progress"
+  | "training_issue_certificates"
+  // ── Retail / POS ─────────────────────────────────────────────────────────
+  | "retail_pos_access"
+  | "retail_process_sale"
+  | "retail_process_return"
+  | "retail_apply_discount"
+  | "retail_manage_inventory"
+  | "retail_manage_products"
+  | "retail_manage_suppliers"
+  | "retail_view_reports"
+  // ── Staff scheduling ─────────────────────────────────────────────────────
+  | "scheduling_view_all"
+  | "scheduling_create_shifts"
+  | "scheduling_edit_shifts"
+  | "scheduling_publish"
+  | "scheduling_approve_time_off"
+  | "scheduling_approve_swaps"
+  | "scheduling_manage_availability"
+  | "scheduling_view_labor_cost"
+  // ── Calling & messages ───────────────────────────────────────────────────
+  | "calling_view"
+  | "calling_make_calls"
+  | "calling_view_recordings"
+  | "calling_view_voicemail"
+  | "calling_manage_routing"
+  | "messages_view_inbox"
+  | "messages_send"
+  | "messages_view_all_threads"
+  | "messages_manage_templates"
+  // ── Services / pricing ───────────────────────────────────────────────────
+  | "view_services"
+  | "manage_services"
+  | "manage_rates"
+  // ── Financial ────────────────────────────────────────────────────────────
+  | "take_payment"
+  | "financial_take_payment"
+  | "process_refund"
+  | "apply_discount"
+  | "financial_view_amounts"
+  | "financial_view_revenue"
+  | "view_revenue"
+  | "financial_reports"
+  | "view_financial_reports"
+  | "export_financials"
+  | "financial_manage_invoices"
+  | "financial_manage_gift_cards"
+  | "financial_manage_payouts"
+  | "financial_view_labor_cost"
+  // ── Marketing ────────────────────────────────────────────────────────────
+  | "marketing_view"
+  | "marketing_create_campaigns"
+  | "marketing_manage_automations"
+  | "marketing_view_analytics"
+  | "marketing_manage_reviews"
+  | "marketing_manage_loyalty"
+  | "marketing_manage_referrals"
+  // ── Operations & logs ────────────────────────────────────────────────────
   | "check_in_out"
   | "log_feedings"
   | "log_medications"
@@ -55,42 +173,46 @@ export type PermissionKey =
   | "log_play_sessions"
   | "log_incidents"
   | "log_cleaning"
-  // Grooming
-  | "view_grooming_queue"
-  | "perform_grooming"
-  | "add_grooming_notes"
-  // Training
-  | "view_training_queue"
-  | "run_training_sessions"
-  | "add_training_notes"
-  // Services / pricing
-  | "view_services"
-  | "manage_services"
-  | "manage_rates"
-  // Payments & finance
-  | "take_payment"
-  | "process_refund"
-  | "apply_discount"
-  | "view_financial_reports"
-  | "view_revenue"
-  | "export_financials"
-  // Staff & payroll
+  | "ops_incidents_view"
+  | "ops_incidents_manage"
+  | "ops_smart_insights"
+  | "ops_view_reports"
+  | "ops_manage_tasks"
+  | "ops_manage_checklists"
+  // ── Staff management ─────────────────────────────────────────────────────
   | "view_staff"
   | "view_staff_permissions"
   | "manage_staff"
   | "manage_roles"
   | "view_payroll"
   | "edit_payroll"
-  // Inventory & supplies
+  | "manage_onboarding"
+  | "manage_writeups"
+  | "view_staff_performance"
+  // ── Inventory & supplies ─────────────────────────────────────────────────
   | "view_inventory"
   | "manage_supplies"
-  // Comms & marketing
+  // ── Communications ───────────────────────────────────────────────────────
   | "communicate_clients"
   | "send_marketing"
-  // Facility
+  // ── Settings & administration ────────────────────────────────────────────
   | "manage_facility_settings"
   | "manage_locations"
-  | "manage_integrations";
+  | "manage_integrations"
+  | "settings_general"
+  | "settings_subscription"
+  | "settings_billing"
+  | "settings_manage_forms"
+  | "settings_manage_notifications"
+  | "settings_manage_taxes"
+  | "settings_audit_log"
+  | "settings_data_export"
+  // ── HQ / multi-location ──────────────────────────────────────────────────
+  | "hq_view"
+  | "hq_manage_locations"
+  | "hq_view_consolidated_reports"
+  | "hq_transfer_resources"
+  | "hq_manage_settings";
 
 export type NotificationEvent =
   | "appointment_created"
@@ -202,12 +324,26 @@ export const ROLE_META: Record<
     ring: "ring-amber-500/40",
     icon: "Crown",
   },
+  admin: {
+    label: "Admin",
+    tagline: "Full administrative access short of ownership",
+    accent: "bg-amber-500/10",
+    ring: "ring-amber-500/40",
+    icon: "ShieldCheck",
+  },
   manager: {
     label: "Manager",
     tagline: "Runs day-to-day ops, approvals, and team",
     accent: "bg-violet-500/10",
     ring: "ring-violet-500/40",
     icon: "ShieldCheck",
+  },
+  supervisor: {
+    label: "Supervisor",
+    tagline: "Shift lead — approves swaps and oversees the floor",
+    accent: "bg-purple-500/10",
+    ring: "ring-purple-500/40",
+    icon: "UserCog",
   },
   reception: {
     label: "Reception",
@@ -230,6 +366,13 @@ export const ROLE_META: Record<
     ring: "ring-emerald-500/40",
     icon: "Award",
   },
+  caretaker: {
+    label: "Caretaker",
+    tagline: "General animal care across boarding & daycare",
+    accent: "bg-cyan-500/10",
+    ring: "ring-cyan-500/40",
+    icon: "PawPrint",
+  },
   daycare_attendant: {
     label: "Daycare Attendant",
     tagline: "Check-ins, play, feedings during daycare",
@@ -243,6 +386,20 @@ export const ROLE_META: Record<
     accent: "bg-indigo-500/10",
     ring: "ring-indigo-500/40",
     icon: "Home",
+  },
+  retail: {
+    label: "Retail Associate",
+    tagline: "Point of sale, products, and stock",
+    accent: "bg-fuchsia-500/10",
+    ring: "ring-fuchsia-500/40",
+    icon: "ShoppingBag",
+  },
+  accountant: {
+    label: "Accountant",
+    tagline: "Financials, invoices, and reporting — no floor ops",
+    accent: "bg-lime-500/10",
+    ring: "ring-lime-500/40",
+    icon: "Calculator",
   },
   sanitation: {
     label: "Sanitation Specialist",
@@ -325,6 +482,7 @@ export const ACCESS_SCOPE_META: Record<
   },
 };
 
+// The "Personal" tab — every account gets these and they cannot be revoked.
 export const ALWAYS_ON_PERMISSIONS: PermissionKey[] = [
   "view_own_schedule",
   "view_team_schedule",
@@ -332,6 +490,15 @@ export const ALWAYS_ON_PERMISSIONS: PermissionKey[] = [
   "view_onboarding",
   "view_training_materials",
   "manage_own_tasks",
+  "view_own_profile",
+  "edit_own_profile",
+  "clock_in_out",
+  "request_time_off",
+  "request_shift_swap",
+  "submit_availability",
+  "view_own_performance",
+  "view_own_writeups",
+  "message_manager",
 ];
 
 export interface PermissionGroup {
@@ -344,8 +511,9 @@ export interface PermissionGroup {
 export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     id: "core",
-    label: "Core (always on)",
-    description: "Every account gets these — schedule, docs, tasks",
+    label: "Personal (always on)",
+    description:
+      "Every account gets these — schedule, docs, tasks, own account",
     permissions: [
       { key: "view_own_schedule", label: "View own schedule" },
       { key: "view_team_schedule", label: "View team schedule" },
@@ -353,43 +521,71 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: "view_onboarding", label: "View onboarding material" },
       { key: "view_training_materials", label: "View training material" },
       { key: "manage_own_tasks", label: "Manage own tasks" },
+      { key: "view_own_profile", label: "View own profile" },
+      { key: "edit_own_profile", label: "Edit own profile" },
+      { key: "clock_in_out", label: "Clock in / out" },
+      { key: "request_time_off", label: "Request time off" },
+      { key: "request_shift_swap", label: "Request a shift swap" },
+      { key: "submit_availability", label: "Submit availability" },
+      { key: "view_own_performance", label: "View own performance" },
+      { key: "view_own_writeups", label: "View own write-ups" },
+      { key: "message_manager", label: "Message manager" },
     ],
   },
   {
     id: "clients",
-    label: "Clients & pets",
-    description: "Who can look up and edit client & pet profiles",
+    label: "Customer data",
+    description: "Look up and edit client & pet profiles",
     permissions: [
-      { key: "view_clients", label: "View clients" },
+      { key: "view_client_list", label: "View client list" },
+      { key: "view_clients", label: "View client profiles" },
+      {
+        key: "view_client_contact_info",
+        label: "View contact info",
+        hint: "Phone & email",
+      },
+      {
+        key: "view_client_address",
+        label: "View home address",
+        hint: "Admin / Owner / Manager only",
+      },
+      {
+        key: "view_client_financial",
+        label: "View client financials",
+        hint: "Lifetime value & balances",
+      },
+      { key: "create_clients", label: "Create clients" },
       { key: "edit_clients", label: "Edit clients" },
+      { key: "delete_clients", label: "Delete clients" },
+      { key: "merge_clients", label: "Merge duplicate clients" },
+      { key: "export_clients", label: "Export client data" },
       { key: "view_pet_records", label: "View pet records" },
       { key: "edit_pet_records", label: "Edit pet records" },
       { key: "add_pet_notes", label: "Add pet notes" },
+      { key: "view_pet_medical", label: "View pet medical records" },
+      { key: "edit_pet_medical", label: "Edit pet medical records" },
+      { key: "view_client_documents", label: "View client documents" },
     ],
   },
   {
     id: "bookings",
-    label: "Bookings",
-    description: "Create, edit, and cancel bookings",
+    label: "Bookings & scheduling",
+    description: "Create, edit, cancel, and manage the calendar",
     permissions: [
       { key: "view_bookings", label: "View bookings" },
       { key: "create_bookings", label: "Create bookings" },
       { key: "edit_bookings", label: "Edit bookings" },
       { key: "cancel_bookings", label: "Cancel bookings" },
-    ],
-  },
-  {
-    id: "operations",
-    label: "Operational logs",
-    description: "Check-ins, feedings, meds, cleaning",
-    permissions: [
-      { key: "check_in_out", label: "Check in / out" },
-      { key: "log_feedings", label: "Log feedings" },
-      { key: "log_medications", label: "Log medications" },
-      { key: "log_potty_breaks", label: "Log potty breaks" },
-      { key: "log_play_sessions", label: "Log play sessions" },
-      { key: "log_incidents", label: "Log incidents" },
-      { key: "log_cleaning", label: "Log cleaning" },
+      { key: "reschedule_bookings", label: "Reschedule bookings" },
+      {
+        key: "view_booking_financials",
+        label: "View booking amounts",
+        hint: "Dollar amounts on bookings",
+      },
+      { key: "view_all_calendars", label: "View all calendars" },
+      { key: "manage_booking_calendar", label: "Manage booking calendar" },
+      { key: "manage_waitlist", label: "Manage waitlist" },
+      { key: "override_booking_capacity", label: "Override capacity limits" },
     ],
   },
   {
@@ -398,8 +594,46 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     description: "Gated to grooming-assigned staff",
     permissions: [
       { key: "view_grooming_queue", label: "View grooming queue" },
+      {
+        key: "grooming_view_own_calendar",
+        label: "View own grooming calendar",
+      },
+      {
+        key: "grooming_view_all_calendars",
+        label: "View all grooming calendars",
+      },
       { key: "perform_grooming", label: "Perform grooming" },
       { key: "add_grooming_notes", label: "Add grooming notes" },
+      { key: "grooming_upload_photos", label: "Upload grooming photos" },
+      { key: "grooming_manage_styles", label: "Manage grooming styles" },
+      { key: "grooming_edit_pricing", label: "Edit grooming pricing" },
+    ],
+  },
+  {
+    id: "boarding",
+    label: "Boarding",
+    description: "Gated to boarding staff",
+    permissions: [
+      { key: "boarding_view_dashboard", label: "View boarding dashboard" },
+      { key: "boarding_daily_care_log", label: "Boarding daily care log" },
+      { key: "boarding_assign_kennels", label: "Assign kennels" },
+      { key: "boarding_log_feeding", label: "Log boarding feeding" },
+      { key: "boarding_log_medication", label: "Log boarding medication" },
+      { key: "boarding_manage_belongings", label: "Manage pet belongings" },
+      { key: "boarding_send_updates", label: "Send boarding updates" },
+    ],
+  },
+  {
+    id: "daycare",
+    label: "Daycare",
+    description: "Gated to daycare staff",
+    permissions: [
+      { key: "daycare_view_dashboard", label: "View daycare dashboard" },
+      { key: "daycare_check_in_out", label: "Daycare check in / out" },
+      { key: "daycare_log_activity", label: "Log daycare activity" },
+      { key: "daycare_manage_groups", label: "Manage playgroups" },
+      { key: "daycare_incident_report", label: "File daycare incident report" },
+      { key: "daycare_send_updates", label: "Send daycare updates" },
     ],
   },
   {
@@ -408,8 +642,68 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     description: "Gated to trainers",
     permissions: [
       { key: "view_training_queue", label: "View training queue" },
+      {
+        key: "training_view_own_calendar",
+        label: "View own training calendar",
+      },
       { key: "run_training_sessions", label: "Run training sessions" },
       { key: "add_training_notes", label: "Add training notes" },
+      { key: "training_manage_programs", label: "Manage training programs" },
+      { key: "training_log_progress", label: "Log training progress" },
+      { key: "training_issue_certificates", label: "Issue certificates" },
+    ],
+  },
+  {
+    id: "retail",
+    label: "Retail / POS",
+    description: "Point of sale, products, and stock",
+    permissions: [
+      { key: "retail_pos_access", label: "Access point of sale" },
+      { key: "retail_process_sale", label: "Process a sale" },
+      { key: "retail_process_return", label: "Process a return" },
+      { key: "retail_apply_discount", label: "Apply retail discount" },
+      { key: "retail_manage_inventory", label: "Manage retail inventory" },
+      { key: "retail_manage_products", label: "Manage products" },
+      { key: "retail_manage_suppliers", label: "Manage suppliers" },
+      { key: "retail_view_reports", label: "View retail reports" },
+    ],
+  },
+  {
+    id: "staff_scheduling",
+    label: "Staff scheduling",
+    description: "Shifts, time off, and swaps for the team",
+    permissions: [
+      { key: "scheduling_view_all", label: "View all staff schedules" },
+      { key: "scheduling_create_shifts", label: "Create shifts" },
+      { key: "scheduling_edit_shifts", label: "Edit shifts" },
+      { key: "scheduling_publish", label: "Publish schedules" },
+      {
+        key: "scheduling_approve_time_off",
+        label: "Approve time-off requests",
+      },
+      { key: "scheduling_approve_swaps", label: "Approve shift swaps" },
+      { key: "scheduling_manage_availability", label: "Manage availability" },
+      {
+        key: "scheduling_view_labor_cost",
+        label: "View labor cost",
+        hint: "Scheduled hours × pay rate",
+      },
+    ],
+  },
+  {
+    id: "calling_messages",
+    label: "Calling & messages",
+    description: "Phone, voicemail, and client messaging",
+    permissions: [
+      { key: "calling_view", label: "View calling" },
+      { key: "calling_make_calls", label: "Make calls" },
+      { key: "calling_view_recordings", label: "View call recordings" },
+      { key: "calling_view_voicemail", label: "View voicemail" },
+      { key: "calling_manage_routing", label: "Manage call routing" },
+      { key: "messages_view_inbox", label: "View message inbox" },
+      { key: "messages_send", label: "Send messages" },
+      { key: "messages_view_all_threads", label: "View all message threads" },
+      { key: "messages_manage_templates", label: "Manage message templates" },
     ],
   },
   {
@@ -424,21 +718,70 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     id: "finance",
-    label: "Payments & finance",
-    description: "Refunds, discounts, financial reports",
+    label: "Financial",
+    description: "Payments, refunds, revenue, and invoices",
     permissions: [
       { key: "take_payment", label: "Take payment" },
+      { key: "financial_take_payment", label: "Take payment (POS/booking)" },
       { key: "process_refund", label: "Process refunds" },
       { key: "apply_discount", label: "Apply discounts" },
-      { key: "view_financial_reports", label: "View financial reports" },
-      { key: "view_revenue", label: "View revenue" },
+      {
+        key: "financial_view_amounts",
+        label: "View financial amounts",
+        hint: "Invoice totals & outstanding balances",
+      },
+      { key: "financial_view_revenue", label: "View revenue" },
+      { key: "view_revenue", label: "View revenue (legacy)" },
+      { key: "financial_reports", label: "View financial reports" },
+      {
+        key: "view_financial_reports",
+        label: "View financial reports (legacy)",
+      },
       { key: "export_financials", label: "Export financials" },
+      { key: "financial_manage_invoices", label: "Manage invoices" },
+      { key: "financial_manage_gift_cards", label: "Manage gift cards" },
+      { key: "financial_manage_payouts", label: "Manage payouts" },
+      { key: "financial_view_labor_cost", label: "View labor cost" },
+    ],
+  },
+  {
+    id: "marketing",
+    label: "Marketing",
+    description: "Campaigns, reviews, loyalty, and referrals",
+    permissions: [
+      { key: "marketing_view", label: "View marketing" },
+      { key: "marketing_create_campaigns", label: "Create campaigns" },
+      { key: "marketing_manage_automations", label: "Manage automations" },
+      { key: "marketing_view_analytics", label: "View campaign analytics" },
+      { key: "marketing_manage_reviews", label: "Manage reviews" },
+      { key: "marketing_manage_loyalty", label: "Manage loyalty program" },
+      { key: "marketing_manage_referrals", label: "Manage referrals" },
+    ],
+  },
+  {
+    id: "operations",
+    label: "Operations",
+    description: "Care logs, incidents, tasks, and insights",
+    permissions: [
+      { key: "check_in_out", label: "Check in / out" },
+      { key: "log_feedings", label: "Log feedings" },
+      { key: "log_medications", label: "Log medications" },
+      { key: "log_potty_breaks", label: "Log potty breaks" },
+      { key: "log_play_sessions", label: "Log play sessions" },
+      { key: "log_incidents", label: "Log incidents" },
+      { key: "log_cleaning", label: "Log cleaning" },
+      { key: "ops_incidents_view", label: "View incidents" },
+      { key: "ops_incidents_manage", label: "Manage incidents" },
+      { key: "ops_smart_insights", label: "View Smart Insights" },
+      { key: "ops_view_reports", label: "View operations reports" },
+      { key: "ops_manage_tasks", label: "Manage team tasks" },
+      { key: "ops_manage_checklists", label: "Manage checklists" },
     ],
   },
   {
     id: "staff",
-    label: "Staff & payroll",
-    description: "Role, schedule, and pay decisions",
+    label: "Staff management",
+    description: "Roles, payroll, onboarding, and write-ups",
     permissions: [
       { key: "view_staff", label: "View staff directory" },
       {
@@ -450,6 +793,13 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: "manage_roles", label: "Manage roles & permissions" },
       { key: "view_payroll", label: "View payroll" },
       { key: "edit_payroll", label: "Edit payroll" },
+      { key: "manage_onboarding", label: "Manage onboarding checklists" },
+      {
+        key: "manage_writeups",
+        label: "Manage write-ups",
+        hint: "Confidential — Manager+",
+      },
+      { key: "view_staff_performance", label: "View staff performance" },
     ],
   },
   {
@@ -464,7 +814,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     id: "comms",
     label: "Communications",
-    description: "Client messaging and marketing",
+    description: "Client messaging and marketing sends",
     permissions: [
       { key: "communicate_clients", label: "Message clients" },
       { key: "send_marketing", label: "Send marketing campaigns" },
@@ -472,12 +822,38 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     id: "facility",
-    label: "Facility settings",
+    label: "Settings & administration",
     description: "Global configuration — high risk",
     permissions: [
       { key: "manage_facility_settings", label: "Facility settings" },
       { key: "manage_locations", label: "Manage locations" },
       { key: "manage_integrations", label: "Manage integrations" },
+      { key: "settings_general", label: "General settings" },
+      { key: "settings_subscription", label: "Manage subscription" },
+      { key: "settings_billing", label: "Manage billing" },
+      { key: "settings_manage_forms", label: "Manage forms" },
+      {
+        key: "settings_manage_notifications",
+        label: "Manage notification settings",
+      },
+      { key: "settings_manage_taxes", label: "Manage taxes" },
+      { key: "settings_audit_log", label: "View audit log" },
+      { key: "settings_data_export", label: "Export facility data" },
+    ],
+  },
+  {
+    id: "hq",
+    label: "HQ & multi-location",
+    description: "Cross-location oversight and transfers",
+    permissions: [
+      { key: "hq_view", label: "View HQ" },
+      { key: "hq_manage_locations", label: "Manage HQ locations" },
+      {
+        key: "hq_view_consolidated_reports",
+        label: "View consolidated reports",
+      },
+      { key: "hq_transfer_resources", label: "Transfer resources" },
+      { key: "hq_manage_settings", label: "Manage HQ settings" },
     ],
   },
 ];
@@ -509,6 +885,16 @@ const CORE_PRESET: PresetEntry[] = ALWAYS_ON_PERMISSIONS.map(
   (p) => [p, "anytime"] as PresetEntry,
 );
 
+/** Every grantable (non-core) key — owner/admin get all of these. */
+const ALL_GRANTABLE_KEYS: PermissionKey[] = PERMISSION_GROUPS.filter(
+  (g) => g.id !== "core",
+).flatMap((g) => g.permissions.map((p) => p.key));
+
+/** Compose a preset: core (always-on) + the given keys at a single scope. */
+function preset(keys: PermissionKey[], scope: AccessScope): PresetEntry[] {
+  return [...CORE_PRESET, ...keys.map((k) => [k, scope] as PresetEntry)];
+}
+
 export const ROLE_PRESETS: Record<
   FacilityStaffRole,
   {
@@ -518,57 +904,26 @@ export const ROLE_PRESETS: Record<
   }
 > = {
   owner: {
-    permissions: [
-      ...CORE_PRESET,
-      ...(
-        [
-          "view_clients",
-          "edit_clients",
-          "view_pet_records",
-          "edit_pet_records",
-          "add_pet_notes",
-          "view_bookings",
-          "create_bookings",
-          "edit_bookings",
-          "cancel_bookings",
-          "check_in_out",
-          "log_feedings",
-          "log_medications",
-          "log_potty_breaks",
-          "log_play_sessions",
-          "log_incidents",
-          "log_cleaning",
-          "view_grooming_queue",
-          "perform_grooming",
-          "add_grooming_notes",
-          "view_training_queue",
-          "run_training_sessions",
-          "add_training_notes",
-          "view_services",
-          "manage_services",
-          "manage_rates",
-          "take_payment",
-          "process_refund",
-          "apply_discount",
-          "view_financial_reports",
-          "view_revenue",
-          "export_financials",
-          "view_staff",
-          "view_staff_permissions",
-          "manage_staff",
-          "manage_roles",
-          "view_payroll",
-          "edit_payroll",
-          "view_inventory",
-          "manage_supplies",
-          "communicate_clients",
-          "send_marketing",
-          "manage_facility_settings",
-          "manage_locations",
-          "manage_integrations",
-        ] as PermissionKey[]
-      ).map((p) => [p, "anytime"] as PresetEntry),
+    permissions: preset(ALL_GRANTABLE_KEYS, "anytime"),
+    services: [
+      "grooming",
+      "training",
+      "daycare",
+      "boarding",
+      "reception",
+      "retail",
+      "sanitation",
+      "transport",
     ],
+    defaultNotifications: {
+      new_booking_request: "at_working_business",
+      invoice_paid: "at_working_business",
+      review_submitted: "at_working_business",
+      appointment_canceled: "at_working_business",
+    },
+  },
+  admin: {
+    permissions: preset(ALL_GRANTABLE_KEYS, "anytime"),
     services: [
       "grooming",
       "training",
@@ -587,46 +942,143 @@ export const ROLE_PRESETS: Record<
     },
   },
   manager: {
-    permissions: [
-      ...CORE_PRESET,
-      ...(
-        [
-          "view_clients",
-          "edit_clients",
-          "view_pet_records",
-          "edit_pet_records",
-          "add_pet_notes",
-          "view_bookings",
-          "create_bookings",
-          "edit_bookings",
-          "cancel_bookings",
-          "check_in_out",
-          "log_feedings",
-          "log_medications",
-          "log_potty_breaks",
-          "log_play_sessions",
-          "log_incidents",
-          "log_cleaning",
-          "view_grooming_queue",
-          "view_training_queue",
-          "view_services",
-          "manage_services",
-          "take_payment",
-          "process_refund",
-          "apply_discount",
-          "view_financial_reports",
-          "view_revenue",
-          "view_staff",
-          "view_staff_permissions",
-          "manage_staff",
-          "view_payroll",
-          "view_inventory",
-          "manage_supplies",
-          "communicate_clients",
-          "send_marketing",
-        ] as PermissionKey[]
-      ).map((p) => [p, "anytime"] as PresetEntry),
-    ],
+    permissions: preset(
+      [
+        // Customer data
+        "view_client_list",
+        "view_clients",
+        "view_client_contact_info",
+        "view_client_address",
+        "view_client_financial",
+        "create_clients",
+        "edit_clients",
+        "merge_clients",
+        "export_clients",
+        "view_pet_records",
+        "edit_pet_records",
+        "add_pet_notes",
+        "view_pet_medical",
+        "edit_pet_medical",
+        "view_client_documents",
+        // Bookings
+        "view_bookings",
+        "create_bookings",
+        "edit_bookings",
+        "cancel_bookings",
+        "reschedule_bookings",
+        "view_booking_financials",
+        "view_all_calendars",
+        "manage_booking_calendar",
+        "manage_waitlist",
+        "override_booking_capacity",
+        // Grooming / boarding / daycare / training oversight
+        "view_grooming_queue",
+        "grooming_view_all_calendars",
+        "add_grooming_notes",
+        "grooming_upload_photos",
+        "grooming_manage_styles",
+        "boarding_view_dashboard",
+        "boarding_daily_care_log",
+        "boarding_assign_kennels",
+        "boarding_manage_belongings",
+        "boarding_send_updates",
+        "daycare_view_dashboard",
+        "daycare_manage_groups",
+        "daycare_incident_report",
+        "daycare_send_updates",
+        "view_training_queue",
+        "training_manage_programs",
+        // Retail
+        "retail_pos_access",
+        "retail_process_sale",
+        "retail_process_return",
+        "retail_apply_discount",
+        "retail_manage_inventory",
+        "retail_manage_products",
+        "retail_manage_suppliers",
+        "retail_view_reports",
+        // Staff scheduling
+        "scheduling_view_all",
+        "scheduling_create_shifts",
+        "scheduling_edit_shifts",
+        "scheduling_publish",
+        "scheduling_approve_time_off",
+        "scheduling_approve_swaps",
+        "scheduling_manage_availability",
+        "scheduling_view_labor_cost",
+        // Calling & messages
+        "calling_view",
+        "calling_make_calls",
+        "calling_view_recordings",
+        "calling_view_voicemail",
+        "calling_manage_routing",
+        "messages_view_inbox",
+        "messages_send",
+        "messages_view_all_threads",
+        "messages_manage_templates",
+        // Services & pricing
+        "view_services",
+        "manage_services",
+        "manage_rates",
+        // Financial
+        "take_payment",
+        "financial_take_payment",
+        "process_refund",
+        "apply_discount",
+        "financial_view_amounts",
+        "financial_view_revenue",
+        "view_revenue",
+        "financial_reports",
+        "view_financial_reports",
+        "export_financials",
+        "financial_manage_invoices",
+        "financial_manage_gift_cards",
+        "financial_view_labor_cost",
+        // Marketing
+        "marketing_view",
+        "marketing_create_campaigns",
+        "marketing_manage_automations",
+        "marketing_view_analytics",
+        "marketing_manage_reviews",
+        "marketing_manage_loyalty",
+        "marketing_manage_referrals",
+        // Operations
+        "check_in_out",
+        "log_feedings",
+        "log_medications",
+        "log_potty_breaks",
+        "log_play_sessions",
+        "log_incidents",
+        "log_cleaning",
+        "ops_incidents_view",
+        "ops_incidents_manage",
+        "ops_smart_insights",
+        "ops_view_reports",
+        "ops_manage_tasks",
+        "ops_manage_checklists",
+        // Staff management
+        "view_staff",
+        "view_staff_permissions",
+        "manage_staff",
+        "view_payroll",
+        "manage_onboarding",
+        "manage_writeups",
+        "view_staff_performance",
+        // Inventory / comms
+        "view_inventory",
+        "manage_supplies",
+        "communicate_clients",
+        "send_marketing",
+        // Settings (limited)
+        "settings_general",
+        "settings_manage_forms",
+        "settings_manage_notifications",
+        // HQ (read)
+        "hq_view",
+        "hq_view_consolidated_reports",
+      ],
+      "anytime",
+    ),
     services: [
       "grooming",
       "training",
@@ -642,28 +1094,136 @@ export const ROLE_PRESETS: Record<
       review_submitted: "at_working_business",
     },
   },
-  reception: {
-    permissions: [
-      ...CORE_PRESET,
-      ...(
-        [
-          "view_clients",
-          "edit_clients",
-          "view_pet_records",
-          "add_pet_notes",
-          "view_bookings",
-          "create_bookings",
-          "edit_bookings",
-          "cancel_bookings",
-          "check_in_out",
-          "view_services",
-          "take_payment",
-          "apply_discount",
-          "view_inventory",
-          "communicate_clients",
-        ] as PermissionKey[]
-      ).map((p) => [p, "operating_hours"] as PresetEntry),
+  supervisor: {
+    permissions: preset(
+      [
+        "view_client_list",
+        "view_clients",
+        "view_client_contact_info",
+        "view_pet_records",
+        "edit_pet_records",
+        "add_pet_notes",
+        "view_pet_medical",
+        "view_client_documents",
+        "view_bookings",
+        "create_bookings",
+        "edit_bookings",
+        "cancel_bookings",
+        "reschedule_bookings",
+        "view_all_calendars",
+        "manage_booking_calendar",
+        "manage_waitlist",
+        "view_grooming_queue",
+        "grooming_view_all_calendars",
+        "boarding_view_dashboard",
+        "boarding_daily_care_log",
+        "daycare_view_dashboard",
+        "daycare_check_in_out",
+        "daycare_log_activity",
+        "daycare_manage_groups",
+        "daycare_incident_report",
+        "view_training_queue",
+        "retail_pos_access",
+        "retail_process_sale",
+        "scheduling_view_all",
+        "scheduling_edit_shifts",
+        "scheduling_approve_time_off",
+        "scheduling_approve_swaps",
+        "scheduling_manage_availability",
+        "calling_view",
+        "calling_make_calls",
+        "messages_view_inbox",
+        "messages_send",
+        "take_payment",
+        "financial_take_payment",
+        "apply_discount",
+        "marketing_view",
+        "check_in_out",
+        "log_feedings",
+        "log_medications",
+        "log_potty_breaks",
+        "log_play_sessions",
+        "log_incidents",
+        "log_cleaning",
+        "ops_incidents_view",
+        "ops_incidents_manage",
+        "ops_view_reports",
+        "ops_manage_tasks",
+        "ops_manage_checklists",
+        "view_staff",
+        "view_staff_performance",
+        "view_inventory",
+        "manage_supplies",
+        "communicate_clients",
+      ],
+      "operating_hours",
+    ),
+    services: [
+      "grooming",
+      "training",
+      "daycare",
+      "boarding",
+      "reception",
+      "retail",
+      "sanitation",
     ],
+    defaultNotifications: {
+      new_booking_request: "at_working_business",
+      appointment_canceled: "at_working_business",
+      task_assigned: "related_to_them",
+    },
+  },
+  reception: {
+    permissions: preset(
+      [
+        "view_client_list",
+        "view_clients",
+        "view_client_contact_info",
+        "create_clients",
+        "edit_clients",
+        "view_pet_records",
+        "add_pet_notes",
+        "view_pet_medical",
+        "view_client_documents",
+        "view_bookings",
+        "create_bookings",
+        "edit_bookings",
+        "cancel_bookings",
+        "reschedule_bookings",
+        "view_booking_financials",
+        "view_all_calendars",
+        "manage_booking_calendar",
+        "manage_waitlist",
+        "view_grooming_queue",
+        "boarding_view_dashboard",
+        "daycare_view_dashboard",
+        "daycare_check_in_out",
+        "view_training_queue",
+        "retail_pos_access",
+        "retail_process_sale",
+        "retail_process_return",
+        "retail_apply_discount",
+        "calling_view",
+        "calling_make_calls",
+        "calling_view_voicemail",
+        "messages_view_inbox",
+        "messages_send",
+        "view_services",
+        "take_payment",
+        "financial_take_payment",
+        "apply_discount",
+        "financial_view_amounts",
+        "financial_manage_invoices",
+        "financial_manage_gift_cards",
+        "marketing_view",
+        "check_in_out",
+        "log_incidents",
+        "ops_incidents_view",
+        "view_inventory",
+        "communicate_clients",
+      ],
+      "operating_hours",
+    ),
     services: ["reception"],
     defaultNotifications: {
       new_booking_request: "at_working_business",
@@ -673,21 +1233,25 @@ export const ROLE_PRESETS: Record<
     },
   },
   groomer: {
-    permissions: [
-      ...CORE_PRESET,
-      ...(
-        [
-          "view_clients",
-          "view_pet_records",
-          "add_pet_notes",
-          "view_bookings",
-          "check_in_out",
-          "view_grooming_queue",
-          "perform_grooming",
-          "add_grooming_notes",
-        ] as PermissionKey[]
-      ).map((p) => [p, "assigned_shifts"] as PresetEntry),
-    ],
+    permissions: preset(
+      [
+        "view_clients",
+        "view_client_contact_info",
+        "view_pet_records",
+        "add_pet_notes",
+        "view_pet_medical",
+        "view_bookings",
+        "view_grooming_queue",
+        "grooming_view_own_calendar",
+        "perform_grooming",
+        "add_grooming_notes",
+        "grooming_upload_photos",
+        "check_in_out",
+        "messages_view_inbox",
+        "messages_send",
+      ],
+      "assigned_shifts",
+    ),
     services: ["grooming"],
     defaultNotifications: {
       appointment_created: "related_to_them",
@@ -696,21 +1260,26 @@ export const ROLE_PRESETS: Record<
     },
   },
   trainer: {
-    permissions: [
-      ...CORE_PRESET,
-      ...(
-        [
-          "view_clients",
-          "view_pet_records",
-          "add_pet_notes",
-          "view_bookings",
-          "check_in_out",
-          "view_training_queue",
-          "run_training_sessions",
-          "add_training_notes",
-        ] as PermissionKey[]
-      ).map((p) => [p, "assigned_shifts"] as PresetEntry),
-    ],
+    permissions: preset(
+      [
+        "view_clients",
+        "view_client_contact_info",
+        "view_pet_records",
+        "add_pet_notes",
+        "view_pet_medical",
+        "view_bookings",
+        "view_training_queue",
+        "training_view_own_calendar",
+        "run_training_sessions",
+        "add_training_notes",
+        "training_log_progress",
+        "training_issue_certificates",
+        "check_in_out",
+        "messages_view_inbox",
+        "messages_send",
+      ],
+      "assigned_shifts",
+    ),
     services: ["training"],
     defaultNotifications: {
       appointment_created: "related_to_them",
@@ -718,24 +1287,62 @@ export const ROLE_PRESETS: Record<
       task_assigned: "related_to_them",
     },
   },
+  caretaker: {
+    permissions: preset(
+      [
+        "view_pet_records",
+        "add_pet_notes",
+        "view_pet_medical",
+        "view_bookings",
+        "boarding_view_dashboard",
+        "boarding_daily_care_log",
+        "boarding_log_feeding",
+        "boarding_log_medication",
+        "boarding_manage_belongings",
+        "boarding_send_updates",
+        "daycare_view_dashboard",
+        "daycare_check_in_out",
+        "daycare_log_activity",
+        "daycare_incident_report",
+        "daycare_send_updates",
+        "check_in_out",
+        "log_feedings",
+        "log_medications",
+        "log_potty_breaks",
+        "log_play_sessions",
+        "log_incidents",
+        "log_cleaning",
+      ],
+      "anytime",
+    ),
+    services: ["daycare", "boarding"],
+    defaultNotifications: {
+      task_assigned: "related_to_them",
+      appointment_created: "at_working_business",
+    },
+  },
   daycare_attendant: {
-    permissions: [
-      ...CORE_PRESET,
-      ...(
-        [
-          "view_pet_records",
-          "add_pet_notes",
-          "view_bookings",
-          "check_in_out",
-          "log_feedings",
-          "log_medications",
-          "log_potty_breaks",
-          "log_play_sessions",
-          "log_incidents",
-          "log_cleaning",
-        ] as PermissionKey[]
-      ).map((p) => [p, "assigned_shifts"] as PresetEntry),
-    ],
+    permissions: preset(
+      [
+        "view_pet_records",
+        "add_pet_notes",
+        "view_bookings",
+        "daycare_view_dashboard",
+        "daycare_check_in_out",
+        "daycare_log_activity",
+        "daycare_manage_groups",
+        "daycare_incident_report",
+        "daycare_send_updates",
+        "check_in_out",
+        "log_feedings",
+        "log_medications",
+        "log_potty_breaks",
+        "log_play_sessions",
+        "log_incidents",
+        "log_cleaning",
+      ],
+      "assigned_shifts",
+    ),
     services: ["daycare"],
     defaultNotifications: {
       task_assigned: "related_to_them",
@@ -743,35 +1350,106 @@ export const ROLE_PRESETS: Record<
     },
   },
   boarding_attendant: {
-    permissions: [
-      ...CORE_PRESET,
-      ...(
-        [
-          "view_pet_records",
-          "add_pet_notes",
-          "view_bookings",
-          "check_in_out",
-          "log_feedings",
-          "log_medications",
-          "log_potty_breaks",
-          "log_incidents",
-          "log_cleaning",
-        ] as PermissionKey[]
-      ).map((p) => [p, "anytime"] as PresetEntry),
-    ],
+    permissions: preset(
+      [
+        "view_pet_records",
+        "add_pet_notes",
+        "view_pet_medical",
+        "view_bookings",
+        "boarding_view_dashboard",
+        "boarding_daily_care_log",
+        "boarding_assign_kennels",
+        "boarding_log_feeding",
+        "boarding_log_medication",
+        "boarding_manage_belongings",
+        "boarding_send_updates",
+        "check_in_out",
+        "log_feedings",
+        "log_medications",
+        "log_potty_breaks",
+        "log_incidents",
+        "log_cleaning",
+      ],
+      "anytime",
+    ),
     services: ["boarding"],
     defaultNotifications: {
       task_assigned: "related_to_them",
       appointment_created: "at_working_business",
     },
   },
+  retail: {
+    permissions: preset(
+      [
+        "view_client_list",
+        "view_clients",
+        "view_bookings",
+        "retail_pos_access",
+        "retail_process_sale",
+        "retail_process_return",
+        "retail_apply_discount",
+        "retail_manage_inventory",
+        "retail_manage_products",
+        "retail_manage_suppliers",
+        "retail_view_reports",
+        "take_payment",
+        "financial_take_payment",
+        "apply_discount",
+        "view_inventory",
+        "manage_supplies",
+        "messages_view_inbox",
+        "messages_send",
+      ],
+      "operating_hours",
+    ),
+    services: ["retail"],
+    defaultNotifications: {
+      task_assigned: "related_to_them",
+    },
+  },
+  accountant: {
+    permissions: preset(
+      [
+        "view_client_list",
+        "view_clients",
+        "view_client_financial",
+        "view_bookings",
+        "view_booking_financials",
+        "take_payment",
+        "financial_take_payment",
+        "process_refund",
+        "apply_discount",
+        "financial_view_amounts",
+        "financial_view_revenue",
+        "view_revenue",
+        "financial_reports",
+        "view_financial_reports",
+        "export_financials",
+        "financial_manage_invoices",
+        "financial_manage_gift_cards",
+        "financial_manage_payouts",
+        "financial_view_labor_cost",
+        "scheduling_view_labor_cost",
+        "view_payroll",
+        "retail_view_reports",
+        "marketing_view_analytics",
+        "settings_billing",
+        "settings_manage_taxes",
+        "settings_data_export",
+        "hq_view_consolidated_reports",
+      ],
+      "anytime",
+    ),
+    services: [],
+    defaultNotifications: {
+      invoice_paid: "at_working_business",
+    },
+  },
   sanitation: {
-    permissions: [
-      ...CORE_PRESET,
-      ...(
-        ["log_cleaning", "view_inventory", "manage_supplies"] as PermissionKey[]
-      ).map((p) => [p, "assigned_shifts"] as PresetEntry),
-    ],
+    permissions: preset(
+      ["log_cleaning", "check_in_out", "view_inventory", "manage_supplies"],
+      "assigned_shifts",
+    ),
     services: ["sanitation"],
     defaultNotifications: {
       task_assigned: "related_to_them",
@@ -885,4 +1563,35 @@ export function resolvePermission(
   };
   const widest = scopes.reduce((best, s) => (rank[s] > rank[best] ? s : best));
   return { granted: true, scope: widest };
+}
+
+/** Every permission key, derived from the grouped catalog (source of truth). */
+export const ALL_PERMISSION_KEYS: PermissionKey[] = PERMISSION_GROUPS.flatMap(
+  (g) => g.permissions.map((p) => p.key),
+);
+
+/**
+ * The effective permission map for one staff member: each key maps to its
+ * granted {@link AccessScope}, or `false` when the permission is not granted.
+ * This is the shape guards / sidebars / field-masking consume.
+ */
+export type EffectivePermissions = Record<PermissionKey, AccessScope | false>;
+
+/**
+ * Resolve EVERY permission for a staff member in one pass — the plural companion
+ * to {@link resolvePermission}. Loads the role preset (or custom-role) defaults
+ * and applies the staff's per-key overrides (GRANT / REVOKE / scope; a missing
+ * override key means "inherit the role default"). Pure — no React, no I/O — so
+ * both the provider and non-hook callers can use it.
+ */
+export function resolveAllPermissions(
+  staff: StaffProfile,
+  ctx: ResolvePermissionContext = {},
+): EffectivePermissions {
+  const out = {} as EffectivePermissions;
+  for (const key of ALL_PERMISSION_KEYS) {
+    const { granted, scope } = resolvePermission(staff, key, ctx);
+    out[key] = granted ? scope : false;
+  }
+  return out;
 }

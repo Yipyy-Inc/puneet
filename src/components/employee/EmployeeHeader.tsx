@@ -25,30 +25,43 @@ import { facilityStaff } from "@/data/facility-staff";
 import { setUserRole, clearEmployeeStaffId } from "@/lib/role-utils";
 import type { FacilityStaffRole } from "@/types/facility-staff";
 import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";
+import { ClockInOut } from "@/components/employee/ClockInOut";
 
 const ROLE_LABEL: Record<FacilityStaffRole, string> = {
   owner: "Owner / Admin",
+  admin: "Admin",
   manager: "Manager",
+  supervisor: "Supervisor",
   reception: "Reception",
   groomer: "Groomer",
   trainer: "Trainer",
+  caretaker: "Caretaker",
   daycare_attendant: "Daycare Attendant",
   boarding_attendant: "Boarding Staff",
+  retail: "Retail Associate",
+  accountant: "Accountant",
   sanitation: "Sanitation",
 };
 
 const ROLE_COLOR: Record<FacilityStaffRole, string> = {
   owner: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  admin: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
   manager:
     "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+  supervisor:
+    "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
   reception: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
   groomer: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
   trainer:
     "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+  caretaker: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300",
   daycare_attendant:
     "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
   boarding_attendant:
     "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+  retail:
+    "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950 dark:text-fuchsia-300",
+  accountant: "bg-lime-100 text-lime-700 dark:bg-lime-950 dark:text-lime-300",
   sanitation: "bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300",
 };
 
@@ -93,6 +106,9 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Core action — clock in / out (all viewports) */}
+        <ClockInOut staffId={staffId} />
+
         {/* Switch employee — quick access */}
         <Button
           variant="ghost"

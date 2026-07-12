@@ -40,6 +40,8 @@ import { TagList } from "@/components/shared/TagList";
 import { getTagsByType, getNoteCount } from "@/data/tags-notes";
 import { BookingDateRangeFilter } from "@/components/bookings/BookingDateRangeFilter";
 import { useLocationContext } from "@/hooks/use-location-context";
+import { usePermission } from "@/hooks/use-facility-rbac";
+import { useFieldMask } from "@/lib/staff/mask";
 import { deriveLocationId, getLocationById } from "@/data/locations";
 import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
 const calculateTaskCount = (booking: Booking): number => {
@@ -153,6 +155,10 @@ export default function FacilityBookingsPage() {
   const facility = facilities.find((f) => f.id === facilityId);
   const { setRequests: setBookingRequests } = useBookingRequestsStore();
   const { currentLocationId, isHQView, isMultiLocation } = useLocationContext();
+  // Table 21 masking: booking $ hidden from staff without view_booking_financials;
+  // the Revenue KPI is Manager+ (financial_view_revenue).
+  const { maskAmount } = useFieldMask();
+  const canSeeRevenue = usePermission("financial_view_revenue");
 
   const [bookings, setBookings] = useState<Booking[]>(
     initialBookings as Booking[],
@@ -483,7 +489,9 @@ export default function FacilityBookingsPage() {
       sortable: true,
       sortValue: (booking) => booking.totalCost,
       render: (booking) => (
-        <span className="price-value">${booking.totalCost.toFixed(2)}</span>
+        <span className="price-value">
+          {maskAmount(`$${booking.totalCost.toFixed(2)}`, "booking_financials")}
+        </span>
       ),
     },
   ];
@@ -706,13 +714,15 @@ export default function FacilityBookingsPage() {
           icon={Clock}
           tone="rose"
         />
-        <KpiTile
-          label="Revenue"
-          value={`$${totalRevenue.toLocaleString()}`}
-          hint={`$${pendingRevenue.toFixed(0)} pending`}
-          icon={TrendingUp}
-          tone="emerald"
-        />
+        {canSeeRevenue && (
+          <KpiTile
+            label="Revenue"
+            value={`$${totalRevenue.toLocaleString()}`}
+            hint={`$${pendingRevenue.toFixed(0)} pending`}
+            icon={TrendingUp}
+            tone="emerald"
+          />
+        )}
       </div>
 
       {/* Table View */}

@@ -38,6 +38,7 @@ import {
 } from "@/hooks/use-client-filters";
 import { getCustomerLanguageLabel } from "@/lib/language-settings";
 import { createCustomCustomerSegment } from "@/lib/marketing-segments";
+import { useFieldMask } from "@/lib/staff/mask";
 import {
   Download,
   User,
@@ -124,7 +125,12 @@ function buildFilterSummary(filters: ClientFilters): string {
   return summary.join("; ");
 }
 
-const exportClientsToCSV = (clientsData: typeof clients) => {
+// `canSeeContact` gates email/phone in the export (spec Table 21) — a viewer
+// without view_client_contact_info gets "Hidden" instead of the real values.
+const exportClientsToCSV = (
+  clientsData: typeof clients,
+  canSeeContact: boolean,
+) => {
   const headers = [
     "ID",
     "Name",
@@ -141,8 +147,8 @@ const exportClientsToCSV = (clientsData: typeof clients) => {
       [
         client.id,
         `"${client.name.replace(/"/g, '""')}"`,
-        client.email,
-        client.phone || "",
+        canSeeContact ? client.email : "Hidden",
+        canSeeContact ? client.phone || "" : "Hidden",
         client.preferredLanguage
           ? getCustomerLanguageLabel(client.preferredLanguage)
           : "",
@@ -180,6 +186,10 @@ export default function FacilityClientsPage() {
     activeCount,
     applyFilters,
   } = useClientFilters();
+
+  // Field masking (spec Table 21): hide contact info from staff without
+  // view_client_contact_info. TODO: also strip server-side when a backend exists.
+  const { maskContact, canSee } = useFieldMask();
 
   const [clientsData, setClientsData] = useState(clients);
   const [creatingClient, setCreatingClient] = useState(false);
@@ -312,7 +322,7 @@ export default function FacilityClientsPage() {
       render: (client) => (
         <span className="inline-flex items-center gap-1.5 text-sm text-slate-600">
           <MailIcon className="size-3.5 text-sky-500" />
-          {client.email}
+          {maskContact(client.email)}
         </span>
       ),
     },
@@ -324,7 +334,7 @@ export default function FacilityClientsPage() {
       render: (client) => (
         <span className="inline-flex items-center gap-1.5 text-sm text-slate-600">
           <Phone className="size-3.5 text-emerald-500" />
-          {client.phone || "—"}
+          {maskContact(client.phone)}
         </span>
       ),
     },
@@ -498,7 +508,9 @@ export default function FacilityClientsPage() {
               variant="outline"
               size="sm"
               className="bg-white/90"
-              onClick={() => exportClientsToCSV(locationClients)}
+              onClick={() =>
+                exportClientsToCSV(locationClients, canSee("client_contact"))
+              }
             >
               <Download className="mr-2 size-4" />
               Export
@@ -646,6 +658,7 @@ export default function FacilityClientsPage() {
                       onExport={() =>
                         exportClientsToCSV(
                           locationClients.filter((c) => selectedIds.has(c.id)),
+                          canSee("client_contact"),
                         )
                       }
                       onCreateEmailSegment={handleOpenCreateSegmentModal}

@@ -1,5 +1,5 @@
-import StaffSchedulePage from "@/app/staff/page";
+import { StaffScheduleView } from "./staff-schedule-view";
 
 export default function EmployeeSchedulePage() {
-  return <StaffSchedulePage />;
+  return <StaffScheduleView />;
 }

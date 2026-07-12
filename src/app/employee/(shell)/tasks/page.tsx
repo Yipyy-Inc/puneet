@@ -1,5 +1,5 @@
-import TasksPage from "@/app/facility/dashboard/tasks/page";
+import { MyTasksView } from "./my-tasks-view";
 
 export default function EmployeeTasksPage() {
-  return <TasksPage />;
+  return <MyTasksView />;
 }

@@ -6,6 +6,7 @@ import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Booking } from "@/types/booking";
 import type { Pet } from "@/types/pet";
+import { useFieldMask } from "@/lib/staff/mask";
 
 function formatDateShort(dateStr: string) {
   return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
@@ -61,6 +62,9 @@ interface BookingCardProps {
 }
 
 export function BookingCard({ booking, pet, clientId }: BookingCardProps) {
+  // Hide the booking dollar amount from staff without view_booking_financials
+  // (Table 21). TODO: also strip server-side when a backend exists.
+  const { maskAmount } = useFieldMask();
   const sc = statusConfig(booking.status);
   const nights = nightsBetween(booking.startDate, booking.endDate);
   const total = booking.invoice?.total ?? booking.totalCost;
@@ -110,7 +114,7 @@ export function BookingCard({ booking, pet, clientId }: BookingCardProps) {
       {/* Price + payment */}
       <div className="text-right">
         <p className="font-[tabular-nums] text-sm font-semibold">
-          ${total.toFixed(2)}
+          {maskAmount(`$${total.toFixed(2)}`, "booking_financials")}
         </p>
         {booking.paymentStatus === "paid" ? (
           <p className="text-xs text-emerald-600">Paid</p>

@@ -44,6 +44,7 @@ import {
   type StaffProfile,
 } from "@/types/facility-staff";
 import { facilityStaff, FACILITY_LOCATIONS } from "@/data/facility-staff";
+import { initOnboarding } from "@/data/staff-onboarding";
 import { StaffCard } from "./_components/staff-card";
 import { StaffProfileSheet } from "./_components/staff-profile-sheet";
 import { StaffFormDialog } from "./_components/staff-form-dialog";
@@ -169,6 +170,8 @@ export default function FacilityStaffPage() {
       if (idx === -1) {
         // New staff member
         logStaffCreated(subject, actor, next.primaryRole);
+        // Auto-populate a role-appropriate onboarding checklist (spec F1).
+        initOnboarding(next.id, next.primaryRole, next.employment.hireDate);
         return [next, ...list];
       }
       // Existing — diff and log

@@ -78,6 +78,7 @@ import { useLocationContext } from "@/hooks/use-location-context";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getPetAgeDisplay } from "@/lib/pet-utils";
+import { useFieldMask } from "@/lib/staff/mask";
 import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
 import { NotesButton } from "@/components/shared/NotesButton";
 import { TagsButton } from "@/components/shared/TagsButton";
@@ -143,6 +144,9 @@ export default function ClientBookingDetailPage({
 }) {
   const { id, bookingId: bookingIdStr } = use(params);
   const { role } = useFacilityRole();
+  // Hide the booking dollar amount from staff without view_booking_financials
+  // (Table 21). TODO: also strip server-side when a backend exists.
+  const { maskAmount } = useFieldMask();
   const clientId = parseInt(id, 10);
   const bookingId = parseInt(bookingIdStr, 10);
 
@@ -729,7 +733,10 @@ export default function ClientBookingDetailPage({
             </div>
             <div className="text-right">
               <p className="font-[tabular-nums] text-2xl font-bold">
-                ${(booking.invoice?.total ?? booking.totalCost).toFixed(2)}
+                {maskAmount(
+                  `$${(booking.invoice?.total ?? booking.totalCost).toFixed(2)}`,
+                  "booking_financials",
+                )}
               </p>
               <StatusBadge type="status" value={booking.paymentStatus} />
             </div>

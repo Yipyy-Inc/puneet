@@ -38,12 +38,26 @@ import {
   Award,
 } from "lucide-react";
 
-import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
+import {
+  GenericSidebar,
+  MenuItem,
+  MenuSection,
+} from "@/components/ui/generic-sidebar";
 import { facilities } from "@/data/facilities";
 import { LocationContextSelector } from "@/components/hq/LocationContextSelector";
+import { useEffectivePermissions } from "@/hooks/use-facility-rbac";
+import type { PermissionKey } from "@/types/facility-staff";
+
+/** A nav item plus the minimum permission (Table 18) needed to see it. */
+type GatedItem = MenuItem & { require?: PermissionKey };
+type GatedSection = { label?: string; items: GatedItem[] };
 
 export function FacilitySidebar() {
   const isMounted = useHydrated();
+
+  // The acting user's effective permissions (F0.2). Owner/Admin resolve to the
+  // full set, so every section passes; lower roles see only what they hold.
+  const permissions = useEffectivePermissions();
 
   // Static facility ID for now (would come from user token in production).
   const facilityId = 11;
@@ -55,9 +69,10 @@ export function FacilitySidebar() {
     refetchOnWindowFocus: true,
   });
 
-  // Show all menu items since permission system is removed
+  // Gate every section/item through the resolver — the sidebar makes no
+  // independent permission decisions. Items with no `require` are always shown.
   const filteredMenuSections = useMemo((): MenuSection[] => {
-    const allMenuSections: MenuSection[] = [
+    const allMenuSections: GatedSection[] = [
       {
         items: [
           {
@@ -76,12 +91,14 @@ export function FacilitySidebar() {
             url: "/facility/dashboard/calendar",
             icon: Calendar,
             disabled: false,
+            require: "view_bookings",
           },
           {
             title: "Occupancy Calendar",
             url: "/facility/dashboard/kennel-view",
             icon: Grid3X3,
             disabled: false,
+            require: "view_bookings",
           },
         ],
       },
@@ -93,12 +110,14 @@ export function FacilitySidebar() {
             url: "/facility/dashboard/calling",
             icon: Phone,
             disabled: false,
+            require: "calling_view",
           },
           {
             title: "Inbox",
             url: "/facility/dashboard/messaging",
             icon: MessageSquare,
             disabled: false,
+            require: "messages_view_inbox",
           },
         ],
       },
@@ -109,6 +128,7 @@ export function FacilitySidebar() {
             url: "/facility/dashboard/services/grooming",
             icon: Scissors,
             disabled: false,
+            require: "view_grooming_queue",
           },
         ],
       },
@@ -119,6 +139,7 @@ export function FacilitySidebar() {
             url: "/facility/dashboard/services/training",
             icon: GraduationCap,
             disabled: false,
+            require: "view_training_queue",
           },
         ],
       },
@@ -129,6 +150,7 @@ export function FacilitySidebar() {
             url: "/facility/dashboard/services/retail",
             icon: ShoppingCart,
             disabled: false,
+            require: "retail_pos_access",
           },
         ],
       },
@@ -140,6 +162,7 @@ export function FacilitySidebar() {
             url: "/facility/dashboard/automations",
             icon: Zap,
             disabled: false,
+            require: "marketing_manage_automations",
           },
           {
             title: "Smart Insights",
@@ -147,6 +170,7 @@ export function FacilitySidebar() {
             icon: Lightbulb,
             disabled: false,
             count: highPriorityCount > 0 ? highPriorityCount : undefined,
+            require: "ops_smart_insights",
           },
         ],
       },
@@ -158,6 +182,7 @@ export function FacilitySidebar() {
             icon: Users,
             disabled: false,
             count: 3,
+            require: "view_client_list",
           },
         ],
       },
@@ -168,6 +193,7 @@ export function FacilitySidebar() {
             url: "/facility/dashboard/services/scheduling",
             icon: Clock,
             disabled: false,
+            require: "scheduling_view_all",
           },
         ],
       },
@@ -179,6 +205,7 @@ export function FacilitySidebar() {
             url: "/facility/dashboard/daily-care",
             icon: HeartHandshake,
             disabled: false,
+            require: "boarding_daily_care_log",
           },
           {
             title: "Bookings",
@@ -186,12 +213,14 @@ export function FacilitySidebar() {
             icon: Calendar,
             disabled: false,
             count: 8,
+            require: "view_bookings",
           },
           {
             title: "Estimates",
             url: "/facility/dashboard/estimates",
             icon: FileText,
             disabled: false,
+            require: "view_bookings",
           },
           {
             title: "Tasks",
@@ -199,42 +228,49 @@ export function FacilitySidebar() {
             icon: ClipboardList,
             disabled: false,
             count: 2,
+            require: "ops_manage_tasks",
           },
           {
             title: "Booking Requests",
             url: "/facility/dashboard/online-booking",
             icon: CalendarClock,
             disabled: false,
+            require: "view_bookings",
           },
           {
             title: "Evaluations",
             url: "/facility/dashboard/evaluations",
             icon: ClipboardCheck,
             disabled: false,
+            require: "view_bookings",
           },
           {
             title: "Staff",
             url: "/facility/dashboard/staff",
             icon: UserCheck,
             disabled: false,
+            require: "view_staff",
           },
           {
             title: "Operational Inventory",
             url: "/facility/dashboard/inventory",
             icon: Package,
             disabled: false,
+            require: "view_inventory",
           },
           {
             title: "Memberships",
             url: "/facility/services/memberships",
             icon: Tags,
             disabled: false,
+            require: "view_services",
           },
           {
             title: "Live Pet Cams",
             url: "/facility/dashboard/petcams",
             icon: Camera,
             disabled: false,
+            require: "view_bookings",
           },
         ],
       },
@@ -246,18 +282,21 @@ export function FacilitySidebar() {
             url: "/facility/dashboard/billing",
             icon: DollarSign,
             disabled: false,
+            require: "financial_take_payment",
           },
           {
             title: "Subscription & Billing",
             url: "/facility/settings/billing",
             icon: CreditCard,
             disabled: false,
+            require: "settings_billing",
           },
           {
             title: "Gift Cards",
             url: "/facility/dashboard/gift-cards",
             icon: Gift,
             disabled: false,
+            require: "financial_manage_gift_cards",
           },
         ],
       },
@@ -269,6 +308,7 @@ export function FacilitySidebar() {
             url: "/facility/dashboard/reports",
             icon: BarChart3,
             disabled: false,
+            require: "financial_reports",
           },
         ],
       },
@@ -280,24 +320,28 @@ export function FacilitySidebar() {
             url: "/facility/dashboard/marketing",
             icon: Megaphone,
             disabled: false,
+            require: "marketing_view",
           },
           {
             title: "Loyalty Program",
             url: "/facility/dashboard/loyalty",
             icon: Award,
             disabled: false,
+            require: "marketing_manage_loyalty",
           },
           {
             title: "Loyalty Reports",
             url: "/facility/dashboard/marketing/loyalty-reports",
             icon: BarChart3,
             disabled: false,
+            require: "marketing_view_analytics",
           },
           {
             title: "Reputation Booster",
             url: "/facility/dashboard/marketing/reputation-booster",
             icon: ShieldCheck,
             disabled: false,
+            require: "marketing_manage_reviews",
           },
         ],
       },
@@ -310,18 +354,21 @@ export function FacilitySidebar() {
             icon: AlertTriangle,
             disabled: false,
             count: 2,
+            require: "ops_incidents_view",
           },
           {
             title: "Digital Waivers",
             url: "/facility/dashboard/waivers",
             icon: FileText,
             disabled: false,
+            require: "settings_manage_forms",
           },
           {
             title: "Intake Forms",
             url: "/facility/dashboard/forms",
             icon: ClipboardList,
             disabled: false,
+            require: "settings_manage_forms",
           },
         ],
       },
@@ -334,14 +381,21 @@ export function FacilitySidebar() {
             url: "/facility/dashboard/settings",
             icon: Settings,
             disabled: false,
+            require: "settings_general",
           },
         ],
       },
     ];
 
-    // Since permission system is removed, always show all items
-    return allMenuSections;
-  }, [highPriorityCount]);
+    // Filter through the resolver: keep an item when it has no `require` or the
+    // acting user holds it; drop sections left with no visible items.
+    const isAllowed = (item: GatedItem) =>
+      item.require == null || permissions[item.require] !== false;
+
+    return allMenuSections
+      .map(({ label, items }) => ({ label, items: items.filter(isAllowed) }))
+      .filter((section) => section.items.length > 0);
+  }, [highPriorityCount, permissions]);
 
   const handleLogout = () => {
     // TODO: Implement logout logic

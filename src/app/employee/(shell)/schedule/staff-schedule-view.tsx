@@ -1,0 +1,1496 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  FileText,
+  CalendarDays,
+  ArrowRightLeft,
+  CheckCircle2,
+  AlertCircle,
+  Info,
+  ChevronLeft,
+  ChevronRight,
+  List,
+  Grid3x3,
+  Calendar as CalendarIcon,
+} from "lucide-react";
+import { schedules, type Schedule } from "@/data/schedules";
+import {
+  timeOffRequests,
+  defaultTimeOffReasons,
+  shiftSwapRequests,
+  type ShiftSwapRequest,
+  shiftTasks,
+  type ShiftTask,
+} from "@/data/staff-availability";
+import { getCurrentUserId } from "@/lib/role-utils";
+import { users } from "@/data/users";
+
+// Schedule update acknowledgment interface
+interface ScheduleUpdate {
+  id: string;
+  publishedAt: string;
+  weekStart: string;
+  weekEnd: string;
+  acknowledgedBy: string[];
+  facility: string;
+}
+
+// Mock schedule updates (in production, this would come from backend)
+const mockScheduleUpdates: ScheduleUpdate[] = [
+  {
+    id: "update-1",
+    publishedAt: new Date().toISOString(),
+    weekStart: "2025-11-17",
+    weekEnd: "2025-11-23",
+    acknowledgedBy: [],
+    facility: "Paws & Play Daycare",
+  },
+];
+
+// Status pill for a time-off / swap request (Pending / Approved / Declined …).
+function requestStatusBadge(status: string): {
+  label: string;
+  className: string;
+} {
+  switch (status) {
+    case "approved":
+      return {
+        label: "Approved",
+        className:
+          "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300",
+      };
+    case "denied":
+      return {
+        label: "Declined",
+        className:
+          "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300",
+      };
+    case "changes_requested":
+      return {
+        label: "Changes requested",
+        className:
+          "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300",
+      };
+    case "cancelled":
+      return {
+        label: "Cancelled",
+        className:
+          "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300",
+      };
+    case "pending":
+    default:
+      return {
+        label: "Pending",
+        className:
+          "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300",
+      };
+  }
+}
+
+export function StaffScheduleView() {
+  const [userId] = useState<string | null>(() => {
+    const currentUserId = getCurrentUserId();
+    if (currentUserId) return currentUserId;
+    const defaultStaff = users.find((u) => u.role === "Staff");
+    return defaultStaff?.id.toString() || "4";
+  });
+  const [viewMode, setViewMode] = useState<"week" | "list" | "day">("week");
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+    const today = new Date();
+    const day = today.getDay();
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+    return new Date(today.setDate(diff));
+  });
+  const [_selectedDate, setSelectedDate] = useState(
+    () => new Date().toISOString().split("T")[0],
+  );
+  const [selectedShift, setSelectedShift] = useState<Schedule | null>(null);
+  const [isShiftDetailModalOpen, setIsShiftDetailModalOpen] = useState(false);
+  const [isTimeOffModalOpen, setIsTimeOffModalOpen] = useState(false);
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
+  const [isSickCallModalOpen, setIsSickCallModalOpen] = useState(false);
+  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const [isSwapResponseModalOpen, setIsSwapResponseModalOpen] = useState(false);
+  const [selectedSwapRequest, setSelectedSwapRequest] =
+    useState<ShiftSwapRequest | null>(null);
+  const [acknowledgedUpdateIds, setAcknowledgedUpdateIds] = useState<
+    Set<string>
+  >(new Set());
+
+  // Time off request state
+  const [timeOffData, setTimeOffData] = useState({
+    type: "",
+    startDate: "",
+    endDate: "",
+    reason: "",
+  });
+
+  // Swap request state
+  const [swapData, setSwapData] = useState({
+    shiftId: "",
+    swapType: "specific" as "specific" | "anyone",
+    targetStaffId: "",
+    reason: "",
+  });
+
+  // Sick call state
+  const [sickCallData, setSickCallData] = useState({
+    shiftId: "",
+    reason: "",
+  });
+
+  // Message state
+  const [messageData, setMessageData] = useState({
+    subject: "",
+    message: "",
+  });
+
+  // Get staff member info
+  const staffMember = useMemo(() => {
+    if (!userId) return null;
+    return (
+      users.find((u) => u.id.toString() === userId || u.email === userId) ||
+      null
+    );
+  }, [userId]);
+
+  // Get schedules for this staff member
+  const mySchedules = useMemo(() => {
+    if (!userId) return [];
+    const staffId = parseInt(userId);
+    const today = new Date().toISOString().split("T")[0];
+
+    return schedules
+      .filter((s) => s.staffId === staffId && s.date >= today)
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return a.startTime.localeCompare(b.startTime);
+      });
+  }, [userId]);
+
+  // Get pending schedule updates
+  const pendingUpdates = useMemo(() => {
+    if (!staffMember) return [];
+    return mockScheduleUpdates.filter(
+      (update) =>
+        !update.acknowledgedBy.includes(staffMember.id.toString()) &&
+        !acknowledgedUpdateIds.has(update.id),
+    );
+  }, [staffMember, acknowledgedUpdateIds]);
+
+  // Get time off reasons
+  const timeOffReasons = useMemo(() => {
+    return defaultTimeOffReasons.filter((r) => r.isActive);
+  }, []);
+
+  // Get my pending time off requests
+  const myTimeOffRequests = useMemo(() => {
+    if (!userId) return [];
+    const staffId = parseInt(userId);
+    return timeOffRequests.filter((r) => r.staffId === staffId);
+  }, [userId]);
+
+  // Get my pending swap requests
+  const mySwapRequests = useMemo(() => {
+    if (!userId) return [];
+    const staffId = parseInt(userId);
+    return shiftSwapRequests.filter((r) => r.requestingStaffId === staffId);
+  }, [userId]);
+
+  // Get swap requests I can respond to (targeted at me or open to anyone)
+  const availableSwapRequests = useMemo(() => {
+    if (!userId) return [];
+    const staffId = parseInt(userId);
+    return shiftSwapRequests.filter(
+      (r) =>
+        r.status === "pending" &&
+        // Open to anyone (no targetStaffId) OR specifically targeted at me
+        (!r.targetStaffId || r.targetStaffId === staffId) &&
+        r.requestingStaffId !== staffId,
+    );
+  }, [userId]);
+
+  // Get tasks for a specific shift
+  const getShiftTasks = (shift: Schedule): ShiftTask[] => {
+    return shiftTasks.filter(
+      (t) =>
+        t.shiftId === shift.id ||
+        (t.scheduleDate === shift.date &&
+          t.shiftStartTime === shift.startTime &&
+          t.shiftEndTime === shift.endTime),
+    );
+  };
+
+  // Get tasks assigned to me for a shift
+  const getMyShiftTasks = (shift: Schedule): ShiftTask[] => {
+    if (!userId) return [];
+    const staffId = parseInt(userId);
+    return getShiftTasks(shift).filter(
+      (t) => t.assignedToStaffId === staffId || t.assignedToStaffId === null,
+    );
+  };
+
+  // Week view helpers
+  const weekDays = useMemo(() => {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(currentWeekStart);
+      date.setDate(currentWeekStart.getDate() + i);
+      days.push(date);
+    }
+    return days;
+  }, [currentWeekStart]);
+
+  const getSchedulesForDate = (date: Date): Schedule[] => {
+    const dateStr = date.toISOString().split("T")[0];
+    return mySchedules.filter((s) => s.date === dateStr);
+  };
+
+  const handlePreviousWeek = () => {
+    const newDate = new Date(currentWeekStart);
+    newDate.setDate(currentWeekStart.getDate() - 7);
+    setCurrentWeekStart(newDate);
+  };
+
+  const handleNextWeek = () => {
+    const newDate = new Date(currentWeekStart);
+    newDate.setDate(currentWeekStart.getDate() + 7);
+    setCurrentWeekStart(newDate);
+  };
+
+  const handleToday = () => {
+    const today = new Date();
+    const day = today.getDay();
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+    setCurrentWeekStart(new Date(today.setDate(diff)));
+    setSelectedDate(today.toISOString().split("T")[0]);
+  };
+
+  // Handle shift detail view
+  const handleViewShift = (shift: Schedule) => {
+    setSelectedShift(shift);
+    setIsShiftDetailModalOpen(true);
+  };
+
+  // Handle time off request
+  const handleTimeOffSubmit = () => {
+    if (!timeOffData.type || !timeOffData.startDate || !timeOffData.endDate) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    // In production, this would make an API call
+    toast.success("Time off request submitted successfully");
+    setIsTimeOffModalOpen(false);
+    setTimeOffData({ type: "", startDate: "", endDate: "", reason: "" });
+  };
+
+  // Handle swap request
+  const handleSwapSubmit = () => {
+    if (!swapData.shiftId || !swapData.reason) {
+      toast.error("Please select a shift and provide a reason");
+      return;
+    }
+
+    if (swapData.swapType === "specific" && !swapData.targetStaffId) {
+      toast.error("Please select a coworker to swap with");
+      return;
+    }
+
+    // In production, this would make an API call
+    toast.success("Shift swap request submitted successfully");
+    setIsSwapModalOpen(false);
+    setSwapData({
+      shiftId: "",
+      swapType: "specific",
+      targetStaffId: "",
+      reason: "",
+    });
+  };
+
+  // Handle sick call
+  const handleSickCallSubmit = () => {
+    if (!sickCallData.shiftId || !sickCallData.reason) {
+      toast.error("Please select a shift and provide a reason");
+      return;
+    }
+
+    // In production, this would make an API call
+    toast.success("Sick call reported. Managers have been notified.");
+    setIsSickCallModalOpen(false);
+    setSickCallData({ shiftId: "", reason: "" });
+  };
+
+  // Handle message to manager
+  const handleMessageSubmit = () => {
+    if (!messageData.subject || !messageData.message) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    // In production, this would make an API call
+    toast.success("Message sent to manager");
+    setIsMessageModalOpen(false);
+    setMessageData({ subject: "", message: "" });
+  };
+
+  // Handle swap response
+  const handleSwapResponse = (accept: boolean) => {
+    if (!selectedSwapRequest) return;
+
+    // In production, this would make an API call
+    toast.success(accept ? "Swap request accepted" : "Swap request declined");
+    setIsSwapResponseModalOpen(false);
+    setSelectedSwapRequest(null);
+  };
+
+  // Handle schedule update acknowledgment
+  const handleAcknowledgeUpdate = (updateId: string) => {
+    if (!staffMember) return;
+
+    // In production, this would make an API call
+    setAcknowledgedUpdateIds((prev) => new Set([...prev, updateId]));
+    toast.success("Schedule update acknowledged");
+  };
+
+  // Format date for display
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const formatDateShort = (date: Date) => {
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  // Get status badge color
+  const getStatusBadge = (status: Schedule["status"]) => {
+    const variants: Record<
+      Schedule["status"],
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
+      scheduled: "default",
+      confirmed: "secondary",
+      completed: "outline",
+      absent: "destructive",
+      sick: "destructive",
+    };
+    return variants[status] || "outline";
+  };
+
+  // Get today's shifts
+  const todayShifts = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+    return mySchedules.filter((s) => s.date === today);
+  }, [mySchedules]);
+
+  if (!staffMember) {
+    return (
+      <div className="p-4 sm:p-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <AlertCircle className="mx-auto mb-4 size-12 text-yellow-500" />
+              <h2 className="mb-2 text-xl font-semibold">
+                No Staff Member Found
+              </h2>
+              <p className="text-muted-foreground">
+                Please log in to view your schedule.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 p-3 sm:p-4">
+      {/* Minimal Header - Mobile First */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold sm:text-2xl">My Schedule</h1>
+          <p className="text-muted-foreground text-sm">{staffMember.name}</p>
+        </div>
+        {/* Mobile: Single menu button, Desktop: Essential actions only */}
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setIsTimeOffModalOpen(true)}
+            variant="outline"
+            size="sm"
+            className="hidden sm:flex"
+          >
+            <CalendarDays className="size-4 sm:mr-2" />
+            <span className="hidden sm:inline">Time Off</span>
+          </Button>
+          <Button
+            onClick={() => setIsSwapModalOpen(true)}
+            variant="outline"
+            size="sm"
+            className="hidden sm:flex"
+          >
+            <ArrowRightLeft className="size-4 sm:mr-2" />
+            <span className="hidden sm:inline">Swap</span>
+          </Button>
+          {/* Mobile menu button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="sm:hidden"
+            onClick={() => {
+              // Simple dropdown would go here - for now just show time off
+              setIsTimeOffModalOpen(true);
+            }}
+          >
+            <CalendarDays className="size-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Schedule Updates Notification */}
+      {pendingUpdates.length > 0 && (
+        <Card className="border-blue-200 bg-blue-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Info className="size-5 text-blue-600" />
+              New Schedule Updates
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {pendingUpdates.map((update) => (
+              <div
+                key={update.id}
+                className="bg-background flex items-center justify-between rounded-lg border p-3"
+              >
+                <div>
+                  <p className="font-medium">
+                    Schedule published for {formatDate(update.weekStart)} -{" "}
+                    {formatDate(update.weekEnd)}
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    Published{" "}
+                    {new Date(update.publishedAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => handleAcknowledgeUpdate(update.id)}
+                >
+                  <CheckCircle2 className="mr-2 size-4" />
+                  Acknowledge
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Swap Requests I Can Respond To */}
+      {availableSwapRequests.length > 0 && (
+        <Card className="border-green-200 bg-green-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <ArrowRightLeft className="size-5 text-green-600" />
+              Available Swap Requests
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {availableSwapRequests.map((request) => (
+              <div
+                key={request.id}
+                className="bg-background flex items-center justify-between rounded-lg border p-3"
+              >
+                <div className="flex-1">
+                  <p className="font-medium">
+                    {request.requestingStaffName} wants to swap
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    {request.requestingShiftDate} -{" "}
+                    {request.requestingShiftTime}
+                    {(() => {
+                      // Find the shift to get the role (search in all schedules, not just mySchedules)
+                      const shift = schedules.find(
+                        (s) => s.id === request.requestingShiftId,
+                      );
+                      return shift ? ` (${shift.role})` : "";
+                    })()}
+                  </p>
+                  {request.reason && (
+                    <p className="text-muted-foreground mt-1 text-sm">
+                      Reason: {request.reason}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setSelectedSwapRequest(request);
+                    setIsSwapResponseModalOpen(true);
+                  }}
+                >
+                  View & Respond
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* My Requests — time-off + outgoing swaps with status (spec Table 2) */}
+      {(myTimeOffRequests.length > 0 || mySwapRequests.length > 0) && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">My Requests</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {myTimeOffRequests.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-muted-foreground text-xs font-medium">
+                  Time off
+                </p>
+                {myTimeOffRequests.map((req) => {
+                  const badge = requestStatusBadge(req.status);
+                  const reason =
+                    defaultTimeOffReasons.find((r) => r.id === req.type)
+                      ?.name ??
+                    req.customTypeName ??
+                    req.type;
+                  return (
+                    <div
+                      key={req.id}
+                      className="flex items-center justify-between gap-3 rounded-lg border p-2.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{reason}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {req.startDate}
+                          {req.endDate !== req.startDate
+                            ? ` – ${req.endDate}`
+                            : ""}
+                        </p>
+                        {req.status !== "pending" && req.reviewedByName && (
+                          <p className="text-muted-foreground text-[11px]">
+                            Reviewed by {req.reviewedByName}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className={badge.className}>
+                        {badge.label}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {mySwapRequests.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-muted-foreground text-xs font-medium">
+                  Shift swaps
+                </p>
+                {mySwapRequests.map((req) => {
+                  const badge = requestStatusBadge(req.status);
+                  return (
+                    <div
+                      key={req.id}
+                      className="flex items-center justify-between gap-3 rounded-lg border p-2.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">
+                          {req.requestingShiftDate} · {req.requestingShiftTime}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {req.targetStaffName
+                            ? `With ${req.targetStaffName}`
+                            : "Open to anyone"}
+                          {req.status === "pending"
+                            ? " · awaiting approval"
+                            : req.status === "approved" &&
+                                req.reviewedByStaffName
+                              ? ` · approved by ${req.reviewedByStaffName}`
+                              : ""}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className={badge.className}>
+                        {badge.label}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* View Tabs */}
+      <Tabs
+        value={viewMode}
+        onValueChange={(v) => setViewMode(v as "week" | "list" | "day")}
+      >
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="week">
+              <Grid3x3 className="mr-2 size-4" />
+              Week View
+            </TabsTrigger>
+            <TabsTrigger value="list">
+              <List className="mr-2 size-4" />
+              My Shifts
+            </TabsTrigger>
+            <TabsTrigger value="day">
+              <CalendarIcon className="mr-2 size-4" />
+              Today
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Week View */}
+        <TabsContent value="week" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Week View</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviousWeek}
+                  >
+                    <ChevronLeft className="size-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleToday}>
+                    Today
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleNextWeek}>
+                    <ChevronRight className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-7 gap-2">
+                {weekDays.map((day, index) => {
+                  const daySchedules = getSchedulesForDate(day);
+                  const isToday =
+                    day.toISOString().split("T")[0] ===
+                    new Date().toISOString().split("T")[0];
+
+                  return (
+                    <div
+                      key={index}
+                      className={`min-h-[200px] rounded-lg border p-2 ${isToday ? "border-blue-300 bg-blue-50" : ""} `}
+                    >
+                      <div className="mb-2 text-sm font-semibold">
+                        {formatDateShort(day)}
+                      </div>
+                      <div className="space-y-1">
+                        {daySchedules.map((shift) => (
+                          <div
+                            key={shift.id}
+                            className="bg-primary/10 hover:bg-primary/20 cursor-pointer rounded-sm p-1.5 text-xs"
+                            onClick={() => handleViewShift(shift)}
+                          >
+                            <div className="font-medium">
+                              {shift.startTime} - {shift.endTime}
+                            </div>
+                            <div className="text-muted-foreground">
+                              {shift.role}
+                            </div>
+                            {shift.location && (
+                              <div className="text-muted-foreground flex items-center gap-1">
+                                <MapPin className="size-3" />
+                                {shift.location}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* List View */}
+        <TabsContent value="list" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>My Shifts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {mySchedules.length === 0 ? (
+                <div className="text-muted-foreground py-8 text-center">
+                  <Calendar className="mx-auto mb-4 size-12 opacity-50" />
+                  <p>No upcoming shifts scheduled</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {mySchedules.map((shift) => {
+                    const myTasks = getMyShiftTasks(shift);
+                    return (
+                      <div
+                        key={shift.id}
+                        className="hover:bg-accent/50 flex cursor-pointer flex-col items-start justify-between rounded-lg border p-4 transition-colors sm:flex-row sm:items-center"
+                        onClick={() => handleViewShift(shift)}
+                      >
+                        <div className="flex-1 space-y-2">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="text-muted-foreground size-4" />
+                              <span className="font-medium">
+                                {formatDate(shift.date)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="text-muted-foreground size-4" />
+                              <span className="text-sm">
+                                {shift.startTime} - {shift.endTime}
+                              </span>
+                            </div>
+                            <Badge variant={getStatusBadge(shift.status)}>
+                              {shift.status}
+                            </Badge>
+                          </div>
+                          <div className="text-muted-foreground flex flex-wrap items-center gap-4 text-sm">
+                            <span className="font-medium">{shift.role}</span>
+                            {shift.location && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="size-3" />
+                                <span>{shift.location}</span>
+                              </div>
+                            )}
+                          </div>
+                          {myTasks.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              <p className="text-muted-foreground text-xs font-medium">
+                                My Tasks:
+                              </p>
+                              {myTasks.slice(0, 2).map((task) => (
+                                <div
+                                  key={task.id}
+                                  className="flex items-center gap-2 text-xs"
+                                >
+                                  <Checkbox
+                                    checked={task.status === "completed"}
+                                    disabled
+                                    className="size-3"
+                                  />
+                                  <span
+                                    className={
+                                      task.status === "completed"
+                                        ? "text-muted-foreground line-through"
+                                        : ""
+                                    }
+                                  >
+                                    {task.taskName}
+                                  </span>
+                                </div>
+                              ))}
+                              {myTasks.length > 2 && (
+                                <p className="text-muted-foreground text-xs">
+                                  +{myTasks.length - 2} more tasks
+                                </p>
+                              )}
+                            </div>
+                          )}
+                          {shift.notes && (
+                            <p className="text-muted-foreground line-clamp-2 text-sm">
+                              {shift.notes}
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-2 sm:mt-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewShift(shift);
+                          }}
+                        >
+                          <FileText className="mr-2 size-4" />
+                          Details
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Day View */}
+        <TabsContent value="day" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Today&apos;s Shifts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {todayShifts.length === 0 ? (
+                <div className="text-muted-foreground py-8 text-center">
+                  <Calendar className="mx-auto mb-4 size-12 opacity-50" />
+                  <p>No shifts scheduled for today</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {todayShifts.map((shift) => {
+                    const myTasks = getMyShiftTasks(shift);
+                    return (
+                      <Card key={shift.id}>
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <CardTitle className="text-lg">
+                                {shift.startTime} - {shift.endTime}
+                              </CardTitle>
+                              <div className="mt-1 flex items-center gap-2">
+                                <Badge variant={getStatusBadge(shift.status)}>
+                                  {shift.status}
+                                </Badge>
+                                <Badge variant="outline">{shift.role}</Badge>
+                                {shift.location && (
+                                  <Badge
+                                    variant="outline"
+                                    className="flex items-center gap-1"
+                                  >
+                                    <MapPin className="size-3" />
+                                    {shift.location}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewShift(shift)}
+                            >
+                              View Details
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {shift.notes && (
+                            <div>
+                              <Label className="text-sm font-medium">
+                                Notes
+                              </Label>
+                              <p className="text-muted-foreground mt-1 text-sm">
+                                {shift.notes}
+                              </p>
+                            </div>
+                          )}
+                          {myTasks.length > 0 && (
+                            <div>
+                              <Label className="mb-2 block text-sm font-medium">
+                                My Tasks
+                              </Label>
+                              <div className="space-y-2">
+                                {myTasks.map((task) => (
+                                  <div
+                                    key={task.id}
+                                    className="flex items-start gap-3 rounded-lg border p-2"
+                                  >
+                                    <Checkbox
+                                      checked={task.status === "completed"}
+                                      disabled
+                                      className="mt-0.5"
+                                    />
+                                    <div className="flex-1">
+                                      <p
+                                        className={`text-sm font-medium ${
+                                          task.status === "completed"
+                                            ? `text-muted-foreground line-through`
+                                            : ""
+                                        } `}
+                                      >
+                                        {task.taskName}
+                                      </p>
+                                      {task.description && (
+                                        <p className="text-muted-foreground mt-1 text-xs">
+                                          {task.description}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {task.priority}
+                                    </Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Shift Detail Modal */}
+      <Dialog
+        open={isShiftDetailModalOpen}
+        onOpenChange={setIsShiftDetailModalOpen}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Shift Details</DialogTitle>
+            <DialogDescription>
+              View complete information about this shift
+            </DialogDescription>
+          </DialogHeader>
+          {selectedShift && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <div className="flex items-center gap-2">
+                  <Calendar className="text-muted-foreground size-4" />
+                  <span>{formatDate(selectedShift.date)}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Time</Label>
+                <div className="flex items-center gap-2">
+                  <Clock className="text-muted-foreground size-4" />
+                  <span>
+                    {selectedShift.startTime} - {selectedShift.endTime}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Badge variant={getStatusBadge(selectedShift.status)}>
+                  {selectedShift.role}
+                </Badge>
+              </div>
+              {selectedShift.location && (
+                <div className="space-y-2">
+                  <Label>Location</Label>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="text-muted-foreground size-4" />
+                    <span>{selectedShift.location}</span>
+                  </div>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Badge variant={getStatusBadge(selectedShift.status)}>
+                  {selectedShift.status}
+                </Badge>
+              </div>
+              {selectedShift.notes && (
+                <div className="space-y-2">
+                  <Label>Notes</Label>
+                  <p className="bg-muted text-muted-foreground rounded-md p-3 text-sm">
+                    {selectedShift.notes}
+                  </p>
+                </div>
+              )}
+              {/* Tasks for this shift */}
+              {getMyShiftTasks(selectedShift).length > 0 && (
+                <div className="space-y-2">
+                  <Label>My Tasks</Label>
+                  <div className="bg-muted/50 space-y-2 rounded-lg border p-3">
+                    {getMyShiftTasks(selectedShift).map((task) => (
+                      <div
+                        key={task.id}
+                        className="bg-background flex items-start gap-3 rounded-sm p-2"
+                      >
+                        <Checkbox
+                          checked={task.status === "completed"}
+                          disabled
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1">
+                          <p
+                            className={`text-sm font-medium ${
+                              task.status === "completed"
+                                ? `text-muted-foreground line-through`
+                                : ""
+                            } `}
+                          >
+                            {task.taskName}
+                          </p>
+                          {task.description && (
+                            <p className="text-muted-foreground mt-1 text-xs">
+                              {task.description}
+                            </p>
+                          )}
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {task.priority}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setSickCallData({
+                  ...sickCallData,
+                  shiftId: selectedShift?.id.toString() || "",
+                });
+                setIsShiftDetailModalOpen(false);
+                setIsSickCallModalOpen(true);
+              }}
+            >
+              <AlertCircle className="mr-2 size-4" />I Can&apos;t Make This
+              Shift
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsShiftDetailModalOpen(false)}
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                setSwapData({
+                  ...swapData,
+                  shiftId: selectedShift?.id.toString() || "",
+                });
+                setIsShiftDetailModalOpen(false);
+                setIsSwapModalOpen(true);
+              }}
+            >
+              Request Swap
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Time Off Request Modal */}
+      <Dialog open={isTimeOffModalOpen} onOpenChange={setIsTimeOffModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Time Off</DialogTitle>
+            <DialogDescription>
+              Submit a request for time off. Your manager will review and
+              respond.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Type of Request</Label>
+              <Select
+                value={timeOffData.type}
+                onValueChange={(value) =>
+                  setTimeOffData({ ...timeOffData, type: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timeOffReasons.map((reason) => (
+                    <SelectItem key={reason.id} value={reason.id}>
+                      {reason.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Start Date</Label>
+                <Input
+                  type="date"
+                  value={timeOffData.startDate}
+                  onChange={(e) =>
+                    setTimeOffData({
+                      ...timeOffData,
+                      startDate: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>End Date</Label>
+                <Input
+                  type="date"
+                  value={timeOffData.endDate}
+                  onChange={(e) =>
+                    setTimeOffData({ ...timeOffData, endDate: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Reason (Optional)</Label>
+              <Textarea
+                value={timeOffData.reason}
+                onChange={(e) =>
+                  setTimeOffData({ ...timeOffData, reason: e.target.value })
+                }
+                placeholder="Provide additional details..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsTimeOffModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleTimeOffSubmit}>Submit Request</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Swap Request Modal */}
+      <Dialog open={isSwapModalOpen} onOpenChange={setIsSwapModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Shift Swap</DialogTitle>
+            <DialogDescription>
+              Request to swap a shift with a coworker or open it up for anyone
+              qualified.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Select Shift</Label>
+              <Select
+                value={swapData.shiftId}
+                onValueChange={(value) =>
+                  setSwapData({ ...swapData, shiftId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a shift" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mySchedules
+                    .filter(
+                      (s) =>
+                        s.status === "scheduled" || s.status === "confirmed",
+                    )
+                    .map((shift) => (
+                      <SelectItem key={shift.id} value={shift.id.toString()}>
+                        {formatDate(shift.date)} - {shift.startTime} to{" "}
+                        {shift.endTime} ({shift.role})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Swap Type</Label>
+              <Select
+                value={swapData.swapType}
+                onValueChange={(value) =>
+                  setSwapData({
+                    ...swapData,
+                    swapType: value as "specific" | "anyone",
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="specific">Specific Coworker</SelectItem>
+                  <SelectItem value="anyone">
+                    Open to Anyone Qualified
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {swapData.swapType === "specific" && (
+              <div className="space-y-2">
+                <Label>Select Coworker</Label>
+                <Select
+                  value={swapData.targetStaffId}
+                  onValueChange={(value) =>
+                    setSwapData({ ...swapData, targetStaffId: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a coworker" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users
+                      .filter(
+                        (u) => u.id.toString() !== userId && u.role === "Staff",
+                      )
+                      .map((staff, index) => (
+                        <SelectItem
+                          key={`staff-${staff.id}-${staff.email}-${index}`}
+                          value={staff.id.toString()}
+                        >
+                          {staff.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Reason</Label>
+              <Textarea
+                value={swapData.reason}
+                onChange={(e) =>
+                  setSwapData({ ...swapData, reason: e.target.value })
+                }
+                placeholder="Why do you need to swap this shift?"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSwapModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSwapSubmit}>Submit Request</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sick Call Modal */}
+      <Dialog open={isSickCallModalOpen} onOpenChange={setIsSickCallModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Report Absence / Sick</DialogTitle>
+            <DialogDescription>
+              Report that you cannot make this shift. Managers will be notified
+              immediately.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Select Shift</Label>
+              <Select
+                value={sickCallData.shiftId}
+                onValueChange={(value) =>
+                  setSickCallData({ ...sickCallData, shiftId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a shift" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mySchedules
+                    .filter(
+                      (s) =>
+                        s.status === "scheduled" || s.status === "confirmed",
+                    )
+                    .map((shift) => (
+                      <SelectItem key={shift.id} value={shift.id.toString()}>
+                        {formatDate(shift.date)} - {shift.startTime} to{" "}
+                        {shift.endTime} ({shift.role})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Reason</Label>
+              <Textarea
+                value={sickCallData.reason}
+                onChange={(e) =>
+                  setSickCallData({ ...sickCallData, reason: e.target.value })
+                }
+                placeholder="Please provide a reason (e.g., sick, emergency, family issue)..."
+                rows={4}
+              />
+            </div>
+            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+              <p className="text-sm text-yellow-800">
+                <AlertCircle className="mr-1 inline size-4" />
+                This will flag your shift as needing coverage and notify
+                managers immediately.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsSickCallModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleSickCallSubmit}>
+              Report Absence
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Message Manager Modal */}
+      <Dialog open={isMessageModalOpen} onOpenChange={setIsMessageModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Message Manager</DialogTitle>
+            <DialogDescription>
+              Send a message to your manager about your schedule or shifts.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Subject</Label>
+              <Input
+                value={messageData.subject}
+                onChange={(e) =>
+                  setMessageData({ ...messageData, subject: e.target.value })
+                }
+                placeholder="e.g., Question about my shift..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Message</Label>
+              <Textarea
+                value={messageData.message}
+                onChange={(e) =>
+                  setMessageData({ ...messageData, message: e.target.value })
+                }
+                placeholder="Type your message here..."
+                rows={6}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsMessageModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleMessageSubmit}>Send Message</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Swap Response Modal */}
+      <Dialog
+        open={isSwapResponseModalOpen}
+        onOpenChange={setIsSwapResponseModalOpen}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Respond to Swap Request</DialogTitle>
+            <DialogDescription>
+              Review the swap request and decide if you can take this shift.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedSwapRequest && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Requested By</Label>
+                <p className="text-sm font-medium">
+                  {selectedSwapRequest.requestingStaffName}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Shift Details</Label>
+                <div className="space-y-1 text-sm">
+                  <p>
+                    <strong>Date:</strong>{" "}
+                    {formatDate(selectedSwapRequest.requestingShiftDate)}
+                  </p>
+                  <p>
+                    <strong>Time:</strong>{" "}
+                    {selectedSwapRequest.requestingShiftTime}
+                  </p>
+                  {(() => {
+                    const shift = schedules.find(
+                      (s) => s.id === selectedSwapRequest.requestingShiftId,
+                    );
+                    return shift ? (
+                      <p>
+                        <strong>Role:</strong> {shift.role}
+                      </p>
+                    ) : null;
+                  })()}
+                </div>
+              </div>
+              {selectedSwapRequest.reason && (
+                <div className="space-y-2">
+                  <Label>Reason</Label>
+                  <p className="bg-muted text-muted-foreground rounded-md p-3 text-sm">
+                    {selectedSwapRequest.reason}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsSwapResponseModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => handleSwapResponse(false)}
+            >
+              Decline
+            </Button>
+            <Button onClick={() => handleSwapResponse(true)}>
+              Accept Swap
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

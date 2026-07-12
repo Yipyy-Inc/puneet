@@ -28,11 +28,23 @@ const ROLE_CONFIG: Record<
     color: "text-amber-600",
     bg: "bg-amber-50 dark:bg-amber-950/30",
   },
+  admin: {
+    label: "Admin",
+    icon: UserCog,
+    color: "text-amber-600",
+    bg: "bg-amber-50 dark:bg-amber-950/30",
+  },
   manager: {
     label: "Manager",
     icon: Users,
     color: "text-violet-600",
     bg: "bg-violet-50 dark:bg-violet-950/30",
+  },
+  supervisor: {
+    label: "Supervisor",
+    icon: Users,
+    color: "text-purple-600",
+    bg: "bg-purple-50 dark:bg-purple-950/30",
   },
   reception: {
     label: "Reception / Front Desk",
@@ -52,6 +64,12 @@ const ROLE_CONFIG: Record<
     color: "text-emerald-600",
     bg: "bg-emerald-50 dark:bg-emerald-950/30",
   },
+  caretaker: {
+    label: "Caretaker",
+    icon: Moon,
+    color: "text-cyan-600",
+    bg: "bg-cyan-50 dark:bg-cyan-950/30",
+  },
   daycare_attendant: {
     label: "Daycare Attendant",
     icon: Sun,
@@ -64,6 +82,18 @@ const ROLE_CONFIG: Record<
     color: "text-indigo-600",
     bg: "bg-indigo-50 dark:bg-indigo-950/30",
   },
+  retail: {
+    label: "Retail Associate",
+    icon: Sparkles,
+    color: "text-fuchsia-600",
+    bg: "bg-fuchsia-50 dark:bg-fuchsia-950/30",
+  },
+  accountant: {
+    label: "Accountant",
+    icon: MonitorSpeaker,
+    color: "text-lime-600",
+    bg: "bg-lime-50 dark:bg-lime-950/30",
+  },
   sanitation: {
     label: "Sanitation",
     icon: Sparkles,
@@ -74,12 +104,17 @@ const ROLE_CONFIG: Record<
 
 const ROLE_ORDER: FacilityStaffRole[] = [
   "owner",
+  "admin",
   "manager",
+  "supervisor",
   "reception",
   "groomer",
   "trainer",
+  "caretaker",
   "daycare_attendant",
   "boarding_attendant",
+  "retail",
+  "accountant",
   "sanitation",
 ];
 
