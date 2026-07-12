@@ -69,6 +69,11 @@ export interface PackagePolicy {
   allowTransfer: boolean;
   /** Customer can request an extension on expiring passes */
   allowExtension: boolean;
+  /** Show a "Contact us to extend" CTA on expired passes in the customer
+   *  portal, letting pass-holders request an exception extension. Facilities
+   *  can still extend manually regardless of this flag; it only controls the
+   *  customer-facing prompt. Defaults off (undefined ⇒ hidden). */
+  allowCustomerExtensionRequest?: boolean;
   /** Maximum number of days the validity window can be extended */
   maxExtensionDays: number;
   /** One-time fee to extend validity (0 = free) */
@@ -92,6 +97,8 @@ export const defaultPackagePolicy: PackagePolicy = {
   allowStoreCreditOnCancel: true,
   allowTransfer: false,
   allowExtension: true,
+  // Off by default — the customer "Contact us to extend" prompt is opt-in.
+  allowCustomerExtensionRequest: false,
   maxExtensionDays: 30,
   extensionFee: 0,
 };

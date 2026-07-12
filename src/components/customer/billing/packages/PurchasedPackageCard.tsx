@@ -430,15 +430,19 @@ export function PurchasedPackageCard({
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Single primary CTA */}
+        {/* Single primary CTA. On expired passes the "Contact us to extend"
+            prompt only shows when the facility opted in (policy flag); otherwise
+            no CTA is offered. */}
         {showBookingCta &&
           (isExpired ? (
-            <Button variant="outline" className="w-full gap-2" asChild>
-              <Link href="/customer/messages">
-                <MessageSquare className="size-4" />
-                Contact us to extend
-              </Link>
-            </Button>
+            policy.allowCustomerExtensionRequest ? (
+              <Button variant="outline" className="w-full gap-2" asChild>
+                <Link href="/customer/messages">
+                  <MessageSquare className="size-4" />
+                  Contact us to extend
+                </Link>
+              </Button>
+            ) : null
           ) : (
             <BookWithPassButton
               purchase={purchase}
