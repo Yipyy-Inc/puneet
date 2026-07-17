@@ -14,6 +14,7 @@ import {
   Camera,
   X,
   Clock,
+  UserX,
 } from "lucide-react";
 import {
   Dialog,
@@ -37,14 +38,83 @@ import type {
   ArrivalHealthFlag,
   GroomingAppointment,
 } from "@/types/grooming";
-import type { GroomingStationPetSize } from "@/types/rooms";
+import type {
+  GroomingStation,
+  GroomingStationPetSize,
+  GroomingStationType,
+} from "@/types/rooms";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const STATION_STATUS_LABEL: Record<string, string> = {
   available: "Available",
   "in-use": "In use",
   "needs-cleaning": "Needs cleaning",
 };
+
+const SIZE_ORDER: GroomingStationPetSize[] = [
+  "small",
+  "medium",
+  "large",
+  "giant",
+];
+
+const STATION_TYPE_LABEL: Record<GroomingStationType, string> = {
+  table: "table",
+  tub: "tub",
+  cage_dryer: "cage dryer",
+  stand_dryer: "stand dryer",
+};
+
+/** Human label for a station's size capacity — "Large/Giant", or "Any size"
+ *  for a multi-purpose station with no size restriction. */
+function stationSizesLabel(s: GroomingStation): string {
+  if (!s.allowedPetSizes || s.allowedPetSizes.length === 0) return "Any size";
+  return s.allowedPetSizes
+    .map((z) => z.charAt(0).toUpperCase() + z.slice(1))
+    .join("/");
+}
+
+/**
+ * Best station to auto-assign at check-in: the first Available station sized
+ * for the pet, preferring an exact size match then the next size up. Only
+ * stations whose live status is "available" are considered — in-use /
+ * needs-cleaning / out-of-service are skipped. Returns null when every
+ * size-eligible station is currently busy (the Table 18 "assign manually"
+ * case). Fit distance = how much larger than the pet the station's largest
+ * allowed size is (0 = exact); multi-purpose "any size" stations count as
+ * giant-capacity so a dedicated table wins over a general-purpose one.
+ */
+function pickBestStation(
+  stations: GroomingStation[],
+  petSize: GroomingStationPetSize,
+): GroomingStation | null {
+  const petIdx = SIZE_ORDER.indexOf(petSize);
+  const candidates = stations.filter(
+    (s) =>
+      s.active &&
+      (s.status ?? "available") === "available" &&
+      isStationEligibleForPetSize(s, petSize),
+  );
+  if (candidates.length === 0) return null;
+  const fitDistance = (s: GroomingStation): number => {
+    const sizes = s.allowedPetSizes;
+    const maxIdx =
+      !sizes || sizes.length === 0
+        ? SIZE_ORDER.length - 1
+        : Math.max(...sizes.map((z) => SIZE_ORDER.indexOf(z)));
+    return maxIdx - petIdx;
+  };
+  return [...candidates].sort((a, b) => {
+    const da = fitDistance(a);
+    const db = fitDistance(b);
+    if (da !== db) return da - db;
+    const wa = a.maxWeightLbs ?? Number.POSITIVE_INFINITY;
+    const wb = b.maxWeightLbs ?? Number.POSITIVE_INFINITY;
+    if (wa !== wb) return wa - wb;
+    return a.name.localeCompare(b.name);
+  })[0];
+}
 
 export interface CheckInConfirmation {
   stationId: string;
@@ -71,6 +141,13 @@ export interface CheckInConfirmation {
    *  durations; the groomer can nudge it ±5 min in the dialog before
    *  confirming. Surfaced to the owner in their customer portal. */
   estimatedReadyTime: string;
+  /** HH:MM (24h) actual check-in time — editable, pre-filled with now.
+   *  Persisted as the appointment's `checkInTime` by {@link applyCheckInResult}. */
+  checkInTime: string;
+  /** True when staff flagged the pet as a no-show instead of checking in. The
+   *  caller flips the appointment to `no-show` and skips the check-in side
+   *  effects (no station assignment, no session start). */
+  markNoShow: boolean;
 }
 
 const MAX_BEFORE_PHOTOS = 3;
@@ -130,6 +207,10 @@ export function CheckInConfirmationDialog({
   // check-in mistake (especially when two same-breed dogs arrive together).
   const [petConfirmed, setPetConfirmed] = useState(false);
   const [stationId, setStationId] = useState<string>("");
+  // When false, Section 6 shows the auto-assigned station as a confirmed line;
+  // set true by "Change" (or when nothing is available) to reveal the manual
+  // station picker.
+  const [showStationPicker, setShowStationPicker] = useState(false);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [observations, setObservations] = useState<string>("");
   const [mattedSurchargeEnabled, setMattedSurchargeEnabled] = useState(false);
@@ -156,6 +237,12 @@ export function CheckInConfirmationDialog({
   // True once staff has nudged the time; suppresses the auto-calc effect so
   // their manual value sticks even if add-ons change afterwards.
   const [readyTimeEdited, setReadyTimeEdited] = useState(false);
+  // "Mark as No-Show" — when checked, confirm flips the appointment to
+  // no-show instead of checking it in (spec Table 17).
+  const [markNoShow, setMarkNoShow] = useState(false);
+  // Current local minutes-since-midnight, driving the late-arrival indicator
+  // (spec Table 18). Ticks while the dialog is open; null when closed.
+  const [nowMin, setNowMin] = useState<number | null>(null);
 
   // Look up this appointment's service config to get the default matted
   // surcharge amount the facility has configured.
@@ -177,7 +264,7 @@ export function CheckInConfirmationDialog({
       return;
     }
     setPetConfirmed(false);
-    setStationId("");
+    setMarkNoShow(false);
     setSelectedAddOns(apt?.addOns ?? []);
     setObservations("");
     setMattedSurchargeEnabled(false);
@@ -212,6 +299,40 @@ export function CheckInConfirmationDialog({
     packageConfig?.duration,
     selectedAddOns,
   ]);
+
+  // Auto-assign the best available station the moment the dialog opens, so the
+  // receptionist sees "Assigned to Table 3" instead of hunting a list (spec
+  // Table 8). When every size-eligible station is busy, leave it unassigned
+  // and open the manual picker with the Table 18 warning. Intentionally keyed
+  // to the open/appointment transition only — we don't want a later station
+  // status change to silently override a staffer's manual pick.
+  useEffect(() => {
+    if (!open || !apt) return;
+    const best = pickBestStation(
+      stations,
+      apt.petSize as GroomingStationPetSize,
+    );
+    setStationId(best?.id ?? "");
+    setShowStationPicker(!best);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, apt?.id]);
+
+  // Tick current time while the dialog is open so the late-arrival indicator
+  // stays live. Only runs after the dialog opens (client-side), so no
+  // hydration mismatch.
+  useEffect(() => {
+    if (!open) {
+      setNowMin(null);
+      return;
+    }
+    const tick = () => {
+      const d = new Date();
+      setNowMin(d.getHours() * 60 + d.getMinutes());
+    };
+    tick();
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, [open]);
 
   function handlePhotoSelect(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -253,6 +374,33 @@ export function CheckInConfirmationDialog({
     (a) => a.isActive && !selectedAddOns.includes(a.name),
   );
 
+  // Size-eligible stations that are actually free right now. Empty (while
+  // eligibleStations is not) => every fitting station is busy: the Table 18
+  // "assign manually" case.
+  const availableEligible = eligibleStations.filter(
+    (s) => (s.status ?? "available") === "available",
+  );
+  // Distinct station types among the eligible set, for the warning copy
+  // ("all table stations are in use…").
+  const eligibleTypeLabel = Array.from(
+    new Set(eligibleStations.map((s) => s.type)),
+  )
+    .map((t) => STATION_TYPE_LABEL[t] ?? t)
+    .join("/");
+  const selectedStation = eligibleStations.find((s) => s.id === stationId);
+
+  // Late-arrival indicator (spec Table 18) — fires once the client is more
+  // than 10 minutes past the scheduled start.
+  const scheduledStartMin = (() => {
+    const [h, m] = apt.startTime.split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+  })();
+  const lateMinutes =
+    nowMin !== null && nowMin - scheduledStartMin > 10
+      ? nowMin - scheduledStartMin
+      : 0;
+  const hasExpressCheckin = !!apt.expressCheckinSubmission;
+
   function toggleAddOn(name: string, on: boolean) {
     setSelectedAddOns((prev) =>
       on ? [...prev, name] : prev.filter((x) => x !== name),
@@ -260,6 +408,25 @@ export function CheckInConfirmationDialog({
   }
 
   function handleConfirm() {
+    // No-show path — the pet never arrived, so skip station + photos; the
+    // caller flips the appointment to no-show.
+    if (markNoShow) {
+      onConfirm({
+        stationId: "",
+        stationName: "",
+        addOns: selectedAddOns,
+        dropOffObservations: observations.trim(),
+        mattedSurcharge: 0,
+        arrivalCoatCondition: coatCondition,
+        arrivalBehavior: behaviorAtArrival,
+        arrivalHealthFlags: healthFlags.length > 0 ? healthFlags : undefined,
+        beforePhotos: [],
+        estimatedReadyTime: estimatedReadyTime,
+        checkInTime: checkInAnchor,
+        markNoShow: true,
+      });
+      return;
+    }
     const station = eligibleStations.find((s) => s.id === stationId);
     if (!station) return;
     onConfirm({
@@ -273,6 +440,8 @@ export function CheckInConfirmationDialog({
       arrivalHealthFlags: healthFlags.length > 0 ? healthFlags : undefined,
       beforePhotos: beforePhotos,
       estimatedReadyTime: estimatedReadyTime,
+      checkInTime: checkInAnchor,
+      markNoShow: false,
     });
   }
 
@@ -302,6 +471,76 @@ export function CheckInConfirmationDialog({
             appointment moves to <strong>In Progress</strong> after confirming.
           </p>
         </DialogHeader>
+
+        {/* Appointment summary + pre-visit status + check-in time + no-show
+            (spec Tables 17 & 18). */}
+        <div className="bg-muted/20 space-y-2.5 rounded-xl border px-4 py-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                Appointment
+              </p>
+              <p className="text-sm font-bold">
+                #{apt.id}
+                <span className="text-muted-foreground ml-1.5 font-normal">
+                  · {apt.packageName}
+                </span>
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                Scheduled
+              </p>
+              <p className="flex items-center justify-end gap-2 text-sm font-bold tabular-nums">
+                {apt.startTime}
+                {lateMinutes > 0 && (
+                  <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">
+                    Late: {lateMinutes} minutes
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Pre-visit (Express Check-In) form status */}
+          {hasExpressCheckin ? (
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+              <CheckCircle2 className="size-3.5 shrink-0" />
+              Express Check-In complete — form reviewed
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              <AlertTriangle className="size-3.5 shrink-0" />
+              Express Check-In not submitted — collect drop-off details verbally
+            </div>
+          )}
+
+          {/* Editable check-in time + Mark as No-Show */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="checkin-time"
+                className="text-muted-foreground text-xs font-medium"
+              >
+                Check-in Time
+              </label>
+              <input
+                id="checkin-time"
+                type="time"
+                value={checkInAnchor}
+                onChange={(e) => setCheckInAnchor(e.target.value)}
+                className="bg-background rounded-md border px-2 py-1 text-sm tabular-nums focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:outline-none"
+              />
+            </div>
+            <label className="ml-auto flex cursor-pointer items-center gap-2 text-xs font-medium">
+              <Checkbox
+                checked={markNoShow}
+                onCheckedChange={(c) => setMarkNoShow(c === true)}
+              />
+              Mark as No-Show
+            </label>
+          </div>
+        </div>
 
         {/* 1 · Confirm the pet — single-tap identity gate so staff don't
               accidentally check in the wrong animal when two same-breed
@@ -727,51 +966,108 @@ export function CheckInConfirmationDialog({
 
         <Separator />
 
-        {/* 6 · Station assignment */}
+        {/* 6 · Station assignment — the system auto-assigns the best available
+              station on open (spec Table 8); "Change" reveals the manual picker,
+              which also appears with an amber warning when everything is busy
+              (spec Table 18). */}
         <Section
           step={6}
           icon={MapPin}
           title="Station assignment"
-          subtitle={`Pick the table or tub for this ${apt.petSize} pet.`}
+          subtitle={`Auto-assigned to the best available station for this ${apt.petSize} pet — change if needed.`}
         >
           {eligibleStations.length === 0 ? (
             <p className="text-muted-foreground py-3 text-center text-xs">
               No stations are currently sized for a {apt.petSize} pet.
             </p>
+          ) : selectedStation && !showStationPicker ? (
+            /* Confirmed auto-assignment — one glance, with a Change affordance. */
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-400 bg-emerald-50 px-3 py-2.5 dark:border-emerald-700 dark:bg-emerald-950/30">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold tracking-wider text-emerald-800 uppercase dark:text-emerald-300">
+                      Assigned Station
+                    </p>
+                    <p className="truncate text-sm font-semibold">
+                      {selectedStation.name}{" "}
+                      <span className="text-muted-foreground font-normal">
+                        ({stationSizesLabel(selectedStation)})
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 shrink-0 text-xs"
+                  onClick={() => setShowStationPicker(true)}
+                >
+                  Change
+                </Button>
+              </div>
+              <p className="text-muted-foreground text-[10px]">
+                Best available station for a {apt.petSize} pet — tap Change to
+                pick a different one.
+              </p>
+            </div>
           ) : (
-            <div className="grid gap-1.5 sm:grid-cols-2">
-              {eligibleStations.map((s) => {
-                const status = s.status ?? "available";
-                const occupied =
-                  status === "in-use" || status === "needs-cleaning";
-                const isSelected = stationId === s.id;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    disabled={occupied}
-                    onClick={() => setStationId(s.id)}
-                    className={cn(
-                      "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition-colors",
-                      isSelected
-                        ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
-                        : "hover:bg-muted/40",
-                      occupied && "cursor-not-allowed opacity-50",
-                    )}
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{s.name}</p>
-                      <p className="text-muted-foreground text-[11px] capitalize">
-                        {STATION_STATUS_LABEL[status] ?? status}
-                        {s.maxWeightLbs ? ` · max ${s.maxWeightLbs} lbs` : ""}
-                      </p>
-                    </div>
-                    {isSelected && (
-                      <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
-                    )}
-                  </button>
-                );
-              })}
+            /* Manual picker — after "Change", or when nothing is available.
+               Busy stations stay selectable here so staff can force an
+               override (they know it's about to free up). */
+            <div className="space-y-2">
+              {availableEligible.length === 0 && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-400 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-100">
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                  <p>
+                    No station available for {apt.petSize} — all{" "}
+                    {eligibleTypeLabel} stations are in use or need cleaning.{" "}
+                    <span className="font-semibold">Assign manually:</span>
+                  </p>
+                </div>
+              )}
+              <div className="grid gap-1.5 sm:grid-cols-2">
+                {eligibleStations.map((s) => {
+                  const status = s.status ?? "available";
+                  const busy =
+                    status === "in-use" || status === "needs-cleaning";
+                  const isSelected = stationId === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setStationId(s.id)}
+                      className={cn(
+                        "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition-colors",
+                        isSelected
+                          ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
+                          : "hover:bg-muted/40",
+                        busy && !isSelected && "opacity-70",
+                      )}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{s.name}</p>
+                        <p
+                          className={cn(
+                            "text-[11px] capitalize",
+                            busy
+                              ? "text-amber-700 dark:text-amber-300"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          {STATION_STATUS_LABEL[status] ?? status}
+                          {s.maxWeightLbs ? ` · max ${s.maxWeightLbs} lbs` : ""}
+                        </p>
+                      </div>
+                      {isSelected && (
+                        <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </Section>
@@ -888,12 +1184,26 @@ export function CheckInConfirmationDialog({
             Cancel
           </Button>
           <Button
-            disabled={!petConfirmed || !stationId}
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
+            disabled={!petConfirmed || (!markNoShow && !stationId)}
+            className={cn(
+              "text-white",
+              markNoShow
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-emerald-600 hover:bg-emerald-700",
+            )}
             onClick={handleConfirm}
           >
-            <LogIn className="mr-1.5 size-4" />
-            Confirm &amp; Start
+            {markNoShow ? (
+              <>
+                <UserX className="mr-1.5 size-4" />
+                Mark No-Show
+              </>
+            ) : (
+              <>
+                <LogIn className="mr-1.5 size-4" />
+                Confirm &amp; Start
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

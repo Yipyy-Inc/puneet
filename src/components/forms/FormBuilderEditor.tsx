@@ -394,6 +394,9 @@ export interface FormBuilderEditorProps {
   facilityId: number;
   initialFormId?: string | null;
   templateId?: string | null;
+  /** Pre-selects the service type for a brand-new form (e.g. grooming
+   *  check-in forms created from Grooming → Settings). Ignored when editing. */
+  defaultServiceType?: ServiceType;
   onSave: (form: Form) => void;
 }
 
@@ -401,6 +404,7 @@ export function FormBuilderEditor({
   facilityId,
   initialFormId,
   templateId,
+  defaultServiceType,
   onSave,
 }: FormBuilderEditorProps) {
   const { languageSettings } = useSettings();
@@ -413,7 +417,7 @@ export function FormBuilderEditor({
     existing?.type ?? template?.formType ?? "intake",
   );
   const [serviceType, setServiceType] = useState<ServiceType | "">(
-    existing?.serviceType ?? "",
+    existing?.serviceType ?? (initialFormId ? "" : (defaultServiceType ?? "")),
   );
   const [internal, setInternal] = useState(existing?.internal ?? false);
   const [repeatPerPet, setRepeatPerPet] = useState(

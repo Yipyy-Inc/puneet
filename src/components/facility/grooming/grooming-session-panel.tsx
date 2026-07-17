@@ -13,6 +13,7 @@ import {
   UtensilsCrossed,
   Pill,
   ShieldAlert,
+  ListChecks,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { petQueries } from "@/lib/api/pet";
 import { getGroomingPhotoRequirements } from "@/lib/api/grooming";
+import { useSettings } from "@/hooks/use-settings";
 import type {
   BehaviorTag,
   CareLogEntry,
@@ -76,17 +78,76 @@ function durationMinutes(start: string, end: string): number {
 
 const LONG_APPOINTMENT_MIN_MINUTES = 90;
 
+/** Ordered grooming steps the groomer ticks off (spec Table 51). */
+const GROOMING_STEPS = [
+  "Bath",
+  "Blow Dry",
+  "Brush",
+  "Haircut",
+  "Nail Trim",
+  "Ear Cleaning",
+  "Final Check",
+] as const;
+
+type ProgressStep = { step: string; done: boolean; at?: string };
+
 interface GroomingSessionPanelProps {
   appointment: GroomingAppointment;
   /** Notifies parent so the page header can reflect saved state / unlock
    *  "Mark Ready" once the requirement is satisfied. */
   onChange?: (next: GroomingIntake) => void;
+  /** Fired with `true` when the progress checklist is enabled AND every step
+   *  is ticked — the page uses it to make "Mark Ready" glow. */
+  onProgressChange?: (allStepsDone: boolean) => void;
 }
 
 export function GroomingSessionPanel({
   appointment,
   onChange,
+  onProgressChange,
 }: GroomingSessionPanelProps) {
+  // Facility toggle (default off) — read from the grooming module config.
+  const { grooming: groomingModule } = useSettings();
+  const progressChecklistEnabled =
+    groomingModule.settings.progressChecklist?.enabled ?? false;
+
+  const [progress, setProgress] = useState<ProgressStep[]>(() => {
+    const existing = appointment.groomingProgress ?? [];
+    return GROOMING_STEPS.map((step) => {
+      const found = existing.find((p) => p.step === step);
+      return found
+        ? { step, done: found.done, at: found.at }
+        : { step, done: false };
+    });
+  });
+  const allStepsDone = progress.length > 0 && progress.every((p) => p.done);
+
+  function toggleStep(step: string) {
+    setProgress((prev) =>
+      prev.map((p) =>
+        p.step === step
+          ? {
+              step,
+              done: !p.done,
+              at: !p.done ? new Date().toISOString() : undefined,
+            }
+          : p,
+      ),
+    );
+  }
+
+  // Persist the checklist onto the appointment (in place, like intake) and let
+  // the page know whether Mark Ready should glow.
+  useEffect(() => {
+    (
+      appointment as GroomingAppointment & {
+        groomingProgress?: ProgressStep[];
+      }
+    ).groomingProgress = progress;
+    onProgressChange?.(progressChecklistEnabled && allStepsDone);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress, progressChecklistEnabled]);
+
   const { requireBeforePhotos, requireAfterPhotos } = useMemo(
     getGroomingPhotoRequirements,
     [],
@@ -320,6 +381,71 @@ export function GroomingSessionPanel({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
+        {/* Grooming progress checklist (spec Table 51) — facility-gated. */}
+        {progressChecklistEnabled && (
+          <section>
+            <header className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <ListChecks className="text-muted-foreground size-4" />
+                Grooming Progress
+              </div>
+              <span
+                className={cn(
+                  "text-[11px] font-medium",
+                  allStepsDone ? "text-emerald-600" : "text-muted-foreground",
+                )}
+              >
+                {progress.filter((p) => p.done).length}/{progress.length} done
+              </span>
+            </header>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {progress.map((p) => (
+                <button
+                  key={p.step}
+                  type="button"
+                  onClick={() => toggleStep(p.step)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md border px-2.5 py-2 text-left text-sm transition-colors",
+                    p.done
+                      ? "border-emerald-300 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20"
+                      : "bg-background hover:bg-muted/60",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex size-4 shrink-0 items-center justify-center rounded-sm border",
+                      p.done
+                        ? "border-emerald-600 bg-emerald-600 text-white"
+                        : "border-input",
+                    )}
+                  >
+                    {p.done && <CheckCircle2 className="size-3" />}
+                  </span>
+                  <span
+                    className={cn(
+                      "font-medium",
+                      p.done && "text-emerald-900 dark:text-emerald-200",
+                    )}
+                  >
+                    {p.step}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {allStepsDone ? (
+              <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-emerald-600">
+                <CheckCircle2 className="size-3.5" />
+                All steps complete — Mark Ready is lit up.
+              </p>
+            ) : (
+              <p className="text-muted-foreground mt-2 text-[11px]">
+                Tick each step as you go. Mark Ready lights up once the
+                checklist is complete.
+              </p>
+            )}
+          </section>
+        )}
+
         {/* Before photos */}
         <section>
           <header className="mb-2 flex items-center justify-between">

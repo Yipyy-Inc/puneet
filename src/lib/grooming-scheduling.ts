@@ -34,6 +34,12 @@ export interface SlotEntry {
    * compute helper.
    */
   driveMinFromPrev?: number;
+  /**
+   * True when this (available) slot would leave under 15 minutes of gap
+   * before or after the nearest neighbouring appointment — bookable, but a
+   * tight transition for the groomer. Never set on conflict slots.
+   */
+  shortGap?: boolean;
 }
 
 export type DayDensity = "plenty" | "limited" | "waitlist" | "off";
@@ -93,6 +99,37 @@ export function getAppointmentsForStylistOnDate(
 }
 
 /**
+ * First appointment (if any) on this stylist's day that overlaps the requested
+ * window — the same overlap test the slot grid uses (`start < aEnd && end >
+ * aStart`). Used by the calendar's drag-and-drop reassign/reschedule guard.
+ * `excludeAppointmentId` skips the appointment being moved.
+ */
+export function findStylistTimeConflict(
+  stylistId: string,
+  dateStr: string,
+  startTime: string,
+  endTime: string,
+  appointments: GroomingAppointment[],
+  excludeAppointmentId?: string,
+): GroomingAppointment | null {
+  const start = timeToMin(startTime);
+  const end = timeToMin(endTime);
+  if (end <= start) return null;
+  const dayAppts = getAppointmentsForStylistOnDate(
+    stylistId,
+    dateStr,
+    appointments,
+  );
+  for (const a of dayAppts) {
+    if (a.id === excludeAppointmentId) continue;
+    if (start < timeToMin(a.endTime) && end > timeToMin(a.startTime)) {
+      return a;
+    }
+  }
+  return null;
+}
+
+/**
  * Set of station ids already booked during the requested window on the given
  * date. The station picker subtracts these from the eligible-by-size list so
  * staff can't double-book a tub/table.
@@ -147,6 +184,10 @@ export interface ComputeSlotGridArgs {
     facilityBaseSeed?: string;
   };
 }
+
+/** Minimum gap (minutes) before/after a neighbouring appointment below which
+ *  a slot is flagged "short gap" — a tight transition for the groomer. */
+const SHORT_GAP_MINUTES = 15;
 
 export function computeSlotGrid(args: ComputeSlotGridArgs): SlotEntry[] {
   const {
@@ -209,6 +250,19 @@ export function computeSlotGrid(args: ComputeSlotGridArgs): SlotEntry[] {
       } else {
         slot.recommended = true;
       }
+
+      // Short gap — under SHORT_GAP_MINUTES of free time before or after the
+      // nearest neighbouring appointment. Bookable, but a tight transition.
+      // (This slot doesn't overlap any appointment, so every appt sits wholly
+      // before or wholly after it.)
+      let nearestGap = Number.POSITIVE_INFINITY;
+      for (const a of stylistAppts) {
+        const aStart = timeToMin(a.startTime);
+        const aEnd = timeToMin(a.endTime);
+        if (aEnd <= start) nearestGap = Math.min(nearestGap, start - aEnd);
+        if (aStart >= end) nearestGap = Math.min(nearestGap, aStart - end);
+      }
+      slot.shortGap = nearestGap < SHORT_GAP_MINUTES;
 
       if (mobile) {
         // Previous stop on the route = the latest appointment that ends at

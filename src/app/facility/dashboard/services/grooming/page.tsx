@@ -1,5 +1,5 @@
-import { GroomingCalendar } from "@/components/facility/grooming/grooming-calendar";
+import { CheckInBoard } from "@/components/facility/grooming/check-in-board";
 
 export default function GroomingPage() {
-  return <GroomingCalendar />;
+  return <CheckInBoard />;
 }

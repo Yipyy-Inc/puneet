@@ -1327,6 +1327,12 @@ export const groomingConfig: ModuleConfig = {
       medication: "disabled",
       belongings: "optional",
     },
+    inventory: {
+      trackingEnabled: true,
+    },
+    progressChecklist: {
+      enabled: false,
+    },
   },
   status: {
     disabled: false,

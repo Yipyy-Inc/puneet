@@ -58,6 +58,7 @@ export const toolConditionEnum = z.enum(["good", "needs-service", "retired"]);
 export type ToolCondition = z.infer<typeof toolConditionEnum>;
 
 export const stylistSkillLevelEnum = z.enum([
+  "basic",
   "standard",
   "premium",
   "platinum",
@@ -101,6 +102,59 @@ export const stylistCapacitySchema = z.object({
 });
 export type StylistCapacity = z.infer<typeof stylistCapacitySchema>;
 
+// ─── Per-groomer notification preferences (Spec Table 83) ────────────────────
+// Each groomer chooses which notification types and channels they receive and
+// their preferred summary send-time, overriding the facility defaults. Stored
+// (mock) on the stylist record via `notificationPrefs`; absence = fall back to
+// facility defaults.
+
+export const groomerNotificationTypeEnum = z.enum([
+  "new_booking", // a new booking assigned to them
+  "changes", // reassign / reschedule
+  "cancellations",
+  "tomorrow_summary", // evening "Tomorrow's Schedule" (Table 77–80)
+  "day_of", // morning first-appointment reminder (Table 81)
+  "thirty_min", // 30-min pre-visit reminder (Table 82)
+]);
+export type GroomerNotificationType = z.infer<
+  typeof groomerNotificationTypeEnum
+>;
+
+export const groomerNotificationChannelEnum = z.enum([
+  "sms",
+  "email",
+  "in_app",
+  "push",
+]);
+export type GroomerNotificationChannel = z.infer<
+  typeof groomerNotificationChannelEnum
+>;
+
+export const groomerNotificationPrefsSchema = z.object({
+  /** Which event types this groomer wants to be notified about. */
+  types: z.object({
+    new_booking: z.boolean(),
+    changes: z.boolean(),
+    cancellations: z.boolean(),
+    tomorrow_summary: z.boolean(),
+    day_of: z.boolean(),
+    thirty_min: z.boolean(),
+  }),
+  /** Which channels to deliver on. */
+  channels: z.object({
+    sms: z.boolean(),
+    email: z.boolean(),
+    in_app: z.boolean(),
+    push: z.boolean(),
+  }),
+  /** Preferred "Tomorrow's Schedule" send time (HH:MM), overriding the
+   *  facility default. */
+  summaryTime: z.string(),
+});
+export type GroomerNotificationPrefs = z.infer<
+  typeof groomerNotificationPrefsSchema
+>;
+
 export const stylistSchema = z.object({
   id: z.string(),
   staffId: z.string().optional(),
@@ -122,6 +176,8 @@ export const stylistSchema = z.object({
   calendarColor: z.string().optional(),
   /** Service/package ids this stylist is explicitly qualified to perform. */
   qualifiedPackageIds: z.array(z.string()).optional(),
+  /** Per-groomer notification overrides (Table 83). Absent = facility defaults. */
+  notificationPrefs: groomerNotificationPrefsSchema.optional(),
 });
 export type Stylist = z.infer<typeof stylistSchema>;
 
@@ -490,6 +546,24 @@ export type GroomingIntake = z.infer<typeof groomingIntakeSchema>;
  * leaving the booking. Answers are keyed by question id; the value
  * shape mirrors the question type (string | boolean | string[]).
  */
+/**
+ * A potential surcharge the client was asked to pre-approve on the Express
+ * Check-In form (Spec Table 103). An "approved" decision lets the groomer add
+ * the fee with one click (no call); a "declined" decision surfaces a
+ * "discuss at drop-off" notice. Maps 1:1 onto a {@link PriceAdjustment}.
+ */
+export const surchargeApprovalSchema = z.object({
+  id: z.string(),
+  /** Human label shown to the client + groomer, e.g. "De-matting fee". */
+  label: z.string(),
+  reason: priceAdjustmentReasonEnum,
+  amount: z.number().nonnegative(),
+  decision: z.enum(["approved", "declined"]),
+  /** ISO timestamp of the client's decision. */
+  decidedAt: z.string(),
+});
+export type SurchargeApproval = z.infer<typeof surchargeApprovalSchema>;
+
 export const expressCheckinSubmissionSchema = z.object({
   submittedAt: z.string(),
   answers: z.record(
@@ -498,6 +572,8 @@ export const expressCheckinSubmissionSchema = z.object({
   ),
   /** Photos the client uploaded with the form (e.g., current coat condition). */
   photosFromClient: z.array(z.string()).optional(),
+  /** Client's approve/decline decisions on potential surcharges (Table 103). */
+  surchargeApprovals: z.array(surchargeApprovalSchema).optional(),
 });
 export type ExpressCheckinSubmission = z.infer<
   typeof expressCheckinSubmissionSchema
@@ -725,6 +801,22 @@ export const groomingAppointmentSchema = z.object({
    * and renders the per-question answers in the pre-visit briefing.
    */
   expressCheckinSubmission: expressCheckinSubmissionSchema.optional(),
+  /**
+   * In-session progress checklist (spec Table 51) — the groomer ticks steps
+   * as they go (Bath, Blow Dry, Brush, Haircut, Nail Trim, Ear Cleaning,
+   * Final Check). Optional; only surfaced when the facility enables the
+   * progress checklist in Grooming Settings. `at` is the ISO timestamp the
+   * step was ticked done.
+   */
+  groomingProgress: z
+    .array(
+      z.object({
+        step: z.string(),
+        done: z.boolean(),
+        at: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 export type GroomingAppointment = z.infer<typeof groomingAppointmentSchema>;
 
@@ -1176,6 +1268,8 @@ export const groomingBookingDataSchema = z.object({
   clientPhone: z.string(),
   petId: z.number(),
   petName: z.string(),
+  /** Optional — surfaced in the groomer notification "{Pet} ({Breed})" (Table 75). */
+  petBreed: z.string().optional(),
   serviceCategory: z.string(),
   serviceVariant: z.string().optional(),
   addOns: z.array(z.string()),
@@ -1235,6 +1329,11 @@ export const stylistPerformanceMetricsSchema = z.object({
   completedCount: z.number(),
   cancelledCount: z.number(),
   totalAppointments: z.number(),
+  /** % of checked-in completed appointments where the pet was started on time
+   *  (check-in at or before the scheduled start). 0 when none measurable. */
+  onTimePercentage: z.number(),
+  /** Total gratuity ($) collected across completed appointments. */
+  totalTips: z.number(),
 });
 export type StylistPerformanceMetrics = z.infer<
   typeof stylistPerformanceMetricsSchema

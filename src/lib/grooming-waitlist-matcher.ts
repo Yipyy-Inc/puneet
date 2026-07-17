@@ -140,7 +140,17 @@ export function dateMatchesPreference(
       const dow = new Date(candidateDate + "T00:00:00").getDay();
       return pref.daysOfWeek.includes(dow);
     }
+    case "range":
+      return candidateDate >= pref.startDate && candidateDate <= pref.endDate;
   }
+}
+
+/** True when the candidate date is NOT on the entry's exclusion list (Table 96). */
+export function dateNotExcluded(
+  candidateDate: string,
+  excludedDates: string[] | undefined,
+): boolean {
+  return !excludedDates || !excludedDates.includes(candidateDate);
 }
 
 /** True when the slot's start time satisfies the entry's expectedTime preference. */
@@ -315,6 +325,9 @@ export function findAvailableMatches({
 
     for (const date of dates) {
       if (!dateMatchesPreference(date, entry.expectedDate, entry.date, today)) {
+        continue;
+      }
+      if (!dateNotExcluded(date, entry.excludedDates)) {
         continue;
       }
       const slots = findOpenSlotsForDay(date, stylists, appointments);

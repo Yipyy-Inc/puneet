@@ -218,6 +218,34 @@ export function GroomingCheckInOutSection() {
 
     if (!previousData) return;
 
+    // State-machine guard — a transition may only advance to the next legal
+    // state. The UI already routes Check In from the Scheduled list and Check
+    // Out from the Ready-for-Pickup list, but assert the source status here so
+    // the transition can never skip a state or run backward, whatever the
+    // entry point. (Start Grooming / Mark Ready are guarded inline at their
+    // buttons: checked-in→in-progress and in-progress→ready-for-pickup.)
+    if (checkInOutMode === "check-in" && previousData.status !== "scheduled") {
+      toast.error(
+        `Cannot check in ${selectedAppointment.petName} — appointment is "${previousData.status}", not Scheduled.`,
+      );
+      setCheckInOutMode(null);
+      setSelectedAppointment(null);
+      setHandlerName("");
+      return;
+    }
+    if (
+      checkInOutMode === "check-out" &&
+      previousData.status !== "ready-for-pickup"
+    ) {
+      toast.error(
+        `Cannot check out ${selectedAppointment.petName} — appointment is "${previousData.status}", not Ready for Pickup.`,
+      );
+      setCheckInOutMode(null);
+      setSelectedAppointment(null);
+      setHandlerName("");
+      return;
+    }
+
     if (checkInOutMode === "check-in") {
       // Check-in: scheduled -> checked-in
       setAppointmentsData((prev) =>

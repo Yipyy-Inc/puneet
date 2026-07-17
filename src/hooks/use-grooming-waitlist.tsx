@@ -15,10 +15,13 @@ import {
   type GroomingWaitlistStatus,
 } from "@/data/grooming-waitlist";
 
+import { WAITLIST_OFFER_WINDOW_MINUTES } from "@/lib/grooming-waitlist-offer";
+
 const STORAGE_KEY = "yipyy_grooming_waitlist_state";
 
-// Default confirmation window when a slot is offered to a waitlist client.
-export const DEFAULT_OFFER_WINDOW_MINUTES = 120;
+// Default confirmation window when a slot is offered to a waitlist client —
+// 4 hours per Spec Table 96.
+export const DEFAULT_OFFER_WINDOW_MINUTES = WAITLIST_OFFER_WINDOW_MINUTES;
 
 type State = {
   /** New entries staff added on top of the seed. */
@@ -67,6 +70,23 @@ interface WaitlistContextValue {
     slot: { startTime: string; endTime: string },
     windowMinutes?: number,
   ) => void;
+  /**
+   * Expire the current offer and hand the freed slot to the next matching
+   * client (Table 96 "no response in 4h → offer to next person"). Returns the
+   * newly-offered entry, or null if nobody else qualifies.
+   */
+  expireAndOfferNext: (
+    expiredId: string,
+    slot: {
+      date: string;
+      startTime: string;
+      endTime: string;
+      stylistName?: string;
+      stylistId?: string;
+      serviceName?: string;
+    },
+    windowMinutes?: number,
+  ) => GroomingWaitlistEntry | null;
 }
 
 const WaitlistContext = createContext<WaitlistContextValue | null>(null);
@@ -115,7 +135,7 @@ function slotMatchesExpectedTime(
   return Math.abs(startMin - timeToMin(pref.time)) <= 15;
 }
 
-/** Structured date preference — new shape. ASAP/specific-date/day-of-week. */
+/** Structured date preference — ASAP/specific-date/day-of-week/range. */
 function dateMatchesExpectedDate(
   candidateDate: string,
   pref: GroomingWaitlistEntry["expectedDate"],
@@ -124,8 +144,67 @@ function dateMatchesExpectedDate(
   if (!pref) return !legacyDate || candidateDate === legacyDate;
   if (pref.kind === "asap") return true;
   if (pref.kind === "specific-date") return candidateDate === pref.date;
+  if (pref.kind === "range") {
+    return candidateDate >= pref.startDate && candidateDate <= pref.endDate;
+  }
   const dow = new Date(candidateDate + "T00:00:00").getDay();
   return pref.daysOfWeek.includes(dow);
+}
+
+/** Slot descriptor a freed appointment offers to the waitlist. */
+type SlotMatchInput = {
+  date: string;
+  startTime: string;
+  endTime: string;
+  stylistName?: string;
+  stylistId?: string;
+  serviceName?: string;
+};
+
+/**
+ * Highest-priority "waiting" entry whose preferences fit the freed slot, FIFO
+ * by `addedAt`. `excludeId` skips an entry (e.g. the one whose offer just
+ * expired) so the handoff moves to the next person. Pure — no state writes.
+ */
+function pickNextMatch(
+  entries: GroomingWaitlistEntry[],
+  input: SlotMatchInput,
+  excludeId?: string,
+): GroomingWaitlistEntry | null {
+  const today = new Date().toISOString().split("T")[0];
+  const candidates = entries
+    .filter((e) => e.status === "waiting")
+    .filter((e) => e.id !== excludeId)
+    .filter((e) => !e.validUntil || e.validUntil >= today)
+    .filter((e) => dateMatchesExpectedDate(input.date, e.expectedDate, e.date))
+    .filter((e) => !e.excludedDates?.includes(input.date))
+    .filter(
+      (e) =>
+        !input.serviceName ||
+        e.serviceName.toLowerCase() === input.serviceName.toLowerCase() ||
+        e.serviceName.toLowerCase().includes(input.serviceName.toLowerCase()),
+    )
+    .filter((e) => {
+      if (e.preferredStylistIds && e.preferredStylistIds.length > 0) {
+        return !input.stylistId
+          ? false
+          : e.preferredStylistIds.includes(input.stylistId);
+      }
+      if (e.preferredStylistName && input.stylistName) {
+        return (
+          e.preferredStylistName.toLowerCase() ===
+          input.stylistName.toLowerCase()
+        );
+      }
+      return true;
+    })
+    .filter((e) =>
+      e.expectedTime
+        ? slotMatchesExpectedTime(input.startTime, e.expectedTime)
+        : slotMatchesPreference(input.startTime, e.preferredTimeWindow),
+    )
+    .sort((a, b) => a.addedAt.localeCompare(b.addedAt));
+  return candidates[0] ?? null;
 }
 
 export function GroomingWaitlistProvider({
@@ -222,58 +301,38 @@ export function GroomingWaitlistProvider({
   );
 
   const findMatchForSlot = useCallback(
-    (input: {
-      date: string;
-      startTime: string;
-      endTime: string;
-      stylistName?: string;
-      stylistId?: string;
-      serviceName?: string;
-    }): GroomingWaitlistEntry | null => {
-      const today = new Date().toISOString().split("T")[0];
-      const candidates = entries
-        .filter((e) => e.status === "waiting")
-        // Auto-expire check.
-        .filter((e) => !e.validUntil || e.validUntil >= today)
-        // Date check honors structured expectedDate, falling back to legacy.
-        .filter((e) =>
-          dateMatchesExpectedDate(input.date, e.expectedDate, e.date),
-        )
-        // Service preference — match by name if the slot specifies one.
-        .filter(
-          (e) =>
-            !input.serviceName ||
-            e.serviceName.toLowerCase() === input.serviceName.toLowerCase() ||
-            e.serviceName
-              .toLowerCase()
-              .includes(input.serviceName.toLowerCase()),
-        )
-        // Stylist preference — structured ids first, then legacy name fallback.
-        .filter((e) => {
-          if (e.preferredStylistIds && e.preferredStylistIds.length > 0) {
-            return !input.stylistId
-              ? false
-              : e.preferredStylistIds.includes(input.stylistId);
-          }
-          if (e.preferredStylistName && input.stylistName) {
-            return (
-              e.preferredStylistName.toLowerCase() ===
-              input.stylistName.toLowerCase()
-            );
-          }
-          return true;
-        })
-        // Time preference — structured first, then legacy.
-        .filter((e) =>
-          e.expectedTime
-            ? slotMatchesExpectedTime(input.startTime, e.expectedTime)
-            : slotMatchesPreference(input.startTime, e.preferredTimeWindow),
-        )
-        // Oldest waiting first (FIFO).
-        .sort((a, b) => a.addedAt.localeCompare(b.addedAt));
-      return candidates[0] ?? null;
-    },
+    (input: SlotMatchInput): GroomingWaitlistEntry | null =>
+      pickNextMatch(entries, input),
     [entries],
+  );
+
+  const expireAndOfferNext = useCallback(
+    (
+      expiredId: string,
+      slot: SlotMatchInput,
+      windowMinutes: number = DEFAULT_OFFER_WINDOW_MINUTES,
+    ): GroomingWaitlistEntry | null => {
+      // Next person in line for the same slot, skipping the one who lapsed.
+      const next = pickNextMatch(entries, slot, expiredId);
+      const now = new Date();
+      const overrides: State["overrides"] = {
+        ...state.overrides,
+        [expiredId]: { ...state.overrides[expiredId], status: "expired" },
+      };
+      if (next) {
+        const until = new Date(now.getTime() + windowMinutes * 60_000);
+        overrides[next.id] = {
+          ...state.overrides[next.id],
+          status: "offered",
+          offeredAt: now.toISOString(),
+          offeredUntil: until.toISOString(),
+          offeredSlot: `${slot.startTime}–${slot.endTime}`,
+        };
+      }
+      persist({ ...state, overrides });
+      return next;
+    },
+    [entries, state, persist],
   );
 
   const value = useMemo<WaitlistContextValue>(
@@ -284,8 +343,17 @@ export function GroomingWaitlistProvider({
       setStatus,
       offerSlot,
       findMatchForSlot,
+      expireAndOfferNext,
     }),
-    [entries, entriesForDate, addEntry, setStatus, offerSlot, findMatchForSlot],
+    [
+      entries,
+      entriesForDate,
+      addEntry,
+      setStatus,
+      offerSlot,
+      findMatchForSlot,
+      expireAndOfferNext,
+    ],
   );
 
   return (

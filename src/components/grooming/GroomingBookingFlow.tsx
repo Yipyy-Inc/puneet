@@ -1,14 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { groomingQueries } from "@/lib/api/grooming";
 import { useGroomingValidation } from "@/hooks/use-grooming-validation";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { vaccinationRecords } from "@/data/pet-data";
-import { stylists } from "@/data/grooming";
+import { stylists, groomingAppointments } from "@/data/grooming";
 import { locations } from "@/data/settings";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,7 +54,7 @@ import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { cn } from "@/lib/utils";
 import {
   handleImmediatePostBookingActions,
-  schedule24HourReminder,
+  scheduleAppointmentReminders,
   type GroomingBookingData,
 } from "@/lib/grooming-post-booking";
 import {
@@ -840,6 +840,61 @@ export function GroomingBookingFlow({
     });
   }, [availableAddOns, petFlags]);
 
+  // Add-ons the pet had on their most recent completed grooming visit — used
+  // to pre-select "Based on your last visit" on the add-ons step (Table 90).
+  const lastVisitAddOnIds = useMemo(() => {
+    if (!customer || selectedPetId == null) return [] as string[];
+    const lastBooking = bookings
+      .filter(
+        (b) =>
+          b.clientId === customer.id &&
+          b.petId === selectedPetId &&
+          b.service.toLowerCase() === "grooming" &&
+          b.status === "completed",
+      )
+      .sort(
+        (a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime(),
+      )[0];
+    const names = (lastBooking?.groomingAddOns ?? []).map((n) =>
+      n.toLowerCase(),
+    );
+    if (names.length === 0) return [] as string[];
+    return availableAddOns
+      .filter((a) =>
+        names.some(
+          (n) =>
+            a.name.toLowerCase().includes(n) ||
+            n.includes(a.name.toLowerCase()),
+        ),
+      )
+      .map((a) => a.id);
+  }, [customer, selectedPetId, availableAddOns]);
+
+  const didPreselectAddOnsRef = useRef(false);
+
+  // Per-day availability density for the date picker dots (Table 91). Derived
+  // from how full each day already is across active groomers vs a soft daily
+  // capacity: plenty (green) / limited (amber) / waitlist (red).
+  const availabilityDensityByDate = useMemo(() => {
+    const activeGroomerCount = Math.max(
+      1,
+      stylists.filter((s) => s.status === "active").length,
+    );
+    const softDailyCap = activeGroomerCount * 6; // ~6 appts per groomer/day
+    const counts: Record<string, number> = {};
+    for (const a of groomingAppointments) {
+      if (a.status === "cancelled" || a.status === "no-show") continue;
+      counts[a.date] = (counts[a.date] ?? 0) + 1;
+    }
+    const density: Record<string, "plenty" | "limited" | "waitlist"> = {};
+    for (const [date, n] of Object.entries(counts)) {
+      const ratio = n / softDailyCap;
+      density[date] =
+        ratio >= 1 ? "waitlist" : ratio >= 0.6 ? "limited" : "plenty";
+    }
+    return density;
+  }, []);
+
   // Calculate total duration with add-ons
   const totalDurationWithAddOns = useMemo(() => {
     let total = calculatedDuration;
@@ -1096,6 +1151,17 @@ export function GroomingBookingFlow({
     if (requiresPhotos && customPhotos.length === 0) {
       // Show error or prevent proceeding
       return;
+    }
+
+    // Pre-select the pet's last-visit add-ons the first time we reach the
+    // add-ons step (Table 90). Only when the customer hasn't chosen any yet.
+    if (
+      !didPreselectAddOnsRef.current &&
+      selectedAddOns.length === 0 &&
+      lastVisitAddOnIds.length > 0
+    ) {
+      didPreselectAddOnsRef.current = true;
+      setSelectedAddOns(lastVisitAddOnIds);
     }
 
     // Navigate to Step 4 (Add-ons)
@@ -2235,14 +2301,21 @@ export function GroomingBookingFlow({
       // Execute immediate post-booking actions
       await handleImmediatePostBookingActions(bookingData);
 
-      // Schedule 24-hour reminder
-      await schedule24HourReminder(bookingData);
+      // Queue confirmation + the 48h / 24h / 2h reminder cadence (Table 95).
+      await scheduleAppointmentReminders(bookingData);
 
-      // Success - close modal and show success message
+      // Prep message (Table 94) — how to get the pet ready for the visit.
+      const prepMessage =
+        serviceLocation === "mobile"
+          ? `To prep ${selectedPet.name}: brush out any tangles, take a short walk before we arrive, and please clear a parking spot for the van.`
+          : `To prep ${selectedPet.name}: brush out any tangles, a short walk before drop-off helps them settle, and bring any medications they need.`;
+
+      // On-screen confirmation summary + success toast.
       onOpenChange(false);
 
-      toast.success("Booking confirmed!", {
-        description: `Your appointment for ${selectedPet.name} has been scheduled. Check your email for confirmation details.`,
+      toast.success(`Booking confirmed for ${selectedPet.name}!`, {
+        description: `${prepMessage} A confirmation + reminders (48h, 24h, 2h before) are on the way by email/SMS.`,
+        duration: 12000,
         action: {
           label: "Manage Booking",
           onClick: () => router.push(`/customer/bookings/${bookingId}`),
@@ -3027,6 +3100,14 @@ export function GroomingBookingFlow({
                               {isSuggested && (
                                 <Badge variant="outline" className="text-xs">
                                   Recommended
+                                </Badge>
+                              )}
+                              {lastVisitAddOnIds.includes(addon.id) && (
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-pink-100 text-xs text-pink-700 dark:bg-pink-950/40 dark:text-pink-300"
+                                >
+                                  Based on your last visit
                                 </Badge>
                               )}
                             </div>
@@ -3879,12 +3960,27 @@ export function GroomingBookingFlow({
                     }}
                     minDate={minBookingDate}
                     disabledDates={disabledDates}
+                    availabilityDensityByDate={availabilityDensityByDate}
                     bookingRules={{
                       minimumAdvanceBooking:
                         config.bookingRules.leadTime.minimumHours,
                       maximumAdvanceBooking: 14, // 2 weeks
                     }}
                   />
+                  <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-3 text-[11px]">
+                    <span className="flex items-center gap-1">
+                      <span className="size-1.5 rounded-full bg-emerald-500" />
+                      Plenty of openings
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="size-1.5 rounded-full bg-amber-500" />
+                      Filling up
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="size-1.5 rounded-full bg-rose-500" />
+                      Waitlist likely
+                    </span>
+                  </div>
                 </div>
 
                 {/* Time Slot Selection */}
@@ -3985,6 +4081,7 @@ export function GroomingBookingFlow({
                     }}
                     minDate={minBookingDate}
                     disabledDates={disabledDates}
+                    availabilityDensityByDate={availabilityDensityByDate}
                     bookingRules={{
                       minimumAdvanceBooking:
                         config.bookingRules.leadTime.minimumHours,

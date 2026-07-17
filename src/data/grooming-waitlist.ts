@@ -13,11 +13,13 @@ export type GroomingWaitlistStatus =
  *   - asap: any open slot from today forward
  *   - specific-date: only the named ISO date
  *   - day-of-week: a recurring weekday preference (0=Sun … 6=Sat)
+ *   - range: any open slot within [startDate, endDate] inclusive (Table 96)
  */
 export type WaitlistExpectedDate =
   | { kind: "asap" }
   | { kind: "specific-date"; date: string }
-  | { kind: "day-of-week"; daysOfWeek: number[] };
+  | { kind: "day-of-week"; daysOfWeek: number[] }
+  | { kind: "range"; startDate: string; endDate: string };
 
 /**
  * Expected time-of-day preference.
@@ -62,8 +64,13 @@ export type GroomingWaitlistEntry = {
   preferredStylistIds?: string[];
   /** Legacy 3-way preference; new entries use {@link expectedTime}. */
   preferredTimeWindow?: "morning" | "afternoon" | "anytime";
-  /** Structured expected-date preference (asap / specific-date / day-of-week). */
+  /** Structured expected-date preference (asap / specific-date / day-of-week / range). */
   expectedDate?: WaitlistExpectedDate;
+  /**
+   * ISO dates the client explicitly cannot do — never offered on these days
+   * even if they otherwise satisfy {@link expectedDate} (Table 96).
+   */
+  excludedDates?: string[];
   /** Structured expected-time preference (anytime / period / exact-time). */
   expectedTime?: WaitlistExpectedTime;
   /**

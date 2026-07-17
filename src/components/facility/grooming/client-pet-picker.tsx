@@ -25,6 +25,10 @@ import {
 import { ArrowLeft, Mail, PawPrint, Phone, Plus, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clientQueries } from "@/lib/api/client";
+import {
+  groomingQueries,
+  getMostRecentCompletedAppointment,
+} from "@/lib/api/grooming";
 import type { Client } from "@/types/client";
 import type { Pet } from "@/types/pet";
 
@@ -83,6 +87,9 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 
 export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
   const { data: clients = [] } = useQuery(clientQueries.all());
+  const { data: allAppointments = [] } = useQuery(
+    groomingQueries.appointments(),
+  );
 
   const selectedClient = useMemo(
     () =>
@@ -91,6 +98,18 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
         : null,
     [clients, value.clientId],
   );
+
+  // The most recent completed grooming service per pet of the selected client —
+  // shown on each pet card. Derived from the existing appointments source.
+  const lastServiceByPetId = useMemo(() => {
+    const map: Record<number, string> = {};
+    if (!selectedClient) return map;
+    for (const p of (selectedClient.pets ?? []) as Pet[]) {
+      const last = getMostRecentCompletedAppointment(p.id, allAppointments);
+      if (last) map[p.id] = last.packageName;
+    }
+    return map;
+  }, [selectedClient, allAppointments]);
 
   // Local UI flags. The "mode" is derived from these + value so the picker
   // stays fully controlled by the parent's form state.
@@ -203,17 +222,24 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
   // ─── Search results ────────────────────────────────────────────────────────
 
   const q = searchQuery.trim().toLowerCase();
+  // Before typing: recent clients. Once typing: search the FULL client
+  // database by name / phone / email (+ pet name). Phone is matched on digits
+  // so a query like "5145550100" matches a formatted "(514) 555-0100".
   const matched = useMemo(() => {
     if (!q) return clients.slice(0, 6);
+    const qDigits = q.replace(/\D/g, "");
     return clients
-      .filter(
-        (c) =>
+      .filter((c) => {
+        const phoneDigits = (c.phone ?? "").replace(/\D/g, "");
+        return (
           c.name.toLowerCase().includes(q) ||
           c.email.toLowerCase().includes(q) ||
           (c.phone ?? "").toLowerCase().includes(q) ||
-          (c.pets ?? []).some((p) => p.name.toLowerCase().includes(q)),
-      )
-      .slice(0, 8);
+          (qDigits.length >= 3 && phoneDigits.includes(qDigits)) ||
+          (c.pets ?? []).some((p) => p.name.toLowerCase().includes(q))
+        );
+      })
+      .slice(0, 25);
   }, [clients, q]);
 
   return (
@@ -419,6 +445,7 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
             <PetGallery
               pets={clientPets}
               selectedPetId={value.petId}
+              lastServiceByPetId={lastServiceByPetId}
               onPick={pickPet}
               onAddNew={startNewPet}
             />
@@ -565,11 +592,13 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
 function PetGallery({
   pets,
   selectedPetId,
+  lastServiceByPetId,
   onPick,
   onAddNew,
 }: {
   pets: Pet[];
   selectedPetId?: number;
+  lastServiceByPetId: Record<number, string>;
   onPick: (p: Pet) => void;
   onAddNew: () => void;
 }) {
@@ -619,6 +648,11 @@ function PetGallery({
                   </span>
                 )}
               </div>
+              <p className="text-muted-foreground mt-0.5 truncate text-[10px]">
+                {lastServiceByPetId[p.id]
+                  ? `Last: ${lastServiceByPetId[p.id]}`
+                  : "No prior visits"}
+              </p>
             </div>
           </button>
         );

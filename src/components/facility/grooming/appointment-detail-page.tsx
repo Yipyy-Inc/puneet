@@ -10,6 +10,16 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -82,6 +92,7 @@ import {
   useGroomingWaitlist,
   DEFAULT_OFFER_WINDOW_MINUTES,
 } from "@/hooks/use-grooming-waitlist";
+import { buildWaitlistOfferForEntry } from "@/lib/grooming-waitlist-offer";
 import { PreVisitBriefing } from "./pre-visit-briefing";
 import { GroomingSessionPanel } from "./grooming-session-panel";
 import {
@@ -323,15 +334,20 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       { startTime: apt.startTime, endTime: apt.endTime },
       DEFAULT_OFFER_WINDOW_MINUTES,
     );
-    const hours = Math.round(DEFAULT_OFFER_WINDOW_MINUTES / 60);
+    // Build the Table 96 SMS+email copy (mock — surfaced, not really sent).
+    const { message } = buildWaitlistOfferForEntry(match, {
+      date: apt.date,
+      startTime: apt.startTime,
+      groomerName: match.preferredStylistName ? apt.stylistName : undefined,
+    });
     toast.success(
       `Slot offered to ${match.petName} (${match.ownerName}) from the waitlist`,
       {
-        description: `${hours}h to confirm — Phone/SMS sent`,
+        description: message,
       },
     );
     recordHistory(
-      `Waitlist auto-match — offered ${match.petName} (${match.ownerName}) the freed slot · ${DEFAULT_OFFER_WINDOW_MINUTES}m window`,
+      `Waitlist auto-match — SMS+email sent to ${match.ownerName}: "${message}"`,
     );
   }
 
@@ -344,6 +360,9 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   const [comments, setComments] = useState<TicketComment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [history, setHistory] = useState<AppointmentHistoryEntry[]>([]);
+  // True when the in-progress session's step checklist is complete — makes the
+  // Mark Ready button glow (spec Table 51).
+  const [progressComplete, setProgressComplete] = useState(false);
   // Pet-level notes are read-only here in terms of authoring, but staff can
   // pin/unpin from this page so the most important note floats to the top.
   const [pinnedOverrides, setPinnedOverrides] = useState<
@@ -355,6 +374,10 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   const [noShowOpen, setNoShowOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [bookAgainOpen, setBookAgainOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [msgOpen, setMsgOpen] = useState(false);
+  const [smsDraft, setSmsDraft] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [markReadyOpen, setMarkReadyOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -434,6 +457,25 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     );
   }, [customerPackages, apt]);
 
+  // This pet's previous completed visits at this facility (spec Table 56 —
+  // "Booking History"). Distinct from the field-level Update History audit
+  // trail; declared before the early return to keep hook order stable.
+  const priorVisits = useMemo(() => {
+    if (!apt) return [];
+    const todayStr = new Date().toISOString().split("T")[0];
+    return allAppointments
+      .filter(
+        (a) =>
+          a.petId === apt.petId &&
+          a.id !== apt.id &&
+          a.date < todayStr &&
+          a.status === "completed",
+      )
+      .sort((a, b) =>
+        `${b.date} ${b.startTime}`.localeCompare(`${a.date} ${a.startTime}`),
+      );
+  }, [allAppointments, apt]);
+
   if (!apt) {
     return (
       <Card>
@@ -444,7 +486,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
             We couldn&apos;t find an appointment with id <code>{id}</code>.
           </p>
           <Button asChild variant="outline">
-            <Link href="/facility/dashboard/services/grooming">
+            <Link href="/facility/dashboard/services/grooming/calendar">
               <ArrowLeft className="mr-2 size-4" />
               Back to Calendar
             </Link>
@@ -513,10 +555,18 @@ export function AppointmentDetailPage({ id }: { id: string }) {
 
   function handleCheckInConfirm(result: CheckInConfirmation) {
     if (!apt) return;
+    // No-show path — staff ticked "Mark as No-Show" in the check-in dialog.
+    if (result.markNoShow) {
+      const beforeNoShow = STATUS_META[status ?? apt.status].label;
+      setStatus("no-show");
+      recordFieldChange("Status", beforeNoShow, STATUS_META["no-show"].label);
+      toast.warning(`${apt.petName} — No-Show`);
+      return;
+    }
     const before = STATUS_META[status ?? apt.status].label;
     setStatus("in-progress");
     recordFieldChange("Status", before, STATUS_META["in-progress"].label);
-    recordHistory(`Station assigned · ${result.stationName}`);
+    recordHistory(`Assigned to ${result.stationName} at check-in`);
     if (result.dropOffObservations) {
       recordHistory(`Drop-off: ${result.dropOffObservations}`);
     }
@@ -852,7 +902,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
         size="sm"
         className="text-muted-foreground"
       >
-        <Link href="/facility/dashboard/services/grooming">
+        <Link href="/facility/dashboard/services/grooming/calendar">
           <ArrowLeft className="mr-1.5 size-4" />
           Back to Calendar
         </Link>
@@ -901,7 +951,14 @@ export function AppointmentDetailPage({ id }: { id: string }) {
           <div className="flex items-center gap-2">
             {primary && (
               <Button
-                className={primary.className}
+                className={cn(
+                  primary.className,
+                  // Glow when the in-progress step checklist is complete.
+                  currentStatus === "in-progress" &&
+                    primary.next === "ready-for-pickup" &&
+                    progressComplete &&
+                    "animate-pulse ring-2 ring-emerald-400 ring-offset-2",
+                )}
                 onClick={() => {
                   if (
                     currentStatus === "scheduled" &&
@@ -931,6 +988,56 @@ export function AppointmentDetailPage({ id }: { id: string }) {
                 {primary.label}
               </Button>
             )}
+            {/* Message Owner — quick SMS compose pre-addressed to the owner,
+                with an editable template (fires the mock SMS toast). */}
+            <Popover
+              open={msgOpen}
+              onOpenChange={(o) => {
+                setMsgOpen(o);
+                if (o) {
+                  setSmsDraft(
+                    `Hi ${apt.ownerName}, this is Yipyy about ${apt.petName}'s grooming appointment on ${formatDateLong(apt.date)} at ${apt.startTime}. Reply here if you have any questions!`,
+                  );
+                }
+              }}
+            >
+              <PopoverTrigger asChild>
+                <Button variant="outline">
+                  <MessageSquare className="mr-1.5 size-4" />
+                  Message Owner
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80">
+                <p className="text-sm font-semibold">Message {apt.ownerName}</p>
+                <p className="text-muted-foreground mb-2 text-xs">
+                  To: {apt.ownerPhone}
+                </p>
+                <Textarea
+                  value={smsDraft}
+                  onChange={(e) => setSmsDraft(e.target.value)}
+                  rows={4}
+                  className="text-sm"
+                  placeholder="Type a message to the owner…"
+                />
+                <div className="mt-2 flex justify-end">
+                  <Button
+                    size="sm"
+                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                    disabled={!smsDraft.trim()}
+                    onClick={() => {
+                      toast.success(`SMS sent to ${apt.ownerName}`, {
+                        description: smsDraft.trim(),
+                      });
+                      recordHistory(`SMS sent to owner (${apt.ownerPhone})`);
+                      setMsgOpen(false);
+                    }}
+                  >
+                    <MessageSquare className="mr-1.5 size-4" />
+                    Send SMS
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -939,9 +1046,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuItem
-                  onClick={() => toast.info("Edit appointment")}
-                >
+                <DropdownMenuItem onClick={() => setEditOpen(true)}>
                   <Pencil className="mr-2 size-4" />
                   Edit
                 </DropdownMenuItem>
@@ -1055,7 +1160,10 @@ export function AppointmentDetailPage({ id }: { id: string }) {
 
       {/* Session panel — visible while the appointment is In Progress */}
       {currentStatus === "in-progress" && (
-        <GroomingSessionPanel appointment={apt} />
+        <GroomingSessionPanel
+          appointment={apt}
+          onProgressChange={setProgressComplete}
+        />
       )}
 
       {/* Service Details */}
@@ -1477,6 +1585,77 @@ export function AppointmentDetailPage({ id }: { id: string }) {
         </Card>
       )}
 
+      {/* Booking History (spec Table 56) — this pet's previous completed visits
+          at the facility. Collapsed by default; distinct from the field-level
+          Update History audit trail above. */}
+      <Card>
+        <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="hover:bg-muted/40 flex w-full items-center justify-between gap-2 rounded-t-xl px-6 py-4 text-left transition-colors"
+            >
+              <span className="flex items-center gap-2 font-semibold">
+                <History className="text-muted-foreground size-4" />
+                Booking History
+                {priorVisits.length > 0 && (
+                  <Badge variant="secondary">{priorVisits.length}</Badge>
+                )}
+              </span>
+              <ChevronDown
+                className={cn(
+                  "text-muted-foreground size-4 transition-transform",
+                  historyOpen && "rotate-180",
+                )}
+              />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="space-y-2 px-6 pb-5">
+              {priorVisits.length === 0 ? (
+                <p className="text-muted-foreground text-sm italic">
+                  No previous visits on file for {apt.petName}.
+                </p>
+              ) : (
+                <>
+                  {priorVisits.map((v) => (
+                    <div
+                      key={v.id}
+                      className="bg-muted/30 rounded-md border px-3 py-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium">
+                          {formatDateLong(v.date)}
+                        </span>
+                        <span className="text-muted-foreground flex items-center gap-1 text-xs">
+                          <User className="size-3" />
+                          {v.stylistName}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground text-xs">
+                        {v.packageName}
+                        {v.addOns.length > 0 ? ` · ${v.addOns.join(", ")}` : ""}
+                      </p>
+                      {v.intake?.sessionNotes && (
+                        <p className="mt-1 text-xs">{v.intake.sessionNotes}</p>
+                      )}
+                    </div>
+                  ))}
+                  <div className="pt-1">
+                    <Button asChild variant="link" size="sm" className="px-0">
+                      <Link href={`/facility/dashboard/clients/${apt.ownerId}`}>
+                        View All
+                        <ExternalLink className="ml-1 size-3.5" />
+                      </Link>
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+
       <CancelAppointmentDialog
         open={cancelOpen}
         onOpenChange={setCancelOpen}
@@ -1500,6 +1679,16 @@ export function AppointmentDetailPage({ id }: { id: string }) {
         open={bookAgainOpen}
         onOpenChange={setBookAgainOpen}
         prefillFrom={apt}
+      />
+      {/* Edit — the full booking pre-filled with THIS appointment's date, time,
+          groomer, service and add-ons, all editable. */}
+      <NewAppointmentDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        prefillFrom={apt}
+        defaultDate={apt.date}
+        defaultStartTime={apt.startTime}
+        defaultStylistId={apt.stylistId}
       />
       <CheckInConfirmationDialog
         open={checkInOpen}

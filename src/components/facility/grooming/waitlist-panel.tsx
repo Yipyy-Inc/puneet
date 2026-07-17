@@ -27,6 +27,7 @@ import type {
   GroomingWaitlistStatus,
 } from "@/data/grooming-waitlist";
 import { useGroomingWaitlist } from "@/hooks/use-grooming-waitlist";
+import { buildWaitlistOfferForEntry } from "@/lib/grooming-waitlist-offer";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -133,7 +134,7 @@ export function WaitlistPanel({
   entries: GroomingWaitlistEntry[];
   onBookFromWaitlist?: (entry: GroomingWaitlistEntry) => void;
 }) {
-  const { setStatus } = useGroomingWaitlist();
+  const { setStatus, expireAndOfferNext } = useGroomingWaitlist();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -276,8 +277,31 @@ export function WaitlistPanel({
                             variant="outline"
                             className="h-8 gap-1.5"
                             onClick={() => {
-                              setStatus(e.id, "expired");
-                              toast.info(`Offer to ${e.petName} expired`);
+                              const [startTime, endTime] = (
+                                e.offeredSlot ?? "–"
+                              ).split("–");
+                              // Table 96 — expire this offer and hand the slot
+                              // to the next matching client.
+                              const next = expireAndOfferNext(e.id, {
+                                date: e.date,
+                                startTime: startTime || "",
+                                endTime: endTime || "",
+                                serviceName: e.serviceName,
+                              });
+                              if (next) {
+                                const { message } = buildWaitlistOfferForEntry(
+                                  next,
+                                  { date: e.date, startTime: startTime || "" },
+                                );
+                                toast.info(
+                                  `Offer to ${e.petName} expired — passed to ${next.petName}`,
+                                  { description: message },
+                                );
+                              } else {
+                                toast.info(
+                                  `Offer to ${e.petName} expired — no one else is waiting for this slot`,
+                                );
+                              }
                             }}
                           >
                             <XCircle className="size-3.5" />
