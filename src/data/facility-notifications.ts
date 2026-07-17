@@ -3,6 +3,8 @@
  * Used for YipyyGo submissions, form submissions, and other facility events.
  */
 
+import { useSyncExternalStore } from "react";
+
 import { facilityConfig } from "@/data/facility-config";
 
 // Types re-exported from @/types/facility (single source of truth)
@@ -25,8 +27,8 @@ function ago(minutes: number): string {
   return new Date(Date.now() - minutes * 60 * 1000).toISOString();
 }
 
-// Seed notifications across all categories
-const notifications: FacilityNotification[] = [
+// Seed notifications across all categories (spec Table 31 examples).
+const SEED: FacilityNotification[] = [
   // --- Customers ---
   {
     id: "fn-cust-1",
@@ -75,18 +77,8 @@ const notifications: FacilityNotification[] = [
     link: "/facility/dashboard/services/boarding/check-in",
     meta: { petName: "Luna" },
   },
-  {
-    id: "fn-board-3",
-    type: "booking_new",
-    title: "New boarding request",
-    message: "Charlie (Labrador) — 5 nights starting Mar 30",
-    read: false,
-    timestamp: ago(30),
-    facilityId: 11,
-    category: "boarding",
-    link: "/facility/dashboard/bookings",
-    meta: { petName: "Charlie" },
-  },
+  // (A static "New boarding request" seed lived here; pending booking requests
+  //  now come live from useBookingRequestNotifications — spec Table 52.)
   // --- Daycare ---
   {
     id: "fn-day-1",
@@ -183,7 +175,7 @@ const notifications: FacilityNotification[] = [
     timestamp: ago(12),
     facilityId: 11,
     category: "forms",
-    link: "/facility/dashboard/forms/submissions",
+    link: "/facility/dashboard/forms/submissions/sub-1",
     submissionId: "sub-1",
     meta: {
       formName: "New Client Intake",
@@ -202,7 +194,7 @@ const notifications: FacilityNotification[] = [
     timestamp: ago(25),
     facilityId: 11,
     category: "forms",
-    link: "/facility/dashboard/forms/submissions",
+    link: "/facility/dashboard/forms/submissions/sub-2",
     submissionId: "sub-2",
     meta: {
       formName: "Boarding Intake",
@@ -221,7 +213,7 @@ const notifications: FacilityNotification[] = [
     timestamp: ago(200),
     facilityId: 11,
     category: "forms",
-    link: "/facility/dashboard/forms/submissions",
+    link: "/facility/dashboard/forms/submissions/sub-3",
     submissionId: "sub-3",
     meta: {
       formName: "Pet Profile",
@@ -235,7 +227,7 @@ const notifications: FacilityNotification[] = [
   {
     id: "fn-yipyygo-3",
     type: "yipyygo_submitted",
-    title: "YipyyGo form submitted",
+    title: "Express Check-In submitted",
     message: "Max — Bob Smith · Booking #3 · 2024-03-10",
     read: false,
     timestamp: ago(130),
@@ -248,7 +240,7 @@ const notifications: FacilityNotification[] = [
   {
     id: "fn-yipyygo-4",
     type: "warning",
-    title: "YipyyGo form needs review",
+    title: "Express form needs review",
     message: "Rex — John Doe · Booking #4 · 2024-03-13",
     read: false,
     timestamp: ago(240),
@@ -260,8 +252,8 @@ const notifications: FacilityNotification[] = [
   },
   {
     id: "fn-yipyygo-5",
-    type: "warning",
-    title: "YipyyGo pre-check missing",
+    type: "yipyygo_missing",
+    title: "Express Check-In missing",
     message: "Luna — Emma Davis · Booking #5 · arriving tomorrow",
     read: false,
     timestamp: ago(60),
@@ -271,22 +263,98 @@ const notifications: FacilityNotification[] = [
     link: "/facility/dashboard/bookings/5#yipyygo",
     meta: { petName: "Luna", bookingRef: "#5" },
   },
+  // --- Older, already-read items (demonstrate retention/archive, Table 43) ---
+  {
+    id: "fn-arch-1",
+    type: "checkout",
+    title: "Boarding departure",
+    message: "Cooper (Beagle) checked out after a 2-night stay",
+    read: true,
+    timestamp: ago(45 * 24 * 60), // ~45 days ago → archived at 7/14/30, kept at 90
+    facilityId: 11,
+    category: "boarding",
+    link: "/facility/dashboard/bookings",
+  },
+  {
+    id: "fn-arch-2",
+    type: "customer_registered",
+    title: "New customer registered",
+    message: "Priya Nair created an account and added 1 pet",
+    read: true,
+    timestamp: ago(100 * 24 * 60), // ~100 days ago → archived at every window
+    facilityId: 11,
+    category: "customers",
+    link: "/facility/dashboard/clients",
+  },
 ];
 
-const listeners = new Set<() => void>();
+// ── Persistent store ────────────────────────────────────────────────────────
+// localStorage for durability + a BroadcastChannel for cross-tab sync, with an
+// immutable `commit` so `useSyncExternalStore` snapshots stay stable between
+// changes. This is the single facility-notification store (the old parallel
+// stack was removed).
+const STORAGE_KEY = "yipyy-facility-notifications-v2";
+const CHANNEL = "yipyy-facility-notifications-v2";
 
-function notifyListeners() {
+let state: FacilityNotification[] = SEED;
+let ready = false;
+const listeners = new Set<() => void>();
+let channel: BroadcastChannel | null = null;
+
+function emit() {
   listeners.forEach((cb) => cb());
+}
+
+function persist() {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // ignore (SSR / quota)
+  }
+}
+
+function load() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (raw) state = JSON.parse(raw) as FacilityNotification[];
+  } catch {
+    // ignore malformed
+  }
+}
+
+function ensureChannel() {
+  if (channel || typeof window === "undefined") return;
+  channel = new BroadcastChannel(CHANNEL);
+  channel.onmessage = () => {
+    load();
+    emit();
+  };
+}
+
+/** Lazily hydrate from localStorage + open the cross-tab channel. No-op on the
+ *  server and after the first run. Called from subscribe + every mutation so
+ *  the first client interaction picks up persisted state. */
+function ensureReady() {
+  if (ready || typeof window === "undefined") return;
+  ready = true;
+  load();
+  ensureChannel();
+}
+
+function commit(next: FacilityNotification[]) {
+  state = next;
+  persist();
+  emit();
+  ensureChannel();
+  channel?.postMessage({ kind: "sync" });
 }
 
 export function getFacilityNotifications(
   facilityId?: number,
 ): FacilityNotification[] {
   const list = facilityId
-    ? notifications.filter(
-        (n) => n.facilityId == null || n.facilityId === facilityId,
-      )
-    : [...notifications];
+    ? state.filter((n) => n.facilityId == null || n.facilityId === facilityId)
+    : [...state];
   return list.sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
@@ -301,41 +369,69 @@ export function getUnreadFacilityNotificationCount(
 export function addFacilityNotification(
   notification: Omit<FacilityNotification, "id" | "read" | "timestamp">,
 ): FacilityNotification {
+  ensureReady();
   const item: FacilityNotification = {
     ...notification,
+    // Design Principle 4 — every notification is actionable. If a caller omits
+    // a destination, fall back to the notification center so the row is never a
+    // dead end (the bell row wraps this in a <Link>).
+    link: notification.link ?? "/facility/notifications",
     id: `fn-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     read: false,
     timestamp: new Date().toISOString(),
   };
-  notifications.unshift(item);
-  notifyListeners();
+  commit([item, ...state]);
   return item;
 }
 
 export function markFacilityNotificationRead(id: string): void {
-  const n = notifications.find((x) => x.id === id);
-  if (n) {
-    n.read = true;
-    notifyListeners();
-  }
+  ensureReady();
+  if (!state.some((n) => n.id === id && !n.read)) return;
+  commit(state.map((n) => (n.id === id ? { ...n, read: true } : n)));
+}
+
+export function markFacilityNotificationUnread(id: string): void {
+  ensureReady();
+  if (!state.some((n) => n.id === id && n.read)) return;
+  commit(state.map((n) => (n.id === id ? { ...n, read: false } : n)));
 }
 
 export function markAllFacilityNotificationsRead(facilityId?: number): void {
-  const scope = facilityId
-    ? (n: FacilityNotification) =>
-        n.facilityId == null || n.facilityId === facilityId
-    : () => true;
-  notifications.forEach((n) => {
-    if (scope(n)) n.read = true;
-  });
-  notifyListeners();
+  ensureReady();
+  const inScope = (n: FacilityNotification) =>
+    facilityId ? n.facilityId == null || n.facilityId === facilityId : true;
+  if (!state.some((n) => !n.read && inScope(n))) return;
+  commit(state.map((n) => (!n.read && inScope(n) ? { ...n, read: true } : n)));
 }
 
 export function subscribeToFacilityNotifications(
   callback: () => void,
 ): () => void {
+  ensureReady();
   listeners.add(callback);
-  return () => listeners.delete(callback);
+  return () => {
+    listeners.delete(callback);
+  };
+}
+
+// ── useSyncExternalStore surface ─────────────────────────────────────────────
+// Returns the raw list with a stable reference between commits; consumers
+// filter/sort as needed. getServerSnapshot returns the seed so SSR + the first
+// client render agree (hydration-safe), then localStorage loads on subscribe.
+function getSnapshot(): FacilityNotification[] {
+  return state;
+}
+
+function getServerSnapshot(): FacilityNotification[] {
+  return SEED;
+}
+
+export function useFacilityNotifications(): FacilityNotification[] {
+  return useSyncExternalStore(
+    subscribeToFacilityNotifications,
+    getSnapshot,
+    getServerSnapshot,
+  );
 }
 
 /**
@@ -439,7 +535,7 @@ export function notifyFacilityStaffYipyyGoSubmitted(params: {
   const bookingRef = `#${bookingId}`;
   addFacilityNotification({
     type: "yipyygo_submitted",
-    title: "YipyyGo form submitted",
+    title: "Express Check-In submitted",
     message: `${petName} – Booking ${bookingRef}${arrivalTime ? ` · Arrival ${arrivalTime}` : ""}`,
     facilityId,
     bookingId,

@@ -10,6 +10,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -35,10 +38,34 @@ import {
   Receipt,
   CreditCard,
   Download,
+  LifeBuoy,
+  MapPin,
+  Globe,
+  Check,
 } from "lucide-react";
 import { getUserRole, setUserRole, type UserRole } from "@/lib/role-utils";
 import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";
 import { useUiText } from "@/hooks/use-ui-text";
+import { useLocationContext } from "@/hooks/use-location-context";
+import { openSupportDrawer } from "@/lib/support-drawer-store";
+import { cn } from "@/lib/utils";
+
+// Role → avatar tint for quick visual ID (spec Table 24). Keyed by the role
+// from getUserRole/role-utils; staff roles (manager/groomer/…) are included so
+// the tint is meaningful wherever a finer role is available.
+const ROLE_AVATAR_COLOR: Record<string, string> = {
+  super_admin: "bg-slate-700",
+  facility_admin: "bg-indigo-600",
+  owner: "bg-indigo-600",
+  manager: "bg-blue-600",
+  groomer: "bg-pink-600",
+  trainer: "bg-emerald-600",
+  receptionist: "bg-amber-600",
+};
+
+function roleAvatarColor(role: string | null | undefined): string {
+  return (role && ROLE_AVATAR_COLOR[role]) || "bg-primary";
+}
 
 interface Notification {
   id: string;
@@ -147,6 +174,18 @@ export function UserProfileSheet({
   const isSuperAdmin = !currentRole || currentRole === "super_admin";
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  // Safe hook — returns FALLBACK (isMultiLocation=false) when there is no
+  // LocationContextProvider (e.g. the super-admin portal), so this never throws.
+  const {
+    isMultiLocation,
+    isHQView,
+    currentLocation,
+    locations,
+    setHQView,
+    setLocation,
+  } = useLocationContext();
+  const avatarBg = roleAvatarColor(currentRole);
+
   // Update notifications when role changes
   useEffect(() => {
     setNotifications(getInitialNotifications(isSuperAdmin));
@@ -216,7 +255,9 @@ export function UserProfileSheet({
           <Button variant="ghost" size="icon" className="size-9 rounded-full">
             <Avatar className="size-8">
               <AvatarImage src="" alt="User" />
-              <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+              <AvatarFallback
+                className={cn("text-sm font-medium text-white", avatarBg)}
+              >
                 SA
               </AvatarFallback>
             </Avatar>
@@ -226,7 +267,9 @@ export function UserProfileSheet({
           <DropdownMenuLabel className="flex items-center gap-2">
             <Avatar className="size-8">
               <AvatarImage src="" alt="User" />
-              <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+              <AvatarFallback
+                className={cn("text-sm font-medium text-white", avatarBg)}
+              >
                 SA
               </AvatarFallback>
             </Avatar>
@@ -243,6 +286,56 @@ export function UserProfileSheet({
               <User className="size-4" />
               {t("Profile Settings")}
             </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link
+              href="/facility/dashboard/settings?section=notifications"
+              className="flex items-center gap-2"
+            >
+              <Bell className="size-4" />
+              {t("Notification Preferences")}
+            </Link>
+          </DropdownMenuItem>
+          {isMultiLocation && (
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="flex items-center gap-2">
+                <MapPin className="size-4" />
+                {t("Switch Location")}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-56">
+                <DropdownMenuItem
+                  onClick={setHQView}
+                  className="flex items-center gap-2"
+                >
+                  <Globe className="size-4 text-sky-500" />
+                  {t("All Locations (HQ)")}
+                  {isHQView && (
+                    <Check className="text-primary ml-auto size-3.5" />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {locations.map((loc) => (
+                  <DropdownMenuItem
+                    key={loc.id}
+                    onClick={() => setLocation(loc.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <MapPin className="text-muted-foreground size-4" />
+                    <span className="truncate">{loc.name}</span>
+                    {!isHQView && currentLocation?.id === loc.id && (
+                      <Check className="text-primary ml-auto size-3.5" />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          )}
+          <DropdownMenuItem
+            onClick={() => openSupportDrawer("faq")}
+            className="flex items-center gap-2"
+          >
+            <LifeBuoy className="size-4" />
+            {t("Help & Support")}
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link

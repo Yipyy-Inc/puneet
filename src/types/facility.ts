@@ -122,6 +122,16 @@ export const facilityNotificationTypeEnum = z.enum([
   "incident",
   "info",
   "warning",
+  // Schedule + tasks (spec Table 31). Appended — order-independent, so this
+  // stays backward-compatible with existing seed data.
+  "shift_swap",
+  "staff_announcement",
+  "task_assigned",
+  "task_overdue",
+  "daycare_capacity",
+  // Express Check-In (YipyyGo) pre-check not submitted — distinct from the
+  // generic "needs review" warning so the row can offer "Send Reminder".
+  "yipyygo_missing",
 ]);
 export type FacilityNotificationType = z.infer<
   typeof facilityNotificationTypeEnum
@@ -1609,6 +1619,11 @@ export const facilityNotificationCategoryEnum = z.enum([
   "grooming",
   "training",
   "forms",
+  // "yipyygo" is already used as a raw string on seed data (the schema's
+  // `category` is a plain string); listed here so the enum reflects reality.
+  "yipyygo",
+  "schedule",
+  "tasks",
 ]);
 export type FacilityNotificationCategory = z.infer<
   typeof facilityNotificationCategoryEnum
@@ -1623,6 +1638,12 @@ export const facilityNotificationSchema = z.object({
   timestamp: z.string(),
   /** Category for filtering in notification center */
   category: z.string().optional(),
+  /**
+   * Marks a notification as high-priority (spec Table 23). When unset, urgency
+   * is derived from `type` via {@link isUrgentNotification}, so existing seed
+   * data lights up correctly without a stored flag.
+   */
+  urgent: z.boolean().optional(),
   /** Navigation link when clicking the notification */
   link: z.string().optional(),
   /** Custom service module ID for custom service notifications */
@@ -1644,6 +1665,50 @@ export const facilityNotificationSchema = z.object({
     .optional(),
 });
 export type FacilityNotification = z.infer<typeof facilityNotificationSchema>;
+
+/**
+ * Notification types that are inherently urgent (spec Table 23): SLA / overdue
+ * check-in-out, capacity at 90%+, incidents, red-flag form answers, failed
+ * payments, and overdue tasks. Used as the fallback when `urgent` isn't stored.
+ */
+const URGENT_NOTIFICATION_TYPES: ReadonlySet<FacilityNotificationType> =
+  new Set([
+    "attendance_alert", // capacity alert (e.g. daycare 90%+)
+    "daycare_capacity",
+    "incident",
+    "form_submission_red_flag",
+    "task_overdue",
+  ]);
+
+/**
+ * True when a notification should be treated as urgent. Honors an explicit
+ * `urgent` flag when present, otherwise derives it from `type` so existing seed
+ * data (attendance_alert at capacity, incident, form red-flag, …) lights up.
+ */
+export function isUrgentNotification(
+  n: Pick<FacilityNotification, "type" | "urgent">,
+): boolean {
+  if (typeof n.urgent === "boolean") return n.urgent;
+  return URGENT_NOTIFICATION_TYPES.has(n.type);
+}
+
+/**
+ * Safety-critical types that are ALWAYS delivered in-app and flagged urgent,
+ * regardless of a staff member's preferences (spec Table 49): form red-flag /
+ * aggressive behavior, safety incident reports, and capacity alerts (fully
+ * booked). These bypass per-user category filtering and can't be muted. (The
+ * system-wide maintenance announcement is likewise mandatory, delivered via the
+ * urgent announcement banner rather than a bell notification type.)
+ */
+const MANDATORY_NOTIFICATION_TYPES: ReadonlySet<FacilityNotificationType> =
+  new Set(["form_submission_red_flag", "incident", "daycare_capacity"]);
+
+/** True when a notification can never be suppressed by user preferences. */
+export function isMandatoryNotification(
+  n: Pick<FacilityNotification, "type">,
+): boolean {
+  return MANDATORY_NOTIFICATION_TYPES.has(n.type);
+}
 
 // ============================================================================
 // Facility Request (from facility-requests.ts)

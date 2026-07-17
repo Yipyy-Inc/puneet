@@ -154,12 +154,11 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
               <DropdownMenuTrigger asChild>
                 <Button
                   id="facility-create-new-trigger"
-                  variant="ghost"
-                  size="icon"
-                  className="size-10 rounded-xl"
+                  className="h-10 gap-1.5 rounded-xl bg-indigo-600 px-3 text-white hover:bg-indigo-700"
                   aria-label={t("Create")}
                 >
-                  <Plus className="text-muted-foreground size-5" />
+                  <Plus className="size-4" />
+                  <span className="text-sm font-medium">{t("New")}</span>
                 </Button>
               </DropdownMenuTrigger>
             </TooltipTrigger>

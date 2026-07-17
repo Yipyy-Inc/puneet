@@ -38,6 +38,8 @@ import { FormRequirementsSettings } from "@/components/forms/FormRequirementsSet
 import { TagNotesSettings } from "@/components/facility-config/TagNotesSettings";
 import { BreedManagement } from "@/components/facility/BreedManagement";
 import { CareTaskSettings } from "@/components/facility/CareTaskSettings";
+import { StaffNotificationPreferences } from "@/components/facility/StaffNotificationPreferences";
+import { NotificationRoleDefaults } from "@/components/facility/NotificationRoleDefaults";
 import { FeedingMedicationConfig } from "@/components/facility/FeedingMedicationConfig";
 import { TaxSettings } from "@/components/facility/TaxSettings";
 import { BookingStatusSettings } from "@/components/facility/BookingStatusSettings";
@@ -4107,6 +4109,13 @@ export default function SettingsPage() {
           {/* Notifications */}
           {activeSection === "notifications" && (
             <div className="space-y-6">
+              {/* My Profile → Notifications: the logged-in staff member's own
+                  per-user preferences (spec Part 6). */}
+              <StaffNotificationPreferences />
+
+              {/* Facility-level per-role notification defaults (spec Table 51). */}
+              <NotificationRoleDefaults />
+
               <NotificationSettingsCard />
 
               <ServiceNotificationSettings />

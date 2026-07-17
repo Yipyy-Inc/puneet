@@ -1,23 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import {
-  Bell,
-  FileText,
-  Info,
-  AlertCircle,
-  AlertTriangle,
-  Paperclip,
-  CheckCircle,
-  Scissors,
-  GraduationCap,
-  Users,
-  LogIn,
-  LogOut,
-  Calendar,
-  MessageSquare,
-} from "lucide-react";
+import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -31,19 +16,57 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  getFacilityNotifications,
-  getUnreadFacilityNotificationCount,
   markFacilityNotificationRead,
   markAllFacilityNotificationsRead,
-  subscribeToFacilityNotifications,
+  useFacilityNotifications,
 } from "@/data/facility-notifications";
-import type {
-  FacilityNotification,
-  FacilityNotificationType,
-} from "@/types/facility";
+import { isUrgentNotification } from "@/types/facility";
+import type { FacilityNotification } from "@/types/facility";
+import { NotificationTypeIcon } from "@/lib/notification-icons";
+import {
+  useScheduleNotifications,
+  swapIdFromNotification,
+  ShiftSwapNotificationActions,
+} from "@/lib/schedule-notifications";
+import {
+  useTaskNotifications,
+  taskIdFromNotification,
+  TaskCompleteAction,
+} from "@/lib/task-notifications-feed";
+import { useAnnouncementNotifications } from "@/lib/announcement-notifications";
+import { useBookingRequestNotifications } from "@/lib/booking-request-notifications";
+import {
+  isExpressCheckinMissing,
+  ExpressCheckinReminderAction,
+} from "@/lib/express-checkin-reminder";
+import { NotificationRowMenu } from "@/components/facility/NotificationRowMenu";
+import { cn } from "@/lib/utils";
 
 interface FacilityNotificationsDropdownProps {
   facilityId?: number;
+}
+
+// An unread urgent notification needs action: it floats to the top under the
+// "Action Required" sub-header, gets a red left border, and clears only when
+// the user acts on it (no quick "Mark read"). Read urgent items are normal.
+function isActionRequired(n: FacilityNotification): boolean {
+  return !n.read && isUrgentNotification(n);
+}
+
+const CATEGORY_LABEL: Record<string, string> = {
+  customers: "Customers",
+  boarding: "Boarding",
+  daycare: "Daycare",
+  grooming: "Grooming",
+  training: "Training",
+  forms: "Forms",
+  yipyygo: "Express Check-in",
+  schedule: "Schedule",
+  tasks: "Tasks",
+};
+
+function categoryLabel(c: string): string {
+  return CATEGORY_LABEL[c] ?? c.charAt(0).toUpperCase() + c.slice(1);
 }
 
 function formatTime(iso: string): string {
@@ -56,78 +79,70 @@ function formatTime(iso: string): string {
   return d.toLocaleDateString();
 }
 
-function IconForType(type: FacilityNotificationType) {
-  switch (type) {
-    case "checkin":
-      return <LogIn className="size-4 text-green-600" />;
-    case "checkout":
-      return <LogOut className="size-4 text-amber-600" />;
-    case "booking_new":
-      return <Calendar className="text-primary size-4" />;
-    case "booking_cancelled":
-      return <AlertCircle className="text-destructive size-4" />;
-    case "attendance_alert":
-      return <AlertTriangle className="size-4 text-amber-500" />;
-    case "appointment_confirmed":
-      return <CheckCircle className="size-4 text-green-600" />;
-    case "appointment_completed":
-      return <Scissors className="text-primary size-4" />;
-    case "session_update":
-      return <GraduationCap className="text-primary size-4" />;
-    case "customer_registered":
-      return <Users className="text-primary size-4" />;
-    case "customer_message":
-      return <MessageSquare className="text-primary size-4" />;
-    case "incident":
-      return <AlertTriangle className="text-destructive size-4" />;
-    case "yipyygo_submitted":
-    case "form_submission_new":
-      return <FileText className="text-primary size-4" />;
-    case "form_submission_red_flag":
-      return <AlertTriangle className="text-destructive size-4" />;
-    case "form_submission_has_files":
-      return <Paperclip className="text-muted-foreground size-4" />;
-    case "warning":
-      return <AlertCircle className="size-4 text-amber-500" />;
-    default:
-      return <Info className="text-muted-foreground size-4" />;
-  }
-}
-
 function NotificationRow({
   n,
+  urgent,
+  canToggleRead,
   onMarkRead,
   onClose,
 }: {
   n: FacilityNotification;
+  urgent: boolean;
+  canToggleRead: boolean;
   onMarkRead: (id: string) => void;
   onClose: () => void;
 }) {
+  // Shift-swap rows resolve in place with Approve/Decline (spec Table 33) and
+  // task rows with "Mark Complete" (spec Table 34) instead of a "Mark read" link.
+  const swapId = swapIdFromNotification(n);
+  const taskId = taskIdFromNotification(n);
   const content = (
     <div
-      className={`hover:bg-muted/50 flex gap-2 px-3 py-2 ${!n.read ? "bg-primary/5" : ""} `}
+      className={cn(
+        "hover:bg-muted/50 flex gap-2.5 px-4 py-2.5 transition-colors",
+        urgent
+          ? "border-l-2 border-red-500 bg-red-50/50 dark:bg-red-950/20"
+          : !n.read && "bg-primary/5",
+      )}
     >
-      <div className="mt-0.5 shrink-0">{IconForType(n.type)}</div>
+      <div className="mt-0.5 shrink-0">
+        <NotificationTypeIcon n={n} />
+      </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{n.title}</p>
         <p className="text-muted-foreground text-xs">{n.message}</p>
         <p className="text-muted-foreground mt-1 text-[10px]">
           {formatTime(n.timestamp)}
         </p>
+        {swapId && (
+          <div className="mt-2">
+            <ShiftSwapNotificationActions swapId={swapId} />
+          </div>
+        )}
+        {taskId && (
+          <div className="mt-2">
+            <TaskCompleteAction taskId={taskId} />
+          </div>
+        )}
+        {/* Table 39 — one-click "Send Reminder" for a missing express check-in. */}
+        {isExpressCheckinMissing(n) && (
+          <div className="mt-2">
+            <ExpressCheckinReminderAction notification={n} />
+          </div>
+        )}
       </div>
-      {!n.read && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 shrink-0 text-xs"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onMarkRead(n.id);
+      {/* Table 37 — read/unread demoted into a ··· overflow menu. Urgent rows
+          still clear only on action (no menu); swap + task rows use their inline
+          actions above instead. */}
+      {!urgent && !swapId && !taskId && (
+        <NotificationRowMenu
+          notification={n}
+          canToggleRead={canToggleRead}
+          onNavigate={() => {
+            if (!n.read) onMarkRead(n.id);
+            onClose();
           }}
-        >
-          Mark read
-        </Button>
+        />
       )}
     </div>
   );
@@ -153,32 +168,71 @@ function NotificationRow({
 export function FacilityNotificationsDropdown({
   facilityId = 11,
 }: FacilityNotificationsDropdownProps) {
-  const [notifications, setNotifications] = useState<FacilityNotification[]>(
-    () => getFacilityNotifications(facilityId),
-  );
+  const base = useFacilityNotifications();
+  const schedule = useScheduleNotifications();
+  const tasks = useTaskNotifications();
+  const announcements = useAnnouncementNotifications(facilityId);
+  const bookingRequests = useBookingRequestNotifications(facilityId);
   const [open, setOpen] = useState(false);
 
-  const refresh = useCallback(
-    () => setNotifications(getFacilityNotifications(facilityId)),
-    [facilityId],
+  const notifications = useMemo(() => {
+    const scoped = [
+      ...base,
+      ...schedule,
+      ...tasks,
+      ...announcements,
+      ...bookingRequests,
+    ].filter((n) => n.facilityId == null || n.facilityId === facilityId);
+    return [...scoped].sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
+  }, [base, schedule, tasks, announcements, bookingRequests, facilityId]);
+  // Total unread across ALL categories + urgency for the badge color language
+  // (spec Table 22 & 23 / Design Principle 3): red if any unread is urgent,
+  // amber if unread but none urgent, no badge at all when count is 0.
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const hasUrgentUnread = notifications.some(
+    (n) => !n.read && isUrgentNotification(n),
   );
-  const unreadCount = getUnreadFacilityNotificationCount(facilityId);
-  const hasUnread = unreadCount > 0;
 
-  useEffect(() => {
-    const unsub = subscribeToFacilityNotifications(refresh);
-    return unsub;
-  }, [refresh]);
+  const markRead = (id: string) => markFacilityNotificationRead(id);
+  const markAllRead = () => markAllFacilityNotificationsRead(facilityId);
 
-  const markRead = (id: string) => {
-    markFacilityNotificationRead(id);
-    refresh();
-  };
+  // Only store-backed notifications can persist a read/unread flip (Table 37).
+  const storeIds = useMemo(() => new Set(base.map((n) => n.id)), [base]);
 
-  const markAllRead = () => {
-    markAllFacilityNotificationsRead(facilityId);
-    refresh();
-  };
+  // 8 most recent, but action-required (unread urgent) always first (Table 27).
+  const visible = useMemo(() => {
+    return [...notifications]
+      .sort((a, b) => {
+        const rank =
+          (isActionRequired(b) ? 1 : 0) - (isActionRequired(a) ? 1 : 0);
+        if (rank !== 0) return rank;
+        return (
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+      })
+      .slice(0, 8);
+  }, [notifications]);
+  const urgentRows = visible.filter(isActionRequired);
+  const normalRows = visible.filter((n) => !isActionRequired(n));
+
+  // Footer summary: top unread categories by count (Table 30).
+  const categorySummary = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const n of notifications) {
+      if (n.read || !n.category) continue;
+      counts.set(n.category, (counts.get(n.category) ?? 0) + 1);
+    }
+    const entries = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    if (entries.length === 0) return "";
+    const top = entries
+      .slice(0, 3)
+      .map(([c, count]) => `${categoryLabel(c)} ${count}`);
+    const more = entries.length - 3;
+    return top.join(" · ") + (more > 0 ? ` · +${more} more` : "");
+  }, [notifications]);
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -194,8 +248,12 @@ export function FacilityNotificationsDropdown({
                 aria-label="Notifications"
               >
                 <Bell className="text-muted-foreground group-hover:text-foreground size-5 transition-colors" />
-                {hasUnread && (
-                  <span className="bg-primary text-primary-foreground absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full text-[10px] font-medium">
+                {unreadCount > 0 && (
+                  <span
+                    className={`absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full text-[10px] font-medium text-white ${
+                      hasUrgentUnread ? "bg-red-500" : "bg-amber-500"
+                    }`}
+                  >
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
@@ -208,10 +266,15 @@ export function FacilityNotificationsDropdown({
         </Tooltip>
         <DropdownMenuContent
           align="end"
-          className="flex w-[calc(100vw-2rem)] flex-col sm:w-80"
+          sideOffset={8}
+          className="w-[420px] max-w-[calc(100vw-1rem)] overflow-hidden p-0"
         >
-          <div className="flex items-center justify-between border-b px-3 py-2">
-            <span className="text-sm font-medium">Notifications</span>
+          {/* Red accent bar when there are unread urgent notifications (Table 26) */}
+          {hasUrgentUnread && <div className="h-0.5 w-full bg-red-500" />}
+
+          {/* Zone 1 — header */}
+          <div className="flex items-center justify-between border-b px-4 py-2.5">
+            <span className="text-sm font-semibold">Notifications</span>
             {unreadCount > 0 && (
               <Button
                 variant="ghost"
@@ -223,17 +286,36 @@ export function FacilityNotificationsDropdown({
               </Button>
             )}
           </div>
-          <div className="max-h-[340px] overflow-y-auto">
+
+          {/* Zone 2 — list (scrolls) */}
+          <div className="max-h-[440px] overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className="text-muted-foreground py-8 text-center text-sm">
+              <div className="text-muted-foreground py-10 text-center text-sm">
                 No notifications
               </div>
             ) : (
               <div className="py-1">
-                {notifications.slice(0, 15).map((n) => (
+                {urgentRows.length > 0 && (
+                  <p className="px-4 pt-1.5 pb-1 text-[10px] font-semibold tracking-wider text-red-600 uppercase dark:text-red-400">
+                    Action Required
+                  </p>
+                )}
+                {urgentRows.map((n) => (
                   <NotificationRow
                     key={n.id}
                     n={n}
+                    urgent
+                    canToggleRead={storeIds.has(n.id)}
+                    onMarkRead={markRead}
+                    onClose={() => setOpen(false)}
+                  />
+                ))}
+                {normalRows.map((n) => (
+                  <NotificationRow
+                    key={n.id}
+                    n={n}
+                    urgent={false}
+                    canToggleRead={storeIds.has(n.id)}
                     onMarkRead={markRead}
                     onClose={() => setOpen(false)}
                   />
@@ -241,13 +323,18 @@ export function FacilityNotificationsDropdown({
               </div>
             )}
           </div>
-          <div className="border-t px-3 py-2">
+
+          {/* Zone 3 — footer (always visible) */}
+          <div className="flex items-center justify-between gap-3 border-t px-4 py-2">
+            <span className="text-muted-foreground min-w-0 truncate text-[11px]">
+              {categorySummary}
+            </span>
             <Link
-              href="/facility/dashboard/notifications"
-              className="text-primary text-xs hover:underline"
+              href="/facility/notifications"
+              className="text-primary shrink-0 text-xs font-medium hover:underline"
               onClick={() => setOpen(false)}
             >
-              View all notifications
+              View all notifications →
             </Link>
           </div>
         </DropdownMenuContent>

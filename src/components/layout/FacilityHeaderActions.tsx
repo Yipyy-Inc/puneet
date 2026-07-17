@@ -9,27 +9,34 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { LocationTopNavSelector } from "@/components/hq/LocationTopNavSelector";
-import { CallingButton } from "@/components/layout/CallingButton";
 import { TopBarIconsNext } from "@/components/layout/TopBarIconsNext";
-import { TaskNotificationsPanel } from "@/components/tasks/TaskNotificationsPanel";
-import { ScheduleNotificationsDropdown } from "@/components/scheduling/ScheduleNotificationsDropdown";
-import { FacilityNotificationBell } from "@/components/facility/notifications/facility-notification-bell";
-import { AnnouncementBell } from "@/components/facility/announcement-bell";
-import { BookingRequestsTopbarDropdown } from "@/components/facility/BookingRequestsTopbarDropdown";
+import { getUnreadMessagesCount } from "@/lib/messaging-unread";
+import { FacilityNotificationsDropdown } from "@/components/facility/FacilityNotificationsDropdown";
 import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
 import { FacilityHeader } from "@/components/layout/FacilityHeader";
 import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
 
 /**
- * Facility top-nav action cluster (FB-16 — rebalanced after the Support button
- * was removed in FB-1). Items are evenly spaced with a single consistent gap so
- * nothing competes. At ≥1280px (xl) every item sits inline on one row; the row
- * is `shrink-0`, so icons never wrap or compress (the left-hand search shrinks
- * first). Below xl (tablet/mobile) the SECONDARY items collapse into a single
- * overflow ("More") menu, keeping the location selector, unified notifications
- * and the user avatar always visible.
+ * Facility top-nav action cluster. Trimmed per spec Part 3 + Table 52: calling
+ * moved to the sidebar; the task, schedule, announcement and booking-request
+ * dropdowns were removed — their content now surfaces through the unified
+ * notification bell (their component logic is reused only as data sources).
+ *
+ * The right side is: + New · Messages · Bell · Avatar (plus the EN/FR language
+ * toggle, which renders only when >1 locale is enabled). The prominent "+ New"
+ * create button, the bell and the avatar stay visible at every breakpoint; the
+ * HQ View / location selector moved out of the header to a page-level control
+ * (spec Table 17 — see LocationFilterBanner). At ≥1280px (xl) the secondary
+ * items (Messages, language) sit inline; below xl they collapse into a single
+ * overflow ("More") menu.
  */
+// Stable (module-level) counts source for the Messages badge — reads the real
+// mock message data instead of localStorage. Stable identity keeps the polling
+// effect in TopBarIcons from re-subscribing every render.
+async function facilityTopBarCounts() {
+  return { unreadMessages: getUnreadMessagesCount() };
+}
+
 export function FacilityHeaderActions({ facilityId }: { facilityId: number }) {
   const isWide = useMediaQuery("(min-width: 1280px)", true);
 
@@ -37,20 +44,16 @@ export function FacilityHeaderActions({ facilityId }: { facilityId: number }) {
   // exactly one of the two branches mounts, so there are no duplicate instances.
   const secondary = (
     <>
-      <CallingButton />
-      <TopBarIconsNext />
-      <TaskNotificationsPanel />
-      <ScheduleNotificationsDropdown />
-      <AnnouncementBell facilityId={facilityId} />
-      <BookingRequestsTopbarDropdown />
+      <TopBarIconsNext getCounts={facilityTopBarCounts} />
       <HeaderDropdown />
-      <FacilityHeader facilityId={facilityId} />
     </>
   );
 
   return (
     <div className="flex shrink-0 items-center gap-1">
-      <LocationTopNavSelector />
+      {/* The primary "+ New" create button stays visible + leftmost at every
+          breakpoint (spec Table 18 & 19) — it does not collapse into "More". */}
+      <FacilityHeader facilityId={facilityId} />
 
       {isWide ? (
         <div className="flex items-center gap-1">{secondary}</div>
@@ -74,7 +77,7 @@ export function FacilityHeaderActions({ facilityId }: { facilityId: number }) {
         </Popover>
       )}
 
-      <FacilityNotificationBell />
+      <FacilityNotificationsDropdown facilityId={facilityId} />
       <UserProfileSheet showNotifications={false} />
     </div>
   );

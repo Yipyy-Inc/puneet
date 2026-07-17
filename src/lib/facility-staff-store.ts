@@ -2,6 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 
+import { applyRoleNotificationDefaults } from "@/lib/notification-role-defaults-store";
+
 // Per-facility staff store. Holds each facility's staff list in memory, keyed by
 // facility id, so edits (add / change role / deactivate) persist while the admin
 // switches profile tabs or navigates between facilities. Resets on a full page
@@ -51,6 +53,9 @@ export function ensureFacilityStaffSeeded(
 
 export function addStaffAccount(facilityId: number, account: StaffAccount) {
   commit(facilityId, [account, ...get(facilityId)]);
+  // Seed the new account's notification preferences from its role defaults
+  // (spec Part 7). The member can customize them afterwards.
+  applyRoleNotificationDefaults(account.id, account.role);
 }
 
 export function setStaffRole(facilityId: number, id: string, role: string) {
@@ -58,6 +63,8 @@ export function setStaffRole(facilityId: number, id: string, role: string) {
     facilityId,
     get(facilityId).map((s) => (s.id === id ? { ...s, role } : s)),
   );
+  // Re-seed defaults to match the newly assigned role (spec Part 7).
+  applyRoleNotificationDefaults(id, role);
 }
 
 export function deactivateStaffAccount(facilityId: number, id: string) {

@@ -1,5 +1,5 @@
-import { FacilityNotificationCenter } from "@/components/facility/notifications/facility-notification-center";
+import { NotificationCenter } from "@/components/facility/NotificationCenter";
 
 export default function FacilityNotificationsPage() {
-  return <FacilityNotificationCenter />;
+  return <NotificationCenter />;
 }

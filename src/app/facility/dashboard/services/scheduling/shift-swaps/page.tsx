@@ -17,12 +17,9 @@ import { Input } from "@/components/ui/input";
 
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import {
-  enhancedShiftSwaps as initialSwaps,
-  departments,
-  scheduleEmployees,
-} from "@/data/scheduling";
+import { departments, scheduleEmployees } from "@/data/scheduling";
 import type { EnhancedShiftSwap } from "@/types/scheduling";
+import { useShiftSwaps, decideShiftSwap } from "@/lib/shift-swaps-store";
 
 type StatusFilter = "pending" | "approved" | "denied" | "all";
 
@@ -328,7 +325,7 @@ const STATUS_TABS: { value: StatusFilter; label: string }[] = [
 ];
 
 export default function ShiftSwapsPage() {
-  const [swaps, setSwaps] = useState<EnhancedShiftSwap[]>(initialSwaps);
+  const swaps = useShiftSwaps();
   const [tab, setTab] = useState<StatusFilter>("pending");
   const [query, setQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -356,19 +353,9 @@ export default function ShiftSwapsPage() {
   }, [swaps, tab, query]);
 
   const decide = (id: string, status: "approved" | "denied", notes: string) => {
-    setSwaps((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? {
-              ...s,
-              status,
-              reviewedAt: new Date().toISOString().split("T")[0],
-              reviewedBy: "emp-1",
-              reviewNotes: notes || undefined,
-            }
-          : s,
-      ),
-    );
+    // Persist through the shared store so the notification bell (and other tabs)
+    // reflect the same resolution.
+    decideShiftSwap(id, status, notes);
     setExpandedId(null);
     toast.success(
       status === "approved" ? "Shift swap approved" : "Shift swap denied",
