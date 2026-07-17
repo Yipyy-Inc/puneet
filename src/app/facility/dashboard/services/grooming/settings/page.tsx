@@ -32,6 +32,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MobileGroomingSettings } from "@/components/facility/grooming/mobile-grooming-settings";
+import { GroomingCheckInForms } from "@/components/facility/grooming/grooming-check-in-forms";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -436,6 +437,9 @@ export default function GroomingSettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* 4.5 · Check-In Forms (digital pre-arrival forms) */}
+      <GroomingCheckInForms />
 
       {/* 5 · Report Cards */}
       <Card>

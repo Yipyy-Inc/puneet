@@ -866,9 +866,10 @@ export function propagatePackageChangesToUpcoming(args: {
  * master — never by junior or intermediate.
  */
 export const STYLIST_SKILL_RANK: Record<StylistSkillLevel, number> = {
-  standard: 0,
-  premium: 1,
-  platinum: 2,
+  basic: 0,
+  standard: 1,
+  premium: 2,
+  platinum: 3,
 };
 
 export function stylistMeetsSkillRequirement(

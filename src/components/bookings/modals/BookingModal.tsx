@@ -1995,10 +1995,11 @@ export function BookingModal({
   }, [selectedClient, selectedService, serviceType, customerPackagesData]);
 
   const handleNext = () => {
-    // If package prompt is showing, dismiss it and proceed to tip/confirm
+    // If package prompt is showing, dismiss it and proceed to tip/confirm.
+    // The tip step is customer-only (spec Table 93) — staff never see it.
     if (showingPackagePromptStep) {
       setShowingPackagePromptStep(false);
-      if (tipConfig?.enabled && !isEstimateMode) {
+      if (tipConfig?.enabled && !isEstimateMode && isCustomerMode) {
         setShowingTipStep(true);
       }
       return;
@@ -2039,7 +2040,7 @@ export function BookingModal({
           !isCustomerMode
         ) {
           setShowingPackagePromptStep(true);
-        } else if (tipConfig?.enabled) {
+        } else if (tipConfig?.enabled && isCustomerMode) {
           setShowingTipStep(true);
         }
       }
@@ -2101,7 +2102,7 @@ export function BookingModal({
 
     // From confirm, go back to tip step or package prompt instead of jumping straight to details
     if (currentStepId === "confirm" && !isEstimateMode) {
-      if (tipConfig?.enabled) {
+      if (tipConfig?.enabled && isCustomerMode) {
         setShowingTipStep(true);
         return;
       } else if (

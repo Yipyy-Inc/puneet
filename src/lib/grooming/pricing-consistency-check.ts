@@ -62,7 +62,7 @@ const FIXTURE_PACKAGE: GroomingPackage = {
   // Tier deltas — applied on top of the resolved service price when the
   // assigned stylist's `capacity.skillLevel` matches the key. Junior is
   // present in the enum even though we don't use it in the scenarios.
-  tierAdjustments: { standard: 0, premium: 20, platinum: 35 },
+  tierAdjustments: { basic: 0, standard: 0, premium: 20, platinum: 35 },
   includes: [],
   purchaseCount: 0,
   createdAt: "2024-01-01T00:00:00.000Z",

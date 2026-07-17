@@ -954,6 +954,20 @@ export const moduleConfigSchema = z.object({
       })
       .optional(),
     earlyCheckout: earlyCheckoutPolicySchema.optional(),
+    /** When enabled, the module tracks product stock and surfaces supply
+     *  alerts (e.g. the grooming calendar's Supply Alerts panel). */
+    inventory: z
+      .object({
+        trackingEnabled: z.boolean(),
+      })
+      .optional(),
+    /** When enabled, the grooming session panel shows the in-progress step
+     *  checklist (Bath, Blow Dry, …). Default off. */
+    progressChecklist: z
+      .object({
+        enabled: z.boolean(),
+      })
+      .optional(),
   }),
   status: z.object({
     disabled: z.boolean(),

@@ -19,7 +19,11 @@ import {
   TrendingUp,
   ActivitySquare,
 } from "lucide-react";
-import { groomingQueries, getEffectiveAlertNotes } from "@/lib/api/grooming";
+import {
+  groomingQueries,
+  getEffectiveAlertNotes,
+  stylistMeetsSkillRequirement,
+} from "@/lib/api/grooming";
 import type {
   AlertNote,
   GroomingAppointment,
@@ -45,6 +49,24 @@ import { PrintableDaySheet } from "./printable-day-sheet";
 import { PrintableAppointmentCards } from "./printable-appointment-cards";
 import { BulkActionsDialog, type BulkActionMode } from "./bulk-actions-dialog";
 import { getMissedTaskCountForModule } from "@/lib/today-tasks";
+import { useSettings } from "@/hooks/use-settings";
+import { computeSupplyAlerts } from "@/lib/grooming-supply-alerts";
+import {
+  findStylistTimeConflict,
+  getBookedStationIdsInWindow,
+} from "@/lib/grooming-scheduling";
+import { groomingPackages } from "@/data/grooming";
+import { buildBookingChangeMessage } from "@/lib/grooming-post-booking";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { useGroomingWaitlist } from "@/hooks/use-grooming-waitlist";
 import { facilityStaff } from "@/data/facility-staff";
@@ -204,6 +226,13 @@ function timeToMinutes(time: string): number {
   return h * 60 + m;
 }
 
+function minutesToTime(total: number): string {
+  const clamped = Math.max(0, Math.min(24 * 60 - 1, total));
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
 function formatISODate(date: Date): string {
   return date.toISOString().split("T")[0];
 }
@@ -211,6 +240,16 @@ function formatISODate(date: Date): string {
 function formatHour(h: number): string {
   if (h === 12) return "12 PM";
   return h > 12 ? `${h - 12} PM` : `${h} AM`;
+}
+
+/** Compact "Xh expected" / "Xh Ym expected" label for a session's estimated
+ *  duration (spec Table 34 — second line of the elapsed indicator). */
+function formatExpectedDuration(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m expected`;
+  if (h > 0) return `${h}h expected`;
+  return `${m}m expected`;
 }
 
 function getWeekStart(dateStr: string): Date {
@@ -395,7 +434,13 @@ function GroomingSidebar({
       (a) => a.status !== "cancelled" && a.status !== "no-show",
     );
     const finished = counting.filter((a) => a.status === "completed");
-    const earnedRevenue = finished.reduce((s, a) => s + a.totalPrice, 0);
+    // Earned = money actually collected — appointments paid at checkout
+    // (applyPaymentResult stamps paymentStatus="paid") or otherwise completed.
+    // Updates live as payments come in, so it no longer sits at $0 all day.
+    const collected = counting.filter(
+      (a) => a.paymentStatus === "paid" || a.status === "completed",
+    );
+    const earnedRevenue = collected.reduce((s, a) => s + a.totalPrice, 0);
     const expectedRevenue = counting.reduce((s, a) => s + a.totalPrice, 0);
     const distinctPets = new Set(counting.map((a) => a.petId));
     return {
@@ -414,8 +459,11 @@ function GroomingSidebar({
         ? "this week"
         : "this month";
 
-  const serviceBreakdown = useMemo(() => {
-    const inView = appointments.filter((a) => {
+  // Active (non-cancelled / non-no-show) appointments in the current view.
+  // Shared by the service mix + add-on breakdown so both reconcile with the
+  // Calendar Report's Expected revenue (same date-filtered set).
+  const inViewActive = useMemo(() => {
+    return appointments.filter((a) => {
       if (a.status === "cancelled" || a.status === "no-show") return false;
       if (viewMode === "day") return a.date === selectedDate;
       if (viewMode === "week") {
@@ -430,20 +478,57 @@ function GroomingSidebar({
         aDate.getMonth() === ref.getMonth()
       );
     });
-    const map: Record<string, { count: number; color: string }> = {};
-    for (const a of inView) {
+  }, [appointments, viewMode, selectedDate]);
+
+  const serviceBreakdown = useMemo(() => {
+    const map: Record<
+      string,
+      { count: number; color: string; revenue: number }
+    > = {};
+    for (const a of inViewActive) {
       const svc = a.packageName ?? "Other";
-      if (!map[svc]) map[svc] = { count: 0, color: colorForService(svc) };
+      if (!map[svc]) {
+        map[svc] = { count: 0, color: colorForService(svc), revenue: 0 };
+      }
       map[svc].count++;
+      map[svc].revenue += a.totalPrice;
     }
     return Object.entries(map)
       .sort((a, b) => b[1].count - a[1].count)
       .slice(0, 7);
-  }, [appointments, viewMode, selectedDate]);
+  }, [inViewActive]);
+
+  // Every add-on booked across the in-view appointments, counted by name so
+  // staff can prep supplies. Derived from the same day-filtered set.
+  const addOnBreakdown = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const a of inViewActive) {
+      for (const name of a.addOns ?? []) {
+        map[name] = (map[name] ?? 0) + 1;
+      }
+    }
+    const entries = Object.entries(map).sort((a, b) => b[1] - a[1]);
+    const total = entries.reduce((s, [, c]) => s + c, 0);
+    return { entries, total };
+  }, [inViewActive]);
 
   const totalInView = serviceBreakdown.reduce(
     (s, [, { count }]) => s + count,
     0,
+  );
+
+  // Supply Alerts (spec Table 31) — only when the grooming module tracks
+  // inventory. Joins the in-view add-ons to the consumable each draws down and
+  // surfaces a soft reminder when stock is low. Never blocks anything.
+  const { grooming: groomingModule } = useSettings();
+  const inventoryTrackingEnabled =
+    groomingModule.settings.inventory?.trackingEnabled ?? false;
+  const supplyAlerts = useMemo(
+    () =>
+      inventoryTrackingEnabled
+        ? computeSupplyAlerts(Object.fromEntries(addOnBreakdown.entries))
+        : [],
+    [inventoryTrackingEnabled, addOnBreakdown],
   );
 
   const monthLabel = displayMonth.toLocaleDateString("en-US", {
@@ -775,10 +860,10 @@ function GroomingSidebar({
           <div className="mx-4 mt-2 h-px bg-slate-200/70" />
           <div className="px-4 pt-3 pb-5">
             <p className="mb-2.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
-              {viewMode === "day" ? "Today's Services" : "Services in View"}
+              {viewMode === "day" ? "Service Mix Today" : "Services in View"}
             </p>
             <div className="space-y-2.5">
-              {serviceBreakdown.map(([service, { count, color }]) => {
+              {serviceBreakdown.map(([service, { count, color, revenue }]) => {
                 const pct = totalInView > 0 ? (count / totalInView) * 100 : 0;
                 return (
                   <div key={service}>
@@ -796,7 +881,7 @@ function GroomingSidebar({
                         </span>
                       </div>
                       <span className="ml-2 shrink-0 text-[11px] font-bold text-slate-800 tabular-nums">
-                        {count}
+                        ×{count} = ${revenue.toFixed(0)}
                       </span>
                     </div>
                     <div
@@ -811,6 +896,79 @@ function GroomingSidebar({
                   </div>
                 );
               })}
+            </div>
+
+            {/* Add-ons roll-up — clickable list of every add-on across the
+                in-view appointments (name × count) so staff can prep supplies. */}
+            {addOnBreakdown.total > 0 && (
+              <div className="mt-3">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 transition-colors hover:text-blue-800 hover:underline"
+                    >
+                      <Sparkles className="size-3" />
+                      Add-ons: {addOnBreakdown.total} total
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-56 p-0">
+                    <div className="border-b px-3 py-2">
+                      <p className="text-xs font-semibold">Add-ons today</p>
+                      <p className="text-muted-foreground text-[10px]">
+                        Prep supplies across today&rsquo;s appointments
+                      </p>
+                    </div>
+                    <ul className="max-h-64 divide-y overflow-y-auto">
+                      {addOnBreakdown.entries.map(([name, count]) => (
+                        <li
+                          key={name}
+                          className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs"
+                        >
+                          <span className="truncate">{name}</span>
+                          <span className="shrink-0 font-semibold tabular-nums">
+                            ×{count}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Supply Alerts — soft reminders when today's add-ons draw down a low
+          consumable (spec Table 31). Rendered only when inventory tracking is
+          enabled and something is actually low; never a hard block. */}
+      {inventoryTrackingEnabled && supplyAlerts.length > 0 && (
+        <>
+          <div className="mx-4 mt-2 h-px bg-slate-200/70" />
+          <div className="px-4 pt-3 pb-5">
+            <p className="mb-2.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
+              Supply Alerts
+            </p>
+            <div className="space-y-1.5">
+              {supplyAlerts.map((a) => (
+                <div
+                  key={a.addOnName}
+                  className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/70 px-2.5 py-2 dark:border-amber-900/40 dark:bg-amber-950/20"
+                >
+                  <AlertTriangle className="mt-0.5 size-3 shrink-0 text-amber-600" />
+                  <div className="min-w-0">
+                    <p className="text-[11px] leading-tight font-semibold text-amber-900 dark:text-amber-200">
+                      {a.message}
+                    </p>
+                    {a.alreadyLow && (
+                      <p className="mt-0.5 text-[10px] text-amber-700/80 dark:text-amber-300/70">
+                        {a.productName} is at/below its reorder level.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </>
@@ -833,6 +991,8 @@ function AppointmentBlock({
   alertNotes,
   nowMin,
   isToday,
+  isDraggable,
+  onDragStartAppointment,
 }: {
   appointment: GroomingAppointment;
   stylistColor: string;
@@ -867,6 +1027,11 @@ function AppointmentBlock({
   /** True when the calendar is showing today's date. Time-based exception
    *  tags only apply to today's appointments. */
   isToday?: boolean;
+  /** When true the block can be dragged to another column (reassign) or a new
+   *  time (reschedule). Only the primary, non-terminal block is draggable. */
+  isDraggable?: boolean;
+  /** Fired on drag start so the DayView can track which appointment is moving. */
+  onDragStartAppointment?: () => void;
 }) {
   const startStr = stageOverride?.startTime ?? appointment.startTime;
   const endStr = stageOverride?.endTime ?? appointment.endTime;
@@ -1031,10 +1196,12 @@ function AppointmentBlock({
       elapsedMin > 0 ? (
       <span
         title={`Elapsed ${elapsedMin} min of ~${sessionEstimatedMin} min estimated`}
-        className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase tabular-nums shadow-sm"
+        className="inline-flex shrink-0 flex-col items-center rounded-md bg-blue-600 px-1.5 py-0.5 text-[9px] leading-none font-bold text-white tabular-nums shadow-sm"
       >
-        <Clock className="size-2.5" />
-        {elapsedMin}/{sessionEstimatedMin}m
+        <span>{elapsedMin}m</span>
+        <span className="mt-0.5 text-[8px] font-medium opacity-90">
+          {formatExpectedDuration(sessionEstimatedMin)}
+        </span>
       </span>
     ) : readySinceMin > 0 ? (
       <span
@@ -1101,9 +1268,28 @@ function AppointmentBlock({
     </span>
   ) : null;
 
+  // +N add-ons badge (spec Table 35) — surfaces how many extras this booking
+  // carries so staff can prep. Tooltip lists the add-on names.
+  const addOnBadge =
+    (appointment.addOns?.length ?? 0) > 0 ? (
+      <span
+        title={`Add-ons: ${appointment.addOns.join(", ")}`}
+        className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-violet-600 px-1 py-0.5 text-[9px] font-bold text-white shadow-sm"
+      >
+        <Sparkles className="size-2" />+{appointment.addOns.length}
+      </span>
+    ) : null;
+
   return (
     <button
       ref={blockRef}
+      draggable={isDraggable}
+      onDragStart={(e) => {
+        if (!isDraggable) return;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", appointment.id);
+        onDragStartAppointment?.();
+      }}
       onClick={(e) => {
         e.stopPropagation();
         onClick(appointment);
@@ -1181,6 +1367,7 @@ function AppointmentBlock({
         <div className="flex shrink-0 flex-col items-end gap-px">
           {checkedInBadge}
           {cornerBadge}
+          {addOnBadge}
         </div>
       </div>
       {/* Elapsed / estimated progress bar — only on today's in-progress
@@ -1319,6 +1506,7 @@ function DayView({
   stylistNameById,
   alertCountById,
   alertNotesById,
+  onDropAppointment,
 }: {
   selectedDate: string;
   appointments: GroomingAppointment[];
@@ -1351,8 +1539,19 @@ function DayView({
    *  popover on each block's alert badge so staff can read the specific
    *  warnings without opening the full appointment view. */
   alertNotesById: Record<string, AlertNote[]>;
+  /** Called on drop: reassign (target ≠ current groomer) or reschedule
+   *  (same column, new time). The parent validates + confirms. */
+  onDropAppointment: (
+    apptId: string,
+    targetStylistId: string,
+    targetTime: string | null,
+  ) => void;
 }) {
   const dateAppointments = appointments.filter((a) => a.date === selectedDate);
+
+  // Tracks which appointment card is mid-drag (native HTML5 DnD) so a column
+  // drop knows what to move.
+  const [draggingApptId, setDraggingApptId] = useState<string | null>(null);
 
   // One ticker per DayView mount — passed down to each block so all of them
   // share the same "now" and re-render together.
@@ -1568,6 +1767,19 @@ function DayView({
                     className="relative min-w-[168px] flex-1 cursor-pointer border-l"
                     onClick={handleColumnClick}
                     onContextMenu={handleColumnContextMenu}
+                    onDragOver={(e) => {
+                      if (draggingApptId) {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const id = draggingApptId;
+                      setDraggingApptId(null);
+                      if (!id) return;
+                      onDropAppointment(id, stylist.id, slotTimeFromEvent(e));
+                    }}
                     role="button"
                     tabIndex={-1}
                     aria-label={`Schedule slot for ${stylist.name}`}
@@ -1636,6 +1848,15 @@ function DayView({
                           stylistColor={stylistColor}
                           staffLine={staffLine}
                           isSecondary={isSecondary}
+                          isDraggable={
+                            !isSecondary &&
+                            apt.status !== "cancelled" &&
+                            apt.status !== "completed" &&
+                            apt.status !== "no-show"
+                          }
+                          onDragStartAppointment={() =>
+                            setDraggingApptId(apt.id)
+                          }
                           onClick={onBlockClick}
                           isMatch={searchActive && matchedIds.has(apt.id)}
                           isDimmed={searchActive && !matchedIds.has(apt.id)}
@@ -1732,6 +1953,15 @@ function WeekView({
           const isSelected = ds === selectedDate;
 
           const waitlistCount = waitlistByDate[ds] ?? 0;
+          // Per-day service mix — feeds the count + mini color bar (Table 37).
+          const serviceMix = (() => {
+            const map = new Map<string, number>();
+            for (const a of dayApts) {
+              const svc = a.packageName ?? "Other";
+              map.set(svc, (map.get(svc) ?? 0) + 1);
+            }
+            return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+          })();
           return (
             <button
               key={ds}
@@ -1765,6 +1995,31 @@ function WeekView({
                   size="xs"
                 />
               </div>
+              {dayApts.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-muted-foreground text-[10px] font-semibold">
+                    {dayApts.length} appt{dayApts.length === 1 ? "" : "s"}
+                  </span>
+                  {/* Mini service-mix bar — one segment per service, width
+                      proportional to its share of the day (Table 37). */}
+                  <div
+                    className="bg-muted/40 flex h-1.5 w-full overflow-hidden rounded-full"
+                    title={serviceMix
+                      .map(([svc, c]) => `${svc} ×${c}`)
+                      .join(" · ")}
+                  >
+                    {serviceMix.map(([svc, count]) => (
+                      <div
+                        key={svc}
+                        style={{
+                          width: `${(count / dayApts.length) * 100}%`,
+                          backgroundColor: colorForService(svc),
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
               {dayApts.length === 0 ? (
                 <span className="text-muted-foreground/50 mt-1 text-[10px]">
                   No appts
@@ -1973,9 +2228,180 @@ export function GroomingCalendar() {
   } | null>(null);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
 
-  const { data: appointments = [] } = useQuery(groomingQueries.appointments());
+  const { data: rawAppointments = [] } = useQuery(
+    groomingQueries.appointments(),
+  );
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
   const { entries: waitlist } = useGroomingWaitlist();
+
+  // Drag-and-drop reassign/reschedule edits, merged over the (static mock)
+  // query so a drop renders immediately. Mock-only, in-memory.
+  const [apptOverrides, setApptOverrides] = useState<
+    Record<string, GroomingAppointment>
+  >({});
+  const appointments = useMemo(
+    () => rawAppointments.map((a) => apptOverrides[a.id] ?? a),
+    [rawAppointments, apptOverrides],
+  );
+
+  // Pending drop awaiting confirmation ("Reassign / Reschedule … ?").
+  const [pendingDrop, setPendingDrop] = useState<
+    | {
+        kind: "reassign";
+        apt: GroomingAppointment;
+        targetStylistId: string;
+        targetStylistName: string;
+      }
+    | {
+        kind: "reschedule";
+        apt: GroomingAppointment;
+        newTime: string;
+        newEndTime: string;
+      }
+    | null
+  >(null);
+
+  // Validate a drop and stage the confirm. Guards against groomer skill
+  // eligibility and time / station conflicts (spec Table 36).
+  function handleAppointmentDrop(
+    apptId: string,
+    targetStylistId: string,
+    targetTime: string | null,
+  ) {
+    const apt = appointments.find((a) => a.id === apptId);
+    if (!apt) return;
+
+    // Reassign — dropped on a different groomer's column (time preserved).
+    if (targetStylistId !== apt.stylistId) {
+      const targetStylist = stylistsData.find((s) => s.id === targetStylistId);
+      if (!targetStylist) return;
+      const pkg = groomingPackages.find((p) => p.id === apt.packageId);
+      if (pkg && !stylistMeetsSkillRequirement(targetStylist, pkg)) {
+        toast.error(
+          `${targetStylist.name} isn't qualified for ${apt.packageName}.`,
+        );
+        return;
+      }
+      const conflict = findStylistTimeConflict(
+        targetStylistId,
+        apt.date,
+        apt.startTime,
+        apt.endTime,
+        appointments,
+        apt.id,
+      );
+      if (conflict) {
+        toast.error(
+          `${targetStylist.name} is busy at ${apt.startTime} (${conflict.petName}).`,
+        );
+        return;
+      }
+      setPendingDrop({
+        kind: "reassign",
+        apt,
+        targetStylistId,
+        targetStylistName: targetStylist.name,
+      });
+      return;
+    }
+
+    // Reschedule — dropped at a new time in the same column.
+    if (!targetTime || targetTime === apt.startTime) return;
+    const duration = timeToMinutes(apt.endTime) - timeToMinutes(apt.startTime);
+    const newEndTime = minutesToTime(timeToMinutes(targetTime) + duration);
+    const conflict = findStylistTimeConflict(
+      apt.stylistId,
+      apt.date,
+      targetTime,
+      newEndTime,
+      appointments,
+      apt.id,
+    );
+    if (conflict) {
+      toast.error(`That time conflicts with ${conflict.petName}.`);
+      return;
+    }
+    if (apt.stationId) {
+      const booked = getBookedStationIdsInWindow(
+        apt.date,
+        targetTime,
+        newEndTime,
+        appointments.filter((a) => a.id !== apt.id),
+      );
+      if (booked.has(apt.stationId)) {
+        toast.error(`That station is already booked at ${targetTime}.`);
+        return;
+      }
+    }
+    setPendingDrop({
+      kind: "reschedule",
+      apt,
+      newTime: targetTime,
+      newEndTime,
+    });
+  }
+
+  // Apply the confirmed drop: update the store override, append a history
+  // entry, and fire the mock owner notification.
+  function applyDrop() {
+    if (!pendingDrop) return;
+    const { apt } = pendingDrop;
+    const at = new Date().toISOString();
+    const histId = `h-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    if (pendingDrop.kind === "reassign") {
+      const updated: GroomingAppointment = {
+        ...apt,
+        stylistId: pendingDrop.targetStylistId,
+        stylistName: pendingDrop.targetStylistName,
+        history: [
+          ...(apt.history ?? []),
+          {
+            id: histId,
+            at,
+            staff: "You",
+            description: `Reassigned from ${apt.stylistName} to ${pendingDrop.targetStylistName}`,
+          },
+        ],
+      };
+      setApptOverrides((prev) => ({ ...prev, [apt.id]: updated }));
+      toast.success(
+        `${apt.petName} reassigned to ${pendingDrop.targetStylistName}`,
+        {
+          description: buildBookingChangeMessage({
+            kind: "reassign",
+            petName: apt.petName,
+            clientName: apt.ownerName,
+            newGroomerName: pendingDrop.targetStylistName,
+          }),
+        },
+      );
+    } else {
+      const updated: GroomingAppointment = {
+        ...apt,
+        startTime: pendingDrop.newTime,
+        endTime: pendingDrop.newEndTime,
+        history: [
+          ...(apt.history ?? []),
+          {
+            id: histId,
+            at,
+            staff: "You",
+            description: `Rescheduled from ${apt.startTime} to ${pendingDrop.newTime}`,
+          },
+        ],
+      };
+      setApptOverrides((prev) => ({ ...prev, [apt.id]: updated }));
+      toast.success(`${apt.petName} rescheduled to ${pendingDrop.newTime}`, {
+        description: buildBookingChangeMessage({
+          kind: "reschedule",
+          petName: apt.petName,
+          clientName: apt.ownerName,
+          newTime: pendingDrop.newTime,
+        }),
+      });
+    }
+    setPendingDrop(null);
+  }
   const { enabled: mobileEnabled, vans } = useMobileGrooming();
 
   // When mobile grooming is on, vans show up alongside groomers as calendar
@@ -2336,6 +2762,7 @@ export function GroomingCalendar() {
                 stylistNameById={stylistNameById}
                 alertCountById={alertCountById}
                 alertNotesById={alertNotesById}
+                onDropAppointment={handleAppointmentDrop}
               />
             )}
             {viewMode === "week" && (
@@ -2403,6 +2830,37 @@ export function GroomingCalendar() {
             waitlistDate ? waitlist.filter((w) => w.date === waitlistDate) : []
           }
         />
+
+        {/* Drag-and-drop reassign / reschedule confirmation (spec Table 36). */}
+        <AlertDialog
+          open={!!pendingDrop}
+          onOpenChange={(o) => {
+            if (!o) setPendingDrop(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {pendingDrop?.kind === "reassign"
+                  ? "Reassign appointment?"
+                  : "Reschedule appointment?"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {pendingDrop?.kind === "reassign"
+                  ? `Reassign ${pendingDrop.apt.petName} to ${pendingDrop.targetStylistName}? The owner will be notified.`
+                  : pendingDrop
+                    ? `Reschedule ${pendingDrop.apt.petName} to ${pendingDrop.newTime}? The owner will be notified.`
+                    : ""}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={applyDrop}>
+                Confirm &amp; Notify
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <PrintableDaySheet

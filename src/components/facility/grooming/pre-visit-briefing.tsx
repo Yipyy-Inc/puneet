@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   CheckCircle2,
@@ -10,8 +10,29 @@ import {
   Camera,
   Sparkle,
   ShieldAlert,
+  DollarSign,
+  Plus,
+  Ban,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import {
+  applyPreApprovedSurcharge,
+  hasPreApprovedSurcharge,
+} from "@/lib/grooming/pre-approved-surcharge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
   groomingQueries,
@@ -21,6 +42,7 @@ import type {
   GroomingAppointment,
   BehaviorTag,
   SessionIssueKind,
+  SurchargeApproval,
 } from "@/types/grooming";
 import {
   getYipyyGoConfig,
@@ -101,6 +123,28 @@ export function PreVisitBriefing({
   const submission = appointment.expressCheckinSubmission;
   const isNarrow = layout === "narrow";
 
+  // Photo lightbox (expandable thumbnails) + full-form drawer.
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [fullFormOpen, setFullFormOpen] = useState(false);
+
+  // Client price pre-approvals (Table 103). Local state just tracks which fees
+  // were added this session so the button flips to "Added"; the source of truth
+  // is the appointment's priceAdjustments (mutated by the helper).
+  const surchargeApprovals = submission?.surchargeApprovals ?? [];
+  const [, forceRerender] = useState(0);
+
+  const handleAddFee = (approval: SurchargeApproval) => {
+    const adj = applyPreApprovedSurcharge(appointment, approval);
+    if (adj) {
+      forceRerender((n) => n + 1);
+      toast.success(
+        `Added $${approval.amount} ${approval.label.toLowerCase()} to ${appointment.petName}'s appointment`,
+      );
+    } else {
+      toast.info("This fee has already been added.");
+    }
+  };
+
   return (
     <div className={cn("space-y-3", isNarrow ? "" : "space-y-4")}>
       {/* Pre-visit form responses */}
@@ -110,20 +154,31 @@ export function PreVisitBriefing({
             <ClipboardList className="text-muted-foreground size-4" />
             Pre-visit Form Responses
           </div>
-          {submission ? (
-            <Badge
-              className="border-0 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
-              title={`Submitted ${new Date(submission.submittedAt).toLocaleString("en-CA")}`}
-            >
-              <CheckCircle2 className="mr-1 size-3" />
-              Checked in by client
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-muted-foreground">
-              <Clock className="mr-1 size-3" />
-              Form pending
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {submission && (
+              <button
+                type="button"
+                onClick={() => setFullFormOpen(true)}
+                className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+              >
+                View Full Form
+              </button>
+            )}
+            {submission ? (
+              <Badge
+                className="border-0 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                title={`Submitted ${new Date(submission.submittedAt).toLocaleString("en-CA")}`}
+              >
+                <CheckCircle2 className="mr-1 size-3" />
+                Checked in by client
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-muted-foreground">
+                <Clock className="mr-1 size-3" />
+                Form pending
+              </Badge>
+            )}
+          </div>
         </div>
         <div className="px-4 py-3">
           {submission ? (
@@ -133,6 +188,34 @@ export function PreVisitBriefing({
                 isNarrow ? "grid-cols-1" : "sm:grid-cols-2",
               )}
             >
+              {/* Photo thumbnails render in a row ABOVE the Q&A (Table 104).
+                  Tap any thumbnail to expand. */}
+              {submission.photosFromClient &&
+                submission.photosFromClient.length > 0 && (
+                  <div className="col-span-full">
+                    <dt className="text-muted-foreground mb-1.5 text-[10px] tracking-wide uppercase">
+                      Photos from the client
+                    </dt>
+                    <dd className="flex flex-wrap gap-2">
+                      {submission.photosFromClient.map((url, i) => (
+                        <button
+                          key={`${url}-${i}`}
+                          type="button"
+                          onClick={() => setLightboxUrl(url)}
+                          title="Tap to expand"
+                          className="group focus-visible:ring-ring rounded-md focus-visible:ring-2 focus-visible:outline-none"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={url}
+                            alt={`Client photo ${i + 1}`}
+                            className="ring-border size-16 rounded-md object-cover ring-1 transition-transform group-hover:scale-105"
+                          />
+                        </button>
+                      ))}
+                    </dd>
+                  </div>
+                )}
               {questions.map((q) => {
                 const value = submission.answers[q.id];
                 if (q.type === "file_upload") return null;
@@ -147,25 +230,6 @@ export function PreVisitBriefing({
                   </div>
                 );
               })}
-              {submission.photosFromClient &&
-                submission.photosFromClient.length > 0 && (
-                  <div className="col-span-full">
-                    <dt className="text-muted-foreground mb-1.5 text-[10px] tracking-wide uppercase">
-                      Photos from the client
-                    </dt>
-                    <dd className="flex flex-wrap gap-2">
-                      {submission.photosFromClient.map((url, i) => (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          key={`${url}-${i}`}
-                          src={url}
-                          alt={`Client photo ${i + 1}`}
-                          className="ring-border size-16 rounded-md object-cover ring-1"
-                        />
-                      ))}
-                    </dd>
-                  </div>
-                )}
             </dl>
           ) : (
             <p className="text-muted-foreground text-xs italic">
@@ -175,6 +239,80 @@ export function PreVisitBriefing({
           )}
         </div>
       </div>
+
+      {/* Client price pre-approvals (Table 103) */}
+      {surchargeApprovals.length > 0 && (
+        <div className="bg-card rounded-xl border shadow-sm">
+          <div className="flex items-center gap-2 border-b px-4 py-2.5 text-sm font-semibold">
+            <DollarSign className="text-muted-foreground size-4" />
+            Price Pre-Approvals
+          </div>
+          <div className="space-y-2 px-4 py-3">
+            {surchargeApprovals.map((sa) => {
+              const decidedLabel = new Date(sa.decidedAt).toLocaleString(
+                "en-CA",
+                {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                },
+              );
+              if (sa.decision === "approved") {
+                const alreadyAdded = hasPreApprovedSurcharge(appointment, sa);
+                return (
+                  <div
+                    key={sa.id}
+                    className="flex items-center justify-between gap-3 rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 dark:border-emerald-900 dark:bg-emerald-950/30"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
+                        <CheckCircle2 className="mr-1 inline size-3.5" />
+                        Client approved {sa.label.toLowerCase()} (+$
+                        {sa.amount})
+                      </p>
+                      <p className="text-[11px] text-emerald-700 dark:text-emerald-300/80">
+                        Approved {decidedLabel} — add the fee without calling.
+                      </p>
+                    </div>
+                    {alreadyAdded ? (
+                      <Badge className="shrink-0 border-0 bg-emerald-600 text-white">
+                        <CheckCircle2 className="mr-1 size-3" />
+                        Added
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="h-8 shrink-0 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+                        onClick={() => handleAddFee(sa)}
+                      >
+                        <Plus className="size-3.5" />
+                        Add ${sa.amount} fee
+                      </Button>
+                    )}
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={sa.id}
+                  className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-900 dark:bg-amber-950/30"
+                >
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                    <Ban className="mr-1 inline size-3.5" />
+                    Client declined {sa.label.toLowerCase()} pre-approval —
+                    discuss at drop-off
+                  </p>
+                  <p className="text-[11px] text-amber-700 dark:text-amber-300/80">
+                    Declined {decidedLabel}. Don&apos;t add the ${sa.amount} fee
+                    without talking to the owner first.
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Coat + size + service quick facts */}
       <div className="bg-card rounded-xl border shadow-sm">
@@ -328,6 +466,94 @@ export function PreVisitBriefing({
           )}
         </div>
       </div>
+
+      {/* Expandable photo lightbox — click any client thumbnail to enlarge. */}
+      <Dialog
+        open={!!lightboxUrl}
+        onOpenChange={(o) => !o && setLightboxUrl(null)}
+      >
+        <DialogContent className="max-w-2xl p-2">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Client photo</DialogTitle>
+          </DialogHeader>
+          {lightboxUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={lightboxUrl}
+              alt="Client photo (enlarged)"
+              className="max-h-[80vh] w-full rounded-md object-contain"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Full Express Check-In form in a side drawer. */}
+      <Sheet open={fullFormOpen} onOpenChange={setFullFormOpen}>
+        <SheetContent
+          side="right"
+          className="w-full overflow-y-auto sm:max-w-md"
+        >
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <ClipboardList className="size-4" />
+              Express Check-In Form
+            </SheetTitle>
+          </SheetHeader>
+          {submission ? (
+            <div className="space-y-4 px-4 pb-6">
+              <p className="text-muted-foreground text-xs">
+                Submitted{" "}
+                {new Date(submission.submittedAt).toLocaleString("en-CA")}
+              </p>
+              <dl className="space-y-3">
+                {questions.map((q) => {
+                  if (q.type === "file_upload") return null;
+                  return (
+                    <div key={q.id}>
+                      <dt className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                        {q.label}
+                      </dt>
+                      <dd className="text-sm wrap-break-word">
+                        {formatAnswer(q, submission.answers[q.id])}
+                      </dd>
+                    </div>
+                  );
+                })}
+              </dl>
+              {submission.photosFromClient &&
+                submission.photosFromClient.length > 0 && (
+                  <div>
+                    <p className="text-muted-foreground mb-1.5 text-[10px] tracking-wide uppercase">
+                      Photos from the client
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {submission.photosFromClient.map((url, i) => (
+                        <button
+                          key={`full-${url}-${i}`}
+                          type="button"
+                          onClick={() => setLightboxUrl(url)}
+                          title="Click to enlarge"
+                          className="focus-visible:ring-ring rounded-md focus-visible:ring-2 focus-visible:outline-none"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={url}
+                            alt={`Client photo ${i + 1}`}
+                            className="ring-border aspect-square w-full rounded-md object-cover ring-1"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+            </div>
+          ) : (
+            <p className="text-muted-foreground px-4 text-xs italic">
+              The client hasn&apos;t submitted the Express Check-In form yet.
+            </p>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

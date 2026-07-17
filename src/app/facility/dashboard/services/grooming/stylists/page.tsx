@@ -41,6 +41,8 @@ import {
   Timer,
   ExternalLink,
   Info,
+  Send,
+  Bell,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -54,7 +56,28 @@ import {
   groomingAppointments,
   groomingPackages,
 } from "@/data/grooming";
-import type { StylistCapacity, StylistSkillLevel } from "@/types/grooming";
+import type {
+  StylistCapacity,
+  StylistSkillLevel,
+  GroomerNotificationPrefs,
+} from "@/types/grooming";
+import {
+  GROOMER_NOTIFICATION_TYPE_OPTIONS,
+  GROOMER_NOTIFICATION_CHANNEL_OPTIONS,
+  defaultGroomerNotificationPrefs,
+} from "@/lib/grooming-notification-prefs";
+import { TimePickerLux } from "@/components/ui/time-picker-lux";
+import { GroomerProfileSheet } from "@/components/facility/grooming/groomer-profile-sheet";
+import {
+  buildTomorrowSummary,
+  type TomorrowSummary,
+} from "@/lib/grooming-tomorrow-summary";
+import {
+  buildMorningReminder,
+  buildUpcomingReminder,
+  selectUpcomingReminderTarget,
+} from "@/lib/grooming-groomer-reminders";
+import { notifyGroomerReminder } from "@/data/facility-notifications";
 import { facilityStaff } from "@/data/facility-staff";
 import type { StaffProfile } from "@/types/facility-staff";
 import { toast } from "sonner";
@@ -71,7 +94,7 @@ type MergedStylist = {
   email: string;
   phone: string;
   photoUrl?: string;
-  status: "active" | "inactive";
+  status: "active" | "inactive" | "on-leave";
   specializations: string[];
   certifications: string[];
   yearsExperience: number;
@@ -84,6 +107,7 @@ type MergedStylist = {
   hasGroomingProfile: boolean;
   calendarColor?: string;
   qualifiedPackageIds: string[];
+  notificationPrefs?: GroomerNotificationPrefs;
 };
 
 const defaultCapacity: StylistCapacity = {
@@ -131,7 +155,10 @@ function buildMergedStylists(staffList: StaffProfile[]): MergedStylist[] {
       email: staff.email,
       phone: staff.phone,
       photoUrl: staff.avatarUrl,
-      status: staff.status === "active" ? "active" : "inactive",
+      // Prefer the grooming profile's status (supports "on-leave"); fall back
+      // to the staff-account status when there's no grooming profile yet.
+      status:
+        profile?.status ?? (staff.status === "active" ? "active" : "inactive"),
       specializations: profile?.specializations ?? [],
       certifications: profile?.certifications ?? [],
       yearsExperience: profile?.yearsExperience ?? 0,
@@ -144,6 +171,7 @@ function buildMergedStylists(staffList: StaffProfile[]): MergedStylist[] {
       hasGroomingProfile: !!profile,
       calendarColor: profile?.calendarColor,
       qualifiedPackageIds: profile?.qualifiedPackageIds ?? [],
+      notificationPrefs: profile?.notificationPrefs,
     };
   });
 }
@@ -166,6 +194,44 @@ export default function StylistsPage() {
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
   const [selectedGroomer, setSelectedGroomer] = useState<MergedStylist | null>(
     null,
+  );
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [summary, setSummary] = useState<TomorrowSummary | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [profileGroomer, setProfileGroomer] = useState<MergedStylist | null>(
+    null,
+  );
+
+  // "+ Add Groomer" — mock-creates a staff account + sends an invite. New
+  // groomers are appended locally so they appear in the table immediately.
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [addedGroomers, setAddedGroomers] = useState<MergedStylist[]>([]);
+  const [addedSchedules, setAddedSchedules] = useState<Record<string, string>>(
+    {},
+  );
+  const [addForm, setAddForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    title: "Groomer",
+    skillLevel: "standard" as StylistSkillLevel,
+    qualifiedPackageIds: [] as string[],
+    workDays: [1, 2, 3, 4, 5] as number[],
+    startTime: "09:00",
+    endTime: "17:00",
+  });
+
+  // Per-groomer notification preferences (Table 83). Mock persistence: a local
+  // override map keyed by staffId, seeded from the stylist record. `notifDraft`
+  // holds the in-flight edit for the open dialog.
+  const [isNotifPrefsOpen, setIsNotifPrefsOpen] = useState(false);
+  const [notifPrefsGroomer, setNotifPrefsGroomer] =
+    useState<MergedStylist | null>(null);
+  const [notifPrefs, setNotifPrefs] = useState<
+    Record<string, GroomerNotificationPrefs>
+  >({});
+  const [notifDraft, setNotifDraft] = useState<GroomerNotificationPrefs>(
+    defaultGroomerNotificationPrefs(),
   );
 
   const [formData, setFormData] = useState({
@@ -372,6 +438,182 @@ export default function StylistsPage() {
     toast.success("Grooming profile updated");
   };
 
+  const handlePreviewSummary = (groomer: MergedStylist) => {
+    if (!groomer.stylistId) {
+      toast.error("This groomer has no stylist profile yet.");
+      return;
+    }
+    // Tomorrow, built the same way the mock appointment book stamps its dates
+    // so the demo lines up with the seeded schedule.
+    const day = new Date();
+    day.setDate(day.getDate() + 1);
+    const dateStr = day.toISOString().split("T")[0];
+    setSummary(
+      buildTomorrowSummary({
+        stylistId: groomer.stylistId,
+        stylistName: groomer.name,
+        dateStr,
+        appointments: groomingAppointments,
+      }),
+    );
+    setIsSummaryOpen(true);
+  };
+
+  const handleViewProfile = (groomer: MergedStylist) => {
+    setProfileGroomer(groomer);
+    setIsProfileOpen(true);
+  };
+
+  const handleAddGroomer = () => {
+    if (!addForm.name.trim() || !addForm.email.trim()) {
+      toast.error("Name and email are required.");
+      return;
+    }
+    if (addForm.workDays.length === 0) {
+      toast.error("Pick at least one working day.");
+      return;
+    }
+    const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const days = [...addForm.workDays].sort((a, b) => a - b);
+    const contiguous = days.every((d, i) => i === 0 || d === days[i - 1] + 1);
+    const dayLabel = contiguous
+      ? days.length === 1
+        ? DAY_SHORT[days[0]]
+        : `${DAY_SHORT[days[0]]}–${DAY_SHORT[days[days.length - 1]]}`
+      : days.map((d) => DAY_SHORT[d]).join(", ");
+    const scheduleSummary = `${dayLabel} ${addForm.startTime}–${addForm.endTime}`;
+
+    const staffId = `groomer-new-${Date.now()}`;
+    const newGroomer: MergedStylist = {
+      staffId,
+      stylistId: staffId,
+      name: addForm.name.trim(),
+      email: addForm.email.trim(),
+      phone: addForm.phone.trim(),
+      status: "inactive", // pending invite acceptance
+      specializations: addForm.title.trim() ? [addForm.title.trim()] : [],
+      certifications: [],
+      yearsExperience: 0,
+      bio: "",
+      rating: 0,
+      totalAppointments: 0,
+      hireDate: new Date().toISOString().split("T")[0],
+      capacity: { ...defaultCapacity, skillLevel: addForm.skillLevel },
+      visibleOnline: false,
+      hasGroomingProfile: true,
+      calendarColor: fallbackColorFor(staffId),
+      qualifiedPackageIds: addForm.qualifiedPackageIds,
+    };
+
+    setAddedGroomers((prev) => [...prev, newGroomer]);
+    setAddedSchedules((prev) => ({ ...prev, [staffId]: scheduleSummary }));
+    setIsAddOpen(false);
+    toast.success(`Invite sent to ${newGroomer.email}`, {
+      description: `${newGroomer.name} will appear as Active once they accept the setup link (mock).`,
+    });
+    setAddForm({
+      name: "",
+      email: "",
+      phone: "",
+      title: "Groomer",
+      skillLevel: "standard",
+      qualifiedPackageIds: [],
+      workDays: [1, 2, 3, 4, 5],
+      startTime: "09:00",
+      endTime: "17:00",
+    });
+  };
+
+  const displayedStylists = useMemo(
+    () => [...mergedStylists, ...addedGroomers],
+    [mergedStylists, addedGroomers],
+  );
+
+  // Demo facility id — matches the mocked groomer-booking notifications.
+  const DEMO_FACILITY_ID = 11;
+
+  const handleSendMorningReminder = (groomer: MergedStylist) => {
+    if (!groomer.stylistId) {
+      toast.error("This groomer has no stylist profile yet.");
+      return;
+    }
+    const todayStr = new Date().toISOString().split("T")[0];
+    const reminder = buildMorningReminder({
+      stylistId: groomer.stylistId,
+      stylistName: groomer.name,
+      dateStr: todayStr,
+      appointments: groomingAppointments,
+    });
+    notifyGroomerReminder({
+      facilityId: DEMO_FACILITY_ID,
+      kind: "morning",
+      message: reminder.message,
+      petName: reminder.firstPetName,
+    });
+    toast.success(`Morning reminder sent to ${groomer.name}`, {
+      description: reminder.message,
+    });
+  };
+
+  const handleSendUpcomingReminder = (groomer: MergedStylist) => {
+    if (!groomer.stylistId) {
+      toast.error("This groomer has no stylist profile yet.");
+      return;
+    }
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    const target = selectUpcomingReminderTarget({
+      stylistId: groomer.stylistId,
+      dateStr: todayStr,
+      appointments: groomingAppointments,
+      nowMinutes: now.getHours() * 60 + now.getMinutes(),
+    });
+    if (!target) {
+      toast.info(`${groomer.name} has no appointments scheduled today.`);
+      return;
+    }
+    const message = buildUpcomingReminder({
+      appointment: target.appointment,
+      minutesUntil: target.minutesUntil,
+    });
+    notifyGroomerReminder({
+      facilityId: DEMO_FACILITY_ID,
+      kind: "upcoming",
+      message,
+      petName: target.appointment.petName,
+      appointmentId: target.appointment.id,
+    });
+    toast.success(`30-minute reminder sent to ${groomer.name}`, {
+      description: message,
+    });
+  };
+
+  const handleEditNotifPrefs = (groomer: MergedStylist) => {
+    const current =
+      notifPrefs[groomer.staffId] ??
+      groomer.notificationPrefs ??
+      defaultGroomerNotificationPrefs();
+    setNotifPrefsGroomer(groomer);
+    setNotifDraft({
+      types: { ...current.types },
+      channels: { ...current.channels },
+      summaryTime: current.summaryTime,
+    });
+    setIsNotifPrefsOpen(true);
+  };
+
+  const handleSaveNotifPrefs = () => {
+    if (!notifPrefsGroomer) return;
+    setNotifPrefs((prev) => ({
+      ...prev,
+      [notifPrefsGroomer.staffId]: notifDraft,
+    }));
+    setIsNotifPrefsOpen(false);
+    toast.success(
+      `Notification preferences saved for ${notifPrefsGroomer.name}`,
+    );
+  };
+
   const handleManageAvailability = (groomer: MergedStylist) => {
     setSelectedGroomer(groomer);
 
@@ -427,7 +669,13 @@ export default function StylistsPage() {
             </AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-medium">{groomer.name}</p>
+            <button
+              type="button"
+              onClick={() => handleViewProfile(groomer)}
+              className="font-medium hover:underline"
+            >
+              {groomer.name}
+            </button>
             <p className="text-muted-foreground text-sm">{groomer.email}</p>
           </div>
         </div>
@@ -474,6 +722,8 @@ export default function StylistsPage() {
       render: (groomer) => {
         const level = groomer.capacity.skillLevel;
         const cls: Record<typeof level, string> = {
+          basic:
+            "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
           standard:
             "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
           premium:
@@ -551,7 +801,9 @@ export default function StylistsPage() {
       defaultVisible: true,
       render: (groomer) => (
         <span className="text-muted-foreground text-xs">
-          {scheduleSummaries.get(groomer.staffId) ?? "No schedule set"}
+          {addedSchedules[groomer.staffId] ??
+            scheduleSummaries.get(groomer.staffId) ??
+            "No schedule set"}
         </span>
       ),
     },
@@ -722,10 +974,12 @@ export default function StylistsPage() {
           className={
             groomer.status === "active"
               ? "bg-green-100 text-green-700"
-              : "bg-gray-100 text-gray-700"
+              : groomer.status === "on-leave"
+                ? "bg-amber-100 text-amber-800"
+                : "bg-gray-100 text-gray-700"
           }
         >
-          {groomer.status}
+          {groomer.status === "on-leave" ? "On Leave" : groomer.status}
         </Badge>
       ),
     },
@@ -761,6 +1015,10 @@ export default function StylistsPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleViewProfile(groomer)}>
+              <Users className="mr-2 size-4" />
+              View Profile
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleEdit(groomer)}>
               <Edit className="mr-2 size-4" />
               Edit Grooming Profile
@@ -768,6 +1026,26 @@ export default function StylistsPage() {
             <DropdownMenuItem onClick={() => handleManageAvailability(groomer)}>
               <Clock className="mr-2 size-4" />
               Manage Availability
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handlePreviewSummary(groomer)}>
+              <Send className="mr-2 size-4" />
+              Preview tomorrow&apos;s summary
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleSendMorningReminder(groomer)}
+            >
+              <Send className="mr-2 size-4" />
+              Send test morning reminder
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleSendUpcomingReminder(groomer)}
+            >
+              <Send className="mr-2 size-4" />
+              Send test 30-min reminder
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleEditNotifPrefs(groomer)}>
+              <Bell className="mr-2 size-4" />
+              Notification preferences
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/facility/dashboard/staff">
@@ -788,6 +1066,7 @@ export default function StylistsPage() {
       options: [
         { value: "all", label: "All Statuses" },
         { value: "active", label: "Active" },
+        { value: "on-leave", label: "On Leave" },
         { value: "inactive", label: "Inactive" },
       ],
     },
@@ -893,16 +1172,25 @@ export default function StylistsPage() {
               Staff Management.
             </p>
           </div>
-          <Button asChild variant="outline">
-            <Link href="/facility/dashboard/staff">
+          <div className="flex items-center gap-2">
+            <Button
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={() => setIsAddOpen(true)}
+            >
               <Users className="mr-2 size-4" />
-              Manage Staff
-            </Link>
-          </Button>
+              Add Groomer
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/facility/dashboard/staff">
+                <Users className="mr-2 size-4" />
+                Manage Staff
+              </Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <DataTable
-            data={mergedStylists}
+            data={displayedStylists}
             columns={columns}
             filters={filters}
             searchPlaceholder="Search stylists..."
@@ -961,10 +1249,10 @@ export default function StylistsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="junior">Junior</SelectItem>
-                    <SelectItem value="intermediate">Intermediate</SelectItem>
-                    <SelectItem value="senior">Senior</SelectItem>
-                    <SelectItem value="master">Master</SelectItem>
+                    <SelectItem value="basic">Basic</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="premium">Premium</SelectItem>
+                    <SelectItem value="platinum">Platinum</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1288,6 +1576,368 @@ export default function StylistsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
+        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="size-4" />
+              Tomorrow&apos;s Schedule — {summary?.stylistName}
+            </DialogTitle>
+            <DialogDescription>
+              {summary?.dateLabel} · {summary?.count ?? 0} appointment
+              {summary?.count === 1 ? "" : "s"}. Auto-sent by SMS &amp; email
+              each evening (mock preview — nothing is actually sent).
+            </DialogDescription>
+          </DialogHeader>
+
+          {summary && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-muted-foreground text-xs tracking-wide uppercase">
+                  SMS
+                </Label>
+                <pre className="bg-muted mt-1 rounded-md border p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap">
+                  {summary.sms}
+                </pre>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs tracking-wide uppercase">
+                  Email preview
+                </Label>
+                <div
+                  className="mt-1 overflow-hidden rounded-md border"
+                  // Self-contained HTML we generated ourselves (no user input) —
+                  // safe to render as the email body preview.
+                  dangerouslySetInnerHTML={{ __html: summary.emailHtml }}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSummaryOpen(false)}>
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                if (!summary) return;
+                toast.success(
+                  `Summary sent to ${summary.stylistName} by SMS & email (mock)`,
+                );
+                setIsSummaryOpen(false);
+              }}
+            >
+              <Send className="mr-2 size-4" />
+              Send now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isNotifPrefsOpen} onOpenChange={setIsNotifPrefsOpen}>
+        <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bell className="size-4" />
+              Notification Preferences — {notifPrefsGroomer?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Choose which alerts {notifPrefsGroomer?.name?.split(" ")[0]}{" "}
+              receives and how. These override the facility defaults.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-2">
+            <div className="space-y-3">
+              <Label className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                Notify me about
+              </Label>
+              {GROOMER_NOTIFICATION_TYPE_OPTIONS.map((opt) => (
+                <div
+                  key={opt.key}
+                  className="flex items-center justify-between gap-4"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{opt.label}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {opt.description}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={notifDraft.types[opt.key]}
+                    onCheckedChange={(v) =>
+                      setNotifDraft((prev) => ({
+                        ...prev,
+                        types: { ...prev.types, [opt.key]: v },
+                      }))
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                Channels
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                {GROOMER_NOTIFICATION_CHANNEL_OPTIONS.map((opt) => (
+                  <div
+                    key={opt.key}
+                    className="flex items-center justify-between rounded-md border px-3 py-2"
+                  >
+                    <span className="text-sm font-medium">{opt.label}</span>
+                    <Switch
+                      checked={notifDraft.channels[opt.key]}
+                      onCheckedChange={(v) =>
+                        setNotifDraft((prev) => ({
+                          ...prev,
+                          channels: { ...prev.channels, [opt.key]: v },
+                        }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="summary-time"
+                className="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
+              >
+                Preferred summary time
+              </Label>
+              <TimePickerLux
+                id="summary-time"
+                value={notifDraft.summaryTime}
+                onValueChange={(next) =>
+                  setNotifDraft((prev) => ({ ...prev, summaryTime: next }))
+                }
+                stepMinutes={30}
+              />
+              <p className="text-muted-foreground text-xs">
+                When the evening &quot;Tomorrow&apos;s Schedule&quot; summary is
+                sent.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsNotifPrefsOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveNotifPrefs}>Save Preferences</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Groomer</DialogTitle>
+            <DialogDescription>
+              Creates a staff account and emails a setup link (mock). They join
+              the roster as Active once they accept.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-1">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="ag-name">Full name</Label>
+                <Input
+                  id="ag-name"
+                  value={addForm.name}
+                  onChange={(e) =>
+                    setAddForm((p) => ({ ...p, name: e.target.value }))
+                  }
+                  placeholder="Jordan Lee"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ag-title">Title / role</Label>
+                <Input
+                  id="ag-title"
+                  value={addForm.title}
+                  onChange={(e) =>
+                    setAddForm((p) => ({ ...p, title: e.target.value }))
+                  }
+                  placeholder="Senior Groomer"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ag-email">Email</Label>
+                <Input
+                  id="ag-email"
+                  type="email"
+                  value={addForm.email}
+                  onChange={(e) =>
+                    setAddForm((p) => ({ ...p, email: e.target.value }))
+                  }
+                  placeholder="jordan@yipyy.com"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ag-phone">Phone</Label>
+                <Input
+                  id="ag-phone"
+                  value={addForm.phone}
+                  onChange={(e) =>
+                    setAddForm((p) => ({ ...p, phone: e.target.value }))
+                  }
+                  placeholder="(514) 555-0100"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="ag-skill">Capability</Label>
+              <Select
+                value={addForm.skillLevel}
+                onValueChange={(v) =>
+                  setAddForm((p) => ({
+                    ...p,
+                    skillLevel: v as StylistSkillLevel,
+                  }))
+                }
+              >
+                <SelectTrigger id="ag-skill">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="basic">Basic</SelectItem>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="premium">Premium</SelectItem>
+                  <SelectItem value="platinum">Platinum</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Qualified services</Label>
+              <div className="grid max-h-40 grid-cols-1 gap-1.5 overflow-y-auto rounded-md border p-2">
+                {activePackages.map((p) => {
+                  const checked = addForm.qualifiedPackageIds.includes(p.id);
+                  return (
+                    <label
+                      key={p.id}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(v) =>
+                          setAddForm((prev) => ({
+                            ...prev,
+                            qualifiedPackageIds: v
+                              ? [...prev.qualifiedPackageIds, p.id]
+                              : prev.qualifiedPackageIds.filter(
+                                  (id) => id !== p.id,
+                                ),
+                          }))
+                        }
+                      />
+                      {p.name}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Working hours</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+                  (d, i) => {
+                    const on = addForm.workDays.includes(i);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() =>
+                          setAddForm((p) => ({
+                            ...p,
+                            workDays: on
+                              ? p.workDays.filter((x) => x !== i)
+                              : [...p.workDays, i],
+                          }))
+                        }
+                        className={`size-8 rounded-full border text-[11px] font-medium transition ${
+                          on
+                            ? "border-emerald-400 bg-emerald-100 text-emerald-900"
+                            : "hover:bg-muted"
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <TimePickerLux
+                  value={addForm.startTime}
+                  onValueChange={(v) =>
+                    setAddForm((p) => ({ ...p, startTime: v }))
+                  }
+                  stepMinutes={30}
+                />
+                <span className="text-muted-foreground text-sm">to</span>
+                <TimePickerLux
+                  value={addForm.endTime}
+                  onValueChange={(v) =>
+                    setAddForm((p) => ({ ...p, endTime: v }))
+                  }
+                  stepMinutes={30}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={handleAddGroomer}
+            >
+              Create &amp; Send Invite
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <GroomerProfileSheet
+        open={isProfileOpen}
+        onOpenChange={setIsProfileOpen}
+        groomer={profileGroomer}
+        scheduleSummary={
+          profileGroomer
+            ? scheduleSummaries.get(profileGroomer.staffId)
+            : undefined
+        }
+        onEditProfile={() => {
+          if (profileGroomer) {
+            setIsProfileOpen(false);
+            handleEdit(profileGroomer);
+          }
+        }}
+        onManageAvailability={() => {
+          if (profileGroomer) {
+            setIsProfileOpen(false);
+            handleManageAvailability(profileGroomer);
+          }
+        }}
+        onEditNotifPrefs={() => {
+          if (profileGroomer) {
+            setIsProfileOpen(false);
+            handleEditNotifPrefs(profileGroomer);
+          }
+        }}
+      />
     </div>
   );
 }

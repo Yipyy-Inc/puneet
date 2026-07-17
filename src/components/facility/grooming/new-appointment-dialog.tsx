@@ -27,7 +27,6 @@ import {
   computeDayDensity,
   computeSlotGrid,
   getAppointmentsForStylistOnDate,
-  getBookedStationIdsInWindow,
   getStylistWorkWindow,
   appointmentAddressSeed,
   type DayDensity,
@@ -56,7 +55,7 @@ import {
   type ClientPetPickerValue,
 } from "./client-pet-picker";
 import { cn } from "@/lib/utils";
-import { DollarSign, Plus, Scissors, Sparkles } from "lucide-react";
+import { Clock, DollarSign, Plus, Scissors, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
 import { isStationEligibleForPetSize } from "@/components/rooms/GroomingStationsClient";
@@ -110,7 +109,6 @@ const DEFAULT_FORM = {
    *  decremented in `mockCustomerPackages` on submit. */
   customerPackageId: "",
   stylistId: "",
-  stationId: "",
   date: "",
   startTime: "09:00",
   endTime: "10:00",
@@ -144,6 +142,15 @@ function addMinutesToTime(time: string, minutes: number): string {
   const nh = Math.floor(total / 60);
   const nm = total % 60;
   return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+}
+
+/** "175" → "2h 55m", "60" → "1h", "40" → "40m". */
+function formatHoursMinutes(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m}m`;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -612,6 +619,17 @@ export function NewAppointmentDialog({
     [selectedAddOns],
   );
 
+  // Minutes the selected add-ons add on top of the service(s) — mirrors
+  // addOnTotal (price) so the duration counter updates as add-ons toggle.
+  const addOnDurationMin = useMemo(
+    () =>
+      selectedAddOns.reduce((sum, id) => {
+        const ao = ADD_ONS.find((a) => a.id === id);
+        return sum + (ao?.duration ?? 0);
+      }, 0),
+    [selectedAddOns],
+  );
+
   // Filter stylists by package restrictions. Three-layer check:
   //   1. If the package pins an explicit `assignedStylistIds` list, that wins.
   //   2. Otherwise, fall back to the stylist's `qualifiedPackageIds` — if the
@@ -684,16 +702,6 @@ export function NewAppointmentDialog({
     );
   }, [stations, form.petSize]);
 
-  // If the currently selected station no longer fits the pet size, clear it
-  // so we never submit a Great Dane to a small-dog table.
-  useEffect(() => {
-    if (!form.stationId) return;
-    const stillEligible = eligibleStations.some((s) => s.id === form.stationId);
-    if (!stillEligible) {
-      setForm((prev) => ({ ...prev, stationId: "" }));
-    }
-  }, [form.stationId, eligibleStations]);
-
   // ─── Step 3 derived data: density calendar + slot grid + map preview ─
 
   // Pre-compute pricing for the primary pet so its resolved duration can size the calendar.
@@ -732,39 +740,6 @@ export function NewAppointmentDialog({
     primaryPricing?.durationMin ??
     selectedPackage?.duration ??
     0;
-
-  // Station ids already booked during the booking's window — feeds the station
-  // picker so staff can't double-book a tub/table. Empty until date / start
-  // time / duration are all known.
-  const bookedStationIds = useMemo(() => {
-    if (!form.date || !form.startTime || serviceDurationForSlots <= 0) {
-      return new Set<string>();
-    }
-    const endTime = addMinutesToTime(form.startTime, serviceDurationForSlots);
-    return getBookedStationIdsInWindow(
-      form.date,
-      form.startTime,
-      endTime,
-      allAppointments,
-    );
-  }, [form.date, form.startTime, serviceDurationForSlots, allAppointments]);
-
-  // Size-eligible AND free at this date/time — what the picker actually offers.
-  const availableStations = useMemo(
-    () => eligibleStations.filter((s) => !bookedStationIds.has(s.id)),
-    [eligibleStations, bookedStationIds],
-  );
-  const hiddenForConflictCount =
-    eligibleStations.length - availableStations.length;
-
-  // Clear the chosen station if a date / time change pushed it into a
-  // conflict. The size-only cleanup above handles pet swaps separately.
-  useEffect(() => {
-    if (!form.stationId) return;
-    if (bookedStationIds.has(form.stationId)) {
-      setForm((prev) => ({ ...prev, stationId: "" }));
-    }
-  }, [form.stationId, bookedStationIds]);
 
   // Synthetic address seed for the new appointment, used to compute drive
   // times from prior stops. Matches the route planner's hashing scheme so
@@ -1203,6 +1178,8 @@ export function NewAppointmentDialog({
 
   const lineItemsSubtotal = petLines.reduce((s, l) => s + l.price, 0);
   const totalDurationMin = petLines.reduce((s, l) => s + l.durationMin, 0);
+  // Running "Total appointment duration" = service(s) + selected add-ons.
+  const grandDurationMin = totalDurationMin + addOnDurationMin;
   const showPriceSummary = petLines.length > 0;
 
   // Facility base postal — used to compute the travel zone for mobile.
@@ -1599,6 +1576,58 @@ export function NewAppointmentDialog({
                   </div>
                 )}
 
+                {/* Size/coat price adjustment — read-only heads-up so staff
+                    aren't surprised by the total once size/coat kick in
+                    (spec Table 63). */}
+                {selectedPackage &&
+                  form.petSize &&
+                  petLines.length > 0 &&
+                  (() => {
+                    const primary = petLines[0];
+                    const smallPrice =
+                      selectedPackage.sizePricing["small"] ??
+                      selectedPackage.basePrice;
+                    const resolved = primary.pricing.price;
+                    const coatLabel = primary.pricing.coatAdjustment
+                      ? `, ${form.coatType} coat`
+                      : "";
+                    const adjusted =
+                      form.petSize !== "small" &&
+                      Math.abs(resolved - smallPrice) > 0.005;
+                    return (
+                      <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-100">
+                        <p className="flex items-center gap-1.5 font-medium">
+                          <DollarSign className="size-3.5 shrink-0" />
+                          Price adjusted for {form.petName || "this pet"}&apos;s
+                          size{coatLabel ? " & coat" : ""}
+                        </p>
+                        <p className="mt-0.5 opacity-90">
+                          {form.petName || "This pet"} is a{" "}
+                          <span className="capitalize">{form.petSize}</span>{" "}
+                          {form.petType ? form.petType.toLowerCase() : "pet"}.{" "}
+                          {selectedPackage.name}:{" "}
+                          {adjusted ? (
+                            <>
+                              <span className="opacity-70">
+                                ${smallPrice} (small)
+                              </span>
+                              {" → "}
+                              <span className="font-semibold tabular-nums">
+                                ${resolved} ({form.petSize}
+                                {coatLabel})
+                              </span>
+                            </>
+                          ) : (
+                            <span className="font-semibold tabular-nums">
+                              ${resolved} ({form.petSize}
+                              {coatLabel})
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    );
+                  })()}
+
                 {/* Inline price + duration override (Step 2 — items #7 / #8).
                   Editable only when a package is picked AND we know enough
                   about the pet to compute a base price. */}
@@ -1753,6 +1782,37 @@ export function NewAppointmentDialog({
               {/* ── Add-ons — appear naturally after service selection ── */}
               {showAddOns && (
                 <div className="mt-4">
+                  {/* Running total appointment duration (spec Table 65) —
+                      sticky so it stays visible while toggling add-ons. */}
+                  {grandDurationMin > 0 && (
+                    <div className="sticky top-0 z-10 mb-2.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 dark:border-sky-900 dark:bg-sky-950/40">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-sky-900 uppercase dark:text-sky-200">
+                          <Clock className="size-3.5" />
+                          Total appointment duration
+                        </span>
+                        <span className="text-sm font-bold text-sky-900 tabular-nums dark:text-sky-100">
+                          {grandDurationMin} min (
+                          {formatHoursMinutes(grandDurationMin)})
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-sky-800/90 dark:text-sky-200/80">
+                        {[
+                          ...petLines.map(
+                            (l) => `${l.packageName}: ${l.durationMin} min`,
+                          ),
+                          ...selectedAddOns
+                            .map((id) => ADD_ONS.find((a) => a.id === id))
+                            .filter(
+                              (ao): ao is (typeof ADD_ONS)[number] =>
+                                !!ao && ao.duration > 0,
+                            )
+                            .map((ao) => `${ao.name}: ${ao.duration} min`),
+                        ].join(" + ")}{" "}
+                        = {grandDurationMin} min
+                      </p>
+                    </div>
+                  )}
                   <div className="mb-2.5 flex items-center gap-2">
                     <Sparkles className="size-3.5 text-pink-500" />
                     <Label className="text-muted-foreground text-xs">
@@ -2341,79 +2401,6 @@ export function NewAppointmentDialog({
                   )}
                 </div>
                 <div className="col-span-2">
-                  <Label className="text-xs">
-                    Station{" "}
-                    <span className="text-muted-foreground font-normal">
-                      (optional)
-                    </span>
-                  </Label>
-                  <Select
-                    value={form.stationId || "__none__"}
-                    onValueChange={(v) =>
-                      update("stationId", v === "__none__" ? "" : v)
-                    }
-                    disabled={!form.petSize}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue
-                        placeholder={
-                          form.petSize
-                            ? "Assign at check-in or pick now"
-                            : "Pick a pet size first"
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">
-                        Auto-assign at check-in
-                      </SelectItem>
-                      {eligibleStations.length === 0 && form.petSize ? (
-                        <div className="text-muted-foreground px-2 py-1.5 text-xs">
-                          No stations fit a {form.petSize} pet.
-                        </div>
-                      ) : availableStations.length === 0 ? (
-                        <div className="text-muted-foreground px-2 py-1.5 text-xs">
-                          All eligible stations are already booked at this time.
-                        </div>
-                      ) : (
-                        availableStations.map((s) => {
-                          const sizes =
-                            !s.allowedPetSizes || s.allowedPetSizes.length === 0
-                              ? "any size"
-                              : s.allowedPetSizes.join(", ");
-                          return (
-                            <SelectItem key={s.id} value={s.id}>
-                              <div className="flex flex-col gap-0.5">
-                                <span>{s.name}</span>
-                                <span className="text-muted-foreground text-[10px] capitalize">
-                                  {sizes}
-                                  {s.maxWeightLbs
-                                    ? ` · max ${s.maxWeightLbs} lbs`
-                                    : ""}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          );
-                        })
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {form.petSize && (
-                    <p className="text-muted-foreground mt-1 text-[10px]">
-                      Showing stations sized for {form.petSize} pets.
-                      {hiddenForConflictCount > 0 && (
-                        <>
-                          {" "}
-                          <span className="text-amber-700 dark:text-amber-300">
-                            {hiddenForConflictCount} hidden — already booked at
-                            this time.
-                          </span>
-                        </>
-                      )}
-                    </p>
-                  )}
-                </div>
-                <div className="col-span-2">
                   <div className="mb-2 flex items-center justify-between">
                     <Label className="text-xs">
                       Appointment Time{" "}
@@ -2582,9 +2569,9 @@ export function NewAppointmentDialog({
                   <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                     Booking Summary
                   </p>
-                  {totalDurationMin > 0 && (
+                  {grandDurationMin > 0 && (
                     <span className="text-muted-foreground text-[10px]">
-                      {totalDurationMin} min total
+                      {grandDurationMin} min total
                     </span>
                   )}
                 </div>

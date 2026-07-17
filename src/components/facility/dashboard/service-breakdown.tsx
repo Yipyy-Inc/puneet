@@ -11,11 +11,15 @@ export function ServiceBreakdown() {
   const { services, counts } = useUnifiedBookings();
   const { serviceFilter, setServiceFilter, setTab } = useDashboardFilters();
 
-  const total = services.reduce(
+  // Grooming is excluded from the main-dashboard board — single-visit services
+  // manage their own check-in in their module (spec Tables 10 & 11). Filtering
+  // here drops the Grooming pill and keeps the total in sync.
+  const boardServices = services.filter((s) => s.key !== "grooming");
+  const total = boardServices.reduce(
     (sum, s) => sum + (counts.byService[s.key] ?? 0),
     0,
   );
-  const hasCustom = services.some((s) => s.isCustom);
+  const hasCustom = boardServices.some((s) => s.isCustom);
 
   const handleClick = (key: string) => {
     setServiceFilter(key);
@@ -37,7 +41,7 @@ export function ServiceBreakdown() {
             <p className="text-lg/tight font-semibold tabular-nums">
               {total}
               <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-                across {services.length} services
+                across {boardServices.length} services
               </span>
             </p>
           </div>
@@ -55,7 +59,7 @@ export function ServiceBreakdown() {
                 setTab("scheduled");
               }}
             />
-            {services.map((s) => (
+            {boardServices.map((s) => (
               <ServicePill
                 key={s.key}
                 label={s.label}

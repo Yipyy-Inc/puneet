@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { FormBuilderEditor } from "@/components/forms/FormBuilderEditor";
 import { ArrowLeft } from "lucide-react";
-import type { Form } from "@/data/forms";
+import type { Form, ServiceType } from "@/data/forms";
 
 const FACILITY_ID = 11;
 
@@ -15,6 +15,9 @@ export default function FormBuilderPage() {
   const formId = searchParams.get("id");
   const isNew = searchParams.get("new") === "1";
   const templateId = searchParams.get("templateId");
+  const serviceType = (searchParams.get("serviceType") ?? undefined) as
+    | ServiceType
+    | undefined;
 
   const handleSave = (form: Form) => {
     router.push(`/facility/dashboard/forms?highlight=${form.id}`);
@@ -41,6 +44,7 @@ export default function FormBuilderPage() {
         facilityId={FACILITY_ID}
         initialFormId={isNew ? null : formId}
         templateId={templateId}
+        defaultServiceType={serviceType}
         onSave={handleSave}
       />
     </div>

@@ -11,10 +11,14 @@ export function KpiRow() {
   const { tab, setTab, serviceFilter } = useDashboardFilters();
 
   const counts = useMemo(() => {
+    // Grooming is excluded from the main-dashboard board (spec Tables 10 & 11)
+    // — it manages its own check-in in the Grooming module — so it must not
+    // count toward these guest/arrival tiles either.
+    const boardBookings = bookings.filter((b) => b.serviceKey !== "grooming");
     const scoped =
       serviceFilter === "all"
-        ? bookings
-        : bookings.filter((b) => b.serviceKey === serviceFilter);
+        ? boardBookings
+        : boardBookings.filter((b) => b.serviceKey === serviceFilter);
 
     let currentGuests = 0;
     let todaysArrivals = 0;

@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import type { Client } from "@/types/client";
 import type { Pet } from "@/types/pet";
 
-type DateKind = "asap" | "specific-date" | "day-of-week";
+type DateKind = "asap" | "specific-date" | "day-of-week" | "range";
 type TimePeriod = "morning" | "afternoon" | "evening" | "anytime";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -50,8 +50,19 @@ export function GroomingWaitlistDialog({
   const [dateKind, setDateKind] = useState<DateKind>("asap");
   const [specificDate, setSpecificDate] = useState("");
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([]);
+  const [rangeStart, setRangeStart] = useState("");
+  const [rangeEnd, setRangeEnd] = useState("");
+  const [excludedDates, setExcludedDates] = useState<string[]>([]);
+  const [exclusionDraft, setExclusionDraft] = useState("");
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("anytime");
   const [comment, setComment] = useState("");
+
+  const addExclusion = () => {
+    if (exclusionDraft && !excludedDates.includes(exclusionDraft)) {
+      setExcludedDates((prev) => [...prev, exclusionDraft].sort());
+    }
+    setExclusionDraft("");
+  };
 
   const pet = selectedPets[0]; // Primary pet on the entry; multi-pet entries
   // would each get their own waitlist row — out of scope for this form.
@@ -75,13 +86,23 @@ export function GroomingWaitlistDialog({
       toast.error("Pick at least one day of the week.");
       return;
     }
+    if (dateKind === "range" && (!rangeStart || !rangeEnd)) {
+      toast.error("Pick both a start and end date for the range.");
+      return;
+    }
+    if (dateKind === "range" && rangeEnd < rangeStart) {
+      toast.error("The range end can't be before the start.");
+      return;
+    }
 
     const expectedDate: GroomingWaitlistEntry["expectedDate"] =
       dateKind === "asap"
         ? { kind: "asap" }
         : dateKind === "specific-date"
           ? { kind: "specific-date", date: specificDate }
-          : { kind: "day-of-week", daysOfWeek };
+          : dateKind === "range"
+            ? { kind: "range", startDate: rangeStart, endDate: rangeEnd }
+            : { kind: "day-of-week", daysOfWeek };
 
     const expectedTime: GroomingWaitlistEntry["expectedTime"] =
       timePeriod === "anytime"
@@ -97,7 +118,9 @@ export function GroomingWaitlistDialog({
     const legacyDate =
       dateKind === "specific-date"
         ? specificDate
-        : new Date().toISOString().split("T")[0];
+        : dateKind === "range"
+          ? rangeStart
+          : new Date().toISOString().split("T")[0];
 
     const entry: GroomingWaitlistEntry = {
       id: `wl-${Date.now()}`,
@@ -111,6 +134,7 @@ export function GroomingWaitlistDialog({
       ownerEmail: selectedClient.email,
       serviceName: pkg?.name ?? "Grooming",
       expectedDate,
+      excludedDates: excludedDates.length > 0 ? excludedDates : undefined,
       expectedTime,
       postalCode: isMobile ? postalCode : undefined,
       source: "online-booking",
@@ -132,6 +156,10 @@ export function GroomingWaitlistDialog({
     setDateKind("asap");
     setSpecificDate("");
     setDaysOfWeek([]);
+    setRangeStart("");
+    setRangeEnd("");
+    setExcludedDates([]);
+    setExclusionDraft("");
     setTimePeriod("anytime");
     setComment("");
     onOpenChange(false);
@@ -158,10 +186,11 @@ export function GroomingWaitlistDialog({
           {/* Preferred date */}
           <div>
             <Label className="text-xs font-semibold">Preferred date</Label>
-            <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+            <div className="mt-1.5 grid grid-cols-2 gap-1.5">
               {[
                 { kind: "asap" as const, label: "ASAP" },
                 { kind: "specific-date" as const, label: "Specific date" },
+                { kind: "range" as const, label: "Date range" },
                 { kind: "day-of-week" as const, label: "Day of week" },
               ].map((opt) => (
                 <button
@@ -186,6 +215,26 @@ export function GroomingWaitlistDialog({
                 value={specificDate}
                 onChange={(e) => setSpecificDate(e.target.value)}
               />
+            )}
+            {dateKind === "range" && (
+              <div className="mt-2 flex items-center gap-2">
+                <Input
+                  type="date"
+                  aria-label="Earliest date"
+                  className="h-9 text-xs"
+                  value={rangeStart}
+                  onChange={(e) => setRangeStart(e.target.value)}
+                />
+                <span className="text-muted-foreground text-xs">to</span>
+                <Input
+                  type="date"
+                  aria-label="Latest date"
+                  className="h-9 text-xs"
+                  value={rangeEnd}
+                  min={rangeStart || undefined}
+                  onChange={(e) => setRangeEnd(e.target.value)}
+                />
+              </div>
             )}
             {dateKind === "day-of-week" && (
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -233,6 +282,54 @@ export function GroomingWaitlistDialog({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Date exclusions */}
+          <div>
+            <Label className="text-xs font-semibold">
+              Dates you can&rsquo;t do (optional)
+            </Label>
+            <div className="mt-1.5 flex items-center gap-2">
+              <Input
+                type="date"
+                aria-label="Excluded date"
+                className="h-9 text-xs"
+                value={exclusionDraft}
+                onChange={(e) => setExclusionDraft(e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9"
+                disabled={!exclusionDraft}
+                onClick={addExclusion}
+              >
+                Add
+              </Button>
+            </div>
+            {excludedDates.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {excludedDates.map((d) => (
+                  <span
+                    key={d}
+                    className="bg-muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]"
+                  >
+                    {d}
+                    <button
+                      type="button"
+                      aria-label={`Remove ${d}`}
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() =>
+                        setExcludedDates((prev) => prev.filter((x) => x !== d))
+                      }
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Note */}

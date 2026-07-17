@@ -50,6 +50,15 @@ export function applyCheckInResult(
   deps: CheckInActionDeps,
 ): CheckInActionSummary {
   const nowIso = new Date().toISOString();
+  // Honor the (editable) check-in time from the dialog; fall back to now.
+  const checkInIso = (() => {
+    if (!result.checkInTime) return nowIso;
+    const [h, m] = result.checkInTime.split(":").map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return nowIso;
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d.toISOString();
+  })();
 
   // ── 1. Newly-added add-ons (vs. original booking) → price + SMS ─────────
   const originalAddOns = apt.addOns ?? [];
@@ -85,7 +94,7 @@ export function applyCheckInResult(
     sessionStartedAt: nowIso,
   };
   apt.addOns = result.addOns;
-  apt.checkInTime = nowIso;
+  apt.checkInTime = checkInIso;
   if (result.estimatedReadyTime) {
     apt.estimatedReadyTime = result.estimatedReadyTime;
   }
@@ -215,6 +224,39 @@ export function applyCheckInResult(
 
 /** Re-export so callers don't have to remember where GroomingStation came from. */
 export type { GroomingStation };
+
+/**
+ * Append a station-assignment entry to the appointment history so station
+ * utilization can be reported later (spec Table 9). Like the apply* helpers
+ * this mutates the appointment in place — kept in this pure-mutation module so
+ * the direct mutation lives out of component code — but the check-in caller
+ * decides when to call it, owning its own history bookkeeping.
+ */
+export function recordStationAssignmentHistory(
+  apt: GroomingAppointment,
+  stationName: string,
+  staff: string,
+): void {
+  apt.history = [
+    ...(apt.history ?? []),
+    {
+      id: `h-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      at: new Date().toISOString(),
+      staff,
+      description: `Assigned to ${stationName} at check-in`,
+    },
+  ];
+}
+
+/**
+ * Flip an appointment to no-show in place (mock store). Invoked from the
+ * check-in dialog's "Mark as No-Show" path. Kept here in the pure-mutation
+ * module so the direct status mutation lives out of component code — no
+ * station assignment or session side effects run for a pet that didn't arrive.
+ */
+export function markAppointmentNoShow(apt: GroomingAppointment): void {
+  apt.status = "no-show";
+}
 
 export interface MarkReadyActionDeps {
   clients: Client[];

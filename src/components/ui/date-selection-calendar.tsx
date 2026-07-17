@@ -101,6 +101,13 @@ export interface DateSelectionCalendarProps {
   unavailableDates?: Date[];
 
   /**
+   * Optional per-day availability density (key = YYYY-MM-DD). Renders a small
+   * colored dot on each day: plenty = green, limited = amber, waitlist = red.
+   * Purely decorative — does not change which dates are selectable.
+   */
+  availabilityDensityByDate?: Record<string, "plenty" | "limited" | "waitlist">;
+
+  /**
    * Enables appointment-specific availability logic (closed days, unavailable slots,
    * holidays, and "Next available" hint). Set to false for generic date fields
    * like birthday or vaccine expiry.
@@ -211,6 +218,7 @@ export function DateSelectionCalendar({
   disabledEndDates,
   disabledDateMessages,
   unavailableDates = [],
+  availabilityDensityByDate,
   enableAvailabilityRules = true,
   holidays = [],
   className,
@@ -793,6 +801,21 @@ export function DateSelectionCalendar({
         {hasModifiedHours && !selected && !disabled && (
           <span className="absolute right-0.5 bottom-0.5 size-1 rounded-full bg-amber-400" />
         )}
+        {/* Availability density dot (plenty/limited/waitlist) */}
+        {(() => {
+          const density = availabilityDensityByDate?.[formatDateString(date)];
+          if (!density || selected || disabled || unavailable) return null;
+          return (
+            <span
+              className={cn(
+                "absolute bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full",
+                density === "plenty" && "bg-emerald-500",
+                density === "limited" && "bg-amber-500",
+                density === "waitlist" && "bg-rose-500",
+              )}
+            />
+          );
+        })()}
       </button>
     );
   };

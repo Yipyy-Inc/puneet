@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { GroomingAppointment } from "@/types/grooming";
 import { getEffectiveAlertNotes } from "@/lib/api/grooming";
+import { useGroomingStations } from "@/hooks/use-grooming-stations";
 import type { TimeBlock } from "./time-block-dialog";
 
 type PrintableStylist = { id: string; name: string; status: string };
@@ -29,9 +30,11 @@ type Row =
       petName: string;
       petBreed: string;
       service: string;
+      addOns: string;
       ownerName: string;
       ownerPhone: string;
       price: number;
+      station: string;
       alertCount: number;
       alertSummary: string;
       notes: string;
@@ -100,6 +103,14 @@ export function PrintableDaySheet({
     setPrintedAt(new Date().toLocaleString("en-CA"));
   }, []);
 
+  // Resolve each appointment's station id to its name; unassigned = "Auto".
+  const { stations } = useGroomingStations();
+  const stationNameById = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const s of stations) m[s.id] = s.name;
+    return m;
+  }, [stations]);
+
   if (!active) return null;
 
   return (
@@ -156,9 +167,14 @@ export function PrintableDaySheet({
                 petName: a.petName,
                 petBreed: a.petBreed,
                 service: a.packageName,
+                addOns:
+                  a.addOns && a.addOns.length > 0 ? a.addOns.join(", ") : "—",
                 ownerName: a.ownerName,
                 ownerPhone: a.ownerPhone,
                 price: a.totalPrice,
+                station: a.stationId
+                  ? (stationNameById[a.stationId] ?? a.stationId)
+                  : "Auto",
                 alertCount: effectiveAlerts.length,
                 alertSummary: effectiveAlerts.map((n) => n.text).join(" · "),
                 notes: [
@@ -192,13 +208,15 @@ export function PrintableDaySheet({
               <table className="w-full border-collapse text-[11px]">
                 <thead>
                   <tr className="border-b border-black text-left">
-                    <th className="w-[10%] py-1 pr-2">Time</th>
-                    <th className="w-[18%] py-1 pr-2">Pet</th>
-                    <th className="w-[18%] py-1 pr-2">Service</th>
-                    <th className="w-[16%] py-1 pr-2">Owner</th>
-                    <th className="w-[14%] py-1 pr-2">Phone</th>
-                    <th className="w-[8%] py-1 pr-2 text-right">$</th>
-                    <th className="w-[16%] py-1">Alerts</th>
+                    <th className="w-[8%] py-1 pr-2">Time</th>
+                    <th className="w-[15%] py-1 pr-2">Pet</th>
+                    <th className="w-[14%] py-1 pr-2">Service</th>
+                    <th className="w-[13%] py-1 pr-2">Add-Ons</th>
+                    <th className="w-[13%] py-1 pr-2">Owner</th>
+                    <th className="w-[11%] py-1 pr-2">Phone</th>
+                    <th className="w-[6%] py-1 pr-2 text-right">$</th>
+                    <th className="w-[10%] py-1 pr-2">Station</th>
+                    <th className="w-[10%] py-1">Alerts</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -212,7 +230,7 @@ export function PrintableDaySheet({
                           <td className="py-1 pr-2 align-top tabular-nums">
                             {row.time}
                           </td>
-                          <td className="py-1 pr-2 align-top" colSpan={6}>
+                          <td className="py-1 pr-2 align-top" colSpan={8}>
                             BLOCKED ·{" "}
                             <span className="capitalize">{row.reason}</span>
                             {row.notes ? ` — ${row.notes}` : ""}
@@ -233,6 +251,7 @@ export function PrintableDaySheet({
                           </div>
                         </td>
                         <td className="py-1 pr-2">{row.service}</td>
+                        <td className="py-1 pr-2">{row.addOns}</td>
                         <td className="py-1 pr-2">{row.ownerName}</td>
                         <td className="py-1 pr-2 tabular-nums">
                           {row.ownerPhone}
@@ -240,6 +259,7 @@ export function PrintableDaySheet({
                         <td className="py-1 pr-2 text-right font-semibold tabular-nums">
                           ${row.price}
                         </td>
+                        <td className="py-1 pr-2">{row.station}</td>
                         <td className="py-1">
                           {row.alertCount > 0 ? (
                             <span
@@ -261,7 +281,7 @@ export function PrintableDaySheet({
                   ) && (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={9}
                         className="pt-1 text-[10px] text-gray-600"
                       >
                         {rows

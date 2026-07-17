@@ -243,6 +243,35 @@ export function PaymentDialog({
           </p>
         </DialogHeader>
 
+        {/* Payment status — prepaid online vs. collect at pickup (spec Table 19).
+            When still owed, the "Charge / Collect Payment" footer button below
+            handles collection. */}
+        {(() => {
+          const status = apt.paymentStatus ?? "pending";
+          if (status === "paid") {
+            return (
+              <div className="flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+                <CheckCircle2 className="size-4 shrink-0" />
+                Paid at booking — no collection needed
+              </div>
+            );
+          }
+          if (status === "refunded") {
+            return (
+              <div className="flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <Receipt className="size-4 shrink-0" />
+                Refunded
+              </div>
+            );
+          }
+          return (
+            <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              <Banknote className="size-4 shrink-0" />
+              Collect payment now
+            </div>
+          );
+        })()}
+
         {/* 1 · Itemized total */}
         <Section icon={Receipt} title="Itemized total">
           <div className="bg-muted/30 space-y-1 rounded-lg border px-3 py-2.5 text-sm">

@@ -41,12 +41,17 @@ export function SlotGrid({
     );
   }
 
+  const hasShortGap = slots.some((s) => s.shortGap);
+
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
         {slots.map((slot) => {
           const isSelected = slot.startTime === selectedStartTime;
           const isConflict = slot.status === "conflict";
+          // Bookable, but tight against a neighbour (<15 min). Amber warns;
+          // the slot stays clickable.
+          const isShortGap = !isConflict && !!slot.shortGap;
           // With Smart Scheduling on, only recommended slots get the
           // emphasis; available-but-not-recommended slots are dimmed.
           // With it off, every available slot is treated equally.
@@ -65,12 +70,18 @@ export function SlotGrid({
                 isConflict &&
                   "border-muted bg-muted/30 text-muted-foreground cursor-not-allowed line-through",
                 !isConflict &&
-                  !isDimmed &&
                   !isSelected &&
+                  isShortGap &&
+                  "border-amber-300 bg-amber-50 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/30 dark:hover:bg-amber-950/50",
+                !isConflict &&
+                  !isSelected &&
+                  !isShortGap &&
+                  !isDimmed &&
                   "border-pink-200 bg-pink-50/60 hover:bg-pink-100 dark:border-pink-900 dark:bg-pink-950/20 dark:hover:bg-pink-950/40",
                 !isConflict &&
-                  isDimmed &&
                   !isSelected &&
+                  !isShortGap &&
+                  isDimmed &&
                   "border-muted-foreground/40 text-muted-foreground hover:bg-muted/40 border-dashed bg-transparent",
                 isSelected &&
                   "border-pink-400 bg-pink-100 text-pink-900 ring-2 ring-pink-300 dark:border-pink-700 dark:bg-pink-950/40 dark:text-pink-100 dark:ring-pink-700",
@@ -78,18 +89,27 @@ export function SlotGrid({
               title={
                 isConflict
                   ? "Conflicts with an existing appointment"
-                  : isDimmed
-                    ? "Outside the recommended buffer — still pickable"
-                    : "Recommended slot"
+                  : isShortGap
+                    ? "Short gap — under 15 min before/after a neighbouring appointment. Still bookable."
+                    : isDimmed
+                      ? "Outside the recommended buffer — still pickable"
+                      : "Recommended slot"
               }
             >
               <div className="flex items-center justify-between gap-1">
                 <span className="font-semibold tabular-nums">
                   {formatTime(slot.startTime)}
                 </span>
-                {!isConflict && slot.recommended && smartSchedulingEnabled && (
+                {isShortGap ? (
+                  <span
+                    aria-hidden
+                    className="size-2 shrink-0 rounded-full bg-amber-500"
+                  />
+                ) : !isConflict &&
+                  slot.recommended &&
+                  smartSchedulingEnabled ? (
                   <Sparkles className="size-3 text-pink-500" />
-                )}
+                ) : null}
               </div>
               {showDriveTime &&
                 !isConflict &&
@@ -115,6 +135,12 @@ export function SlotGrid({
           <span className="border-muted bg-muted/30 inline-block size-2 rounded-sm border" />
           Conflict (occupied)
         </span>
+        {hasShortGap && (
+          <span className="inline-flex items-center gap-1">
+            <span className="inline-block size-2 rounded-sm border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40" />
+            Short gap (&lt;15 min)
+          </span>
+        )}
         {smartSchedulingEnabled && (
           <span className="inline-flex items-center gap-1">
             <span className="border-muted-foreground/40 inline-block size-2 rounded-sm border border-dashed" />

@@ -21,6 +21,79 @@ import type {
 } from "@/types/grooming";
 
 /**
+ * Booking-change customer notification (spec Table 76). Builds the SMS/email
+ * copy sent when an appointment is rescheduled to a new time or reassigned to
+ * a different groomer — e.g. from the calendar's drag-and-drop. Mock: callers
+ * surface it as a toast; production would send via SMS + email.
+ */
+export function buildBookingChangeMessage(input: {
+  kind: "reschedule" | "reassign";
+  petName: string;
+  clientName?: string;
+  /** New HH:MM time — for reschedule. */
+  newTime?: string;
+  /** New groomer name — for reassign. */
+  newGroomerName?: string;
+}): string {
+  const hi = input.clientName ? `Hi ${input.clientName}! ` : "";
+  if (input.kind === "reassign") {
+    return `${hi}Update: ${input.petName}'s grooming appointment has been reassigned to ${input.newGroomerName}. Same date and time — reply if you'd like to make any changes.`;
+  }
+  return `${hi}Update: ${input.petName}'s grooming appointment has been rescheduled to ${input.newTime}. Reply if this new time doesn't work for you.`;
+}
+
+/** Groomer-facing view link for an appointment (staff calendar detail page). */
+export function groomerAppointmentLink(appointmentId: string): string {
+  return `/facility/dashboard/services/grooming/appointments/${appointmentId}`;
+}
+
+export type GroomerBookingEvent =
+  | "created"
+  | "reassigned"
+  | "rescheduled"
+  | "cancelled";
+
+/**
+ * Groomer-facing notification copy (spec Tables 75 & 76). `created` is the
+ * Table 75 new-booking payload; `reassigned` / `rescheduled` / `cancelled`
+ * are the Table 76 booking-change variants. Mock — surfaced as a toast + an
+ * in-app feed entry (see {@link notifyGroomerOfBooking}); no real SMS/email.
+ */
+export function buildGroomerBookingMessage(input: {
+  event: GroomerBookingEvent;
+  petName: string;
+  petBreed?: string;
+  serviceLabel: string;
+  /** Human date, e.g. "Mon, Jul 21". */
+  date: string;
+  time: string;
+  ownerName: string;
+  ownerPhone: string;
+  addOns?: string[];
+  viewLink: string;
+}): string {
+  const pet = input.petBreed
+    ? `${input.petName} (${input.petBreed})`
+    : input.petName;
+  const owner = `Owner: ${input.ownerName}, ${input.ownerPhone}.`;
+  const addOns =
+    input.addOns && input.addOns.length > 0
+      ? ` Add-ons: ${input.addOns.join(", ")}.`
+      : "";
+  const view = ` View: ${input.viewLink}`;
+  switch (input.event) {
+    case "created":
+      return `${pet} — ${input.serviceLabel} booked for ${input.date} at ${input.time} with you. ${owner}${addOns}${view}`;
+    case "reassigned":
+      return `${pet} — ${input.serviceLabel} on ${input.date} at ${input.time} has been reassigned to you. ${owner}${addOns}${view}`;
+    case "rescheduled":
+      return `${pet} — ${input.serviceLabel} rescheduled to ${input.date} at ${input.time} with you. ${owner}${addOns}${view}`;
+    case "cancelled":
+      return `${pet} — ${input.serviceLabel} on ${input.date} at ${input.time} has been cancelled. ${owner}`;
+  }
+}
+
+/**
  * Immediate post-booking actions
  */
 export async function handleImmediatePostBookingActions(
@@ -157,18 +230,26 @@ async function sendGroomerNotification(
     return []; // No specific groomer assigned
   }
 
-  const lastVisitText = bookingData.lastVisitDate
-    ? `Last visit: ${bookingData.lastVisitDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
-    : "First visit";
-
-  const addOnsText =
-    bookingData.addOns.length > 0 ? ` + ${bookingData.addOns.join(", ")}` : "";
-
-  const notesText = bookingData.petNotes
-    ? ` Notes: ${bookingData.petNotes}`
-    : "";
-
-  const message = `New booking: ${bookingData.petName}, ${bookingData.serviceCategory}${addOnsText}, ${bookingData.appointmentTime} ${bookingData.appointmentDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}. ${lastVisitText}.${notesText}`;
+  // Spec Table 75 payload — "{Pet} ({Breed}) — {Service} booked for {Date} at
+  // {Time} with you. Owner: {Name}, {Phone}. Add-ons: {list}. View: {link}".
+  const message = buildGroomerBookingMessage({
+    event: "created",
+    petName: bookingData.petName,
+    petBreed: bookingData.petBreed,
+    serviceLabel: bookingData.serviceVariant
+      ? `${bookingData.serviceCategory} (${bookingData.serviceVariant})`
+      : bookingData.serviceCategory,
+    date: bookingData.appointmentDate.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    }),
+    time: bookingData.appointmentTime,
+    ownerName: bookingData.clientName,
+    ownerPhone: bookingData.clientPhone,
+    addOns: bookingData.addOns,
+    viewLink: groomerAppointmentLink(bookingData.id),
+  });
 
   // TODO: Replace with actual notification service
   // In production, this would send to groomer's app or SMS based on preferences
@@ -293,6 +374,57 @@ export async function schedule24HourReminder(
     `Scheduled 24-hour reminder for ${reminderTime.toISOString()}:`,
     reminderMessage,
   );
+}
+
+/**
+ * Schedule the 48-hour "your appointment is coming up" reminder (Table 95).
+ * Mock: logs the scheduled send; a real scheduler would enqueue an SMS/email.
+ */
+export async function schedule48HourReminder(
+  bookingData: GroomingBookingData,
+): Promise<void> {
+  const reminderTime = new Date(bookingData.appointmentDate);
+  reminderTime.setDate(reminderTime.getDate() - 2);
+  reminderTime.setHours(9, 0, 0, 0); // 9 AM two days before
+  const reminderMessage = `Hi ${bookingData.clientName}! ${bookingData.petName}'s ${bookingData.serviceCategory} appointment is in 2 days (${bookingData.appointmentTime}). See you soon! Reply RESCHEDULE if you need to change it.`;
+  console.log(
+    `Scheduled 48-hour reminder for ${reminderTime.toISOString()}:`,
+    reminderMessage,
+  );
+}
+
+/**
+ * Schedule the 2-hour "starting soon" reminder (Table 95). Mock: logs only.
+ */
+export async function schedule2HourReminder(
+  bookingData: GroomingBookingData,
+): Promise<void> {
+  const [h, m] = bookingData.appointmentTime.split(":").map(Number);
+  const reminderTime = new Date(bookingData.appointmentDate);
+  if (!Number.isNaN(h)) reminderTime.setHours(h - 2, m || 0, 0, 0);
+  const mobileArrivalText =
+    bookingData.serviceLocation === "mobile"
+      ? " Please have a parking spot ready for the van."
+      : "";
+  const reminderMessage = `Hi ${bookingData.clientName}! ${bookingData.petName}'s grooming appointment is in about 2 hours, at ${bookingData.appointmentTime}.${mobileArrivalText}`;
+  console.log(
+    `Scheduled 2-hour reminder for ${reminderTime.toISOString()}:`,
+    reminderMessage,
+  );
+}
+
+/**
+ * Queue the full confirmation + reminder cadence (Table 95): 48h, 24h, and 2h
+ * before the appointment. Mock: schedules all three (no real send).
+ */
+export async function scheduleAppointmentReminders(
+  bookingData: GroomingBookingData,
+): Promise<void> {
+  await Promise.all([
+    schedule48HourReminder(bookingData),
+    schedule24HourReminder(bookingData),
+    schedule2HourReminder(bookingData),
+  ]);
 }
 
 /**

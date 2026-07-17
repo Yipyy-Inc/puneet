@@ -96,6 +96,29 @@ export function calculateStylistPerformance(
       ? Math.round((cancelledAppointments / totalAppointments) * 100)
       : 0;
 
+  // On-time %: of completed appointments that recorded a check-in time, how
+  // many were checked in at or before the scheduled start (5-min grace).
+  const startedAppointments = completedAppointments.filter(
+    (apt) => apt.checkInTime,
+  );
+  const onTimeCount = startedAppointments.filter((apt) => {
+    const checkIn = new Date(apt.checkInTime as string);
+    const checkInMinutes = checkIn.getHours() * 60 + checkIn.getMinutes();
+    const [sh, sm] = apt.startTime.split(":").map(Number);
+    const scheduledMinutes = sh * 60 + sm;
+    return checkInMinutes <= scheduledMinutes + 5;
+  }).length;
+  const onTimePercentage =
+    startedAppointments.length > 0
+      ? Math.round((onTimeCount / startedAppointments.length) * 100)
+      : 0;
+
+  // Gratuity total across completed appointments.
+  const totalTips = completedAppointments.reduce(
+    (sum, apt) => sum + (apt.tipAmount ?? 0),
+    0,
+  );
+
   return {
     stylistId,
     todayAppointments,
@@ -105,6 +128,8 @@ export function calculateStylistPerformance(
     completedCount: completedAppointments.length,
     cancelledCount: cancelledAppointments,
     totalAppointments,
+    onTimePercentage,
+    totalTips,
   };
 }
 

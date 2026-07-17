@@ -15,6 +15,7 @@ import {
   ClipboardList,
   Route,
   Activity,
+  LayoutDashboard,
 } from "lucide-react";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
@@ -29,10 +30,15 @@ type Tab = {
 
 const tabs: Tab[] = [
   {
-    name: "Calendar",
+    name: "Check-In Board",
     href: "/facility/dashboard/services/grooming",
-    icon: Calendar,
+    icon: LayoutDashboard,
     exact: true,
+  },
+  {
+    name: "Calendar",
+    href: "/facility/dashboard/services/grooming/calendar",
+    icon: Calendar,
   },
   {
     name: "Route Planner",

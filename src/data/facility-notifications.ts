@@ -10,7 +10,15 @@ export type {
   FacilityNotificationType,
   FacilityNotification,
 } from "@/types/facility";
-import type { FacilityNotification } from "@/types/facility";
+import type {
+  FacilityNotification,
+  FacilityNotificationType,
+} from "@/types/facility";
+import {
+  buildGroomerBookingMessage,
+  groomerAppointmentLink,
+  type GroomerBookingEvent,
+} from "@/lib/grooming-post-booking";
 
 // Helper to create timestamps relative to now
 function ago(minutes: number): string {
@@ -328,6 +336,94 @@ export function subscribeToFacilityNotifications(
 ): () => void {
   listeners.add(callback);
   return () => listeners.delete(callback);
+}
+
+/**
+ * Notify the assigned groomer when a booking is created / reassigned /
+ * rescheduled / cancelled (spec Tables 74–76). Mocks the in-app channel by
+ * pushing to the facility feed; returns the notification so the caller can
+ * also fire a toast (SMS/email/push are mocked, not sent). Message content is
+ * the Table 75 / 76 payload from {@link buildGroomerBookingMessage}.
+ */
+export function notifyGroomerOfBooking(params: {
+  facilityId: number;
+  /** Grooming appointment id (string) — used for the View link. */
+  appointmentId: string;
+  event: GroomerBookingEvent;
+  petName: string;
+  petBreed?: string;
+  serviceLabel: string;
+  /** Human date, e.g. "Mon, Jul 21". */
+  date: string;
+  time: string;
+  ownerName: string;
+  ownerPhone: string;
+  addOns?: string[];
+}): FacilityNotification {
+  const message = buildGroomerBookingMessage({
+    event: params.event,
+    petName: params.petName,
+    petBreed: params.petBreed,
+    serviceLabel: params.serviceLabel,
+    date: params.date,
+    time: params.time,
+    ownerName: params.ownerName,
+    ownerPhone: params.ownerPhone,
+    addOns: params.addOns,
+    viewLink: groomerAppointmentLink(params.appointmentId),
+  });
+  const typeByEvent: Record<GroomerBookingEvent, FacilityNotificationType> = {
+    created: "booking_new",
+    reassigned: "session_update",
+    rescheduled: "session_update",
+    cancelled: "booking_cancelled",
+  };
+  const titleByEvent: Record<GroomerBookingEvent, string> = {
+    created: "New booking assigned to you",
+    reassigned: "Appointment reassigned to you",
+    rescheduled: "Appointment rescheduled",
+    cancelled: "Appointment cancelled",
+  };
+  return addFacilityNotification({
+    type: typeByEvent[params.event],
+    title: titleByEvent[params.event],
+    message,
+    facilityId: params.facilityId,
+    category: "grooming",
+    link: groomerAppointmentLink(params.appointmentId),
+    meta: { petName: params.petName },
+  });
+}
+
+/**
+ * Push a groomer-facing reminder (spec Tables 81 & 82) to the in-app feed.
+ * `kind: "morning"` is the day's first-appointment nudge; `kind: "upcoming"`
+ * is the 30-minutes-before pre-visit reminder. The message is built by
+ * src/lib/grooming-groomer-reminders.ts; SMS/push are mocked, not sent. The
+ * caller also fires a toast off the returned notification.
+ */
+export function notifyGroomerReminder(params: {
+  facilityId: number;
+  kind: "morning" | "upcoming";
+  message: string;
+  petName?: string;
+  /** Grooming appointment id — links the "upcoming" reminder to its detail. */
+  appointmentId?: string;
+}): FacilityNotification {
+  return addFacilityNotification({
+    type: params.kind === "morning" ? "info" : "session_update",
+    title:
+      params.kind === "morning"
+        ? "Your first appointment today"
+        : "Appointment starting soon",
+    message: params.message,
+    facilityId: params.facilityId,
+    category: "grooming",
+    link: params.appointmentId
+      ? groomerAppointmentLink(params.appointmentId)
+      : "/facility/dashboard/services/grooming",
+    meta: params.petName ? { petName: params.petName } : undefined,
+  });
 }
 
 /** Call when a customer submits a YipyyGo form – notifies staff (in-app; optional email via config). */

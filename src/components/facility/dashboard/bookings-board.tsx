@@ -12,11 +12,19 @@ export function BookingsBoard() {
   const { bookings } = useUnifiedBookings();
   const { tab, serviceFilter, query, setQuery } = useDashboardFilters();
 
+  // The main-dashboard Live Activity Board tracks overnight / multi-day stays
+  // only (Boarding & Daycare). Single-visit services manage their own check-in
+  // in their own module, so Grooming is excluded here (spec Tables 10 & 11).
+  const boardBookings = useMemo(
+    () => bookings.filter((b) => b.serviceKey !== "grooming"),
+    [bookings],
+  );
+
   const serviceScoped = useMemo(() => {
     return serviceFilter === "all"
-      ? bookings
-      : bookings.filter((b) => b.serviceKey === serviceFilter);
-  }, [bookings, serviceFilter]);
+      ? boardBookings
+      : boardBookings.filter((b) => b.serviceKey === serviceFilter);
+  }, [boardBookings, serviceFilter]);
 
   const queryScoped = useMemo(() => {
     if (!query.trim()) return serviceScoped;

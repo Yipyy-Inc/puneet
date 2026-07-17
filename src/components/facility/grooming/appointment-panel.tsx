@@ -40,6 +40,8 @@ import {
   applyCheckInResult,
   applyMarkReadyResult,
   applyPaymentResult,
+  recordStationAssignmentHistory,
+  markAppointmentNoShow,
 } from "@/lib/grooming/check-in-actions";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
 import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
@@ -799,11 +801,27 @@ export function AppointmentPanel({
         onOpenChange={setCheckInOpen}
         apt={appointment}
         onConfirm={(result: CheckInConfirmation) => {
+          if (result.markNoShow) {
+            markAppointmentNoShow(appointment);
+            toast.warning(`${appointment.petName} — No-Show`);
+            setCheckInOpen(false);
+            return;
+          }
           applyCheckInResult(appointment, result, {
             clients: initialClients,
             setStationStatus,
             notify: (title, detail) => toast.message(title, detail),
           });
+          // Record the station assignment on the appointment history so
+          // station utilization can be reported later (spec Table 9). The
+          // caller owns the decision to record (pure-mutation policy); the
+          // in-place mutation lives in check-in-actions.ts alongside the
+          // other appointment mutations. Mock-only, in-memory store.
+          recordStationAssignmentHistory(
+            appointment,
+            result.stationName,
+            "You",
+          );
           const readyLine = result.estimatedReadyTime
             ? ` · ready ~${result.estimatedReadyTime}`
             : "";
