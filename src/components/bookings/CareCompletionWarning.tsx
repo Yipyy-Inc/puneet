@@ -132,7 +132,7 @@ export function CareCompletionGateDialog({
 
         <div className="bg-muted/30 mt-2 max-h-64 space-y-1.5 overflow-y-auto rounded-md border p-3">
           {pending.map((item, i) => {
-            const Icon = item.kind === "medication" ? Pill : Utensils;
+            const Icon = item.kind === "feeding" ? Utensils : Pill;
             return (
               <div
                 key={i}
@@ -146,7 +146,7 @@ export function CareCompletionGateDialog({
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium">
-                    {item.label}
+                    {itemLabel(item)}
                     {item.isCritical && (
                       <span className="ml-1.5 text-[9px] font-bold tracking-wider text-rose-700 uppercase">
                         Critical
@@ -186,12 +186,20 @@ export function CareCompletionGateDialog({
   );
 }
 
+/** Item name with its incident reference appended, e.g.
+ *  "Wound cream (Incident INC-007)". Owner-provided items are unchanged. */
+function itemLabel(item: PendingCareItem): string {
+  return item.incidentId
+    ? `${item.label} (Incident ${item.incidentId})`
+    : item.label;
+}
+
 function buildSummary(pending: PendingCareItem[]): string {
   if (pending.length === 0) return "";
-  if (pending.length === 1) return pending[0].label;
+  if (pending.length === 1) return itemLabel(pending[0]);
   if (pending.length === 2)
-    return `${pending[0].label} and ${pending[1].label}`;
-  return `${pending[0].label}, ${pending[1].label}, and ${pending.length - 2} more`;
+    return `${itemLabel(pending[0])} and ${itemLabel(pending[1])}`;
+  return `${itemLabel(pending[0])}, ${itemLabel(pending[1])}, and ${pending.length - 2} more`;
 }
 
 function scrollToDomId(domId: string | undefined): void {

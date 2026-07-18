@@ -104,6 +104,13 @@ const FacilityRolesStudio = dynamic(
     ),
   { ssr: false },
 );
+const IncidentReportingSettings = dynamic(
+  () =>
+    import("@/components/facility/IncidentReportingSettings").then(
+      (mod) => mod.IncidentReportingSettings,
+    ),
+  { ssr: false },
+);
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -4602,6 +4609,13 @@ export default function SettingsPage() {
           {activeSection === "checkin-requirements" && (
             <div className="space-y-6">
               <CheckinRequirementsSettings />
+            </div>
+          )}
+
+          {/* Incident Reporting */}
+          {activeSection === "incident-reporting" && (
+            <div className="space-y-6">
+              <IncidentReportingSettings />
             </div>
           )}
 

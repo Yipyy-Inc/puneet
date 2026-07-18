@@ -55,42 +55,46 @@ export function generateFollowUpTasks(
   protocol: FollowUpProtocol,
   options: GenerateOptions,
 ): FollowUpTask[] {
-  return protocol.steps.map((step) => {
-    const dueDate = addOffset(
-      options.incidentDate,
-      step.daysAfterIncident,
-      step.hoursAfterIncident,
-    );
+  // In-stay care steps (2B) become incident care actions instead — see
+  // generateCareActionsFromProtocol. Only owner-contact steps are tasks.
+  return protocol.steps
+    .filter((step) => step.stepType !== "in_stay_care")
+    .map((step) => {
+      const dueDate = addOffset(
+        options.incidentDate,
+        step.daysAfterIncident,
+        step.hoursAfterIncident,
+      );
 
-    const task: FollowUpTask = {
-      id: `task-${options.incidentId}-${step.id}`,
-      incidentId: options.incidentId,
-      title: step.title,
-      description: step.description,
-      assignedTo: resolveAssignee(step, options),
-      dueDate,
-      status: "pending",
+      const task: FollowUpTask = {
+        id: `task-${options.incidentId}-${step.id}`,
+        incidentId: options.incidentId,
+        title: step.title,
+        description: step.description,
+        assignedTo: resolveAssignee(step, options),
+        dueDate,
+        status: "pending",
 
-      protocolId: protocol.id,
-      protocolStepId: step.id,
-      protocolName: protocol.name,
-      stepOrder: step.order,
+        protocolId: protocol.id,
+        protocolStepId: step.id,
+        protocolName: protocol.name,
+        stepOrder: step.order,
 
-      contactMethod: step.contactMethod,
-      instructions: step.instructions,
-      questionsToAsk: step.questionsToAsk,
-      requiresPhoto: step.requiresPhoto,
-      requiresClientResponse: step.requiresClientResponse,
+        contactMethod: step.contactMethod,
+        instructions: step.instructions,
+        questionsToAsk: step.questionsToAsk,
+        requiresPhoto: step.requiresPhoto,
+        requiresClientResponse: step.requiresClientResponse,
 
-      conversationLog: [],
-      attemptCount: 0,
-      escalated: false,
-      escalateAfterAttempts: step.escalateAfterAttempts,
+        conversationLog: [],
+        attemptCount: 0,
+        escalated: false,
+        escalateAfterAttempts: step.escalateAfterAttempts,
 
-      scheduledFor: dueDate,
-      surfacedToDailyTasks: true,
-    };
+        scheduledFor: dueDate,
+        surfacedToDailyTasks: true,
+      };
 
-    return task;
-  });
+      return task;
+    });
 }

@@ -36,6 +36,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { BookingDetailActionBar } from "@/components/bookings/BookingDetailActionBar";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { CreateIncidentModal } from "@/components/incidents/CreateIncidentModal";
+import { getIncidentCareCharges } from "@/lib/incidents/incident-billing";
+import { getIncidentsForBooking, lockInStayCare } from "@/data/incidents";
 import { bookings as initialBookings } from "@/data/bookings";
 import { estimates } from "@/data/estimates";
 import { clients } from "@/data/clients";
@@ -332,6 +336,12 @@ export default function ClientBookingDetailPage({
   const [refundOpen, setRefundOpen] = useState(false);
   const [retailOpen, setRetailOpen] = useState(false);
   const [boardingSheetOpen, setBoardingSheetOpen] = useState(false);
+  const [incidentOpen, setIncidentOpen] = useState(false);
+  // Flow C: checkout must lock any open incident's in-stay care first. Holds the
+  // pending checkout action to run after the manager confirms the lock.
+  const [checkoutLock, setCheckoutLock] = useState<null | { run: () => void }>(
+    null,
+  );
   const [addedItems, setAddedItems] = useState<InvoiceLineItem[]>([]);
   const [destructiveConfirm, setDestructiveConfirm] = useState<{
     title: string;
@@ -409,7 +419,37 @@ export default function ClientBookingDetailPage({
 
   const invoice = booking.invoice;
   const addedSubtotal = addedItems.reduce((s, i) => s + i.price, 0);
+  // Incident-medication charges (2B.3) — gated by the med's chargeFee + the
+  // facility toggle (2G.1); per_admin lines recompute as care logs accrue.
+  const incidentCareItems = getIncidentCareCharges(booking.id);
+  const incidentCareTotal = incidentCareItems.reduce((s, i) => s + i.price, 0);
   const completedTasks = tasks.filter((t) => t.status === "completed").length;
+
+  // Flow C: open, unlocked incidents with active in-stay care that checkout must
+  // lock before proceeding.
+  const lockableIncidents = getIncidentsForBooking(booking.id).filter(
+    (i) =>
+      i.status !== "closed" &&
+      !i.inStayCareLocked &&
+      (i.careActions.some((a) => a.active) || i.incidentMedications.length > 0),
+  );
+  // Gate a checkout action behind the in-stay-care lock warning when needed.
+  const guardCheckout = (run: () => void) => {
+    if (lockableIncidents.length > 0) {
+      setCheckoutLock({ run });
+      return;
+    }
+    run();
+  };
+  const confirmCheckoutLock = () => {
+    lockableIncidents.forEach((i) => lockInStayCare(i.id));
+    const pending = checkoutLock;
+    setCheckoutLock(null);
+    toast.warning(
+      "In-stay care locked — the incident stays open and its follow-up tasks continue.",
+    );
+    pending?.run();
+  };
 
   const openCheckout = () => {
     const scheduledEndIso = `${booking.endDate}T${booking.checkOutTime ?? "12:00"}:00`;
@@ -443,10 +483,12 @@ export default function ClientBookingDetailPage({
     ? depositRule.label
     : `50% of total ($${(bookingTotalForDeposit * 0.5).toFixed(2)})`;
 
-  // Care-completion check — surfaces unlogged meals/meds before checkout
+  // Care-completion check — surfaces unlogged meals/meds (and incident care,
+  // 2B) before checkout.
   const careStatus = getPendingCareItems(
     booking.feedingInstructions,
     booking.medicationInstructions,
+    booking.id,
   );
 
   return (
@@ -844,12 +886,17 @@ export default function ClientBookingDetailPage({
             }}
             onEmailInvoice={() => toast.success("Invoice emailed")}
             onSmsLink={() => toast.success("SMS sent")}
+            onReportIncident={() => setIncidentOpen(true)}
             onTransfer={() => setTransferOpen(true)}
-            onMarkAsReady={() => {
-              toast.success("Service marked as ready — proceed to checkout");
-              autoTransition("onCheckIn");
-            }}
-            onEarlyCheckout={() => setEarlyCheckoutOpen(true)}
+            onMarkAsReady={() =>
+              guardCheckout(() => {
+                toast.success("Service marked as ready — proceed to checkout");
+                autoTransition("onCheckIn");
+              })
+            }
+            onEarlyCheckout={() =>
+              guardCheckout(() => setEarlyCheckoutOpen(true))
+            }
             onFinishWithoutPayment={() => {
               toast.success(
                 "Appointment marked as finished — invoice stays open for later billing",
@@ -1064,6 +1111,7 @@ export default function ClientBookingDetailPage({
                       <MedicationSection
                         entries={booking.medicationInstructions ?? []}
                         required={medicationMode === "required"}
+                        bookingId={booking.id}
                       />
                     </div>
                   )}
@@ -1300,6 +1348,7 @@ export default function ClientBookingDetailPage({
                   client={client}
                   pendingCare={careStatus.pending}
                   hasCriticalCare={careStatus.hasCritical}
+                  extraServiceItems={incidentCareItems}
                 />
               ) : (
                 <Card>
@@ -1338,11 +1387,26 @@ export default function ClientBookingDetailPage({
                           </span>
                         </div>
                       )}
+                      {incidentCareTotal > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Incident Care
+                          </span>
+                          <span className="font-[tabular-nums] font-medium text-amber-600">
+                            +${incidentCareTotal.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
                       <Separator />
                       <div className="flex items-baseline justify-between">
                         <span className="text-sm font-semibold">Total</span>
                         <span className="font-[tabular-nums] text-2xl font-bold">
-                          ${(booking.totalCost + addedSubtotal).toFixed(2)}
+                          $
+                          {(
+                            booking.totalCost +
+                            addedSubtotal +
+                            incidentCareTotal
+                          ).toFixed(2)}
                         </span>
                       </div>
                       {!isPaid && !isCancelled && (
@@ -1457,18 +1521,38 @@ export default function ClientBookingDetailPage({
             initialFormat="kennel"
           />
         )}
+        <Dialog open={incidentOpen} onOpenChange={setIncidentOpen}>
+          <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+            <CreateIncidentModal
+              onClose={() => setIncidentOpen(false)}
+              // Pre-add every pet on the booking (staff can add/remove); store
+              // the booking link (reservationId + bookingId + clientId) on save.
+              prefilledPets={pets.map((p) => ({
+                id: p.id,
+                name: p.name,
+                clientName: client.name,
+                clientId: client.id,
+              }))}
+              reservationId={bookingRef}
+              bookingId={booking.id}
+              clientId={client.id}
+            />
+          </DialogContent>
+        </Dialog>
         <PaymentCheckoutFlow
           open={checkoutOpen}
           onOpenChange={setCheckoutOpen}
           amountDue={
             (invoice?.remainingDue ?? booking.totalCost) +
             addedSubtotal +
+            incidentCareTotal +
             (pendingLateFee?.amount ?? 0)
           }
           depositPaid={invoice?.depositCollected ?? 0}
           invoiceTotal={
             (invoice?.total ?? booking.totalCost) +
             addedSubtotal +
+            incidentCareTotal +
             (pendingLateFee?.amount ?? 0)
           }
           otherUnpaidInvoices={initialBookings
@@ -1696,6 +1780,43 @@ export default function ClientBookingDetailPage({
                 }}
               >
                 {destructiveConfirm?.confirmLabel ?? "Confirm"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Flow C — lock in-stay care before checkout when an incident is open */}
+        <AlertDialog
+          open={checkoutLock !== null}
+          onOpenChange={(open) => {
+            if (!open) setCheckoutLock(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Lock in-stay care for checkout?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This booking has {lockableIncidents.length} open incident
+                {lockableIncidents.length === 1 ? "" : "s"} with active in-stay
+                care:{" "}
+                <strong>
+                  {lockableIncidents
+                    .map((i) => `${i.id} — ${i.title}`)
+                    .join("; ")}
+                </strong>
+                . Checking out stops in-stay care (no more care tasks in Daily
+                Care), but the incident stays open and its follow-up tasks
+                continue on schedule.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setCheckoutLock(null)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={confirmCheckoutLock}>
+                Lock &amp; continue
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

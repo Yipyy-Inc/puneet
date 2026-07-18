@@ -5,6 +5,8 @@ import type {
   MedFrequencyRule,
 } from "@/types/boarding";
 import type { ScheduledTask, ShiftType } from "@/types/care-log";
+import { getIncidentsForPet } from "@/data/incidents";
+import type { IncidentCareAction, IncidentMedication } from "@/types/incidents";
 
 // F1: whether a step's configured "Who This Task Applies To" rule includes a
 // given guest. Undefined / "all" = every current boarding guest (the default,
@@ -121,6 +123,132 @@ function buildAlertTags(guest: BoardingGuest): string[] {
   if (guest.postSurgery) tags.push("Post-Surgery");
   if (guest.heatCycle) tags.push("Heat Cycle");
   return tags;
+}
+
+// ── In-stay care from incidents (2B) ────────────────────────────────────────
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function toMinutes(time: string): number {
+  const [h, m] = time.split(":").map((n) => parseInt(n, 10));
+  return (h || 0) * 60 + (m || 0);
+}
+
+function startOfDayMs(d: Date): number {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x.getTime();
+}
+
+// Clock times through the day at a fixed step, anchored at 08:00 through 20:00.
+function steppedTimes(stepHours: number): string[] {
+  const times: string[] = [];
+  for (let h = 8; h <= 20; h += stepHours) {
+    times.push(`${String(h).padStart(2, "0")}:00`);
+  }
+  return times.length > 0 ? times : ["08:00"];
+}
+
+// Times implied by a care action's frequency.
+function careActionTimes(a: IncidentCareAction): string[] {
+  switch (a.frequency) {
+    case "twice_daily":
+      return ["08:00", "18:00"];
+    case "once_daily":
+    case "once":
+    case "custom":
+      return ["08:00"];
+    case "every_x_hours":
+      return steppedTimes(
+        a.everyXHours && a.everyXHours > 0 ? a.everyXHours : 6,
+      );
+  }
+}
+
+// Times implied by an incident medication's free-text frequency.
+function medFrequencyTimes(freq: string): string[] {
+  const f = freq.toLowerCase();
+  const everyN = f.match(/every\s+(\d+)\s*h/);
+  if (everyN) {
+    const step = parseInt(everyN[1] ?? "0", 10);
+    if (step > 0) return steppedTimes(step);
+  }
+  if (/(thrice|three|3x|3 times|\btid\b)/.test(f)) {
+    return ["08:00", "14:00", "20:00"];
+  }
+  if (/(twice|2x|2 times|\bbid\b)/.test(f)) return ["08:00", "18:00"];
+  return ["08:00"];
+}
+
+// The times a care action should run on `today` within the guest's stay, or []
+// when it shouldn't appear (inactive, before its start, past checkout / x-days).
+function careActionTimesForDay(
+  a: IncidentCareAction,
+  guest: BoardingGuest,
+  today: Date,
+): string[] {
+  if (!a.active) return [];
+  const todayMs = startOfDayMs(today);
+  if (todayMs > startOfDayMs(new Date(guest.checkOutDate))) return [];
+  const start = new Date(a.createdAt);
+  if (a.starts === "next_morning_8am") start.setDate(start.getDate() + 1);
+  const startMs = startOfDayMs(start);
+  if (todayMs < startMs) return [];
+  if (a.duration === "x_days") {
+    const days = a.days && a.days > 0 ? a.days : 1;
+    if (todayMs > startMs + (days - 1) * DAY_MS) return [];
+  }
+  // "once" runs a single time on its start day only.
+  if (a.frequency === "once" && todayMs !== startMs) return [];
+  return careActionTimes(a);
+}
+
+// The times an incident medication should run on `today`: daily from the day it
+// was added through checkout, at its frequency-implied times.
+function medTimesForDay(
+  med: IncidentMedication,
+  guest: BoardingGuest,
+  today: Date,
+): string[] {
+  const todayMs = startOfDayMs(today);
+  if (todayMs > startOfDayMs(new Date(guest.checkOutDate))) return [];
+  if (todayMs < startOfDayMs(new Date(med.createdAt))) return [];
+  return medFrequencyTimes(med.frequency);
+}
+
+// Nearest enabled step to a time — the render "home" for a task with no step of
+// its own (incident care actions have no config step).
+function nearestStepId(
+  steps: DailyCareStep[],
+  time: string,
+): string | undefined {
+  if (steps.length === 0) return undefined;
+  const target = toMinutes(time);
+  let bestId = steps[0].id;
+  let bestDiff = Infinity;
+  for (const s of steps) {
+    const diff = Math.abs(toMinutes(s.time) - target);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestId = s.id;
+    }
+  }
+  return bestId;
+}
+
+function careFrequencyLabel(a: IncidentCareAction): string {
+  switch (a.frequency) {
+    case "twice_daily":
+      return "Twice daily";
+    case "once_daily":
+      return "Once daily";
+    case "once":
+      return "Once";
+    case "every_x_hours":
+      return `Every ${a.everyXHours ?? "?"}h`;
+    case "custom":
+      return a.customSchedule || "Custom schedule";
+  }
 }
 
 // ── Scheduled-task generation ───────────────────────────────────────────────
@@ -314,6 +442,70 @@ export function generateScheduledTasks(
         // task falls back to the enrichment log.
         customLogType: step.logType,
       });
+    }
+
+    // In-stay care from this pet's incidents (2B) — auto-inserted, no manual
+    // action, for every remaining day of the stay at frequency-implied times.
+    // Care actions log via the enrichment modal, medications via the med modal;
+    // both honor the requires-photo gate and write back an incident careLog.
+    for (const incident of getIncidentsForPet(guest.petId)) {
+      // Flow C: once in-stay care is locked at checkout, its tasks stop being
+      // generated for Daily Care (the incident stays open; follow-up tasks
+      // continue independently).
+      if (incident.inStayCareLocked) continue;
+      for (const action of incident.careActions) {
+        for (const time of careActionTimesForDay(action, guest, today)) {
+          tasks.push({
+            ...baseTask,
+            id: `inc-care-${action.id}-${time}`,
+            taskType: "care",
+            subType: "monitoring",
+            scheduledTime: time,
+            shift: getShiftForTime(time),
+            details: action.name,
+            subDetails: action.staffInstructions
+              ? [action.staffInstructions]
+              : undefined,
+            requiresPhotoProof: action.requiresPhoto,
+            frequencyNote: careFrequencyLabel(action),
+            // The dedicated "Incident care" tag (PetRow) marks the source.
+            alertTags: [],
+            // No config step of its own — slot into the nearest time block.
+            sourceStepId: nearestStepId(enabledSteps, time),
+            sourceIncidentId: incident.id,
+            careActionId: action.id,
+          });
+        }
+      }
+      for (const med of incident.incidentMedications) {
+        for (const time of medTimesForDay(med, guest, today)) {
+          const matchedStep = medSteps.find((s) => s.time === time);
+          tasks.push({
+            ...baseTask,
+            id: `inc-med-${med.id}-${time}`,
+            taskType: "medication",
+            scheduledTime: time,
+            shift: getShiftForTime(time),
+            details: `${med.name}${med.dosage ? ` ${med.dosage}` : ""}`,
+            subDetails: [med.frequency, med.instructions].filter(Boolean),
+            frequencyNote: med.frequency,
+            // "Meds" keeps the med chip; the "Incident care" tag marks the source.
+            alertTags: ["Meds"],
+            sourceStepId:
+              matchedStep?.id ??
+              nearestStepId(medSteps, time) ??
+              nearestStepId(enabledSteps, time),
+            medDetail: {
+              name: med.name,
+              dosage: med.dosage,
+              method: med.medType === "other" ? "oral" : med.medType,
+              timingNote: med.instructions || undefined,
+            },
+            sourceIncidentId: incident.id,
+            medicationId: med.id,
+          });
+        }
+      }
     }
   }
 

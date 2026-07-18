@@ -34,10 +34,41 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { MedicationEntry } from "@/types/booking";
+import type { IncidentMedication } from "@/types/incidents";
+import { getIncidentsForBooking } from "@/data/incidents";
 
 interface MedicationSectionProps {
   entries: MedicationEntry[];
   required?: boolean;
+  /**
+   * When set, medications filed against this booking's incidents (2B.3) are
+   * merged in and rendered identically to parent-provided meds — same Give/Log
+   * button. Source (incidentId) is kept in the data only, never shown to staff.
+   */
+  bookingId?: number;
+}
+
+// Map an incident-sourced medication onto the booking medication shape so the
+// existing UI renders it identically. One pending dose gives it a Give button.
+function incidentMedToEntry(m: IncidentMedication): MedicationEntry {
+  return {
+    id: m.id,
+    name: m.name,
+    dosage: m.dosage,
+    method: m.medType.charAt(0).toUpperCase() + m.medType.slice(1),
+    frequency: m.frequency,
+    times: [],
+    instructions: m.instructions || undefined,
+    isCritical: m.critical,
+    doses: [{ scheduledAt: m.createdAt, status: "pending" as const }],
+  };
+}
+
+function incidentMedsForBooking(bookingId?: number): MedicationEntry[] {
+  if (bookingId == null) return [];
+  return getIncidentsForBooking(bookingId)
+    .flatMap((i) => i.incidentMedications)
+    .map(incidentMedToEntry);
 }
 
 const MED_METHODS = [
@@ -89,8 +120,12 @@ let _medId = 200;
 export function MedicationSection({
   entries,
   required,
+  bookingId,
 }: MedicationSectionProps) {
-  const [meds, setMeds] = useState(entries);
+  const [meds, setMeds] = useState<MedicationEntry[]>(() => [
+    ...entries,
+    ...incidentMedsForBooking(bookingId),
+  ]);
   const [addOpen, setAddOpen] = useState(false);
   const [notePopover, setNotePopover] = useState<string | null>(null);
   const [doseNote, setDoseNote] = useState("");

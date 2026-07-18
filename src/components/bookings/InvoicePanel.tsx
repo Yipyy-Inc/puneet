@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { Invoice } from "@/types/booking";
+import type { Invoice, InvoiceLineItem } from "@/types/booking";
 import type { Client } from "@/types/client";
 import { canEditInvoice } from "@/types/booking";
 import { InvoiceActivityLog } from "@/components/bookings/InvoiceActivityLog";
@@ -66,11 +66,17 @@ export function InvoicePanel({
   client,
   pendingCare,
   hasCriticalCare,
+  extraServiceItems,
 }: {
   invoice: Invoice;
   client?: Pick<Client, "membership" | "packages" | "storeCredit"> | null;
   pendingCare?: PendingCareItem[];
   hasCriticalCare?: boolean;
+  /**
+   * Read-only service lines derived elsewhere (e.g. incident-care charges,
+   * 2B.3) — shown in Services and folded into the subtotal/total/remaining.
+   */
+  extraServiceItems?: InvoiceLineItem[];
 }) {
   // Table 21: staff without financial_view_amounts must not see invoice totals.
   // The whole panel is monetary, so gate it wholesale. TODO: also strip
@@ -82,6 +88,11 @@ export function InvoicePanel({
   const canEditBase = canEditInvoice(invoice.status, "base");
   const canEditAddon = canEditInvoice(invoice.status, "addon");
   const isClosed = invoice.status === "closed";
+  const extraItems = extraServiceItems ?? [];
+  const extraTotal = extraItems.reduce((sum, i) => sum + i.price, 0);
+  // Once closed the extra charges were settled at checkout, so they no longer
+  // add to the amount owed — but they stay visible in the itemized total.
+  const extraOwed = isClosed ? 0 : extraTotal;
   const [addingItem, setAddingItem] = useState(false);
   const [newItemName, setNewItemName] = useState("");
   const [newItemPrice, setNewItemPrice] = useState("");
@@ -193,7 +204,7 @@ export function InvoicePanel({
         )}
 
         {/* Items */}
-        {invoice.items.length > 0 && (
+        {(invoice.items.length > 0 || extraItems.length > 0) && (
           <div>
             <div className="mb-2 flex items-center justify-between">
               <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
@@ -322,6 +333,23 @@ export function InvoicePanel({
                   </div>
                 ),
               )}
+              {/* Derived incident-care charges — read-only (2B.3) */}
+              {extraItems.map((item, i) => (
+                <div
+                  key={`extra-${i}`}
+                  className="-mx-2 flex items-start justify-between rounded-md px-2 py-1.5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm">{item.name}</p>
+                    <p className="text-muted-foreground text-xs">
+                      ${fmt(item.unitPrice)} x {item.quantity}
+                    </p>
+                  </div>
+                  <span className="font-[tabular-nums] text-sm">
+                    ${fmt(item.price)}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -397,7 +425,7 @@ export function InvoicePanel({
           <div className="flex justify-between">
             <span className="text-muted-foreground">Subtotal</span>
             <span className="font-[tabular-nums]">
-              ${fmt(invoice.subtotal)}
+              ${fmt(invoice.subtotal + extraTotal)}
             </span>
           </div>
           {/* Itemized discounts or single discount */}
@@ -480,7 +508,9 @@ export function InvoicePanel({
           <Separator />
           <div className="flex justify-between font-medium">
             <span>Total</span>
-            <span className="font-[tabular-nums]">${fmt(invoice.total)}</span>
+            <span className="font-[tabular-nums]">
+              ${fmt(invoice.total + extraTotal)}
+            </span>
           </div>
         </div>
 
@@ -549,14 +579,14 @@ export function InvoicePanel({
               <div
                 className={cn(
                   "flex items-center justify-between font-medium",
-                  invoice.remainingDue > 0
+                  invoice.remainingDue + extraOwed > 0
                     ? "text-destructive"
                     : "text-emerald-700",
                 )}
               >
                 <span>Remaining</span>
                 <span className="font-[tabular-nums]">
-                  ${fmt(invoice.remainingDue)}
+                  ${fmt(invoice.remainingDue + extraOwed)}
                 </span>
               </div>
             </div>
@@ -566,11 +596,11 @@ export function InvoicePanel({
         {/* Remaining due — fallback when no deposit context */}
         {(invoice.depositRequired ?? 0) === 0 &&
           invoice.depositCollected === 0 &&
-          invoice.remainingDue > 0 && (
+          invoice.remainingDue + extraOwed > 0 && (
             <div className="text-destructive flex items-center justify-between text-sm font-medium">
               <span>Remaining due</span>
               <span className="font-[tabular-nums]">
-                ${fmt(invoice.remainingDue)}
+                ${fmt(invoice.remainingDue + extraOwed)}
               </span>
             </div>
           )}

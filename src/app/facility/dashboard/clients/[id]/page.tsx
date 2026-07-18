@@ -41,8 +41,11 @@ import {
   customerCredits,
 } from "@/data/payments";
 import { getClientRetailPurchases } from "@/data/retail";
+import { getIncidentsForClient, getIncidentsForPet } from "@/data/incidents";
+import { IncidentDetailsModal } from "@/components/incidents/IncidentDetailsModal";
 import { useFieldMask } from "@/lib/staff/mask";
 import type { Evaluation } from "@/types/pet";
+import type { Incident } from "@/types/incidents";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { Badge } from "@/components/ui/badge";
@@ -109,9 +112,30 @@ import {
   Receipt,
   Bell,
   Scissors,
+  Siren,
   Settings as SettingsIcon,
   CalendarDays,
 } from "lucide-react";
+
+// Compact badge styling for the Overview → Incidents section.
+const INCIDENT_SEVERITY_STYLES: Record<string, string> = {
+  critical:
+    "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-400",
+  high: "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-900 dark:bg-orange-900/20 dark:text-orange-400",
+  medium:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-400",
+  low: "border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400",
+};
+
+const INCIDENT_STATUS_STYLES: Record<string, string> = {
+  open: "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-900/20 dark:text-red-400",
+  investigating:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-400",
+  resolved:
+    "border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400",
+  closed:
+    "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-400",
+};
 
 interface Pet {
   id: number;
@@ -150,6 +174,10 @@ export default function ClientDetailPage({
   // pet from their roster) pre-filled.
   const [groomingDialogOpen, setGroomingDialogOpen] = useState(false);
   const [groomingDialogPetId, setGroomingDialogPetId] = useState<number | null>(
+    null,
+  );
+  // Overview → Incidents: row click opens the shared IncidentDetailsModal.
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(
     null,
   );
 
@@ -234,6 +262,19 @@ export default function ClientDetailPage({
 
   // Get client-specific data
   const clientBookings = bookings.filter((b) => b.clientId === client.id);
+  // Incidents for this customer: linked by clientId (0.1) unioned with any
+  // incident involving one of their pets, deduped and newest-first.
+  const clientIncidents = Array.from(
+    new Map(
+      [
+        ...getIncidentsForClient(client.id),
+        ...client.pets.flatMap((p) => getIncidentsForPet(p.id)),
+      ].map((i) => [i.id, i]),
+    ).values(),
+  ).sort(
+    (a, b) =>
+      new Date(b.incidentDate).getTime() - new Date(a.incidentDate).getTime(),
+  );
   const clientDocs = clientDocuments.filter((d) => d.clientId === client.id);
   const clientComms = clientCommunications.filter(
     (c) => c.clientId === client.id,
@@ -1092,6 +1133,124 @@ export default function ClientDetailPage({
             </CardContent>
           </Card>
 
+          {/* Incidents — facility-side only (this page never renders in the
+              customer's own portal). Booking link is internal. */}
+          <Card id="incidents-section">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <Siren className="size-4" />
+                Incidents
+                {clientIncidents.length > 0 && (
+                  <Badge variant="secondary" className="text-[10px]">
+                    {clientIncidents.length}
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {clientIncidents.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-muted-foreground border-b text-left text-xs">
+                        <th className="py-2 pr-3 font-medium">Date</th>
+                        <th className="py-2 pr-3 font-medium">Pet(s)</th>
+                        <th className="py-2 pr-3 font-medium">Type</th>
+                        <th className="py-2 pr-3 font-medium">Severity</th>
+                        <th className="py-2 pr-3 font-medium">Incident</th>
+                        <th className="py-2 pr-3 font-medium">Status</th>
+                        <th className="py-2 font-medium">Booking</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clientIncidents.map((incident) => {
+                        const d = new Date(incident.incidentDate);
+                        const dateStr = `${d.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })} ${d.toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}`;
+                        const bookingHref = incident.bookingId
+                          ? `/facility/dashboard/clients/${
+                              incident.clientId ?? client.id
+                            }/bookings/${incident.bookingId}`
+                          : null;
+                        return (
+                          <tr
+                            key={incident.id}
+                            onClick={() => setSelectedIncident(incident)}
+                            className="hover:bg-muted/40 cursor-pointer border-b transition-colors last:border-0"
+                          >
+                            <td className="text-muted-foreground py-2.5 pr-3 whitespace-nowrap">
+                              {dateStr}
+                            </td>
+                            <td className="py-2.5 pr-3">
+                              {incident.petNames.join(", ") || "—"}
+                            </td>
+                            <td className="py-2.5 pr-3 capitalize">
+                              {incident.type}
+                            </td>
+                            <td className="py-2.5 pr-3">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-[10px] capitalize",
+                                  INCIDENT_SEVERITY_STYLES[incident.severity],
+                                )}
+                              >
+                                {incident.severity}
+                              </Badge>
+                            </td>
+                            <td
+                              className="max-w-[220px] truncate py-2.5 pr-3 font-medium"
+                              title={incident.title}
+                            >
+                              {incident.title.length > 50
+                                ? `${incident.title.slice(0, 50)}…`
+                                : incident.title}
+                            </td>
+                            <td className="py-2.5 pr-3">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-[10px] capitalize",
+                                  INCIDENT_STATUS_STYLES[incident.status],
+                                )}
+                              >
+                                {incident.status}
+                              </Badge>
+                            </td>
+                            <td className="py-2.5 whitespace-nowrap">
+                              {bookingHref ? (
+                                <Link
+                                  href={bookingHref}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-primary inline-flex items-center gap-1 hover:underline"
+                                >
+                                  View
+                                  <ExternalLink className="size-3" />
+                                </Link>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-muted-foreground py-4 text-center text-sm">
+                  No incidents on record
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Purchase History (Retail) */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -1212,6 +1371,13 @@ export default function ClientDetailPage({
                       <div className="grid grid-cols-2 gap-4">
                         {activePets.map((pet) => {
                           const petData = getPetData(pet);
+                          // Per-animal incident history (2E.1) — spot repeat
+                          // fights / recurring illness at a glance.
+                          const petIncidents = getIncidentsForPet(pet.id).sort(
+                            (a, b) =>
+                              new Date(b.incidentDate).getTime() -
+                              new Date(a.incidentDate).getTime(),
+                          );
                           return (
                             <div
                               key={pet.id}
@@ -1320,6 +1486,89 @@ export default function ClientDetailPage({
                                   <AlertCircle className="size-3" />
                                   {petData.expiredVaccinations.length} expired
                                   vaccination(s)
+                                </div>
+                              )}
+                              {petIncidents.length > 0 && (
+                                <div className="mt-4 border-t pt-3">
+                                  <div className="mb-2 flex items-center justify-between">
+                                    <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold">
+                                      <Siren className="size-3.5" />
+                                      Incident history
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-[10px]"
+                                      >
+                                        {petIncidents.length}
+                                      </Badge>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveTab("overview");
+                                        if (typeof document !== "undefined") {
+                                          setTimeout(() => {
+                                            document
+                                              .getElementById(
+                                                "incidents-section",
+                                              )
+                                              ?.scrollIntoView({
+                                                behavior: "smooth",
+                                                block: "start",
+                                              });
+                                          }, 50);
+                                        }
+                                      }}
+                                      className="text-primary text-xs hover:underline"
+                                    >
+                                      View all
+                                    </button>
+                                  </div>
+                                  <ul className="space-y-1">
+                                    {petIncidents
+                                      .slice(0, 3)
+                                      .map((incident) => (
+                                        <li
+                                          key={incident.id}
+                                          className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs"
+                                        >
+                                          <span className="text-muted-foreground whitespace-nowrap">
+                                            {new Date(
+                                              incident.incidentDate,
+                                            ).toLocaleDateString("en-US", {
+                                              month: "short",
+                                              day: "numeric",
+                                              year: "numeric",
+                                            })}
+                                          </span>
+                                          <span className="capitalize">
+                                            {incident.type}
+                                          </span>
+                                          <Badge
+                                            variant="outline"
+                                            className={cn(
+                                              "text-[10px] capitalize",
+                                              INCIDENT_SEVERITY_STYLES[
+                                                incident.severity
+                                              ],
+                                            )}
+                                          >
+                                            {incident.severity}
+                                          </Badge>
+                                          <Badge
+                                            variant="outline"
+                                            className={cn(
+                                              "text-[10px] capitalize",
+                                              INCIDENT_STATUS_STYLES[
+                                                incident.status
+                                              ],
+                                            )}
+                                          >
+                                            {incident.status}
+                                          </Badge>
+                                        </li>
+                                      ))}
+                                  </ul>
                                 </div>
                               )}
                             </div>
@@ -2562,6 +2811,23 @@ export default function ClientDetailPage({
           />
         );
       })()}
+
+      {/* Incident Details Modal — opened from the Overview → Incidents table */}
+      <Dialog
+        open={!!selectedIncident}
+        onOpenChange={(open) => {
+          if (!open) setSelectedIncident(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+          {selectedIncident && (
+            <IncidentDetailsModal
+              incident={selectedIncident}
+              onClose={() => setSelectedIncident(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Pet Details Modal */}
       <Dialog open={!!selectedPet} onOpenChange={() => setSelectedPet(null)}>

@@ -31,6 +31,7 @@ import type {
   NoteCategory,
   PetNoteSubType,
   Note,
+  NoteVisibility,
   TagNoteSettings,
   LegacyPetTag,
   LegacyPetTagAssignment,
@@ -1069,6 +1070,39 @@ export function getPinnedNotes(
 export function getNoteCount(category: NoteCategory, entityId: number): number {
   return notes.filter((n) => n.category === category && n.entityId === entityId)
     .length;
+}
+
+// Monotonic suffix so appended note ids stay unique within a millisecond.
+let appendNoteSeq = 0;
+
+/**
+ * Append a structured note to the shared store (same array `useNotesForEntity`
+ * reads). Used to mirror external events — e.g. a logged incident follow-up
+ * conversation — into an entity's Structured Notes. Returns the created note.
+ */
+export function appendNote(params: {
+  category: NoteCategory;
+  entityId: number;
+  content: string;
+  facilityId?: number;
+  visibility?: NoteVisibility;
+  createdBy?: string;
+}): Note {
+  const note: Note = {
+    id: `note-${new Date().getTime()}-${(appendNoteSeq += 1)}`,
+    category: params.category,
+    entityId: params.entityId,
+    facilityId: params.facilityId ?? 1,
+    content: params.content,
+    visibility: params.visibility ?? "internal",
+    isPinned: false,
+    createdAt: new Date().toISOString(),
+    createdBy: params.createdBy ?? "Current User",
+    createdById: 1,
+    editHistory: [],
+  };
+  notes.push(note);
+  return note;
 }
 
 // Legacy types re-exported from @/types/tags

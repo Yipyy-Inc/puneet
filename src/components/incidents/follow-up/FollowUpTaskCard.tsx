@@ -42,6 +42,7 @@ import type {
   FollowUpTask,
 } from "@/types/incidents";
 import { LogConversationDialog } from "./LogConversationDialog";
+import { appendNote } from "@/data/tags-notes";
 
 interface FollowUpTaskCardProps {
   task: FollowUpTask;
@@ -149,27 +150,31 @@ export function FollowUpTaskCard({
     const attemptCount = (task.attemptCount ?? 0) + 1;
     const reached = entry.reachedClient;
 
-    let nextStatus = task.status;
-    // If client reached & questions answered, mark complete; otherwise keep in-progress
-    if (reached) nextStatus = "completed";
-    else if (task.status === "pending") nextStatus = "in_progress";
+    // Logging a conversation moves a not-started task to In Progress. It does
+    // NOT auto-complete — staff mark complete explicitly via "Mark Complete".
+    const nextStatus = task.status === "pending" ? "in_progress" : task.status;
 
     onUpdate({
       ...task,
       conversationLog: nextLog,
       attemptCount,
       status: nextStatus,
-      completedDate:
-        nextStatus === "completed"
-          ? new Date().toISOString()
-          : task.completedDate,
-      completedBy:
-        nextStatus === "completed" ? entry.loggedBy : task.completedBy,
       escalated:
         task.escalateAfterAttempts !== undefined &&
         !reached &&
         attemptCount >= task.escalateAfterAttempts,
     });
+
+    // Mirror the contact into the incident's Structured Notes (Notes tab),
+    // with a phone icon + the outcome as the label.
+    const incidentEntityId = Number(task.incidentId.replace(/\D/g, "")) || 1;
+    appendNote({
+      category: "incident",
+      entityId: incidentEntityId,
+      content: `📞 ${entry.summary}`,
+      createdBy: entry.loggedBy,
+    });
+
     setLogOpen(false);
   };
 
@@ -189,6 +194,22 @@ export function FollowUpTaskCard({
   };
 
   const statusBadge = (() => {
+    // Derived display only — a pending/in-progress task past its due time reads
+    // as "Overdue" without mutating the stored status. Completed/skipped keep
+    // their own badge.
+    if (
+      isOverdue &&
+      (task.status === "pending" || task.status === "in_progress")
+    ) {
+      return (
+        <Badge
+          variant="outline"
+          className="gap-1 border-red-300 bg-red-50 text-red-700"
+        >
+          <AlertCircle className="size-3" /> Overdue
+        </Badge>
+      );
+    }
     switch (task.status) {
       case "completed":
         return (
@@ -210,12 +231,8 @@ export function FollowUpTaskCard({
         );
       default:
         return (
-          <Badge
-            variant="outline"
-            className={isOverdue ? "border-red-300 bg-red-50 text-red-700" : ""}
-          >
-            <AlertCircle className="mr-1 size-3" />
-            {isOverdue ? "Overdue" : "Pending"}
+          <Badge variant="outline" className="gap-1">
+            <AlertCircle className="size-3" /> Pending
           </Badge>
         );
     }
@@ -469,13 +486,12 @@ export function FollowUpTaskCard({
         </CardContent>
       </Card>
 
-      {/* Log dialog */}
+      {/* Log dialog — small quick-log modal */}
       <Dialog open={logOpen} onOpenChange={setLogOpen}>
-        <DialogContent className="max-h-[90vh] min-w-3xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <LogConversationDialog
             task={task}
             loggedBy={currentUser}
-            priorEntries={priorEntries}
             onSave={handleAddEntry}
             onCancel={() => setLogOpen(false)}
           />

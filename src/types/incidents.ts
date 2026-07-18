@@ -69,6 +69,39 @@ export const customerSentimentEnum = z.enum([
 ]);
 export type CustomerSentiment = z.infer<typeof customerSentimentEnum>;
 
+// A protocol step is either an owner-contact follow-up (the classic call/email)
+// or an in-stay care action to run while the pet is boarding (2B).
+export const followUpStepTypeEnum = z.enum(["owner_contact", "in_stay_care"]);
+export type FollowUpStepType = z.infer<typeof followUpStepTypeEnum>;
+
+// Care-action shapes (0.2) — declared here so both in-stay-care protocol steps
+// (below) and the incident care model reuse them.
+// How often a care action recurs while the pet is boarding.
+export const careActionFrequencyEnum = z.enum([
+  "once",
+  "every_x_hours",
+  "twice_daily",
+  "once_daily",
+  "custom",
+]);
+export type CareActionFrequency = z.infer<typeof careActionFrequencyEnum>;
+
+// How long the care action stays active.
+export const careActionDurationEnum = z.enum([
+  "until_checkout",
+  "x_days",
+  "until_stopped",
+]);
+export type CareActionDuration = z.infer<typeof careActionDurationEnum>;
+
+// When the first occurrence is scheduled.
+export const careActionStartEnum = z.enum([
+  "immediately",
+  "next_care_time",
+  "next_morning_8am",
+]);
+export type CareActionStart = z.infer<typeof careActionStartEnum>;
+
 export const followUpProtocolStepSchema = z.object({
   id: z.string(),
   order: z.number(),
@@ -86,6 +119,15 @@ export const followUpProtocolStepSchema = z.object({
   requiresClientResponse: z.boolean(),
   // If client cannot be reached after N attempts, escalate
   escalateAfterAttempts: z.number().optional(),
+
+  // ── Step type (2B) ──────────────────────────────────────────────────
+  stepType: followUpStepTypeEnum.default("owner_contact"),
+  // Care-action fields — used when stepType === "in_stay_care" (shapes 0.2).
+  careActionName: z.string().optional(),
+  frequency: careActionFrequencyEnum.optional(),
+  duration: careActionDurationEnum.optional(),
+  starts: careActionStartEnum.optional(),
+  staffInstructions: z.string().optional(),
 });
 export type FollowUpProtocolStep = z.infer<typeof followUpProtocolStepSchema>;
 
@@ -170,12 +212,97 @@ export const followUpTaskSchema = z.object({
   // The day this should appear on the assignee's daily task list
   scheduledFor: z.string().optional(),
   surfacedToDailyTasks: z.boolean().optional(),
+
+  // ── Archival ──────────────────────────────────────────────────────
+  // "Dismiss as historical": archive a long-overdue task without marking it
+  // complete (status stays as-is). Removes it from the active/overdue lists but
+  // keeps it on record. Reason is required at dismissal.
+  archived: z.boolean().optional(),
+  archiveReason: z.string().optional(),
+  archivedAt: z.string().optional(),
 });
 export type FollowUpTask = z.infer<typeof followUpTaskSchema>;
 
 // ========================================
+// IN-STAY CARE (2B)
+// ========================================
+
+// Care-action frequency/duration/start enums are declared above (shared with
+// in-stay-care protocol steps).
+
+export const incidentCareActionSchema = z.object({
+  id: z.string(),
+  incidentId: z.string(),
+  name: z.string(),
+  frequency: careActionFrequencyEnum,
+  everyXHours: z.number().optional(), // when frequency === "every_x_hours"
+  customSchedule: z.string().optional(), // when frequency === "custom"
+  duration: careActionDurationEnum,
+  days: z.number().optional(), // when duration === "x_days"
+  starts: careActionStartEnum,
+  staffInstructions: z.string(),
+  requiresPhoto: z.boolean(),
+  createdBy: z.string(),
+  createdAt: z.string(),
+  active: z.boolean(),
+});
+export type IncidentCareAction = z.infer<typeof incidentCareActionSchema>;
+
+// Mirrors src/components/bookings/MedicationSection.tsx so an incident-scoped
+// medication can render identically in the in-stay care UI.
+export const incidentMedTypeEnum = z.enum([
+  "oral",
+  "topical",
+  "injection",
+  "other",
+]);
+export type IncidentMedType = z.infer<typeof incidentMedTypeEnum>;
+
+export const incidentMedFeeTypeEnum = z.enum(["per_admin", "one_time"]);
+export type IncidentMedFeeType = z.infer<typeof incidentMedFeeTypeEnum>;
+
+export const incidentMedicationSchema = z.object({
+  id: z.string(),
+  incidentId: z.string(),
+  name: z.string(),
+  medType: incidentMedTypeEnum,
+  dosage: z.string(),
+  frequency: z.string(),
+  instructions: z.string(),
+  critical: z.boolean(),
+  chargeFee: z.boolean(),
+  feeType: incidentMedFeeTypeEnum.optional(),
+  feeAmount: z.number().optional(),
+  createdBy: z.string(),
+  createdAt: z.string(),
+});
+export type IncidentMedication = z.infer<typeof incidentMedicationSchema>;
+
+// One log entry per care/medication administration (photo optional).
+export const incidentCareLogSchema = z.object({
+  id: z.string(),
+  incidentId: z.string(),
+  careActionId: z.string().optional(),
+  medicationId: z.string().optional(),
+  loggedBy: z.string(),
+  loggedAt: z.string(),
+  note: z.string().optional(),
+  photoUrl: z.string().optional(),
+});
+export type IncidentCareLog = z.infer<typeof incidentCareLogSchema>;
+
+// ========================================
 // INCIDENT
 // ========================================
+
+// Per-owner notification state (2E). Incidents can involve pets from multiple
+// owner accounts; each owner is notified independently.
+export const clientNotificationSchema = z.object({
+  clientId: z.number(),
+  notified: z.boolean(),
+  notifiedAt: z.string().optional(),
+});
+export type ClientNotification = z.infer<typeof clientNotificationSchema>;
 
 export const incidentSchema = z.object({
   id: z.string(),
@@ -208,10 +335,29 @@ export const incidentSchema = z.object({
   managersNotified: z.array(z.string()),
   clientNotified: z.boolean(),
   clientNotificationDate: z.string().optional(),
+  // Per-owner notification (2E) — one entry per distinct owner account across
+  // the incident's pets. When absent, `clientNotified` applies to every owner.
+  clientNotifications: z.array(clientNotificationSchema).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   closedBy: z.string().optional(),
+  // Reason recorded when closing the incident (required if open follow-up tasks
+  // remain — Flow C). Those tasks are left in the system, not auto-completed.
+  closeReason: z.string().optional(),
   boardingGuestId: z.string().optional(),
+  // Booking linkage (spec 2A). `reservationId` is the human-readable reservation
+  // code (e.g. "RES-001"); `bookingId` is the numeric booking id used as the
+  // booking-overview route param (/clients/[clientId]/bookings/[bookingId]).
   reservationId: z.string().optional(),
+  bookingId: z.number().optional(),
+  // Owner account, so customer grouping (2E) doesn't need a pet→client lookup.
+  clientId: z.number().optional(),
+
+  // ── In-stay care (2B) ─────────────────────────────────────────────
+  careActions: z.array(incidentCareActionSchema).default([]),
+  incidentMedications: z.array(incidentMedicationSchema).default([]),
+  careLogs: z.array(incidentCareLogSchema).default([]),
+  // Set true at checkout so care can no longer be modified (Flow C).
+  inStayCareLocked: z.boolean().optional(),
 });
 export type Incident = z.infer<typeof incidentSchema>;

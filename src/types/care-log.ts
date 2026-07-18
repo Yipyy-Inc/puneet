@@ -148,6 +148,12 @@ export type ScheduledTask = {
   careNote?: string;
   /** Source step from FacilityDailyCareConfig, when applicable */
   sourceStepId?: string;
+  /** In-stay care origin (2B): set when the task was auto-generated from an
+   *  incident's care action or medication. Logging it writes back an incident
+   *  careLog (2B.4). Exactly one of careActionId / medicationId is set. */
+  sourceIncidentId?: string;
+  careActionId?: string;
+  medicationId?: string;
   /** Structured medication detail for the dedicated medication log modal —
    *  read-only, sourced from the booking. Present only on medication tasks. */
   medDetail?: {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   DialogHeader,
   DialogTitle,
@@ -37,9 +37,14 @@ import type {
   ContactMethod,
   FollowUpProtocol,
   FollowUpProtocolStep,
+  FollowUpStepType,
+  CareActionFrequency,
+  CareActionDuration,
+  CareActionStart,
   IncidentSeverity,
   IncidentType,
 } from "@/types/incidents";
+import { getIncidentReportingConfig } from "@/data/facility-config";
 
 interface ProtocolEditorDialogProps {
   protocol: FollowUpProtocol | null;
@@ -65,6 +70,31 @@ const CONTACT_METHODS: { value: ContactMethod; label: string }[] = [
   { value: "in_person", label: "In person" },
   { value: "video_call", label: "Video call" },
   { value: "other", label: "Other / internal" },
+];
+
+const STEP_TYPES: { value: FollowUpStepType; label: string }[] = [
+  { value: "owner_contact", label: "Owner Contact" },
+  { value: "in_stay_care", label: "In-Stay Care Action" },
+];
+
+const CARE_FREQUENCIES: { value: CareActionFrequency; label: string }[] = [
+  { value: "once", label: "Once" },
+  { value: "every_x_hours", label: "Every X hours" },
+  { value: "twice_daily", label: "Twice daily" },
+  { value: "once_daily", label: "Once daily" },
+  { value: "custom", label: "Custom schedule" },
+];
+
+const CARE_DURATIONS: { value: CareActionDuration; label: string }[] = [
+  { value: "until_checkout", label: "Until checkout" },
+  { value: "x_days", label: "For X days" },
+  { value: "until_stopped", label: "Until stopped" },
+];
+
+const CARE_STARTS: { value: CareActionStart; label: string }[] = [
+  { value: "immediately", label: "Immediately" },
+  { value: "next_care_time", label: "Next care time" },
+  { value: "next_morning_8am", label: "Next morning (8 AM)" },
 ];
 
 const ASSIGNEE_ROLES: { value: AssigneeRole; label: string; help: string }[] = [
@@ -100,7 +130,10 @@ const ASSIGNEE_ROLES: { value: AssigneeRole; label: string; help: string }[] = [
   },
 ];
 
-function emptyStep(order: number): FollowUpProtocolStep {
+function emptyStep(
+  order: number,
+  assigneeRole: AssigneeRole = "reporter",
+): FollowUpProtocolStep {
   return {
     id: `step-new-${Date.now()}-${order}`,
     order,
@@ -110,10 +143,11 @@ function emptyStep(order: number): FollowUpProtocolStep {
     daysAfterIncident: 0,
     hoursAfterIncident: 0,
     contactMethod: "phone",
-    assigneeRole: "reporter",
+    assigneeRole,
     questionsToAsk: [],
     requiresPhoto: false,
     requiresClientResponse: true,
+    stepType: "owner_contact",
   };
 }
 
@@ -123,6 +157,11 @@ export function ProtocolEditorDialog({
   onCancel,
 }: ProtocolEditorDialogProps) {
   const isNew = !protocol;
+  // Facility default assignee role for new steps (Incident Reporting settings).
+  const defaultAssigneeRole = useMemo(
+    () => getIncidentReportingConfig().defaultFollowUpAssigneeRole,
+    [],
+  );
   const [name, setName] = useState(protocol?.name ?? "");
   const [description, setDescription] = useState(protocol?.description ?? "");
   const [severityScopes, setSeverityScopes] = useState<IncidentSeverity[]>(
@@ -134,7 +173,7 @@ export function ProtocolEditorDialog({
   const [isDefault, setIsDefault] = useState(protocol?.isDefault ?? false);
   const [isActive, setIsActive] = useState(protocol?.isActive ?? true);
   const [steps, setSteps] = useState<FollowUpProtocolStep[]>(
-    protocol?.steps ?? [emptyStep(1)],
+    protocol?.steps ?? [emptyStep(1, defaultAssigneeRole)],
   );
   const [expandedStep, setExpandedStep] = useState<string | null>(
     protocol?.steps[0]?.id ?? steps[0]?.id ?? null,
@@ -159,7 +198,7 @@ export function ProtocolEditorDialog({
   };
 
   const addStep = () => {
-    const newStep = emptyStep(steps.length + 1);
+    const newStep = emptyStep(steps.length + 1, defaultAssigneeRole);
     setSteps((prev) => [...prev, newStep]);
     setExpandedStep(newStep.id);
   };
@@ -441,8 +480,16 @@ function StepEditor({
                 )}
               </p>
               <p className="text-muted-foreground truncate text-xs">
-                {formatScheduleHint(step)} ·{" "}
-                {step.contactMethod.replace("_", " ")}
+                {step.stepType === "in_stay_care"
+                  ? `In-stay care${
+                      step.frequency
+                        ? ` · ${step.frequency.replace(/_/g, " ")}`
+                        : ""
+                    }`
+                  : `${formatScheduleHint(step)} · ${step.contactMethod.replace(
+                      "_",
+                      " ",
+                    )}`}
               </p>
             </div>
           </button>
@@ -461,221 +508,365 @@ function StepEditor({
         {/* Expanded body */}
         {expanded && (
           <div className="mt-4 space-y-4 border-t pt-4">
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold">Step Title *</Label>
-              <Input
-                value={step.title}
-                onChange={(e) => onUpdate({ title: e.target.value })}
-                placeholder="e.g. 24-hour wellness check-in"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold">Short Description</Label>
-              <Input
-                value={step.description}
-                onChange={(e) => onUpdate({ description: e.target.value })}
-                placeholder="One sentence shown on the daily task list"
-              />
-            </div>
-
-            {/* Schedule + Contact + Assignee */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Days After</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={step.daysAfterIncident}
-                  onChange={(e) =>
-                    onUpdate({
-                      daysAfterIncident: Math.max(
-                        0,
-                        Number(e.target.value) || 0,
-                      ),
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Hours After</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={23}
-                  value={step.hoursAfterIncident}
-                  onChange={(e) =>
-                    onUpdate({
-                      hoursAfterIncident: Math.max(
-                        0,
-                        Math.min(23, Number(e.target.value) || 0),
-                      ),
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Contact Method</Label>
-                <Select
-                  value={step.contactMethod}
-                  onValueChange={(v) =>
-                    onUpdate({ contactMethod: v as ContactMethod })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CONTACT_METHODS.map((m) => (
-                      <SelectItem key={m.value} value={m.value}>
-                        {m.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Assigned To</Label>
-                <Select
-                  value={step.assigneeRole}
-                  onValueChange={(v) =>
-                    onUpdate({ assigneeRole: v as AssigneeRole })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ASSIGNEE_ROLES.map((r) => (
-                      <SelectItem key={r.value} value={r.value}>
-                        {r.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {step.assigneeRole === "specific" && (
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">
-                  Specific staff name
-                </Label>
-                <Input
-                  value={step.assigneeName ?? ""}
-                  onChange={(e) => onUpdate({ assigneeName: e.target.value })}
-                  placeholder="e.g. Emma Wilson"
-                />
-              </div>
-            )}
-
-            {/* Instructions */}
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold">
-                Step-by-Step Instructions
-              </Label>
-              <Textarea
-                value={step.instructions}
-                onChange={(e) => onUpdate({ instructions: e.target.value })}
-                placeholder={`What should the staff member do? Be specific.\n\n1) Open with...\n2) Confirm pet's status...\n3) Ask...`}
-                rows={5}
-              />
-            </div>
-
-            {/* Questions */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5 text-xs font-semibold">
-                <HelpCircle className="size-3.5" />
-                Questions to Ask
-                <span className="text-muted-foreground font-normal">
-                  ({step.questionsToAsk.length})
-                </span>
-              </Label>
-              {step.questionsToAsk.length > 0 && (
-                <ul className="space-y-1.5">
-                  {step.questionsToAsk.map((q, idx) => (
-                    <li
-                      key={idx}
-                      className="bg-muted/40 flex items-center gap-2 rounded-md px-3 py-1.5 text-sm"
+            {/* Step Type — chosen before any other field; drives the field set. */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Step Type</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {STEP_TYPES.map((t) => {
+                  const active = (step.stepType ?? "owner_contact") === t.value;
+                  return (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => onUpdate({ stepType: t.value })}
+                      className={`rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+                        active
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-input bg-background text-muted-foreground hover:bg-muted"
+                      }`}
                     >
-                      <span className="text-muted-foreground text-xs">
-                        {idx + 1}.
-                      </span>
-                      <span className="flex-1">{q}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeQuestion(idx)}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="size-3.5" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="flex gap-2">
-                <Input
-                  value={newQuestion}
-                  onChange={(e) => setNewQuestion(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addQuestion()}
-                  placeholder="Type a question and press Enter"
-                  className="text-sm"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addQuestion}
-                  disabled={!newQuestion.trim()}
-                >
-                  <Plus className="size-4" />
-                </Button>
+                      {t.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Toggles */}
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={step.requiresClientResponse}
-                  onCheckedChange={(v) =>
-                    onUpdate({ requiresClientResponse: Boolean(v) })
-                  }
-                />
-                Requires client response
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={step.requiresPhoto}
-                  onCheckedChange={(v) =>
-                    onUpdate({ requiresPhoto: Boolean(v) })
-                  }
-                />
-                Requires photo proof
-              </label>
-              <div className="flex items-center gap-2 text-sm">
-                <Label className="text-xs">Escalate after</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  className="w-16"
-                  value={step.escalateAfterAttempts ?? ""}
-                  onChange={(e) =>
-                    onUpdate({
-                      escalateAfterAttempts: e.target.value
-                        ? Number(e.target.value)
-                        : undefined,
-                    })
-                  }
-                />
-                <span className="text-muted-foreground text-xs">
-                  failed attempts
-                </span>
-              </div>
-            </div>
+            {step.stepType === "in_stay_care" ? (
+              <>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">
+                    Care Action Name *
+                  </Label>
+                  <Input
+                    value={step.careActionName ?? step.title}
+                    onChange={(e) =>
+                      onUpdate({
+                        careActionName: e.target.value,
+                        title: e.target.value,
+                      })
+                    }
+                    placeholder="e.g. Ice-pack the swelling"
+                  />
+                </div>
 
-            <Badge variant="outline" className="text-[10px]">
-              Step #{step.order} · scheduled {formatScheduleHint(step)}
-            </Badge>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Frequency</Label>
+                    <Select
+                      value={step.frequency ?? "once_daily"}
+                      onValueChange={(v) =>
+                        onUpdate({ frequency: v as CareActionFrequency })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CARE_FREQUENCIES.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Duration</Label>
+                    <Select
+                      value={step.duration ?? "until_checkout"}
+                      onValueChange={(v) =>
+                        onUpdate({ duration: v as CareActionDuration })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CARE_DURATIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Starts</Label>
+                  <Select
+                    value={step.starts ?? "immediately"}
+                    onValueChange={(v) =>
+                      onUpdate({ starts: v as CareActionStart })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CARE_STARTS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">
+                    Staff Instructions
+                  </Label>
+                  <Textarea
+                    value={step.staffInstructions ?? ""}
+                    onChange={(e) =>
+                      onUpdate({ staffInstructions: e.target.value })
+                    }
+                    placeholder="What should staff do each time this runs?"
+                    rows={4}
+                  />
+                </div>
+
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={step.requiresPhoto}
+                    onCheckedChange={(v) =>
+                      onUpdate({ requiresPhoto: Boolean(v) })
+                    }
+                  />
+                  Requires photo confirmation
+                </label>
+
+                <Badge variant="outline" className="text-[10px]">
+                  Step #{step.order} · in-stay care
+                </Badge>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Step Title *</Label>
+                  <Input
+                    value={step.title}
+                    onChange={(e) => onUpdate({ title: e.target.value })}
+                    placeholder="e.g. 24-hour wellness check-in"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">
+                    Short Description
+                  </Label>
+                  <Input
+                    value={step.description}
+                    onChange={(e) => onUpdate({ description: e.target.value })}
+                    placeholder="One sentence shown on the daily task list"
+                  />
+                </div>
+
+                {/* Schedule + Contact + Assignee */}
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Days After</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={step.daysAfterIncident}
+                      onChange={(e) =>
+                        onUpdate({
+                          daysAfterIncident: Math.max(
+                            0,
+                            Number(e.target.value) || 0,
+                          ),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Hours After</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={23}
+                      value={step.hoursAfterIncident}
+                      onChange={(e) =>
+                        onUpdate({
+                          hoursAfterIncident: Math.max(
+                            0,
+                            Math.min(23, Number(e.target.value) || 0),
+                          ),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">
+                      Contact Method
+                    </Label>
+                    <Select
+                      value={step.contactMethod}
+                      onValueChange={(v) =>
+                        onUpdate({ contactMethod: v as ContactMethod })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CONTACT_METHODS.map((m) => (
+                          <SelectItem key={m.value} value={m.value}>
+                            {m.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Assigned To</Label>
+                    <Select
+                      value={step.assigneeRole}
+                      onValueChange={(v) =>
+                        onUpdate({ assigneeRole: v as AssigneeRole })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ASSIGNEE_ROLES.map((r) => (
+                          <SelectItem key={r.value} value={r.value}>
+                            {r.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {step.assigneeRole === "specific" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">
+                      Specific staff name
+                    </Label>
+                    <Input
+                      value={step.assigneeName ?? ""}
+                      onChange={(e) =>
+                        onUpdate({ assigneeName: e.target.value })
+                      }
+                      placeholder="e.g. Emma Wilson"
+                    />
+                  </div>
+                )}
+
+                {/* Instructions */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">
+                    Step-by-Step Instructions
+                  </Label>
+                  <Textarea
+                    value={step.instructions}
+                    onChange={(e) => onUpdate({ instructions: e.target.value })}
+                    placeholder={`What should the staff member do? Be specific.\n\n1) Open with...\n2) Confirm pet's status...\n3) Ask...`}
+                    rows={5}
+                  />
+                </div>
+
+                {/* Questions */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5 text-xs font-semibold">
+                    <HelpCircle className="size-3.5" />
+                    Questions to Ask
+                    <span className="text-muted-foreground font-normal">
+                      ({step.questionsToAsk.length})
+                    </span>
+                  </Label>
+                  {step.questionsToAsk.length > 0 && (
+                    <ul className="space-y-1.5">
+                      {step.questionsToAsk.map((q, idx) => (
+                        <li
+                          key={idx}
+                          className="bg-muted/40 flex items-center gap-2 rounded-md px-3 py-1.5 text-sm"
+                        >
+                          <span className="text-muted-foreground text-xs">
+                            {idx + 1}.
+                          </span>
+                          <span className="flex-1">{q}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeQuestion(idx)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="flex gap-2">
+                    <Input
+                      value={newQuestion}
+                      onChange={(e) => setNewQuestion(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && addQuestion()}
+                      placeholder="Type a question and press Enter"
+                      className="text-sm"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addQuestion}
+                      disabled={!newQuestion.trim()}
+                    >
+                      <Plus className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Toggles */}
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={step.requiresClientResponse}
+                      onCheckedChange={(v) =>
+                        onUpdate({ requiresClientResponse: Boolean(v) })
+                      }
+                    />
+                    Requires client response
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={step.requiresPhoto}
+                      onCheckedChange={(v) =>
+                        onUpdate({ requiresPhoto: Boolean(v) })
+                      }
+                    />
+                    Requires photo proof
+                  </label>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Label className="text-xs">Escalate after</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      className="w-16"
+                      value={step.escalateAfterAttempts ?? ""}
+                      onChange={(e) =>
+                        onUpdate({
+                          escalateAfterAttempts: e.target.value
+                            ? Number(e.target.value)
+                            : undefined,
+                        })
+                      }
+                    />
+                    <span className="text-muted-foreground text-xs">
+                      failed attempts
+                    </span>
+                  </div>
+                </div>
+
+                <Badge variant="outline" className="text-[10px]">
+                  Step #{step.order} · scheduled {formatScheduleHint(step)}
+                </Badge>
+              </>
+            )}
           </div>
         )}
       </CardContent>

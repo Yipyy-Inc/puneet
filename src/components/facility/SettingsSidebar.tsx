@@ -26,6 +26,7 @@ import {
   Receipt,
   Sparkles,
   Globe,
+  Siren,
 } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import {
@@ -99,6 +100,7 @@ const STATIC_GROUPS: SettingsGroup[] = [
         label: "Express Check-in",
         icon: CircleDot,
       },
+      { id: "incident-reporting", label: "Incident Reporting", icon: Siren },
       { id: "retail", label: "Retail / POS", icon: Puzzle },
     ],
   },

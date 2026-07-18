@@ -1,3 +1,5 @@
+import type { AssigneeRole, IncidentSeverity } from "@/types/incidents";
+
 export const facilityConfig = {
   services: {
     boarding: {
@@ -802,6 +804,11 @@ export const facilityConfig = {
         applicableServices: ["daycare", "boarding"] as string[],
         label: "Medication Administration Fee",
       },
+      /** 2G.1 — Bill for medications added via an incident's In-Stay Care. */
+      chargeIncidentMedications: {
+        enabled: true,
+        label: "Charge for incident medications",
+      },
       /** Facility can provide items to give medication with (pill pockets, cheese, etc.) */
       facilityProvides: {
         enabled: true,
@@ -954,4 +961,111 @@ export function getEstimatedResponseTime(serviceType: string): number {
     all[serviceType]?.estimatedResponseTime ??
     facilityConfig.bookingRules.approvalWorkflow.estimatedResponseTime
   );
+}
+
+// ============================================================================
+// Incident Reporting settings (facility-level, per-facility mock store)
+// ============================================================================
+
+export type IncidentMedFeeMode = "per_admin" | "one_time";
+
+export interface IncidentReportingConfig {
+  /** (1) Charge for facility-provided incident medications. Feeds 2B.5. */
+  chargeIncidentMedications: {
+    enabled: boolean;
+    /** "per_admin" = $X per Give log; "one_time" = $X when the med is created. */
+    feeMode: IncidentMedFeeMode;
+    feeAmount: number;
+  };
+  /** (2) Default assignee role pre-filled on new follow-up protocol steps. */
+  defaultFollowUpAssigneeRole: AssigneeRole;
+  /** (3) Require ≥1 photo before a Critical incident can be filed. */
+  requirePhotoOnCritical: boolean;
+  /** (4) Auto-notify rules by severity (2G.1/2G.2). Pre-sets the report modal's
+   *  notify checkboxes and drives which mock notifications fire on save. */
+  autoNotify: Record<
+    IncidentSeverity,
+    {
+      notifyManager: boolean;
+      notifyOwner: boolean;
+      /** Also alert the pet-profile emergency contact (critical by default). */
+      notifyEmergencyContact: boolean;
+    }
+  >;
+}
+
+export const INCIDENT_REPORTING_SETTINGS_KEY = "settings-incident-reporting";
+
+export const defaultIncidentReportingConfig: IncidentReportingConfig = {
+  chargeIncidentMedications: {
+    enabled: false,
+    feeMode: "per_admin",
+    feeAmount: 5,
+  },
+  defaultFollowUpAssigneeRole: "reporter",
+  requirePhotoOnCritical: false,
+  autoNotify: {
+    // Low = none; Medium = manager; High = manager + owner (immediately);
+    // Critical = managers + owner + pet-profile emergency contact.
+    low: {
+      notifyManager: false,
+      notifyOwner: false,
+      notifyEmergencyContact: false,
+    },
+    medium: {
+      notifyManager: true,
+      notifyOwner: false,
+      notifyEmergencyContact: false,
+    },
+    high: {
+      notifyManager: true,
+      notifyOwner: true,
+      notifyEmergencyContact: false,
+    },
+    critical: {
+      notifyManager: true,
+      notifyOwner: true,
+      notifyEmergencyContact: true,
+    },
+  },
+};
+
+/** Read the persisted incident-reporting config (localStorage → default). */
+export function getIncidentReportingConfig(): IncidentReportingConfig {
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem(INCIDENT_REPORTING_SETTINGS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as Partial<IncidentReportingConfig>;
+        // Merge with defaults so new fields survive older stored payloads.
+        return {
+          ...defaultIncidentReportingConfig,
+          ...parsed,
+          chargeIncidentMedications: {
+            ...defaultIncidentReportingConfig.chargeIncidentMedications,
+            ...parsed.chargeIncidentMedications,
+          },
+          autoNotify: {
+            ...defaultIncidentReportingConfig.autoNotify,
+            ...parsed.autoNotify,
+          },
+        };
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return defaultIncidentReportingConfig;
+}
+
+/** Persist the incident-reporting config to localStorage. */
+export function saveIncidentReportingConfig(
+  config: IncidentReportingConfig,
+): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(
+      INCIDENT_REPORTING_SETTINGS_KEY,
+      JSON.stringify(config),
+    );
+  }
 }

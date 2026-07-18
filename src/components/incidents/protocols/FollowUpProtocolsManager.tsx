@@ -54,6 +54,20 @@ const CONTACT_ICONS = {
   other: ArrowUpRight,
 } as const;
 
+// Step-count line broken down by step type, e.g.
+// "3 steps — 2 owner contact · 1 care action". So managers see at a glance
+// whether a protocol handles owner communication, animal care, or both.
+function stepBreakdownLabel(steps: FollowUpProtocol["steps"]): string {
+  const total = steps.length;
+  const care = steps.filter((s) => s.stepType === "in_stay_care").length;
+  const owner = total - care;
+  const parts: string[] = [];
+  if (owner > 0) parts.push(`${owner} owner contact`);
+  if (care > 0) parts.push(`${care} care action${care === 1 ? "" : "s"}`);
+  const base = `${total} step${total === 1 ? "" : "s"}`;
+  return parts.length > 0 ? `${base} — ${parts.join(" · ")}` : base;
+}
+
 export function FollowUpProtocolsManager() {
   const [protocols, setProtocols] = useState<FollowUpProtocol[]>(seedProtocols);
   const [search, setSearch] = useState("");
@@ -212,8 +226,7 @@ export function FollowUpProtocolsManager() {
                 {/* Steps preview */}
                 <div className="bg-muted/40 space-y-1.5 rounded-lg p-3">
                   <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-                    {protocol.steps.length} step
-                    {protocol.steps.length === 1 ? "" : "s"}
+                    {stepBreakdownLabel(protocol.steps)}
                   </p>
                   <ol className="space-y-1.5">
                     {protocol.steps.slice(0, 4).map((step) => {

@@ -56,6 +56,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { clients } from "@/data/clients";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { useAiText } from "@/hooks/use-ai-text";
 import { AiGenerateButton } from "@/components/shared/AiGenerateButton";
 import {
@@ -63,13 +64,32 @@ import {
   suggestProtocols,
 } from "@/data/follow-up-protocols";
 import { generateFollowUpTasks } from "@/lib/incidents/generate-follow-up-tasks";
+import { generateCareActionsFromProtocol } from "@/lib/incidents/generate-care-actions";
+import { getIncidentReportingConfig } from "@/data/facility-config";
+import { addFacilityNotification } from "@/data/facility-notifications";
+import { addIncident } from "@/data/incidents";
+import { toast } from "sonner";
 import type { ContactMethod } from "@/types/incidents";
+
+type PrefilledPet = {
+  id: number;
+  name: string;
+  clientName: string;
+  clientId?: number;
+};
 
 interface CreateIncidentModalProps {
   onClose: () => void;
-  prefilledPet?: { id: number; name: string; clientName: string };
+  // Single pet, locked into "Pets Involved" (shows a "From reservation" badge).
+  prefilledPet?: PrefilledPet;
+  // All pets on a booking, pre-added but removable (2A.1) — staff can add/remove.
+  prefilledPets?: PrefilledPet[];
   reservationId?: string;
   boardingGuestId?: string;
+  // Booking linkage (numeric booking-overview route param) + owner account.
+  // Threaded from the reporting context so the incident stores them on save.
+  bookingId?: number;
+  clientId?: number;
 }
 
 // ── Incident type card ────────────────────────────────────────────────────────
@@ -187,6 +207,7 @@ type PetOption = {
   type: string;
   breed: string;
   clientName: string;
+  clientId: number;
 };
 
 function PetPickerDialog({
@@ -560,9 +581,13 @@ function SectionHeader({
 export function CreateIncidentModal({
   onClose,
   prefilledPet,
+  prefilledPets,
   reservationId,
   boardingGuestId,
+  bookingId,
+  clientId,
 }: CreateIncidentModalProps) {
+  const { user: currentUser } = useCurrentUser();
   const [incidentType, setIncidentType] = useState<IncidentType | "">("");
   const [severity, setSeverity] = useState<SeverityValue | "">("");
   const [title, setTitle] = useState("");
@@ -577,16 +602,32 @@ export function CreateIncidentModal({
     `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
   );
   const [selectedPets, setSelectedPets] = useState<
-    { uid: string; id: number; name: string; clientName: string }[]
-  >(
-    prefilledPet
-      ? [{ uid: `prefilled-${prefilledPet.id}`, ...prefilledPet }]
-      : [],
-  );
+    {
+      uid: string;
+      id: number;
+      name: string;
+      clientName: string;
+      clientId?: number;
+    }[]
+  >(() => {
+    // Prefer the full booking roster (all pets pre-added, removable); fall back
+    // to the single locked pet.
+    const seed =
+      prefilledPets && prefilledPets.length > 0
+        ? prefilledPets
+        : prefilledPet
+          ? [prefilledPet]
+          : [];
+    return seed.map((p) => ({ uid: `prefilled-${p.id}`, ...p }));
+  });
   const [staffInvolved, setStaffInvolved] = useState<string[]>([]);
-  const [reportedBy, setReportedBy] = useState("");
+  // Pre-fill with the logged-in staff member (2A.1); still editable.
+  const [reportedBy, setReportedBy] = useState(currentUser.name);
   const [notifyManager, setNotifyManager] = useState(true);
   const [notifyClient, setNotifyClient] = useState(false);
+  // Once the reporter toggles a notify checkbox, stop auto-setting it from the
+  // severity rule (they've taken manual control — 2G.1).
+  const [notifyTouched, setNotifyTouched] = useState(false);
   const [photos, setPhotos] = useState<
     { id: string; url: string; caption: string; isClientVisible: boolean }[]
   >([]);
@@ -601,16 +642,21 @@ export function CreateIncidentModal({
       type: pet.type,
       breed: pet.breed,
       clientName: client.name,
+      clientId: client.id,
     })),
   );
 
-  const staffMembers = [
-    "Sarah Johnson",
-    "Mike Davis",
-    "Emily Brown",
-    "Emma Wilson",
-    "John Smith",
-  ];
+  // Ensure the logged-in staff member is always a selectable option.
+  const staffMembers = Array.from(
+    new Set([
+      currentUser.name,
+      "Sarah Johnson",
+      "Mike Davis",
+      "Emily Brown",
+      "Emma Wilson",
+      "John Smith",
+    ]),
+  );
 
   const handleAddPet = (pet: PetOption) => {
     if (!selectedPets.find((p) => p.id === pet.id)) {
@@ -644,38 +690,102 @@ export function CreateIncidentModal({
   };
 
   const handleSubmit = () => {
+    // Submit is gated by isValid, but narrow the union types for the record.
+    if (!incidentType || !severity) return;
     const fullIncidentDate = incidentDate
       ? `${incidentDate}T${incidentTime}:00`
       : "";
+    // Owner account: prefer the explicit prop, else derive from the reporting
+    // context (prefilled pet or the first selected pet's owner).
+    const resolvedClientId =
+      clientId ?? prefilledPet?.clientId ?? selectedPets[0]?.clientId;
+    const incidentId = `INC-${Date.now()}`;
+    const nowIso = new Date().toISOString();
     const generatedTasks = selectedProtocol
       ? generateFollowUpTasks(selectedProtocol, {
-          incidentId: `INC-${Date.now()}`,
-          incidentDate: fullIncidentDate || new Date().toISOString(),
+          incidentId,
+          incidentDate: fullIncidentDate || nowIso,
           reporter: reportedBy,
         })
       : [];
-    console.log(
-      "Creating incident:",
-      {
-        incidentType,
-        severity,
-        title,
-        description,
-        internalNotes,
-        clientFacingNotes,
-        incidentDate: fullIncidentDate,
-        selectedPets,
-        staffInvolved,
-        reportedBy,
-        notifyManager,
-        notifyClient,
-        followUpProtocolId: selectedProtocolId || undefined,
-        followUpTasks: generatedTasks,
-      },
-      "Photos:",
+    // In-stay care steps become pre-populated incident care actions (Flow A #8);
+    // staff review/adjust them in the In-Stay Care tab.
+    const generatedCareActions = selectedProtocol
+      ? generateCareActionsFromProtocol(selectedProtocol, {
+          incidentId,
+          createdBy: reportedBy,
+          createdAt: nowIso,
+        })
+      : [];
+    // Persist the incident so it flows to every read surface (In-Stay Care tab,
+    // booking Medications, Daily Care, care-completion alert, customer profile).
+    addIncident({
+      id: incidentId,
+      type: incidentType,
+      severity,
+      status: "open",
+      title,
+      description,
+      internalNotes,
+      clientFacingNotes,
+      petIds: selectedPets.map((p) => p.id),
+      petNames: selectedPets.map((p) => p.name),
+      staffInvolved,
+      reportedBy,
+      incidentDate: fullIncidentDate || nowIso,
+      reportedDate: nowIso,
       photos,
-      { reservationId, boardingGuestId },
-    );
+      followUpTasks: generatedTasks,
+      followUpProtocolId: selectedProtocolId || undefined,
+      managerNotified: notifyManager,
+      managersNotified: notifyManager ? ["On-duty manager"] : [],
+      clientNotified: notifyClient,
+      clientNotificationDate: notifyClient ? nowIso : undefined,
+      clientNotifications:
+        resolvedClientId != null
+          ? [
+              {
+                clientId: resolvedClientId,
+                notified: notifyClient,
+                notifiedAt: notifyClient ? nowIso : undefined,
+              },
+            ]
+          : undefined,
+      careActions: generatedCareActions,
+      incidentMedications: [],
+      careLogs: [],
+      reservationId,
+      bookingId,
+      clientId: resolvedClientId,
+      boardingGuestId,
+    });
+
+    // Flow A step 12 — fire the notifications the reporter left checked, plus
+    // the emergency contact when the severity rule calls for it (mocked).
+    const petNames = selectedPets.map((p) => p.name).join(", ");
+    if (notifyManager) {
+      addFacilityNotification({
+        type: "incident",
+        title: `Incident reported${severity ? ` — ${severity}` : ""}`,
+        message: `${title || "New incident"}${
+          petNames ? ` · ${petNames}` : ""
+        } — reported by ${reportedBy || "staff"}`,
+        facilityId: 11,
+        category: "boarding",
+        link: "/facility/dashboard/incidents",
+      });
+      toast.warning("Manager notified — incident added to the facility feed");
+    }
+    if (notifyClient) {
+      toast.success(
+        "Pet owner notified — client-facing message sent via their SMS/email",
+      );
+    }
+    const severityRule = severity ? incidentConfig.autoNotify[severity] : null;
+    if (severityRule?.notifyEmergencyContact) {
+      toast.warning("Emergency contact notified (from the pet's profile)");
+    }
+
     onClose();
   };
 
@@ -705,20 +815,38 @@ export function CreateIncidentModal({
     maxWords: 80,
   });
 
-  // Auto-suggest a protocol once we know severity + type
+  // Suggested protocols for the dropdown grouping (type + severity match).
   const suggestedProtocols = useMemo(() => {
     if (!incidentType || !severity) return [];
     return suggestProtocols(severity, incidentType);
   }, [incidentType, severity]);
 
+  // Severity-driven default. Any severity auto-selects the top suggested
+  // protocol (type + severity match) when one exists — e.g. Injury/Medium →
+  // Standard Injury Follow-Up. High/Critical additionally fall back to any
+  // active protocol scoped to that severity so they are never left on None.
+  const defaultProtocolId = useMemo(() => {
+    if (!severity) return "";
+    const typeMatch = incidentType
+      ? suggestProtocols(severity, incidentType)[0]
+      : undefined;
+    if (typeMatch) return typeMatch.id;
+    if (severity === "high" || severity === "critical") {
+      const severityMatch = followUpProtocols
+        .filter((p) => p.isActive && p.severityScopes.includes(severity))
+        .sort((a, b) => Number(b.isDefault) - Number(a.isDefault))[0];
+      return severityMatch?.id ?? "";
+    }
+    return "";
+  }, [severity, incidentType]);
+
   useEffect(() => {
     if (autoSuggested) return;
-    const top = suggestedProtocols[0];
-    if (top && !selectedProtocolId) {
-      setSelectedProtocolId(top.id);
+    if (defaultProtocolId && !selectedProtocolId) {
+      setSelectedProtocolId(defaultProtocolId);
       setAutoSuggested(true);
     }
-  }, [suggestedProtocols, selectedProtocolId, autoSuggested]);
+  }, [defaultProtocolId, selectedProtocolId, autoSuggested]);
 
   const selectedProtocol = useMemo(
     () => followUpProtocols.find((p) => p.id === selectedProtocolId),
@@ -740,13 +868,30 @@ export function CreateIncidentModal({
   }, [selectedProtocol, incidentDate, incidentTime, reportedBy]);
 
   const isCriticalOrHigh = severity === "critical" || severity === "high";
+  // Facility Incident Reporting settings (2G.1): photo gate + per-severity
+  // auto-notify rules.
+  const incidentConfig = useMemo(() => getIncidentReportingConfig(), []);
+  const criticalPhotoMissing =
+    incidentConfig.requirePhotoOnCritical &&
+    severity === "critical" &&
+    photos.length === 0;
+
+  // Pre-set the notify checkboxes from the selected severity's rule until the
+  // reporter overrides them (they can still change per incident).
+  useEffect(() => {
+    if (notifyTouched || !severity) return;
+    const rule = incidentConfig.autoNotify[severity];
+    setNotifyManager(rule.notifyManager);
+    setNotifyClient(rule.notifyOwner);
+  }, [severity, notifyTouched, incidentConfig]);
   const isValid =
     incidentType &&
     severity &&
     title &&
     description &&
     selectedPets.length > 0 &&
-    reportedBy;
+    reportedBy &&
+    !criticalPhotoMissing;
 
   return (
     <>
@@ -1084,7 +1229,9 @@ export function CreateIncidentModal({
                 selectedIds={selectedPets.map((p) => p.id)}
                 lockedId={prefilledPet?.id}
                 placeholder={
-                  prefilledPet ? "Add another pet involved..." : "Add a pet..."
+                  selectedPets.length > 0
+                    ? "Add another pet involved..."
+                    : "Add a pet..."
                 }
                 onSelect={handleAddPet}
               />
@@ -1364,8 +1511,8 @@ export function CreateIncidentModal({
                 <div className="flex items-center gap-2 text-sm font-medium">
                   Notify Manager
                   {isCriticalOrHigh && (
-                    <Badge variant="destructive" className="text-[10px]">
-                      Required for {severity}
+                    <Badge variant="secondary" className="text-[10px]">
+                      Default for {severity}
                     </Badge>
                   )}
                 </div>
@@ -1375,7 +1522,10 @@ export function CreateIncidentModal({
               </div>
               <Checkbox
                 checked={notifyManager}
-                onCheckedChange={(v) => setNotifyManager(v as boolean)}
+                onCheckedChange={(v) => {
+                  setNotifyManager(v as boolean);
+                  setNotifyTouched(true);
+                }}
               />
             </label>
             <label className="hover:bg-muted/30 flex cursor-pointer items-center justify-between p-4">
@@ -1387,7 +1537,10 @@ export function CreateIncidentModal({
               </div>
               <Checkbox
                 checked={notifyClient}
-                onCheckedChange={(v) => setNotifyClient(v as boolean)}
+                onCheckedChange={(v) => {
+                  setNotifyClient(v as boolean);
+                  setNotifyTouched(true);
+                }}
               />
             </label>
           </div>
@@ -1525,6 +1678,8 @@ export function CreateIncidentModal({
                 !description && "description",
                 selectedPets.length === 0 && "at least one pet",
                 !reportedBy && "reported by",
+                criticalPhotoMissing &&
+                  "a photo (required for critical incidents)",
               ]
                 .filter(Boolean)
                 .join(" · ")}

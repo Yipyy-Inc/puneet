@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import {
+  Dialog,
+  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
@@ -37,6 +39,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { NotesList } from "@/components/shared/NotesList";
 import { FollowUpTaskCard } from "@/components/incidents/follow-up/FollowUpTaskCard";
+import {
+  InStayCareTab,
+  isIncidentInStay,
+} from "@/components/incidents/InStayCareTab";
+import { cn } from "@/lib/utils";
 import type { FollowUpTask, Incident } from "@/types/incidents";
 
 interface IncidentDetailsModalProps {
@@ -59,6 +66,19 @@ export function IncidentDetailsModal({
   });
   const [showAddTask, setShowAddTask] = useState(false);
   const [tasks, setTasks] = useState<FollowUpTask[]>(incident.followUpTasks);
+
+  // Closing with open follow-up tasks (Flow C) — gate on a confirm + reason.
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
+  const [closeReason, setCloseReason] = useState("");
+  const openTaskCount = tasks.filter(
+    (t) => t.status !== "completed" && t.status !== "skipped" && !t.archived,
+  ).length;
+
+  // In-Stay Care tab (2B): while an involved pet is still checked in, OR after
+  // checkout locked it (Flow C) so the read-only Completed Care Log stays
+  // reachable. Historical incidents with neither never show it.
+  const showInStayCare =
+    isIncidentInStay(incident) || !!incident.inStayCareLocked;
 
   const handleTaskUpdate = (next: FollowUpTask) => {
     setTasks((prev) => prev.map((t) => (t.id === next.id ? next : t)));
@@ -103,8 +123,26 @@ export function IncidentDetailsModal({
   };
 
   const handleCloseIncident = () => {
+    // Open follow-up tasks remain in the system after close (they keep firing).
+    // Require an explicit confirm + reason first.
+    if (openTaskCount > 0) {
+      setCloseConfirmOpen(true);
+      return;
+    }
     setStatus("closed");
     console.log("Incident closed");
+    onClose();
+  };
+
+  const confirmCloseWithOpenTasks = () => {
+    if (!closeReason.trim()) return;
+    setStatus("closed");
+    // Record the reason; open tasks are intentionally left untouched.
+    console.log("Incident closed", {
+      closeReason: closeReason.trim(),
+      openTasksLeftOpen: openTaskCount,
+    });
+    setCloseConfirmOpen(false);
     onClose();
   };
 
@@ -198,13 +236,21 @@ export function IncidentDetailsModal({
 
         {/* Tabs for Details */}
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList
+            className={cn(
+              "grid w-full",
+              showInStayCare ? "grid-cols-5" : "grid-cols-4",
+            )}
+          >
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
             <TabsTrigger value="photos">
               Photos ({incident.photos.length})
             </TabsTrigger>
             <TabsTrigger value="tasks">Follow-Up ({tasks.length})</TabsTrigger>
+            {showInStayCare && (
+              <TabsTrigger value="care">In-Stay Care</TabsTrigger>
+            )}
           </TabsList>
 
           {/* Overview Tab */}
@@ -556,12 +602,65 @@ export function IncidentDetailsModal({
               </Card>
             )}
           </TabsContent>
+
+          {/* In-Stay Care Tab (2B) — only mounts while a pet is checked in */}
+          {showInStayCare && (
+            <TabsContent value="care" className="space-y-4">
+              <InStayCareTab incident={incident} />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 
       <DialogFooter>
         <Button onClick={onClose}>Close</Button>
       </DialogFooter>
+
+      {/* Confirm closing an incident that still has open follow-up tasks */}
+      <Dialog
+        open={closeConfirmOpen}
+        onOpenChange={(open) => {
+          if (!open) setCloseConfirmOpen(false);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="size-5 text-amber-600" />
+              Close with open follow-up tasks?
+            </DialogTitle>
+            <DialogDescription>
+              This incident has {openTaskCount} open follow-up task
+              {openTaskCount === 1 ? "" : "s"}. Closing the incident will not
+              complete these tasks — they will remain in the Follow-Up Tasks
+              list and keep firing on schedule.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5 py-1">
+            <Label htmlFor="close-reason" className="text-sm font-medium">
+              Reason for closing <span className="text-red-600">*</span>
+            </Label>
+            <Textarea
+              id="close-reason"
+              value={closeReason}
+              onChange={(e) => setCloseReason(e.target.value)}
+              placeholder="Why is this incident being closed while follow-up tasks remain open?"
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCloseConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmCloseWithOpenTasks}
+              disabled={!closeReason.trim()}
+            >
+              Close anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

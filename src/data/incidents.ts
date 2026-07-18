@@ -1,6 +1,18 @@
 // Types re-exported from @/types/incidents (single source of truth)
-export type { Incident, FollowUpTask } from "@/types/incidents";
-import type { Incident, FollowUpTask } from "@/types/incidents";
+export type {
+  Incident,
+  FollowUpTask,
+  IncidentCareAction,
+  IncidentMedication,
+  IncidentCareLog,
+} from "@/types/incidents";
+import type {
+  Incident,
+  IncidentCareAction,
+  IncidentMedication,
+  IncidentCareLog,
+  FollowUpTask,
+} from "@/types/incidents";
 
 export const incidents: Incident[] = [
   {
@@ -51,6 +63,9 @@ export const incidents: Incident[] = [
     createdAt: "2024-02-21T14:45:00Z",
     updatedAt: "2024-02-22T10:00:00Z",
     closedBy: "Emma Wilson",
+    careActions: [],
+    incidentMedications: [],
+    careLogs: [],
   },
   {
     id: "INC-002",
@@ -98,6 +113,9 @@ export const incidents: Incident[] = [
     clientNotificationDate: "2024-02-22T09:45:00Z",
     createdAt: "2024-02-22T09:45:00Z",
     updatedAt: "2024-02-22T10:30:00Z",
+    careActions: [],
+    incidentMedications: [],
+    careLogs: [],
   },
   {
     id: "INC-003",
@@ -142,6 +160,9 @@ export const incidents: Incident[] = [
     createdAt: "2024-02-20T13:45:00Z",
     updatedAt: "2024-02-21T09:15:00Z",
     closedBy: "Sarah Johnson",
+    careActions: [],
+    incidentMedications: [],
+    careLogs: [],
   },
   {
     id: "INC-004",
@@ -214,6 +235,9 @@ export const incidents: Incident[] = [
     clientNotificationDate: "2024-02-22T11:15:00Z",
     createdAt: "2024-02-22T11:00:00Z",
     updatedAt: "2024-02-22T11:30:00Z",
+    careActions: [],
+    incidentMedications: [],
+    careLogs: [],
   },
   {
     id: "INC-005",
@@ -242,6 +266,9 @@ export const incidents: Incident[] = [
     createdAt: "2024-02-21T15:15:00Z",
     updatedAt: "2024-02-21T15:30:00Z",
     closedBy: "Emily Brown",
+    careActions: [],
+    incidentMedications: [],
+    careLogs: [],
   },
   {
     id: "INC-006",
@@ -437,10 +464,60 @@ export const incidents: Incident[] = [
     managerNotified: true,
     managersNotified: ["Emma Wilson - Manager"],
     clientNotified: false,
+    // Two owner accounts (Buddy → client 15, Charlie/pet 5 → client 19). Only
+    // Buddy's owner has been reached so far → "1/2 notified".
+    clientNotifications: [
+      { clientId: 15, notified: true, notifiedAt: "2026-04-28T13:42:00Z" },
+    ],
     createdAt: "2026-04-28T12:35:00Z",
     updatedAt: "2026-04-28T12:35:00Z",
     boardingGuestId: "buddy-001",
     reservationId: "RES-001",
+    bookingId: 1,
+    clientId: 15,
+    careActions: [
+      {
+        id: "care-inc006-01",
+        incidentId: "INC-006",
+        name: "Isolated rest & stress monitoring",
+        frequency: "twice_daily",
+        duration: "until_checkout",
+        starts: "immediately",
+        staffInstructions:
+          "Keep Buddy in the quiet isolation kennel. Check body language for stiffness/hard stare each round and note demeanor.",
+        requiresPhoto: false,
+        createdBy: "Emma Wilson",
+        createdAt: "2026-04-28T12:40:00Z",
+        active: true,
+      },
+    ],
+    incidentMedications: [
+      {
+        id: "imed-inc006-01",
+        incidentId: "INC-006",
+        name: "Calming chew (Zylkene)",
+        medType: "oral",
+        dosage: "1 chew",
+        frequency: "Once daily",
+        instructions: "Give with the evening meal to reduce overstimulation.",
+        critical: false,
+        chargeFee: true,
+        feeType: "per_admin",
+        feeAmount: 3,
+        createdBy: "Emma Wilson",
+        createdAt: "2026-04-28T12:42:00Z",
+      },
+    ],
+    careLogs: [
+      {
+        id: "carelog-inc006-01",
+        incidentId: "INC-006",
+        careActionId: "care-inc006-01",
+        loggedBy: "Sarah Johnson",
+        loggedAt: "2026-04-28T18:00:00Z",
+        note: "Evening check — Buddy calm and resting, no stress signals.",
+      },
+    ],
   },
 ];
 
@@ -464,6 +541,101 @@ export const getIncidentStats = () => {
 // Get incidents linked to a boarding guest
 export const getIncidentsForGuest = (boardingGuestId: string): Incident[] =>
   incidents.filter((i) => i.boardingGuestId === boardingGuestId);
+
+// Get incidents for an owner account (powers customer-level grouping, 2E)
+export const getIncidentsForClient = (clientId: number): Incident[] =>
+  incidents.filter((i) => i.clientId === clientId);
+
+// Get incidents involving a specific pet
+export const getIncidentsForPet = (petId: number): Incident[] =>
+  incidents.filter((i) => i.petIds.includes(petId));
+
+// Get incidents linked to a booking (numeric booking-overview route param)
+export const getIncidentsForBooking = (bookingId: number): Incident[] =>
+  incidents.filter((i) => i.bookingId === bookingId);
+
+// Persist a newly reported incident (mock/in-memory). The caller supplies the
+// id (so generated follow-up tasks / care actions reference the same one);
+// createdAt/updatedAt are stamped here. Returns the stored incident.
+export const addIncident = (
+  data: Omit<Incident, "createdAt" | "updatedAt">,
+): Incident => {
+  const now = new Date().toISOString();
+  const incident: Incident = { ...data, createdAt: now, updatedAt: now };
+  incidents.push(incident);
+  return incident;
+};
+
+// ========================================
+// IN-STAY CARE MUTATORS (2B) — mock/in-memory
+// ========================================
+
+// Monotonic sequences so ids stay unique even within the same millisecond.
+let careActionSeq = 0;
+let incidentMedSeq = 0;
+let careLogSeq = 0;
+
+const findIncident = (incidentId: string): Incident | undefined =>
+  incidents.find((i) => i.id === incidentId);
+
+// Add a care action to an incident (id/incidentId/createdAt are filled here).
+export const addCareAction = (
+  incidentId: string,
+  data: Omit<IncidentCareAction, "id" | "incidentId" | "createdAt">,
+): IncidentCareAction | undefined => {
+  const incident = findIncident(incidentId);
+  if (!incident) return undefined;
+  const action: IncidentCareAction = {
+    ...data,
+    id: `care-${new Date().getTime()}-${(careActionSeq += 1)}`,
+    incidentId,
+    createdAt: new Date().toISOString(),
+  };
+  incident.careActions.push(action);
+  return action;
+};
+
+// Add an incident-scoped medication.
+export const addIncidentMedication = (
+  incidentId: string,
+  data: Omit<IncidentMedication, "id" | "incidentId" | "createdAt">,
+): IncidentMedication | undefined => {
+  const incident = findIncident(incidentId);
+  if (!incident) return undefined;
+  const med: IncidentMedication = {
+    ...data,
+    id: `imed-${new Date().getTime()}-${(incidentMedSeq += 1)}`,
+    incidentId,
+    createdAt: new Date().toISOString(),
+  };
+  incident.incidentMedications.push(med);
+  return med;
+};
+
+// Log an administration of a care action or medication (loggedAt stamped here).
+export const logCareAction = (
+  incidentId: string,
+  data: Omit<IncidentCareLog, "id" | "incidentId" | "loggedAt">,
+): IncidentCareLog | undefined => {
+  const incident = findIncident(incidentId);
+  if (!incident) return undefined;
+  const log: IncidentCareLog = {
+    ...data,
+    id: `carelog-${new Date().getTime()}-${(careLogSeq += 1)}`,
+    incidentId,
+    loggedAt: new Date().toISOString(),
+  };
+  incident.careLogs.push(log);
+  return log;
+};
+
+// Lock in-stay care at checkout (Flow C) — no further edits after this.
+export const lockInStayCare = (incidentId: string): Incident | undefined => {
+  const incident = findIncident(incidentId);
+  if (!incident) return undefined;
+  incident.inStayCareLocked = true;
+  return incident;
+};
 
 // Get pending follow-up tasks
 export const getPendingFollowUpTasks = (): FollowUpTask[] => {

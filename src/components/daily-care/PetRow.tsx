@@ -99,6 +99,10 @@ export function PetRow({ task, execution, date, onLog, onQuickLog }: Props) {
     : undefined;
 
   const allTags = [...task.alertTags, ...task.behaviorTags];
+  // Incident-sourced task (2B): staff may log it here, but its
+  // instructions/frequency are managed from the incident's In-Stay Care tab —
+  // Daily Care renders no definition-edit affordance for it.
+  const isIncident = Boolean(task.sourceIncidentId);
 
   return (
     <div
@@ -120,6 +124,16 @@ export function PetRow({ task, execution, date, onLog, onQuickLog }: Props) {
           <span className="text-sm leading-none font-medium">
             {task.petName}
           </span>
+          {isIncident && (
+            <Badge
+              variant="outline"
+              className="h-4 gap-0.5 border-orange-200 bg-orange-50 px-1 py-0 text-[9px] font-medium text-orange-700 dark:border-orange-900 dark:bg-orange-900/20 dark:text-orange-400"
+              title="From an incident — manage instructions in the incident's In-Stay Care tab"
+            >
+              <AlertTriangle className="size-2.5" />
+              Incident care
+            </Badge>
+          )}
           {task.careNote && (
             <Popover>
               <PopoverTrigger asChild>

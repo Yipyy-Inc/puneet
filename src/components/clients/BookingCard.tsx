@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Booking } from "@/types/booking";
 import type { Pet } from "@/types/pet";
 import { useFieldMask } from "@/lib/staff/mask";
+import { getIncidentsForBooking } from "@/data/incidents";
 
 function formatDateShort(dateStr: string) {
   return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
@@ -70,6 +71,10 @@ export function BookingCard({ booking, pet, clientId }: BookingCardProps) {
   const total = booking.invoice?.total ?? booking.totalCost;
   const cId = clientId ?? booking.clientId;
   const duration = nights > 0 ? `${nights}n` : "day";
+  // Incidents filed against this booking (same getIncidentsForX derivation as
+  // 2E.1). The whole card links to the booking overview, so the icon navigates
+  // there too.
+  const incidentCount = getIncidentsForBooking(booking.id).length;
 
   return (
     <Link
@@ -101,6 +106,17 @@ export function BookingCard({ booking, pet, clientId }: BookingCardProps) {
           >
             {booking.status}
           </Badge>
+          {incidentCount > 0 && (
+            <span
+              className="inline-flex items-center gap-0.5 rounded-sm border border-amber-200 bg-amber-50 px-1 text-[10px] font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-400"
+              title={`${incidentCount} incident${
+                incidentCount === 1 ? "" : "s"
+              } filed during this stay.`}
+            >
+              <AlertTriangle className="size-3" />
+              {incidentCount}
+            </span>
+          )}
         </div>
         <p className="text-muted-foreground mt-0.5 text-xs">
           {formatDateShort(booking.startDate)}

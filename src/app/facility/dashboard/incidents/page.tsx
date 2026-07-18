@@ -18,7 +18,16 @@ import {
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   incidents,
   getIncidentStats,
@@ -28,6 +37,7 @@ import { CreateIncidentModal } from "@/components/incidents/CreateIncidentModal"
 import { IncidentDetailsModal } from "@/components/incidents/IncidentDetailsModal";
 import { FollowUpProtocolsManager } from "@/components/incidents/protocols/FollowUpProtocolsManager";
 import { FollowUpTaskCard } from "@/components/incidents/follow-up/FollowUpTaskCard";
+import { getIncidentOwnerNotifications } from "@/lib/incidents/owner-notifications";
 import type { FollowUpTask } from "@/types/incidents";
 import { TagList } from "@/components/shared/TagList";
 import {
@@ -37,6 +47,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+// A task this far past due is legacy — offer to dismiss it as historical.
+const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
 export default function IncidentsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -52,9 +65,26 @@ export default function IncidentsPage() {
   const [tasks, setTasks] = useState<FollowUpTask[]>(getPendingFollowUpTasks());
 
   const stats = getIncidentStats();
-  const pendingTasks = tasks;
+  // Archived ("dismissed as historical") tasks drop out of the active lists.
+  const pendingTasks = tasks.filter((t) => !t.archived);
   const handleTaskUpdate = (updated: FollowUpTask) => {
     setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+  };
+
+  // "Dismiss as historical" confirm — archives a >90-day-overdue task (with a
+  // required reason) instead of falsely completing it.
+  const [archiveTarget, setArchiveTarget] = useState<FollowUpTask | null>(null);
+  const [archiveReason, setArchiveReason] = useState("");
+  const handleArchive = () => {
+    if (!archiveTarget || !archiveReason.trim()) return;
+    handleTaskUpdate({
+      ...archiveTarget,
+      archived: true,
+      archiveReason: archiveReason.trim(),
+      archivedAt: new Date().toISOString(),
+    });
+    setArchiveTarget(null);
+    setArchiveReason("");
   };
 
   // Filter follow-up tasks by date scope
@@ -212,20 +242,50 @@ export default function IncidentsPage() {
       },
     },
     {
-      accessorKey: "managerNotified",
+      accessorKey: "clientNotified",
       header: "Notified",
-      cell: ({ row }) => (
-        <div className="text-center">
-          {row.original.managerNotified ? (
-            <Badge variant="default">
+      cell: ({ row }) => {
+        const owners = getIncidentOwnerNotifications(row.original);
+        const total = owners.length;
+        const notifiedCount = owners.filter((o) => o.notified).length;
+        if (total === 0) {
+          return <div className="text-muted-foreground text-center">—</div>;
+        }
+        const allNotified = notifiedCount === total;
+        // Hover title: which owners were notified and which were not.
+        const notifiedNames = owners
+          .filter((o) => o.notified)
+          .map((o) => o.clientName);
+        const pendingNames = owners
+          .filter((o) => !o.notified)
+          .map((o) => o.clientName);
+        const title = [
+          notifiedNames.length > 0
+            ? `Notified: ${notifiedNames.join(", ")}`
+            : null,
+          pendingNames.length > 0
+            ? `Not notified: ${pendingNames.join(", ")}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join("\n");
+        return (
+          <div className="text-center">
+            <Badge
+              variant={allNotified ? "default" : "outline"}
+              className={
+                allNotified
+                  ? undefined
+                  : "border-amber-300 bg-amber-50 text-amber-700"
+              }
+              title={title}
+            >
               <CheckCircle2 className="mr-1 inline size-3" />
-              Yes
+              {notifiedCount}/{total} notified
             </Badge>
-          ) : (
-            <Badge variant="outline">No</Badge>
-          )}
-        </div>
-      ),
+          </div>
+        );
+      },
     },
   ];
 
@@ -461,16 +521,34 @@ export default function IncidentsPage() {
                         new Date(a.dueDate).getTime() -
                         new Date(b.dueDate).getTime(),
                     )
-                    .map((task) => (
-                      <FollowUpTaskCard
-                        key={task.id}
-                        task={task}
-                        onUpdate={handleTaskUpdate}
-                        siblingTasks={tasks.filter(
-                          (t) => t.incidentId === task.incidentId,
-                        )}
-                      />
-                    ))}
+                    .map((task) => {
+                      const isStale =
+                        now.getTime() - new Date(task.dueDate).getTime() >
+                        NINETY_DAYS_MS;
+                      return (
+                        <div key={task.id} className="space-y-1">
+                          <FollowUpTaskCard
+                            task={task}
+                            onUpdate={handleTaskUpdate}
+                            siblingTasks={tasks.filter(
+                              (t) => t.incidentId === task.incidentId,
+                            )}
+                          />
+                          {isStale && (
+                            <div className="flex justify-end">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-muted-foreground h-7 text-xs"
+                                onClick={() => setArchiveTarget(task)}
+                              >
+                                Dismiss as historical
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
               )}
             </CardContent>
@@ -491,6 +569,61 @@ export default function IncidentsPage() {
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
         <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <CreateIncidentModal onClose={() => setShowCreateModal(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Dismiss-as-historical confirm — required reason, archives (no delete) */}
+      <Dialog
+        open={archiveTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiveTarget(null);
+            setArchiveReason("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Dismiss as historical</DialogTitle>
+            <DialogDescription>
+              Archive this long-overdue task without marking it complete. It
+              stays on record for audit but leaves the active follow-up list.
+            </DialogDescription>
+          </DialogHeader>
+          {archiveTarget && (
+            <div className="bg-muted/40 rounded-md border px-3 py-2 text-sm">
+              <p className="font-medium">{archiveTarget.title}</p>
+              <p className="text-muted-foreground text-xs">
+                Due {new Date(archiveTarget.dueDate).toLocaleDateString()}
+              </p>
+            </div>
+          )}
+          <div className="space-y-1.5 py-1">
+            <Label htmlFor="archive-reason" className="text-sm font-medium">
+              Reason <span className="text-red-600">*</span>
+            </Label>
+            <Textarea
+              id="archive-reason"
+              value={archiveReason}
+              onChange={(e) => setArchiveReason(e.target.value)}
+              placeholder="e.g. Legacy data from a resolved 2024 incident — never actioned."
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setArchiveTarget(null);
+                setArchiveReason("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleArchive} disabled={!archiveReason.trim()}>
+              Dismiss as historical
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

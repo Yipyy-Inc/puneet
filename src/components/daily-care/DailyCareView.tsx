@@ -29,6 +29,7 @@ import {
   Printer,
 } from "lucide-react";
 import { getCurrentGuests } from "@/data/boarding";
+import { logCareAction } from "@/data/incidents";
 import { staffMembers } from "@/data/staff";
 import { shiftNotesStore } from "@/data/shift-notes-store";
 import { petFlagsStore } from "@/data/pet-flags-store";
@@ -419,6 +420,22 @@ export function DailyCareView() {
     });
   };
 
+  // In-stay care writeback (2B/2D): logging an incident-sourced task also
+  // appends an incident careLog (2B.4), carrying the note + first photo.
+  const writeIncidentCareLog = (
+    task: ScheduledTask,
+    opts: { note?: string; photoUrl?: string },
+  ) => {
+    if (!task.sourceIncidentId) return;
+    logCareAction(task.sourceIncidentId, {
+      careActionId: task.careActionId,
+      medicationId: task.medicationId,
+      loggedBy: user.name,
+      note: opts.note,
+      photoUrl: opts.photoUrl,
+    });
+  };
+
   function handleLog(task: ScheduledTask, existing?: TaskExecution) {
     // Medication (rule a): step through every not-yet-logged med for this pet
     // at this time. Editing a single logged med skips the queue.
@@ -470,6 +487,10 @@ export function DailyCareView() {
       photoUrls: entry.photoUrls,
       photoUrl: entry.photoUrls?.[0],
     });
+    writeIncidentCareLog(task, {
+      note: entry.notes,
+      photoUrl: entry.photoUrls?.[0],
+    });
     toast.success(
       `Logged ${task.medDetail?.name ?? "medication"} for ${task.petName}`,
     );
@@ -498,6 +519,7 @@ export function DailyCareView() {
       staffInitials: user.initials,
       staffName: user.name,
     });
+    writeIncidentCareLog(task, {});
     toast.success(`Logged for ${task.petName}`);
   };
 
@@ -543,6 +565,10 @@ export function DailyCareView() {
       missedReason: entry.missedReason,
       addon: entry.addon,
       enrichment: entry.enrichment,
+    });
+    writeIncidentCareLog(task, {
+      note: entry.notes,
+      photoUrl: entry.photoUrls?.[0],
     });
 
     // An escalating log (health concern or add-on incident) raises the pet flag
@@ -594,6 +620,9 @@ export function DailyCareView() {
     for (const t of notLogged) {
       const outcome = defaultOutcomeFor(t.taskType)?.value;
       if (!outcome) continue;
+      // An incident task that requires a photo can't be batch-completed — its
+      // photo gate is only satisfiable through the log modal.
+      if (t.sourceIncidentId && t.requiresPhotoProof) continue;
       log({
         taskId: t.id,
         guestId: t.guestId,
@@ -605,6 +634,7 @@ export function DailyCareView() {
         staffInitials: user.initials,
         staffName: user.name,
       });
+      writeIncidentCareLog(t, {});
       count += 1;
     }
     toast.success(

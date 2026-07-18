@@ -17,6 +17,7 @@ import {
   RotateCcw,
   Send,
   ShoppingBag,
+  Siren,
   Smartphone,
   XCircle,
 } from "lucide-react";
@@ -25,6 +26,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
@@ -64,6 +66,7 @@ export interface BookingDetailActionBarProps {
   onSmsLink: () => void;
 
   // More menu
+  onReportIncident: () => void;
   onTransfer: () => void;
   onMarkAsReady: () => void;
   onEarlyCheckout: () => void;
@@ -187,14 +190,9 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
     showNoShow ||
     showCancel;
 
-  const hasMoreItems =
-    showSendEstimate ||
-    showMarkAsReady ||
-    showEarlyCheckout ||
-    showFinishWithoutPayment ||
-    showTransfer ||
-    showSplitTips ||
-    showRefund;
+  // Report Incident is always available — an incident can be filed against any
+  // booking regardless of status — so the More menu always renders.
+  const hasMoreItems = true;
 
   const requestConfirm = props.requestDestructiveConfirm;
 
@@ -320,6 +318,16 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
+              {/* Report Incident — a different kind of action, kept first and
+                  divided off from the booking-lifecycle items below. */}
+              <DropdownMenuItem
+                onClick={props.onReportIncident}
+                className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
+              >
+                <Siren className="size-4" />
+                Report Incident
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               {showSendEstimate && (
                 <DropdownMenuItem onClick={props.onSendEstimate}>
                   <Send className="size-4" />
