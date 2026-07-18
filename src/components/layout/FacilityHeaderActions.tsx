@@ -15,14 +15,15 @@ import { FacilityNotificationsDropdown } from "@/components/facility/FacilityNot
 import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
 import { FacilityHeader } from "@/components/layout/FacilityHeader";
 import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
+import { CallingButton } from "@/components/layout/CallingButton";
 
 /**
- * Facility top-nav action cluster. Trimmed per spec Part 3 + Table 52: calling
- * moved to the sidebar; the task, schedule, announcement and booking-request
- * dropdowns were removed — their content now surfaces through the unified
- * notification bell (their component logic is reused only as data sources).
+ * Facility top-nav action cluster. Trimmed per spec Part 3 + Table 52: the task,
+ * schedule, announcement and booking-request dropdowns were removed — their
+ * content now surfaces through the unified notification bell (their component
+ * logic is reused only as data sources).
  *
- * The right side is: + New · Messages · Bell · Avatar (plus the EN/FR language
+ * The right side is: Calling · + New · Messages · Bell · Avatar (plus the EN/FR
  * toggle, which renders only when >1 locale is enabled). The prominent "+ New"
  * create button, the bell and the avatar stay visible at every breakpoint; the
  * HQ View / location selector moved out of the header to a page-level control
@@ -51,6 +52,10 @@ export function FacilityHeaderActions({ facilityId }: { facilityId: number }) {
 
   return (
     <div className="flex shrink-0 items-center gap-1">
+      {/* Quick access to the calling module — sits just left of "+ New" and
+          stays visible at every breakpoint (mirrors the sidebar Calling entry). */}
+      <CallingButton />
+
       {/* The primary "+ New" create button stays visible + leftmost at every
           breakpoint (spec Table 18 & 19) — it does not collapse into "More". */}
       <FacilityHeader facilityId={facilityId} />
