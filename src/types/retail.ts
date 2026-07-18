@@ -100,6 +100,27 @@ export const cartDiscountTypeEnum = z.enum([
 ]);
 export type CartDiscountType = z.infer<typeof cartDiscountTypeEnum>;
 
+// How a product's/variant's selling price is derived (spec tasks #5, #6).
+export const pricingMethodEnum = z.enum(["manual", "margin", "brand_rule"]);
+export type PricingMethod = z.infer<typeof pricingMethodEnum>;
+
+// "Packaged as" — how the product is physically packaged, for invoice auto-fill.
+export const packageUnitTypeEnum = z.enum([
+  "each",
+  "box",
+  "case",
+  "bag",
+  "pack",
+  "bundle",
+]);
+export type PackageUnitType = z.infer<typeof packageUnitTypeEnum>;
+
+export const packagedAsSchema = z.object({
+  unitType: packageUnitTypeEnum,
+  itemsPerPackage: z.number().optional(),
+});
+export type PackagedAs = z.infer<typeof packagedAsSchema>;
+
 // ============================================================================
 // Core Schemas
 // ============================================================================
@@ -121,6 +142,11 @@ export const productVariantSchema = z.object({
   imageUrls: z.array(z.string()).optional(),
   // Multi-dimensional variant attributes, e.g. { Size: "Small", Color: "Red" }
   variantAttributes: z.record(z.string(), z.string()).optional(),
+  // Pricing (spec tasks #6, #7). When overridePricing is true the variant uses
+  // its own cost + method; otherwise it inherits the product's pricing.
+  pricingMethod: pricingMethodEnum.default("manual"),
+  marginPercent: z.number().optional(), // used when pricingMethod === "margin"
+  overridePricing: z.boolean().optional(),
 });
 export type ProductVariant = z.infer<typeof productVariantSchema>;
 
@@ -131,8 +157,18 @@ export const productSchema = z
     description: z.string(),
     category: z.string(),
     brand: z.string(),
+    // basePrice is the stored, computed SELLING price (spec task #6): no longer
+    // always typed by hand — derived from pricingMethod + baseCostPrice + margin.
     basePrice: z.number(),
-    baseCostPrice: z.number(),
+    baseCostPrice: z.number(), // the cost base
+    // Pricing method + inputs (spec tasks #5, #6).
+    pricingMethod: pricingMethodEnum.default("manual"),
+    marginPercent: z.number().optional(), // used when pricingMethod === "margin"
+    // "Packaged as" — for invoice auto-fill (spec task #30).
+    packagedAs: packagedAsSchema.optional(),
+    // ISO; set whenever basePrice changes, for the "Price Updated (last X days)"
+    // label filter.
+    priceUpdatedAt: z.string().optional(),
     sku: z.string(),
     barcode: z.string(),
     status: productStatusEnum,
@@ -220,6 +256,13 @@ export const purchaseOrderSchema = z
     expectedDelivery: z.string(),
     receivedAt: z.string().optional(),
     createdBy: z.string(),
+    // How this PO was created, e.g. "Invoice Import" (spec 2.4).
+    sourceNote: z.string().optional(),
+    // The original supplier invoice attached on import (task #33). Mock: the
+    // file name and, when available, an object URL.
+    invoiceFile: z
+      .object({ name: z.string(), url: z.string().optional() })
+      .optional(),
   })
   .passthrough();
 export type PurchaseOrder = z.infer<typeof purchaseOrderSchema>;

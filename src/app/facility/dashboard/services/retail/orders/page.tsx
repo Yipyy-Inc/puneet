@@ -3,6 +3,9 @@
 import { useState } from "react";
 import {
   Plus,
+  ChevronDown,
+  FileUp,
+  PenLine,
   Minus,
   MoreHorizontal,
   Truck,
@@ -45,6 +48,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -93,6 +97,7 @@ import {
   type Product,
   type ProductVariant,
   type PaymentMethod,
+  type PricingMethod,
 } from "@/data/retail";
 import { processFiservRefund } from "@/lib/fiserv-payment-service";
 import {
@@ -100,6 +105,10 @@ import {
   getCloverTerminalTransactionByTransactionId,
   getFiservConfig,
 } from "@/data/fiserv-payments";
+import { sellingFromMargin } from "@/lib/retail-pricing";
+import { resolveBrandRule } from "@/lib/api/retail";
+import { retailConfig } from "@/data/retail-config";
+import { InvoiceImportDialog } from "@/components/retail/InvoiceImportDialog";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { hasPermission, getCurrentUserId } from "@/lib/role-utils";
 import {
@@ -128,6 +137,7 @@ export default function OrdersPage() {
   const [isViewOrderModalOpen, setIsViewOrderModalOpen] = useState(false);
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const [isReceiveOrderModalOpen, setIsReceiveOrderModalOpen] = useState(false);
+  const [isInvoiceImportOpen, setIsInvoiceImportOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(
     null,
   );
@@ -144,6 +154,23 @@ export default function OrdersPage() {
       newReceivedQuantity: number;
     }>;
   }>({ items: [] });
+
+  // Post-receiving cost/price confirmation (spec 2.2). A margin/brand product
+  // whose received cost differs gets a NEW selling price — but that price is
+  // never changed silently; the admin confirms each one here.
+  const [isCostUpdateModalOpen, setIsCostUpdateModalOpen] = useState(false);
+  const [costUpdates, setCostUpdates] = useState<
+    Array<{
+      productId: string;
+      productName: string;
+      oldCost: number;
+      newCost: number;
+      currentSelling: number;
+      newSelling: number;
+      method: PricingMethod;
+      checked: boolean;
+    }>
+  >([]);
 
   // Return form state
   const [returnForm, setReturnForm] = useState<{
@@ -1097,14 +1124,84 @@ export default function OrdersPage() {
       receivedAt: updatedReceivedAt,
     };
 
-    // Close modal and reset
+    // Detect margin/brand products whose received cost differs from the stored
+    // baseCostPrice — their selling price is margin-derived, so a cost change
+    // implies a new price. Manual-price products are excluded (their selling
+    // price isn't derived from cost). Deduped per product.
+    const rounding = retailConfig.pricingConfig.rounding;
+    const seen = new Set<string>();
+    const candidates: typeof costUpdates = [];
+    itemsToReceive.forEach((item) => {
+      const product = products.find((p) => p.id === item.productId);
+      if (!product || seen.has(product.id)) return;
+      if (
+        product.pricingMethod !== "margin" &&
+        product.pricingMethod !== "brand_rule"
+      ) {
+        return;
+      }
+      const poItem = selectedOrder.items.find((oi) => oi.sku === item.sku);
+      const newCost = poItem?.unitCost;
+      if (newCost == null || newCost === product.baseCostPrice) return;
+      seen.add(product.id);
+
+      const newSelling =
+        product.pricingMethod === "margin"
+          ? sellingFromMargin(newCost, product.marginPercent ?? 0, rounding)
+          : (() => {
+              const rule = resolveBrandRule(product.brand);
+              return rule
+                ? sellingFromMargin(newCost, rule.marginPercent, rounding)
+                : product.basePrice;
+            })();
+
+      candidates.push({
+        productId: product.id,
+        productName: product.name,
+        oldCost: product.baseCostPrice,
+        newCost,
+        currentSelling: product.basePrice,
+        newSelling,
+        method: product.pricingMethod,
+        checked: true,
+      });
+    });
+
+    // Close the receiving modal and reset.
     setIsReceiveOrderModalOpen(false);
     setSelectedOrder(null);
     setReceivingForm({ items: [] });
 
-    // Show success message
-    alert(
-      `Order ${selectedOrder.orderNumber} received successfully. Stock levels updated.`,
+    if (candidates.length > 0) {
+      // Never re-price silently — hand off to the confirmation modal.
+      setCostUpdates(candidates);
+      setIsCostUpdateModalOpen(true);
+    } else {
+      alert(
+        `Order ${selectedOrder.orderNumber} received successfully. Stock levels updated.`,
+      );
+    }
+  };
+
+  const handleApplyCostUpdates = () => {
+    const now = new Date().toISOString().slice(0, 10);
+    costUpdates.forEach((c) => {
+      if (!c.checked) return;
+      const product = products.find((p) => p.id === c.productId);
+      if (!product) return;
+      product.baseCostPrice = c.newCost;
+      if (c.newSelling !== product.basePrice) {
+        product.basePrice = c.newSelling;
+        product.priceUpdatedAt = now;
+      }
+    });
+    setIsCostUpdateModalOpen(false);
+    setCostUpdates([]);
+  };
+
+  const toggleCostUpdate = (productId: string, checked: boolean) => {
+    setCostUpdates((prev) =>
+      prev.map((c) => (c.productId === productId ? { ...c, checked } : c)),
     );
   };
 
@@ -1610,14 +1707,31 @@ export default function OrdersPage() {
             </TabsTrigger>
           </TabsList>
 
-          {selectedTab !== "transactions" && (
-            <Button
-              onClick={
-                selectedTab === "orders" ? handleCreateOrder : handleAddSupplier
-              }
-            >
+          {selectedTab === "orders" && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 size-4" />
+                  New Order
+                  <ChevronDown className="ml-2 size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleCreateOrder}>
+                  <PenLine className="mr-2 size-4" />
+                  Create Manually
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsInvoiceImportOpen(true)}>
+                  <FileUp className="mr-2 size-4" />
+                  Import from Invoice
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {selectedTab === "suppliers" && (
+            <Button onClick={handleAddSupplier}>
               <Plus className="mr-2 size-4" />
-              {selectedTab === "orders" ? "New Order" : "Add Supplier"}
+              Add Supplier
             </Button>
           )}
         </div>
@@ -3373,6 +3487,105 @@ export default function OrdersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* New Cost Price — post-receiving price confirmation (spec 2.2) */}
+      <Dialog
+        open={isCostUpdateModalOpen}
+        onOpenChange={(open) => {
+          // Dismissing keeps prices as-is (never silently re-priced).
+          if (!open) {
+            setIsCostUpdateModalOpen(false);
+            setCostUpdates([]);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Update selling prices?</DialogTitle>
+            <DialogDescription>
+              Stock was received at a different cost for these margin-priced
+              products. Review each new selling price and apply the ones you
+              want. Unchecked products keep their current price.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[55vh] space-y-2 overflow-y-auto">
+            {costUpdates.map((c) => (
+              <div
+                key={c.productId}
+                className="flex items-start gap-3 rounded-lg border p-3"
+              >
+                <Checkbox
+                  id={`cost-${c.productId}`}
+                  checked={c.checked}
+                  onCheckedChange={(v) => toggleCostUpdate(c.productId, !!v)}
+                  className="mt-0.5"
+                />
+                <label
+                  htmlFor={`cost-${c.productId}`}
+                  className="flex-1 cursor-pointer space-y-1"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{c.productName}</span>
+                    <Badge variant="secondary" className="text-xs font-normal">
+                      {c.method === "margin" ? "Margin" : "Brand Rule"}
+                    </Badge>
+                  </div>
+                  <div className="text-muted-foreground grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs sm:grid-cols-4">
+                    <span>
+                      Old cost:{" "}
+                      <span className="text-foreground">
+                        ${c.oldCost.toFixed(2)}
+                      </span>
+                    </span>
+                    <span>
+                      New cost:{" "}
+                      <span className="text-foreground font-medium">
+                        ${c.newCost.toFixed(2)}
+                      </span>
+                    </span>
+                    <span>
+                      Current price:{" "}
+                      <span className="text-foreground">
+                        ${c.currentSelling.toFixed(2)}
+                      </span>
+                    </span>
+                    <span>
+                      New price:{" "}
+                      <span className="text-foreground font-medium">
+                        ${c.newSelling.toFixed(2)}
+                      </span>
+                    </span>
+                  </div>
+                </label>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCostUpdateModalOpen(false);
+                setCostUpdates([]);
+              }}
+            >
+              Keep prices as-is
+            </Button>
+            <Button
+              onClick={handleApplyCostUpdates}
+              disabled={costUpdates.every((c) => !c.checked)}
+            >
+              Apply selected
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <InvoiceImportDialog
+        open={isInvoiceImportOpen}
+        onOpenChange={setIsInvoiceImportOpen}
+      />
     </div>
   );
 }

@@ -33,7 +33,7 @@ interface BulkPriceLabelPrintProps {
   selectedProductIds: Set<string | number>;
 }
 
-type SelectionMode = "selected" | "new" | "custom";
+type SelectionMode = "selected" | "new" | "price_updated" | "custom";
 
 const LABEL_SIZES = [
   { value: "standard", label: 'Standard (2" x 1")', width: 192, height: 96 },
@@ -41,12 +41,13 @@ const LABEL_SIZES = [
   { value: "large", label: 'Large (3" x 1.5")', width: 288, height: 144 },
 ] as const;
 
-function isCreatedWithinDays(dateValue: string, days: number) {
-  const created = new Date(dateValue);
-  if (Number.isNaN(created.getTime())) return false;
+function isWithinLastDays(dateValue: string | undefined, days: number) {
+  if (!dateValue) return false;
+  const when = new Date(dateValue);
+  if (Number.isNaN(when.getTime())) return false;
 
   const now = new Date();
-  const diffMs = now.getTime() - created.getTime();
+  const diffMs = now.getTime() - when.getTime();
   return diffMs <= days * 24 * 60 * 60 * 1000;
 }
 
@@ -58,6 +59,7 @@ export function BulkPriceLabelPrint({
 }: BulkPriceLabelPrintProps) {
   const [mode, setMode] = useState<SelectionMode>("selected");
   const [newWindowDays, setNewWindowDays] = useState("14");
+  const [priceWindowDays, setPriceWindowDays] = useState("7");
   const [search, setSearch] = useState("");
   const [customSelected, setCustomSelected] = useState<Set<string>>(new Set());
   const [includeVariants, setIncludeVariants] = useState(false);
@@ -88,12 +90,26 @@ export function BulkPriceLabelPrint({
     if (mode === "new") {
       const days = parseInt(newWindowDays, 10);
       return products.filter((product) =>
-        isCreatedWithinDays(product.createdAt, days),
+        isWithinLastDays(product.createdAt, days),
+      );
+    }
+
+    if (mode === "price_updated") {
+      const days = parseInt(priceWindowDays, 10);
+      return products.filter((product) =>
+        isWithinLastDays(product.priceUpdatedAt, days),
       );
     }
 
     return products.filter((product) => customSelected.has(product.id));
-  }, [mode, products, selectedProductIds, newWindowDays, customSelected]);
+  }, [
+    mode,
+    products,
+    selectedProductIds,
+    newWindowDays,
+    priceWindowDays,
+    customSelected,
+  ]);
 
   const labelRows = useMemo(() => {
     const rows: Array<{
@@ -308,13 +324,13 @@ export function BulkPriceLabelPrint({
             Bulk Price Label Printing
           </DialogTitle>
           <DialogDescription>
-            Print labels by selected products, newly added products, or custom
-            picks.
+            Print labels by selected products, newly added products, recent
+            price changes, or custom picks.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div
               role="button"
               tabIndex={0}
@@ -354,6 +370,43 @@ export function BulkPriceLabelPrint({
               </p>
               <div className="mt-2">
                 <Select value={newWindowDays} onValueChange={setNewWindowDays}>
+                  <SelectTrigger
+                    className="h-8 text-xs"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">Last 7 days</SelectItem>
+                    <SelectItem value="14">Last 14 days</SelectItem>
+                    <SelectItem value="30">Last 30 days</SelectItem>
+                    <SelectItem value="90">Last 90 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div
+              role="button"
+              tabIndex={0}
+              className={cn(
+                "cursor-pointer rounded-lg border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:outline-none",
+                mode === "price_updated"
+                  ? "border-amber-400 bg-amber-50"
+                  : "border-slate-200 hover:bg-slate-50",
+              )}
+              onClick={() => setMode("price_updated")}
+              onKeyDown={(event) => handleModeKeyDown(event, "price_updated")}
+            >
+              <p className="text-sm font-semibold">Price Updated</p>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                Reprint labels for recent price changes
+              </p>
+              <div className="mt-2">
+                <Select
+                  value={priceWindowDays}
+                  onValueChange={setPriceWindowDays}
+                >
                   <SelectTrigger
                     className="h-8 text-xs"
                     onClick={(e) => e.stopPropagation()}

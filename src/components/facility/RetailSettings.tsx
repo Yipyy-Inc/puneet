@@ -34,6 +34,7 @@ import {
   Shield,
   Sparkles,
   Pencil,
+  GitMerge,
   Globe,
   Mail,
   Phone,
@@ -52,10 +53,13 @@ import { useFacilityRole } from "@/hooks/use-facility-role";
 import {
   retailConfig,
   type RetailSupplier,
+  type RetailBrand,
   type RetailTaxMode,
   type RetailReceiptFormat,
 } from "@/data/retail-config";
 import { retailMutations } from "@/lib/api/retail";
+import { products, type PricingMethod } from "@/data/retail";
+import type { RoundingRule } from "@/lib/retail-pricing";
 
 const TAX_MODES: { value: RetailTaxMode; label: string; hint: string }[] = [
   { value: "HST", label: "HST", hint: "Harmonized Sales Tax" },
@@ -131,12 +135,151 @@ export function RetailSettings() {
     retailConfig.lowStockConfig.notifyStaff,
   );
 
+  // Default pricing method + margin (spec 1.8) — seeds the product form's
+  // create path (1.2). The rounding rule is preserved as-is.
+  const [defaultPricingMethod, setDefaultPricingMethod] =
+    useState<PricingMethod>(retailConfig.pricingConfig.defaultPricingMethod);
+  const [defaultMarginPercent, setDefaultMarginPercent] = useState(
+    retailConfig.pricingConfig.defaultMarginPercent != null
+      ? String(retailConfig.pricingConfig.defaultMarginPercent)
+      : "",
+  );
+  const [rounding, setRounding] = useState<RoundingRule>(
+    retailConfig.pricingConfig.rounding,
+  );
+
   // Inline add state
   const [newCat, setNewCat] = useState("");
   const [newBrand, setNewBrand] = useState("");
   const [newTag, setNewTag] = useState("");
   const [newTagColor, setNewTagColor] = useState("blue");
   const [newUnit, setNewUnit] = useState("");
+
+  // ── Manage Brands (spec 1.6): rename + merge to keep brand names canonical ──
+  const [renameBrand, setRenameBrand] = useState<RetailBrand | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [mergeBrand, setMergeBrand] = useState<RetailBrand | null>(null);
+  const [mergeTargetId, setMergeTargetId] = useState("");
+
+  // Same normalization resolveBrandRule uses, so counts/moves match rule lookups.
+  const normalizeBrand = (s: string) =>
+    s.trim().toLowerCase().replace(/\s+/g, "");
+
+  const brandProductCount = (name: string) => {
+    const key = normalizeBrand(name);
+    return products.filter((p) => normalizeBrand(p.brand) === key).length;
+  };
+
+  const addBrand = () => {
+    const name = newBrand.trim();
+    if (!name) return;
+    if (brands.some((b) => normalizeBrand(b.name) === normalizeBrand(name))) {
+      toast.error(`"${name}" already exists as a brand.`);
+      return;
+    }
+    setBrands([...brands, { id: nextId("br"), name }]);
+    setNewBrand("");
+  };
+
+  const handleRenameBrand = () => {
+    if (!renameBrand) return;
+    const newName = renameValue.trim();
+    if (!newName) return;
+    const oldName = renameBrand.name;
+    if (normalizeBrand(newName) === normalizeBrand(oldName)) {
+      // Same name (or only casing/spacing changed on itself) — just relabel.
+      const relabeled = brands.map((b) =>
+        b.id === renameBrand.id ? { ...b, name: newName } : b,
+      );
+      setBrands(relabeled);
+      retailConfig.brands = relabeled;
+      setRenameBrand(null);
+      return;
+    }
+    if (
+      brands.some(
+        (b) =>
+          b.id !== renameBrand.id &&
+          normalizeBrand(b.name) === normalizeBrand(newName),
+      )
+    ) {
+      toast.error(
+        `"${newName}" already exists. Use Merge to combine the two brands.`,
+      );
+      return;
+    }
+
+    const updatedBrands = brands.map((b) =>
+      b.id === renameBrand.id ? { ...b, name: newName } : b,
+    );
+    setBrands(updatedBrands);
+    retailConfig.brands = updatedBrands;
+
+    // Reassign products and any margin rule that referenced the old name so the
+    // rename is the canonical, permanent fix (resolveBrandRule stays tolerant
+    // as a safety net, but this removes the ambiguity at the source).
+    const key = normalizeBrand(oldName);
+    let moved = 0;
+    for (const p of products) {
+      if (normalizeBrand(p.brand) === key) {
+        p.brand = newName;
+        moved += 1;
+      }
+    }
+    for (const rule of retailConfig.brandMarginRules) {
+      if (normalizeBrand(rule.brandName) === key) rule.brandName = newName;
+    }
+    toast.success(
+      `Renamed to "${newName}"${moved ? ` — updated ${moved} product${moved === 1 ? "" : "s"}` : ""}.`,
+    );
+    setRenameBrand(null);
+  };
+
+  const handleMergeBrand = () => {
+    if (!mergeBrand || !mergeTargetId) return;
+    const target = brands.find((b) => b.id === mergeTargetId);
+    if (!target || target.id === mergeBrand.id) return;
+
+    const sourceKey = normalizeBrand(mergeBrand.name);
+    const targetKey = normalizeBrand(target.name);
+    const targetName = target.name;
+
+    // Reassign every product from the source brand to the target brand.
+    let moved = 0;
+    for (const p of products) {
+      if (normalizeBrand(p.brand) === sourceKey) {
+        p.brand = targetName;
+        moved += 1;
+      }
+    }
+
+    // Collapse rules: drop the source's rule; if the target had none, carry the
+    // source's margin over so the merged brand keeps a rule.
+    const rules = retailConfig.brandMarginRules;
+    const sourceRule = rules.find(
+      (r) => normalizeBrand(r.brandName) === sourceKey,
+    );
+    const targetHasRule = rules.some(
+      (r) => normalizeBrand(r.brandName) === targetKey,
+    );
+    let nextRules = rules.filter(
+      (r) => normalizeBrand(r.brandName) !== sourceKey,
+    );
+    if (sourceRule && !targetHasRule) {
+      nextRules = [...nextRules, { ...sourceRule, brandName: targetName }];
+    }
+    retailConfig.brandMarginRules = nextRules;
+
+    const updatedBrands = brands.filter((b) => b.id !== mergeBrand.id);
+    setBrands(updatedBrands);
+    retailConfig.brands = updatedBrands;
+
+    toast.success(
+      `Merged "${mergeBrand.name}" into "${targetName}" — moved ${moved} product${moved === 1 ? "" : "s"}.`,
+    );
+    setMergeBrand(null);
+    setMergeTargetId("");
+  };
 
   const toggleCategoryExempt = (categoryId: string) => {
     setExemptCategoryIds((prev) =>
@@ -190,6 +333,22 @@ export function RetailSettings() {
     },
   });
 
+  const savePricingConfig = useMutation({
+    ...retailMutations.updatePricingConfig({
+      defaultPricingMethod,
+      defaultMarginPercent:
+        defaultMarginPercent.trim() === ""
+          ? undefined
+          : Number.parseFloat(defaultMarginPercent) || 0,
+      rounding,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["retail", "pricing-config"],
+      });
+    },
+  });
+
   const handleSendTestReceipt = () => {
     const via =
       receiptFormat === "both"
@@ -209,6 +368,7 @@ export function RetailSettings() {
     saveTaxConfig.mutate();
     saveReceiptConfig.mutate();
     saveLowStockConfig.mutate();
+    savePricingConfig.mutate();
     toast.success("Retail settings saved");
   };
 
@@ -345,6 +505,96 @@ export function RetailSettings() {
         nextId={nextId}
       />
 
+      {/* Default Pricing */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Tag className="size-4" />
+            Default Pricing
+          </CardTitle>
+          <p className="text-muted-foreground text-xs">
+            How new products are priced by default. Individual products can
+            still override this on their own page.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Default Pricing Method</Label>
+            <Select
+              value={defaultPricingMethod}
+              onValueChange={(v) => setDefaultPricingMethod(v as PricingMethod)}
+            >
+              <SelectTrigger
+                aria-label="Default Pricing Method"
+                className="h-9 max-w-[240px] text-sm"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="manual">Manual Price</SelectItem>
+                <SelectItem value="margin">Product Margin %</SelectItem>
+                <SelectItem value="brand_rule">Brand Rule</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {defaultPricingMethod === "margin" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="default-margin-percent" className="text-xs">
+                Default Margin %
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="default-margin-percent"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={defaultMarginPercent}
+                  onChange={(e) => setDefaultMarginPercent(e.target.value)}
+                  placeholder="0"
+                  className="h-9 max-w-[160px] text-sm"
+                />
+                <span className="text-muted-foreground text-sm">%</span>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Pre-fills the margin field when a new product is created in
+                margin mode.
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Selling Price Rounding</Label>
+            <Select
+              value={rounding}
+              onValueChange={(v) => setRounding(v as RoundingRule)}
+            >
+              <SelectTrigger
+                aria-label="Selling Price Rounding"
+                className="h-9 max-w-[240px] text-sm"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No rounding</SelectItem>
+                <SelectItem value="nearest_0.05">Nearest $0.05</SelectItem>
+                <SelectItem value="nearest_0.10">Nearest $0.10</SelectItem>
+                <SelectItem value="nearest_0.25">Nearest $0.25</SelectItem>
+                <SelectItem value="nearest_0.50">Nearest $0.50</SelectItem>
+                <SelectItem value="up_whole_dollar">
+                  Round up to whole dollar
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-xs">
+              Applies to every margin-calculated price (product form, brand
+              rules, invoice import). Changing this affects future calculations
+              only — it does not re-round prices that are already set.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Tax Configuration */}
       <Card>
         <CardHeader className="pb-3">
@@ -478,43 +728,82 @@ export function RetailSettings() {
         </CardContent>
       </Card>
 
-      {/* Brands */}
+      {/* Manage Brands */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Sparkles className="size-4" />
-            Brands
+            Manage Brands
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            {brands.map((brand, idx) => (
-              <div
-                key={brand.id}
-                className="bg-background flex items-center gap-1.5 rounded-full border px-3 py-1"
-              >
-                <span className="text-xs font-medium">{brand.name}</span>
-                <button
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => setBrands(brands.filter((_, i) => i !== idx))}
+        <CardContent className="space-y-3">
+          <div className="space-y-2">
+            {brands.map((brand) => {
+              const count = brandProductCount(brand.name);
+              return (
+                <div
+                  key={brand.id}
+                  className="bg-background flex items-center justify-between gap-2 rounded-lg border px-3 py-2"
                 >
-                  <Trash2 className="size-3" />
-                </button>
-              </div>
-            ))}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{brand.name}</span>
+                    <Badge variant="secondary" className="text-xs font-normal">
+                      {count} {count === 1 ? "product" : "products"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      aria-label={`Rename ${brand.name}`}
+                      onClick={() => {
+                        setRenameBrand(brand);
+                        setRenameValue(brand.name);
+                      }}
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      aria-label={`Merge ${brand.name}`}
+                      disabled={brands.length < 2}
+                      onClick={() => {
+                        setMergeBrand(brand);
+                        setMergeTargetId("");
+                      }}
+                    >
+                      <GitMerge className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive size-7"
+                      aria-label={`Delete ${brand.name}`}
+                      onClick={() =>
+                        setBrands(brands.filter((b) => b.id !== brand.id))
+                      }
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+            {brands.length === 0 && (
+              <p className="text-muted-foreground py-2 text-center text-sm">
+                No brands yet.
+              </p>
+            )}
           </div>
           <div className="flex gap-2">
             <Input
               value={newBrand}
               onChange={(e) => setNewBrand(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && newBrand.trim()) {
-                  setBrands([
-                    ...brands,
-                    { id: nextId("br"), name: newBrand.trim() },
-                  ]);
-                  setNewBrand("");
-                }
+                if (e.key === "Enter") addBrand();
               }}
               placeholder="Add brand..."
               className="h-8 text-sm"
@@ -524,19 +813,110 @@ export function RetailSettings() {
               size="sm"
               className="h-8 shrink-0"
               disabled={!newBrand.trim()}
-              onClick={() => {
-                setBrands([
-                  ...brands,
-                  { id: nextId("br"), name: newBrand.trim() },
-                ]);
-                setNewBrand("");
-              }}
+              onClick={addBrand}
             >
               <Plus className="size-3.5" />
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Rename Brand */}
+      <Dialog
+        open={!!renameBrand}
+        onOpenChange={(open) => !open && setRenameBrand(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Brand</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label>Brand Name</Label>
+            <Input
+              autoFocus
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleRenameBrand();
+              }}
+              placeholder="Brand name"
+            />
+            <p className="text-muted-foreground text-xs">
+              Updates the name on every product using this brand and on its
+              margin rule, so &ldquo;Brand Rule&rdquo; pricing keeps matching.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameBrand(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRenameBrand} disabled={!renameValue.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Merge Brand */}
+      <Dialog
+        open={!!mergeBrand}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMergeBrand(null);
+            setMergeTargetId("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Merge Brand</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-muted-foreground text-sm">
+              Move every product from{" "}
+              <span className="text-foreground font-medium">
+                {mergeBrand?.name}
+              </span>{" "}
+              to another brand, then remove{" "}
+              <span className="text-foreground font-medium">
+                {mergeBrand?.name}
+              </span>
+              . Duplicate margin rules are collapsed into one.
+            </p>
+            <div className="space-y-2">
+              <Label>Merge into</Label>
+              <Select value={mergeTargetId} onValueChange={setMergeTargetId}>
+                <SelectTrigger aria-label="Merge into">
+                  <SelectValue placeholder="Select target brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  {brands
+                    .filter((b) => b.id !== mergeBrand?.id)
+                    .map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name} ({brandProductCount(b.name)})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setMergeBrand(null);
+                setMergeTargetId("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleMergeBrand} disabled={!mergeTargetId}>
+              Merge
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Product Tags */}
       <Card>

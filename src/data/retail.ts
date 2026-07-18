@@ -12,6 +12,9 @@ import type {
   MovementType,
   CartItemType,
   CartDiscountType,
+  PricingMethod,
+  PackageUnitType,
+  PackagedAs,
   ProductVariant,
   Product,
   Supplier,
@@ -44,6 +47,9 @@ export type {
   MovementType,
   CartItemType,
   CartDiscountType,
+  PricingMethod,
+  PackageUnitType,
+  PackagedAs,
   ProductVariant,
   Product,
   Supplier,
@@ -88,6 +94,7 @@ export const products: Product[] = [
     brand: "PawNutrition",
     basePrice: 54.99,
     baseCostPrice: 35.0,
+    pricingMethod: "manual",
     sku: "PDF-001",
     barcode: "123456789012",
     status: "active",
@@ -105,6 +112,7 @@ export const products: Product[] = [
         maxStock: 100,
         variantType: "weight",
         variantValue: "5 lb",
+        pricingMethod: "manual",
       },
       {
         id: "var-001-2",
@@ -118,6 +126,7 @@ export const products: Product[] = [
         maxStock: 60,
         variantType: "weight",
         variantValue: "15 lb",
+        pricingMethod: "manual",
       },
       {
         id: "var-001-3",
@@ -131,6 +140,7 @@ export const products: Product[] = [
         maxStock: 30,
         variantType: "weight",
         variantValue: "30 lb",
+        pricingMethod: "manual",
       },
     ],
     stock: 85,
@@ -152,6 +162,7 @@ export const products: Product[] = [
     brand: "SmartPup",
     basePrice: 29.99,
     baseCostPrice: 14.0,
+    pricingMethod: "manual",
     sku: "IPT-002",
     barcode: "223456789012",
     status: "active",
@@ -169,6 +180,7 @@ export const products: Product[] = [
         maxStock: 40,
         variantType: "size",
         variantValue: "Small",
+        pricingMethod: "manual",
       },
       {
         id: "var-002-2",
@@ -182,6 +194,7 @@ export const products: Product[] = [
         maxStock: 40,
         variantType: "size",
         variantValue: "Medium",
+        pricingMethod: "manual",
       },
       {
         id: "var-002-3",
@@ -195,6 +208,7 @@ export const products: Product[] = [
         maxStock: 40,
         variantType: "size",
         variantValue: "Large",
+        pricingMethod: "manual",
       },
     ],
     stock: 55,
@@ -216,6 +230,7 @@ export const products: Product[] = [
     brand: "PetStyle",
     basePrice: 18.99,
     baseCostPrice: 7.5,
+    pricingMethod: "manual",
     sku: "ADC-003",
     barcode: "323456789012",
     status: "active",
@@ -233,6 +248,7 @@ export const products: Product[] = [
         maxStock: 30,
         variantType: "color",
         variantValue: "Red",
+        pricingMethod: "manual",
         variantAttributes: { Size: "Small", Color: "Red" },
         imageUrl: "/dogs/dog-1.jpg",
       },
@@ -248,6 +264,7 @@ export const products: Product[] = [
         maxStock: 30,
         variantType: "color",
         variantValue: "Blue",
+        pricingMethod: "manual",
         variantAttributes: { Size: "Small", Color: "Blue" },
         imageUrl: "/dogs/dog-2.jpg",
       },
@@ -263,6 +280,7 @@ export const products: Product[] = [
         maxStock: 30,
         variantType: "color",
         variantValue: "Red",
+        pricingMethod: "manual",
         variantAttributes: { Size: "Medium", Color: "Red" },
         imageUrl: "/dogs/dog-3.jpg",
       },
@@ -278,6 +296,7 @@ export const products: Product[] = [
         maxStock: 30,
         variantType: "color",
         variantValue: "Blue",
+        pricingMethod: "manual",
         variantAttributes: { Size: "Medium", Color: "Blue" },
         imageUrl: "/dogs/dog-4.jpg",
       },
@@ -293,6 +312,7 @@ export const products: Product[] = [
         maxStock: 30,
         variantType: "color",
         variantValue: "Red",
+        pricingMethod: "manual",
         variantAttributes: { Size: "Large", Color: "Red" },
         imageUrl: "/dogs/dog-1.jpg",
       },
@@ -308,6 +328,7 @@ export const products: Product[] = [
         maxStock: 30,
         variantType: "color",
         variantValue: "Blue",
+        pricingMethod: "manual",
         variantAttributes: { Size: "Large", Color: "Blue" },
         imageUrl: "/dogs/dog-2.jpg",
       },
@@ -332,6 +353,7 @@ export const products: Product[] = [
     brand: "WalkEasy",
     basePrice: 34.99,
     baseCostPrice: 16.0,
+    pricingMethod: "manual",
     sku: "NPH-013",
     barcode: "133456789012",
     status: "active",
@@ -349,6 +371,7 @@ export const products: Product[] = [
         maxStock: 30,
         variantType: "color",
         variantValue: "Black",
+        pricingMethod: "manual",
         variantAttributes: { Size: "Small", Color: "Black" },
         imageUrl: "/dogs/dog-1.jpg",
       },
@@ -364,6 +387,7 @@ export const products: Product[] = [
         maxStock: 30,
         variantType: "color",
         variantValue: "Red",
+        pricingMethod: "manual",
         variantAttributes: { Size: "Small", Color: "Red" },
         imageUrl: "/dogs/dog-3.jpg",
       },
@@ -379,6 +403,7 @@ export const products: Product[] = [
         maxStock: 30,
         variantType: "color",
         variantValue: "Black",
+        pricingMethod: "manual",
         variantAttributes: { Size: "Medium", Color: "Black" },
         imageUrl: "/dogs/dog-2.jpg",
       },
@@ -394,6 +419,7 @@ export const products: Product[] = [
         maxStock: 30,
         variantType: "color",
         variantValue: "Red",
+        pricingMethod: "manual",
         variantAttributes: { Size: "Medium", Color: "Red" },
         imageUrl: "/dogs/dog-4.jpg",
       },
@@ -409,6 +435,7 @@ export const products: Product[] = [
         maxStock: 20,
         variantType: "color",
         variantValue: "Black",
+        pricingMethod: "manual",
         variantAttributes: { Size: "Large", Color: "Black" },
         imageUrl: "/dogs/dog-1.jpg",
       },
@@ -424,6 +451,7 @@ export const products: Product[] = [
         maxStock: 20,
         variantType: "color",
         variantValue: "Red",
+        pricingMethod: "manual",
         variantAttributes: { Size: "Large", Color: "Red" },
         imageUrl: "/dogs/dog-3.jpg",
       },
@@ -447,6 +475,7 @@ export const products: Product[] = [
     brand: "PurePaws",
     basePrice: 16.99,
     baseCostPrice: 8.0,
+    pricingMethod: "manual",
     sku: "NDS-004",
     barcode: "423456789012",
     status: "active",
@@ -471,6 +500,7 @@ export const products: Product[] = [
     brand: "ComfyPet",
     basePrice: 79.99,
     baseCostPrice: 42.0,
+    pricingMethod: "manual",
     sku: "ODB-005",
     barcode: "523456789012",
     status: "active",
@@ -488,6 +518,7 @@ export const products: Product[] = [
         maxStock: 20,
         variantType: "size",
         variantValue: "Small",
+        pricingMethod: "manual",
       },
       {
         id: "var-005-2",
@@ -501,6 +532,7 @@ export const products: Product[] = [
         maxStock: 15,
         variantType: "size",
         variantValue: "Medium",
+        pricingMethod: "manual",
       },
       {
         id: "var-005-3",
@@ -514,6 +546,7 @@ export const products: Product[] = [
         maxStock: 10,
         variantType: "size",
         variantValue: "Large",
+        pricingMethod: "manual",
       },
     ],
     stock: 16,
@@ -535,6 +568,7 @@ export const products: Product[] = [
     brand: "GoodBoy",
     basePrice: 12.99,
     baseCostPrice: 6.0,
+    pricingMethod: "manual",
     sku: "TRT-006",
     barcode: "623456789012",
     status: "active",
@@ -552,6 +586,7 @@ export const products: Product[] = [
         maxStock: 60,
         variantType: "flavor",
         variantValue: "Chicken",
+        pricingMethod: "manual",
       },
       {
         id: "var-006-2",
@@ -565,6 +600,7 @@ export const products: Product[] = [
         maxStock: 60,
         variantType: "flavor",
         variantValue: "Beef",
+        pricingMethod: "manual",
       },
       {
         id: "var-006-3",
@@ -578,6 +614,7 @@ export const products: Product[] = [
         maxStock: 60,
         variantType: "flavor",
         variantValue: "Peanut Butter",
+        pricingMethod: "manual",
       },
     ],
     stock: 105,
@@ -599,6 +636,7 @@ export const products: Product[] = [
     brand: "WalkEasy",
     basePrice: 24.99,
     baseCostPrice: 11.0,
+    pricingMethod: "manual",
     sku: "RDL-007",
     barcode: "723456789012",
     status: "active",
@@ -623,6 +661,7 @@ export const products: Product[] = [
     brand: "PetSafe",
     basePrice: 34.99,
     baseCostPrice: 18.0,
+    pricingMethod: "manual",
     sku: "FAK-008",
     barcode: "823456789012",
     status: "active",
@@ -647,6 +686,7 @@ export const products: Product[] = [
     brand: "KittyKing",
     basePrice: 44.99,
     baseCostPrice: 22.0,
+    pricingMethod: "manual",
     sku: "CSP-009",
     barcode: "923456789012",
     status: "active",
@@ -671,6 +711,7 @@ export const products: Product[] = [
     brand: "TravelPet",
     basePrice: 49.99,
     baseCostPrice: 25.0,
+    pricingMethod: "manual",
     sku: "PCB-010",
     barcode: "103456789012",
     status: "active",
@@ -688,6 +729,7 @@ export const products: Product[] = [
         maxStock: 15,
         variantType: "size",
         variantValue: "Small",
+        pricingMethod: "manual",
       },
       {
         id: "var-010-2",
@@ -701,6 +743,7 @@ export const products: Product[] = [
         maxStock: 15,
         variantType: "size",
         variantValue: "Medium",
+        pricingMethod: "manual",
       },
     ],
     stock: 12,
@@ -722,6 +765,7 @@ export const products: Product[] = [
     brand: "CleanPaw",
     basePrice: 14.99,
     baseCostPrice: 6.0,
+    pricingMethod: "manual",
     sku: "PSR-011",
     barcode: "113456789012",
     status: "active",
@@ -746,6 +790,7 @@ export const products: Product[] = [
     brand: "TrainRight",
     basePrice: 7.99,
     baseCostPrice: 2.5,
+    pricingMethod: "manual",
     sku: "DTC-012",
     barcode: "123456789112",
     status: "active",
@@ -1565,6 +1610,105 @@ export function getPendingOrders(): PurchaseOrder[] {
   return purchaseOrders.filter(
     (o) => o.status === "pending" || o.status === "ordered",
   );
+}
+
+// ── Purchase-order create / receive (shared by invoice import, spec 2.4) ─────
+
+/** An OPEN PO for a supplier — one not yet received or cancelled. */
+export function getOpenPurchaseOrderForSupplier(
+  supplierId: string,
+): PurchaseOrder | undefined {
+  if (!supplierId) return undefined;
+  return purchaseOrders.find(
+    (po) =>
+      po.supplierId === supplierId &&
+      po.status !== "received" &&
+      po.status !== "cancelled",
+  );
+}
+
+interface ReceivedPoInput {
+  supplierId: string;
+  supplierName: string;
+  /** Line items being received (receivedQuantity is set to quantity). */
+  items: PurchaseOrderItem[];
+  invoiceNumber?: string;
+  invoiceFile?: { name: string; url?: string };
+}
+
+// Monotonic suffix so PO ids stay unique even for imports in the same millisecond.
+let poIdSeq = 0;
+
+/** Create a new PO already marked "received" (e.g. from an invoice import). */
+export function createReceivedPurchaseOrder(
+  input: ReceivedPoInput,
+): PurchaseOrder {
+  const now = new Date();
+  const iso = now.toISOString();
+  const date = iso.slice(0, 10);
+  const items = input.items.map((i) => ({
+    ...i,
+    receivedQuantity: i.quantity,
+  }));
+  const subtotal =
+    Math.round(items.reduce((s, i) => s + i.totalCost, 0) * 100) / 100;
+  const po: PurchaseOrder = {
+    id: `po-${now.getTime()}-${(poIdSeq += 1)}`,
+    orderNumber: `IMP-${input.invoiceNumber || now.getTime()}`,
+    supplierId: input.supplierId,
+    supplierName: input.supplierName,
+    status: "received",
+    items,
+    subtotal,
+    tax: 0,
+    shipping: 0,
+    total: subtotal,
+    notes: input.invoiceNumber
+      ? `Invoice Import — ${input.invoiceNumber}`
+      : "Invoice Import",
+    orderedAt: date,
+    expectedDelivery: date,
+    receivedAt: iso,
+    createdBy: "Invoice Import",
+    sourceNote: "Invoice Import",
+    invoiceFile: input.invoiceFile,
+  };
+  purchaseOrders.push(po);
+  return po;
+}
+
+/**
+ * Receive invoice-import lines into an existing OPEN PO: append received
+ * quantities (merging by product/variant/sku), mark it received, and attach the
+ * invoice. Mutates and returns the PO.
+ */
+export function receiveInvoiceIntoPurchaseOrder(
+  po: PurchaseOrder,
+  input: Omit<ReceivedPoInput, "supplierId" | "supplierName">,
+): PurchaseOrder {
+  const iso = new Date().toISOString();
+  for (const item of input.items) {
+    const existing = po.items.find(
+      (i) =>
+        i.productId === item.productId &&
+        i.variantId === item.variantId &&
+        i.sku === item.sku,
+    );
+    if (existing) {
+      existing.receivedQuantity =
+        (existing.receivedQuantity || 0) + item.quantity;
+    } else {
+      po.items.push({ ...item, receivedQuantity: item.quantity });
+    }
+  }
+  po.status = "received";
+  po.receivedAt = iso;
+  po.sourceNote = po.sourceNote || "Invoice Import";
+  if (input.invoiceNumber) {
+    po.notes = `${po.notes ? `${po.notes} · ` : ""}Invoice Import — ${input.invoiceNumber}`;
+  }
+  if (input.invoiceFile) po.invoiceFile = input.invoiceFile;
+  return po;
 }
 
 function getTodayTransactions(): Transaction[] {

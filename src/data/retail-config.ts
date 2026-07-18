@@ -1,5 +1,8 @@
 // ── Configurable retail settings per facility ────────────────────────────────
 
+import type { PricingMethod } from "@/types/retail";
+import type { RoundingRule } from "@/lib/retail-pricing";
+
 export interface RetailCategory {
   id: string;
   name: string;
@@ -92,6 +95,34 @@ export interface RetailLowStockConfig {
   notifyStaff: boolean;
 }
 
+/**
+ * Facility-wide default pricing behavior (spec tasks #11, #12, #13). The product
+ * form seeds new products from this, and the rounding rule is fed to the pricing
+ * math in {@link "@/lib/retail-pricing"}. Individual products/variants can still
+ * override the method.
+ */
+export interface RetailPricingConfig {
+  /** How a new product's selling price is derived by default. */
+  defaultPricingMethod: PricingMethod;
+  /** Default target margin (%) used when the method is "margin". */
+  defaultMarginPercent?: number;
+  /** Facility rounding rule applied after the raw margin price is computed. */
+  rounding: RoundingRule;
+}
+
+/**
+ * A per-brand margin rule (spec task #8). Rules match on brand NAME — that is
+ * why "Manage Brands" standardization matters, and why lookups are done
+ * case/space-insensitively (see resolveBrandRule in @/lib/api/retail).
+ */
+export interface BrandMarginRule {
+  id: string;
+  /** The brand this rule applies to, matched by normalized name. */
+  brandName: string;
+  /** Target margin (%) for products of this brand priced by "brand_rule". */
+  marginPercent: number;
+}
+
 export interface RetailConfig {
   categories: RetailCategory[];
   suppliers: RetailSupplier[];
@@ -101,6 +132,8 @@ export interface RetailConfig {
   taxConfig: RetailTaxConfig;
   receiptConfig: RetailReceiptConfig;
   lowStockConfig: RetailLowStockConfig;
+  pricingConfig: RetailPricingConfig;
+  brandMarginRules: BrandMarginRule[];
 }
 
 // ── Default data ─────────────────────────────────────────────────────────────
@@ -260,4 +293,12 @@ export const retailConfig: RetailConfig = {
     defaultThreshold: 5,
     notifyStaff: true,
   },
+  pricingConfig: {
+    defaultPricingMethod: "manual",
+    rounding: "none",
+  },
+  brandMarginRules: [
+    { id: "brm-1", brandName: "Royal Canin", marginPercent: 40 },
+    { id: "brm-2", brandName: "Kong", marginPercent: 45 },
+  ],
 };

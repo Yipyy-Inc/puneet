@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Plus,
   MoreHorizontal,
@@ -50,6 +51,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import {
   products,
@@ -57,6 +59,8 @@ import {
   type Product,
   type ProductVariant,
   type VariantType,
+  type PricingMethod,
+  type PackageUnitType,
 } from "@/data/retail";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -65,9 +69,53 @@ import { BarcodeDisplay } from "@/components/retail/BarcodeDisplay";
 import { BarcodeLabelPrint } from "@/components/retail/BarcodeLabelPrint";
 import { BulkPriceLabelPrint } from "@/components/retail/BulkPriceLabelPrint";
 import { retailConfig } from "@/data/retail-config";
+import {
+  sellingFromMargin,
+  profitOf,
+  marginOf,
+  type RoundingRule,
+} from "@/lib/retail-pricing";
+import { resolveBrandRule } from "@/lib/api/retail";
 import { useHardwareBarcodeScanner } from "@/hooks/use-hardware-barcode-scanner";
 
 type ProductWithRecord = Product & Record<string, unknown>;
+
+/**
+ * Resolve a selling price from a pricing method + cost, shared by the product
+ * level and each variant so the math never diverges (spec: variants inherit the
+ * product method by default, but can override with their own cost + method).
+ * "manual" and an unresolved brand rule fall back to the typed price.
+ */
+function priceForMethod(
+  cost: number,
+  method: PricingMethod,
+  marginPercent: number,
+  brand: string,
+  manualFallback: number,
+  rounding: RoundingRule,
+): number {
+  if (method === "margin") {
+    return sellingFromMargin(cost, marginPercent, rounding);
+  }
+  if (method === "brand_rule") {
+    const rule = resolveBrandRule(brand.trim());
+    return rule
+      ? sellingFromMargin(cost, rule.marginPercent, rounding)
+      : manualFallback;
+  }
+  return manualFallback; // manual
+}
+
+// "Packaged as" options (spec 0.1). Values are the lowercase PackageUnitType;
+// labels are title-cased for display.
+const PACKAGE_UNIT_OPTIONS: { value: PackageUnitType; label: string }[] = [
+  { value: "each", label: "Each" },
+  { value: "box", label: "Box" },
+  { value: "case", label: "Case" },
+  { value: "bag", label: "Bag" },
+  { value: "pack", label: "Pack" },
+  { value: "bundle", label: "Bundle" },
+];
 
 export default function ProductsPage() {
   const [productList, setProductList] = useState<Product[]>(products);
@@ -92,6 +140,9 @@ export default function ProductsPage() {
     brand: "",
     basePrice: 0,
     baseCostPrice: 0,
+    pricingMethod: retailConfig.pricingConfig
+      .defaultPricingMethod as PricingMethod,
+    marginPercent: retailConfig.pricingConfig.defaultMarginPercent ?? 0,
     sku: "",
     barcode: "",
     status: "active" as "active" | "inactive" | "discontinued",
@@ -104,6 +155,8 @@ export default function ProductsPage() {
     onlineVisible: true,
     tags: [] as string[],
     imageUrl: "",
+    packagedAsUnitType: "each" as PackageUnitType,
+    packagedAsItemsPerPackage: 1,
   });
 
   const [newTag, setNewTag] = useState("");
@@ -124,6 +177,9 @@ export default function ProductsPage() {
     maxStock: 100,
     variantType: "size" as VariantType,
     variantValue: "",
+    pricingMethod: "manual" as PricingMethod,
+    marginPercent: retailConfig.pricingConfig.defaultMarginPercent ?? 0,
+    overridePricing: false,
     customVariantType: "",
     imageUrl: "",
     imageUrls: [] as string[],
@@ -203,6 +259,42 @@ export default function ProductsPage() {
     };
   }, [productList]);
 
+  // Resolved selling price for the current form state — typed in manual mode,
+  // computed from the margin/brand rule otherwise. Single source of truth for
+  // both the always-visible pricing strip and the value saved into basePrice,
+  // so the two never drift.
+  const pricingRounding = retailConfig.pricingConfig.rounding;
+  const resolvedSellingPrice = priceForMethod(
+    formData.baseCostPrice,
+    formData.pricingMethod,
+    formData.marginPercent,
+    formData.brand,
+    formData.basePrice,
+    pricingRounding,
+  );
+
+  // Resolved selling price for the variant currently being edited. When it
+  // overrides, its own cost + method drive the price; otherwise it follows the
+  // product's method applied to the variant's own cost (so a 5lb and a 30lb bag
+  // get different prices from the same margin).
+  const resolvedVariantSellingPrice = variantForm.overridePricing
+    ? priceForMethod(
+        variantForm.costPrice,
+        variantForm.pricingMethod,
+        variantForm.marginPercent,
+        formData.brand,
+        variantForm.price,
+        pricingRounding,
+      )
+    : priceForMethod(
+        variantForm.costPrice,
+        formData.pricingMethod,
+        formData.marginPercent,
+        formData.brand,
+        variantForm.price,
+        pricingRounding,
+      );
+
   const handleAddNew = () => {
     setEditingProduct(null);
     setFormData({
@@ -212,6 +304,8 @@ export default function ProductsPage() {
       brand: "",
       basePrice: 0,
       baseCostPrice: 0,
+      pricingMethod: retailConfig.pricingConfig.defaultPricingMethod,
+      marginPercent: retailConfig.pricingConfig.defaultMarginPercent ?? 0,
       sku: "",
       barcode: "",
       status: "active",
@@ -224,6 +318,8 @@ export default function ProductsPage() {
       onlineVisible: true,
       tags: [],
       imageUrl: "",
+      packagedAsUnitType: "each",
+      packagedAsItemsPerPackage: 1,
     });
     setVariants([]);
     setIsAddEditModalOpen(true);
@@ -238,6 +334,11 @@ export default function ProductsPage() {
       brand: product.brand,
       basePrice: product.basePrice,
       baseCostPrice: product.baseCostPrice,
+      pricingMethod: product.pricingMethod,
+      marginPercent:
+        product.marginPercent ??
+        retailConfig.pricingConfig.defaultMarginPercent ??
+        0,
       sku: product.sku,
       barcode: product.barcode,
       status: product.status,
@@ -250,6 +351,8 @@ export default function ProductsPage() {
       onlineVisible: product.onlineVisible,
       tags: [...product.tags],
       imageUrl: product.imageUrl || "",
+      packagedAsUnitType: product.packagedAs?.unitType ?? "each",
+      packagedAsItemsPerPackage: product.packagedAs?.itemsPerPackage ?? 1,
     });
     setVariants(product.hasVariants ? product.variants : []);
     setIsAddEditModalOpen(true);
@@ -268,6 +371,11 @@ export default function ProductsPage() {
       maxStock: 100,
       variantType: "size",
       variantValue: "",
+      pricingMethod: formData.pricingMethod,
+      marginPercent:
+        formData.marginPercent ||
+        (retailConfig.pricingConfig.defaultMarginPercent ?? 0),
+      overridePricing: false,
       customVariantType: "",
       imageUrl: "",
       imageUrls: [],
@@ -288,6 +396,15 @@ export default function ProductsPage() {
       maxStock: variant.maxStock,
       variantType: variant.variantType,
       variantValue: variant.variantValue,
+      pricingMethod: variant.overridePricing
+        ? variant.pricingMethod
+        : formData.pricingMethod,
+      marginPercent:
+        variant.marginPercent ??
+        formData.marginPercent ??
+        retailConfig.pricingConfig.defaultMarginPercent ??
+        0,
+      overridePricing: variant.overridePricing ?? false,
       customVariantType: variant.customVariantType || "",
       imageUrl: variant.imageUrl || "",
       imageUrls: variant.imageUrls || [],
@@ -296,31 +413,28 @@ export default function ProductsPage() {
   };
 
   const handleSaveVariant = () => {
+    // Store the resolved selling price (computed for margin/brand, typed for
+    // manual) so downstream (POS, list) reads a concrete value from variant.price.
+    const variantPatch = {
+      ...variantForm,
+      price: resolvedVariantSellingPrice,
+      customVariantType:
+        variantForm.variantType === "custom"
+          ? variantForm.customVariantType
+          : undefined,
+    };
     if (editingVariant) {
       // Update existing variant
       setVariants(
         variants.map((v) =>
-          v.id === editingVariant.id
-            ? {
-                ...v,
-                ...variantForm,
-                customVariantType:
-                  variantForm.variantType === "custom"
-                    ? variantForm.customVariantType
-                    : undefined,
-              }
-            : v,
+          v.id === editingVariant.id ? { ...v, ...variantPatch } : v,
         ),
       );
     } else {
       // Add new variant
       const newVariant: ProductVariant = {
-        id: `var-${Date.now()}`,
-        ...variantForm,
-        customVariantType:
-          variantForm.variantType === "custom"
-            ? variantForm.customVariantType
-            : undefined,
+        id: `var-${new Date().getTime()}`,
+        ...variantPatch,
       };
       setVariants([...variants, newVariant]);
     }
@@ -335,14 +449,59 @@ export default function ProductsPage() {
   const handleSave = () => {
     const now = new Date().toISOString().slice(0, 10);
 
+    // Build the "Packaged as" object from the flat form helpers; drop
+    // itemsPerPackage for "each" (one sellable per unit). Keep the helpers out
+    // of the spread so they don't leak onto the product record.
+    const { packagedAsUnitType, packagedAsItemsPerPackage, ...productFields } =
+      formData;
+    const packagedAs =
+      packagedAsUnitType === "each"
+        ? { unitType: packagedAsUnitType }
+        : {
+            unitType: packagedAsUnitType,
+            itemsPerPackage: packagedAsItemsPerPackage,
+          };
+
+    // The selling price is computed (not typed) in "margin" and "brand_rule"
+    // modes; store the resolved value into basePrice. In "manual" mode this is
+    // whatever the user typed. A brand_rule product with no resolvable rule
+    // keeps its existing basePrice rather than collapsing to a computed value.
+    // (Same value shown in the always-visible pricing strip — no drift.)
+    const resolvedBasePrice = resolvedSellingPrice;
+
+    // Non-overriding variants follow the product method — recompute each from
+    // its own cost against the (possibly just-changed) product method, so a
+    // margin change on the product flows down to its inheriting variants.
+    const syncedVariants = variants.map((v) =>
+      v.overridePricing
+        ? v
+        : {
+            ...v,
+            price: priceForMethod(
+              v.costPrice,
+              formData.pricingMethod,
+              formData.marginPercent,
+              formData.brand,
+              v.price,
+              pricingRounding,
+            ),
+          },
+    );
+
     if (editingProduct) {
       setProductList((prev) =>
         prev.map((product) =>
           product.id === editingProduct.id
             ? {
                 ...product,
-                ...formData,
-                variants: formData.hasVariants ? variants : [],
+                ...productFields,
+                packagedAs,
+                basePrice: resolvedBasePrice,
+                priceUpdatedAt:
+                  resolvedBasePrice !== product.basePrice
+                    ? now
+                    : product.priceUpdatedAt,
+                variants: formData.hasVariants ? syncedVariants : [],
                 updatedAt: now,
               }
             : product,
@@ -351,9 +510,12 @@ export default function ProductsPage() {
       toast.success("Product updated");
     } else {
       const newProduct: Product = {
-        id: `prod-${Date.now()}`,
-        ...formData,
-        variants: formData.hasVariants ? variants : [],
+        id: `prod-${new Date().getTime()}`,
+        ...productFields,
+        packagedAs,
+        basePrice: resolvedBasePrice,
+        priceUpdatedAt: now,
+        variants: formData.hasVariants ? syncedVariants : [],
         createdAt: now,
         updatedAt: now,
       };
@@ -790,8 +952,16 @@ export default function ProductsPage() {
                                 className="bg-muted/30 rounded-sm border p-2"
                               >
                                 <div className="flex items-center justify-between">
-                                  <span className="text-sm font-medium">
+                                  <span className="flex items-center gap-1.5 text-sm font-medium">
                                     {variant.name}
+                                    {variant.overridePricing && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-[10px] font-normal"
+                                      >
+                                        Custom pricing
+                                      </Badge>
+                                    )}
                                   </span>
                                   <span className="font-medium">
                                     ${variant.price.toFixed(2)}
@@ -1087,24 +1257,11 @@ export default function ProductsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="basePrice">Selling Price ($)</Label>
-                <Input
-                  id="basePrice"
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={formData.basePrice}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      basePrice: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                />
-              </div>
-              <div className="grid gap-2">
+            {/* Pricing section. Cost Price is always the base for every
+                calculation; the Pricing Method selector below it drives which
+                pricing UI renders (Manual / Margin / Brand Rule). */}
+            <div className="space-y-4">
+              <div className="grid gap-2 sm:max-w-[calc(50%-0.5rem)]">
                 <Label htmlFor="baseCostPrice">Cost Price ($)</Label>
                 <Input
                   id="baseCostPrice"
@@ -1120,6 +1277,187 @@ export default function ProductsPage() {
                   }
                 />
               </div>
+
+              <div className="grid gap-2">
+                <Label>Pricing Method</Label>
+                <ToggleGroup
+                  type="single"
+                  variant="outline"
+                  value={formData.pricingMethod}
+                  onValueChange={(value) => {
+                    // ToggleGroup emits "" when the active item is re-clicked;
+                    // ignore that so a method is always selected.
+                    if (!value) return;
+                    setFormData({
+                      ...formData,
+                      pricingMethod: value as PricingMethod,
+                    });
+                  }}
+                  className="w-full"
+                >
+                  <ToggleGroupItem value="manual">Manual Price</ToggleGroupItem>
+                  <ToggleGroupItem value="margin">
+                    Product Margin %
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="brand_rule">
+                    Brand Rule
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+
+              {(() => {
+                const cost = formData.baseCostPrice;
+                const rounding = retailConfig.pricingConfig.rounding;
+
+                // Margin mode: the selling price is computed from cost + margin,
+                // never typed. The summary updates live as either input changes;
+                // the value is stored into basePrice on save.
+                if (formData.pricingMethod === "margin") {
+                  const selling = sellingFromMargin(
+                    cost,
+                    formData.marginPercent,
+                    rounding,
+                  );
+                  const profit = profitOf(selling, cost);
+                  return (
+                    <div className="grid gap-2 sm:max-w-[calc(50%-0.5rem)]">
+                      <Label htmlFor="marginPercent">Margin %</Label>
+                      <Input
+                        id="marginPercent"
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        value={formData.marginPercent}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            marginPercent: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                      />
+                      <p className="text-muted-foreground text-sm">
+                        Selling price:{" "}
+                        <span className="text-foreground font-medium">
+                          ${selling.toFixed(2)}
+                        </span>{" "}
+                        · Profit:{" "}
+                        <span className="text-foreground font-medium">
+                          ${profit.toFixed(2)}
+                        </span>
+                      </p>
+                    </div>
+                  );
+                }
+
+                // Brand Rule mode: no inputs — the price is driven by the
+                // brand's margin rule (matched by name), computed and stored
+                // into basePrice on save.
+                if (formData.pricingMethod === "brand_rule") {
+                  const brand = formData.brand.trim();
+                  if (!brand) {
+                    return (
+                      <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+                        Set a brand for this product first, then its brand
+                        margin rule can set the price automatically.
+                      </div>
+                    );
+                  }
+                  const rule = resolveBrandRule(brand);
+                  if (!rule) {
+                    return (
+                      <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+                        <p>
+                          No margin rule set for {brand}. Add one in Settings
+                          &rarr; Brand Margin Rules, or switch to a different
+                          pricing method.
+                        </p>
+                        <Link
+                          href="/facility/dashboard/services/retail/settings"
+                          className="font-medium underline underline-offset-2"
+                        >
+                          Manage brand rules &rarr;
+                        </Link>
+                      </div>
+                    );
+                  }
+                  const selling = sellingFromMargin(
+                    cost,
+                    rule.marginPercent,
+                    rounding,
+                  );
+                  return (
+                    <p className="text-muted-foreground text-sm">
+                      Using {brand}&rsquo;s margin rule: {rule.marginPercent}%
+                      &rarr; Selling price:{" "}
+                      <span className="text-foreground font-medium">
+                        ${selling.toFixed(2)}
+                      </span>
+                      .
+                    </p>
+                  );
+                }
+
+                // Manual mode: selling price is typed, exactly as before.
+                return (
+                  <div className="grid gap-2 sm:max-w-[calc(50%-0.5rem)]">
+                    <Label htmlFor="basePrice">Selling Price ($)</Label>
+                    <Input
+                      id="basePrice"
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={formData.basePrice}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          basePrice: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+                );
+              })()}
+
+              {/* Always-visible pricing summary — recomputes live from the
+                  current cost and resolved selling price, regardless of the
+                  selected pricing method. */}
+              {(() => {
+                const cost = formData.baseCostPrice;
+                const selling = resolvedSellingPrice;
+                const profit = profitOf(selling, cost);
+                const margin = marginOf(selling, cost);
+                return (
+                  <div className="bg-muted/40 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border p-3 text-sm">
+                    <span className="text-muted-foreground">
+                      Cost:{" "}
+                      <span className="text-foreground font-medium">
+                        ${cost.toFixed(2)}
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground/50">|</span>
+                    <span className="text-muted-foreground">
+                      Selling:{" "}
+                      <span className="text-foreground font-medium">
+                        ${selling.toFixed(2)}
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground/50">|</span>
+                    <span className="text-muted-foreground">
+                      Profit:{" "}
+                      <span className="text-foreground font-medium">
+                        ${profit.toFixed(2)}
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground/50">|</span>
+                    <span className="text-muted-foreground">
+                      Margin:{" "}
+                      <span className="text-foreground font-medium">
+                        {margin.toFixed(1)}%
+                      </span>
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="grid grid-cols-3 gap-4">
@@ -1167,6 +1505,69 @@ export default function ProductsPage() {
                     })
                   }
                 />
+              </div>
+            </div>
+
+            {/* Packaged as — how this product ships from the supplier. Used to
+                auto-fill the invoice-import line config (spec 0.1, 2.x). */}
+            <div className="grid gap-2">
+              <Label>Packaged as</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-1.5">
+                  <Label
+                    htmlFor="packagedAsUnitType"
+                    className="text-muted-foreground text-xs font-normal"
+                  >
+                    Unit Type
+                  </Label>
+                  <Select
+                    value={formData.packagedAsUnitType}
+                    onValueChange={(v) =>
+                      setFormData({
+                        ...formData,
+                        packagedAsUnitType: v as PackageUnitType,
+                        packagedAsItemsPerPackage:
+                          v === "each"
+                            ? 1
+                            : formData.packagedAsItemsPerPackage || 1,
+                      })
+                    }
+                  >
+                    <SelectTrigger id="packagedAsUnitType">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PACKAGE_UNIT_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {formData.packagedAsUnitType !== "each" && (
+                  <div className="grid gap-1.5">
+                    <Label
+                      htmlFor="packagedAsItemsPerPackage"
+                      className="text-muted-foreground text-xs font-normal"
+                    >
+                      Items per Package
+                    </Label>
+                    <Input
+                      id="packagedAsItemsPerPackage"
+                      type="number"
+                      min={1}
+                      value={formData.packagedAsItemsPerPackage}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          packagedAsItemsPerPackage:
+                            parseInt(e.target.value, 10) || 0,
+                        })
+                      }
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1238,6 +1639,14 @@ export default function ProductsPage() {
                                 : variant.variantType}
                               : {variant.variantValue}
                             </Badge>
+                            {variant.overridePricing && (
+                              <Badge
+                                variant="secondary"
+                                className="text-xs font-normal"
+                              >
+                                Custom pricing
+                              </Badge>
+                            )}
                           </div>
                           <div className="text-muted-foreground mt-1 flex items-center gap-4 text-sm">
                             <span>SKU: {variant.sku}</span>
@@ -1443,24 +1852,10 @@ export default function ProductsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="variantPrice">Selling Price ($)</Label>
-                <Input
-                  id="variantPrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={variantForm.price}
-                  onChange={(e) =>
-                    setVariantForm({
-                      ...variantForm,
-                      price: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                />
-              </div>
-              <div className="grid gap-2">
+            {/* Variant pricing. Cost is always variant-specific; the method is
+                inherited from the product unless "Override pricing" is on. */}
+            <div className="space-y-4">
+              <div className="grid gap-2 sm:max-w-[calc(50%-0.5rem)]">
                 <Label htmlFor="variantCostPrice">Cost Price ($)</Label>
                 <Input
                   id="variantCostPrice"
@@ -1476,6 +1871,197 @@ export default function ProductsPage() {
                   }
                 />
               </div>
+
+              <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="variantOverridePricing">
+                    Override pricing
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    Give this variant its own pricing method instead of
+                    following the product.
+                  </p>
+                </div>
+                <Switch
+                  id="variantOverridePricing"
+                  checked={variantForm.overridePricing}
+                  onCheckedChange={(checked) =>
+                    setVariantForm({ ...variantForm, overridePricing: checked })
+                  }
+                />
+              </div>
+
+              {variantForm.overridePricing ? (
+                <>
+                  <div className="grid gap-2">
+                    <Label>Pricing Method</Label>
+                    <ToggleGroup
+                      type="single"
+                      variant="outline"
+                      value={variantForm.pricingMethod}
+                      onValueChange={(value) => {
+                        if (!value) return;
+                        setVariantForm({
+                          ...variantForm,
+                          pricingMethod: value as PricingMethod,
+                        });
+                      }}
+                      className="w-full"
+                    >
+                      <ToggleGroupItem value="manual">
+                        Manual Price
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="margin">
+                        Product Margin %
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="brand_rule">
+                        Brand Rule
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
+
+                  {(() => {
+                    if (variantForm.pricingMethod === "margin") {
+                      return (
+                        <div className="grid gap-2 sm:max-w-[calc(50%-0.5rem)]">
+                          <Label htmlFor="variantMarginPercent">Margin %</Label>
+                          <Input
+                            id="variantMarginPercent"
+                            type="number"
+                            min={0}
+                            step={0.1}
+                            value={variantForm.marginPercent}
+                            onChange={(e) =>
+                              setVariantForm({
+                                ...variantForm,
+                                marginPercent: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                          />
+                        </div>
+                      );
+                    }
+                    if (variantForm.pricingMethod === "brand_rule") {
+                      const brand = formData.brand.trim();
+                      if (!brand) {
+                        return (
+                          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+                            Set a brand on the product first, then its brand
+                            margin rule can price this variant.
+                          </div>
+                        );
+                      }
+                      const rule = resolveBrandRule(brand);
+                      if (!rule) {
+                        return (
+                          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+                            No margin rule set for {brand}. Add one in Settings
+                            &rarr; Brand Margin Rules, or pick a different
+                            method.
+                          </div>
+                        );
+                      }
+                      return (
+                        <p className="text-muted-foreground text-sm">
+                          Using {brand}&rsquo;s margin rule:{" "}
+                          {rule.marginPercent}% &rarr; Selling price:{" "}
+                          <span className="text-foreground font-medium">
+                            ${resolvedVariantSellingPrice.toFixed(2)}
+                          </span>
+                          .
+                        </p>
+                      );
+                    }
+                    // manual override — typed selling price
+                    return (
+                      <div className="grid gap-2 sm:max-w-[calc(50%-0.5rem)]">
+                        <Label htmlFor="variantPrice">Selling Price ($)</Label>
+                        <Input
+                          id="variantPrice"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={variantForm.price}
+                          onChange={(e) =>
+                            setVariantForm({
+                              ...variantForm,
+                              price: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </div>
+                    );
+                  })()}
+                </>
+              ) : formData.pricingMethod === "manual" ? (
+                // Following the product's manual method — variant price is typed.
+                <div className="grid gap-2 sm:max-w-[calc(50%-0.5rem)]">
+                  <Label htmlFor="variantPrice">Selling Price ($)</Label>
+                  <Input
+                    id="variantPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={variantForm.price}
+                    onChange={(e) =>
+                      setVariantForm({
+                        ...variantForm,
+                        price: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                  />
+                </div>
+              ) : (
+                // Following the product's margin/brand method — computed.
+                <p className="text-muted-foreground text-sm">
+                  Follows product{" "}
+                  {formData.pricingMethod === "margin"
+                    ? `margin (${formData.marginPercent}%)`
+                    : `brand rule${formData.brand ? ` (${formData.brand})` : ""}`}{" "}
+                  &rarr; Selling price:{" "}
+                  <span className="text-foreground font-medium">
+                    ${resolvedVariantSellingPrice.toFixed(2)}
+                  </span>
+                </p>
+              )}
+
+              {(() => {
+                const cost = variantForm.costPrice;
+                const selling = resolvedVariantSellingPrice;
+                const profit = profitOf(selling, cost);
+                const margin = marginOf(selling, cost);
+                return (
+                  <div className="bg-muted/40 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border p-3 text-sm">
+                    <span className="text-muted-foreground">
+                      Cost:{" "}
+                      <span className="text-foreground font-medium">
+                        ${cost.toFixed(2)}
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground/50">|</span>
+                    <span className="text-muted-foreground">
+                      Selling:{" "}
+                      <span className="text-foreground font-medium">
+                        ${selling.toFixed(2)}
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground/50">|</span>
+                    <span className="text-muted-foreground">
+                      Profit:{" "}
+                      <span className="text-foreground font-medium">
+                        ${profit.toFixed(2)}
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground/50">|</span>
+                    <span className="text-muted-foreground">
+                      Margin:{" "}
+                      <span className="text-foreground font-medium">
+                        {margin.toFixed(1)}%
+                      </span>
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="grid grid-cols-3 gap-4">

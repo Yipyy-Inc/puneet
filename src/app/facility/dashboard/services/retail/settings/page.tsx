@@ -23,7 +23,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { customPaymentMethods, type CustomPaymentMethod } from "@/data/retail";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { toast } from "sonner";
+import {
+  customPaymentMethods,
+  products,
+  type CustomPaymentMethod,
+} from "@/data/retail";
+import { retailConfig, type BrandMarginRule } from "@/data/retail-config";
+import { retailMutations, resolveBrandRule } from "@/lib/api/retail";
+import { sellingFromMargin } from "@/lib/retail-pricing";
 
 export default function RetailSettingsPage() {
   const [settings, setSettings] = useState({
@@ -121,6 +144,113 @@ export default function RetailSettingsPage() {
     isActive: true,
     canBeUsedForRefunds: true,
   });
+
+  // ── Brand Margin Rules (spec 1.7) ─────────────────────────────────────────
+  const ADD_NEW_BRAND = "__add_new_brand__";
+  const [brandRules, setBrandRules] = useState<BrandMarginRule[]>(
+    retailConfig.brandMarginRules,
+  );
+  const [brandRuleModalOpen, setBrandRuleModalOpen] = useState(false);
+  const [editingBrandRule, setEditingBrandRule] =
+    useState<BrandMarginRule | null>(null);
+  const [addingNewBrand, setAddingNewBrand] = useState(false);
+  const [brandRuleForm, setBrandRuleForm] = useState({
+    brandName: "",
+    marginPercent: 0,
+    applyToExisting: false,
+  });
+
+  const brandNameOptions = retailConfig.brands.map((b) => b.name);
+
+  // "Products Using This Rule" — products whose brand resolves to this rule and
+  // that are actually in brand_rule pricing mode.
+  const countProductsUsingRule = (rule: BrandMarginRule) =>
+    products.filter(
+      (p) =>
+        p.pricingMethod === "brand_rule" &&
+        resolveBrandRule(p.brand)?.id === rule.id,
+    ).length;
+
+  const openAddBrandRule = () => {
+    setEditingBrandRule(null);
+    setAddingNewBrand(false);
+    setBrandRuleForm({
+      brandName: "",
+      marginPercent: retailConfig.pricingConfig.defaultMarginPercent ?? 0,
+      applyToExisting: false,
+    });
+    setBrandRuleModalOpen(true);
+  };
+
+  const openEditBrandRule = (rule: BrandMarginRule) => {
+    setEditingBrandRule(rule);
+    // If the brand isn't one of the known brands, edit it as free text.
+    setAddingNewBrand(!brandNameOptions.includes(rule.brandName));
+    setBrandRuleForm({
+      brandName: rule.brandName,
+      marginPercent: rule.marginPercent,
+      applyToExisting: false,
+    });
+    setBrandRuleModalOpen(true);
+  };
+
+  const handleSaveBrandRule = async () => {
+    const name = brandRuleForm.brandName.trim();
+    if (!name) return;
+
+    const updated = await retailMutations
+      .upsertBrandMarginRule({
+        id: editingBrandRule?.id,
+        brandName: name,
+        marginPercent: brandRuleForm.marginPercent,
+      })
+      .mutationFn();
+    setBrandRules([...updated]);
+
+    // On "Apply to existing", recompute basePrice for every product of this
+    // brand that is currently priced by brand_rule, and stamp priceUpdatedAt.
+    const savedRule = resolveBrandRule(name);
+    if (brandRuleForm.applyToExisting && savedRule) {
+      const now = new Date().toISOString().slice(0, 10);
+      const rounding = retailConfig.pricingConfig.rounding;
+      let affected = 0;
+      for (const p of products) {
+        if (
+          p.pricingMethod === "brand_rule" &&
+          resolveBrandRule(p.brand)?.id === savedRule.id
+        ) {
+          const newPrice = sellingFromMargin(
+            p.baseCostPrice,
+            savedRule.marginPercent,
+            rounding,
+          );
+          if (newPrice !== p.basePrice) {
+            p.basePrice = newPrice;
+            p.priceUpdatedAt = now;
+            affected += 1;
+          }
+        }
+      }
+      toast.success(
+        `Brand rule saved — repriced ${affected} product${affected === 1 ? "" : "s"}.`,
+      );
+    } else {
+      toast.success(
+        editingBrandRule ? "Brand rule updated." : "Brand rule added.",
+      );
+    }
+
+    setBrandRuleModalOpen(false);
+    setEditingBrandRule(null);
+  };
+
+  const handleDeleteBrandRule = async (rule: BrandMarginRule) => {
+    const updated = await retailMutations
+      .deleteBrandMarginRule(rule.id)
+      .mutationFn();
+    setBrandRules([...updated]);
+    toast.success("Brand rule deleted.");
+  };
 
   const handleSave = () => {
     // TODO: Save to backend
@@ -872,6 +1002,78 @@ export default function RetailSettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Brand Margin Rules */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <CardTitle>Brand Margin Rules</CardTitle>
+                <CardDescription>
+                  Set a target margin per brand. Products priced by &ldquo;Brand
+                  Rule&rdquo; use their brand&rsquo;s margin against their own
+                  cost.
+                </CardDescription>
+              </div>
+              <Button size="sm" onClick={openAddBrandRule}>
+                <Plus className="mr-2 size-4" />
+                Add Brand Rule
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {brandRules.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Brand Name</TableHead>
+                    <TableHead>Margin %</TableHead>
+                    <TableHead>Products Using This Rule</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {brandRules.map((rule) => (
+                    <TableRow key={rule.id}>
+                      <TableCell className="font-medium">
+                        {rule.brandName}
+                      </TableCell>
+                      <TableCell>{rule.marginPercent}%</TableCell>
+                      <TableCell>{countProductsUsingRule(rule)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            aria-label={`Edit ${rule.brandName} rule`}
+                            onClick={() => openEditBrandRule(rule)}
+                          >
+                            <Edit className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive size-8"
+                            aria-label={`Delete ${rule.brandName} rule`}
+                            onClick={() => handleDeleteBrandRule(rule)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-muted-foreground py-6 text-center text-sm">
+                No brand margin rules yet. Add one to auto-price products by
+                brand.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Orders & Fulfillment */}
         <Card>
           <CardHeader>
@@ -1331,6 +1533,119 @@ export default function RetailSettingsPage() {
               disabled={!customPaymentForm.name.trim()}
             >
               {editingPaymentMethod ? "Save Changes" : "Add Method"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Brand Margin Rule Modal */}
+      <Dialog open={brandRuleModalOpen} onOpenChange={setBrandRuleModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingBrandRule ? "Edit Brand Rule" : "Add Brand Rule"}
+            </DialogTitle>
+            <DialogDescription>
+              Products of this brand priced by &ldquo;Brand Rule&rdquo; are sold
+              at this margin over their own cost.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid gap-2">
+              <Label>Brand Name</Label>
+              <Select
+                value={addingNewBrand ? ADD_NEW_BRAND : brandRuleForm.brandName}
+                onValueChange={(value) => {
+                  if (value === ADD_NEW_BRAND) {
+                    setAddingNewBrand(true);
+                    setBrandRuleForm({ ...brandRuleForm, brandName: "" });
+                  } else {
+                    setAddingNewBrand(false);
+                    setBrandRuleForm({ ...brandRuleForm, brandName: value });
+                  }
+                }}
+              >
+                <SelectTrigger aria-label="Brand Name">
+                  <SelectValue placeholder="Select a brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  {brandNameOptions.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value={ADD_NEW_BRAND}>
+                    + Add new brand&hellip;
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {addingNewBrand && (
+                <Input
+                  autoFocus
+                  value={brandRuleForm.brandName}
+                  onChange={(e) =>
+                    setBrandRuleForm({
+                      ...brandRuleForm,
+                      brandName: e.target.value,
+                    })
+                  }
+                  placeholder="New brand name"
+                />
+              )}
+            </div>
+            <div className="grid gap-2">
+              <Label>Margin %</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  value={brandRuleForm.marginPercent}
+                  onChange={(e) =>
+                    setBrandRuleForm({
+                      ...brandRuleForm,
+                      marginPercent: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  className="w-32"
+                />
+                <span className="text-muted-foreground">%</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <Label>Apply to existing products</Label>
+                <p className="text-muted-foreground text-sm">
+                  Reprice every product of this brand that is currently on Brand
+                  Rule pricing.
+                </p>
+              </div>
+              <Switch
+                checked={brandRuleForm.applyToExisting}
+                onCheckedChange={(checked) =>
+                  setBrandRuleForm({
+                    ...brandRuleForm,
+                    applyToExisting: checked,
+                  })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBrandRuleModalOpen(false);
+                setEditingBrandRule(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveBrandRule}
+              disabled={!brandRuleForm.brandName.trim()}
+            >
+              {editingBrandRule ? "Save Changes" : "Add Rule"}
             </Button>
           </DialogFooter>
         </DialogContent>

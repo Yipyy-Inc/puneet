@@ -30,6 +30,8 @@ import {
   type RetailTaxConfig,
   type RetailReceiptConfig,
   type RetailLowStockConfig,
+  type RetailPricingConfig,
+  type BrandMarginRule,
 } from "@/data/retail-config";
 import type { InvoiceDocumentTax } from "@/lib/invoice-document";
 
@@ -110,7 +112,41 @@ export const retailQueries = {
     queryFn: async (): Promise<RetailLowStockConfig> =>
       retailConfig.lowStockConfig,
   }),
+  /**
+   * Facility default pricing behavior (spec tasks #11–13): default method,
+   * default margin, and the rounding rule fed to @/lib/retail-pricing.
+   */
+  pricingConfig: () => ({
+    queryKey: ["retail", "pricing-config"] as const,
+    queryFn: async (): Promise<RetailPricingConfig> =>
+      retailConfig.pricingConfig,
+  }),
+  /** Per-brand margin rules (spec task #8), matched by normalized brand name. */
+  brandMarginRules: () => ({
+    queryKey: ["retail", "brand-margin-rules"] as const,
+    queryFn: async (): Promise<BrandMarginRule[]> =>
+      retailConfig.brandMarginRules,
+  }),
 };
+
+/** Normalize a brand name for matching: lowercase, whitespace removed. */
+function normalizeBrandName(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, "");
+}
+
+/**
+ * Resolve the brand margin rule for a product's brand (spec task #8). Matching
+ * is case- and space-insensitive so "PawNutrition" and "Paw Nutrition" resolve
+ * to the same rule — this is why the "Manage Brands" screen standardizes names.
+ */
+export function resolveBrandRule(
+  brandName: string,
+  rules: BrandMarginRule[] = retailConfig.brandMarginRules,
+): BrandMarginRule | undefined {
+  if (!brandName) return undefined;
+  const target = normalizeBrandName(brandName);
+  return rules.find((r) => normalizeBrandName(r.brandName) === target);
+}
 
 export const retailMutations = {
   addTransaction: (
@@ -155,6 +191,41 @@ export const retailMutations = {
     mutationFn: async (): Promise<RetailLowStockConfig> => {
       retailConfig.lowStockConfig = config;
       return retailConfig.lowStockConfig;
+    },
+  }),
+  updatePricingConfig: (config: RetailPricingConfig) => ({
+    mutationFn: async (): Promise<RetailPricingConfig> => {
+      retailConfig.pricingConfig = config;
+      return retailConfig.pricingConfig;
+    },
+  }),
+  /**
+   * Insert or update a brand margin rule (spec task #8). A missing/blank id
+   * creates a new rule; an existing id replaces it in place.
+   */
+  upsertBrandMarginRule: (
+    input: Omit<BrandMarginRule, "id"> & { id?: string },
+  ) => ({
+    mutationFn: async (): Promise<BrandMarginRule[]> => {
+      const id = input.id || `brm-${Date.now()}`;
+      const rule: BrandMarginRule = {
+        id,
+        brandName: input.brandName,
+        marginPercent: input.marginPercent,
+      };
+      const rules = retailConfig.brandMarginRules;
+      const idx = rules.findIndex((r) => r.id === id);
+      if (idx >= 0) rules[idx] = rule;
+      else rules.push(rule);
+      return retailConfig.brandMarginRules;
+    },
+  }),
+  deleteBrandMarginRule: (id: string) => ({
+    mutationFn: async (): Promise<BrandMarginRule[]> => {
+      retailConfig.brandMarginRules = retailConfig.brandMarginRules.filter(
+        (r) => r.id !== id,
+      );
+      return retailConfig.brandMarginRules;
     },
   }),
 };

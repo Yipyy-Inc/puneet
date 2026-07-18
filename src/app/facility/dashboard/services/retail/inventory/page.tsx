@@ -17,6 +17,7 @@ import {
   Eye,
   ShoppingCart,
   FileText,
+  FileUp,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ import {
   type Product,
   type ProductVariant,
 } from "@/data/retail";
+import { InvoiceImportDialog } from "@/components/retail/InvoiceImportDialog";
 
 type InventoryMovementWithRecord = InventoryMovement & Record<string, unknown>;
 type LowStockAlertWithRecord = LowStockAlert & Record<string, unknown>;
@@ -69,6 +71,7 @@ export default function InventoryPage() {
     "overview" | "movements" | "alerts"
   >("overview");
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+  const [isInvoiceImportOpen, setIsInvoiceImportOpen] = useState(false);
   const [isAlertDetailModalOpen, setIsAlertDetailModalOpen] = useState(false);
   const [isReorderListModalOpen, setIsReorderListModalOpen] = useState(false);
   const [isCreatePOModalOpen, setIsCreatePOModalOpen] = useState(false);
@@ -636,10 +639,19 @@ export default function InventoryPage() {
             </TabsTrigger>
           </TabsList>
 
-          <Button onClick={() => setIsAdjustmentModalOpen(true)}>
-            <RefreshCw className="mr-2 size-4" />
-            Adjust Stock
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsInvoiceImportOpen(true)}
+            >
+              <FileUp className="mr-2 size-4" />
+              Receive Stock via Invoice
+            </Button>
+            <Button onClick={() => setIsAdjustmentModalOpen(true)}>
+              <RefreshCw className="mr-2 size-4" />
+              Adjust Stock
+            </Button>
+          </div>
         </div>
 
         {/* Overview Tab */}
@@ -1432,6 +1444,11 @@ export default function InventoryPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <InvoiceImportDialog
+        open={isInvoiceImportOpen}
+        onOpenChange={setIsInvoiceImportOpen}
+      />
     </div>
   );
 }
