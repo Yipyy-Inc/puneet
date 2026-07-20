@@ -60,7 +60,7 @@ export function InboxList({
   }, [conversations, filter, query]);
 
   return (
-    <div className="bg-card flex h-full min-h-0 w-[380px] shrink-0 flex-col overflow-hidden rounded-2xl border">
+    <div className="bg-card flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-2xl border">
       <div className="space-y-2 border-b p-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">Support Inbox</h2>

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import {
+  ArrowLeft,
   FileText,
   FileVideo,
   Lock,
@@ -51,8 +52,11 @@ function fileIcon(type?: string) {
 
 export function ConversationThread({
   conversation,
+  onBack,
 }: {
   conversation: SupportConversation | null;
+  /** Small screens only: return to the inbox list (clears the selection). */
+  onBack?: () => void;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const count = conversation?.messages.length ?? 0;
@@ -74,6 +78,16 @@ export function ConversationThread({
     <div className="bg-card flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border">
       <div className="flex items-center justify-between gap-3 border-b p-3">
         <div className="flex min-w-0 items-center gap-3">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label="Back to inbox"
+              className="hover:bg-muted -ml-1 flex size-8 shrink-0 items-center justify-center rounded-full lg:hidden"
+            >
+              <ArrowLeft className="size-4" />
+            </button>
+          )}
           <FacilityAvatar
             name={conversation.facilityName}
             id={conversation.facilityId}
