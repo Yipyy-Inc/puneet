@@ -758,7 +758,7 @@ function BusinessHoursCard() {
                 key={day}
                 className="flex items-center justify-between rounded-lg border p-3"
               >
-                <div className="flex flex-1 items-center gap-4">
+                <div className="flex flex-1 flex-wrap items-center gap-x-4 gap-y-2">
                   <div className="w-32 font-medium capitalize">{day}</div>
                   <Switch
                     aria-label={`${day} open`}

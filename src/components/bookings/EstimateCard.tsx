@@ -91,7 +91,7 @@ export function EstimateCard({
       >
         <CardContent className="p-0">
           {/* Header strip */}
-          <div className="flex items-center justify-between px-5 py-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
             <div className="flex items-center gap-3">
               {/* Bulk-selection checkbox — hover-reveal, always shown when selected */}
               {onToggleSelect && (
@@ -205,7 +205,7 @@ export function EstimateCard({
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               {/* Expiry countdown — the primary badge conveys the expired state */}
               {estimate.status === "sent" &&
                 expiryDays !== null &&

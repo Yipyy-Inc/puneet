@@ -725,7 +725,7 @@ export function DailyCareView() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/* HQ View — manager monitoring mode over all blocks + staff. */}
             <Button
               variant={hqView ? "default" : "outline"}

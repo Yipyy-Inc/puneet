@@ -35,7 +35,7 @@ function HubInner() {
 
   return (
     <div className="flex h-full flex-col">
-      <nav className="flex items-center gap-1 border-b bg-white px-6 pt-4">
+      <nav className="flex items-center gap-1 overflow-x-auto border-b bg-white px-6 pt-4">
         <div className="flex items-center gap-1">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;

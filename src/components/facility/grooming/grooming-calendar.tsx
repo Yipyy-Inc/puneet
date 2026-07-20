@@ -2658,7 +2658,7 @@ export function GroomingCalendar() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <div className="relative">
                 <Search className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
                 <Input

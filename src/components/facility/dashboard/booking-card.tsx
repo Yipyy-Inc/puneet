@@ -307,7 +307,7 @@ export function BookingCard({
               entityId={booking.petId}
               compact
               maxVisible={1}
-              className="shrink-0 flex-nowrap"
+              className="min-w-0 flex-wrap"
             />
           </div>
           <p className="text-muted-foreground line-clamp-1 text-xs">
