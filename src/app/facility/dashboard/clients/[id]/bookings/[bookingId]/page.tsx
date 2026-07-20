@@ -721,10 +721,10 @@ export default function ClientBookingDetailPage({
         )}
 
         {/* ── Hero Header ── */}
-        <div className="from-card to-muted/20 rounded-xl border bg-linear-to-r p-6">
+        <div className="from-card to-muted/20 rounded-xl border bg-linear-to-r p-4 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-2xl font-bold tracking-tight">
                   {bookingRef}
                 </h1>
@@ -913,11 +913,11 @@ export default function ClientBookingDetailPage({
         </div>
 
         {/* ── Content Grid ── */}
-        <div className="grid gap-5 lg:grid-cols-5">
+        <div className="grid gap-5 lg:grid-cols-5 [&>*]:min-w-0">
           {/* Left — 3 cols */}
-          <div className="space-y-5 lg:col-span-3">
+          <div className="min-w-0 space-y-5 lg:col-span-3">
             {/* Booking Details + Pets */}
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               {/* Details */}
               <Card className="overflow-hidden">
                 <CardHeader className="bg-muted/30 pb-3">
@@ -1340,7 +1340,7 @@ export default function ClientBookingDetailPage({
           </div>
 
           {/* Right — 2 cols — Invoice */}
-          <div className="lg:col-span-2">
+          <div className="min-w-0 lg:col-span-2">
             <div className="sticky top-4">
               {invoice ? (
                 <InvoicePanel

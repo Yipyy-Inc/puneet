@@ -131,7 +131,7 @@ export function BelongingsSection({
     <>
       <Card className="overflow-hidden">
         <CardHeader className="bg-muted/30 pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
               <Backpack className="size-3.5" />
               Belongings
@@ -149,7 +149,7 @@ export function BelongingsSection({
                 </span>
               )}
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {unreturnedCount > 1 && (
                 <Button
                   variant="outline"
@@ -415,7 +415,7 @@ export function BelongingsSection({
 
                   {/* Details */}
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={cn(
                           "text-sm font-semibold",

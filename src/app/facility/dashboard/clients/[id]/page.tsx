@@ -480,7 +480,7 @@ export default function ClientDetailPage({
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <Button
           variant="ghost"
           size="icon"
@@ -488,7 +488,7 @@ export default function ClientDetailPage({
         >
           <ArrowLeft className="size-5" />
         </Button>
-        <div className="flex flex-1 items-center gap-4">
+        <div className="flex min-w-0 flex-1 items-center gap-4">
           {/* Client Avatar */}
           <div className="relative">
             <div className="bg-muted flex h-16 w-16 items-center justify-center overflow-hidden rounded-full">
@@ -504,8 +504,8 @@ export default function ClientDetailPage({
               </Button>
             )}
           </div>
-          <div>
-            <div className="flex items-center gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-3xl font-bold tracking-tight">
                 {client.name}
               </h2>
@@ -535,7 +535,7 @@ export default function ClientDetailPage({
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {isEditing ? (
             <>
               <Button variant="outline" size="sm" onClick={handleCancel}>
@@ -1057,7 +1057,7 @@ export default function ClientDetailPage({
                   </Badge>
                 )}
               </CardTitle>
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <Button
                   size="sm"
                   variant="outline"

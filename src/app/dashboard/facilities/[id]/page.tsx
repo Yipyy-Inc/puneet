@@ -484,7 +484,7 @@ export default function FacilityDetailPage() {
             >
               <ArrowLeft className="size-5" />
             </Button>
-            <div className="flex flex-1 items-center gap-3">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
               <div
                 className="flex size-12 items-center justify-center rounded-xl"
                 style={{
@@ -494,15 +494,15 @@ export default function FacilityDetailPage() {
               >
                 <Building className="size-6 text-white" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h1 className="text-2xl font-bold tracking-tight">
                   {facility.name}
                 </h1>
-                <div className="mt-1 flex items-center gap-2">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
                   <StatusBadge type="status" value={currentStatus} showIcon />
                   <StatusBadge type="plan" value={facility.plan} showIcon />
                   {uniqueServices.length > 0 && (
-                    <div className="ml-2 flex gap-1">
+                    <div className="flex flex-wrap gap-1 sm:ml-2">
                       {uniqueServices.slice(0, 3).map((service) => {
                         const Icon = getServiceIcon(service);
                         return (
@@ -529,7 +529,7 @@ export default function FacilityDetailPage() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 onClick={() => setShowImpersonateDialog(true)}
