@@ -256,7 +256,12 @@ export function BookingCard({
       // keyboard users use the inner links/actions.
       onClick={handleOpen}
       className={cn(
-        "group border-border/70 bg-card relative flex h-full cursor-pointer items-center gap-3 rounded-2xl border p-3 transition-all",
+        // flex-wrap + a full-width action row below sm: on a phone the card is
+        // ~358px, and an inline action column left only ~199px for the details,
+        // forcing the name and badges onto separate lines. Dropping the action
+        // to its own row gives the details ~306px — the same single-line
+        // name/badges + owner + kennel layout as desktop.
+        "group border-border/70 bg-card relative flex h-full cursor-pointer flex-wrap items-center gap-3 rounded-2xl border p-3 transition-all",
         "hover:border-border hover:shadow-sm",
         "data-[status=checked-out]:opacity-80",
       )}
@@ -367,7 +372,7 @@ export function BookingCard({
       </div>
 
       {/* Action region — sibling to the clickable area, no propagation possible */}
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto [&>*]:flex-1 sm:[&>*]:flex-none">
         {primaryAction === "check-in" && (
           <>
             <Button

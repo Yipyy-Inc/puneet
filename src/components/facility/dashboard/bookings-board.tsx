@@ -150,8 +150,12 @@ function BookingList({ items, empty, primaryAction }: BookingListProps) {
       </div>
     );
   }
+  // One card per row on phones: at 2 columns a card is ~180px, which the avatar
+  // and Check In button consume entirely, collapsing the pet/owner details to
+  // zero width instead of overflowing — so a clipping probe reports it clean
+  // while it is unusable.
   return (
-    <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
       {items.map((b) => (
         <BookingCard key={b.id} booking={b} primaryAction={primaryAction} />
       ))}
