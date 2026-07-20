@@ -409,6 +409,7 @@ export default function LiveSupportPage() {
                               className="size-8 p-0"
                             >
                               <MoreVertical className="size-4" />
+                              <span className="sr-only">Open menu</span>
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
@@ -514,7 +515,7 @@ export default function LiveSupportPage() {
 
         {/* Ticket Detail Modal */}
         <Dialog open={isTicketModalOpen} onOpenChange={setIsTicketModalOpen}>
-          <DialogContent className="flex max-h-[90vh] min-w-5xl flex-col p-0">
+          <DialogContent className="flex max-h-[90vh] flex-col p-0 sm:max-w-5xl">
             <div className="flex-1 overflow-y-auto p-6">
               <DialogHeader className="mb-4">
                 <DialogTitle className="text-xl">
@@ -695,7 +696,7 @@ export default function LiveSupportPage() {
           open={isResolveDialogOpen}
           onOpenChange={setIsResolveDialogOpen}
         >
-          <DialogContent className="min-w-5xl">
+          <DialogContent className="sm:max-w-5xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CheckCircle2 className="text-success size-5" />

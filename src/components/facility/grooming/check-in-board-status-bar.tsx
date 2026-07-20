@@ -1,6 +1,20 @@
 "use client";
 
+import {
+  CalendarCheck,
+  CheckCircle2,
+  DollarSign,
+  LogIn,
+  PackageCheck,
+  Scissors,
+  UserX,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  KpiTile,
+  type KpiTone,
+} from "@/components/facility/dashboard/kpi-tile";
 
 export interface BoardCounts {
   totalBooked: number;
@@ -13,7 +27,60 @@ export interface BoardCounts {
   collectedRevenue: number;
 }
 
-// Zone 1 — Today's Status Bar: live counts + revenue + package filter pills.
+const STATUS_TILES: {
+  key: keyof BoardCounts;
+  label: string;
+  hint: string;
+  icon: LucideIcon;
+  tone: KpiTone;
+}[] = [
+  {
+    key: "totalBooked",
+    label: "Total Booked",
+    hint: "Appointments today",
+    icon: CalendarCheck,
+    tone: "slate",
+  },
+  {
+    key: "checkedIn",
+    label: "Checked In",
+    hint: "Arrived & waiting",
+    icon: LogIn,
+    tone: "emerald",
+  },
+  {
+    key: "inProgress",
+    label: "In Progress",
+    hint: "Being groomed",
+    icon: Scissors,
+    tone: "indigo",
+  },
+  {
+    key: "ready",
+    label: "Ready for Pickup",
+    hint: "Awaiting pickup",
+    icon: PackageCheck,
+    tone: "violet",
+  },
+  {
+    key: "completed",
+    label: "Completed",
+    hint: "Finished today",
+    icon: CheckCircle2,
+    tone: "slate",
+  },
+  {
+    key: "noShows",
+    label: "No-Shows",
+    hint: "Did not arrive",
+    icon: UserX,
+    tone: "rose",
+  },
+];
+
+// Zone 1 — Today's Status Bar: dashboard-style KPI tiles + revenue tiles, with
+// the package filter pills below (matches the main-dashboard Live Activity Board
+// look).
 export function StatusBar({
   counts,
   packages,
@@ -25,76 +92,36 @@ export function StatusBar({
   activeFilter: string;
   onFilter: (id: string) => void;
 }) {
-  const tiles: { label: string; value: number; tone: string }[] = [
-    {
-      label: "Total Booked",
-      value: counts.totalBooked,
-      tone: "text-slate-700 dark:text-slate-200",
-    },
-    {
-      label: "Checked In",
-      value: counts.checkedIn,
-      tone: "text-emerald-600 dark:text-emerald-400",
-    },
-    {
-      label: "In Progress",
-      value: counts.inProgress,
-      tone: "text-blue-600 dark:text-blue-400",
-    },
-    {
-      label: "Ready for Pickup",
-      value: counts.ready,
-      tone: "text-purple-600 dark:text-purple-400",
-    },
-    {
-      label: "Completed",
-      value: counts.completed,
-      tone: "text-gray-500 dark:text-gray-400",
-    },
-    {
-      label: "No-Shows",
-      value: counts.noShows,
-      tone: "text-red-600 dark:text-red-400",
-    },
-  ];
   return (
-    <div className="bg-card space-y-3 rounded-xl border p-3">
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        {tiles.map((t) => (
-          <div key={t.label} className="min-w-16">
-            <p
-              className={cn(
-                "text-2xl leading-none font-bold tabular-nums",
-                t.tone,
-              )}
-            >
-              {t.value}
-            </p>
-            <p className="text-muted-foreground mt-1 text-[11px] font-medium">
-              {t.label}
-            </p>
-          </div>
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+        {STATUS_TILES.map((t) => (
+          <KpiTile
+            key={t.key}
+            label={t.label}
+            value={counts[t.key]}
+            hint={t.hint}
+            icon={t.icon}
+            tone={t.tone}
+          />
         ))}
-        <div className="ml-auto flex items-center gap-6">
-          <div>
-            <p className="text-2xl leading-none font-bold text-slate-700 tabular-nums dark:text-slate-200">
-              ${counts.expectedRevenue.toFixed(0)}
-            </p>
-            <p className="text-muted-foreground mt-1 text-[11px] font-medium">
-              Expected Revenue
-            </p>
-          </div>
-          <div>
-            <p className="text-2xl leading-none font-bold text-emerald-600 tabular-nums dark:text-emerald-400">
-              ${counts.collectedRevenue.toFixed(0)}
-            </p>
-            <p className="text-muted-foreground mt-1 text-[11px] font-medium">
-              Collected Revenue
-            </p>
-          </div>
-        </div>
+        <KpiTile
+          label="Expected Revenue"
+          value={`$${counts.expectedRevenue.toFixed(0)}`}
+          hint="If all appointments complete"
+          icon={DollarSign}
+          tone="amber"
+        />
+        <KpiTile
+          label="Collected Revenue"
+          value={`$${counts.collectedRevenue.toFixed(0)}`}
+          hint="Paid so far today"
+          icon={DollarSign}
+          tone="emerald"
+        />
       </div>
-      <div className="flex flex-wrap gap-1.5 border-t pt-3">
+
+      <div className="flex flex-wrap gap-1.5">
         <FilterPill
           label="All"
           active={activeFilter === "all"}
@@ -127,10 +154,10 @@ function FilterPill({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+        "rounded-full border px-3 py-1 text-xs font-medium transition-all hover:-translate-y-px hover:shadow-sm",
         active
-          ? "border-transparent bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-          : "hover:bg-muted/60",
+          ? "border-transparent bg-sky-500 text-white shadow-md"
+          : "border-border/70 bg-background hover:bg-muted/60",
       )}
     >
       {label}

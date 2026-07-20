@@ -290,19 +290,25 @@ export function GenericSidebar({
                   onOpenChange={() => toggleSection(section.label!)}
                 >
                   <CollapsibleTrigger asChild>
+                    {/* asChild → a real <button>: Collapsible stamps
+                        type/aria-controls/aria-expanded on this node, and those
+                        ARIA attributes are invalid on a plain <div>. */}
                     <SidebarGroupLabel
+                      asChild
                       className={cn(
-                        `text-muted-foreground/70 mb-1 flex items-center justify-between px-3 text-xs font-semibold tracking-wider uppercase`,
+                        `text-muted-foreground mb-1 flex items-center justify-between px-3 text-xs font-semibold tracking-wider uppercase`,
                         !hasActiveItem && "cursor-pointer",
                       )}
                     >
-                      <span>{t(section.label)}</span>
-                      <ChevronRight
-                        className={cn(
-                          "size-4 transition-transform duration-200",
-                          isOpen ? "rotate-90" : "",
-                        )}
-                      />
+                      <button type="button" className="w-full">
+                        <span>{t(section.label)}</span>
+                        <ChevronRight
+                          className={cn(
+                            "size-4 transition-transform duration-200",
+                            isOpen ? "rotate-90" : "",
+                          )}
+                        />
+                      </button>
                     </SidebarGroupLabel>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="border-sidebar-border data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down ml-3 overflow-hidden border-l-2 pl-3">

@@ -57,7 +57,7 @@ export function StepSelectSource({
                   e.stopPropagation();
                   toast.info(`Opening the ${s.name} export guide`);
                 }}
-                className="inline-flex w-fit items-center gap-1 text-xs text-violet-600 hover:underline dark:text-violet-400"
+                className="inline-flex min-h-6 w-fit items-center gap-1 py-1 text-xs text-violet-600 hover:underline dark:text-violet-400"
               >
                 <Download className="size-3" />
                 Download Export Guide

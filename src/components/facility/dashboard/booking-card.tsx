@@ -250,20 +250,15 @@ export function BookingCard({
 
   return (
     <div
-      role="button"
-      tabIndex={0}
+      // No role="button"/tabIndex: the card contains its own links (pet, owner)
+      // and action buttons (Check In / Check Out). A button wrapping buttons is
+      // a WCAG "nested-interactive" failure — the card stays mouse-clickable and
+      // keyboard users use the inner links/actions.
       onClick={handleOpen}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          handleOpen();
-        }
-      }}
       className={cn(
         "group border-border/70 bg-card relative flex h-full cursor-pointer items-center gap-3 rounded-2xl border p-3 transition-all",
         "hover:border-border hover:shadow-sm",
         "data-[status=checked-out]:opacity-80",
-        "focus-visible:ring-ring focus:outline-none focus-visible:ring-2",
       )}
       data-status={booking.status}
     >
@@ -272,6 +267,7 @@ export function BookingCard({
         <Link
           href={petHref}
           onClick={(e) => e.stopPropagation()}
+          aria-label={`${booking.petName} profile`}
           className="relative block size-12 shrink-0"
         >
           {petImage ? (

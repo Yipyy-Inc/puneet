@@ -241,6 +241,7 @@ export function ChatPanel({
             className="hover:bg-muted size-9 rounded-full transition-colors"
           >
             <MoreVertical className="size-4" />
+            <span className="sr-only">Open menu</span>
           </Button>
         </div>
       </CardHeader>

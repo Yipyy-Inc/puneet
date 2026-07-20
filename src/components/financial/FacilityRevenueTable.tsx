@@ -102,6 +102,7 @@ export function FacilityRevenueTable() {
         <Button variant="ghost" className="size-8 p-0">
           <span className="sr-only">Open menu</span>
           <MoreHorizontal className="size-4" />
+          <span className="sr-only">Open menu</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

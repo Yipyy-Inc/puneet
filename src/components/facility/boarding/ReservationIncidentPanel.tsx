@@ -214,7 +214,7 @@ export function ReservationIncidentPanel({
 
       {/* Create incident modal */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <CreateIncidentModal
             onClose={() => setShowCreate(false)}
             prefilledPet={{ id: petId, name: petName, clientName: ownerName }}
@@ -231,7 +231,7 @@ export function ReservationIncidentPanel({
           if (!open) setSelected(null);
         }}
       >
-        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           {selected && (
             <IncidentDetailsModal
               incident={selected}

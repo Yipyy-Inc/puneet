@@ -318,7 +318,7 @@ export function ReputationMessageBuilder() {
                 >
                   {localeLabel(code)}
                   {code === baseLocale && (
-                    <span className="text-muted-foreground/70 ml-1">
+                    <span className="text-muted-foreground ml-1">
                       (default)
                     </span>
                   )}

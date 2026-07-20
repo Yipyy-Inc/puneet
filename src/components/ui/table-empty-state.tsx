@@ -37,7 +37,7 @@ export function TableEmptyState({
       )}
     >
       {Icon && (
-        <div className="bg-muted text-muted-foreground/70 flex size-12 items-center justify-center rounded-2xl">
+        <div className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-2xl">
           <Icon className="size-6" />
         </div>
       )}

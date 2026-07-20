@@ -118,28 +118,35 @@ export function FacilityOnboardingWizard({
       </header>
 
       {created ? (
-        <SuccessScreen
-          facilityName={draft.displayName || draft.legalName}
-          onViewProfile={handleViewProfile}
-          onClose={onClose}
-        />
+        // min-h-0 + overflow-y-auto: without a scroll container the step body
+        // is clipped by the fixed inset-0 shell on short screens, leaving the
+        // lower fields and the Next button unreachable on phones.
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <SuccessScreen
+            facilityName={draft.displayName || draft.legalName}
+            onViewProfile={handleViewProfile}
+            onClose={onClose}
+          />
+        </div>
       ) : (
         <>
           <WizardProgress step={step} onStepClick={(i) => setStep(i)} />
-          {step === 0 && <BusinessInformationStep {...stepProps} />}
-          {step === 1 && <PlanTrialStep {...stepProps} />}
-          {step === 2 && <ServicesPricingStep {...stepProps} />}
-          {step === 3 && <OperatingConfigurationStep {...stepProps} />}
-          {step === 4 && <PrimaryAdminStep {...stepProps} />}
-          {step === 5 && (
-            <ReviewStep
-              draft={draft}
-              onEdit={(i) => setStep(i)}
-              onBack={() => setStep(4)}
-              onCancel={onClose}
-              onCreate={handleCreate}
-            />
-          )}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {step === 0 && <BusinessInformationStep {...stepProps} />}
+            {step === 1 && <PlanTrialStep {...stepProps} />}
+            {step === 2 && <ServicesPricingStep {...stepProps} />}
+            {step === 3 && <OperatingConfigurationStep {...stepProps} />}
+            {step === 4 && <PrimaryAdminStep {...stepProps} />}
+            {step === 5 && (
+              <ReviewStep
+                draft={draft}
+                onEdit={(i) => setStep(i)}
+                onBack={() => setStep(4)}
+                onCancel={onClose}
+                onCreate={handleCreate}
+              />
+            )}
+          </div>
         </>
       )}
     </div>

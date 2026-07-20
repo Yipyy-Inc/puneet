@@ -233,6 +233,7 @@ export function FacilitySubscriptionsTable() {
         <Button variant="ghost" className="size-8 p-0">
           <span className="sr-only">Open menu</span>
           <MoreHorizontal className="size-4" />
+          <span className="sr-only">Open menu</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -424,7 +425,7 @@ export function FacilitySubscriptionsTable() {
 
       {/* View Details Modal */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="size-5" />

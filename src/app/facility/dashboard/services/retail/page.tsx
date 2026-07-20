@@ -1843,7 +1843,7 @@ export default function POSPage() {
                             {product.category ? ` · ${product.category}` : ""}
                           </p>
                           {product.brand && (
-                            <p className="text-muted-foreground/70 text-[10px]">
+                            <p className="text-muted-foreground text-[10px]">
                               {product.brand}
                             </p>
                           )}

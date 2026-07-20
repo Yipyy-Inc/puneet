@@ -862,7 +862,7 @@ export default function StylistsPage() {
               {s.totalRevenue.toLocaleString(undefined, {
                 maximumFractionDigits: 0,
               })}
-              <span className="text-muted-foreground/70"> revenue</span>
+              <span className="text-muted-foreground"> revenue</span>
             </div>
           </div>
         );
@@ -1012,6 +1012,7 @@ export default function StylistsPage() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
               <MoreHorizontal className="size-4" />
+              <span className="sr-only">Open menu</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

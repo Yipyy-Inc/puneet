@@ -38,9 +38,10 @@ export function QuickBookButton() {
       className="gap-2"
       onClick={handleOpenBookingWizard}
       disabled={!selectedFacility || !customer}
+      aria-label="Book a Service"
     >
       <Calendar className="size-4" />
-      <span>Book a Service</span>
+      <span className="hidden xl:inline">Book a Service</span>
     </Button>
   );
 }

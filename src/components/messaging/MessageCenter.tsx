@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { ContactList } from "./ContactList";
 import { ConversationThread } from "./ConversationThread";
 import { ClientContextPanel } from "./ClientContextPanel";
@@ -239,9 +240,15 @@ export function MessageCenter({
         letterSpacing: "-0.01em",
       }}
     >
-      {/* Contacts */}
+      {/* Contacts — full width on mobile; hidden there once a thread is open
+          (single-panel navigation). Fixed width from md up. */}
       {showContactList && (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div
+          className={cn(
+            "w-full shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:w-auto",
+            selectedThreadId ? "hidden lg:block" : "block",
+          )}
+        >
           <ContactList
             messages={activeMessages}
             mode={mode}
@@ -254,22 +261,28 @@ export function MessageCenter({
         </div>
       )}
 
-      {/* Conversation */}
-      <div className="flex min-w-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      {/* Conversation — on mobile only visible once a thread is selected. */}
+      <div
+        className={cn(
+          "min-w-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm",
+          selectedThreadId || !showContactList ? "flex" : "hidden lg:flex",
+        )}
+      >
         <ConversationThread
           threadId={selectedThreadId}
           messages={activeMessages}
           mode={mode}
           detailOpen={detailOpen}
           onToggleDetail={toggleDetail}
+          onBack={showContactList ? () => setSelectedThreadId(null) : undefined}
           senderBlocked={senderBlocked}
           composePrefill={composePrefill}
         />
       </div>
 
-      {/* Media panel */}
+      {/* Media panel — only on wide (xl+) screens; would crowd phone/tablet. */}
       {detailOpen && (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm xl:block">
           <ClientContextPanel
             threadId={selectedThreadId}
             messages={activeMessages}

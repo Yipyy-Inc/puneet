@@ -375,7 +375,7 @@ function CourseCard({
             )}
             {CLASS_TYPE_LABEL[course.classType]}
             {course.classType === "group" && course.maxGroupSize && (
-              <span className="text-muted-foreground/70 ml-0.5">
+              <span className="text-muted-foreground ml-0.5">
                 · max {course.maxGroupSize}
               </span>
             )}

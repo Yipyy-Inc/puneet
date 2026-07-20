@@ -144,7 +144,7 @@ function FilterBar({
                       "tabular-nums",
                       active
                         ? "text-primary-foreground/80"
-                        : "text-muted-foreground/70",
+                        : "text-muted-foreground",
                     )}
                   >
                     {count}

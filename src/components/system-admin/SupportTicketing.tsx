@@ -568,6 +568,7 @@ export function SupportTicketing() {
                             className="size-8 p-0"
                           >
                             <MoreVertical className="size-4" />
+                            <span className="sr-only">Open menu</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -825,7 +826,7 @@ export function SupportTicketing() {
 
       {/* Assign Agent Modal */}
       <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
-        <DialogContent className="min-w-5xl">
+        <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="size-5" />
@@ -927,7 +928,7 @@ export function SupportTicketing() {
 
       {/* Resolve Ticket Dialog */}
       <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
-        <DialogContent className="min-w-5xl">
+        <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="text-success size-5" />
@@ -976,7 +977,7 @@ export function SupportTicketing() {
 
       {/* SLA Settings Modal */}
       <Dialog open={isSLAModalOpen} onOpenChange={setIsSLAModalOpen}>
-        <DialogContent className="min-w-5xl">
+        <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings className="size-5" />

@@ -2851,7 +2851,7 @@ export function BookingModal({
 
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex h-[85vh] w-[90vw] min-w-4xl flex-col overflow-hidden p-0">
+        <DialogContent className="flex h-[85vh] w-[90vw] flex-col overflow-hidden p-0 sm:max-w-4xl">
           <DialogTitle className="sr-only">Booking Details</DialogTitle>
           <div className="border-b p-6">
             <div className="flex items-center justify-between">

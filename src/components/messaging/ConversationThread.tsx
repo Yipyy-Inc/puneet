@@ -7,6 +7,7 @@ import {
   Phone,
   MoreHorizontal,
   MessageSquare,
+  ArrowLeft,
   PanelRightClose,
   Info,
   Search,
@@ -118,6 +119,7 @@ export function ConversationThread({
   messages,
   detailOpen,
   onToggleDetail,
+  onBack,
   mode = "facility",
   senderBlocked = false,
   composePrefill = null,
@@ -126,6 +128,8 @@ export function ConversationThread({
   messages: Message[];
   detailOpen: boolean;
   onToggleDetail: () => void;
+  /** Mobile only: return to the conversation list (clears the selection). */
+  onBack?: () => void;
   mode?: "facility" | "customer";
   senderBlocked?: boolean;
   composePrefill?: { key: string; text: string } | null;
@@ -443,6 +447,17 @@ export function ConversationThread({
       {/* Thread header */}
       <div className="flex items-center justify-between border-b bg-white px-5 py-3">
         <div className="flex items-center gap-3">
+          {onBack && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Back to inbox"
+              onClick={onBack}
+              className="-ml-2 size-9 shrink-0 rounded-full lg:hidden"
+            >
+              <ArrowLeft className="size-5" />
+            </Button>
+          )}
           {counterpartyImage ? (
             <img
               src={counterpartyImage}
@@ -706,6 +721,7 @@ export function ConversationThread({
                 className="size-9 rounded-full text-slate-400 hover:bg-slate-100"
               >
                 <MoreHorizontal className="size-[18px]" />
+                <span className="sr-only">Open menu</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">

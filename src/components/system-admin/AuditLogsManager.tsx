@@ -1123,7 +1123,7 @@ export function AuditLogsManager() {
 
       {/* Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-h-[80vh] min-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>Audit Log Details</DialogTitle>
             <DialogDescription>
@@ -1296,7 +1296,7 @@ export function AuditLogsManager() {
 
       {/* Advanced Filters Dialog */}
       <Dialog open={showFilterDialog} onOpenChange={setShowFilterDialog}>
-        <DialogContent className="min-w-5xl">
+        <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>Advanced Filters</DialogTitle>
             <DialogDescription>

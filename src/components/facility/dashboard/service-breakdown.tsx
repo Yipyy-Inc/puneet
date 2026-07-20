@@ -11,10 +11,12 @@ export function ServiceBreakdown() {
   const { services, counts } = useUnifiedBookings();
   const { serviceFilter, setServiceFilter, setTab } = useDashboardFilters();
 
-  // Grooming is excluded from the main-dashboard board — single-visit services
-  // manage their own check-in in their module (spec Tables 10 & 11). Filtering
-  // here drops the Grooming pill and keeps the total in sync.
-  const boardServices = services.filter((s) => s.key !== "grooming");
+  // The main-dashboard board covers Boarding & Daycare only. Every other
+  // service (Grooming, Training, custom modules) manages its own check-in in
+  // its module page, so we drop their pills here and keep the total in sync.
+  const boardServices = services.filter(
+    (s) => s.key === "boarding" || s.key === "daycare",
+  );
   const total = boardServices.reduce(
     (sum, s) => sum + (counts.byService[s.key] ?? 0),
     0,

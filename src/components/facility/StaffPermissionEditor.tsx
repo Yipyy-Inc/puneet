@@ -241,7 +241,7 @@ export function StaffPermissionEditor({
                       </div>
                     )}
                     {/* Role default shown greyed behind the override */}
-                    <div className="text-muted-foreground/70 mt-0.5 text-[10px]">
+                    <div className="text-muted-foreground mt-0.5 text-[10px]">
                       Role default:{" "}
                       {def.granted
                         ? ACCESS_SCOPE_META[def.scope].label

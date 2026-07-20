@@ -229,6 +229,9 @@ export function DataTable<T extends object>({
   );
 
   const visibleColumnDefs = columns.filter((col) => visibleColumns[col.key]);
+  // Rows that render a selection checkbox or an actions cell contain their own
+  // interactive controls, so the row itself must not also be a button.
+  const hasRowControls = Boolean((selectable && getItemId) || actions);
   const emptyColSpan =
     (selectable && getItemId ? 1 : 0) +
     visibleColumnDefs.length +
@@ -267,7 +270,7 @@ export function DataTable<T extends object>({
                 setCurrentPage(1);
               }}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger aria-label={filter.label} className="w-[180px]">
                 <SelectValue placeholder={filter.label} />
               </SelectTrigger>
               <SelectContent>
@@ -298,6 +301,7 @@ export function DataTable<T extends object>({
           <Button
             variant={showFilters ? "default" : "outline"}
             size="icon"
+            aria-label={showFilters ? "Hide filters" : "Show filters"}
             onClick={() => setShowFilters(!showFilters)}
           >
             <Filter className="size-4" />
@@ -306,7 +310,7 @@ export function DataTable<T extends object>({
         {columns.length > 1 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" aria-label="Choose columns">
                 <Columns className="size-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -360,6 +364,7 @@ export function DataTable<T extends object>({
                   )}
                 >
                   <Checkbox
+                    aria-label="Select all rows"
                     checked={
                       filteredData.length > 0 &&
                       filteredData.every((item) =>
@@ -465,12 +470,18 @@ export function DataTable<T extends object>({
                       onRowClick(item);
                     }
                   }}
-                  tabIndex={onRowClick ? 0 : undefined}
-                  role={onRowClick ? "button" : undefined}
+                  // Only claim role="button" when the row has no interactive
+                  // children — a button containing a checkbox/menu button is a
+                  // WCAG "nested-interactive" failure. Rows that do contain
+                  // controls stay mouse-clickable; keyboard users reach the
+                  // row's own controls/links instead.
+                  tabIndex={onRowClick && !hasRowControls ? 0 : undefined}
+                  role={onRowClick && !hasRowControls ? "button" : undefined}
                 >
                   {selectable && getItemId && (
                     <TableCell className="w-10">
                       <Checkbox
+                        aria-label="Select row"
                         checked={(externalSelectedIds ?? new Set()).has(
                           getItemId(item),
                         )}

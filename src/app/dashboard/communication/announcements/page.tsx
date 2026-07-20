@@ -547,7 +547,7 @@ export default function AnnouncementsPage() {
                 Create Announcement
               </Button>
             </DialogTrigger>
-            <DialogContent className="min-w-5xl">
+            <DialogContent className="sm:max-w-5xl">
               <DialogHeader>
                 <DialogTitle>Create New Announcement</DialogTitle>
               </DialogHeader>
@@ -693,6 +693,7 @@ export default function AnnouncementsPage() {
                             className="size-8"
                           >
                             <MoreVertical className="size-4" />
+                            <span className="sr-only">Open menu</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -751,7 +752,7 @@ export default function AnnouncementsPage() {
 
       {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="min-w-5xl">
+        <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Megaphone className="text-primary size-5" />
@@ -848,7 +849,7 @@ export default function AnnouncementsPage() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="min-w-5xl">
+        <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>Edit Announcement</DialogTitle>
           </DialogHeader>
@@ -872,7 +873,7 @@ export default function AnnouncementsPage() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="min-w-5xl">
+        <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle className="text-destructive flex items-center gap-2">
               <AlertTriangle className="size-5" />

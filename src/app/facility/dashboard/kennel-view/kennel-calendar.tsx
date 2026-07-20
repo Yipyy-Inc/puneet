@@ -746,7 +746,7 @@ export function KennelCalendarView({
                             <div className="text-muted-foreground text-xs font-normal">
                               {kennel.name}
                             </div>
-                            <div className="text-muted-foreground/70 text-[11px]">
+                            <div className="text-muted-foreground text-[11px]">
                               ${kennel.dailyRate}
                               {rateSuffix}
                             </div>

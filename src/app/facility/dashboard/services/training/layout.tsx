@@ -15,6 +15,7 @@ import {
   DollarSign,
   Package,
   ClipboardList,
+  LogIn,
 } from "lucide-react";
 
 const tabs = [
@@ -22,6 +23,11 @@ const tabs = [
     name: "Calendar",
     href: "/facility/dashboard/services/training",
     icon: Calendar,
+  },
+  {
+    name: "Check-In",
+    href: "/facility/dashboard/services/training/check-in",
+    icon: LogIn,
   },
   {
     name: "Series",

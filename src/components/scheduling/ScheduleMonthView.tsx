@@ -104,7 +104,7 @@ export function ScheduleMonthView({
             key={d}
             className={cn(
               "text-muted-foreground py-3 text-center text-[11px] font-semibold tracking-[0.08em] uppercase",
-              i >= 5 && "text-muted-foreground/70",
+              i >= 5 && "text-muted-foreground",
             )}
           >
             {d}

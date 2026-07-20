@@ -17,6 +17,7 @@ import {
   Settings,
   AlertTriangle,
   ClipboardList,
+  LogIn,
 } from "lucide-react";
 
 export default function CustomServiceLayout({
@@ -61,6 +62,7 @@ export default function CustomServiceLayout({
   const isEnabled = serviceModule.status === "active";
 
   const tabs = [
+    { name: "Check-In", href: `${basePath}/check-in`, icon: LogIn },
     { name: "Rates", href: `${basePath}/rates`, icon: DollarSign },
     { name: "Tasks", href: `${basePath}/tasks`, icon: ClipboardList },
     { name: "Settings", href: `${basePath}/settings`, icon: Settings },

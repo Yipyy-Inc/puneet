@@ -224,7 +224,7 @@ export function InvoiceActivityLog({ invoice }: InvoiceActivityLogProps) {
             <History className="size-3.5" />
             Invoice Activity
           </p>
-          <span className="text-muted-foreground/70 text-[10px]">
+          <span className="text-muted-foreground text-[10px]">
             {events.length} event{events.length !== 1 ? "s" : ""}
           </span>
         </div>

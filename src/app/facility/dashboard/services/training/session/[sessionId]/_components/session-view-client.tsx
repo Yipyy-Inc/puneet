@@ -526,7 +526,7 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
       {/* Incident report — shared facility-wide modal. Trainer picks the
           dog(s) involved; "Notify Manager" defaults on. */}
       <Dialog open={showIncident} onOpenChange={setShowIncident}>
-        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <CreateIncidentModal onClose={() => setShowIncident(false)} />
         </DialogContent>
       </Dialog>

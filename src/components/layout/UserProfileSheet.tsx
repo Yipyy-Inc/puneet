@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { useHydrated } from "@/hooks/use-hydrated";
 import {
   LogOut,
   Bell,
@@ -170,7 +171,12 @@ export function UserProfileSheet({
   const [isPending, startTransition] = useTransition();
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const currentRole = getUserRole();
+  // getUserRole() reads document.cookie, which is unavailable during SSR (it
+  // returns null on the server). Reading it on the first client render would
+  // mismatch the server-rendered HTML — most visibly the role-derived avatar
+  // color — so we defer to the cookie value only after hydration.
+  const hydrated = useHydrated();
+  const currentRole = hydrated ? getUserRole() : null;
   const isSuperAdmin = !currentRole || currentRole === "super_admin";
   const unreadCount = notifications.filter((n) => !n.read).length;
 

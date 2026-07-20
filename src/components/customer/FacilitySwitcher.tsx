@@ -26,13 +26,14 @@ export function FacilitySwitcher() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
+          aria-label="Switch facility"
           className="border-muted-foreground/20 hover:bg-accent gap-2"
         >
           <Building2 className="size-4" />
-          <span className="max-w-[200px] truncate">
+          <span className="hidden max-w-[200px] truncate xl:inline">
             {selectedFacility?.name ?? "Select Facility"}
           </span>
-          <ChevronDown className="size-4 opacity-50" />
+          <ChevronDown className="hidden size-4 opacity-50 xl:block" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-[250px]">

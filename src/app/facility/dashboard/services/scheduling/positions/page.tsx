@@ -224,6 +224,7 @@ export default function PositionsPage() {
                             className="size-6 opacity-0 group-hover:opacity-100"
                           >
                             <MoreHorizontal className="size-3.5" />
+                            <span className="sr-only">Open menu</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">

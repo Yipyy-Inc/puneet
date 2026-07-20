@@ -470,7 +470,7 @@ export function OverviewTab({
 
       {/* Edit Contact Dialog */}
       <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
-        <DialogContent className="min-w-5xl">
+        <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>Edit Contact Information</DialogTitle>
             <DialogDescription>
@@ -558,7 +558,7 @@ export function OverviewTab({
 
       {/* Change Owner Dialog */}
       <Dialog open={showOwnerDialog} onOpenChange={setShowOwnerDialog}>
-        <DialogContent className="min-w-2xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Change Facility Owner</DialogTitle>
             <DialogDescription>

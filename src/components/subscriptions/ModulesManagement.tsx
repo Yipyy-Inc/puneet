@@ -601,7 +601,7 @@ export function ModulesManagement() {
         open={isEditModuleDialogOpen}
         onOpenChange={setIsEditModuleDialogOpen}
       >
-        <DialogContent className="max-h-[90vh] min-w-6xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-6xl">
           <DialogHeader>
             <DialogTitle>Edit Module</DialogTitle>
             <DialogDescription>
@@ -855,7 +855,7 @@ export function ModulesManagement() {
         open={isEditPackageDialogOpen}
         onOpenChange={setIsEditPackageDialogOpen}
       >
-        <DialogContent className="max-h-[90vh] min-w-6xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-6xl">
           <DialogHeader>
             <DialogTitle>Edit Package</DialogTitle>
             <DialogDescription>
@@ -1020,7 +1020,7 @@ export function ModulesManagement() {
         open={isCreatePackageDialogOpen}
         onOpenChange={setIsCreatePackageDialogOpen}
       >
-        <DialogContent className="max-h-[90vh] min-w-6xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-6xl">
           <DialogHeader>
             <DialogTitle>Create Package</DialogTitle>
             <DialogDescription>

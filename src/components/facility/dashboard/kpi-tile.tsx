@@ -129,13 +129,17 @@ export function KpiTile({
 }: KpiTileProps) {
   const styles = TONE_STYLES[tone];
   const isInteractive = !!onClick;
+  // A `link` renders a nested <button> inside the tile; a button containing a
+  // button is a WCAG "nested-interactive" failure, so the tile only takes the
+  // button role/tab stop when it has no nested control.
+  const takesButtonRole = isInteractive && !link;
 
   return (
     <Card
       data-tone={tone}
       data-active={active ? "true" : undefined}
-      role={isInteractive ? "button" : undefined}
-      tabIndex={isInteractive ? 0 : undefined}
+      role={takesButtonRole ? "button" : undefined}
+      tabIndex={takesButtonRole ? 0 : undefined}
       className={cn(
         "group bg-card relative overflow-hidden border transition-all duration-300",
         "hover:-translate-y-0.5 hover:shadow-lg",

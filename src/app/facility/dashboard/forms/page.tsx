@@ -270,6 +270,7 @@ function FormCard({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="size-8 shrink-0">
                 <MoreVertical className="size-4" />
+                <span className="sr-only">Open menu</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

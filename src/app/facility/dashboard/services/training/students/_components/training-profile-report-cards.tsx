@@ -710,7 +710,7 @@ function ReportCardPanel({
           {card.kind === "series-completion"
             ? "Graduation report — a milestone summary the owner can keep."
             : "Auto-drafted after this session."}{" "}
-          <span className="text-muted-foreground/70">
+          <span className="text-muted-foreground">
             By {card.createdBy} · {formatDate(card.createdAt)}
           </span>
         </p>

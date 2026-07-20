@@ -282,6 +282,7 @@ export default function DepartmentsPage() {
                         className="size-7 opacity-0 group-hover:opacity-100"
                       >
                         <MoreHorizontal className="size-4" />
+                        <span className="sr-only">Open menu</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">

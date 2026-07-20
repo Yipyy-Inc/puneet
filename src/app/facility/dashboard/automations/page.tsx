@@ -864,7 +864,7 @@ export default function AutomationsPage() {
 
       {/* Modal */}
       <Dialog open={showAutomationModal} onOpenChange={setShowAutomationModal}>
-        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <AutomationRuleModal
             rule={selectedAutomationRule ?? undefined}
             onClose={() => {

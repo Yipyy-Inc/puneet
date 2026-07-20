@@ -179,7 +179,7 @@ export function OutcomeBreakdown({
                       >
                         {delta > 0 ? "▲" : delta < 0 ? "▼" : "–"}
                         {delta !== 0 ? `${Math.abs(Math.round(delta))}pp` : ""}
-                        <span className="text-muted-foreground/70">
+                        <span className="text-muted-foreground">
                           vs {Math.round(prevP)}%
                         </span>
                       </span>

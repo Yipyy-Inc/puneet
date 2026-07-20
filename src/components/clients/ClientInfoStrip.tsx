@@ -53,7 +53,7 @@ export function ClientInfoStrip({
           Back to client profile
         </Link>
         {currentContext && (
-          <span className="text-muted-foreground/70 text-xs">
+          <span className="text-muted-foreground text-xs">
             {currentContext}
           </span>
         )}

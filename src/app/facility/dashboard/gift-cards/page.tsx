@@ -1114,7 +1114,7 @@ export default function FacilityGiftCardsPage() {
                             {log.action.replaceAll("_", " ")}
                             {target ? ` · ${target.label}` : ""}
                           </p>
-                          <p className="text-muted-foreground/70 truncate text-[11px]">
+                          <p className="text-muted-foreground truncate text-[11px]">
                             {log.performedBy === "Online Purchase"
                               ? "Online Purchase"
                               : `by ${log.performedBy}`}
@@ -1401,6 +1401,7 @@ export default function FacilityGiftCardsPage() {
                   >
                     <span className="sr-only">Open actions menu</span>
                     <MoreHorizontal className="size-4" />
+                    <span className="sr-only">Open menu</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44">
@@ -1735,6 +1736,7 @@ export default function FacilityGiftCardsPage() {
                             >
                               <span className="sr-only">Batch actions</span>
                               <MoreHorizontal className="size-4" />
+                              <span className="sr-only">Open menu</span>
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-52">

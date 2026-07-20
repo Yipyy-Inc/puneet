@@ -11,6 +11,9 @@ const Progress = React.forwardRef<
 >(({ className, value, ...props }, ref) => (
   <ProgressPrimitive.Root
     ref={ref}
+    // role="progressbar" requires an accessible name. This default is placed
+    // before {...props} so a caller's aria-label / aria-labelledby wins.
+    aria-label="Progress"
     className={cn(
       "bg-primary/20 relative h-2 w-full overflow-hidden rounded-full",
       className,

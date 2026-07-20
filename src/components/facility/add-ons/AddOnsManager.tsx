@@ -518,6 +518,7 @@ export function AddOnsManager({ serviceFilter }: AddOnsManagerProps = {}) {
                                 className="size-8 p-0 opacity-60 transition-opacity group-hover:opacity-100"
                               >
                                 <MoreVertical className="size-4" />
+                                <span className="sr-only">Open menu</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">

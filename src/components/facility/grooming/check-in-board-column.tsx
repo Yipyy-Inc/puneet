@@ -61,6 +61,30 @@ function checkInMinutes(apt: GroomingAppointment): number | null {
   return Number.isNaN(d.getTime()) ? null : d.getHours() * 60 + d.getMinutes();
 }
 
+// Initials + a deterministic gradient so groomers without an uploaded photo get
+// a polished avatar (never a broken image or a bare letter).
+const AVATAR_GRADIENTS = [
+  "from-pink-500 to-rose-500",
+  "from-indigo-500 to-blue-500",
+  "from-violet-500 to-purple-500",
+  "from-emerald-500 to-teal-500",
+  "from-amber-500 to-orange-500",
+  "from-sky-500 to-cyan-500",
+];
+
+function staffInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
+  return (first + last).toUpperCase();
+}
+
+function staffGradient(name: string): string {
+  let sum = 0;
+  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
+  return AVATAR_GRADIENTS[sum % AVATAR_GRADIENTS.length];
+}
+
 export interface ColumnActions {
   onCheckIn: (a: GroomingAppointment) => void;
   onStart: (a: GroomingAppointment) => void;
@@ -87,14 +111,19 @@ export function GroomerColumn({
   actions: ColumnActions;
 }) {
   return (
-    <div className="bg-muted/20 flex w-72 shrink-0 flex-col rounded-xl border">
+    <div className="bg-muted/20 flex w-72 min-w-72 flex-1 flex-col rounded-xl border">
       <div className="flex items-center gap-2.5 border-b px-3 py-2.5">
-        <div className="ring-background relative size-8 shrink-0 overflow-hidden rounded-full bg-pink-100 ring-2 dark:bg-pink-950/40">
+        <div className="ring-background relative size-8 shrink-0 overflow-hidden rounded-full ring-2">
           {photoUrl ? (
             <Image src={photoUrl} alt={name} fill className="object-cover" />
           ) : (
-            <span className="flex size-full items-center justify-center text-xs font-bold text-pink-700 dark:text-pink-300">
-              {name.charAt(0)}
+            <span
+              className={cn(
+                "flex size-full items-center justify-center bg-linear-to-br text-[11px] font-bold text-white",
+                staffGradient(name),
+              )}
+            >
+              {staffInitials(name)}
             </span>
           )}
         </div>
@@ -148,7 +177,7 @@ function AppointmentCard({
       : null;
 
   return (
-    <div className="bg-card rounded-lg border p-2.5 shadow-sm">
+    <div className="bg-card border-border/70 hover:border-border rounded-2xl border p-2.5 transition-all hover:shadow-sm">
       <div className="flex items-start gap-2.5">
         <div className="ring-background relative size-9 shrink-0 overflow-hidden rounded-full ring-2">
           {apt.petPhotoUrl ? (

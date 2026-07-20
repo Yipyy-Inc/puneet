@@ -541,6 +541,7 @@ export default function FacilityDetailPage() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon">
                     <MoreVertical className="size-4" />
+                    <span className="sr-only">Open menu</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">

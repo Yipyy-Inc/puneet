@@ -378,7 +378,7 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
       {/* Row 3 — Destructive actions, separated, muted */}
       {hasDestructive && (
         <div className="border-border/40 flex flex-wrap items-center gap-1.5 border-t pt-3">
-          <span className="text-muted-foreground/70 mr-auto text-[10px] font-semibold tracking-wider uppercase">
+          <span className="text-muted-foreground mr-auto text-[10px] font-semibold tracking-wider uppercase">
             Reverse / Cancel
           </span>
 

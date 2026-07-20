@@ -406,7 +406,7 @@ export function ContactList({
   };
 
   return (
-    <div className="flex h-full w-80 shrink-0 flex-col bg-white">
+    <div className="flex h-full w-full shrink-0 flex-col bg-white lg:w-80">
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-4 pb-2">
         <h1 className="text-xl font-bold text-slate-900">Inbox</h1>

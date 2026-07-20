@@ -155,7 +155,7 @@ export function SavedRepliesPanel({
             <p className="text-muted-foreground text-xs">
               No saved replies match.
             </p>
-            <p className="text-muted-foreground/70 mt-1 text-[10px]">
+            <p className="text-muted-foreground mt-1 text-[10px]">
               Try a different search or category.
             </p>
           </div>

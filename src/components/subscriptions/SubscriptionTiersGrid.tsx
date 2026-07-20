@@ -374,7 +374,7 @@ export function SubscriptionTiersGrid() {
 
       {/* Edit Tier Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-h-[90vh] min-w-6xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-6xl">
           <DialogHeader>
             <DialogTitle>Edit Subscription Tier</DialogTitle>
             <DialogDescription>
@@ -642,7 +642,7 @@ export function SubscriptionTiersGrid() {
 
       {/* Create Tier Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-h-[90vh] min-w-6xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-6xl">
           <DialogHeader>
             <DialogTitle>Create Subscription Tier</DialogTitle>
             <DialogDescription>

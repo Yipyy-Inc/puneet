@@ -9,6 +9,7 @@ import {
 import { BookingModalProviderWrapper } from "@/components/providers/BookingModalProviderWrapper";
 import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigProviderWrapper";
 import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
+import { MobileSearch } from "@/components/search/MobileSearch";
 import { FacilityHeaderActions } from "@/components/layout/FacilityHeaderActions";
 import { SupportCenter } from "@/components/layout/SupportCenter";
 import { SupportFab } from "@/components/layout/SupportFab";
@@ -54,6 +55,10 @@ export default async function FacilityLayout({
                           <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors md:hidden" />
                           <GlobalSearchNext
                             className="hidden w-[460px] max-w-[480px] min-w-0 sm:flex"
+                            canCreateCustomer={userRole === "facility_admin"}
+                          />
+                          <MobileSearch
+                            className="sm:hidden"
                             canCreateCustomer={userRole === "facility_admin"}
                           />
                         </div>

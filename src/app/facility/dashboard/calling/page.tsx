@@ -1839,7 +1839,7 @@ export default function CallingPage() {
 
       {/* Modals */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-h-[90vh] min-w-3xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           {selectedCall && (
             <CallDetailsModal
               call={selectedCall}

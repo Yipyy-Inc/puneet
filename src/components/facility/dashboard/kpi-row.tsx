@@ -11,10 +11,12 @@ export function KpiRow() {
   const { tab, setTab, serviceFilter } = useDashboardFilters();
 
   const counts = useMemo(() => {
-    // Grooming is excluded from the main-dashboard board (spec Tables 10 & 11)
-    // — it manages its own check-in in the Grooming module — so it must not
-    // count toward these guest/arrival tiles either.
-    const boardBookings = bookings.filter((b) => b.serviceKey !== "grooming");
+    // The main-dashboard tiles cover Boarding & Daycare only. Grooming,
+    // Training and custom modules manage their own check-in in their module
+    // pages, so they must not count toward these guest/arrival tiles either.
+    const boardBookings = bookings.filter(
+      (b) => b.serviceKey === "boarding" || b.serviceKey === "daycare",
+    );
     const scoped =
       serviceFilter === "all"
         ? boardBookings

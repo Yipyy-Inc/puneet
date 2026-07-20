@@ -264,6 +264,7 @@ function TemplateCard({
                     onClick={(e) => e.stopPropagation()}
                   >
                     <MoreHorizontal className="size-4" />
+                    <span className="sr-only">Open menu</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent

@@ -92,7 +92,7 @@ export function AutoAppliedBenefits({
         <div className="text-muted-foreground rounded-md border border-dashed px-2.5 py-2 text-[11px]">
           No active benefits for this client
         </div>
-        <p className="text-muted-foreground/70 text-[9px] italic">
+        <p className="text-muted-foreground text-[9px] italic">
           Order: Package → Membership → Discount → Store Credit → Tax
         </p>
       </div>
@@ -232,7 +232,7 @@ export function AutoAppliedBenefits({
                 <p className="text-muted-foreground text-[11px] font-medium line-through">
                   {label}
                 </p>
-                <p className="text-muted-foreground/70 text-[9px]">
+                <p className="text-muted-foreground text-[9px]">
                   Removed by staff — click to re-apply
                 </p>
               </div>
@@ -241,7 +241,7 @@ export function AutoAppliedBenefits({
         </div>
       </div>
 
-      <p className="text-muted-foreground/70 text-[9px] italic">
+      <p className="text-muted-foreground text-[9px] italic">
         Order: Package → Membership → Discount → Store Credit → Tax
       </p>
     </div>

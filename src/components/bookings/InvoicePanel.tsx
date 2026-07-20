@@ -527,7 +527,7 @@ export function InvoicePanel({
                   <span className="text-muted-foreground">
                     Required
                     {invoice.depositRuleLabel && (
-                      <span className="text-muted-foreground/70 ml-1.5 text-[10px]">
+                      <span className="text-muted-foreground ml-1.5 text-[10px]">
                         · {invoice.depositRuleLabel}
                       </span>
                     )}

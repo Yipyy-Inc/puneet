@@ -290,7 +290,7 @@ export function FollowUpProtocolsManager() {
 
       {/* Editor */}
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
-        <DialogContent className="max-h-[90vh] min-w-4xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
           <ProtocolEditorDialog
             protocol={editing}
             onSave={handleSave}

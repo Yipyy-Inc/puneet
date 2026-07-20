@@ -938,7 +938,7 @@ export default function CustomerPetDetailPage({
           onValueChange={setActiveTab}
           className="space-y-4"
         >
-          <TabsList>
+          <TabsList className="w-full max-w-full justify-start overflow-x-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="vaccinations">
               Vaccinations

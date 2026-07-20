@@ -44,12 +44,14 @@ export interface ModalProps {
   closable?: boolean;
 }
 
+// Responsive max-widths (not min-widths): below `sm` the dialog falls back to
+// the base `max-w-[calc(100%-2rem)]` so it always fits the viewport on phones.
 const sizeClasses = {
-  sm: "min-w-md",
-  md: "min-w-lg",
-  lg: "min-w-2xl",
-  xl: "min-w-4xl min-w-[72rem]",
-  full: "min-w-7xl",
+  sm: "sm:max-w-md",
+  md: "sm:max-w-lg",
+  lg: "sm:max-w-2xl",
+  xl: "sm:max-w-[72rem]",
+  full: "sm:max-w-7xl",
 };
 
 const defaultSizes: Record<ModalProps["type"], keyof typeof sizeClasses> = {

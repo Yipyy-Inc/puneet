@@ -1299,7 +1299,7 @@ export default function MarketingPage() {
 
       {/* Modals */}
       <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
-        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <EmailTemplateModal
             template={selectedTemplate}
             onClose={() => {
@@ -1311,7 +1311,7 @@ export default function MarketingPage() {
       </Dialog>
 
       <Dialog open={showSegmentModal} onOpenChange={setShowSegmentModal}>
-        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <SegmentBuilderModal
             segment={selectedSegment}
             onClose={() => {
@@ -1323,7 +1323,7 @@ export default function MarketingPage() {
       </Dialog>
 
       <Dialog open={showCampaignModal} onOpenChange={setShowCampaignModal}>
-        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <CampaignBuilderModal
             campaign={selectedCampaign}
             segments={segmentsData}
@@ -1336,7 +1336,7 @@ export default function MarketingPage() {
       </Dialog>
 
       <Dialog open={showPromoModal} onOpenChange={setShowPromoModal}>
-        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <PromoCodeModal onClose={() => setShowPromoModal(false)} />
         </DialogContent>
       </Dialog>
@@ -1345,7 +1345,7 @@ export default function MarketingPage() {
         open={showReferralConfigModal}
         onOpenChange={setShowReferralConfigModal}
       >
-        <DialogContent className="max-h-[90vh] min-w-3xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <ReferralProgramWizard
             onClose={() => setShowReferralConfigModal(false)}
           />
@@ -1354,7 +1354,7 @@ export default function MarketingPage() {
 
       {/* Template Preview Modal */}
       <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
-        <DialogContent className="max-h-[90vh] min-w-2xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           {previewTemplate && (
             <>
               <DialogHeader>

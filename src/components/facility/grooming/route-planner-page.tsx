@@ -525,7 +525,7 @@ export function RoutePlannerPage() {
                           ? `${(a.polygon ?? []).length} points`
                           : `${a.radiusKm} km radius`}
                     </span>
-                    <span className="text-muted-foreground/70">
+                    <span className="text-muted-foreground">
                       · {formatDaysOfWeek(a.daysOfWeek)}
                     </span>
                   </div>

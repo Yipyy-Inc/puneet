@@ -1703,7 +1703,7 @@ function DayView({
                 className="relative"
                 style={{ height: `${HOUR_HEIGHT}px` }}
               >
-                <span className="text-muted-foreground/70 absolute -top-[9px] right-2 text-[10px] leading-none">
+                <span className="text-muted-foreground absolute -top-[9px] right-2 text-[10px] leading-none">
                   {formatHour(h)}
                 </span>
               </div>

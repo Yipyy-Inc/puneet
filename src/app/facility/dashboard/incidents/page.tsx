@@ -567,7 +567,7 @@ export default function IncidentsPage() {
 
       {/* Modals */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <CreateIncidentModal onClose={() => setShowCreateModal(false)} />
         </DialogContent>
       </Dialog>
@@ -628,7 +628,7 @@ export default function IncidentsPage() {
       </Dialog>
 
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           {selectedIncident && (
             <IncidentDetailsModal
               incident={selectedIncident}

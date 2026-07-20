@@ -130,6 +130,7 @@ export function CustomReportsManager() {
   const renderActions = () => (
     <Button variant="ghost" size="icon" className="size-8">
       <MoreHorizontal className="size-4" />
+      <span className="sr-only">Open menu</span>
     </Button>
   );
 
@@ -292,6 +293,7 @@ export function CustomReportsManager() {
                     </Button>
                     <Button variant="ghost" size="icon">
                       <MoreHorizontal className="size-4" />
+                      <span className="sr-only">Open menu</span>
                     </Button>
                   </div>
                 </div>

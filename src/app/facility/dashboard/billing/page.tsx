@@ -977,7 +977,7 @@ export default function FacilityBillingPage() {
           open={!!selectedTransaction}
           onOpenChange={() => setSelectedTransaction(null)}
         >
-          <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Receipt className="size-5" />
@@ -1273,7 +1273,7 @@ export default function FacilityBillingPage() {
           open={!!selectedGiftCard}
           onOpenChange={() => setSelectedGiftCard(null)}
         >
-          <DialogContent className="min-w-5xl">
+          <DialogContent className="sm:max-w-5xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Gift className="size-5" />

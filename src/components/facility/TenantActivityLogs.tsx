@@ -879,7 +879,7 @@ export function TenantActivityLogs({
 
       {/* Activity Details Dialog */}
       <Dialog open={showActivityDetails} onOpenChange={setShowActivityDetails}>
-        <DialogContent className="min-w-5xl">
+        <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>Activity Details</DialogTitle>
             <DialogDescription>
@@ -970,7 +970,7 @@ export function TenantActivityLogs({
 
       {/* Audit Details Dialog */}
       <Dialog open={showAuditDetails} onOpenChange={setShowAuditDetails}>
-        <DialogContent className="max-h-[80vh] min-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>Audit Log Details</DialogTitle>
             <DialogDescription>

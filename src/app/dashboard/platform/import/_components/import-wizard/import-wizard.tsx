@@ -76,12 +76,17 @@ export function ImportWizard({ onClose }: { onClose: () => void }) {
 
       <ImportWizardProgress step={step} />
 
-      {step === 0 && <StepSelectSource {...stepProps} />}
-      {step === 1 && <StepSelectFacility {...stepProps} />}
-      {step === 2 && <StepUploadFile {...stepProps} />}
-      {step === 3 && <StepMapFields {...stepProps} />}
-      {step === 4 && <StepValidate {...stepProps} />}
-      {step === 5 && <StepImportComplete {...stepProps} />}
+      {/* min-h-0 + overflow-y-auto: without a scroll container the step body is
+          clipped by the fixed inset-0 shell on short screens, leaving the lower
+          fields and the Next button unreachable on phones. */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {step === 0 && <StepSelectSource {...stepProps} />}
+        {step === 1 && <StepSelectFacility {...stepProps} />}
+        {step === 2 && <StepUploadFile {...stepProps} />}
+        {step === 3 && <StepMapFields {...stepProps} />}
+        {step === 4 && <StepValidate {...stepProps} />}
+        {step === 5 && <StepImportComplete {...stepProps} />}
+      </div>
     </div>
   );
 

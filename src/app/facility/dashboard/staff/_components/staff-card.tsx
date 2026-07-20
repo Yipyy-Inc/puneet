@@ -105,6 +105,7 @@ export function StaffCard({
                     onClick={(e) => e.stopPropagation()}
                   >
                     <MoreVertical className="size-4" />
+                    <span className="sr-only">Open menu</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent

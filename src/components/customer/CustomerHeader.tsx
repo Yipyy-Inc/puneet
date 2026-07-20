@@ -132,7 +132,7 @@ export function CustomerHeader() {
               className="h-8 w-auto"
             />
           )}
-          <div className="hidden sm:block" suppressHydrationWarning>
+          <div className="hidden xl:block" suppressHydrationWarning>
             <div className="text-sm font-semibold" suppressHydrationWarning>
               {selectedFacility?.name ?? "Yipyy"}
             </div>
@@ -149,7 +149,7 @@ export function CustomerHeader() {
           <Button
             variant="outline"
             size="sm"
-            className="hidden gap-1.5 rounded-full sm:flex"
+            className="hidden gap-1.5 rounded-full xl:flex"
             asChild
           >
             <Link href="/customer/packages">

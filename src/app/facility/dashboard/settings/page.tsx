@@ -761,6 +761,7 @@ function BusinessHoursCard() {
                 <div className="flex flex-1 items-center gap-4">
                   <div className="w-32 font-medium capitalize">{day}</div>
                   <Switch
+                    aria-label={`${day} open`}
                     checked={schedule.isOpen}
                     disabled={!isEditing}
                     onCheckedChange={(checked) =>
@@ -774,6 +775,7 @@ function BusinessHoursCard() {
                     <div className="flex items-center gap-2">
                       <Input
                         type="time"
+                        aria-label={`${day} opening time`}
                         value={schedule.openTime}
                         onChange={(e) =>
                           setLocalHours({
@@ -787,6 +789,7 @@ function BusinessHoursCard() {
                       <span>to</span>
                       <Input
                         type="time"
+                        aria-label={`${day} closing time`}
                         value={schedule.closeTime}
                         onChange={(e) =>
                           setLocalHours({
@@ -1193,6 +1196,7 @@ function OneDayScheduleOverrideCard() {
               </Label>
               <Input
                 type="time"
+                aria-label="Opening time"
                 value={newOpenTime}
                 onChange={(e) => setNewOpenTime(e.target.value)}
               />
@@ -1203,6 +1207,7 @@ function OneDayScheduleOverrideCard() {
               </Label>
               <Input
                 type="time"
+                aria-label="Closing time"
                 value={newCloseTime}
                 onChange={(e) => setNewCloseTime(e.target.value)}
               />
@@ -1401,6 +1406,7 @@ function DropOffPickUpOverrideCard() {
                 </Label>
                 <Input
                   type="time"
+                  aria-label="Drop-off start"
                   value={newDropOffStart}
                   onChange={(e) => setNewDropOffStart(e.target.value)}
                 />
@@ -1411,6 +1417,7 @@ function DropOffPickUpOverrideCard() {
                 </Label>
                 <Input
                   type="time"
+                  aria-label="Drop-off end"
                   value={newDropOffEnd}
                   onChange={(e) => setNewDropOffEnd(e.target.value)}
                 />
@@ -1421,6 +1428,7 @@ function DropOffPickUpOverrideCard() {
                 </Label>
                 <Input
                   type="time"
+                  aria-label="Pick-up start"
                   value={newPickUpStart}
                   onChange={(e) => setNewPickUpStart(e.target.value)}
                 />
@@ -1431,6 +1439,7 @@ function DropOffPickUpOverrideCard() {
                 </Label>
                 <Input
                   type="time"
+                  aria-label="Pick-up end"
                   value={newPickUpEnd}
                   onChange={(e) => setNewPickUpEnd(e.target.value)}
                 />
@@ -3232,6 +3241,7 @@ function ReportCardSettingsCard() {
                   </Select>
                   <Input
                     type="time"
+                    aria-label="Report card send time"
                     value={localConfig.autoSend.sendTime ?? "18:00"}
                     readOnly={
                       !isEditing || localConfig.autoSend.mode !== "scheduled"

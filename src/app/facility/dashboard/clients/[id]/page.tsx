@@ -2819,7 +2819,7 @@ export default function ClientDetailPage({
           if (!open) setSelectedIncident(null);
         }}
       >
-        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           {selectedIncident && (
             <IncidentDetailsModal
               incident={selectedIncident}
@@ -2831,7 +2831,7 @@ export default function ClientDetailPage({
 
       {/* Pet Details Modal */}
       <Dialog open={!!selectedPet} onOpenChange={() => setSelectedPet(null)}>
-        <DialogContent className="flex max-h-[90vh] min-w-6xl flex-col p-0">
+        <DialogContent className="flex max-h-[90vh] flex-col p-0 sm:max-w-6xl">
           <div className="flex-1 overflow-y-auto p-6">
             <DialogHeader className="mb-4">
               <DialogTitle className="sr-only">

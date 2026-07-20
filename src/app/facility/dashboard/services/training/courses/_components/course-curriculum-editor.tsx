@@ -511,7 +511,7 @@ function ExerciseMultiPicker({
                     )}
                     {tierBlocks.map(({ level, list }) => (
                       <div key={level}>
-                        <div className="text-muted-foreground/70 px-2 pt-1 text-[9px] font-bold tracking-wider uppercase">
+                        <div className="text-muted-foreground px-2 pt-1 text-[9px] font-bold tracking-wider uppercase">
                           {DIFFICULTY_LABELS[level]}
                         </div>
                         {list.map((e) => {

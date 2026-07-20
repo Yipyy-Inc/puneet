@@ -298,7 +298,7 @@ export default function UserManagementPage() {
         }}
       />
       <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
-        <DialogContent className="flex max-h-[90vh] min-w-5xl flex-col p-0">
+        <DialogContent className="flex max-h-[90vh] flex-col p-0 sm:max-w-5xl">
           <div className="flex-1 overflow-y-auto p-6">
             <DialogHeader className="mb-0">
               <DialogTitle className="sr-only">

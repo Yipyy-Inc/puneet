@@ -142,6 +142,7 @@ export function PlanCard({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="-mt-1 -mr-1">
                 <MoreHorizontal className="size-4" />
+                <span className="sr-only">Open menu</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

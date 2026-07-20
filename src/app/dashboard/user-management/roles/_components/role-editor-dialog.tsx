@@ -83,7 +83,7 @@ export function RoleEditorDialog({
         if (!o) onClose();
       }}
     >
-      <DialogContent className="max-h-[85vh] min-w-5xl overflow-y-auto">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-5xl">
         {state && (
           <RoleEditorBody
             key={`${state.mode}-${state.role?.id ?? "new"}`}

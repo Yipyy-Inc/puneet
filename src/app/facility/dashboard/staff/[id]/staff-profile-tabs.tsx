@@ -570,7 +570,7 @@ function EmptyMetric({
     <div className="border-border/60 bg-muted/20 flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed p-4 text-center">
       <Icon className="text-muted-foreground/50 size-5" />
       <div className="text-muted-foreground text-xs font-medium">{label}</div>
-      <div className="text-muted-foreground/70 text-[10px]">No data yet</div>
+      <div className="text-muted-foreground text-[10px]">No data yet</div>
     </div>
   );
 }
