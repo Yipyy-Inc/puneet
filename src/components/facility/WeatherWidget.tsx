@@ -543,9 +543,11 @@ export function WeatherWidget() {
               </div>
             </div>
 
-            {/* Right: 6-hour forecast */}
-            <div className="flex items-center gap-1">
-              <div className="border-border mr-3 h-12 border-l" />
+            {/* Right: 6-hour forecast — scrolls on mobile rather than being
+                clipped (needs ~330px, viewport is 390px minus the current
+                conditions block). */}
+            <div className="flex max-w-full items-center gap-1 overflow-x-auto">
+              <div className="border-border mr-3 hidden h-12 border-l sm:block" />
               {data.hourly.slice(0, 6).map((h, i) => (
                 <div
                   key={i}

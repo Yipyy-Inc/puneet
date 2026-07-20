@@ -106,7 +106,7 @@ export default function BoardingLayout({
     <div className="flex flex-1 flex-col">
       <div className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-16 z-10 border-b backdrop-blur-sm">
         <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-lg bg-linear-to-br from-indigo-500 to-purple-500">
                 <Bed className="size-5 text-white" />

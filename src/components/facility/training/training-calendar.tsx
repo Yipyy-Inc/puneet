@@ -265,7 +265,7 @@ export function TrainingCalendar() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-180px)] gap-4">
+    <div className="flex flex-col gap-4 lg:h-[calc(100vh-180px)] lg:flex-row">
       <TrainingCalendarSidebar
         selectedDate={selectedDate}
         todayStr={todayStr}

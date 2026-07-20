@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { acquisitionMetrics } from "@/data/analytics";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { TrendingUp, Users, DollarSign, Award } from "lucide-react";
 import {
   BarChart,
@@ -29,6 +30,9 @@ const COLORS = [
 ];
 
 export function CustomerAcquisitionMetrics() {
+  // Outside-arc slice labels overflowed the chart card by ~96px at 390px;
+  // narrow screens show the percentage only (channel names are in the legend).
+  const isNarrow = useMediaQuery("(max-width: 640px)");
   const metrics = acquisitionMetrics;
 
   // Prepare channel breakdown for pie chart
@@ -220,9 +224,11 @@ export function CustomerAcquisitionMetrics() {
                     cy="50%"
                     labelLine={false}
                     label={({ name, percent }) =>
-                      `${name ?? ""}: ${((percent ?? 0) * 100).toFixed(1)}%`
+                      isNarrow
+                        ? `${((percent ?? 0) * 100).toFixed(0)}%`
+                        : `${name ?? ""}: ${((percent ?? 0) * 100).toFixed(1)}%`
                     }
-                    outerRadius={100}
+                    outerRadius={isNarrow ? 70 : 100}
                     fill="#8884d8"
                     dataKey="value"
                   >

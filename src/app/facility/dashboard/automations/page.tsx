@@ -193,7 +193,7 @@ export default function AutomationsPage() {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">Automations</h1>
           <p className="text-muted-foreground mt-1">
@@ -337,8 +337,8 @@ export default function AutomationsPage() {
                     className="rounded-lg border bg-white p-4 transition-colors hover:border-sky-200 hover:bg-sky-50/40"
                   >
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="mb-2 flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
                           {getCategoryIcon(rule.trigger)}
                           <span className="font-semibold">{rule.name}</span>
                           <Badge
@@ -454,8 +454,8 @@ export default function AutomationsPage() {
                       className="hover:bg-muted/50 rounded-lg border p-4 transition-colors"
                     >
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="mb-2 flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
                             <span className="font-semibold">{rule.name}</span>
                             <Badge
                               variant={rule.enabled ? "default" : "secondary"}
@@ -518,8 +518,8 @@ export default function AutomationsPage() {
                       className="hover:bg-muted/50 rounded-lg border p-4 transition-colors"
                     >
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="mb-2 flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
                             <span className="font-semibold">{rule.name}</span>
                             <Badge
                               variant={rule.enabled ? "default" : "secondary"}
@@ -595,8 +595,8 @@ export default function AutomationsPage() {
                       className="hover:bg-muted/50 rounded-lg border p-4 transition-colors"
                     >
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="mb-2 flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
                             <span className="font-semibold">{rule.name}</span>
                             <Badge
                               variant={rule.enabled ? "default" : "secondary"}
@@ -659,8 +659,8 @@ export default function AutomationsPage() {
                       className="hover:bg-muted/50 rounded-lg border p-4 transition-colors"
                     >
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="mb-2 flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
                             <FileText className="size-4" />
                             <span className="font-semibold">{rule.name}</span>
                             <Badge
@@ -787,8 +787,8 @@ export default function AutomationsPage() {
                       className="hover:bg-muted/50 rounded-lg border p-4 transition-colors"
                     >
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="mb-2 flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
                             <ShoppingCart className="size-4 text-amber-500" />
                             <span className="font-semibold">{rule.name}</span>
                             <Badge

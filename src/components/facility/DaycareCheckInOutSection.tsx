@@ -438,9 +438,9 @@ export function DaycareCheckInOutSection() {
 
           <div className="flex flex-col items-start gap-3">
             {/* Section Visibility Toggle */}
-            <div className="flex items-center gap-2">
-              <Eye className="text-muted-foreground size-4" />
-              <div className="flex gap-1 rounded-lg border p-1">
+            <div className="flex max-w-full items-center gap-2">
+              <Eye className="text-muted-foreground size-4 shrink-0" />
+              <div className="flex gap-1 overflow-x-auto rounded-lg border p-1">
                 <Button
                   size="sm"
                   variant={showCheckedIn ? "default" : "ghost"}

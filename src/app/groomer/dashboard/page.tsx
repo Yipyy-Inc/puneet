@@ -362,7 +362,7 @@ export default function GroomerDashboardPage() {
                   className={` ${statusColors[appointment.status].border} border-2`}
                 >
                   <CardContent className="pt-6">
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="flex flex-1 items-start gap-4">
                         {/* Time */}
                         <div className="flex min-w-[80px] flex-col items-center">
@@ -413,7 +413,7 @@ export default function GroomerDashboardPage() {
                       </div>
 
                       {/* Actions */}
-                      <div className="ml-4 flex flex-col gap-2">
+                      <div className="flex flex-col gap-2 sm:ml-4">
                         {appointment.status === "checked-in" && (
                           <Button
                             onClick={() => handleStartGroom(appointment)}

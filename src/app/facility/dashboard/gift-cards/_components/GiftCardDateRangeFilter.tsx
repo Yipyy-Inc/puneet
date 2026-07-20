@@ -110,7 +110,7 @@ export function GiftCardDateRangeFilter({ value, onChange }: Props) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="bg-muted/40 inline-flex items-center gap-0.5 rounded-lg border p-1">
+      <div className="bg-muted/40 flex max-w-full items-center gap-0.5 overflow-x-auto rounded-lg border p-1 sm:inline-flex">
         {PRESETS.map((p) => (
           <Button
             key={p.key}

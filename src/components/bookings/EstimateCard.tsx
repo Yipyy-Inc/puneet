@@ -91,8 +91,8 @@ export function EstimateCard({
       >
         <CardContent className="p-0">
           {/* Header strip */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
               {/* Bulk-selection checkbox — hover-reveal, always shown when selected */}
               {onToggleSelect && (
                 <div
@@ -141,8 +141,8 @@ export function EstimateCard({
                   }`}
                 />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-semibold">{estimate.clientName}</p>
                   <Badge className={`text-[10px] ${config.color}`}>
                     {config.label}
@@ -159,7 +159,7 @@ export function EstimateCard({
                       </Badge>
                     )}
                 </div>
-                <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
+                <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                   <span className="flex items-center gap-1">
                     <CalendarDays className="size-3" />
                     {formatDate(estimate.startDate)}

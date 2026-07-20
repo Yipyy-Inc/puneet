@@ -294,10 +294,10 @@ export default function LiveSupportPage() {
   ).length;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
+    <div className="flex flex-col lg:h-[calc(100vh-4rem)] lg:flex-row">
       {/* Main Content */}
-      <div className="flex-1 overflow-auto p-6 pt-8">
-        <div className="mb-6 flex items-center justify-between">
+      <div className="min-w-0 flex-1 overflow-auto p-4 pt-6 sm:p-6 sm:pt-8">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-4xl font-bold tracking-tight">Live Support</h1>
             <p className="text-muted-foreground mt-1">
@@ -747,7 +747,7 @@ export default function LiveSupportPage() {
       </div>
 
       {/* Right Chat Panel */}
-      <div className="w-[380px] shrink-0">
+      <div className="w-full shrink-0 lg:w-[380px]">
         <ChatPanel
           conversations={chatConversations}
           selectedChat={selectedChat}

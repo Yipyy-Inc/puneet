@@ -293,7 +293,9 @@ export function BookingCard({
         </Link>
 
         <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex items-center gap-1.5 overflow-hidden">
+          {/* wrap rather than overflow-hidden: the service badge is shrink-0,
+              so at 390px it was clipped out of view instead of moving down. */}
+          <div className="flex flex-wrap items-center gap-1.5">
             <Link
               href={petHref}
               onClick={(e) => e.stopPropagation()}

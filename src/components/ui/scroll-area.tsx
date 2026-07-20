@@ -18,7 +18,13 @@ function ScrollArea({
     >
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
-        className="focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
+        // [&>div]:block! — Radix renders its content wrapper with an inline
+        // `display:table`, which shrink-wraps to content and so grows past the
+        // viewport instead of letting children truncate (+133px on
+        // /dashboard/communication/live-support at 390px). Safe here because no
+        // ScrollArea in this codebase scrolls horizontally; `display:table` is
+        // only needed to measure content width for that case.
+        className="focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1 [&>div]:block!"
       >
         {children}
       </ScrollAreaPrimitive.Viewport>

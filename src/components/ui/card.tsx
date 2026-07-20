@@ -7,7 +7,11 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        `border-border/50 bg-card text-card-foreground shadow-card flex flex-col gap-6 rounded-2xl border py-6 transition-all duration-200`,
+        // min-w-0: as a flex/grid item a Card defaults to min-width:auto, so it
+        // refuses to shrink below its content's min-content width and is clipped
+        // by the overflow-x-clip page shell instead (194 clipped nodes on
+        // boarding/settings at 390px). Letting it shrink lets the content wrap.
+        `border-border/50 bg-card text-card-foreground shadow-card flex min-w-0 flex-col gap-6 rounded-2xl border py-6 transition-all duration-200`,
         className,
       )}
       {...props}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import {
   Card,
   CardContent,
@@ -121,6 +122,10 @@ interface AuditLog {
 }
 
 export function AuditLogsManager() {
+  // Pie slice labels sit outside the arc; at 390px the full
+  // "Category: NN%" text overflowed the chart card by ~87px. Narrow screens
+  // get the percentage only — the category name stays available in the legend.
+  const isNarrow = useMediaQuery("(max-width: 640px)");
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showFilterDialog, setShowFilterDialog] = useState(false);
@@ -452,7 +457,7 @@ export function AuditLogsManager() {
             write-once and read-only — no role can edit, modify, or delete them.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             className="gap-2"
@@ -709,9 +714,11 @@ export function AuditLogsManager() {
                         cy="50%"
                         labelLine={false}
                         label={({ payload }) =>
-                          `${payload?.category}: ${payload?.percentage}%`
+                          isNarrow
+                            ? `${payload?.percentage}%`
+                            : `${payload?.category}: ${payload?.percentage}%`
                         }
-                        outerRadius={100}
+                        outerRadius={isNarrow ? 70 : 100}
                         fill="#8884d8"
                         dataKey="count"
                       >

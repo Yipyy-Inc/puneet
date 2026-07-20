@@ -594,7 +594,7 @@ function GroomingSidebar({
   ];
 
   return (
-    <aside className="flex w-72 shrink-0 flex-col overflow-y-auto rounded-2xl border border-slate-200/60 bg-white">
+    <aside className="flex w-full shrink-0 flex-col rounded-2xl border border-slate-200/60 bg-white lg:w-72 lg:overflow-y-auto">
       {/* Header */}
       <div className="border-b border-slate-100 px-5 pt-5 pb-4">
         <div className="flex items-center gap-2.5">
@@ -2618,7 +2618,7 @@ export function GroomingCalendar() {
 
   return (
     <>
-      <div className="flex h-full gap-6 print:hidden">
+      <div className="flex h-full flex-col gap-4 lg:flex-row lg:gap-6 print:hidden">
         <GroomingSidebar
           selectedDate={selectedDate}
           todayStr={todayStr}

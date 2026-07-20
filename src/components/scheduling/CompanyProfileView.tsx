@@ -258,8 +258,8 @@ export function CompanyProfileView() {
         {profile.locations.map((loc) => (
           <Card key={loc.id}>
             <CardHeader>
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="flex items-center gap-2 text-base">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="flex min-w-0 flex-1 items-center gap-2 text-base">
                   <MapPin className="size-4" />
                   <Input
                     value={loc.name}
@@ -370,7 +370,7 @@ export function CompanyProfileView() {
                   {loc.operatingHours.map((h) => (
                     <div
                       key={h.dayOfWeek}
-                      className="flex items-center gap-3 text-sm"
+                      className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm"
                     >
                       <div className="w-12 font-medium">
                         {DAYS[h.dayOfWeek]}

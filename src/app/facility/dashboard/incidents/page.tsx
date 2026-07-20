@@ -379,9 +379,9 @@ export default function IncidentsPage() {
         <TabsContent value="incidents" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <CardTitle>Incident Reports</CardTitle>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                   <div className="flex items-center gap-2">
                     <Filter className="text-muted-foreground size-4" />
                     <Select

@@ -220,14 +220,17 @@ export function Section({
       className="scroll-mt-4 data-[complete=true]:opacity-75 data-[current=true]:border-amber-300 data-[overdue=true]:border-red-300"
     >
       <CardHeader className="pb-3">
-        <div className="flex items-center gap-3">
+        {/* flex-wrap + a real min-width on the title: the action cluster is
+            shrink-0, so without a minimum the flex-1 title collapsed to 0 and
+            the cluster still overflowed (+305px at 820px). */}
+        <div className="flex flex-wrap items-center gap-3">
           <div
             className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${meta.bg}`}
           >
             <Icon className={`size-5 ${meta.color}`} />
           </div>
-          <div className="min-w-0 flex-1">
-            <CardTitle className="flex items-center gap-2 text-base">
+          <div className="min-w-[12rem] flex-1">
+            <CardTitle className="flex flex-wrap items-center gap-2 text-base">
               {step.name}
               {isOverdue && (
                 <Badge

@@ -496,7 +496,9 @@ export default function EstimatesPage() {
 
       {/* Filters */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex gap-1">
+        {/* Scrollable on mobile: the 6 status pills need ~490px and were
+            clipped by the page shell at 390px. */}
+        <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
           {TAB_FILTERS.map((tab) => (
             <button
               key={tab.key}
