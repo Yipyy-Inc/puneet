@@ -109,7 +109,10 @@ function StaffLayoutShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <div className="border-b">
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+        <nav
+          className="-mb-px flex space-x-8 overflow-x-auto"
+          aria-label="Tabs"
+        >
           {staffTabs.map((tab) => {
             const isActive = isActiveTab(tab.href);
             return (

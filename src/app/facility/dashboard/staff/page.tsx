@@ -266,7 +266,7 @@ export default function FacilityStaffPage() {
               rest.
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setDepartmentsOpen(true)}>
               <Building2 className="size-4" /> Manage departments
             </Button>

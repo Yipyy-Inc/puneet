@@ -512,7 +512,7 @@ export default function EstimatesPage() {
             </button>
           ))}
         </div>
-        <div className="flex flex-col gap-2 md:flex-row md:items-center">
+        <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
           {/* Creation-date range filter */}
           <div className="flex flex-wrap items-center gap-1.5">
             <Select

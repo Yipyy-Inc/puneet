@@ -571,7 +571,7 @@ export function KennelCalendarView({
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex overflow-hidden rounded-lg border">
             <Button
               variant={timeFrame === "1week" ? "secondary" : "ghost"}

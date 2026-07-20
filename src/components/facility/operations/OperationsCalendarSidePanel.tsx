@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import {
   CalendarDays,
   CheckCircle2,
@@ -95,6 +96,12 @@ export function OperationsCalendarSidePanel({
   useEffect(() => {
     localStorage.setItem(SIDEPANEL_COLLAPSE_KEY, collapsed ? "1" : "0");
   }, [collapsed]);
+
+  // Below lg the panel stacks above the calendar at full width, so the
+  // narrow icon-rail collapse makes no sense there — honour the saved
+  // preference on desktop only.
+  const isDesktop = useMediaQuery("(min-width: 1024px)", true);
+  const showCollapsed = collapsed && isDesktop;
 
   const shiftAnchorDay = (delta: number) => {
     const next = new Date(anchorDate);
@@ -320,7 +327,7 @@ export function OperationsCalendarSidePanel({
           ? "bg-amber-500"
           : "bg-red-500";
 
-  if (collapsed) {
+  if (showCollapsed) {
     return (
       <aside className="flex w-14 shrink-0 flex-col items-center gap-3 overflow-y-auto border-r border-slate-200/60 bg-white py-4">
         {/* Expand arrow */}
@@ -391,7 +398,7 @@ export function OperationsCalendarSidePanel({
   }
 
   return (
-    <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-r border-slate-200/60 bg-white">
+    <aside className="flex w-full shrink-0 flex-col border-b border-slate-200/60 bg-white lg:w-72 lg:overflow-y-auto lg:border-r lg:border-b-0">
       {/* Header */}
       <div className="relative overflow-hidden border-b border-slate-100 px-5 pt-5 pb-4">
         <div className="pointer-events-none absolute inset-0 bg-slate-50/50" />

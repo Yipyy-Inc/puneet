@@ -260,7 +260,7 @@ export function Section({
               )}
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
             {onPrintStep && (
               <Button
                 variant="ghost"

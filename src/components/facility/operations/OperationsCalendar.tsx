@@ -3148,7 +3148,10 @@ export function OperationsCalendar() {
   };
 
   return (
-    <div className="animate-in fade-in flex min-h-[calc(100vh-4rem)] bg-slate-50 duration-700 ease-in-out">
+    // Stacks below lg: side-by-side, the w-72 panel leaves a phone ~100px for
+    // the grid, so the calendar was clipped off-screen by the layout's
+    // overflow-x-clip.
+    <div className="animate-in fade-in flex min-h-[calc(100vh-4rem)] flex-col bg-slate-50 duration-700 ease-in-out lg:flex-row">
       {/* Left sidebar: mini calendar + stats */}
       <OperationsCalendarSidePanel
         anchorDate={anchorDate}

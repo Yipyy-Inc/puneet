@@ -2629,8 +2629,9 @@ export function GroomingCalendar() {
 
         {/* ── Main View Area ── */}
         <div className="flex min-w-0 flex-1 flex-col gap-4 rounded-4xl border bg-slate-50/50 p-6 shadow-sm dark:bg-slate-900/20">
-          {/* Top Controls */}
-          <div className="flex items-center justify-between">
+          {/* Top Controls — flex-wrap: without it the Filters/Print/New Event
+              group overflowed its clipped parent by ~700px on tablet. */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
@@ -2710,7 +2711,7 @@ export function GroomingCalendar() {
           </div>
 
           {/* Header Title */}
-          <div className="mt-2 mb-2 flex items-center justify-between">
+          <div className="mt-2 mb-2 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
                 <ActivitySquare className="h-5 w-5" />

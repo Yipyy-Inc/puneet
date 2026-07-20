@@ -97,7 +97,9 @@ export function OperationsCalendarToolbar({
 
           {/* Right Side: Actions & Search */}
           <div className="flex flex-wrap items-center justify-end gap-3 lg:flex-1">
-            <div className="group relative w-full flex-1 transition-all sm:max-w-[280px]">
+            {/* basis-full: `flex-1` alone sets basis:0, so the search shrank to
+                a ~60px stub beside the action buttons on phones. */}
+            <div className="group relative w-full flex-1 basis-full transition-all sm:max-w-[280px] sm:basis-auto">
               <Search className="absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
               <Input
                 value={searchTerm}
