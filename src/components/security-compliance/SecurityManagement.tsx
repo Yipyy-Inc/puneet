@@ -903,7 +903,7 @@ export function SecurityManagement() {
           {/* MFA Settings */}
           <Card className="shadow-card border-0">
             <CardHeader>
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                     <Lock className="size-5" />
@@ -941,7 +941,7 @@ export function SecurityManagement() {
           {/* IP Whitelist */}
           <Card className="shadow-card border-0">
             <CardHeader>
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                     <Globe className="size-5" />
@@ -978,7 +978,7 @@ export function SecurityManagement() {
           {/* Active Sessions */}
           <Card className="shadow-card border-0">
             <CardHeader>
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                     <Clock className="size-5" />

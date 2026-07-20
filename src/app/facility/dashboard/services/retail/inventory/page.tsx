@@ -615,7 +615,7 @@ export default function InventoryPage() {
           setSelectedTab(value as "overview" | "movements" | "alerts")
         }
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <TabsList>
             <TabsTrigger value="overview" className="gap-2">
               <Warehouse className="size-4" />
@@ -639,7 +639,7 @@ export default function InventoryPage() {
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               onClick={() => setIsInvoiceImportOpen(true)}
@@ -660,7 +660,7 @@ export default function InventoryPage() {
             {/* Low Stock Items Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex flex-wrap items-center gap-2">
                   <TrendingDown className="size-5 text-red-500" />
                   Low Stock Items
                 </CardTitle>
@@ -730,7 +730,7 @@ export default function InventoryPage() {
             {/* Recent Movements Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex flex-wrap items-center gap-2">
                   <RefreshCw className="size-5" />
                   Recent Movements
                 </CardTitle>
@@ -742,7 +742,7 @@ export default function InventoryPage() {
                       key={movement.id}
                       className="flex items-center justify-between rounded-lg border p-2"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {getMovementTypeIcon(movement.movementType)}
                         <div>
                           <p className="text-sm font-medium">
@@ -1030,7 +1030,7 @@ export default function InventoryPage() {
             </div>
           )}
 
-          <DialogFooter className="flex gap-2">
+          <DialogFooter className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               onClick={() => setIsAlertDetailModalOpen(false)}
@@ -1077,8 +1077,8 @@ export default function InventoryPage() {
               </p>
             ) : (
               <>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -1163,7 +1163,7 @@ export default function InventoryPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Label className="text-sm">
                                 Reorder Quantity:
                               </Label>
@@ -1331,7 +1331,7 @@ export default function InventoryPage() {
                   .filter((item) => item.selected)
                   .map((item) => (
                     <div key={item.alertId} className="p-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="font-medium">{item.productName}</p>
                           {item.variantName && (

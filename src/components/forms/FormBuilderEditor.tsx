@@ -784,7 +784,7 @@ export function FormBuilderEditor({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Form settings</CardTitle>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={handleSave}>
                 <Save className="mr-2 size-4" />
                 Save
@@ -1009,7 +1009,7 @@ export function FormBuilderEditor({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Sections & questions</CardTitle>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={addSection}>
                 <FolderOpen className="mr-2 size-4" />
                 Add section
@@ -1038,7 +1038,7 @@ export function FormBuilderEditor({
                         key={section.id}
                         className="space-y-2 rounded-lg border p-3"
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <FolderOpen className="text-muted-foreground size-4 shrink-0" />
                           <Input
                             value={section.title}
@@ -1144,7 +1144,7 @@ export function FormBuilderEditor({
         )}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <CardTitle className="text-base">Field mapping</CardTitle>
               {fieldMapping.length > 0 && (
                 <Badge
@@ -1370,7 +1370,7 @@ export function FormBuilderEditor({
                 Test Form
               </Button>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant={previewAudience === "customer" ? "default" : "outline"}
                 size="sm"
@@ -1436,7 +1436,7 @@ export function FormBuilderEditor({
                         {testMode ? (
                           /* Interactive inputs for test mode */
                           q.type === "yes_no" ? (
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                               {["yes", "no"].map((val) => (
                                 <Button
                                   key={val}

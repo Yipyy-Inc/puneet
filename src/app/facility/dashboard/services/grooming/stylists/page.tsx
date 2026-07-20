@@ -658,7 +658,7 @@ export default function StylistsPage() {
       icon: Users,
       defaultVisible: true,
       render: (groomer) => (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Avatar>
             <AvatarImage src={groomer.photoUrl} />
             <AvatarFallback>
@@ -815,7 +815,7 @@ export default function StylistsPage() {
         const color =
           groomer.calendarColor ?? fallbackColorFor(groomer.staffId);
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span
               className="ring-background inline-block size-5 rounded-md shadow-sm ring-2"
               style={{ backgroundColor: color }}
@@ -901,7 +901,7 @@ export default function StylistsPage() {
       render: (groomer) => {
         const metrics = stylistMetrics.get(groomer.staffId);
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant={metrics?.todayAppointments ? "default" : "outline"}>
               {metrics?.todayAppointments || 0}
             </Badge>
@@ -944,7 +944,7 @@ export default function StylistsPage() {
         const metrics = stylistMetrics.get(groomer.staffId);
         const rate = metrics?.cancellationRate || 0;
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span
               className={
                 rate > 15
@@ -991,7 +991,7 @@ export default function StylistsPage() {
         const isVisible =
           groomerVisibility[groomer.staffId] ?? groomer.visibleOnline;
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Switch
               checked={isVisible}
               onCheckedChange={() => toggleGroomerVisibility(groomer.staffId)}
@@ -1173,7 +1173,7 @@ export default function StylistsPage() {
               Staff Management.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               className="bg-emerald-600 text-white hover:bg-emerald-700"
               onClick={() => setIsAddOpen(true)}
@@ -1342,7 +1342,7 @@ export default function StylistsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="calendarColor">Calendar Color</Label>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <input
                   id="calendarColor"
                   type="color"
@@ -1365,7 +1365,7 @@ export default function StylistsPage() {
               </div>
             </div>
             <div className="space-y-2 rounded-lg border p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <Label>Qualified Services</Label>
                 <span className="text-muted-foreground text-xs">
                   {formData.qualifiedPackageIds.length} of{" "}
@@ -1417,7 +1417,10 @@ export default function StylistsPage() {
                     ["canHandleAggressive", "Can handle aggressive pets"],
                   ] as [keyof typeof formData, string][]
                 ).map(([key, label]) => (
-                  <div key={key} className="flex items-center justify-between">
+                  <div
+                    key={key}
+                    className="flex flex-wrap items-center justify-between gap-3"
+                  >
                     <span className="text-sm">{label}</span>
                     <Switch
                       checked={formData[key] as boolean}
@@ -1581,7 +1584,7 @@ export default function StylistsPage() {
       <Dialog open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
         <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex flex-wrap items-center gap-2">
               <Send className="size-4" />
               Tomorrow&apos;s Schedule — {summary?.stylistName}
             </DialogTitle>
@@ -1639,7 +1642,7 @@ export default function StylistsPage() {
       <Dialog open={isNotifPrefsOpen} onOpenChange={setIsNotifPrefsOpen}>
         <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex flex-wrap items-center gap-2">
               <Bell className="size-4" />
               Notification Preferences — {notifPrefsGroomer?.name}
             </DialogTitle>

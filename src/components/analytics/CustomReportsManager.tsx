@@ -266,9 +266,9 @@ export function CustomReportsManager() {
                 key={report.id}
                 className="bg-card rounded-lg border p-4 transition-shadow hover:shadow-md"
               >
-                <div className="mb-3 flex items-start justify-between">
+                <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <div className="mb-2 flex items-center gap-3">
+                    <div className="mb-2 flex flex-wrap items-center gap-3">
                       <h4 className="text-lg font-semibold">{report.name}</h4>
                       <Badge
                         variant={
@@ -286,7 +286,7 @@ export function CustomReportsManager() {
                       {report.description}
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button variant="outline" size="sm" className="gap-2">
                       <PlayCircle className="size-4" />
                       Run
@@ -372,7 +372,7 @@ export function CustomReportsManager() {
                   <p className="text-muted-foreground mb-2 text-xs">
                     Export Formats
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {report.exportFormats.map((format) => {
                       const icons: Record<string, LucideIcon> = {
                         PDF: FileText,

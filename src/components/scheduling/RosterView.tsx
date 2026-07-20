@@ -203,7 +203,7 @@ export function RosterView() {
             )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -280,7 +280,7 @@ export function RosterView() {
 
             return (
               <section key={bucket} className="space-y-2">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Icon className={`size-4 ${cfg.color}`} />
                   <h3 className="text-sm font-semibold">{cfg.label}</h3>
                   <Badge variant="secondary" className="h-5 px-1.5 text-[11px]">
@@ -343,7 +343,7 @@ export function RosterView() {
                           )}
 
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <span className="truncate font-medium">
                                 {emp?.name ?? "Unassigned"}
                               </span>

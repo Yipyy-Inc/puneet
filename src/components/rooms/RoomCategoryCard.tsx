@@ -219,7 +219,7 @@ export function RoomCategoryCard({
           </div>
 
           {/* Actions */}
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <Button
               size="sm"
               variant="outline"

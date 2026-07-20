@@ -443,7 +443,7 @@ export function SupportTicketing() {
             Manage support tickets, assign agents, and track SLAs
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={() => setIsSLAModalOpen(true)}>
             <Settings className="mr-2 size-4" />
             SLA Settings
@@ -736,7 +736,7 @@ export function SupportTicketing() {
           {/* SLA Performance Overview */}
           <Card className="mt-4">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex flex-wrap items-center gap-2">
                 <TrendingUp className="size-5" />
                 SLA Performance Overview
               </CardTitle>
@@ -828,7 +828,7 @@ export function SupportTicketing() {
       <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
         <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex flex-wrap items-center gap-2">
               <UserPlus className="size-5" />
               Assign Agent
             </DialogTitle>
@@ -853,7 +853,7 @@ export function SupportTicketing() {
                 <SelectContent>
                   {supportAgents.map((agent) => (
                     <SelectItem key={agent.id} value={agent.id}>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span
                           className={`size-2 rounded-full ${getAgentStatusColor(agent.status)} `}
                         />
@@ -930,7 +930,7 @@ export function SupportTicketing() {
       <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
         <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex flex-wrap items-center gap-2">
               <CheckCircle2 className="text-success size-5" />
               Resolve Ticket
             </DialogTitle>
@@ -979,7 +979,7 @@ export function SupportTicketing() {
       <Dialog open={isSLAModalOpen} onOpenChange={setIsSLAModalOpen}>
         <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex flex-wrap items-center gap-2">
               <Settings className="size-5" />
               SLA Configuration
             </DialogTitle>
@@ -993,7 +993,7 @@ export function SupportTicketing() {
               {slaConfigs.map((sla) => (
                 <div key={sla.id} className="rounded-lg border p-4">
                   <div className="mb-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Badge
                         className={` ${getPriorityColor(sla.priority)} border`}
                       >
@@ -1061,7 +1061,7 @@ export function SupportTicketing() {
       >
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex flex-wrap items-center gap-2">
               <Ticket className="size-5" />
               Create New Ticket
             </DialogTitle>

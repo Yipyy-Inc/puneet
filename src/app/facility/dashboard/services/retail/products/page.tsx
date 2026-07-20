@@ -750,7 +750,7 @@ export default function ProductsPage() {
       </div>
 
       {/* View Toggle and Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Button
             variant={viewMode === "list" ? "default" : "outline"}
@@ -887,7 +887,7 @@ export default function ProductsPage() {
                     {product.description}
                   </p>
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <span className="text-xl font-bold">
                       ${product.basePrice.toFixed(2)}
                     </span>
@@ -953,7 +953,7 @@ export default function ProductsPage() {
                                 key={variant.id}
                                 className="bg-muted/30 rounded-sm border p-2"
                               >
-                                <div className="flex items-center justify-between">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
                                   <span className="flex items-center gap-1.5 text-sm font-medium">
                                     {variant.name}
                                     {variant.overridePricing && (
@@ -1610,7 +1610,7 @@ export default function ProductsPage() {
             {/* Variants Section */}
             {formData.hasVariants && (
               <div className="space-y-4 border-t pt-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <Label className="text-base font-medium">
                     Product Variants
                   </Label>

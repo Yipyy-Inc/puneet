@@ -215,7 +215,7 @@ export function ReportsView() {
             Workforce performance, labor cost trends, and coverage health.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={days} onValueChange={setDays}>
             <SelectTrigger className="h-8 w-[150px]">
               <SelectValue />
@@ -317,7 +317,7 @@ export function ReportsView() {
                   {empHours.slice(0, 20).map((row) => (
                     <TableRow key={row.employee.id}>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Avatar className="size-7">
                             <AvatarImage
                               src={row.employee.avatar}
@@ -380,7 +380,7 @@ export function ReportsView() {
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
                 {deptHours.map((d) => (
                   <div key={d.department.id} className="rounded-md border p-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span
                         className="size-2.5 rounded-full"
                         style={{ backgroundColor: d.department.color }}
@@ -534,7 +534,7 @@ export function ReportsView() {
                       key={s.employee.id}
                       className="flex items-center justify-between text-sm"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Avatar className="size-6">
                           <AvatarImage
                             src={s.employee.avatar}

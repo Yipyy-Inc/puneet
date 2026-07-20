@@ -370,7 +370,7 @@ export function NotificationCenter({
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select
             value={sortBy}
             onValueChange={(v) => setSortBy(v as "newest" | "priority")}

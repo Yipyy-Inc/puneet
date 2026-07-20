@@ -691,7 +691,7 @@ export function ReportCardsModule({
       icon: PawPrint,
       defaultVisible: true,
       render: (item) => (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="bg-primary/10 flex size-8 items-center justify-center rounded-full">
             <PawPrint className="text-primary size-4" />
           </div>
@@ -839,7 +839,7 @@ export function ReportCardsModule({
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle>Daily Report Cards</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 onClick={handleBulkSendDailyCare}
@@ -864,7 +864,7 @@ export function ReportCardsModule({
             searchKey="petName"
             searchPlaceholder="Search by pet name..."
             actions={(item) => (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -1006,7 +1006,7 @@ export function ReportCardsModule({
                             ).map((value) => (
                               <div
                                 key={value}
-                                className="flex items-center gap-2"
+                                className="flex flex-wrap items-center gap-2"
                               >
                                 <RadioGroupItem
                                   value={value}
@@ -1034,7 +1034,7 @@ export function ReportCardsModule({
                               (value) => (
                                 <div
                                   key={value}
-                                  className="flex items-center gap-2"
+                                  className="flex flex-wrap items-center gap-2"
                                 >
                                   <RadioGroupItem
                                     value={value}
@@ -1067,7 +1067,7 @@ export function ReportCardsModule({
                           (value) => (
                             <div
                               key={value}
-                              className="flex items-center gap-2"
+                              className="flex flex-wrap items-center gap-2"
                             >
                               <RadioGroupItem
                                 value={value}
@@ -1108,7 +1108,7 @@ export function ReportCardsModule({
                             return (
                               <div
                                 key={activity}
-                                className="flex items-center gap-2"
+                                className="flex flex-wrap items-center gap-2"
                               >
                                 <Checkbox
                                   id={`activity-${activity}`}
@@ -1171,7 +1171,7 @@ export function ReportCardsModule({
                             ).map((value) => (
                               <div
                                 key={value}
-                                className="flex items-center gap-2"
+                                className="flex flex-wrap items-center gap-2"
                               >
                                 <RadioGroupItem
                                   value={value}
@@ -1198,7 +1198,7 @@ export function ReportCardsModule({
                               (value) => (
                                 <div
                                   key={value}
-                                  className="flex items-center gap-2"
+                                  className="flex flex-wrap items-center gap-2"
                                 >
                                   <RadioGroupItem
                                     value={value}
@@ -1227,7 +1227,7 @@ export function ReportCardsModule({
                               (value) => (
                                 <div
                                   key={value}
-                                  className="flex items-center gap-2"
+                                  className="flex flex-wrap items-center gap-2"
                                 >
                                   <RadioGroupItem
                                     value={value}
@@ -1256,7 +1256,10 @@ export function ReportCardsModule({
                         }
                       >
                         {(["yes", "no"] as const).map((value) => (
-                          <div key={value} className="flex items-center gap-2">
+                          <div
+                            key={value}
+                            className="flex flex-wrap items-center gap-2"
+                          >
                             <RadioGroupItem
                               value={value}
                               id={`holiday-${value}`}
@@ -1290,7 +1293,10 @@ export function ReportCardsModule({
                         }
                       >
                         {overallFeedbackConfig.responseOptions.map((opt) => (
-                          <div key={opt} className="flex items-center gap-2">
+                          <div
+                            key={opt}
+                            className="flex flex-wrap items-center gap-2"
+                          >
                             <RadioGroupItem value={opt} id={`overall-${opt}`} />
                             <Label htmlFor={`overall-${opt}`}>{opt}</Label>
                           </div>
@@ -1339,7 +1345,7 @@ export function ReportCardsModule({
                                 }
                               >
                                 <div className="flex items-center gap-4">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <RadioGroupItem
                                       value="yes"
                                       id={`cq-${q.id}-yes`}
@@ -1348,7 +1354,7 @@ export function ReportCardsModule({
                                       Yes
                                     </Label>
                                   </div>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <RadioGroupItem
                                       value="no"
                                       id={`cq-${q.id}-no`}
@@ -1628,7 +1634,7 @@ export function ReportCardsModule({
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex flex-wrap items-center gap-2">
               <PawPrint className="size-5" />
               Report Card - {viewingCard?.petName}
             </DialogTitle>

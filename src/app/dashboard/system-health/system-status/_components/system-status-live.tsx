@@ -371,13 +371,15 @@ function ComponentRow({
   return (
     <AccordionItem value={c.id}>
       <AccordionTrigger className="hover:no-underline">
-        <div className="flex flex-1 items-center gap-3 pr-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 pr-3">
           <StatusDot status={c.status} />
           <span className="font-medium">{c.name}</span>
           <span className={cn("text-xs font-medium", meta.text)}>
             {meta.label}
           </span>
-          <span className="text-muted-foreground ml-auto truncate text-xs">
+          {/* min-w-0 so `truncate` can actually shrink it — as a flex item it
+              defaulted to min-width:auto and pushed the row 235px wide. */}
+          <span className="text-muted-foreground ml-auto min-w-0 truncate text-xs">
             {c.detail}
           </span>
         </div>

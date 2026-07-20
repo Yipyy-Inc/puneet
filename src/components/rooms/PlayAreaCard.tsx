@@ -252,7 +252,7 @@ export function PlayAreaCard({
           </div>
 
           {/* Actions */}
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <Switch
               checked={area.isActive}
               onCheckedChange={onToggleArea}

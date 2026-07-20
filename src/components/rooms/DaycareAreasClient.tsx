@@ -340,7 +340,7 @@ export function DaycareAreasClient({ facilityId = 11 }: Props) {
                   rows={2}
                 />
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <Switch
                   checked={areaDialog.data.isActive}
                   onCheckedChange={(v) =>
@@ -596,7 +596,7 @@ export function DaycareAreasClient({ facilityId = 11 }: Props) {
                 </Select>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <Switch
                   checked={sectionDialog.data.isActive}
                   onCheckedChange={(v) =>

@@ -396,7 +396,7 @@ export default function ShiftSwapsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-4 flex border-b">
+      <div className="mb-4 flex overflow-x-auto border-b">
         {STATUS_TABS.map((t) => {
           const isActive = tab === t.value;
           const count = counts[t.value];

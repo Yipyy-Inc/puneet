@@ -203,7 +203,7 @@ export function GlobalSettings() {
             Configure branding, languages, currencies, and system defaults
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {unsavedChanges && (
             <Badge
               variant="secondary"
@@ -446,7 +446,7 @@ export function GlobalSettings() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label>Primary Color</Label>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <div
                         className="size-8 cursor-pointer rounded-lg border"
                         style={{ backgroundColor: branding.primaryColor }}
@@ -466,7 +466,7 @@ export function GlobalSettings() {
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>Secondary Color</Label>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <div
                         className="size-8 cursor-pointer rounded-lg border"
                         style={{ backgroundColor: branding.secondaryColor }}
@@ -486,7 +486,7 @@ export function GlobalSettings() {
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>Accent Color</Label>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <div
                         className="size-8 cursor-pointer rounded-lg border"
                         style={{ backgroundColor: branding.accentColor }}
@@ -539,7 +539,7 @@ export function GlobalSettings() {
 
                 <div className="flex items-center justify-between border-t pt-4">
                   <div className="space-y-0.5">
-                    <Label className="flex items-center gap-2">
+                    <Label className="flex flex-wrap items-center gap-2">
                       <Moon className="size-4" />
                       Dark Mode
                     </Label>
@@ -687,7 +687,7 @@ export function GlobalSettings() {
                           {lang.code}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">{lang.name}</span>
                             <span className="text-muted-foreground text-sm">
                               ({lang.nativeName})
@@ -713,7 +713,7 @@ export function GlobalSettings() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {!lang.isDefault && lang.enabled && (
                           <Button
                             variant="ghost"
@@ -761,7 +761,7 @@ export function GlobalSettings() {
                           {curr.symbol}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">{curr.code}</span>
                             <span className="text-muted-foreground text-sm">
                               {curr.name}
@@ -777,7 +777,7 @@ export function GlobalSettings() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {!curr.isDefault && curr.enabled && (
                           <Button
                             variant="ghost"
@@ -1178,7 +1178,7 @@ export function GlobalSettings() {
                       className="bg-muted/50 hover:bg-muted flex items-center justify-between rounded-lg p-3 transition-colors"
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm font-medium">
                             {template.name}
                           </span>
@@ -1368,7 +1368,7 @@ export function GlobalSettings() {
       >
         <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex flex-wrap items-center gap-2">
               <Edit className="size-5" />
               Edit Email Template
             </DialogTitle>

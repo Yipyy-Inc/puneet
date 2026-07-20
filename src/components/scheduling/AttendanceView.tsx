@@ -116,7 +116,7 @@ export function AttendanceView() {
             Compare scheduled shifts against actual clock-in / clock-out times.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={days} onValueChange={setDays}>
             <SelectTrigger className="h-8 w-[150px]">
               <SelectValue />
@@ -249,7 +249,7 @@ export function AttendanceView() {
                   return (
                     <TableRow key={r.shift.id}>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Avatar className="size-7">
                             <AvatarImage src={emp?.avatar} alt={emp?.name} />
                             <AvatarFallback className="text-[10px]">

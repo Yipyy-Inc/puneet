@@ -317,7 +317,7 @@ export default function RetailReportsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Retail Reports</h2>
           <p className="text-muted-foreground">
@@ -337,7 +337,7 @@ export default function RetailReportsPage() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Label>Period:</Label>
               <Select
                 value={dateRange}
@@ -359,7 +359,7 @@ export default function RetailReportsPage() {
 
             {dateRange === "custom" && (
               <>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Label>Start:</Label>
                   <Input
                     type="date"
@@ -368,7 +368,7 @@ export default function RetailReportsPage() {
                     className="w-40"
                   />
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Label>End:</Label>
                   <Input
                     type="date"
@@ -380,7 +380,7 @@ export default function RetailReportsPage() {
               </>
             )}
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Label>Group By:</Label>
               <Select
                 value={period}
@@ -531,14 +531,14 @@ export default function RetailReportsPage() {
         <TabsContent value="products" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <CardTitle>Top Products</CardTitle>
                   <CardDescription>
                     Best performing products by {topProductsSortBy}
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Select
                     value={topProductsSortBy}
                     onValueChange={(value) =>
@@ -778,7 +778,7 @@ function ReconciliationTable({
         const paymentInfo = getPaymentMethodLabel(item as Transaction);
         const PaymentIcon = paymentInfo.icon;
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <PaymentIcon className="text-muted-foreground size-4" />
             <div className="flex flex-col">
               <span className="font-medium">{paymentInfo.label}</span>
@@ -856,7 +856,7 @@ function ReconciliationTable({
         const txn = item as Transaction;
         const locationName = getLocationName(txn.locationId);
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <MapPin className="text-muted-foreground size-4" />
             <span>{locationName}</span>
           </div>

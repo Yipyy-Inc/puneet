@@ -342,7 +342,7 @@ export default function LoyaltyReportsPage() {
     <LoyaltyModuleGuard requirePermission="reports">
       <div className="container mx-auto space-y-6 p-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-3xl font-bold">Loyalty & Referral Reports</h1>
             <p className="text-muted-foreground mt-2">
@@ -869,7 +869,7 @@ export default function LoyaltyReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                       <span className="text-muted-foreground text-sm">
                         Total Revenue
                       </span>
@@ -877,7 +877,7 @@ export default function LoyaltyReportsPage() {
                         {formatCurrency(referralStats.revenueFromReferrals)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                       <span className="text-muted-foreground text-sm">
                         Completed Referrals
                       </span>
@@ -885,7 +885,7 @@ export default function LoyaltyReportsPage() {
                         {referralStats.completedReferrals}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                       <span className="text-muted-foreground text-sm">
                         Average Value
                       </span>

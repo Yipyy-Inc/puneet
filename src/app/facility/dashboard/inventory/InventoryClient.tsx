@@ -454,7 +454,7 @@ export function InventoryClient({
             {facilityName} — supplies & consumables
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             onClick={() => setSupplierModal({ open: true, supplier: null })}

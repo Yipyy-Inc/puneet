@@ -42,8 +42,8 @@ export function LivePetCamGrid() {
       {/* Header Controls */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-4">
               <div>
                 <p className="text-muted-foreground text-sm font-medium">
                   Active Cameras
@@ -72,7 +72,7 @@ export function LivePetCamGrid() {
                 </Select>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline">
                 <Camera className="mr-2 size-4" />
                 Add Camera
@@ -139,7 +139,7 @@ export function LivePetCamGrid() {
                     {/* Controls Overlay */}
                     <div className="absolute right-0 bottom-0 left-0 bg-linear-to-t from-black/80 to-transparent p-4">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Button
                             size="sm"
                             variant="ghost"

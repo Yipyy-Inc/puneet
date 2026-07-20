@@ -12,7 +12,10 @@ function Tabs({
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
-      className={cn("flex flex-col gap-2", className)}
+      // min-w-0 for the same reason as Card: as a flex/grid item this defaults
+      // to min-width:auto and refuses to shrink below its widest tab strip,
+      // which then gets clipped by the page shell rather than scrolling.
+      className={cn("flex min-w-0 flex-col gap-2", className)}
       {...props}
     />
   );

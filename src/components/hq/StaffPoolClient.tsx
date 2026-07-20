@@ -386,7 +386,7 @@ export function StaffPoolClient({ staff: initialStaff, locations }: Props) {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <LastUpdated label="Last updated" className="mr-1" />
           {urgentGapCount > 0 && (
             <button
@@ -652,7 +652,7 @@ export function StaffPoolClient({ staff: initialStaff, locations }: Props) {
                     )}
                   >
                     <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5">
                           <div
                             className={cn(

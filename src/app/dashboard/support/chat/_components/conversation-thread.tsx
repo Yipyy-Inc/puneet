@@ -117,7 +117,7 @@ export function ConversationThread({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <Select
             value={conversation.assignedAgentId?.toString() ?? "unassigned"}
             onValueChange={(v) =>
