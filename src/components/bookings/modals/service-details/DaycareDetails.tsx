@@ -384,7 +384,14 @@ function DaycareSectionAssignmentStep({
 
   const hasRoomRestriction = allowedSectionIds.length > 0;
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
-  const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
+  // Pre-select when there's a single pet: it was already chosen in step 1, so
+  // staff shouldn't have to click its name again here before picking a room.
+  // With it selected, the sections show their "assign here" affordance and a
+  // direct section click assigns the pet. (This step remounts on entry, so the
+  // initializer re-runs if the pet set changes and the user returns.)
+  const [selectedPet, setSelectedPet] = React.useState<Pet | null>(
+    selectedPets.length === 1 ? selectedPets[0] : null,
+  );
   const [dragOverSectionId, setDragOverSectionId] = React.useState<
     string | null
   >(null);
