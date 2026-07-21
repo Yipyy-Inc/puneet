@@ -132,6 +132,7 @@ import {
   Trash2,
   Check,
   Send,
+  ArrowLeft,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -3725,6 +3726,12 @@ export default function SettingsPage() {
       ? "roles-permissions"
       : (requestedSection ?? "business");
   const [activeSection, setActiveSection] = useState(initialSection);
+  // Mobile is single-panel: show the section list, then drill into the chosen
+  // section (with a Back button). Desktop shows list + content side by side, so
+  // this flag is ignored there. Deep-links (?section=…) open straight to detail.
+  const [mobileShowDetail, setMobileShowDetail] = useState(
+    Boolean(requestedSection),
+  );
 
   useEffect(() => {
     if (requestedSection === "form-permissions") {
@@ -3736,6 +3743,8 @@ export default function SettingsPage() {
 
   const handleSectionChange = (section: string) => {
     setActiveSection(section);
+    setMobileShowDetail(true);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0 });
     router.replace(`/facility/dashboard/settings?section=${section}`, {
       scroll: false,
     });
@@ -3815,14 +3824,32 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Sidebar + Content layout */}
+      {/* Sidebar + Content layout. On phones it's a single panel: the sidebar
+          (section list) shows first, then drilling in swaps to the content with
+          a Back button. From lg both show side by side. */}
       <div className="flex flex-col gap-6 lg:flex-row">
-        <SettingsSidebar
-          activeSection={activeSection}
-          onSectionChange={handleSectionChange}
-        />
+        <div className={mobileShowDetail ? "hidden lg:block" : "block"}>
+          <SettingsSidebar
+            activeSection={activeSection}
+            onSectionChange={handleSectionChange}
+          />
+        </div>
 
-        <div className="min-w-0 flex-1 space-y-6">
+        <div
+          className={`min-w-0 flex-1 space-y-6 ${
+            mobileShowDetail ? "block" : "hidden lg:block"
+          }`}
+        >
+          {/* Back to the section list — phones only. */}
+          <button
+            type="button"
+            onClick={() => setMobileShowDetail(false)}
+            className="text-muted-foreground hover:text-foreground -mb-2 flex items-center gap-1.5 text-sm font-medium lg:hidden"
+          >
+            <ArrowLeft className="size-4" />
+            All settings
+          </button>
+
           {/* Business Configuration */}
           {activeSection === "business" && (
             <div className="space-y-6">
