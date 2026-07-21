@@ -249,18 +249,22 @@ export function AttendanceView() {
                   return (
                     <TableRow key={r.shift.id}>
                       <TableCell>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Avatar className="size-7">
+                        {/* No flex-wrap: with it, a long name/role pushed the
+                            avatar onto its own line, making rows uneven. The
+                            table already scrolls horizontally, so keep the
+                            avatar + name on one line and let the cell be wide. */}
+                        <div className="flex items-center gap-2">
+                          <Avatar className="size-7 shrink-0">
                             <AvatarImage src={emp?.avatar} alt={emp?.name} />
                             <AvatarFallback className="text-[10px]">
                               {emp?.initials ?? "??"}
                             </AvatarFallback>
                           </Avatar>
                           <div className="leading-tight">
-                            <div className="text-sm font-medium">
+                            <div className="text-sm font-medium whitespace-nowrap">
                               {emp?.name ?? "Unassigned"}
                             </div>
-                            <div className="text-muted-foreground text-[11px]">
+                            <div className="text-muted-foreground text-[11px] whitespace-nowrap">
                               {pos?.name}
                               {departmentFilter === "all" && dept
                                 ? ` · ${dept.name}`

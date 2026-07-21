@@ -317,8 +317,11 @@ export function ReportsView() {
                   {empHours.slice(0, 20).map((row) => (
                     <TableRow key={row.employee.id}>
                       <TableCell>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Avatar className="size-7">
+                        {/* No flex-wrap: keep the avatar inline with the name so
+                            long names don't push it onto its own line (the table
+                            scrolls horizontally instead). */}
+                        <div className="flex items-center gap-2">
+                          <Avatar className="size-7 shrink-0">
                             <AvatarImage
                               src={row.employee.avatar}
                               alt={row.employee.name}
@@ -328,10 +331,10 @@ export function ReportsView() {
                             </AvatarFallback>
                           </Avatar>
                           <div className="leading-tight">
-                            <div className="text-sm font-medium">
+                            <div className="text-sm font-medium whitespace-nowrap">
                               {row.employee.name}
                             </div>
-                            <div className="text-muted-foreground text-[11px]">
+                            <div className="text-muted-foreground text-[11px] whitespace-nowrap">
                               {row.employee.role}
                             </div>
                           </div>
@@ -534,8 +537,8 @@ export function ReportsView() {
                       key={s.employee.id}
                       className="flex items-center justify-between text-sm"
                     >
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Avatar className="size-6">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Avatar className="size-6 shrink-0">
                           <AvatarImage
                             src={s.employee.avatar}
                             alt={s.employee.name}
@@ -544,7 +547,7 @@ export function ReportsView() {
                             {s.employee.initials}
                           </AvatarFallback>
                         </Avatar>
-                        <span>{s.employee.name}</span>
+                        <span className="truncate">{s.employee.name}</span>
                       </div>
                       <Badge variant="secondary" className="text-[10px]">
                         <Repeat className="mr-1 size-3" />
