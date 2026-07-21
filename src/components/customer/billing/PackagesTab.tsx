@@ -45,6 +45,7 @@ import { DowngradeMembershipDialog } from "./packages/DowngradeMembershipDialog"
 import { PauseMembershipDialog } from "./packages/PauseMembershipDialog";
 import { CancelMembershipDialog } from "./packages/CancelMembershipDialog";
 import { PurchasedPackageCard } from "./packages/PurchasedPackageCard";
+import { BuyPackagesSection } from "./packages/BuyPackagesSection";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = "15";
@@ -357,6 +358,9 @@ export function PackagesTab() {
             </p>
           )}
         </section>
+
+        {/* ─── Zone 2b · Buy prepaid pass bundles ──────────────────────── */}
+        <BuyPackagesSection />
 
         {/* ─── Zone 3 · Explore Plans (marketplace) ────────────────────── */}
         <section className="bg-muted/40 rounded-2xl border p-6 md:p-8">
