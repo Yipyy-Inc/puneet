@@ -32,50 +32,54 @@ export function FacilityOnboardingBanner() {
   if (pathname === "/facility/onboarding") return null;
 
   return (
-    <div className="px-4 pt-4 sm:px-6">
-      <div className="via-background to-background relative flex flex-col gap-3 overflow-hidden rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 p-4 sm:flex-row sm:items-center dark:border-violet-900/50 dark:from-violet-950/30">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-sm">
-          <Rocket className="size-5" />
+    <div className="px-4 pt-3 sm:px-6">
+      {/* Compact single row on all sizes: the old card stacked icon/title/
+          subtitle/progress/buttons and ate ~150px of vertical space on phones.
+          Now it's one ~56px strip — title with an inline step/% caption and a
+          thin progress bar; the CTA collapses to an arrow on phones. */}
+      <div className="via-background to-background relative flex items-center gap-3 overflow-hidden rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 p-2.5 sm:p-3 dark:border-violet-900/50 dark:from-violet-950/30">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-sm">
+          <Rocket className="size-[18px]" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">
+          <p className="truncate text-sm font-semibold">
             Finish setting up your facility
           </p>
-          <p className="text-muted-foreground text-xs">
-            {completed} of {total} steps complete — you&apos;re {percent}% of
-            the way there.
-          </p>
-          <Progress
-            value={percent}
-            className="mt-2 h-1.5 max-w-md [&>div]:bg-violet-500"
-          />
+          <div className="mt-1.5 flex items-center gap-2">
+            <Progress
+              value={percent}
+              className="h-1 flex-1 [&>div]:bg-violet-500"
+            />
+            <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
+              {completed}/{total} · {percent}%
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            asChild
-            size="sm"
-            className="bg-violet-600 text-white hover:bg-violet-700"
-          >
-            <Link href="/facility/onboarding">
-              Continue setup
-              <ArrowRight className="size-4" />
-            </Link>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Dismiss onboarding banner"
-            title={
-              canDismiss
-                ? "Dismiss"
-                : `Complete at least ${ONBOARDING_DISMISS_THRESHOLD} steps to dismiss`
-            }
-            disabled={!canDismiss}
-            onClick={dismissOnboardingBanner}
-          >
-            <X className="size-4" />
-          </Button>
-        </div>
+        <Button
+          asChild
+          size="sm"
+          className="shrink-0 gap-1 bg-violet-600 text-white hover:bg-violet-700"
+        >
+          <Link href="/facility/onboarding" aria-label="Continue setup">
+            <span className="hidden sm:inline">Continue setup</span>
+            <ArrowRight className="size-4" />
+          </Link>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="shrink-0"
+          aria-label="Dismiss onboarding banner"
+          title={
+            canDismiss
+              ? "Dismiss"
+              : `Complete at least ${ONBOARDING_DISMISS_THRESHOLD} steps to dismiss`
+          }
+          disabled={!canDismiss}
+          onClick={dismissOnboardingBanner}
+        >
+          <X className="size-4" />
+        </Button>
       </div>
     </div>
   );
