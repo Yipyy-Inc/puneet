@@ -261,10 +261,17 @@ export function MessageCenter({
         </div>
       )}
 
-      {/* Conversation — on mobile only visible once a thread is selected. */}
+      {/* Conversation. On phones a selected thread becomes a full-screen
+          focused view: the page's maintenance/onboarding banners + hub tabs
+          otherwise consume ~400px, leaving the conversation almost no height.
+          Going fixed inset-0 escapes that chrome (the thread has its own back
+          button). From lg it's a normal in-flow panel beside the contact list. */}
       <div
         className={cn(
-          "min-w-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm",
+          "min-w-0 flex-1 overflow-hidden border border-slate-200 bg-white shadow-sm",
+          selectedThreadId
+            ? "fixed inset-0 z-50 rounded-none lg:relative lg:inset-auto lg:z-auto lg:rounded-2xl"
+            : "rounded-2xl",
           selectedThreadId || !showContactList ? "flex" : "hidden lg:flex",
         )}
       >
