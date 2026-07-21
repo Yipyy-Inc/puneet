@@ -443,10 +443,13 @@ export function ConversationThread({
   );
 
   return (
-    <div className="flex flex-1 flex-col">
+    // min-w-0: as a flex child of the panel column this defaulted to
+    // min-width:auto and would not shrink below its ~720px content, so the
+    // whole thread was clipped by the column's overflow-hidden at 390px.
+    <div className="flex min-w-0 flex-1 flex-col">
       {/* Thread header */}
-      <div className="flex items-center justify-between border-b bg-white px-5 py-3">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-2 border-b bg-white px-4 py-3 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
           {onBack && (
             <Button
               variant="ghost"
@@ -475,9 +478,9 @@ export function ConversationThread({
             </div>
           )}
 
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-800">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <h3 className="truncate text-sm font-bold text-slate-800">
                 {counterpartyName}
               </h3>
               {!isCustomerMode && client?.isBlocked && (
@@ -503,11 +506,11 @@ export function ConversationThread({
                 {channelLabel}
               </Badge>
             </div>
-            <p className="text-[11px] text-slate-400">{contactLine}</p>
+            <p className="truncate text-[11px] text-slate-400">{contactLine}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           {/* Open / Closed toggle */}
           {!isCustomerMode && threadId && (
             <button
@@ -531,12 +534,12 @@ export function ConversationThread({
               {conversationState.isClosed(threadId) ? (
                 <>
                   <Lock className="size-3" />
-                  Closed
+                  <span className="hidden sm:inline">Closed</span>
                 </>
               ) : (
                 <>
                   <Unlock className="size-3" />
-                  Open
+                  <span className="hidden sm:inline">Open</span>
                 </>
               )}
             </button>
@@ -561,15 +564,17 @@ export function ConversationThread({
                       >
                         {conversationState.getAssignee(threadId)!.initials}
                       </span>
-                      {conversationState.getAssignee(threadId)!.name}
+                      <span className="hidden sm:inline">
+                        {conversationState.getAssignee(threadId)!.name}
+                      </span>
                     </>
                   ) : (
                     <>
                       <UserPlus className="size-3" />
-                      Assign
+                      <span className="hidden sm:inline">Assign</span>
                     </>
                   )}
-                  <ChevronDown className="size-3 text-slate-400" />
+                  <ChevronDown className="hidden size-3 text-slate-400 sm:block" />
                 </button>
               </PopoverTrigger>
               <PopoverContent
@@ -642,7 +647,7 @@ export function ConversationThread({
                   )}
                 >
                   <StatusIcon className="size-3" />
-                  {statusCfg.label}
+                  <span className="hidden sm:inline">{statusCfg.label}</span>
                   <ChevronDown className="size-3" />
                 </button>
               </PopoverTrigger>
@@ -679,17 +684,19 @@ export function ConversationThread({
             </Popover>
           )}
 
+          {/* Secondary actions — hidden on phones to keep the header uncluttered
+              (all reachable from the ⋮ menu / client profile). */}
           <Button
             variant="ghost"
             size="icon"
-            className="size-9 rounded-full text-slate-400 hover:bg-blue-50 hover:text-blue-600"
+            className="hidden size-9 rounded-full text-slate-400 hover:bg-blue-50 hover:text-blue-600 sm:inline-flex"
           >
             <Phone className="size-[18px]" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="size-9 rounded-full text-slate-400 hover:bg-blue-50 hover:text-blue-600"
+            className="hidden size-9 rounded-full text-slate-400 hover:bg-blue-50 hover:text-blue-600 sm:inline-flex"
           >
             <Search className="size-[18px]" />
           </Button>
@@ -697,7 +704,8 @@ export function ConversationThread({
             variant="ghost"
             size="icon"
             className={cn(
-              "size-9 rounded-full",
+              // Toggles the client context panel, which only renders at xl.
+              "hidden size-9 rounded-full xl:inline-flex",
               detailOpen
                 ? "bg-blue-50 text-blue-600"
                 : "text-slate-400 hover:bg-blue-50 hover:text-blue-600",
@@ -711,7 +719,7 @@ export function ConversationThread({
             )}
           </Button>
 
-          <div className="mx-1 h-5 border-l border-slate-200" />
+          <div className="mx-1 hidden h-5 border-l border-slate-200 sm:block" />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

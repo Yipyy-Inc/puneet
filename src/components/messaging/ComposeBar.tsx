@@ -326,8 +326,8 @@ export function ComposeBar({
 
       {/* Send Via selector */}
       {!isCustomerMode && (
-        <div className="flex items-center gap-1 border-b border-slate-100 bg-slate-50/60 px-4 py-1.5">
-          <span className="mr-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
+        <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-100 bg-slate-50/60 px-4 py-1.5">
+          <span className="mr-1 shrink-0 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
             Send via
           </span>
           {CHANNEL_OPTIONS.map(({ key, label, icon: Icon }) => {
@@ -338,7 +338,7 @@ export function ComposeBar({
                 type="button"
                 onClick={() => onChannelChange?.(key)}
                 className={cn(
-                  "flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all",
+                  "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all",
                   active
                     ? "border border-slate-200 bg-white text-slate-800 shadow-sm"
                     : "text-slate-400 hover:bg-white/70 hover:text-slate-600",
