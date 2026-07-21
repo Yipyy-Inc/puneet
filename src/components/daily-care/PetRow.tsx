@@ -108,7 +108,7 @@ export function PetRow({ task, execution, date, onLog, onQuickLog }: Props) {
     <div
       data-logged={isLogged}
       data-flagged={isFlagged}
-      className="group bg-card flex items-center gap-3 rounded-md border px-3 py-2 transition-colors data-[flagged=true]:ring-1 data-[flagged=true]:ring-red-400 data-[logged=true]:border-l-4 data-[logged=true]:border-l-green-500 data-[logged=true]:bg-green-50/50 dark:data-[logged=true]:bg-green-950/20"
+      className="group bg-card flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border px-3 py-2 transition-colors data-[flagged=true]:ring-1 data-[flagged=true]:ring-red-400 data-[logged=true]:border-l-4 data-[logged=true]:border-l-green-500 data-[logged=true]:bg-green-50/50 dark:data-[logged=true]:bg-green-950/20"
     >
       <Avatar className="size-9 shrink-0">
         {task.petPhotoUrl && (
@@ -208,7 +208,10 @@ export function PetRow({ task, execution, date, onLog, onQuickLog }: Props) {
         )}
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
+      {/* Actions drop to their own full-width row on phones. Inline they left
+          the content column ~16px wide (card is only ~260px inside the section
+          padding), so "Kennel 8 - Standard" wrapped one word per line. */}
+      <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
         <Button
           variant="ghost"
           size="icon"

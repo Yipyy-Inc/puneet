@@ -316,7 +316,7 @@ export function Section({
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 sm:px-6">
         {requiresHeadCount && !headCountDone && (
           <div className="mb-3 space-y-1">
             <button
