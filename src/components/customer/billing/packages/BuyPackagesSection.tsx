@@ -19,6 +19,7 @@ import {
   services,
   type ServicePackage,
 } from "@/data/services-pricing";
+import { purchasePackage } from "@/lib/customer-package-purchases-store";
 
 const formatCurrency = (n: number) =>
   new Intl.NumberFormat("en-US", {
@@ -65,7 +66,10 @@ export function BuyPackagesSection() {
 
   const confirmPurchase = () => {
     if (!selected) return;
-    // Mock purchase, consistent with the rest of the prototype's billing flows.
+    // Adds the pack to the customer's owned purchases (module store), so it
+    // shows up immediately under "My prepaid packs". No real payment backend
+    // yet — this is the prototype's mock checkout, like the membership flow.
+    purchasePackage(selected);
     toast.success(`${selected.name} purchased`, {
       description: `${passCount(selected)} passes added to your account. Valid for ${selected.validDays} days.`,
     });

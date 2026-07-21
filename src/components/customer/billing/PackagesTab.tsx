@@ -8,8 +8,8 @@ import {
   memberships,
   prepaidCredits,
   servicePackages,
-  customerPackagePurchases,
 } from "@/data/services-pricing";
+import { useCustomerPackagePurchases } from "@/lib/customer-package-purchases-store";
 import { bookings } from "@/data/bookings";
 import {
   Card,
@@ -185,10 +185,11 @@ export function PackagesTab() {
     [],
   );
 
+  // From the live store so a pack bought in "Buy Passes & Bundles" appears here.
+  const allPurchases = useCustomerPackagePurchases();
   const customerPackages = useMemo(
-    () =>
-      customerPackagePurchases.filter((p) => p.customerId === MOCK_CUSTOMER_ID),
-    [],
+    () => allPurchases.filter((p) => p.customerId === MOCK_CUSTOMER_ID),
+    [allPurchases],
   );
 
   const getBooking = (id: number) => bookings.find((b) => b.id === id);
