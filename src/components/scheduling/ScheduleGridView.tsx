@@ -3,6 +3,7 @@
 import { Fragment, useMemo } from "react";
 import { UserX, Star, Sigma } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import {
   Tooltip,
   TooltipContent,
@@ -123,12 +124,18 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
     return sum;
   }, [dailyTotals]);
 
+  // On phones the 240px staff column left ~9px per day, mashing the day labels
+  // together. Narrow the fixed columns and give each day a real minimum width;
+  // the grid then scrolls horizontally (with a pinned staff column) instead of
+  // crushing everything to fit.
+  const isMobile = useMediaQuery("(max-width: 640px)");
   const isCompact = viewMode === "2weeks";
-  const empColWidth = isCompact ? 220 : 240;
-  const hoursColWidth = 84;
+  const empColWidth = isMobile ? 136 : isCompact ? 220 : 240;
+  const hoursColWidth = isMobile ? 56 : 84;
+  const dayCol = isMobile ? "48px" : "minmax(0, 1fr)";
 
   const gridStyle: React.CSSProperties = {
-    gridTemplateColumns: `${empColWidth}px repeat(${dates.length}, minmax(0, 1fr)) ${hoursColWidth}px`,
+    gridTemplateColumns: `${empColWidth}px repeat(${dates.length}, ${dayCol}) ${hoursColWidth}px`,
   };
 
   // Find today's column index for the vertical accent overlay
@@ -198,8 +205,11 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
       : null;
 
   return (
-    <div className="h-full overflow-x-hidden overflow-y-auto">
-      <div className="relative grid" style={gridStyle}>
+    <div className="h-full overflow-x-auto overflow-y-auto">
+      <div
+        className="relative grid w-max min-w-full sm:w-full"
+        style={gridStyle}
+      >
         {/* Vertical today accent line */}
         {todayLeftCalc && (
           <div
@@ -210,7 +220,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
           </div>
         )}
         {/* ─── Header row ───────────────────────────────────── */}
-        <div className="border-border/60 bg-background/95 sticky top-0 z-20 flex items-center border-r border-b px-4 py-3 backdrop-blur-sm">
+        <div className="border-border/60 bg-background/95 sticky top-0 left-0 z-40 flex items-center border-r border-b px-4 py-3 backdrop-blur-sm">
           <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.08em] uppercase">
             Staff
           </span>
@@ -287,7 +297,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
           const totalHours = getEmployeeHours(employee.id);
           return (
             <Fragment key={employee.id}>
-              <div className="border-border/50 bg-background hover:bg-muted/20 flex items-center gap-3 border-r border-b px-4 py-3 transition-colors">
+              <div className="border-border/50 bg-background hover:bg-muted/20 sticky left-0 z-30 flex items-center gap-3 border-r border-b px-4 py-3 transition-colors">
                 <Avatar className="ring-background size-9 shrink-0 ring-2">
                   <AvatarImage src={employee.avatar} alt={employee.name} />
                   <AvatarFallback className="bg-linear-to-br from-indigo-100 via-slate-100 to-slate-50 text-[11px] font-semibold text-slate-700 dark:from-indigo-900/30 dark:via-slate-900 dark:to-slate-950 dark:text-slate-200">
@@ -328,7 +338,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
         {/* ─── Open shifts row (anchored at the bottom) ───── */}
         {hasOpenShifts && (
           <Fragment>
-            <div className="border-border/50 sticky bottom-[52px] z-20 flex items-center gap-3 border-t-2 border-r border-b border-dashed bg-linear-to-r from-amber-50 via-amber-50/70 to-amber-50/40 px-4 py-3 backdrop-blur-md dark:border-amber-700/40 dark:from-amber-950/40 dark:via-amber-950/20 dark:to-amber-950/10">
+            <div className="border-border/50 sticky bottom-[52px] left-0 z-30 flex items-center gap-3 border-t-2 border-r border-b border-dashed bg-amber-50 px-4 py-3 backdrop-blur-md dark:border-amber-700/40 dark:bg-amber-950/40">
               <div className="flex size-10 items-center justify-center rounded-full border border-dashed border-amber-400 bg-white shadow-sm dark:bg-amber-950/30">
                 <UserX className="size-4 text-amber-600" />
               </div>
@@ -393,7 +403,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
         )}
 
         {/* ─── Daily totals row (anchored at the bottom) ───── */}
-        <div className="border-border/60 sticky bottom-0 z-30 flex h-[52px] items-center gap-2 border-t-2 border-r bg-slate-50/95 px-4 backdrop-blur-md dark:bg-slate-900/80">
+        <div className="border-border/60 sticky bottom-0 left-0 z-40 flex h-[52px] items-center gap-2 border-t-2 border-r bg-slate-50 px-4 backdrop-blur-md dark:bg-slate-900">
           <div className="bg-background flex size-7 items-center justify-center rounded-full border shadow-sm">
             <Sigma className="size-3.5 text-indigo-600 dark:text-indigo-400" />
           </div>
