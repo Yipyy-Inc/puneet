@@ -1026,7 +1026,9 @@ export default function FacilityGiftCardsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        {/* Scroll horizontally on phones (7 tabs crammed into a grid-cols-7
+            mashed the labels together); fill the width as a grid from lg up. */}
+        <TabsList className="lg:grid lg:w-full lg:grid-cols-7">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="cards">All Cards</TabsTrigger>
           <TabsTrigger value="wallets">Wallets</TabsTrigger>

@@ -79,7 +79,7 @@ function StepRow({
       style={style}
       data-disabled={!step.enabled}
       data-dragging={isDragging}
-      className="bg-card flex items-center gap-3 rounded-lg border p-3 transition-colors data-[disabled=true]:opacity-50 data-[dragging=true]:opacity-60 data-[dragging=true]:shadow-lg"
+      className="bg-card flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border p-3 transition-colors data-[disabled=true]:opacity-50 data-[dragging=true]:opacity-60 data-[dragging=true]:shadow-lg"
     >
       <button
         type="button"
@@ -98,9 +98,16 @@ function StepRow({
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="leading-none font-medium">{step.name}</span>
-          <Badge variant="outline" className="h-5 px-1.5 py-0 text-xs">
+        {/* flex-wrap + shrink-0 badge: on a phone the actions (switch + edit +
+            delete) squeezed this column, so the name wrapped word-by-word and
+            the badge collided with the toggle. Now the badge drops below the
+            name instead. */}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-medium">{step.name}</span>
+          <Badge
+            variant="outline"
+            className="h-5 shrink-0 px-1.5 py-0 text-xs"
+          >
             {meta.label}
           </Badge>
         </div>
@@ -115,7 +122,9 @@ function StepRow({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
+      {/* Actions take their own row on phones so the step name gets the full
+          card width instead of wrapping word-by-word in a ~78px column. */}
+      <div className="flex w-full shrink-0 items-center justify-end gap-1 sm:w-auto">
         <Switch
           checked={step.enabled}
           onCheckedChange={onToggle}
