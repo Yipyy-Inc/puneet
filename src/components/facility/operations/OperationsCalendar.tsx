@@ -3168,8 +3168,11 @@ export function OperationsCalendar() {
         onAddTask={() => setNewEventMenuOpen(true)}
       />
 
-      {/* Main calendar area */}
-      <div className="flex min-w-0 flex-1 flex-col space-y-4 overflow-auto p-4 pt-6 md:p-6">
+      {/* Main calendar area — order-first on mobile so the schedule sits above
+          the side panel (mini-calendar + long task list), which otherwise
+          pushed the primary content ~4000px down the page. Reset on lg so the
+          side panel keeps its left-hand position on desktop. */}
+      <div className="order-first flex min-w-0 flex-1 flex-col space-y-4 overflow-auto p-4 pt-6 md:p-6 lg:order-none">
         <LocationFilterBanner />
         <OperationsCalendarToolbar
           view={view}
