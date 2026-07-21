@@ -840,16 +840,21 @@ export function ClientPetStep({
                     No clients found
                   </p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2">
+                  // One column on phones: at 2 columns each card was ~180px, so
+                  // the avatar + visits/pets badges consumed the row and the
+                  // name/email collapsed to zero width (invisible).
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {sortedClients.map((client) => {
                       const isSelected = selectedClientId === client.id;
                       return (
                         <div
                           key={client.id}
                           className={cn(
+                            // No row-span on select: in a 2-col grid it forced
+                            // the card to span two rows and balloon into a square.
                             "cursor-pointer rounded-lg p-3 transition-all",
                             isSelected
-                              ? "bg-primary/10 row-span-2 border-transparent shadow-sm"
+                              ? "bg-primary/10 border-transparent shadow-sm"
                               : "hover:bg-muted border-2 border-transparent",
                           )}
                           onClick={() => {
@@ -895,7 +900,7 @@ export function ClientPetStep({
                                 </p>
                               )}
                             </div>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex shrink-0 items-center gap-1.5">
                               {(bookingCounts[client.id] ?? 0) > 0 && (
                                 <Badge
                                   variant="outline"
