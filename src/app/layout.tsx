@@ -111,17 +111,18 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased" suppressHydrationWarning>
-        <div
-          className="flex min-h-screen flex-col pb-16"
-          suppressHydrationWarning
-        >
+        <div className="flex min-h-screen flex-col" suppressHydrationWarning>
           <main className="flex-1">
             <QueryProvider>{children}</QueryProvider>
           </main>
+          {/* Footer in normal flow (was fixed bottom-0, which permanently
+              overlaid content). It now only appears at the true end of the
+              page. Extra bottom padding on phones clears the facility mobile
+              bottom-nav (fixed, md:hidden); removed at md where no nav exists. */}
+          <footer className="bg-background text-muted-foreground flex items-center justify-center border-t px-4 py-4 pb-20 text-xs md:pb-4">
+            © 2026 Yipyy. All rights reserved.
+          </footer>
         </div>
-        <footer className="bg-background/95 text-muted-foreground supports-backdrop-filter:bg-background/80 fixed right-0 bottom-0 left-0 z-40 flex items-center justify-center border-t px-4 py-4 text-xs backdrop-blur-sm">
-          © 2026 Yipyy. All rights reserved.
-        </footer>
         <Toaster />
       </body>
     </html>
