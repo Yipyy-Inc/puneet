@@ -104,10 +104,7 @@ function StepRow({
             name instead. */}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="font-medium">{step.name}</span>
-          <Badge
-            variant="outline"
-            className="h-5 shrink-0 px-1.5 py-0 text-xs"
-          >
+          <Badge variant="outline" className="h-5 shrink-0 px-1.5 py-0 text-xs">
             {meta.label}
           </Badge>
         </div>
