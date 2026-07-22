@@ -37,6 +37,30 @@ import type {
 import type { PetSize } from "@/types/base";
 
 // ============================================================================
+// Section 8B — grooming queue scoping (assigned_only)
+//
+// Maps the acting facility viewer (an fs-* id) to their grooming stylist via
+// the stylist.staffId back-reference, then filters the queue to that stylist's
+// appointments. Enforced in the data layer; same data admin sees when unscoped.
+// ============================================================================
+
+/** The stylist id for a facility staff member (fs-* id), or undefined. */
+export function stylistIdForStaff(staffId: string): string | undefined {
+  return stylists.find((s) => s.staffId === staffId)?.id;
+}
+
+/** Filter grooming appointments to those of `staffId`'s stylist (8B). Returns
+ *  an empty list when the viewer isn't a stylist. */
+export function scopeGroomingQueueToStaff(
+  list: GroomingAppointment[],
+  staffId: string,
+): GroomingAppointment[] {
+  const stylistId = stylistIdForStaff(staffId);
+  if (!stylistId) return [];
+  return list.filter((a) => a.stylistId === stylistId);
+}
+
+// ============================================================================
 // Session → Report Card mapping
 // ============================================================================
 
