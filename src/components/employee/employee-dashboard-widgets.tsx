@@ -17,11 +17,25 @@ import {
   CircleCheck,
   PawPrint,
   ClipboardList,
+  ClipboardCheck,
   Zap,
   Clock,
   Hourglass,
+  Scissors,
+  Dumbbell,
+  Moon,
+  Sun,
+  Users,
 } from "lucide-react";
-import type { StaffProfile, FacilityStaffRole } from "@/types/facility-staff";
+import type {
+  StaffProfile,
+  FacilityStaffRole,
+  PermissionKey,
+  EffectivePermissions,
+} from "@/types/facility-staff";
+import { useEffectivePermissions } from "@/hooks/use-facility-rbac";
+import { useEmployeeTodayCounts } from "@/lib/employee-today-counts";
+import { useScopedNotifications } from "@/lib/employee-notification-scope";
 import {
   useOnboarding,
   setOnboardingTaskComplete,
@@ -41,25 +55,249 @@ export function timeOfDayGreeting(hour: number): string {
   return "Good evening";
 }
 
-// Role-contextual primary action (spec Table 17 — Quick Actions).
-export const ROLE_PRIMARY_ACTION: Record<
-  FacilityStaffRole,
-  { label: string; href: string }
-> = {
-  owner: { label: "View today's bookings", href: "/employee/bookings" },
-  admin: { label: "View today's bookings", href: "/employee/bookings" },
-  manager: { label: "View today's bookings", href: "/employee/bookings" },
-  supervisor: { label: "View today's bookings", href: "/employee/bookings" },
-  reception: { label: "Check in next arrival", href: "/employee/bookings" },
-  groomer: { label: "Start next appointment", href: "/employee/grooming" },
-  trainer: { label: "Start training session", href: "/employee/training" },
-  caretaker: { label: "Log morning rounds", href: "/employee/daycare" },
-  daycare_attendant: { label: "Log daycare round", href: "/employee/daycare" },
-  boarding_attendant: { label: "Log kennel round", href: "/employee/boarding" },
-  retail: { label: "Open point of sale", href: "/employee/retail" },
-  accountant: { label: "View bookings", href: "/employee/bookings" },
-  sanitation: { label: "Log cleaning task", href: "/employee/tasks" },
+// ============================================================================
+// Section 4A / Table 6 — the Quick Action, derived from PERMISSIONS.
+//
+// Listed in priority order: the viewer gets the first action whose permission
+// they hold. There is no role-name switch — `primaryRoles` is used ONLY to
+// disambiguate a multi-role viewer who qualifies for several actions, where the
+// spec says to use their PRIMARY role's action (e.g. a groomer who is also a
+// daycare attendant gets the grooming action; someone whose primary IS daycare
+// gets the daycare board even though grooming sits higher in the table).
+// ============================================================================
+
+type QuickAction = {
+  id: string;
+  /** Any one of these keys grants the action (OR). */
+  permKeys: PermissionKey[];
+  label: string;
+  href: string;
+  /** Primary roles this action belongs to — tie-break only, never a gate. */
+  primaryRoles?: FacilityStaffRole[];
 };
+
+const QUICK_ACTIONS: QuickAction[] = [
+  {
+    id: "grooming",
+    permKeys: ["perform_grooming"],
+    label: "Start next grooming appointment",
+    href: "/employee/grooming",
+    primaryRoles: ["groomer"],
+  },
+  {
+    id: "daycare",
+    permKeys: ["daycare_check_in_out"],
+    label: "View daycare board",
+    href: "/employee/daycare",
+    primaryRoles: ["daycare_attendant"],
+  },
+  {
+    id: "kennel",
+    permKeys: ["boarding_log_feeding", "boarding_daily_care_log"],
+    label: "Log kennel round",
+    href: "/employee/daily-care",
+    primaryRoles: ["boarding_attendant", "caretaker"],
+  },
+  {
+    id: "training",
+    permKeys: ["run_training_sessions"],
+    label: "Start training session",
+    href: "/employee/training",
+    primaryRoles: ["trainer"],
+  },
+  {
+    id: "check-in",
+    permKeys: ["check_in_out"],
+    label: "Check in next arrival",
+    href: "/employee/bookings",
+    primaryRoles: ["reception"],
+  },
+  {
+    id: "cleaning",
+    permKeys: ["log_cleaning"],
+    label: "Log cleaning task",
+    href: "/employee/tasks",
+    primaryRoles: ["sanitation"],
+  },
+  {
+    id: "bookings",
+    permKeys: ["view_bookings"],
+    label: "View today's bookings",
+    href: "/employee/bookings",
+    primaryRoles: ["manager", "owner", "admin", "supervisor", "accountant"],
+  },
+];
+
+/** Personal-only fallback — every account holds view_own_schedule. */
+const PERSONAL_QUICK_ACTION: QuickAction = {
+  id: "schedule",
+  permKeys: [],
+  label: "View my schedule",
+  href: "/employee/schedule",
+};
+
+// ============================================================================
+// Section 4C — Quick Access shortcuts, generated from PERMISSIONS.
+//
+// Priority: (1) their primary service module, (2) Bookings, (3) Clients,
+// (4) Daily Care, (5) My Schedule as the universal fallback.
+//
+// THE RULE: a shortcut must never point at a screen the viewer would be blocked
+// from. Each candidate carries the SAME key(s) that gate its destination (the
+// nav section / the route's RequirePermission), so a shortcut can only appear
+// when the target is genuinely reachable. Note Daily Care uses the route's real
+// gate (log_feedings OR boarding_daily_care_log) — NOT "any log permission" —
+// which is why e.g. Sanitation (log_cleaning only) correctly gets no Daily Care
+// shortcut rather than a link into an AccessRestricted screen.
+// ============================================================================
+
+export type QuickAccessItem = {
+  title: string;
+  description: string;
+  href: string;
+  icon: React.ElementType;
+  accent: string;
+};
+
+type QuickAccessCandidate = QuickAccessItem & {
+  permKeys: PermissionKey[];
+  /** Which primary role treats this as *their* module (priority-1 pick). */
+  primaryRoles?: FacilityStaffRole[];
+};
+
+const SERVICE_SHORTCUTS: QuickAccessCandidate[] = [
+  {
+    title: "Grooming",
+    description: "Today's grooming queue",
+    href: "/employee/grooming",
+    icon: Scissors,
+    accent: "text-rose-600",
+    permKeys: [
+      "view_grooming_queue",
+      "grooming_view_own_calendar",
+      "grooming_view_all_calendars",
+    ],
+    primaryRoles: ["groomer"],
+  },
+  {
+    title: "Training",
+    description: "Training sessions",
+    href: "/employee/training",
+    icon: Dumbbell,
+    accent: "text-emerald-600",
+    permKeys: ["training_view_own_calendar", "training_manage_programs"],
+    primaryRoles: ["trainer"],
+  },
+  {
+    title: "Boarding",
+    description: "Boarding dashboard",
+    href: "/employee/boarding",
+    icon: Moon,
+    accent: "text-indigo-600",
+    permKeys: ["boarding_view_dashboard"],
+    primaryRoles: ["boarding_attendant", "caretaker"],
+  },
+  {
+    title: "Daycare",
+    description: "Daycare board",
+    href: "/employee/daycare",
+    icon: Sun,
+    accent: "text-orange-600",
+    permKeys: ["daycare_view_dashboard"],
+    primaryRoles: ["daycare_attendant"],
+  },
+];
+
+const GENERAL_SHORTCUTS: QuickAccessCandidate[] = [
+  {
+    title: "Bookings",
+    description: "Facility bookings",
+    href: "/employee/bookings",
+    icon: ClipboardList,
+    accent: "text-sky-600",
+    permKeys: ["view_bookings"],
+  },
+  {
+    title: "Clients",
+    description: "Client directory",
+    href: "/employee/clients",
+    icon: Users,
+    accent: "text-violet-600",
+    permKeys: ["view_client_list"],
+  },
+  {
+    title: "Daily Care",
+    description: "Log today's rounds",
+    href: "/employee/daily-care",
+    icon: ClipboardCheck,
+    accent: "text-cyan-600",
+    permKeys: ["log_feedings", "boarding_daily_care_log"],
+  },
+];
+
+/** Universal fallbacks — both are always-on keys, so never blocked. */
+const UNIVERSAL_SHORTCUTS: QuickAccessItem[] = [
+  {
+    title: "My Schedule",
+    description: "Your shifts this week",
+    href: "/employee/schedule",
+    icon: Calendar,
+    accent: "text-amber-600",
+  },
+  {
+    title: "My Tasks",
+    description: "What's assigned to you",
+    href: "/employee/tasks",
+    icon: CheckSquare,
+    accent: "text-slate-600",
+  },
+];
+
+/**
+ * Build the 2–3 Quick Access shortcuts for a viewer from their effective
+ * permissions (4C). Pure — the hook wrapper below supplies the map.
+ */
+export function buildQuickAccess(
+  permissions: EffectivePermissions,
+  role: FacilityStaffRole,
+  max = 3,
+): QuickAccessItem[] {
+  const permitted = (c: QuickAccessCandidate) =>
+    c.permKeys.some((k) => permissions[k] !== false);
+
+  const out: QuickAccessItem[] = [];
+  // (1) THEIR primary service module — the one their primary role works in, and
+  // only if they can actually access it. A viewer with no service module of
+  // their own (manager, reception, accountant, retail…) falls through to
+  // Bookings rather than being pointed at someone else's module.
+  const primary = SERVICE_SHORTCUTS.find(
+    (s) => s.primaryRoles?.includes(role) && permitted(s),
+  );
+  if (primary) out.push(primary);
+
+  // (2) Bookings, (3) Clients, (4) Daily Care — each only if reachable
+  for (const c of GENERAL_SHORTCUTS) {
+    if (out.length >= max) break;
+    if (permitted(c)) out.push(c);
+  }
+
+  // (5) universal fallbacks fill any remaining slots (guarantees ≥1, and ≥2
+  // even for a viewer with no module/ops access at all).
+  for (const u of UNIVERSAL_SHORTCUTS) {
+    if (out.length >= max) break;
+    if (!out.some((o) => o.href === u.href)) out.push(u);
+  }
+  return out.slice(0, max);
+}
+
+/** Hook form — reads the acting viewer's effective permissions once. */
+export function useQuickAccess(
+  role: FacilityStaffRole,
+  max = 3,
+): QuickAccessItem[] {
+  const permissions = useEffectivePermissions();
+  return buildQuickAccess(permissions, role, max);
+}
 
 // ============================================================================
 // Today's Summary — greeting + the day's at-a-glance chips
@@ -72,18 +310,23 @@ export function TodaySummary({
   staff: StaffProfile;
   greeting: string;
 }) {
+  // Section 4B — counts come from the viewer's SCOPED data, not a single
+  // generic staff field. A groomer sees their assigned appointments; a
+  // back-of-house attendant can legitimately read "0 appointments, 6 care
+  // tasks". The care-task chip only appears for staff who can log care.
+  const { appointments, careTasks, showCareTasks } = useEmployeeTodayCounts(
+    staff.id,
+  );
   const chips = [
     {
       icon: Calendar,
       label: "appointments today",
-      value: staff.upcomingAppointments,
+      value: appointments,
     },
+    ...(showCareTasks
+      ? [{ icon: PawPrint, label: "care tasks", value: careTasks }]
+      : []),
     { icon: CheckSquare, label: "tasks due", value: staff.openTasks },
-    {
-      icon: PawPrint,
-      label: "care areas",
-      value: staff.serviceAssignments.length,
-    },
   ];
   return (
     <div className="border-border/60 bg-card rounded-2xl border p-4">
@@ -243,14 +486,24 @@ interface AlertItem {
 }
 
 export function MyAlertsWidget({ staff }: { staff: StaffProfile }) {
-  // Alerts are derived from real profile signals; item-level swap/time-off/
-  // write-up feeds attach here once those stores exist (Areas E/G).
+  // Alerts are derived from real profile signals plus the viewer's
+  // PERMISSION-SCOPED notification feed (4D): an employee is only alerted about
+  // things their keys justify — never payment/staff-management traffic, and
+  // never another module's bookings.
+  const notifications = useScopedNotifications();
   const alerts: AlertItem[] = [];
   if (!isOnboarded(staff)) {
     alerts.push({
       id: "onboarding",
       text: "Finish your onboarding to unlock full access.",
       tone: "warning",
+    });
+  }
+  for (const n of notifications.filter((x) => !x.read).slice(0, 4)) {
+    alerts.push({
+      id: n.id,
+      text: n.title,
+      tone: n.type === "incident" || n.type === "warning" ? "warning" : "info",
     });
   }
 
@@ -293,11 +546,21 @@ export function MyAlertsWidget({ staff }: { staff: StaffProfile }) {
 }
 
 // ============================================================================
-// Quick Actions — the one role-contextual primary action
+// Quick Actions — the one permission-derived primary action (4A / Table 6)
 // ============================================================================
 
 export function QuickActionsBar({ role }: { role: FacilityStaffRole }) {
-  const action = ROLE_PRIMARY_ACTION[role] ?? ROLE_PRIMARY_ACTION.reception;
+  // One read of the effective map, so the OR-of-keys case needs no hook loop.
+  const permissions = useEffectivePermissions();
+  const permitted = QUICK_ACTIONS.filter((a) =>
+    a.permKeys.some((k) => permissions[k] !== false),
+  );
+  // Prefer the action belonging to the viewer's PRIMARY role when they qualify
+  // for several; otherwise the highest-priority permitted one; else personal.
+  const action =
+    permitted.find((a) => a.primaryRoles?.includes(role)) ??
+    permitted[0] ??
+    PERSONAL_QUICK_ACTION;
   return (
     <div className="from-primary/10 to-primary/5 border-primary/20 flex items-center justify-between gap-3 rounded-2xl border bg-linear-to-r p-4">
       <div className="flex items-center gap-3">

@@ -15,9 +15,6 @@ import {
 } from "@/components/ui/card";
 import {
   Scissors,
-  Calendar,
-  ClipboardList,
-  Dog,
   Sun,
   Moon,
   Sparkles,
@@ -25,10 +22,7 @@ import {
   Dumbbell,
   MonitorSpeaker,
   UserCog,
-  ShoppingBag,
   ArrowRight,
-  CheckSquare,
-  Clock,
   RefreshCw,
 } from "lucide-react";
 import type { StaffProfile, FacilityStaffRole } from "@/types/facility-staff";
@@ -41,317 +35,13 @@ import {
   MyAlertsWidget,
   QuickActionsBar,
   OnboardingProgress,
+  useQuickAccess,
 } from "./employee-dashboard-widgets";
 import {
   useOnboarding,
   getOnboarding,
   initOnboarding,
 } from "@/data/staff-onboarding";
-
-// Quick-action cards per role
-const ROLE_ACTIONS: Record<
-  FacilityStaffRole,
-  {
-    title: string;
-    description: string;
-    href: string;
-    icon: React.ElementType;
-    accent: string;
-  }[]
-> = {
-  owner: [
-    {
-      title: "My Schedule",
-      description: "Personal schedule view",
-      href: "/employee/schedule",
-      icon: Calendar,
-      accent: "text-amber-600",
-    },
-    {
-      title: "Bookings",
-      description: "All facility bookings",
-      href: "/employee/bookings",
-      icon: ClipboardList,
-      accent: "text-amber-600",
-    },
-    {
-      title: "Clients",
-      description: "Client directory",
-      href: "/employee/clients",
-      icon: Users,
-      accent: "text-amber-600",
-    },
-  ],
-  admin: [
-    {
-      title: "My Schedule",
-      description: "Personal schedule view",
-      href: "/employee/schedule",
-      icon: Calendar,
-      accent: "text-amber-600",
-    },
-    {
-      title: "Bookings",
-      description: "All facility bookings",
-      href: "/employee/bookings",
-      icon: ClipboardList,
-      accent: "text-amber-600",
-    },
-    {
-      title: "Clients",
-      description: "Client directory",
-      href: "/employee/clients",
-      icon: Users,
-      accent: "text-amber-600",
-    },
-  ],
-  manager: [
-    {
-      title: "My Schedule",
-      description: "Personal schedule",
-      href: "/employee/schedule",
-      icon: Calendar,
-      accent: "text-violet-600",
-    },
-    {
-      title: "Bookings",
-      description: "Today's appointments",
-      href: "/employee/bookings",
-      icon: ClipboardList,
-      accent: "text-violet-600",
-    },
-    {
-      title: "Clients",
-      description: "Client directory",
-      href: "/employee/clients",
-      icon: Users,
-      accent: "text-violet-600",
-    },
-  ],
-  supervisor: [
-    {
-      title: "My Schedule",
-      description: "Personal schedule",
-      href: "/employee/schedule",
-      icon: Calendar,
-      accent: "text-purple-600",
-    },
-    {
-      title: "Bookings",
-      description: "Today's appointments",
-      href: "/employee/bookings",
-      icon: ClipboardList,
-      accent: "text-purple-600",
-    },
-    {
-      title: "Clients",
-      description: "Client directory",
-      href: "/employee/clients",
-      icon: Users,
-      accent: "text-purple-600",
-    },
-  ],
-  reception: [
-    {
-      title: "Bookings",
-      description: "Check-in/out and appointments",
-      href: "/employee/bookings",
-      icon: CheckSquare,
-      accent: "text-sky-600",
-    },
-    {
-      title: "Clients",
-      description: "Find a client",
-      href: "/employee/clients",
-      icon: Users,
-      accent: "text-sky-600",
-    },
-    {
-      title: "Retail POS",
-      description: "Process a sale",
-      href: "/employee/retail",
-      icon: ShoppingBag,
-      accent: "text-sky-600",
-    },
-    {
-      title: "My Schedule",
-      description: "Your shifts",
-      href: "/employee/schedule",
-      icon: Clock,
-      accent: "text-sky-600",
-    },
-  ],
-  groomer: [
-    {
-      title: "Today's Queue",
-      description: "Your grooming appointments",
-      href: "/employee/grooming",
-      icon: Scissors,
-      accent: "text-rose-600",
-    },
-    {
-      title: "My Schedule",
-      description: "Your grooming shifts",
-      href: "/employee/schedule",
-      icon: Calendar,
-      accent: "text-rose-600",
-    },
-    {
-      title: "My Clients",
-      description: "Assigned pets",
-      href: "/employee/clients",
-      icon: Dog,
-      accent: "text-rose-600",
-    },
-  ],
-  trainer: [
-    {
-      title: "Training Sessions",
-      description: "Today's sessions",
-      href: "/employee/training",
-      icon: Dumbbell,
-      accent: "text-emerald-600",
-    },
-    {
-      title: "My Schedule",
-      description: "Your training shifts",
-      href: "/employee/schedule",
-      icon: Calendar,
-      accent: "text-emerald-600",
-    },
-    {
-      title: "My Clients",
-      description: "Enrolled pets",
-      href: "/employee/clients",
-      icon: Dog,
-      accent: "text-emerald-600",
-    },
-  ],
-  caretaker: [
-    {
-      title: "Boarding Guests",
-      description: "Overnight pets in care",
-      href: "/employee/boarding",
-      icon: Moon,
-      accent: "text-cyan-600",
-    },
-    {
-      title: "Daycare Board",
-      description: "Check-in and care logs",
-      href: "/employee/daycare",
-      icon: Sun,
-      accent: "text-cyan-600",
-    },
-    {
-      title: "My Schedule",
-      description: "Your care shifts",
-      href: "/employee/schedule",
-      icon: Calendar,
-      accent: "text-cyan-600",
-    },
-  ],
-  daycare_attendant: [
-    {
-      title: "Daycare Board",
-      description: "Check-in and care logs",
-      href: "/employee/daycare",
-      icon: Sun,
-      accent: "text-orange-500",
-    },
-    {
-      title: "Kennel View",
-      description: "Pet statuses and rooms",
-      href: "/employee/kennel",
-      icon: Dog,
-      accent: "text-orange-500",
-    },
-    {
-      title: "My Schedule",
-      description: "Your daycare shifts",
-      href: "/employee/schedule",
-      icon: Calendar,
-      accent: "text-orange-500",
-    },
-  ],
-  boarding_attendant: [
-    {
-      title: "Boarding Guests",
-      description: "Overnight pets in care",
-      href: "/employee/boarding",
-      icon: Moon,
-      accent: "text-indigo-600",
-    },
-    {
-      title: "Kennel View",
-      description: "Room assignments",
-      href: "/employee/kennel",
-      icon: Dog,
-      accent: "text-indigo-600",
-    },
-    {
-      title: "My Schedule",
-      description: "Your boarding shifts",
-      href: "/employee/schedule",
-      icon: Calendar,
-      accent: "text-indigo-600",
-    },
-  ],
-  retail: [
-    {
-      title: "Retail POS",
-      description: "Process a sale",
-      href: "/employee/retail",
-      icon: ShoppingBag,
-      accent: "text-fuchsia-600",
-    },
-    {
-      title: "Clients",
-      description: "Find a client",
-      href: "/employee/clients",
-      icon: Users,
-      accent: "text-fuchsia-600",
-    },
-    {
-      title: "My Schedule",
-      description: "Your shifts",
-      href: "/employee/schedule",
-      icon: Calendar,
-      accent: "text-fuchsia-600",
-    },
-  ],
-  accountant: [
-    {
-      title: "Bookings",
-      description: "Facility bookings",
-      href: "/employee/bookings",
-      icon: ClipboardList,
-      accent: "text-lime-600",
-    },
-    {
-      title: "My Schedule",
-      description: "Your shifts",
-      href: "/employee/schedule",
-      icon: Calendar,
-      accent: "text-lime-600",
-    },
-  ],
-  sanitation: [
-    {
-      title: "My Tasks",
-      description: "Cleaning & sanitation logs",
-      href: "/employee/tasks",
-      icon: Sparkles,
-      accent: "text-teal-600",
-    },
-    {
-      title: "My Schedule",
-      description: "Your shifts",
-      href: "/employee/schedule",
-      icon: Calendar,
-      accent: "text-teal-600",
-    },
-  ],
-};
 
 const ROLE_LABEL: Record<FacilityStaffRole, string> = {
   owner: "Owner / Admin",
@@ -424,7 +114,10 @@ function getInitials(firstName: string, lastName: string) {
 
 export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
   const role = staff.primaryRole;
-  const actions = ROLE_ACTIONS[role] ?? ROLE_ACTIONS.reception;
+  // Section 4C — Quick Access is derived from the viewer's permissions, never
+  // hardcoded per role. Every shortcut is filtered by the same key(s) that gate
+  // its destination, so it can never link to a blocked screen.
+  const actions = useQuickAccess(role);
   const RoleIcon = ROLE_ICON[role];
   // Read the clock once at mount (purity: no argless Date in render body).
   const [greeting] = useState(() => timeOfDayGreeting(new Date().getHours()));
