@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/sheet";
 import { facilityStaff } from "@/data/facility-staff";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
-import { getStaffNav } from "./EmployeeSidebar";
+import { getOperationsNav } from "./EmployeeSidebar";
 import {
   fullNameOf,
   RolePill,
@@ -55,9 +55,10 @@ export function EmployeeBottomNav({ staffId }: { staffId: string }) {
   const { resolvePermissions } = useFacilityRbac();
   const staff = facilityStaff.find((s) => s.id === staffId);
 
-  // Role-contextual slot = the first permitted non-account section (A2 nav).
-  const sections = getStaffNav(resolvePermissions(staffId));
-  const roleSection = sections.find((s) => s.id !== "my-account");
+  // Role-contextual slot = the viewer's first permitted Operations section (A2
+  // nav), mirroring the sidebar's permission-gated NAV_MODEL — never a role name.
+  const operations = getOperationsNav(resolvePermissions(staffId));
+  const roleSection = operations[0];
   const roleSlot: NavSlot = roleSection?.items[0]
     ? {
         title: roleSection.label,

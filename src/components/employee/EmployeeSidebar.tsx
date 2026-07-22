@@ -14,22 +14,27 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
-  Scissors,
   Calendar,
   CalendarClock,
-  Dog,
-  ClipboardList,
-  Sun,
-  Moon,
+  CalendarDays,
   Sparkles,
-  Users,
-  Dumbbell,
-  MonitorSpeaker,
-  UserCog,
-  ShoppingBag,
   FolderOpen,
   TrendingUp,
   FileText,
+  ClipboardList,
+  ClipboardCheck,
+  AlertTriangle,
+  Inbox,
+  Phone,
+  Scissors,
+  Moon,
+  Dog,
+  Sun,
+  Dumbbell,
+  Users,
+  ShoppingBag,
+  UserCog,
+  MonitorSpeaker,
 } from "lucide-react";
 import { facilityStaff } from "@/data/facility-staff";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
@@ -40,211 +45,282 @@ import type {
 } from "@/types/facility-staff";
 
 // ============================================================================
-// Permission-driven staff navigation (spec Table 18)
+// Permission-driven employee navigation (Sections 2 / 3A, spec Table 3)
 //
-// The sidebar makes NO independent permission decisions — it renders whatever
-// the resolver (F0.2) permits. Each item/section carries its MINIMUM permission
-// key; `getStaffNav()` filters against the staff member's effective permissions.
+// The sidebar makes NO role-name decisions — there is no NAV_BY_ROLE anymore.
+// It reads the acting viewer's effective permissions from the RBAC engine
+// (useFacilityRbac → resolvePermissions, the aggregate of useCan/usePermission)
+// and renders a fixed two-section shell:
 //
-// Only sections with a real /employee route are rendered today. The remaining
-// Table 18 sections live in the facility portal (no dedicated staff route yet):
-//   Operations [ops_incidents_view]   Financial [financial_take_payment]
-//   Reports [financial_reports]       Marketing [marketing_view]
-//   Calling [calling_view]            Messages [messages_view_inbox]
-//   Smart Insights [ops_smart_insights]  Management [ops_incidents_view]
-//   Settings [settings_general]       HQ [hq_view]
-// They are intentionally omitted here until those routes exist — add a section
-// below (with its `require` key) when they do.
+//   • "My Workspace" — personal items, backed by ALWAYS_ON_PERMISSIONS, that
+//      render for every account and are NEVER gated.
+//   • "Operations"  — a declarative NAV_MODEL; each section and item renders
+//      per the engine (visible iff its permKey resolves to granted OR
+//      assigned_only, i.e. `perms[key] !== false`). 3A: a section shows iff at
+//      least one of its items is visible.
 // ============================================================================
 
-interface StaffNavItem {
+export interface NavItem {
   title: string;
   url: string;
   icon: React.ElementType;
-  /** Minimum permission to see this item; omitted = always visible. */
-  require?: PermissionKey;
+  /** Item-visibility permission key. Omitted → always render (My Workspace). */
+  permKey?: PermissionKey;
 }
 
-interface StaffNavSection {
+export interface NavSection {
   id: string;
   label: string;
-  /** Minimum permission to see this section; omitted = always visible. */
-  require?: PermissionKey;
-  items: StaffNavItem[];
+  /**
+   * The section's primary visibility key (spec Table 3). Effective visibility is
+   * the OR of the items' keys — a section shows if ANY item is visible (3A).
+   */
+  permKey?: PermissionKey;
+  items: NavItem[];
 }
 
-// Ordered per spec Table 18. All URLs stay under /employee/* to keep the shell.
-const STAFF_NAV_SECTIONS: StaffNavSection[] = [
+/**
+ * "My Workspace" — always rendered, never gated. Backed by
+ * ALWAYS_ON_PERMISSIONS (view_own_schedule, manage_own_tasks, …), which every
+ * account holds. (Clock in / out is the always-on action in EmployeeHeader /
+ * the mobile bar, not a page, so it has no nav row here.)
+ */
+export const MY_WORKSPACE_ITEMS: NavItem[] = [
+  { title: "Dashboard", url: "/employee", icon: LayoutDashboard },
+  { title: "My Schedule", url: "/employee/schedule", icon: Calendar },
+  { title: "My Tasks", url: "/employee/tasks", icon: Sparkles },
+  { title: "Availability", url: "/employee/availability", icon: CalendarClock },
+  { title: "My Documents", url: "/employee/documents", icon: FolderOpen },
+  { title: "My Performance", url: "/employee/performance", icon: TrendingUp },
+  { title: "My Write-ups", url: "/employee/write-ups", icon: FileText },
+];
+
+/**
+ * "Operations" — declarative, permission-gated. Keys are the REAL
+ * {@link PermissionKey} values (the spec's Table 3 uses shorthand names, e.g.
+ * "view_boarding_dashboard" → `boarding_view_dashboard`, "access_point_of_sale"
+ * → `retail_pos_access`, "view_message_inbox" → `messages_view_inbox`).
+ *
+ * Only sections that have a real /employee route today are listed. The
+ * remaining Table 3 sections are enumerated below with their keys — move each
+ * into this model when its route lands (Parts 5–7), no logic change needed:
+ *   Facility Calendar → view_all_calendars
+ *   Marketing → marketing_view                  Smart Insights → ops_smart_insights
+ *   Staff → view_staff                          Inventory → view_inventory
+ *   Settings → settings_general                 HQ → hq_view
+ */
+export const OPERATIONS_NAV_MODEL: NavSection[] = [
   {
-    id: "my-account",
-    label: "My Account",
-    // No `require` — always visible.
+    id: "bookings",
+    label: "Bookings",
+    permKey: "view_bookings",
     items: [
-      { title: "Dashboard", url: "/employee", icon: LayoutDashboard },
-      { title: "My Schedule", url: "/employee/schedule", icon: Calendar },
-      // Personal tasks — gated by the always-on `manage_own_tasks`.
-      {
-        title: "My Tasks",
-        url: "/employee/tasks",
-        icon: Sparkles,
-        require: "manage_own_tasks",
-      },
-      // Availability submission — gated by the always-on `submit_availability`.
-      {
-        title: "Availability",
-        url: "/employee/availability",
-        icon: CalendarClock,
-        require: "submit_availability",
-      },
-      // HR documents — gated by the always-on `view_own_documents`.
-      {
-        title: "My Documents",
-        url: "/employee/documents",
-        icon: FolderOpen,
-        require: "view_own_documents",
-      },
-      // Performance — gated by the always-on `view_own_performance`; the page
-      // itself only shows metrics when the manager has enabled visibility.
-      {
-        title: "My Performance",
-        url: "/employee/performance",
-        icon: TrendingUp,
-        require: "view_own_performance",
-      },
-      // HR records / write-ups — gated by the always-on `view_own_writeups`.
-      {
-        title: "My HR Records",
-        url: "/employee/write-ups",
-        icon: FileText,
-        require: "view_own_writeups",
-      },
-    ],
-  },
-  {
-    id: "customers",
-    label: "Customers",
-    require: "view_client_list",
-    items: [
-      {
-        title: "Clients",
-        url: "/employee/clients",
-        icon: Users,
-        require: "view_client_list",
-      },
       {
         title: "Bookings",
         url: "/employee/bookings",
         icon: ClipboardList,
-        require: "view_bookings",
+        permKey: "view_bookings",
       },
     ],
   },
   {
     id: "grooming",
     label: "Grooming",
-    require: "grooming_view_own_calendar",
+    permKey: "view_grooming_queue",
     items: [
       {
         title: "Today's Queue",
         url: "/employee/grooming",
         icon: Scissors,
-        require: "grooming_view_own_calendar",
+        permKey: "view_grooming_queue",
+      },
+      {
+        title: "My Calendar",
+        url: "/employee/grooming?view=mine",
+        icon: CalendarDays,
+        permKey: "grooming_view_own_calendar",
+      },
+      {
+        title: "Full Calendar",
+        url: "/employee/grooming?view=all",
+        icon: CalendarDays,
+        permKey: "grooming_view_all_calendars",
       },
     ],
   },
   {
     id: "boarding",
     label: "Boarding",
-    require: "boarding_view_dashboard",
+    permKey: "boarding_view_dashboard",
     items: [
       {
         title: "Boarding",
         url: "/employee/boarding",
         icon: Moon,
-        require: "boarding_view_dashboard",
+        permKey: "boarding_view_dashboard",
       },
       {
         title: "Kennel View",
         url: "/employee/kennel",
         icon: Dog,
-        require: "boarding_view_dashboard",
+        permKey: "boarding_view_dashboard",
       },
     ],
   },
   {
     id: "daycare",
     label: "Daycare",
-    require: "daycare_view_dashboard",
+    permKey: "daycare_view_dashboard",
     items: [
       {
         title: "Daycare",
         url: "/employee/daycare",
         icon: Sun,
-        require: "daycare_view_dashboard",
+        permKey: "daycare_view_dashboard",
       },
-      // Also available to daycare staff who lack boarding access.
+      // Duplicate destination with Boarding — collapses to its first permitted
+      // occurrence via the URL-dedup in getOperationsNav.
       {
         title: "Kennel View",
         url: "/employee/kennel",
         icon: Dog,
-        require: "daycare_view_dashboard",
+        permKey: "daycare_view_dashboard",
+      },
+    ],
+  },
+  {
+    id: "daily-care",
+    label: "Daily Care",
+    permKey: "boarding_daily_care_log",
+    // Table 3: log_feedings OR boarding_daily_care_log — OR expressed as two
+    // same-URL items (deduped), so boarding staff AND daycare attendants see it
+    // while a groomer (perform_grooming only) does not (5D).
+    items: [
+      {
+        title: "Daily Care",
+        url: "/employee/daily-care",
+        icon: ClipboardCheck,
+        permKey: "boarding_daily_care_log",
+      },
+      {
+        title: "Daily Care",
+        url: "/employee/daily-care",
+        icon: ClipboardCheck,
+        permKey: "log_feedings",
       },
     ],
   },
   {
     id: "training",
     label: "Training",
-    require: "training_view_own_calendar",
+    permKey: "training_view_own_calendar",
+    // OR across the trainer key and the manager-oversight key (same route,
+    // deduped) so trainers AND managers see Training, but reception — which has
+    // only view_training_queue — does not (spec 1.2 acceptance).
     items: [
       {
         title: "Training",
         url: "/employee/training",
         icon: Dumbbell,
-        require: "training_view_own_calendar",
+        permKey: "training_view_own_calendar",
+      },
+      {
+        title: "Training",
+        url: "/employee/training",
+        icon: Dumbbell,
+        permKey: "training_manage_programs",
+      },
+    ],
+  },
+  {
+    id: "inbox",
+    label: "Inbox",
+    permKey: "messages_view_inbox",
+    items: [
+      {
+        title: "Inbox",
+        url: "/employee/inbox",
+        icon: Inbox,
+        permKey: "messages_view_inbox",
+      },
+    ],
+  },
+  {
+    id: "calling",
+    label: "Calling",
+    permKey: "calling_view",
+    items: [
+      {
+        title: "Calling",
+        url: "/employee/calling",
+        icon: Phone,
+        permKey: "calling_view",
+      },
+    ],
+  },
+  {
+    id: "incidents",
+    label: "Incidents",
+    permKey: "ops_incidents_view",
+    items: [
+      {
+        title: "Incidents",
+        url: "/employee/incidents",
+        icon: AlertTriangle,
+        permKey: "ops_incidents_view",
+      },
+    ],
+  },
+  {
+    id: "clients",
+    label: "Clients",
+    permKey: "view_client_list",
+    items: [
+      {
+        title: "Clients",
+        url: "/employee/clients",
+        icon: Users,
+        permKey: "view_client_list",
       },
     ],
   },
   {
     id: "retail",
     label: "Retail / POS",
-    require: "retail_pos_access",
+    permKey: "retail_pos_access",
     items: [
       {
         title: "Retail",
         url: "/employee/retail",
         icon: ShoppingBag,
-        require: "retail_pos_access",
+        permKey: "retail_pos_access",
       },
     ],
   },
 ];
 
 /**
- * Build the ordered, permission-filtered staff navigation from the effective
- * permission map (F0.2). A section renders when its `require` is satisfied (or
- * always, for My Account); within it, only items the staff is permitted to see
- * appear. Duplicate destinations (e.g. Kennel View under both Boarding and
- * Daycare) collapse to their first permitted occurrence.
+ * Build the visible Operations nav from an effective-permission map (F0.2 /
+ * spec 3A). An item shows iff its `permKey` is granted or assigned_only
+ * (`perms[key] !== false`); a section shows iff it has at least one visible
+ * item. Duplicate destinations (e.g. Kennel View under Boarding and Daycare)
+ * collapse to their first permitted occurrence.
  */
-export function getStaffNav(
-  permissions: EffectivePermissions,
-): StaffNavSection[] {
-  const has = (key?: PermissionKey) =>
-    key == null || permissions[key] !== false;
+export function getOperationsNav(perms: EffectivePermissions): NavSection[] {
+  const has = (key?: PermissionKey) => key == null || perms[key] !== false;
   const seen = new Set<string>();
 
-  return STAFF_NAV_SECTIONS.filter((section) => has(section.require))
-    .map((section) => {
-      const items = section.items.filter((item) => {
-        if (!has(item.require) || seen.has(item.url)) return false;
-        seen.add(item.url);
-        return true;
-      });
-      return { ...section, items };
-    })
-    .filter((section) => section.items.length > 0);
+  return OPERATIONS_NAV_MODEL.map((section) => {
+    const items = section.items.filter((item) => {
+      if (!has(item.permKey) || seen.has(item.url)) return false;
+      seen.add(item.url);
+      return true;
+    });
+    return { ...section, items };
+  }).filter((section) => section.items.length > 0);
 }
 
+// Identity card (display only — never a permission decision).
 const ROLE_ICON: Record<FacilityStaffRole, React.ElementType> = {
   owner: UserCog,
   admin: UserCog,
@@ -300,9 +376,28 @@ export function EmployeeSidebar({ staffId }: { staffId: string }) {
   const role = staff?.primaryRole ?? "reception";
   const Icon = ROLE_ICON[role];
 
-  // Resolve THIS staff member's effective permissions (F0.2) and build the nav
-  // from them — the sidebar makes no independent permission decisions.
-  const sections = getStaffNav(resolvePermissions(staffId));
+  // Resolve THIS staff member's effective permissions and gate the Operations
+  // nav from them — no role-name branching anywhere below.
+  const operations = getOperationsNav(resolvePermissions(staffId));
+
+  const renderItem = (item: NavItem) => {
+    const ItemIcon = item.icon;
+    const base = item.url.split("?")[0];
+    const isActive =
+      base === "/employee"
+        ? pathname === "/employee"
+        : pathname === base || pathname.startsWith(base + "/");
+    return (
+      <SidebarMenuItem key={item.url}>
+        <SidebarMenuButton asChild isActive={isActive}>
+          <Link href={item.url}>
+            <ItemIcon className="size-4" />
+            <span>{item.title}</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
 
   return (
     <Sidebar>
@@ -324,31 +419,26 @@ export function EmployeeSidebar({ staffId }: { staffId: string }) {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {sections.map((section) => (
-          <SidebarGroup key={section.id}>
-            <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
-            <SidebarMenu>
-              {section.items.map((item) => {
-                const ItemIcon = item.icon;
-                const isActive =
-                  item.url === "/employee"
-                    ? pathname === "/employee"
-                    : pathname === item.url ||
-                      pathname.startsWith(item.url + "/");
-                return (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton asChild isActive={isActive}>
-                      <Link href={item.url}>
-                        <ItemIcon className="size-4" />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroup>
-        ))}
+        {/* My Workspace — always on. */}
+        <SidebarGroup>
+          <SidebarGroupLabel>My Workspace</SidebarGroupLabel>
+          <SidebarMenu>{MY_WORKSPACE_ITEMS.map(renderItem)}</SidebarMenu>
+        </SidebarGroup>
+
+        {/* Operations — permission-gated modules (3A). */}
+        {operations.length > 0 && (
+          <>
+            <SidebarGroup className="pb-0">
+              <SidebarGroupLabel>Operations</SidebarGroupLabel>
+            </SidebarGroup>
+            {operations.map((section) => (
+              <SidebarGroup key={section.id}>
+                <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
+                <SidebarMenu>{section.items.map(renderItem)}</SidebarMenu>
+              </SidebarGroup>
+            ))}
+          </>
+        )}
       </SidebarContent>
     </Sidebar>
   );
