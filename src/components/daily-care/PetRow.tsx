@@ -18,7 +18,12 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
-import { outcomeBadgeClass, getOutcomeOption } from "./outcome-meta";
+import {
+  outcomeBadgeClass,
+  getOutcomeOption,
+  FEEDING_SERVED,
+} from "./outcome-meta";
+import { UtensilsCrossed } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { petFlagsStore } from "@/data/pet-flags-store";
 import type { ScheduledTask, TaskExecution } from "@/types/care-log";
@@ -89,7 +94,11 @@ export function PetRow({ task, execution, date, onLog, onQuickLog }: Props) {
   };
 
   const initial = task.petName.charAt(0);
-  const isLogged = Boolean(execution);
+  // Feeding is two-step: a record with the "served" sentinel means the food is
+  // down but consumption hasn't been recorded yet — not "done".
+  const isServed =
+    task.taskType === "feeding" && execution?.outcome === FEEDING_SERVED;
+  const isLogged = Boolean(execution) && !isServed;
   const quickValue = quickLogOutcome(task);
   const quickLabel = quickValue
     ? getOutcomeOption(task.taskType, quickValue)?.label
@@ -107,8 +116,9 @@ export function PetRow({ task, execution, date, onLog, onQuickLog }: Props) {
   return (
     <div
       data-logged={isLogged}
+      data-served={isServed}
       data-flagged={isFlagged}
-      className="group bg-card flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border px-3 py-2 transition-colors data-[flagged=true]:ring-1 data-[flagged=true]:ring-red-400 data-[logged=true]:border-l-4 data-[logged=true]:border-l-green-500 data-[logged=true]:bg-green-50/50 dark:data-[logged=true]:bg-green-950/20"
+      className="group bg-card flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border px-3 py-2 transition-colors data-[flagged=true]:ring-1 data-[flagged=true]:ring-red-400 data-[logged=true]:border-l-4 data-[logged=true]:border-l-green-500 data-[logged=true]:bg-green-50/50 data-[served=true]:border-l-4 data-[served=true]:border-l-sky-400 data-[served=true]:bg-sky-50/40 dark:data-[logged=true]:bg-green-950/20 dark:data-[served=true]:bg-sky-950/20"
     >
       <Avatar className="size-9 shrink-0">
         {task.petPhotoUrl && (
@@ -185,7 +195,19 @@ export function PetRow({ task, execution, date, onLog, onQuickLog }: Props) {
             Avoid: {task.avoidList.join(", ")}
           </p>
         )}
-        {execution && (
+        {isServed && execution && (
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+            <span className="flex items-center gap-1 font-medium text-sky-700 dark:text-sky-400">
+              <UtensilsCrossed className="size-3" />
+              Served {execution.servedAt ?? execution.executedAt}
+            </span>
+            <span className="text-muted-foreground">
+              · {execution.staffName ?? execution.staffInitials} · awaiting
+              consumption
+            </span>
+          </div>
+        )}
+        {isLogged && execution && (
           <div className="mt-1 flex items-center gap-2 text-xs">
             {outcomeOpt && (
               <Badge
@@ -245,6 +267,22 @@ export function PetRow({ task, execution, date, onLog, onQuickLog }: Props) {
               <Pencil className="size-3.5" />
             </Button>
           </>
+        ) : isServed ? (
+          // Feeding step 2: food is down, record how much they ate.
+          <Button
+            size="sm"
+            onClick={onLog}
+            className="h-7 gap-1 bg-emerald-600 text-xs text-white hover:bg-emerald-700"
+          >
+            <Check className="size-3.5" />
+            Log consumption
+          </Button>
+        ) : task.taskType === "feeding" ? (
+          // Feeding step 1: serve the food.
+          <Button size="sm" onClick={onLog} className="h-7 gap-1 text-xs">
+            <UtensilsCrossed className="size-3.5" />
+            Serve
+          </Button>
         ) : quickValue ? (
           <div className="flex items-center gap-1">
             <Button

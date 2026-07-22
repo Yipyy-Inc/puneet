@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { metaFor } from "./task-type-meta";
 import { format12h } from "@/lib/care-log-scheduler";
-import { defaultOutcomeFor } from "./outcome-meta";
+import { defaultOutcomeFor, FEEDING_SERVED } from "./outcome-meta";
 import { PetRow } from "./PetRow";
 import type { DailyCareStep } from "@/types/boarding";
 import type { ScheduledTask, TaskExecution } from "@/types/care-log";
@@ -110,10 +110,30 @@ export function Section({
   const Icon = meta.Icon;
 
   const total = tasks.length;
+  // A feeding that's been served but not yet eaten is in progress, not done —
+  // exclude the "served" sentinel from the completed count.
   const done = tasks.filter((t) =>
-    executions.some((e) => e.taskId === t.id),
+    executions.some(
+      (e) =>
+        e.taskId === t.id &&
+        !(t.taskType === "feeding" && e.outcome === FEEDING_SERVED),
+    ),
+  ).length;
+  const served = tasks.filter((t) =>
+    executions.some(
+      (e) =>
+        e.taskId === t.id &&
+        t.taskType === "feeding" &&
+        e.outcome === FEEDING_SERVED,
+    ),
   ).length;
   const remaining = total - done;
+  // Pets with no execution at all — what a batch action (serve-all / mark-all)
+  // still has to act on. For feeding this is "not yet served"; for other batch
+  // types it equals `remaining`.
+  const notLoggedCount = tasks.filter(
+    (t) => !executions.some((e) => e.taskId === t.id),
+  ).length;
 
   // Last Call (F1): a requiresHeadCount step is complete when its head count has
   // been recorded — not by per-pet logging. The rollcall is the completion gate.
@@ -143,8 +163,13 @@ export function Section({
   // medication, add-ons, bedding change, custom) shows the control disabled
   // with a tooltip, since each pet needs its own outcome logged.
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // Feeding's serve step carries no per-pet outcome, so it can be batch-served
+  // (consumption is still logged individually afterwards) — like water/kennel.
+  const isFeedingStep = step.taskType === "feeding";
   const batchAllowed =
-    step.taskType === "water_refill" || step.taskType === "kennel_clean";
+    step.taskType === "water_refill" ||
+    step.taskType === "kennel_clean" ||
+    isFeedingStep;
   const defaultOutcome = tasks[0]
     ? defaultOutcomeFor(tasks[0].taskType)
     : undefined;
@@ -276,7 +301,7 @@ export function Section({
                 <Printer className="size-3.5" />
               </Button>
             )}
-            {remaining > 0 &&
+            {notLoggedCount > 0 &&
               (batchAllowed ? (
                 <Button
                   variant="outline"
@@ -284,7 +309,7 @@ export function Section({
                   className="h-7 text-xs"
                   onClick={() => setConfirmOpen(true)}
                 >
-                  Mark all as done
+                  {isFeedingStep ? "Serve all" : "Mark all as done"}
                 </Button>
               ) : (
                 <Tooltip>
@@ -310,7 +335,9 @@ export function Section({
                 {done} / {total}
               </div>
               <div className="text-muted-foreground text-[10px] tracking-wider uppercase">
-                done
+                {isFeedingStep && served > 0
+                  ? `done · ${served} served`
+                  : "done"}
               </div>
             </div>
           </div>
@@ -353,17 +380,29 @@ export function Section({
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Mark all as done?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {isFeedingStep ? "Serve all?" : "Mark all as done?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Log {step.name} as {defaultOutcome?.label} for all {remaining}{" "}
-              {remaining === 1 ? "pet" : "pets"}? This cannot be individually
-              undone.
+              {isFeedingStep ? (
+                <>
+                  Mark {step.name} as served for all {notLoggedCount}{" "}
+                  {notLoggedCount === 1 ? "pet" : "pets"}? You&apos;ll still log
+                  how much each ate after the meal.
+                </>
+              ) : (
+                <>
+                  Log {step.name} as {defaultOutcome?.label} for all{" "}
+                  {notLoggedCount} {notLoggedCount === 1 ? "pet" : "pets"}? This
+                  cannot be individually undone.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => onLogAll?.(step)}>
-              Mark all done
+              {isFeedingStep ? "Serve all" : "Mark all done"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

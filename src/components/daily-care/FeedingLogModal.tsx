@@ -20,7 +20,11 @@ import {
   AlertTriangle,
   UtensilsCrossed,
 } from "lucide-react";
-import { OUTCOME_OPTIONS, outcomeBadgeClass } from "./outcome-meta";
+import {
+  OUTCOME_OPTIONS,
+  outcomeBadgeClass,
+  FEEDING_SERVED,
+} from "./outcome-meta";
 import { metaFor } from "./task-type-meta";
 import { format12h } from "@/lib/care-log-scheduler";
 import { LogMeta } from "./LogMeta";
@@ -40,6 +44,8 @@ type Props = {
     staffInitials: string;
     /** Override log time as "HH:MM"; omitted means stamp the current time. */
     executedAt?: string;
+    /** Time the food was served — set on the serve step, preserved on outcome. */
+    servedAt?: string;
     photoUrls?: string[];
   }) => void;
 };
@@ -83,7 +89,11 @@ export function FeedingLogModal({
       ).padStart(2, "0")}`,
     );
     if (existing) {
-      setOutcome(String(existing.outcome));
+      // A just-served item carries the "served" sentinel — the consumption
+      // outcome hasn't been chosen yet, so start the chips unselected.
+      setOutcome(
+        existing.outcome === FEEDING_SERVED ? null : String(existing.outcome),
+      );
       setNotes(existing.notes ?? "");
       setPhotos(
         existing.photoUrls ?? (existing.photoUrl ? [existing.photoUrl] : []),
@@ -98,6 +108,11 @@ export function FeedingLogModal({
   }, [open, task?.id, existing]);
 
   if (!task) return null;
+
+  // Two-step feeding: serve the food first, then log how much was eaten a few
+  // hours later. The step is derived from whether the food has been served yet.
+  const served = Boolean(existing?.servedAt);
+  const step: "serve" | "outcome" = served ? "outcome" : "serve";
 
   const meta = metaFor(task.taskType, task.subType);
   const Icon = meta.Icon;
@@ -126,12 +141,31 @@ export function FeedingLogModal({
     setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const canSubmit = outcome !== null && (!requiresPhoto || photos.length > 0);
+  const photoOk = !requiresPhoto || photos.length > 0;
+  // Serve step needs no outcome; consumption step needs an eaten-amount choice.
+  const canSubmit = (step === "serve" ? true : outcome !== null) && photoOk;
 
   function handleSubmit() {
+    if (step === "serve") {
+      // Mark the food served now; consumption is recorded on the next visit.
+      const serveTime = logTime || nowValue;
+      onSubmit({
+        outcome: FEEDING_SERVED,
+        servedAt: serveTime,
+        executedAt: logTime || undefined,
+        notes: notes.trim() || undefined,
+        staffName: user.name,
+        staffInitials: user.initials,
+        photoUrls: photos.length > 0 ? photos : undefined,
+      });
+      onOpenChange(false);
+      return;
+    }
+    // Consumption step: record how much was eaten, keep the original serve time.
     if (!outcome) return;
     onSubmit({
       outcome,
+      servedAt: existing?.servedAt,
       notes: notes.trim() || undefined,
       staffName: user.name,
       staffInitials: user.initials,
@@ -153,7 +187,8 @@ export function FeedingLogModal({
             </div>
             <div className="min-w-0 flex-1">
               <DialogTitle className="text-base">
-                {existing ? "Edit" : "Log"} feeding · {task.details}
+                {step === "serve" ? "Serve" : "Log consumption"} ·{" "}
+                {task.details}
               </DialogTitle>
               <DialogDescription className="mt-0.5 truncate">
                 {task.petName} · {task.kennelName} ·{" "}
@@ -232,30 +267,58 @@ export function FeedingLogModal({
           <div className="border-t" />
 
           {/* ── BOTTOM: the log ───────────────────────────────────────────── */}
-          <div className="space-y-1.5">
-            <Label className="text-xs">Outcome</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {options.map((opt) => {
-                const selected = outcome === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setOutcome(opt.value)}
-                    data-selected={selected}
-                    className="rounded-md border px-2.5 py-1 text-xs font-medium transition-all data-[selected=false]:opacity-60 data-[selected=true]:ring-2 data-[selected=true]:ring-offset-1"
-                  >
-                    <Badge
-                      variant="outline"
-                      className={outcomeBadgeClass(opt.tone)}
-                    >
-                      {opt.label}
-                    </Badge>
-                  </button>
-                );
-              })}
+          {step === "serve" ? (
+            // Step 1 — serving. No "how much eaten" yet; that's logged later.
+            <div className="flex items-start gap-2 rounded-md border border-sky-200 bg-sky-50/70 p-3 text-xs dark:border-sky-900/50 dark:bg-sky-950/30">
+              <UtensilsCrossed className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-400" />
+              <div>
+                <p className="font-semibold text-sky-800 dark:text-sky-300">
+                  Mark the food as served
+                </p>
+                <p className="mt-0.5 text-sky-700/90 dark:text-sky-400/80">
+                  Put the food down now. You&apos;ll come back after the meal to
+                  record how much they ate.
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            // Step 2 — consumption. Show when it was served, then the chips.
+            <div className="space-y-2">
+              {existing?.servedAt && (
+                <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                  <UtensilsCrossed className="size-3.5" />
+                  Served at{" "}
+                  <span className="text-foreground font-medium">
+                    {existing.servedAt}
+                  </span>
+                </p>
+              )}
+              <div className="space-y-1.5">
+                <Label className="text-xs">How much did they eat?</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {options.map((opt) => {
+                    const selected = outcome === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setOutcome(opt.value)}
+                        data-selected={selected}
+                        className="rounded-md border px-2.5 py-1 text-xs font-medium transition-all data-[selected=false]:opacity-60 data-[selected=true]:ring-2 data-[selected=true]:ring-offset-1"
+                      >
+                        <Badge
+                          variant="outline"
+                          className={outcomeBadgeClass(opt.tone)}
+                        >
+                          {opt.label}
+                        </Badge>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label className="text-xs">
@@ -326,7 +389,11 @@ export function FeedingLogModal({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit}>
-            {existing ? "Update log" : "Save log"}
+            {step === "serve"
+              ? "Mark as served"
+              : existing?.outcome === FEEDING_SERVED
+                ? "Save consumption"
+                : "Update log"}
           </Button>
         </DialogFooter>
       </DialogContent>

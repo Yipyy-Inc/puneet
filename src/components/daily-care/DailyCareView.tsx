@@ -45,7 +45,7 @@ import {
 } from "@/lib/care-log-scheduler";
 import { ProgressHeader } from "./ProgressHeader";
 import { Section } from "./Section";
-import { defaultOutcomeFor } from "./outcome-meta";
+import { defaultOutcomeFor, FEEDING_SERVED } from "./outcome-meta";
 import { LogModalRouter } from "./log-modals/LogModalRouter";
 import { HeadCountOverlay } from "./HeadCountOverlay";
 import { DaySummaryView } from "./DaySummaryView";
@@ -616,9 +616,15 @@ export function DailyCareView() {
     const executedAt = `${String(now.getHours()).padStart(2, "0")}:${String(
       now.getMinutes(),
     ).padStart(2, "0")}`;
+    // Feeding is two-step: a batch action serves the food for everyone; how
+    // much each pet ate is still recorded individually afterwards.
+    const isFeedingStep = notLogged.every((t) => t.taskType === "feeding");
     let count = 0;
     for (const t of notLogged) {
-      const outcome = defaultOutcomeFor(t.taskType)?.value;
+      const isFeeding = t.taskType === "feeding";
+      const outcome = isFeeding
+        ? FEEDING_SERVED
+        : defaultOutcomeFor(t.taskType)?.value;
       if (!outcome) continue;
       // An incident task that requires a photo can't be batch-completed — its
       // photo gate is only satisfiable through the log modal.
@@ -631,6 +637,7 @@ export function DailyCareView() {
         date,
         executedAt,
         outcome,
+        servedAt: isFeeding ? executedAt : undefined,
         staffInitials: user.initials,
         staffName: user.name,
       });
@@ -638,7 +645,9 @@ export function DailyCareView() {
       count += 1;
     }
     toast.success(
-      `Logged ${step.name} for ${count} ${count === 1 ? "pet" : "pets"}.`,
+      isFeedingStep
+        ? `Served ${step.name} to ${count} ${count === 1 ? "pet" : "pets"} — log consumption after the meal.`
+        : `Logged ${step.name} for ${count} ${count === 1 ? "pet" : "pets"}.`,
     );
   };
 

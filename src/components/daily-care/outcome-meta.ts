@@ -48,6 +48,14 @@ export const OUTCOME_OPTIONS: Record<CareTaskType, OutcomeOption[]> = {
   ],
 };
 
+/**
+ * Feeding is a two-step task: staff serve the food first, then record how much
+ * was eaten a few hours later. Between those steps the execution carries this
+ * sentinel `outcome` (with `servedAt` set) to mean "served, awaiting
+ * consumption". It is intentionally NOT one of OUTCOME_OPTIONS.feeding.
+ */
+export const FEEDING_SERVED = "served";
+
 export function outcomeBadgeClass(tone: OutcomeOption["tone"]): string {
   switch (tone) {
     case "success":
