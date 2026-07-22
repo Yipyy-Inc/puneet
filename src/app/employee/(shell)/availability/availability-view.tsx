@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { CalendarClock } from "lucide-react";
 import { staffAvailability } from "@/data/staff-availability";
-import { getCurrentUserId } from "@/lib/role-utils";
-import { users } from "@/data/users";
+import { useFacilityViewer } from "@/hooks/use-facility-rbac";
 
 // Monday-first order over dayOfWeek (0 = Sunday … 6 = Saturday).
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -32,10 +31,9 @@ interface DayAvailability {
 }
 
 export function AvailabilityView() {
-  const [staffId] = useState<number>(() => {
-    const id = getCurrentUserId() ?? users.find((u) => u.role === "Staff")?.id;
-    return typeof id === "string" ? parseInt(id, 10) : (id ?? 4);
-  });
+  // The signed-in employee — availability is keyed by facility staff id.
+  const { viewer } = useFacilityViewer();
+  const staffId = viewer.id;
 
   // Seed each day from the staff member's saved availability (data/staff-availability).
   const [days, setDays] = useState<DayAvailability[]>(() =>

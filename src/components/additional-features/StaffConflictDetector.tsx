@@ -37,9 +37,9 @@ import type { TimeOffRequest } from "@/data/staff-availability";
 
 interface StaffConflictDetectorProps {
   schedules: Schedule[];
-  staff: Array<{ id: number; name: string; role: string }>;
+  staff: Array<{ id: string; name: string; role: string }>;
   timeOffRequests: TimeOffRequest[];
-  onReassign?: (shiftId: number, newStaffId: number) => void;
+  onReassign?: (shiftId: number, newStaffId: string) => void;
   onEditShift?: (shiftId: number) => void;
   onIgnore?: (shiftId: number, reason: string) => void;
 }
@@ -47,7 +47,7 @@ interface StaffConflictDetectorProps {
 interface Conflict {
   id: string;
   shiftId: number;
-  staffId: number;
+  staffId: string;
   staffName: string;
   conflictType:
     | "double_booking"
@@ -631,10 +631,7 @@ export function StaffConflictDetector({
                 }
 
                 if (onReassign) {
-                  onReassign(
-                    selectedConflict.shiftId,
-                    parseInt(selectedNewStaffId),
-                  );
+                  onReassign(selectedConflict.shiftId, selectedNewStaffId);
                 }
 
                 toast.success("Shift reassigned successfully");

@@ -40,7 +40,7 @@ export function useMyShifts(): Schedule[] {
       .filter((s) => s.employeeId === viewerId && s.status !== "cancelled")
       .map((s, index) => ({
         id: index + 1,
-        staffId: 0,
+        staffId: viewerId,
         staffName: `${viewer.firstName} ${viewer.lastName}`,
         date: s.date,
         startTime: s.startTime,

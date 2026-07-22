@@ -50,9 +50,9 @@ import {
   shiftTasks,
   type ShiftTask,
 } from "@/data/staff-availability";
-import { getCurrentUserId } from "@/lib/role-utils";
 import { useMyShifts } from "@/lib/employee-schedule";
-import { users } from "@/data/users";
+import { useFacilityViewer } from "@/hooks/use-facility-rbac";
+import { facilityStaff } from "@/data/facility-staff";
 
 // Schedule update acknowledgment interface
 interface ScheduleUpdate {
@@ -72,7 +72,7 @@ const mockScheduleUpdates: ScheduleUpdate[] = [
     weekStart: "2025-11-17",
     weekEnd: "2025-11-23",
     acknowledgedBy: [],
-    facility: "Paws & Play Daycare",
+    facility: "Yipyy",
   },
 ];
 
@@ -117,16 +117,10 @@ function requestStatusBadge(status: string): {
 }
 
 export function StaffScheduleView() {
-  // Legacy numeric identity, still used by the time-off / swap / shift-task
-  // subsystems below. Those datasets are keyed to the older `users` roster,
-  // which has no counterpart for a facility staff profile — resolving them per
-  // viewer needs that data keyed by `fs-*` first (tracked in the debt map).
-  const [userId] = useState<string | null>(() => {
-    const currentUserId = getCurrentUserId();
-    if (currentUserId) return currentUserId;
-    const defaultStaff = users.find((u) => u.role === "Staff");
-    return defaultStaff?.id.toString() || "4";
-  });
+  // The signed-in employee. Shifts, time-off, swaps and shift tasks are all
+  // keyed by facility staff id, so every panel on this screen is the viewer's.
+  const { viewer } = useFacilityViewer();
+  const userId = viewer.id;
   const [viewMode, setViewMode] = useState<"week" | "list" | "day">("week");
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     const today = new Date();
@@ -178,14 +172,8 @@ export function StaffScheduleView() {
     message: "",
   });
 
-  // Get staff member info
-  const staffMember = useMemo(() => {
-    if (!userId) return null;
-    return (
-      users.find((u) => u.id.toString() === userId || u.email === userId) ||
-      null
-    );
-  }, [userId]);
+  // The signed-in staff profile.
+  const staffMember = viewer;
 
   // Section 5E — the grid shows the SIGNED-IN employee's own shifts, resolved
   // by identity from the real scheduling data (not the legacy `schedules`
@@ -201,7 +189,7 @@ export function StaffScheduleView() {
     if (!staffMember) return [];
     return mockScheduleUpdates.filter(
       (update) =>
-        !update.acknowledgedBy.includes(staffMember.id.toString()) &&
+        !update.acknowledgedBy.includes(staffMember.id) &&
         !acknowledgedUpdateIds.has(update.id),
     );
   }, [staffMember, acknowledgedUpdateIds]);
@@ -212,31 +200,29 @@ export function StaffScheduleView() {
   }, []);
 
   // Get my pending time off requests
-  const myTimeOffRequests = useMemo(() => {
-    if (!userId) return [];
-    const staffId = parseInt(userId);
-    return timeOffRequests.filter((r) => r.staffId === staffId);
-  }, [userId]);
+  const myTimeOffRequests = useMemo(
+    () => timeOffRequests.filter((r) => r.staffId === userId),
+    [userId],
+  );
 
   // Get my pending swap requests
-  const mySwapRequests = useMemo(() => {
-    if (!userId) return [];
-    const staffId = parseInt(userId);
-    return shiftSwapRequests.filter((r) => r.requestingStaffId === staffId);
-  }, [userId]);
+  const mySwapRequests = useMemo(
+    () => shiftSwapRequests.filter((r) => r.requestingStaffId === userId),
+    [userId],
+  );
 
   // Get swap requests I can respond to (targeted at me or open to anyone)
-  const availableSwapRequests = useMemo(() => {
-    if (!userId) return [];
-    const staffId = parseInt(userId);
-    return shiftSwapRequests.filter(
-      (r) =>
-        r.status === "pending" &&
-        // Open to anyone (no targetStaffId) OR specifically targeted at me
-        (!r.targetStaffId || r.targetStaffId === staffId) &&
-        r.requestingStaffId !== staffId,
-    );
-  }, [userId]);
+  const availableSwapRequests = useMemo(
+    () =>
+      shiftSwapRequests.filter(
+        (r) =>
+          r.status === "pending" &&
+          // Open to anyone (no targetStaffId) OR specifically targeted at me
+          (!r.targetStaffId || r.targetStaffId === userId) &&
+          r.requestingStaffId !== userId,
+      ),
+    [userId],
+  );
 
   // Get tasks for a specific shift
   const getShiftTasks = (shift: Schedule): ShiftTask[] => {
@@ -251,10 +237,8 @@ export function StaffScheduleView() {
 
   // Get tasks assigned to me for a shift
   const getMyShiftTasks = (shift: Schedule): ShiftTask[] => {
-    if (!userId) return [];
-    const staffId = parseInt(userId);
     return getShiftTasks(shift).filter(
-      (t) => t.assignedToStaffId === staffId || t.assignedToStaffId === null,
+      (t) => t.assignedToStaffId === userId || t.assignedToStaffId === null,
     );
   };
 
@@ -447,7 +431,7 @@ export function StaffScheduleView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold sm:text-2xl">My Schedule</h1>
-          <p className="text-muted-foreground text-sm">{staffMember.name}</p>
+          <p className="text-muted-foreground text-sm">{`${staffMember.firstName} ${staffMember.lastName}`}</p>
         </div>
         {/* Mobile: Single menu button, Desktop: Essential actions only */}
         <div className="flex gap-2">
@@ -1268,16 +1252,11 @@ export function StaffScheduleView() {
                     <SelectValue placeholder="Choose a coworker" />
                   </SelectTrigger>
                   <SelectContent>
-                    {users
-                      .filter(
-                        (u) => u.id.toString() !== userId && u.role === "Staff",
-                      )
-                      .map((staff, index) => (
-                        <SelectItem
-                          key={`staff-${staff.id}-${staff.email}-${index}`}
-                          value={staff.id.toString()}
-                        >
-                          {staff.name}
+                    {facilityStaff
+                      .filter((s) => s.id !== userId && s.status === "active")
+                      .map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.firstName} {s.lastName}
                         </SelectItem>
                       ))}
                   </SelectContent>

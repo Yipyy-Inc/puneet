@@ -144,8 +144,8 @@ function CheckInContent() {
         source,
         staffUserId: 1,
         staffUserName: "Staff",
-        assignToStaffId: 1,
-        assignToStaffName: "Staff",
+        assignToStaffId: "fs-board-01",
+        assignToStaffName: "Dominic Levesque",
       });
 
       setCheckedIn(true);

@@ -127,7 +127,7 @@ export function StaffTasks() {
   }
 
   const facilityTasks: StaffTask[] = staffTasks.filter(
-    (t) => t.facility === "Paws & Play Daycare",
+    (t) => t.facility === "Yipyy",
   ) as StaffTask[];
   const facilityTemplates: TaskTemplate[] = taskTemplates.filter(
     (t) => t.isActive,

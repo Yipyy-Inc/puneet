@@ -23,7 +23,7 @@ export const staffQueries = {
     queryKey: ["staff", "tasks"] as const,
     queryFn: async () => staffTasks,
   }),
-  tasksByStaff: (staffId: number) => ({
+  tasksByStaff: (staffId: string) => ({
     queryKey: ["staff", "tasks", staffId] as const,
     queryFn: async () => staffTasks.filter((t) => t.assignedTo === staffId),
   }),
@@ -31,7 +31,7 @@ export const staffQueries = {
     queryKey: ["staff", "performance"] as const,
     queryFn: async () => staffPerformance,
   }),
-  performanceByStaff: (staffId: number) => ({
+  performanceByStaff: (staffId: string) => ({
     queryKey: ["staff", "performance", staffId] as const,
     queryFn: async () => staffPerformance.find((p) => p.staffId === staffId),
   }),
@@ -39,7 +39,7 @@ export const staffQueries = {
     queryKey: ["staff", "documents"] as const,
     queryFn: async () => staffDocuments,
   }),
-  documentsByStaff: (staffId: number) => ({
+  documentsByStaff: (staffId: string) => ({
     queryKey: ["staff", "documents", staffId] as const,
     queryFn: async () => staffDocuments.filter((d) => d.staffId === staffId),
   }),
@@ -63,7 +63,7 @@ export const staffQueries = {
     queryKey: ["staff", "availability"] as const,
     queryFn: async () => staffAvailability,
   }),
-  availabilityByStaff: (staffId: number) => ({
+  availabilityByStaff: (staffId: string) => ({
     queryKey: ["staff", "availability", staffId] as const,
     queryFn: async () => staffAvailability.filter((a) => a.staffId === staffId),
   }),
@@ -71,7 +71,7 @@ export const staffQueries = {
     queryKey: ["staff", "time-off"] as const,
     queryFn: async () => timeOffRequests,
   }),
-  timeOffByStaff: (staffId: number) => ({
+  timeOffByStaff: (staffId: string) => ({
     queryKey: ["staff", "time-off", staffId] as const,
     queryFn: async () => timeOffRequests.filter((r) => r.staffId === staffId),
   }),

@@ -222,7 +222,7 @@ export const staffTaskSchema = z.object({
   templateName: z.string(),
   category: z.string(),
   description: z.string(),
-  assignedTo: z.number(),
+  assignedTo: z.string(),
   assignedToName: z.string(),
   shiftId: z.number().optional(),
   petId: z.number().optional(),
@@ -235,7 +235,7 @@ export const staffTaskSchema = z.object({
   repeatPattern: repeatPatternEnum.optional(),
   customRepeatDays: z.array(z.number()).optional(),
   completedAt: z.string().optional(),
-  completedBy: z.number().optional(),
+  completedBy: z.string().optional(),
   completedByName: z.string().optional(),
   completedByInitials: z.string().optional(),
   photoUrl: z.string().optional(),
@@ -249,7 +249,7 @@ export type StaffTask = z.infer<typeof staffTaskSchema>;
 // ============================================================================
 
 export const staffPerformanceSchema = z.object({
-  staffId: z.number(),
+  staffId: z.string(),
   staffName: z.string(),
   role: z.string(),
   totalTasksAssigned: z.number(),
@@ -270,7 +270,7 @@ export type StaffPerformance = z.infer<typeof staffPerformanceSchema>;
 
 export const staffDocumentSchema = z.object({
   id: z.number(),
-  staffId: z.number(),
+  staffId: z.string(),
   staffName: z.string(),
   name: z.string(),
   type: staffDocumentTypeEnum,
@@ -288,7 +288,7 @@ export type StaffDocument = z.infer<typeof staffDocumentSchema>;
 
 export const staffCertificationSchema = z.object({
   id: z.number(),
-  staffId: z.number(),
+  staffId: z.string(),
   name: z.string(),
   issuedBy: z.string(),
   issuedAt: z.string(),
@@ -311,11 +311,11 @@ export const shiftTaskSchema = z.object({
   description: z.string(),
   category: shiftTaskCategoryEnum,
   priority: taskPriorityEnum,
-  assignedToStaffId: z.number().nullable().optional(),
+  assignedToStaffId: z.string().nullable().optional(),
   assignedToStaffName: z.string().nullable().optional(),
   status: taskStatusEnum,
   completedAt: z.string().optional(),
-  completedByStaffId: z.number().optional(),
+  completedByStaffId: z.string().optional(),
   completedByStaffName: z.string().optional(),
   notes: z.string().optional(),
   requiresPhoto: z.boolean(),
@@ -330,12 +330,12 @@ export type ShiftTask = z.infer<typeof shiftTaskSchema>;
 
 export const shiftSwapRequestSchema = z.object({
   id: z.number(),
-  requestingStaffId: z.number(),
+  requestingStaffId: z.string(),
   requestingStaffName: z.string(),
   requestingShiftId: z.number(),
   requestingShiftDate: z.string(),
   requestingShiftTime: z.string(),
-  targetStaffId: z.number().optional(),
+  targetStaffId: z.string().optional(),
   targetStaffName: z.string().optional(),
   targetShiftId: z.number().optional(),
   targetShiftDate: z.string().optional(),
@@ -343,7 +343,7 @@ export const shiftSwapRequestSchema = z.object({
   reason: z.string(),
   status: swapRequestStatusEnum,
   requestedAt: z.string(),
-  reviewedByStaffId: z.number().optional(),
+  reviewedByStaffId: z.string().optional(),
   reviewedByStaffName: z.string().optional(),
   reviewedAt: z.string().optional(),
   reviewNotes: z.string().optional(),
@@ -359,7 +359,7 @@ export type ShiftSwapRequest = z.infer<typeof shiftSwapRequestSchema>;
 
 export const sickCallInSchema = z.object({
   id: z.number(),
-  staffId: z.number(),
+  staffId: z.string(),
   staffName: z.string(),
   shiftId: z.number(),
   shiftDate: z.string(),
@@ -368,9 +368,9 @@ export const sickCallInSchema = z.object({
   reason: z.string(),
   expectedReturnDate: z.string().optional(),
   coverageStatus: sickCoverageStatusEnum,
-  coveredByStaffId: z.number().optional(),
+  coveredByStaffId: z.string().optional(),
   coveredByStaffName: z.string().optional(),
-  approvedByStaffId: z.number().optional(),
+  approvedByStaffId: z.string().optional(),
   approvedByStaffName: z.string().optional(),
   notes: z.string().optional(),
   facility: z.string(),
@@ -383,7 +383,7 @@ export type SickCallIn = z.infer<typeof sickCallInSchema>;
 
 export const staffAvailabilitySchema = z.object({
   id: z.number(),
-  staffId: z.number(),
+  staffId: z.string(),
   staffName: z.string(),
   dayOfWeek: z.number(),
   startTime: z.string(),
@@ -413,7 +413,7 @@ export type TimeOffReason = z.infer<typeof timeOffReasonSchema>;
 
 export const timeOffRequestSchema = z.object({
   id: z.number(),
-  staffId: z.number(),
+  staffId: z.string(),
   staffName: z.string(),
   type: z.string(),
   customTypeName: z.string().optional(),
@@ -422,7 +422,7 @@ export const timeOffRequestSchema = z.object({
   reason: z.string(),
   status: timeOffRequestStatusEnum,
   requestedAt: z.string(),
-  reviewedBy: z.number().optional(),
+  reviewedBy: z.string().optional(),
   reviewedByName: z.string().optional(),
   reviewedAt: z.string().optional(),
   reviewNotes: z.string().optional(),
@@ -480,7 +480,7 @@ export type ScheduleStatus = z.infer<typeof scheduleStatusEnum>;
 
 export const scheduleSchema = z.object({
   id: z.number(),
-  staffId: z.number(),
+  staffId: z.string(),
   staffName: z.string(),
   date: z.string(),
   startTime: z.string(),
@@ -527,7 +527,7 @@ export type StaffConflict = z.infer<typeof staffConflictSchema>;
 export interface SchedulingConflict {
   id: string;
   shiftId: number;
-  staffId: number;
+  staffId: string;
   staffName: string;
   conflictType: ConflictType;
   severity: ConflictSeverity;

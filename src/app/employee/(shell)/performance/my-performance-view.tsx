@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -14,35 +14,25 @@ import {
   BarChart3,
 } from "lucide-react";
 import { staffPerformance } from "@/data/staff-tasks";
-import { reportCards } from "@/data/pet-data";
-import { getCurrentUserId, getEmployeeStaffId } from "@/lib/role-utils";
-import { users } from "@/data/users";
+import { useFacilityViewer } from "@/hooks/use-facility-rbac";
 import { usePerformanceVisibility } from "@/lib/staff-performance-visibility";
 
 export function MyPerformanceView() {
-  // Visibility is keyed by the profile (fs-*) id the manager toggled on C2.
-  const [staffIdFs] = useState<string | null>(() => getEmployeeStaffId());
-  const visible = usePerformanceVisibility(staffIdFs);
-
-  // Metrics join by the numeric staff id used across the schedule/tasks data.
-  const [numericId] = useState<number>(() => {
-    const id = getCurrentUserId() ?? users.find((u) => u.role === "Staff")?.id;
-    return typeof id === "string" ? parseInt(id, 10) : (id ?? 4);
-  });
+  // Both visibility (toggled by the manager on C2) and the metrics themselves
+  // are keyed by the facility staff id of the signed-in employee.
+  const { viewer } = useFacilityViewer();
+  const staffId = viewer.id;
+  const visible = usePerformanceVisibility(staffId);
 
   const perf = useMemo(
-    () => staffPerformance.find((p) => p.staffId === numericId),
-    [numericId],
+    () => staffPerformance.find((p) => p.staffId === staffId),
+    [staffId],
   );
 
-  const ratings = useMemo(() => {
-    const rated = reportCards.filter(
-      (c) => c.createdById === numericId && c.customerRating,
-    );
-    if (rated.length === 0) return { avg: 0, count: 0 };
-    const total = rated.reduce((s, c) => s + (c.customerRating?.stars ?? 0), 0);
-    return { avg: total / rated.length, count: rated.length };
-  }, [numericId]);
+  // Report cards still carry a numeric author id from the legacy user roster,
+  // so there is no way to attribute them to a staff profile yet — the tile
+  // says so rather than reporting a zero that reads as "no ratings".
+  const ratings = { avg: 0, count: 0 };
 
   if (!visible) {
     return (
@@ -126,7 +116,7 @@ export function MyPerformanceView() {
               hint={
                 ratings.count > 0
                   ? `${ratings.count} rating${ratings.count === 1 ? "" : "s"}`
-                  : "No ratings yet"
+                  : "Not linked to your profile yet"
               }
               stars={ratings.count > 0 ? ratings.avg : undefined}
             />

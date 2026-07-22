@@ -20,8 +20,7 @@ import {
 } from "lucide-react";
 import { staffTasks, getTaskCategoryLabel } from "@/data/staff-tasks";
 import type { StaffTask, TaskStatus, TaskPriority } from "@/types/staff";
-import { getCurrentUserId } from "@/lib/role-utils";
-import { users } from "@/data/users";
+import { useFacilityViewer } from "@/hooks/use-facility-rbac";
 
 // Per-task local edits layered over the static mock data.
 // TODO: persist through a staff-tasks store / API when one exists.
@@ -44,10 +43,9 @@ const PRIORITY_STYLE: Record<TaskPriority, string> = {
 const isOpen = (s: TaskStatus) => s !== "completed" && s !== "skipped";
 
 export function MyTasksView() {
-  const [staffId] = useState<number>(() => {
-    const id = getCurrentUserId() ?? users.find((u) => u.role === "Staff")?.id;
-    return typeof id === "string" ? parseInt(id, 10) : (id ?? 4);
-  });
+  // The signed-in employee — staff data is keyed by facility staff id (`fs-*`).
+  const { viewer } = useFacilityViewer();
+  const staffId = viewer.id;
   const [today] = useState(() => new Date().toISOString().split("T")[0]);
   const [edits, setEdits] = useState<Record<number, TaskEdit>>({});
 

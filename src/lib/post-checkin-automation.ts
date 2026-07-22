@@ -59,7 +59,8 @@ export interface PostCheckInParams {
   staffUserId?: number;
   staffUserName?: string;
   /** If scheduling rules exist, assign tasks to this staff (or round-robin). */
-  assignToStaffId?: number;
+  /** Facility staff id (fs-*) to assign the generated tasks to. */
+  assignToStaffId?: string;
   assignToStaffName?: string;
 }
 
@@ -132,7 +133,7 @@ export function runPostCheckInAutomation(params: PostCheckInParams): {
             (occ.time <= "12:00" ? "Morning Feeding" : "Evening Feeding"),
           category: taskCategory,
           description: `Feed ${petName} – ${occ.label}: ${componentsSummary || "see details"}`,
-          assignedTo: assignToStaffId ?? 0,
+          assignedTo: assignToStaffId ?? "",
           assignedToName: assignToStaffName ?? "Unassigned",
           petId,
           petName,
@@ -157,7 +158,7 @@ export function runPostCheckInAutomation(params: PostCheckInParams): {
             slot.time <= "12:00" ? "Morning Feeding" : "Evening Feeding",
           category: taskCategory,
           description: `Feed ${petName} – ${fi.foodType} ${slot.amount}`,
-          assignedTo: assignToStaffId ?? 0,
+          assignedTo: assignToStaffId ?? "",
           assignedToName: assignToStaffName ?? "Unassigned",
           petId,
           petName,
@@ -188,7 +189,7 @@ export function runPostCheckInAutomation(params: PostCheckInParams): {
             templateName: "Medication Administration",
             category: "medication",
             description: `${med.name}${strengthInfo} – ${med.dosage}, ${med.frequency}${adminInfo} (${petName})`,
-            assignedTo: assignToStaffId ?? 0,
+            assignedTo: assignToStaffId ?? "",
             assignedToName: assignToStaffName ?? "Unassigned",
             petId,
             petName,
@@ -218,7 +219,7 @@ export function runPostCheckInAutomation(params: PostCheckInParams): {
           serviceType === "boarding"
             ? `${petName} – walk`
             : `Play session – ${petName}`,
-        assignedTo: assignToStaffId ?? 0,
+        assignedTo: assignToStaffId ?? "",
         assignedToName: assignToStaffName ?? "Unassigned",
         petId,
         petName,
