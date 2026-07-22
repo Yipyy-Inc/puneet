@@ -94,6 +94,42 @@ export function StaffPermissionEditor({
   const overridesInGroup = (groupKeys: PermissionKey[]) =>
     groupKeys.filter((k) => overrides[k]).length;
 
+  /**
+   * The state actually IN FORCE for a key — the individual override when one
+   * exists, otherwise the role default — collapsed to the three labels a
+   * manager reads at a glance. Every row shows this, always (never hover-only,
+   * never a bare toggle), alongside whether it came from the role or an
+   * individual override.
+   */
+  const effectiveFor = (
+    key: PermissionKey,
+  ): { label: string; tone: string; overridden: boolean } => {
+    if (ALWAYS_ON_PERMISSIONS.includes(key)) {
+      return { label: "Granted", tone: "emerald", overridden: false };
+    }
+    const ov = overrides[key];
+    const setting = ov ?? roleDefault(key);
+    const label = !setting.granted
+      ? "Not granted"
+      : setting.scope === "assigned_shifts"
+        ? "Assigned only"
+        : "Granted";
+    const tone = !setting.granted
+      ? "rose"
+      : setting.scope === "assigned_shifts"
+        ? "amber"
+        : "emerald";
+    return { label, tone, overridden: Boolean(ov) };
+  };
+
+  const TONE_CLASS: Record<string, string> = {
+    emerald:
+      "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300",
+    amber:
+      "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300",
+    rose: "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300",
+  };
+
   const activeGroup =
     PERMISSION_GROUPS.find((g) => g.id === activeGroupId) ??
     PERMISSION_GROUPS[0];
@@ -226,6 +262,7 @@ export function StaffPermissionEditor({
               const alwaysOn = ALWAYS_ON_PERMISSIONS.includes(p.key);
               const def = roleDefault(p.key);
               const value = stateFor(p.key);
+              const eff = effectiveFor(p.key);
               return (
                 <div
                   key={p.key}
@@ -240,7 +277,32 @@ export function StaffPermissionEditor({
                         {p.hint}
                       </div>
                     )}
-                    {/* Role default shown greyed behind the override */}
+                    {/* Current state + provenance, always visible: which rows
+                        are the role default and which are individual overrides. */}
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "h-4 px-1 text-[9px] font-semibold",
+                          TONE_CLASS[eff.tone],
+                        )}
+                      >
+                        {eff.label}
+                      </Badge>
+                      {eff.overridden ? (
+                        <Badge
+                          variant="outline"
+                          className="h-4 border-violet-300 bg-violet-50 px-1 text-[9px] font-semibold text-violet-700 dark:border-violet-700 dark:bg-violet-950/30 dark:text-violet-300"
+                        >
+                          Individual override
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-[9px]">
+                          Role default
+                        </span>
+                      )}
+                    </div>
+                    {/* The inherited value, so an override shows what it replaced */}
                     <div className="text-muted-foreground mt-0.5 text-[10px]">
                       Role default:{" "}
                       {def.granted

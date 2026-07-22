@@ -40,7 +40,14 @@ import {
   ArrowRight,
   ChevronDown,
   Copy,
+  Eye,
+  Ban,
 } from "lucide-react";
+import {
+  startRolePreview,
+  resolvePresetRolePermissions,
+  resolveCustomRolePermissions,
+} from "@/lib/role-preview";
 import {
   FacilityRbacProvider,
   useFacilityRbac,
@@ -501,7 +508,7 @@ function PresetRoleEditor({
   role: FacilityStaffRole;
   onDuplicate: (profile: Omit<CustomFacilityRole, "id" | "createdAt">) => void;
 }) {
-  const { presetOverrides, setPresetPermission, resetPresetRole } =
+  const { presetOverrides, setPresetPermission, resetPresetRole, customRoles } =
     useFacilityRbac();
   const meta = ROLE_META[role];
   const overrides = presetOverrides[role] ?? {};
@@ -575,6 +582,24 @@ function PresetRoleEditor({
             </div>
           </div>
           <div className="flex gap-2">
+            {/* Section 7 — QA tool: open the employee portal exactly as this
+                role sees it, reflecting the CURRENT grid state. */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                startRolePreview({
+                  label: meta.label,
+                  permissions: resolvePresetRolePermissions(role, {
+                    customRoles,
+                    presetOverrides,
+                  }),
+                });
+                window.open("/employee", "_blank", "noopener");
+              }}
+            >
+              <Eye className="size-3.5" /> Preview as employee
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -667,6 +692,11 @@ function PresetRoleEditor({
         onGrantAll={(keys) => {
           guarded(() => {
             for (const key of keys) setPresetPermission(role, key, "anytime");
+          });
+        }}
+        onRevokeAll={(keys) => {
+          guarded(() => {
+            for (const key of keys) setPresetPermission(role, key, "revoked");
           });
         }}
         showPresetOption
@@ -796,6 +826,23 @@ function CustomRoleEditor({
             </div>
           </div>
           <div className="flex gap-2">
+            {/* Section 7 — preview the portal as this custom role sees it. */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                startRolePreview({
+                  label: role.label,
+                  permissions: resolveCustomRolePermissions(
+                    role.id,
+                    customRoles,
+                  ),
+                });
+                window.open("/employee", "_blank", "noopener");
+              }}
+            >
+              <Eye className="size-3.5" /> Preview as employee
+            </Button>
             <Button variant="outline" size="sm" onClick={openEdit}>
               <Pencil className="size-3.5" /> Edit
             </Button>
@@ -854,6 +901,10 @@ function CustomRoleEditor({
         onGrantAll={(keys) => {
           for (const key of keys)
             setCustomRolePermission(role.id, key, "anytime");
+        }}
+        onRevokeAll={(keys) => {
+          // null clears the grant on a custom role → not granted.
+          for (const key of keys) setCustomRolePermission(role.id, key, null);
         }}
       />
 
@@ -916,13 +967,16 @@ export function PermissionsGrid({
   getPresetDefault,
   onChange,
   onGrantAll,
+  onRevokeAll,
   showPresetOption,
 }: {
   getValue: (key: PermissionKey) => GridValue;
   getPresetDefault?: (key: PermissionKey) => AccessScope | null;
   onChange: (key: PermissionKey, value: GridValue) => void;
-  /** "Grant all in category" — receives the group's grantable (non always-on) keys. */
+  /** Bulk grant — receives the group's grantable (non always-on) keys. */
   onGrantAll?: (keys: PermissionKey[]) => void;
+  /** Bulk revoke — receives the group's grantable (non always-on) keys. */
+  onRevokeAll?: (keys: PermissionKey[]) => void;
   showPresetOption?: boolean;
 }) {
   // Categories are accordions — collapse state per group id.
@@ -987,16 +1041,31 @@ export function PermissionsGrid({
                     <Lock className="mr-0.5 size-2.5" /> Always on
                   </Badge>
                 ) : (
-                  onGrantAll &&
                   grantableKeys.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 gap-1 px-2 text-[10px]"
-                      onClick={() => onGrantAll(grantableKeys)}
-                    >
-                      <CheckCheck className="size-3" /> Grant all
-                    </Button>
+                    // Explicit, scoped labels so a bulk change can't be mistaken
+                    // for a single-row toggle.
+                    <>
+                      {onGrantAll && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 gap-1 px-2 text-[10px]"
+                          onClick={() => onGrantAll(grantableKeys)}
+                        >
+                          <CheckCheck className="size-3" /> Grant all in section
+                        </Button>
+                      )}
+                      {onRevokeAll && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 gap-1 px-2 text-[10px] text-rose-600 hover:text-rose-700 dark:text-rose-400"
+                          onClick={() => onRevokeAll(grantableKeys)}
+                        >
+                          <Ban className="size-3" /> Revoke all in section
+                        </Button>
+                      )}
+                    </>
                   )
                 )}
                 <Badge variant="secondary" className="h-5 px-1 text-[10px]">
