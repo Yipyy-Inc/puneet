@@ -86,11 +86,18 @@ export function StatusBar({
   packages,
   activeFilter,
   onFilter,
+  canSeeAmounts = true,
 }: {
   counts: BoardCounts;
   packages: { id: string; name: string }[];
   activeFilter: string;
   onFilter: (id: string) => void;
+  /**
+   * Section 3C / Table 5 — when false (viewer lacks view_booking_financials),
+   * the Expected/Collected Revenue tiles are omitted from the DOM; the rest of
+   * the KPI row still renders. Defaults true so admin surfaces are unaffected.
+   */
+  canSeeAmounts?: boolean;
 }) {
   return (
     <div className="space-y-3">
@@ -105,20 +112,24 @@ export function StatusBar({
             tone={t.tone}
           />
         ))}
-        <KpiTile
-          label="Expected Revenue"
-          value={`$${counts.expectedRevenue.toFixed(0)}`}
-          hint="If all appointments complete"
-          icon={DollarSign}
-          tone="amber"
-        />
-        <KpiTile
-          label="Collected Revenue"
-          value={`$${counts.collectedRevenue.toFixed(0)}`}
-          hint="Paid so far today"
-          icon={DollarSign}
-          tone="emerald"
-        />
+        {canSeeAmounts && (
+          <>
+            <KpiTile
+              label="Expected Revenue"
+              value={`$${counts.expectedRevenue.toFixed(0)}`}
+              hint="If all appointments complete"
+              icon={DollarSign}
+              tone="amber"
+            />
+            <KpiTile
+              label="Collected Revenue"
+              value={`$${counts.collectedRevenue.toFixed(0)}`}
+              hint="Paid so far today"
+              icon={DollarSign}
+              tone="emerald"
+            />
+          </>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-1.5">

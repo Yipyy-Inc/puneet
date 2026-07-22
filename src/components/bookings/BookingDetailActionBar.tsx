@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import type { Booking, Invoice } from "@/types/booking";
 
 export interface DestructiveConfirmRequest {
@@ -149,6 +150,15 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
     multiLocation,
   } = props;
 
+  // Section 3B / Table 4 — action gates. usePermission is true for granted AND
+  // assigned_only (only not_granted hides). Outside the RBAC provider (admin
+  // routes) these fall back to all-access, so admin keeps every control.
+  const canEdit = usePermission("edit_bookings");
+  const canCancel = usePermission("cancel_bookings");
+  const canTakePayment = usePermission("take_payment");
+  const canRefund = usePermission("process_refund");
+  const canReportIncident = usePermission("log_incidents");
+
   const primary = getPrimaryAction(booking, isPaid, isCancelled, props);
   const isCompleted = booking.status === "completed";
   const isOpenForEdits = !isCancelled && !isCompleted && !isPaid;
@@ -174,14 +184,14 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
     booking.status === "in_progress" ||
     booking.status === "ready";
   const showSplitTips = isPaid && !isCancelled;
-  const showRefund = isPaid && !isCancelled;
+  const showRefund = isPaid && !isCancelled && canRefund;
 
   const showUndoCheckIn = booking.status === "confirmed";
   const showUndoConfirm = booking.status === "confirmed";
   const showUndoCheckout = isCompleted && !isCancelled;
   const showNoShow =
     !isCancelled && !isCompleted && (invoice?.depositCollected ?? 0) > 0;
-  const showCancel = !isCancelled && !isCompleted;
+  const showCancel = !isCancelled && !isCompleted && canCancel;
 
   const hasDestructive =
     showUndoCheckIn ||
@@ -190,16 +200,32 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
     showNoShow ||
     showCancel;
 
-  // Report Incident is always available — an incident can be filed against any
-  // booking regardless of status — so the More menu always renders.
-  const hasMoreItems = true;
+  // Report Incident can be filed against any booking regardless of status, but
+  // only when the viewer has log_incidents. Other More items are status-gated;
+  // the menu renders iff at least one item is visible.
+  const hasLifecycleMoreItems =
+    showSendEstimate ||
+    showMarkAsReady ||
+    showEarlyCheckout ||
+    showFinishWithoutPayment ||
+    showTransfer ||
+    showSplitTips ||
+    showRefund;
+  const hasMoreItems = canReportIncident || hasLifecycleMoreItems;
+
+  // A payment-collection primary (Take Payment / Proceed to Checkout) needs
+  // take_payment; Confirm / Check In are lifecycle steps and stay ungated.
+  const primaryIsPayment =
+    primary?.label === "Take Payment" ||
+    primary?.label === "Proceed to Checkout";
+  const showPrimary = primary != null && (!primaryIsPayment || canTakePayment);
 
   const requestConfirm = props.requestDestructiveConfirm;
 
   return (
     <div className="border-border/50 mt-4 space-y-3 border-t pt-4">
       {/* Row 1 — Primary action */}
-      {primary && (
+      {primary && showPrimary && (
         <div className="flex items-center gap-2">
           <Button
             size="lg"
@@ -219,7 +245,7 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
 
       {/* Row 2 — Secondary actions */}
       <div className="flex flex-wrap items-center gap-2">
-        {isOpenForEdits && (
+        {isOpenForEdits && canEdit && (
           <Button
             variant="outline"
             size="sm"
@@ -241,7 +267,7 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
             Add Item
           </Button>
         )}
-        {showChargeDeposit && (
+        {showChargeDeposit && canTakePayment && (
           <Button
             variant="outline"
             size="sm"
@@ -252,7 +278,7 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
             Charge Deposit
           </Button>
         )}
-        {showTakePrepayment && (
+        {showTakePrepayment && canTakePayment && (
           <Button
             variant="outline"
             size="sm"
@@ -318,16 +344,20 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
-              {/* Report Incident — a different kind of action, kept first and
-                  divided off from the booking-lifecycle items below. */}
-              <DropdownMenuItem
-                onClick={props.onReportIncident}
-                className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
-              >
-                <Siren className="size-4" />
-                Report Incident
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              {/* Report Incident (log_incidents) — a different kind of action,
+                  kept first and divided off from the lifecycle items below. */}
+              {canReportIncident && (
+                <DropdownMenuItem
+                  onClick={props.onReportIncident}
+                  className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
+                >
+                  <Siren className="size-4" />
+                  Report Incident
+                </DropdownMenuItem>
+              )}
+              {canReportIncident && hasLifecycleMoreItems && (
+                <DropdownMenuSeparator />
+              )}
               {showSendEstimate && (
                 <DropdownMenuItem onClick={props.onSendEstimate}>
                   <Send className="size-4" />

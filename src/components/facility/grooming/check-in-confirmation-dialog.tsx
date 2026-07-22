@@ -28,6 +28,9 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { usePermission } from "@/hooks/use-facility-rbac";
+import { useAssignedScope } from "@/lib/facility-permissions";
+import { stylistIdForStaff } from "@/lib/api/grooming";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
 import { isStationEligibleForPetSize } from "@/components/rooms/GroomingStationsClient";
 import { groomingAddOnsList } from "@/data/grooming-pricing-rules";
@@ -228,6 +231,17 @@ export function CheckInConfirmationDialog({
   // when the photo is removed or the dialog closes to avoid blob leaks.
   const [beforePhotos, setBeforePhotos] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Section 3B / Table 4 — pre-groom photo step requires grooming_upload_photos
+  // (all-access fallback keeps it for admin outside the RBAC provider). Check-in
+  // confirm doesn't require a photo, so hiding the step never blocks the flow.
+  // Section 5A — when assigned_only, the step shows only on the viewer's OWN
+  // appointments.
+  const photoScope = useAssignedScope("grooming_upload_photos");
+  const isOwnAppointment =
+    photoScope == null ||
+    (apt != null && stylistIdForStaff(photoScope) === apt.stylistId);
+  const canUploadPhotos =
+    usePermission("grooming_upload_photos") && isOwnAppointment;
   // Estimated ready time — auto-computed from check-in time + service +
   // add-ons; staff can adjust before confirming.
   const [estimatedReadyTime, setEstimatedReadyTime] = useState<string>("");
@@ -702,81 +716,84 @@ export function CheckInConfirmationDialog({
           </div>
         </Section>
 
-        <Separator />
+        {canUploadPhotos && <Separator />}
 
-        {/* 3 · Pre-groom photo — liability protection. Stored on the
-              appointment intake and on the pet's photo history so the
-              before-after comparison and any future dispute have evidence. */}
-        <Section
-          step={3}
-          icon={Camera}
-          title="Pre-groom photo"
-          subtitle="Snap 1–3 quick shots of the coat before you start."
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            // capture="environment" opens the rear camera on mobile devices;
-            // desktops fall back to the file picker, which is fine for staff
-            // tablets in the salon.
-            capture="environment"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              handlePhotoSelect(e.target.files);
-              // Reset so picking the same file twice in a row still fires
-              // onChange (browsers skip the event when value is identical).
-              e.target.value = "";
-            }}
-          />
-          <div className="grid grid-cols-3 gap-2">
-            {Array.from({ length: MAX_BEFORE_PHOTOS }).map((_, i) => {
-              const url = beforePhotos[i];
-              if (url) {
-                return (
-                  <div
-                    key={i}
-                    className="bg-muted relative aspect-square overflow-hidden rounded-lg border"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={url}
-                      alt={`Before-groom photo ${i + 1}`}
-                      className="size-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handlePhotoRemove(i)}
-                      title="Remove this photo"
-                      className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-black/60 text-white shadow-sm hover:bg-black/80"
+        {/* 3 · Pre-groom photo — grooming_upload_photos (3B/Table 4). Liability
+              protection: stored on the appointment intake and the pet's photo
+              history so the before-after comparison and any dispute have
+              evidence. */}
+        {canUploadPhotos && (
+          <Section
+            step={3}
+            icon={Camera}
+            title="Pre-groom photo"
+            subtitle="Snap 1–3 quick shots of the coat before you start."
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              // capture="environment" opens the rear camera on mobile devices;
+              // desktops fall back to the file picker, which is fine for staff
+              // tablets in the salon.
+              capture="environment"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                handlePhotoSelect(e.target.files);
+                // Reset so picking the same file twice in a row still fires
+                // onChange (browsers skip the event when value is identical).
+                e.target.value = "";
+              }}
+            />
+            <div className="grid grid-cols-3 gap-2">
+              {Array.from({ length: MAX_BEFORE_PHOTOS }).map((_, i) => {
+                const url = beforePhotos[i];
+                if (url) {
+                  return (
+                    <div
+                      key={i}
+                      className="bg-muted relative aspect-square overflow-hidden rounded-lg border"
                     >
-                      <X className="size-3" />
-                    </button>
-                  </div>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={`Before-groom photo ${i + 1}`}
+                        className="size-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handlePhotoRemove(i)}
+                        title="Remove this photo"
+                        className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-black/60 text-white shadow-sm hover:bg-black/80"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </div>
+                  );
+                }
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="bg-muted/30 text-muted-foreground hover:bg-muted/60 flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed"
+                  >
+                    <Camera className="size-5" />
+                    <span className="text-[10px] font-medium tracking-wide uppercase">
+                      {beforePhotos.length === 0 ? "Take photo" : "Add"}
+                    </span>
+                  </button>
                 );
-              }
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-muted/30 text-muted-foreground hover:bg-muted/60 flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed"
-                >
-                  <Camera className="size-5" />
-                  <span className="text-[10px] font-medium tracking-wide uppercase">
-                    {beforePhotos.length === 0 ? "Take photo" : "Add"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-muted-foreground mt-2 text-[10px]">
-            {beforePhotos.length}/{MAX_BEFORE_PHOTOS} photos · saved to this
-            appointment and {apt.petName}&rsquo;s profile for the before/after
-            comparison.
-          </p>
-        </Section>
+              })}
+            </div>
+            <p className="text-muted-foreground mt-2 text-[10px]">
+              {beforePhotos.length}/{MAX_BEFORE_PHOTOS} photos · saved to this
+              appointment and {apt.petName}&rsquo;s profile for the before/after
+              comparison.
+            </p>
+          </Section>
+        )}
 
         <Separator />
 

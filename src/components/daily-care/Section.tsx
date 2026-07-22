@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -166,10 +167,21 @@ export function Section({
   // Feeding's serve step carries no per-pet outcome, so it can be batch-served
   // (consumption is still logged individually afterwards) — like water/kennel.
   const isFeedingStep = step.taskType === "feeding";
+  // Section 5D: the batch action is a logging action, so it needs the same key
+  // the individual rows do (feeding → log_feedings, medication → log_medications).
+  const canLogFeedings = usePermission("log_feedings");
+  const canLogMedications = usePermission("log_medications");
+  const canLogStep =
+    step.taskType === "feeding"
+      ? canLogFeedings
+      : step.taskType === "medication"
+        ? canLogMedications
+        : true;
   const batchAllowed =
-    step.taskType === "water_refill" ||
-    step.taskType === "kennel_clean" ||
-    isFeedingStep;
+    (step.taskType === "water_refill" ||
+      step.taskType === "kennel_clean" ||
+      isFeedingStep) &&
+    canLogStep;
   const defaultOutcome = tasks[0]
     ? defaultOutcomeFor(tasks[0].taskType)
     : undefined;

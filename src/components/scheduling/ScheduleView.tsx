@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import {
   logShiftCreated,
   logShiftUpdated,
@@ -84,6 +85,11 @@ const schedulingSettings = {
 export function ScheduleView() {
   const { user, can } = useCurrentUser();
   const canViewPayRates = can("payroll.view");
+  // Section 5E — editing shifts (opening the edit dialog, drag move/copy)
+  // requires scheduling_edit_shifts; creating requires scheduling_create_shifts.
+  // All-access fallback keeps admin intact.
+  const canEditShifts = usePermission("scheduling_edit_shifts");
+  const canCreateShifts = usePermission("scheduling_create_shifts");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [selectedDepartment, setSelectedDepartment] = useState<Department>(
@@ -342,11 +348,16 @@ export function ScheduleView() {
   // ─── Shift handlers ──────────────────────────────────────────────────────
 
   const handleShiftClick = (shift: ScheduleShift) => {
+    // Section 5E — without scheduling_edit_shifts the schedule is view-only:
+    // clicking a shift must NOT open the editable dialog.
+    if (!canEditShifts) return;
     setEditingShift(shift);
     setAddShiftOpen(true);
   };
 
   const handleCellClick = (employeeId: string | undefined, date: string) => {
+    // 5E: empty-cell "click to create" is a create action.
+    if (!canCreateShifts) return;
     setDefaultShiftEmployee(employeeId);
     setDefaultShiftDate(date);
     setEditingShift(null);
@@ -408,6 +419,8 @@ export function ScheduleView() {
 
   const handleMoveShift = useCallback(
     (shiftId: string, newEmployeeId: string | undefined, newDate: string) => {
+      // 5E: drag-move is an edit — no-op without scheduling_edit_shifts.
+      if (!canEditShifts) return;
       const original = shifts.find((s) => s.id === shiftId);
       setShifts((prev) =>
         prev.map((s) =>
@@ -437,11 +450,13 @@ export function ScheduleView() {
       }
       toast.success("Shift moved");
     },
-    [shifts, deptEmployees, buildShiftCtx, diffShifts],
+    [shifts, deptEmployees, buildShiftCtx, diffShifts, canEditShifts],
   );
 
   const handleCopyShift = useCallback(
     (shiftId: string, newEmployeeId: string | undefined, newDate: string) => {
+      // 5E: drag-copy is an edit — no-op without scheduling_edit_shifts.
+      if (!canEditShifts) return;
       const copyId = `shift-copy-${Date.now()}`;
       let copied: ScheduleShift | null = null;
       setShifts((prev) => {
@@ -460,7 +475,7 @@ export function ScheduleView() {
       if (copied) logShiftCopied(buildShiftCtx(copied));
       toast.success("Shift copied");
     },
-    [buildShiftCtx],
+    [buildShiftCtx, canEditShifts],
   );
 
   const handleAssignShift = useCallback(

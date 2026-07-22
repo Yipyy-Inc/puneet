@@ -44,6 +44,11 @@ import { getClientRetailPurchases } from "@/data/retail";
 import { getIncidentsForClient, getIncidentsForPet } from "@/data/incidents";
 import { IncidentDetailsModal } from "@/components/incidents/IncidentDetailsModal";
 import { useFieldMask } from "@/lib/staff/mask";
+import { usePermission } from "@/hooks/use-facility-rbac";
+import { useAssignedScope } from "@/lib/facility-permissions";
+import { isClientAssignedTo } from "@/lib/api/client";
+import { isPetAssignedTo } from "@/lib/api/booking";
+import { AccessRestricted } from "@/components/employee/AccessRestricted";
 import type { Evaluation } from "@/types/pet";
 import type { Incident } from "@/types/incidents";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -164,6 +169,15 @@ export default function ClientDetailPage({
   // Field masking (spec Table 21): hide contact info, LTV, and financial amounts
   // from staff without the required permission. TODO: also strip server-side.
   const { maskContact, maskAmount, canSee } = useFieldMask();
+  // Section 3B / Table 4 — message-client controls (communicate_clients).
+  const canMessageClient = usePermission("communicate_clients");
+  // Section 3C / Table 5 — OMIT (not grey) the Billing tab without
+  // view_client_financial, and the Address section without view_client_address.
+  const canSeeClientFinancial = canSee("client_financial");
+  const canSeeClientAddress = canSee("client_address");
+  // Section 8B: viewer's fs-* id when view_clients is assigned_only, else
+  // undefined. Used below to 403 on a client outside the viewer's assigned set.
+  const assignedClientScope = useAssignedScope("view_clients");
   const resumedBookingRef = useRef<string | null>(null);
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const [petActiveTab, setPetActiveTab] = useState("overview");
@@ -258,6 +272,13 @@ export default function ClientDetailPage({
         </div>
       </div>
     );
+  }
+
+  // Section 8B / Part 0.3: a scoped viewer opening a client outside their
+  // assigned set is a 403 — render the branded access screen, never the record.
+  // (Admin / full-access viewers have assignedClientScope === undefined.)
+  if (assignedClientScope && !isClientAssignedTo(client, assignedClientScope)) {
+    return <AccessRestricted />;
   }
 
   // Get client-specific data
@@ -565,14 +586,18 @@ export default function ClientDetailPage({
                   Settings
                 </Link>
               </Button>
-              <Button variant="outline" size="sm">
-                <Mail className="mr-1 size-4" />
-                Email
-              </Button>
-              <Button variant="outline" size="sm">
-                <PhoneCall className="mr-1 size-4" />
-                Call
-              </Button>
+              {canMessageClient && (
+                <Button variant="outline" size="sm">
+                  <Mail className="mr-1 size-4" />
+                  Email
+                </Button>
+              )}
+              {canMessageClient && (
+                <Button variant="outline" size="sm">
+                  <PhoneCall className="mr-1 size-4" />
+                  Call
+                </Button>
+              )}
               <Button
                 size="sm"
                 onClick={() => {
@@ -655,11 +680,29 @@ export default function ClientDetailPage({
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+      <Tabs
+        // Guard: without view_client_financial the Billing tab is omitted, so
+        // never resolve to it (Radix unmounts inactive content → not in DOM).
+        value={
+          activeTab === "billing" && !canSeeClientFinancial
+            ? "overview"
+            : activeTab
+        }
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
+        <TabsList
+          className={cn(
+            "grid w-full",
+            canSeeClientFinancial ? "grid-cols-6" : "grid-cols-5",
+          )}
+        >
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="pets">Pets ({client.pets.length})</TabsTrigger>
-          <TabsTrigger value="billing">Billing</TabsTrigger>
+          {/* Billing tab — omitted without view_client_financial (3C/Table 5) */}
+          {canSeeClientFinancial && (
+            <TabsTrigger value="billing">Billing</TabsTrigger>
+          )}
           <TabsTrigger value="purchases">
             Purchases ({clientRetailPurchases.length})
           </TabsTrigger>
@@ -767,127 +810,130 @@ export default function ClientDetailPage({
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                  <MapPin className="size-4" />
-                  Address
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {isEditing ? (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="street">Street</Label>
-                      <Input
-                        id="street"
-                        value={editedClient.address.street}
-                        onChange={(e) =>
-                          setEditedClient({
-                            ...editedClient,
-                            address: {
-                              ...editedClient.address,
-                              street: e.target.value,
-                            },
-                          })
-                        }
-                      />
+            {/* Address section — omitted without view_client_address (3C/Table 5) */}
+            {canSeeClientAddress && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                    <MapPin className="size-4" />
+                    Address
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {isEditing ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="street">Street</Label>
+                        <Input
+                          id="street"
+                          value={editedClient.address.street}
+                          onChange={(e) =>
+                            setEditedClient({
+                              ...editedClient,
+                              address: {
+                                ...editedClient.address,
+                                street: e.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="city">City</Label>
+                          <Input
+                            id="city"
+                            value={editedClient.address.city}
+                            onChange={(e) =>
+                              setEditedClient({
+                                ...editedClient,
+                                address: {
+                                  ...editedClient.address,
+                                  city: e.target.value,
+                                },
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="state">State</Label>
+                          <Input
+                            id="state"
+                            value={editedClient.address.state}
+                            onChange={(e) =>
+                              setEditedClient({
+                                ...editedClient,
+                                address: {
+                                  ...editedClient.address,
+                                  state: e.target.value,
+                                },
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="zip">ZIP</Label>
+                          <Input
+                            id="zip"
+                            value={editedClient.address.zip}
+                            onChange={(e) =>
+                              setEditedClient({
+                                ...editedClient,
+                                address: {
+                                  ...editedClient.address,
+                                  zip: e.target.value,
+                                },
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="country">Country</Label>
+                          <Input
+                            id="country"
+                            value={editedClient.address.country}
+                            onChange={(e) =>
+                              setEditedClient({
+                                ...editedClient,
+                                address: {
+                                  ...editedClient.address,
+                                  country: e.target.value,
+                                },
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                    </>
+                  ) : client.address && !canSee("client_address") ? (
+                    <div className="bg-muted/50 rounded-lg p-2.5">
+                      <p className="text-muted-foreground text-sm font-medium">
+                        Hidden
+                      </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="city">City</Label>
-                        <Input
-                          id="city"
-                          value={editedClient.address.city}
-                          onChange={(e) =>
-                            setEditedClient({
-                              ...editedClient,
-                              address: {
-                                ...editedClient.address,
-                                city: e.target.value,
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="state">State</Label>
-                        <Input
-                          id="state"
-                          value={editedClient.address.state}
-                          onChange={(e) =>
-                            setEditedClient({
-                              ...editedClient,
-                              address: {
-                                ...editedClient.address,
-                                state: e.target.value,
-                              },
-                            })
-                          }
-                        />
-                      </div>
+                  ) : client.address ? (
+                    <div className="bg-muted/50 rounded-lg p-2.5">
+                      <p className="text-sm font-medium">
+                        {client.address.street}
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        {client.address.city}, {client.address.state}{" "}
+                        {client.address.zip}
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        {client.address.country}
+                      </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="zip">ZIP</Label>
-                        <Input
-                          id="zip"
-                          value={editedClient.address.zip}
-                          onChange={(e) =>
-                            setEditedClient({
-                              ...editedClient,
-                              address: {
-                                ...editedClient.address,
-                                zip: e.target.value,
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="country">Country</Label>
-                        <Input
-                          id="country"
-                          value={editedClient.address.country}
-                          onChange={(e) =>
-                            setEditedClient({
-                              ...editedClient,
-                              address: {
-                                ...editedClient.address,
-                                country: e.target.value,
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                  </>
-                ) : client.address && !canSee("client_address") ? (
-                  <div className="bg-muted/50 rounded-lg p-2.5">
-                    <p className="text-muted-foreground text-sm font-medium">
-                      Hidden
+                  ) : (
+                    <p className="text-muted-foreground py-4 text-center text-sm">
+                      No address on file
                     </p>
-                  </div>
-                ) : client.address ? (
-                  <div className="bg-muted/50 rounded-lg p-2.5">
-                    <p className="text-sm font-medium">
-                      {client.address.street}
-                    </p>
-                    <p className="text-muted-foreground text-sm">
-                      {client.address.city}, {client.address.state}{" "}
-                      {client.address.zip}
-                    </p>
-                    <p className="text-muted-foreground text-sm">
-                      {client.address.country}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground py-4 text-center text-sm">
-                    No address on file
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>
@@ -2897,6 +2943,18 @@ function PetDetailContent({
     expiredVaccinations,
     upcomingVaccinations,
   } = getPetData(pet);
+
+  // Section 5C — pet-level gates.
+  // • view_pet_medical: the Medical & Diet card is only visible when granted.
+  // • add_pet_notes: "Add Note" shows only when granted, and when the key is
+  //   assigned_only, only on pets the viewer is actually assigned to.
+  const canSeePetMedical = usePermission("view_pet_medical");
+  const canAddPetNotes = usePermission("add_pet_notes");
+  const petNotesScope = useAssignedScope("add_pet_notes");
+  const petIsAssigned =
+    petNotesScope == null || isPetAssignedTo(pet.id, petNotesScope);
+  const canAddNoteForThisPet = canAddPetNotes && petIsAssigned;
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -3037,31 +3095,36 @@ function PetDetailContent({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold">
-                Medical & Diet Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-muted-foreground mb-1 text-sm">Allergies</p>
-                <Badge
-                  variant={
-                    pet.allergies !== "None" ? "destructive" : "secondary"
-                  }
-                >
-                  {pet.allergies}
-                </Badge>
-              </div>
-              <div>
-                <p className="text-muted-foreground mb-1 text-sm">
-                  Special Needs
-                </p>
-                <p className="text-sm">{pet.specialNeeds}</p>
-              </div>
-            </CardContent>
-          </Card>
+          {/* 5C: medical records visible only with view_pet_medical. */}
+          {canSeePetMedical && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold">
+                  Medical & Diet Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-muted-foreground mb-1 text-sm">
+                    Allergies
+                  </p>
+                  <Badge
+                    variant={
+                      pet.allergies !== "None" ? "destructive" : "secondary"
+                    }
+                  >
+                    {pet.allergies}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-1 text-sm">
+                    Special Needs
+                  </p>
+                  <p className="text-sm">{pet.specialNeeds}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Photos Tab */}
@@ -3122,7 +3185,13 @@ function PetDetailContent({
               <CardTitle className="text-sm font-semibold">Pet Notes</CardTitle>
             </CardHeader>
             <CardContent>
-              <NotesList category="pet" entityId={pet.id} />
+              {/* 5C: "Add Note" only when add_pet_notes is granted — and, when
+                  assigned_only, only on the viewer's own assigned pets. */}
+              <NotesList
+                category="pet"
+                entityId={pet.id}
+                readOnly={!canAddNoteForThisPet}
+              />
             </CardContent>
           </Card>
         </TabsContent>

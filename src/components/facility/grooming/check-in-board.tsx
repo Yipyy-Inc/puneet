@@ -30,6 +30,9 @@ import { NewAppointmentDialog } from "./new-appointment-dialog";
 import { StatusBar } from "./check-in-board-status-bar";
 import { GroomerColumn } from "./check-in-board-column";
 import { WaitlistRow } from "./check-in-board-waitlist";
+import { usePermission } from "@/hooks/use-facility-rbac";
+import { useAssignedScope } from "@/lib/facility-permissions";
+import { stylistIdForStaff } from "@/lib/api/grooming";
 
 type DialogKind = "check-in" | "mark-ready" | "payment" | null;
 
@@ -58,6 +61,16 @@ function useNowMin(): number | null {
 export function CheckInBoard() {
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
   const nowMin = useNowMin();
+  // Section 3C / Table 5 — hide the revenue KPI tiles from staff without
+  // view_booking_financials (all-access fallback keeps them for admin).
+  const canSeeAmounts = usePermission("view_booking_financials");
+  // Section 5A: when view_grooming_queue resolves to assigned_only, every
+  // groomer column still renders, but only the VIEWER's column carries cards +
+  // action buttons. Undefined for full-access viewers (admin) → unchanged.
+  const queueScope = useAssignedScope("view_grooming_queue");
+  const viewerStylistId = queueScope
+    ? stylistIdForStaff(queueScope)
+    : undefined;
 
   const { data: apptData = [] } = useQuery(groomingQueries.appointments());
   const { data: stylistData = [] } = useQuery(groomingQueries.stylists());
@@ -300,6 +313,7 @@ export function CheckInBoard() {
         packages={packagePills}
         activeFilter={packageFilter}
         onFilter={setPackageFilter}
+        canSeeAmounts={canSeeAmounts}
       />
 
       {/* Zone 2 · Groomer Columns */}
@@ -322,16 +336,22 @@ export function CheckInBoard() {
                 a.status !== "cancelled" &&
                 a.status !== "no-show",
             ).length;
+            // 5A: scoped viewers see every column, but cards + actions only in
+            // their own. The column header (name + count) still renders so the
+            // board reads the same as admin's.
+            const isOwnColumn =
+              viewerStylistId == null || stylist.id === viewerStylistId;
             return (
               <GroomerColumn
                 key={stylist.id}
                 name={stylist.name}
                 photoUrl={stylist.photoUrl}
                 count={activeCount}
-                appointments={dayAppts}
+                appointments={isOwnColumn ? dayAppts : []}
                 alertCountById={alertCountById}
                 nowMin={nowMin}
                 actions={columnActions}
+                restricted={!isOwnColumn}
               />
             );
           })}

@@ -38,6 +38,8 @@ import {
   type GroomingPhoto,
 } from "@/data/grooming";
 import { getCurrentUserId } from "@/lib/role-utils";
+import { useAssignedScope } from "@/lib/facility-permissions";
+import { stylistIdForStaff } from "@/lib/api/grooming";
 import { sendPickupNotifications } from "@/lib/grooming-pickup-notifications";
 
 const statusColors: Record<
@@ -105,10 +107,20 @@ export default function GroomerDashboardPage() {
     return stylists.find((s) => s.id === userId || s.email === userId) || null;
   }, [userId]);
 
-  // Use first stylist as default if no user is set
+  // Section 8B: in the employee portal (view_grooming_queue = assigned_only),
+  // scope the queue to the ACTING viewer's stylist via the data-layer resolver
+  // — not getCurrentUserId / stylists[0]. Undefined outside the RBAC provider
+  // (the /groomer portal), so that path falls back unchanged.
+  const groomingScope = useAssignedScope("view_grooming_queue");
+
   const displayStylist = useMemo(() => {
+    if (groomingScope) {
+      const sid = stylistIdForStaff(groomingScope);
+      const own = sid ? stylists.find((s) => s.id === sid) : null;
+      if (own) return own;
+    }
     return currentStylist || stylists[0] || null;
-  }, [currentStylist]);
+  }, [groomingScope, currentStylist]);
 
   // Get today's appointments for this groomer
   const todayAppointments = useMemo(() => {

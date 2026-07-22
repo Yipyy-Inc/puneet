@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -55,6 +56,9 @@ export function IncidentDetailsModal({
   incident,
   onClose,
 }: IncidentDetailsModalProps) {
+  // Section 5G — mutating an incident (status change / close) requires
+  // ops_incidents_manage; viewing it only requires ops_incidents_view.
+  const canManageIncidents = usePermission("ops_incidents_manage");
   const [status, setStatus] = useState<
     "open" | "investigating" | "resolved" | "closed"
   >(incident.status);
@@ -201,25 +205,33 @@ export function IncidentDetailsModal({
                   <span className="font-semibold capitalize">{status}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Select value={status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="open">Open</SelectItem>
-                    <SelectItem value="investigating">Investigating</SelectItem>
-                    <SelectItem value="resolved">Resolved</SelectItem>
-                    <SelectItem value="closed">Closed</SelectItem>
-                  </SelectContent>
-                </Select>
-                {status !== "closed" && (
-                  <Button variant="default" onClick={handleCloseIncident}>
-                    <CheckCircle2 className="mr-2 size-4" />
-                    Close Incident
-                  </Button>
-                )}
-              </div>
+              {/* Section 5G — the status dropdown and Close Incident are the
+                  incident-management controls: absent without
+                  ops_incidents_manage, even when ops_incidents_view is granted
+                  (the incident stays readable, just not mutable). */}
+              {canManageIncidents && (
+                <div className="flex items-center gap-3">
+                  <Select value={status} onValueChange={handleStatusChange}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="open">Open</SelectItem>
+                      <SelectItem value="investigating">
+                        Investigating
+                      </SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {status !== "closed" && (
+                    <Button variant="default" onClick={handleCloseIncident}>
+                      <CheckCircle2 className="mr-2 size-4" />
+                      Close Incident
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
             {status === "closed" && incident.closedBy && (
               <div className="bg-muted mt-3 rounded-lg p-3">

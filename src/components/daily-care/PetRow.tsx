@@ -25,6 +25,7 @@ import {
 } from "./outcome-meta";
 import { UtensilsCrossed } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import { petFlagsStore } from "@/data/pet-flags-store";
 import type { ScheduledTask, TaskExecution } from "@/types/care-log";
 
@@ -92,6 +93,19 @@ export function PetRow({ task, execution, date, onLog, onQuickLog }: Props) {
       toast(`Flag cleared for ${task.petName}.`);
     }
   };
+
+  // Section 5D — logging is gated per task type: feeding rows need
+  // log_feedings, medication rows need log_medications. Without the key the row
+  // still renders (read-only) — only its action buttons go. Other task types
+  // (potty / care / add-ons) are unaffected here.
+  const canLogFeedings = usePermission("log_feedings");
+  const canLogMedications = usePermission("log_medications");
+  const canLogThisTask =
+    task.taskType === "feeding"
+      ? canLogFeedings
+      : task.taskType === "medication"
+        ? canLogMedications
+        : true;
 
   const initial = task.petName.charAt(0);
   // Feeding is two-step: a record with the "served" sentinel means the food is
@@ -257,17 +271,21 @@ export function PetRow({ task, execution, date, onLog, onQuickLog }: Props) {
               <Check className="size-3" />
               Done
             </Badge>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onLog}
-              className="text-muted-foreground size-7"
-              aria-label={`Edit log for ${task.petName}`}
-            >
-              <Pencil className="size-3.5" />
-            </Button>
+            {/* Section 5D: without the log key this row is read-only — the
+                outcome stays visible, the edit affordance goes. */}
+            {canLogThisTask && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onLog}
+                className="text-muted-foreground size-7"
+                aria-label={`Edit log for ${task.petName}`}
+              >
+                <Pencil className="size-3.5" />
+              </Button>
+            )}
           </>
-        ) : isServed ? (
+        ) : !canLogThisTask ? null : isServed ? (
           // Feeding step 2: food is down, record how much they ate.
           <Button
             size="sm"

@@ -31,6 +31,7 @@ import { AutoAppliedBenefits } from "@/components/bookings/AutoAppliedBenefits";
 import { CareCompletionInlineBanner } from "@/components/bookings/CareCompletionWarning";
 import type { PendingCareItem } from "@/lib/care-completion";
 import { DASH, useFieldMask } from "@/lib/staff/mask";
+import { usePermission } from "@/hooks/use-facility-rbac";
 
 const STATUS_CONFIG: Record<
   string,
@@ -82,6 +83,9 @@ export function InvoicePanel({
   // The whole panel is monetary, so gate it wholesale. TODO: also strip
   // server-side when a backend exists.
   const { canSee } = useFieldMask();
+  // Section 3B / Table 4 — Apply Discount gate (apply_discount). All-access
+  // fallback outside the RBAC provider keeps the admin control visible.
+  const canApplyDiscount = usePermission("apply_discount");
   const showAmounts = canSee("financial_amounts");
 
   const status = STATUS_CONFIG[invoice.status] ?? STATUS_CONFIG.estimate;
@@ -615,38 +619,40 @@ export function InvoicePanel({
             <Separator />
             <div className="space-y-2">
               <div className="flex flex-wrap gap-1.5">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 gap-1 text-[10px]"
-                    >
-                      <Percent className="size-3" />
-                      Discount
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent side="top" align="start" className="w-52">
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium">Apply Discount</p>
-                      <Input
-                        placeholder="Amount or %"
-                        className="h-7 text-xs"
-                      />
-                      <Input
-                        placeholder="Reason (e.g. Loyalty 10%)"
-                        className="h-7 text-xs"
-                      />
+                {canApplyDiscount && (
+                  <Popover>
+                    <PopoverTrigger asChild>
                       <Button
+                        variant="outline"
                         size="sm"
-                        className="h-7 w-full text-xs"
-                        onClick={() => toast.success("Discount applied")}
+                        className="h-7 gap-1 text-[10px]"
                       >
-                        Apply
+                        <Percent className="size-3" />
+                        Discount
                       </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                    </PopoverTrigger>
+                    <PopoverContent side="top" align="start" className="w-52">
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium">Apply Discount</p>
+                        <Input
+                          placeholder="Amount or %"
+                          className="h-7 text-xs"
+                        />
+                        <Input
+                          placeholder="Reason (e.g. Loyalty 10%)"
+                          className="h-7 text-xs"
+                        />
+                        <Button
+                          size="sm"
+                          className="h-7 w-full text-xs"
+                          onClick={() => toast.success("Discount applied")}
+                        >
+                          Apply
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
                 <Button
                   variant="outline"
                   size="sm"

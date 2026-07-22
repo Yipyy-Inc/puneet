@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import { ReportSheet } from "./report-sheet";
 
 type ReportTier = "Essential" | "Beneficial";
@@ -589,6 +590,9 @@ export function ReportsHub({
 }) {
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState<"all" | ReportTier>("all");
+  // Section 3C / Table 5 — omit the revenue/financial KPI tiles without
+  // view_revenue (all-access fallback keeps them for admin).
+  const canSeeRevenue = usePermission("view_revenue");
   const [openReportId, setOpenReportId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -630,13 +634,20 @@ export function ReportsHub({
         </p>
       </div>
 
-      {/* ── KPIs ── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <KpiTile
-          label="Revenue (MTD)"
-          value={`$${kpis.totalRevenue.toLocaleString("en-US", { maximumFractionDigits: 0 })}`}
-          sub="Month to date"
-        />
+      {/* ── KPIs ── Revenue (MTD) + Avg Order omitted without view_revenue (3C) */}
+      <div
+        className={cn(
+          "grid grid-cols-2 gap-3 sm:grid-cols-3",
+          canSeeRevenue ? "lg:grid-cols-6" : "lg:grid-cols-4",
+        )}
+      >
+        {canSeeRevenue && (
+          <KpiTile
+            label="Revenue (MTD)"
+            value={`$${kpis.totalRevenue.toLocaleString("en-US", { maximumFractionDigits: 0 })}`}
+            sub="Month to date"
+          />
+        )}
         <KpiTile
           label="Bookings (MTD)"
           value={kpis.totalBookings.toString()}
@@ -657,11 +668,13 @@ export function ReportsHub({
           value={kpis.activeClients.toString()}
           sub="With bookings"
         />
-        <KpiTile
-          label="Avg Order"
-          value={`$${kpis.aov.toFixed(0)}`}
-          sub="Per booking"
-        />
+        {canSeeRevenue && (
+          <KpiTile
+            label="Avg Order"
+            value={`$${kpis.aov.toFixed(0)}`}
+            sub="Per booking"
+          />
+        )}
       </div>
 
       {/* ── Tier legend ── */}

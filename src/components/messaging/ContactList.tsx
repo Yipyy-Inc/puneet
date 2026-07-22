@@ -25,6 +25,9 @@ import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import { threadMeta as defaultThreadMeta } from "@/data/messaging";
 import { useFacilityRole } from "@/hooks/use-facility-role";
+import { usePermission } from "@/hooks/use-facility-rbac";
+import { useAssignedScope } from "@/lib/facility-permissions";
+import { assignedClientIds } from "@/lib/api/client";
 import { getCustomerLanguageLabel } from "@/lib/language-settings";
 import { ConversationRow } from "./ConversationRow";
 import { useConversationState } from "./conversation-state-context";
@@ -137,8 +140,29 @@ export function ContactList({
   const canPurchase =
     !isCustomerMode && (role === "owner" || role === "manager");
   const conversationState = useConversationState();
+  // ── Section 5F — inbox gating (facility/employee only; never the customer
+  // portal, where the owner is looking at their own threads).
+  // • messages_view_inbox = assigned_only → the thread list is scoped to the
+  //   viewer's assigned-client conversations (data-layer helper).
+  // • messages_view_all_threads not_granted → the "All" filter is absent and
+  //   the list defaults to the viewer's own threads.
+  // • messages_send = assigned_only → you cannot start a conversation with a
+  //   client you aren't assigned to.
+  const inboxScope = useAssignedScope("messages_view_inbox");
+  const sendScope = useAssignedScope("messages_send");
+  const canSend = usePermission("messages_send");
+  const canSeeAllThreads = usePermission("messages_view_all_threads");
+  const assignedClients = useMemo(
+    () =>
+      isCustomerMode || (inboxScope == null && sendScope == null)
+        ? null
+        : assignedClientIds(inboxScope ?? sendScope ?? ""),
+    [isCustomerMode, inboxScope, sendScope],
+  );
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>(
+    !isCustomerMode && !canSeeAllThreads ? "assigned_me" : "all",
+  );
   const [compose, setCompose] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
   const [starredIds, setStarredIds] = useState<Set<string>>(
@@ -168,15 +192,21 @@ export function ContactList({
   );
 
   const clientResults = useMemo(() => {
-    if (!clientSearch.trim()) return clients.slice(0, 10);
+    // 5F: with messages_send = assigned_only you can only start a conversation
+    // with a client you're assigned to — non-assigned clients aren't offered.
+    const pool =
+      sendScope != null && assignedClients
+        ? clients.filter((c) => assignedClients.has(c.id))
+        : clients;
+    if (!clientSearch.trim()) return pool.slice(0, 10);
     const q = clientSearch.toLowerCase();
-    return clients
+    return pool
       .filter(
         (c) =>
           c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q),
       )
       .slice(0, 10);
-  }, [clientSearch]);
+  }, [clientSearch, sendScope, assignedClients]);
 
   const threads = useMemo(() => {
     const map = new Map<string, Thread>();
@@ -289,6 +319,12 @@ export function ContactList({
   const filtered = useMemo(() => {
     let list = threads;
 
+    // 5F: assigned_only inbox — restrict to conversations with clients the
+    // viewer is actually assigned to, before any UI filter runs.
+    if (inboxScope != null && assignedClients) {
+      list = list.filter((t) => assignedClients.has(t.clientId));
+    }
+
     // Default: closed threads hidden unless explicitly viewing them
     if (!isCustomerMode && filter !== "closed") {
       list = list.filter((t) => !conversationState.closed.has(t.threadId));
@@ -332,6 +368,8 @@ export function ContactList({
     isCustomerMode,
     conversationState.closed,
     conversationState.assignments,
+    inboxScope,
+    assignedClients,
   ]);
 
   const customerCanSwitchFacilities = isCustomerMode && threads.length > 1;
@@ -410,7 +448,8 @@ export function ContactList({
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-4 pb-2">
         <h1 className="text-xl font-bold text-slate-900">Inbox</h1>
-        {!isCustomerMode && (
+        {/* 5F: starting a conversation requires messages_send. */}
+        {!isCustomerMode && canSend && (
           <Button
             size="icon"
             variant={compose ? "secondary" : "default"}
@@ -597,7 +636,10 @@ export function ContactList({
       {/* Filters */}
       {showFilters && (
         <div className="scrollbar-none flex gap-1 overflow-x-auto px-4 pb-2">
-          {FILTER_ITEMS.map((f) => (
+          {/* 5F: the "All conversations" filter needs messages_view_all_threads. */}
+          {FILTER_ITEMS.filter(
+            (f) => f.key !== "all" || isCustomerMode || canSeeAllThreads,
+          ).map((f) => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}

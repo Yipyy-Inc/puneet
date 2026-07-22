@@ -83,6 +83,9 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getPetAgeDisplay } from "@/lib/pet-utils";
 import { useFieldMask } from "@/lib/staff/mask";
+import { useAssignedScope } from "@/lib/facility-permissions";
+import { isBookingAssignedTo } from "@/lib/api/booking";
+import { AccessRestricted } from "@/components/employee/AccessRestricted";
 import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
 import { NotesButton } from "@/components/shared/NotesButton";
 import { TagsButton } from "@/components/shared/TagsButton";
@@ -150,7 +153,13 @@ export default function ClientBookingDetailPage({
   const { role } = useFacilityRole();
   // Hide the booking dollar amount from staff without view_booking_financials
   // (Table 21). TODO: also strip server-side when a backend exists.
-  const { maskAmount } = useFieldMask();
+  const { maskAmount, canSee } = useFieldMask();
+  // Section 3C / Table 5 — OMIT the invoice/payment panel and Tips card from the
+  // DOM (not just mask) without view_booking_financials.
+  const canSeeBookingAmounts = canSee("booking_financials");
+  // Section 8B: viewer's fs-* id when view_bookings is assigned_only, else
+  // undefined. Used below to 403 on a booking outside the viewer's assigned set.
+  const assignedStaffId = useAssignedScope("view_bookings");
   const clientId = parseInt(id, 10);
   const bookingId = parseInt(bookingIdStr, 10);
 
@@ -417,6 +426,13 @@ export default function ClientBookingDetailPage({
     );
   }
 
+  // Section 8B / Part 0.3: a scoped viewer opening a booking URL outside their
+  // assigned set is a 403 — render the branded access screen, never the record.
+  // (Admin / full-access viewers have assignedStaffId === undefined → no gate.)
+  if (assignedStaffId && !isBookingAssignedTo(booking, assignedStaffId)) {
+    return <AccessRestricted />;
+  }
+
   const invoice = booking.invoice;
   const addedSubtotal = addedItems.reduce((s, i) => s + i.price, 0);
   // Incident-medication charges (2B.3) — gated by the med's chargeFee + the
@@ -636,76 +652,83 @@ export default function ClientBookingDetailPage({
           </div>
         )}
 
-        {/* Deposit Notice — unpaid */}
-        {!isPaid && !isCancelled && (invoice?.depositCollected ?? 0) === 0 && (
-          <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-100">
-                <Banknote className="size-4 text-blue-600" />
+        {/* Deposit Notice — unpaid. 5B: deposit amounts are part of the price
+            breakdown, so they're omitted without view_booking_amounts. */}
+        {canSeeBookingAmounts &&
+          !isPaid &&
+          !isCancelled &&
+          (invoice?.depositCollected ?? 0) === 0 && (
+            <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                  <Banknote className="size-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-blue-800">
+                    Deposit Required
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    Rule: 50% of service total — $
+                    {(booking.totalCost * 0.5).toFixed(2)} due before check-in
+                  </p>
+                  <p className="text-[10px] text-blue-500">
+                    Paying the deposit will auto-confirm this booking
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-blue-800">
-                  Deposit Required
-                </p>
-                <p className="text-xs text-blue-600">
-                  Rule: 50% of service total — $
-                  {(booking.totalCost * 0.5).toFixed(2)} due before check-in
-                </p>
-                <p className="text-[10px] text-blue-500">
-                  Paying the deposit will auto-confirm this booking
-                </p>
-              </div>
+              <Button
+                size="sm"
+                className="gap-1.5 bg-blue-600 text-white hover:bg-blue-700"
+                onClick={() => setDepositOpen(true)}
+              >
+                <Banknote className="size-3.5" />
+                Charge Deposit
+              </Button>
             </div>
-            <Button
-              size="sm"
-              className="gap-1.5 bg-blue-600 text-white hover:bg-blue-700"
-              onClick={() => setDepositOpen(true)}
-            >
-              <Banknote className="size-3.5" />
-              Charge Deposit
-            </Button>
-          </div>
-        )}
+          )}
 
-        {/* Deposit Collected — with auto-confirm note */}
-        {(invoice?.depositCollected ?? 0) > 0 && !isPaid && (
-          <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
-                <CheckCircle2 className="size-4 text-emerald-600" />
+        {/* Deposit Collected — with auto-confirm note. 5B: omitted without
+            view_booking_amounts (it discloses deposit + remaining balance). */}
+        {canSeeBookingAmounts &&
+          (invoice?.depositCollected ?? 0) > 0 &&
+          !isPaid && (
+            <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
+                  <CheckCircle2 className="size-4 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-emerald-800">
+                    Deposit Collected — $
+                    {(invoice?.depositCollected ?? 0).toFixed(2)}
+                  </p>
+                  <p className="text-xs text-emerald-600">
+                    Remaining balance:{" "}
+                    <span className="font-[tabular-nums] font-medium">
+                      ${(invoice?.remainingDue ?? booking.totalCost).toFixed(2)}
+                    </span>{" "}
+                    · Booking auto-confirmed
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-emerald-800">
-                  Deposit Collected — $
-                  {(invoice?.depositCollected ?? 0).toFixed(2)}
-                </p>
-                <p className="text-xs text-emerald-600">
-                  Remaining balance:{" "}
-                  <span className="font-[tabular-nums] font-medium">
-                    ${(invoice?.remainingDue ?? booking.totalCost).toFixed(2)}
-                  </span>{" "}
-                  · Booking auto-confirmed
-                </p>
+              <div className="flex gap-2">
+                {booking.status !== "confirmed" && (
+                  <Button
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => {
+                      toast.success(
+                        "Checked in — invoice status changed to Open",
+                      );
+                      autoTransition("onCheckIn");
+                    }}
+                  >
+                    Continue to Check In
+                  </Button>
+                )}
               </div>
             </div>
-            <div className="flex gap-2">
-              {booking.status !== "confirmed" && (
-                <Button
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => {
-                    toast.success(
-                      "Checked in — invoice status changed to Open",
-                    );
-                    autoTransition("onCheckIn");
-                  }}
-                >
-                  Continue to Check In
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
+          )}
 
         {/* Finished Notice */}
         {(booking.status === "completed" || isPaid) && !isCancelled && (
@@ -773,15 +796,19 @@ export default function ClientBookingDetailPage({
                 )}
               </div>
             </div>
-            <div className="text-right">
-              <p className="font-[tabular-nums] text-2xl font-bold">
-                {maskAmount(
-                  `$${(booking.invoice?.total ?? booking.totalCost).toFixed(2)}`,
-                  "booking_financials",
-                )}
-              </p>
-              <StatusBadge type="status" value={booking.paymentStatus} />
-            </div>
+            {/* Section 5B / 3C — total + payment status are OMITTED (not greyed)
+                without view_booking_amounts. */}
+            {canSeeBookingAmounts && (
+              <div className="text-right">
+                <p className="font-[tabular-nums] text-2xl font-bold">
+                  {maskAmount(
+                    `$${(booking.invoice?.total ?? booking.totalCost).toFixed(2)}`,
+                    "booking_financials",
+                  )}
+                </p>
+                <StatusBadge type="status" value={booking.paymentStatus} />
+              </div>
+            )}
           </div>
 
           {/* Action bar — primary / secondary / more / destructive */}
@@ -1251,8 +1278,8 @@ export default function ClientBookingDetailPage({
               </Card>
             )}
 
-            {/* Tips Section */}
-            {isPaid && (
+            {/* Tips Section — omitted without view_booking_financials (3C) */}
+            {isPaid && canSeeBookingAmounts && (
               <Card id="tips" className="overflow-hidden">
                 <CardHeader className="bg-muted/30 pb-3">
                   <div className="flex items-center justify-between">
@@ -1342,86 +1369,88 @@ export default function ClientBookingDetailPage({
           {/* Right — 2 cols — Invoice */}
           <div className="min-w-0 lg:col-span-2">
             <div className="sticky top-4">
-              {invoice ? (
-                <InvoicePanel
-                  invoice={invoice}
-                  client={client}
-                  pendingCare={careStatus.pending}
-                  hasCriticalCare={careStatus.hasCritical}
-                  extraServiceItems={incidentCareItems}
-                />
-              ) : (
-                <Card>
-                  <CardHeader className="bg-muted/30 pb-3">
-                    <CardTitle className="text-xs font-semibold tracking-wider uppercase">
-                      Payment Summary
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          Base Price
-                        </span>
-                        <span className="font-[tabular-nums] font-medium">
-                          ${booking.basePrice.toFixed(2)}
-                        </span>
+              {/* Invoice / payment panel — omitted without view_booking_financials (3C) */}
+              {canSeeBookingAmounts &&
+                (invoice ? (
+                  <InvoicePanel
+                    invoice={invoice}
+                    client={client}
+                    pendingCare={careStatus.pending}
+                    hasCriticalCare={careStatus.hasCritical}
+                    extraServiceItems={incidentCareItems}
+                  />
+                ) : (
+                  <Card>
+                    <CardHeader className="bg-muted/30 pb-3">
+                      <CardTitle className="text-xs font-semibold tracking-wider uppercase">
+                        Payment Summary
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Base Price
+                          </span>
+                          <span className="font-[tabular-nums] font-medium">
+                            ${booking.basePrice.toFixed(2)}
+                          </span>
+                        </div>
+                        {booking.discount > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              Discount
+                            </span>
+                            <span className="font-[tabular-nums] font-medium text-emerald-600">
+                              -${booking.discount.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        {addedSubtotal > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              Added Items
+                            </span>
+                            <span className="font-[tabular-nums] font-medium text-amber-600">
+                              +${addedSubtotal.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        {incidentCareTotal > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              Incident Care
+                            </span>
+                            <span className="font-[tabular-nums] font-medium text-amber-600">
+                              +${incidentCareTotal.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        <Separator />
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-sm font-semibold">Total</span>
+                          <span className="font-[tabular-nums] text-2xl font-bold">
+                            $
+                            {(
+                              booking.totalCost +
+                              addedSubtotal +
+                              incidentCareTotal
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                        {!isPaid && !isCancelled && (
+                          <Button
+                            className="mt-2 h-10 w-full gap-1.5"
+                            onClick={() => setPaymentOpen(true)}
+                          >
+                            <CreditCard className="size-4" />
+                            Accept Payment
+                          </Button>
+                        )}
                       </div>
-                      {booking.discount > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            Discount
-                          </span>
-                          <span className="font-[tabular-nums] font-medium text-emerald-600">
-                            -${booking.discount.toFixed(2)}
-                          </span>
-                        </div>
-                      )}
-                      {addedSubtotal > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            Added Items
-                          </span>
-                          <span className="font-[tabular-nums] font-medium text-amber-600">
-                            +${addedSubtotal.toFixed(2)}
-                          </span>
-                        </div>
-                      )}
-                      {incidentCareTotal > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            Incident Care
-                          </span>
-                          <span className="font-[tabular-nums] font-medium text-amber-600">
-                            +${incidentCareTotal.toFixed(2)}
-                          </span>
-                        </div>
-                      )}
-                      <Separator />
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-sm font-semibold">Total</span>
-                        <span className="font-[tabular-nums] text-2xl font-bold">
-                          $
-                          {(
-                            booking.totalCost +
-                            addedSubtotal +
-                            incidentCareTotal
-                          ).toFixed(2)}
-                        </span>
-                      </div>
-                      {!isPaid && !isCancelled && (
-                        <Button
-                          className="mt-2 h-10 w-full gap-1.5"
-                          onClick={() => setPaymentOpen(true)}
-                        >
-                          <CreditCard className="size-4" />
-                          Accept Payment
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+                    </CardContent>
+                  </Card>
+                ))}
             </div>
           </div>
         </div>

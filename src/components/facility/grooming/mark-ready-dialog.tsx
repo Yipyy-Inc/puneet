@@ -25,6 +25,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { usePermission } from "@/hooks/use-facility-rbac";
+import { useAssignedScope } from "@/lib/facility-permissions";
+import { stylistIdForStaff } from "@/lib/api/grooming";
 import type { GroomingAppointment } from "@/types/grooming";
 
 export interface MarkReadyFinalCharge {
@@ -69,6 +72,19 @@ export function MarkReadyDialog({
   const [draftLabel, setDraftLabel] = useState("");
   const [draftAmount, setDraftAmount] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Section 3B / Table 4 — gate the after-photo step (grooming_upload_photos)
+  // and the session-notes field (add_grooming_notes). All-access fallback keeps
+  // both for admin outside the RBAC provider.
+  // Section 5A — when grooming_upload_photos is assigned_only, the photo step
+  // appears only on the viewer's OWN appointments.
+  const photoScope = useAssignedScope("grooming_upload_photos");
+  const isOwnAppointment =
+    photoScope == null ||
+    (apt != null && stylistIdForStaff(photoScope) === apt.stylistId);
+  const canUploadPhotos =
+    usePermission("grooming_upload_photos") && isOwnAppointment;
+  const canAddNotes = usePermission("add_grooming_notes");
 
   useEffect(() => {
     if (!open) {
@@ -141,7 +157,9 @@ export function MarkReadyDialog({
   const taxAmount = preTaxSubtotal * taxRate;
   const grandTotal = preTaxSubtotal + taxAmount;
 
-  const canConfirm = afterPhotos.length > 0;
+  // A photo is required to notify the owner — but only demand one from staff who
+  // can actually add photos; without grooming_upload_photos the step is hidden.
+  const canConfirm = !canUploadPhotos || afterPhotos.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -157,94 +175,98 @@ export function MarkReadyDialog({
           </p>
         </DialogHeader>
 
-        {/* 1 · Post-groom photo */}
-        <Section
-          step={1}
-          icon={Camera}
-          title="Post-groom photo"
-          subtitle="Snap 1–3 shots of the finished coat. These pair with the pre-groom photos in the report card."
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              handlePhotoSelect(e.target.files);
-              e.target.value = "";
-            }}
-          />
-          <div className="grid grid-cols-3 gap-2">
-            {Array.from({ length: MAX_AFTER_PHOTOS }).map((_, i) => {
-              const url = afterPhotos[i];
-              if (url) {
-                return (
-                  <div
-                    key={i}
-                    className="bg-muted relative aspect-square overflow-hidden rounded-lg border"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={url}
-                      alt={`After-groom photo ${i + 1}`}
-                      className="size-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handlePhotoRemove(i)}
-                      title="Remove this photo"
-                      className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-black/60 text-white shadow-sm hover:bg-black/80"
+        {/* 1 · Post-groom photo — grooming_upload_photos (3B/Table 4) */}
+        {canUploadPhotos && (
+          <Section
+            step={1}
+            icon={Camera}
+            title="Post-groom photo"
+            subtitle="Snap 1–3 shots of the finished coat. These pair with the pre-groom photos in the report card."
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                handlePhotoSelect(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            <div className="grid grid-cols-3 gap-2">
+              {Array.from({ length: MAX_AFTER_PHOTOS }).map((_, i) => {
+                const url = afterPhotos[i];
+                if (url) {
+                  return (
+                    <div
+                      key={i}
+                      className="bg-muted relative aspect-square overflow-hidden rounded-lg border"
                     >
-                      <X className="size-3" />
-                    </button>
-                  </div>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={`After-groom photo ${i + 1}`}
+                        className="size-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handlePhotoRemove(i)}
+                        title="Remove this photo"
+                        className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-black/60 text-white shadow-sm hover:bg-black/80"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </div>
+                  );
+                }
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="bg-muted/30 text-muted-foreground hover:bg-muted/60 flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed"
+                  >
+                    <Camera className="size-5" />
+                    <span className="text-[10px] font-medium tracking-wide uppercase">
+                      {afterPhotos.length === 0 ? "Take photo" : "Add"}
+                    </span>
+                  </button>
                 );
-              }
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-muted/30 text-muted-foreground hover:bg-muted/60 flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed"
-                >
-                  <Camera className="size-5" />
-                  <span className="text-[10px] font-medium tracking-wide uppercase">
-                    {afterPhotos.length === 0 ? "Take photo" : "Add"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-muted-foreground mt-2 text-[10px]">
-            {afterPhotos.length}/{MAX_AFTER_PHOTOS} photos · at least one
-            required before notifying the owner.
-          </p>
-        </Section>
+              })}
+            </div>
+            <p className="text-muted-foreground mt-2 text-[10px]">
+              {afterPhotos.length}/{MAX_AFTER_PHOTOS} photos · at least one
+              required before notifying the owner.
+            </p>
+          </Section>
+        )}
 
-        <Separator />
+        {canUploadPhotos && <Separator />}
 
-        {/* 2 · Grooming notes */}
-        <Section
-          step={2}
-          icon={ClipboardEdit}
-          title="Grooming notes"
-          subtitle="What you did, anything you noticed, recommendations for next visit."
-        >
-          <Textarea
-            value={sessionNotes}
-            onChange={(e) => setSessionNotes(e.target.value)}
-            placeholder="e.g. Heavy matting on hindquarters — recommended more frequent brushing. Ears cleaned, nails trimmed. Coat condition much improved after treatment."
-            rows={4}
-            className="text-sm"
-          />
-          <p className="text-muted-foreground mt-1 text-[10px]">
-            These notes attach to the Report Card and the pet&rsquo;s profile.
-          </p>
-        </Section>
+        {/* 2 · Grooming notes — add_grooming_notes (3B/Table 4) */}
+        {canAddNotes && (
+          <Section
+            step={2}
+            icon={ClipboardEdit}
+            title="Grooming notes"
+            subtitle="What you did, anything you noticed, recommendations for next visit."
+          >
+            <Textarea
+              value={sessionNotes}
+              onChange={(e) => setSessionNotes(e.target.value)}
+              placeholder="e.g. Heavy matting on hindquarters — recommended more frequent brushing. Ears cleaned, nails trimmed. Coat condition much improved after treatment."
+              rows={4}
+              className="text-sm"
+            />
+            <p className="text-muted-foreground mt-1 text-[10px]">
+              These notes attach to the Report Card and the pet&rsquo;s profile.
+            </p>
+          </Section>
+        )}
 
-        <Separator />
+        {canAddNotes && <Separator />}
 
         {/* 3 · Final charges */}
         <Section

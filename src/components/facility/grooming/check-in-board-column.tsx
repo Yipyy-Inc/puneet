@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import type { GroomingAppointment, GroomingStatus } from "@/types/grooming";
 
 const STATUS_BADGE: Record<
@@ -101,6 +102,7 @@ export function GroomerColumn({
   alertCountById,
   nowMin,
   actions,
+  restricted = false,
 }: {
   name: string;
   photoUrl?: string;
@@ -109,7 +111,19 @@ export function GroomerColumn({
   alertCountById: Record<string, number>;
   nowMin: number | null;
   actions: ColumnActions;
+  /**
+   * Section 5A — another groomer's column for a viewer whose view_grooming_queue
+   * is assigned_only. The column still renders (name + count) but carries no
+   * cards or actions; this swaps the "nothing scheduled" copy for an honest
+   * "not your column" note so the empty state isn't misread.
+   */
+  restricted?: boolean;
 }) {
+  // Section 3B / Table 4 — the card's Check In / Start / Mark Ready / Check Out
+  // controls require perform_grooming (all-access fallback outside the RBAC
+  // provider keeps them for admin). The "only the viewer's own column when
+  // assigned_only" scoping is layered on in Part 5A, which knows column↔viewer.
+  const canPerformGrooming = usePermission("perform_grooming");
   return (
     <div className="bg-muted/20 flex w-72 min-w-72 flex-1 flex-col rounded-xl border">
       <div className="flex items-center gap-2.5 border-b px-3 py-2.5">
@@ -135,7 +149,11 @@ export function GroomerColumn({
         </div>
       </div>
       <div className="flex flex-col gap-2 p-2">
-        {appointments.length === 0 ? (
+        {restricted ? (
+          <p className="text-muted-foreground py-6 text-center text-xs">
+            Only your own column is shown.
+          </p>
+        ) : appointments.length === 0 ? (
           <p className="text-muted-foreground py-6 text-center text-xs">
             Nothing on the schedule.
           </p>
@@ -147,6 +165,7 @@ export function GroomerColumn({
               alertCount={alertCountById[a.id] ?? 0}
               nowMin={nowMin}
               actions={actions}
+              canPerformGrooming={canPerformGrooming}
             />
           ))
         )}
@@ -160,11 +179,13 @@ function AppointmentCard({
   alertCount,
   nowMin,
   actions,
+  canPerformGrooming,
 }: {
   apt: GroomingAppointment;
   alertCount: number;
   nowMin: number | null;
   actions: ColumnActions;
+  canPerformGrooming: boolean;
 }) {
   const badge = STATUS_BADGE[apt.status];
   const startMin = checkInMinutes(apt);
@@ -243,9 +264,9 @@ function AppointmentCard({
         )}
       </div>
 
-      {/* Status-driven action */}
+      {/* Status-driven action — perform_grooming gated (3B/Table 4) */}
       <div className="mt-2 flex gap-1.5">
-        {apt.status === "scheduled" && (
+        {canPerformGrooming && apt.status === "scheduled" && (
           <Button
             size="sm"
             className="h-7 flex-1 gap-1.5 bg-emerald-600 text-xs text-white hover:bg-emerald-700"
@@ -255,7 +276,7 @@ function AppointmentCard({
             Check In
           </Button>
         )}
-        {apt.status === "checked-in" && (
+        {canPerformGrooming && apt.status === "checked-in" && (
           <Button
             size="sm"
             className="h-7 flex-1 gap-1.5 bg-blue-600 text-xs text-white hover:bg-blue-700"
@@ -265,7 +286,7 @@ function AppointmentCard({
             Start
           </Button>
         )}
-        {apt.status === "in-progress" && (
+        {canPerformGrooming && apt.status === "in-progress" && (
           <Button
             size="sm"
             className="h-7 flex-1 gap-1.5 bg-purple-600 text-xs text-white hover:bg-purple-700"
@@ -275,7 +296,7 @@ function AppointmentCard({
             Mark Ready
           </Button>
         )}
-        {apt.status === "ready-for-pickup" && (
+        {canPerformGrooming && apt.status === "ready-for-pickup" && (
           <Button
             size="sm"
             className="h-7 flex-1 gap-1.5 bg-emerald-600 text-xs text-white hover:bg-emerald-700"

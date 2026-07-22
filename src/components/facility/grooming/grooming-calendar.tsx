@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import { hexToRgba } from "@/lib/color-utils";
 import {
   ChevronLeft,
@@ -2196,6 +2197,9 @@ function MonthView({
 
 export function GroomingCalendar() {
   const todayStr = formatISODate(new Date());
+  // Section 5A / Table 4 — "+ New Event" is hidden when create_bookings is
+  // not_granted (all-access fallback keeps it for admin).
+  const canCreateBookings = usePermission("create_bookings");
   const [selectedDate, setSelectedDate] = useState(todayStr);
   // Print picker — controls which printable layout is mounted into the
   // hidden `print:block` surface when the browser print dialog opens.
@@ -2701,12 +2705,14 @@ export function GroomingCalendar() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button
-                className="h-10 rounded-full bg-blue-600 px-5 text-white shadow-sm hover:bg-blue-700"
-                onClick={handleNewEvent}
-              >
-                <Plus className="mr-1.5 h-4 w-4" /> New Event
-              </Button>
+              {canCreateBookings && (
+                <Button
+                  className="h-10 rounded-full bg-blue-600 px-5 text-white shadow-sm hover:bg-blue-700"
+                  onClick={handleNewEvent}
+                >
+                  <Plus className="mr-1.5 h-4 w-4" /> New Event
+                </Button>
+              )}
             </div>
           </div>
 

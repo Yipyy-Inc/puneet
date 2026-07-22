@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
@@ -39,6 +39,8 @@ import {
 import { getCustomerLanguageLabel } from "@/lib/language-settings";
 import { createCustomCustomerSegment } from "@/lib/marketing-segments";
 import { useFieldMask } from "@/lib/staff/mask";
+import { useAssignedScope } from "@/lib/facility-permissions";
+import { scopeClientsToStaff } from "@/lib/api/client";
 import {
   Download,
   User,
@@ -174,6 +176,11 @@ const exportClientsToCSV = (
 
 export default function FacilityClientsPage() {
   const router = useRouter();
+  // Section 5C: this table is shared by both portals. In the employee portal the
+  // row must open the profile INSIDE the /employee shell so the RBAC provider
+  // stays mounted and the profile's gates + 403 actually apply.
+  const pathname = usePathname();
+  const inEmployeePortal = pathname?.startsWith("/employee") ?? false;
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
   const { currentLocationId, isHQView, isMultiLocation } = useLocationContext();
@@ -190,6 +197,9 @@ export default function FacilityClientsPage() {
   // Field masking (spec Table 21): hide contact info from staff without
   // view_client_contact_info. TODO: also strip server-side when a backend exists.
   const { maskContact, canSee } = useFieldMask();
+  // Section 8B: viewer's fs-* id when view_client_list is assigned_only, else
+  // undefined (full access, as admin).
+  const assignedClientScope = useAssignedScope("view_client_list");
 
   const [clientsData, setClientsData] = useState(clients);
   const [creatingClient, setCreatingClient] = useState(false);
@@ -208,12 +218,19 @@ export default function FacilityClientsPage() {
     (client) => client.facility === facility.name,
   );
 
-  const locationClients =
+  const locationScopedClients =
     isMultiLocation && !isHQView && currentLocationId
       ? facilityClients.filter(
           (c) => deriveLocationId(c.id) === currentLocationId,
         )
       : facilityClients;
+
+  // Section 8B: when view_client_list resolves to assigned_only, restrict to
+  // clients whose bookings are assigned to the viewer (data-layer helper).
+  // Full-access viewers (admin) pass through unchanged.
+  const locationClients = assignedClientScope
+    ? scopeClientsToStaff(locationScopedClients, assignedClientScope)
+    : locationScopedClients;
 
   const handleCreateClient = (newClient: {
     name: string;
@@ -635,7 +652,11 @@ export default function FacilityClientsPage() {
                   onFilterClick={() => setFiltersExpanded(!filtersExpanded)}
                   filterCount={activeCount}
                   onRowClick={(client) =>
-                    router.push(`/facility/dashboard/clients/${client.id}`)
+                    router.push(
+                      inEmployeePortal
+                        ? `/employee/clients/${client.id}`
+                        : `/facility/dashboard/clients/${client.id}`,
+                    )
                   }
                   rowClassName={(client) =>
                     cn(

@@ -7,6 +7,7 @@ import { clientCommunications } from "@/data/communications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Can } from "@/components/rbac/Can";
 import { Input } from "@/components/ui/input";
 import { MessageSquare, Mail, Phone, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -123,23 +124,26 @@ export default function ClientMessagesPage({
             }
           }}
         />
-        <Button
-          onClick={() => {
-            if (quickMsg.trim()) {
-              toast.success(
-                canCommunicateInPreferredLanguage
-                  ? `Message sent to ${client.name} (${preferredLanguageLabel})`
-                  : `Message sent to ${client.name}`,
-              );
-              setQuickMsg("");
-            }
-          }}
-          disabled={!quickMsg.trim()}
-          className="gap-1.5"
-        >
-          <Send className="size-4" />
-          Send
-        </Button>
+        {/* Send — communicate_clients (3B/Table 4) */}
+        <Can permKey="communicate_clients">
+          <Button
+            onClick={() => {
+              if (quickMsg.trim()) {
+                toast.success(
+                  canCommunicateInPreferredLanguage
+                    ? `Message sent to ${client.name} (${preferredLanguageLabel})`
+                    : `Message sent to ${client.name}`,
+                );
+                setQuickMsg("");
+              }
+            }}
+            disabled={!quickMsg.trim()}
+            className="gap-1.5"
+          >
+            <Send className="size-4" />
+            Send
+          </Button>
+        </Can>
       </div>
 
       <Card>

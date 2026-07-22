@@ -45,6 +45,9 @@ import {
 import type { Message } from "@/types/communications";
 import type { ConversationStatus } from "@/types/messaging";
 import { clients } from "@/data/clients";
+import { usePermission } from "@/hooks/use-facility-rbac";
+import { useAssignedScope } from "@/lib/facility-permissions";
+import { assignedClientIds } from "@/lib/api/client";
 import { facilities } from "@/data/facilities";
 import { threadMeta as defaultThreadMeta } from "@/data/messaging";
 
@@ -170,6 +173,18 @@ export function ConversationThread({
 
   const counterpartyId =
     threadMessages[0]?.clientId ?? threadFacilityId ?? undefined;
+
+  // Section 5F — replying requires messages_send; when that resolves to
+  // assigned_only, only within the viewer's assigned-client conversations.
+  // The customer portal is never gated (owners reply on their own threads).
+  const canSendMessages = usePermission("messages_send");
+  const sendScope = useAssignedScope("messages_send");
+  const canReplyHere =
+    isCustomerMode ||
+    (canSendMessages &&
+      (sendScope == null ||
+        (counterpartyId != null &&
+          assignedClientIds(sendScope).has(counterpartyId))));
   const client = counterpartyId
     ? clients.find((c) => c.id === counterpartyId)
     : null;
@@ -416,6 +431,12 @@ export function ConversationThread({
               </p>
             </div>
           </div>
+        </div>
+      ) : !canReplyHere ? (
+        // 5F: replying needs messages_send, and when that key is assigned_only
+        // it's limited to the viewer's assigned-client conversations.
+        <div className="text-muted-foreground border-t px-5 py-4 text-center text-xs">
+          You don&rsquo;t have permission to reply to this conversation.
         </div>
       ) : (
         <ComposeBar

@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import type { Department } from "@/types/scheduling";
 
 export type ViewMode = "day" | "week" | "2weeks" | "month";
@@ -112,6 +113,10 @@ export function ScheduleHeader({
   const { can } = useCurrentUser();
   const canEdit = can("schedule.edit");
   const canPublish = can("schedule.publish");
+  // Section 5E — "+ Add Shift" additionally requires the RBAC key
+  // scheduling_create_shifts, so a viewer with the full facility schedule but
+  // no create right sees it view-only. All-access fallback keeps admin intact.
+  const canCreateShifts = usePermission("scheduling_create_shifts") && canEdit;
 
   const navigateDate = (direction: "prev" | "next") => {
     const newDate = new Date(currentDate);
@@ -242,7 +247,7 @@ export function ScheduleHeader({
             </Badge>
           </Button>
         )}
-        {canEdit && (
+        {canCreateShifts && (
           <Button
             size="sm"
             onClick={onAddShift}

@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import type { Booking } from "@/types/booking";
 import { EvaluationCheckoutAlert } from "@/components/evaluations/EvaluationCheckoutAlert";
 import { useLocationContext } from "@/hooks/use-location-context";
+import { usePermission } from "@/hooks/use-facility-rbac";
 
 interface BookingActionBarProps {
   booking: Booking;
@@ -50,6 +51,11 @@ export function BookingActionBar({
   onTransfer,
 }: BookingActionBarProps) {
   const { isMultiLocation } = useLocationContext();
+  // Section 3B / Table 4 action gates (all-access fallback outside the provider).
+  const canEdit = usePermission("edit_bookings");
+  const canCancel = usePermission("cancel_bookings");
+  const canPay = usePermission("take_payment");
+  const canRefund = usePermission("process_refund");
   const isActive =
     booking.status === "confirmed" || booking.status === "pending";
   const isCancelled = booking.status === "cancelled";
@@ -107,7 +113,7 @@ export function BookingActionBar({
         </DropdownMenu>
 
         {/* Accept Payment */}
-        {!isPaid && !isCancelled && (
+        {!isPaid && !isCancelled && canPay && (
           <Button
             size="sm"
             className="gap-1.5"
@@ -151,7 +157,7 @@ export function BookingActionBar({
         </DropdownMenu>
 
         {/* Edit */}
-        {isActive && (
+        {isActive && canEdit && (
           <Button
             variant="outline"
             size="sm"
@@ -180,7 +186,7 @@ export function BookingActionBar({
         )}
 
         {/* Cancel */}
-        {isActive && (
+        {isActive && canCancel && (
           <Button
             variant="outline"
             size="sm"
@@ -196,7 +202,7 @@ export function BookingActionBar({
         )}
 
         {/* Refund */}
-        {isPaid && !isCancelled && (
+        {isPaid && !isCancelled && canRefund && (
           <Button
             variant="outline"
             size="sm"

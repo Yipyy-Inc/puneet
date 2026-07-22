@@ -24,6 +24,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { usePermission } from "@/hooks/use-facility-rbac";
 
 interface BulkActionsToolbarProps {
   selectedCount: number;
@@ -38,6 +39,12 @@ export function BulkActionsToolbar({
   onExport,
   onCreateEmailSegment,
 }: BulkActionsToolbarProps) {
+  // Section 3B / Table 4 — action gates (hooks must precede the early return).
+  // All-access fallback keeps every bulk action for admin outside the provider.
+  const canMessage = usePermission("communicate_clients");
+  const canMerge = usePermission("merge_clients");
+  const canDelete = usePermission("delete_clients");
+
   if (selectedCount === 0) return null;
 
   const confirm = (action: string, cb: () => void) => {
@@ -64,32 +71,39 @@ export function BulkActionsToolbar({
 
       <div className="bg-border h-4 w-px" />
 
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-8 gap-1.5"
-        onClick={() =>
-          confirm("Send email", () =>
-            toast.success(`Email compose opened for ${selectedCount} clients`),
-          )
-        }
-      >
-        <Mail className="size-3.5" />
-        <span className="hidden lg:inline">Email</span>
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-8 gap-1.5"
-        onClick={() =>
-          confirm("Send SMS", () =>
-            toast.success(`SMS compose opened for ${selectedCount} clients`),
-          )
-        }
-      >
-        <Smartphone className="size-3.5" />
-        <span className="hidden lg:inline">SMS</span>
-      </Button>
+      {/* Email / SMS — communicate_clients (3B/Table 4) */}
+      {canMessage && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5"
+          onClick={() =>
+            confirm("Send email", () =>
+              toast.success(
+                `Email compose opened for ${selectedCount} clients`,
+              ),
+            )
+          }
+        >
+          <Mail className="size-3.5" />
+          <span className="hidden lg:inline">Email</span>
+        </Button>
+      )}
+      {canMessage && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5"
+          onClick={() =>
+            confirm("Send SMS", () =>
+              toast.success(`SMS compose opened for ${selectedCount} clients`),
+            )
+          }
+        >
+          <Smartphone className="size-3.5" />
+          <span className="hidden lg:inline">SMS</span>
+        </Button>
+      )}
       <Button
         variant="outline"
         size="sm"
@@ -166,24 +180,31 @@ export function BulkActionsToolbar({
             <Printer className="size-4" />
             Print Mailing Labels
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => toast.info("Merge duplicate accounts")}
-          >
-            <GitMerge className="size-4" />
-            Merge Duplicates
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-destructive"
-            onClick={() =>
-              confirm("DELETE", () =>
-                toast.error(`${selectedCount} clients would be deleted`),
-              )
-            }
-          >
-            <Trash2 className="size-4" />
-            Delete Selected
-          </DropdownMenuItem>
+          {canMerge && (
+            <DropdownMenuItem
+              onClick={() => toast.info("Merge duplicate accounts")}
+            >
+              <GitMerge className="size-4" />
+              Merge Duplicates
+            </DropdownMenuItem>
+          )}
+          {/* Delete Selected — delete_clients (3B/Table 4) */}
+          {canDelete && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() =>
+                  confirm("DELETE", () =>
+                    toast.error(`${selectedCount} clients would be deleted`),
+                  )
+                }
+              >
+                <Trash2 className="size-4" />
+                Delete Selected
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

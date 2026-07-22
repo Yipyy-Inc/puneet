@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import {
   Dialog,
   DialogContent,
@@ -143,10 +144,12 @@ function ServiceCard({
   pkg,
   onEdit,
   onDelete,
+  canEdit,
 }: {
   pkg: GroomingPackage;
   onEdit: (p: GroomingPackage) => void;
   onDelete: (p: GroomingPackage) => void;
+  canEdit: boolean;
 }) {
   const minPrice = Math.min(...Object.values(pkg.sizePricing));
   const maxPrice = Math.max(...Object.values(pkg.sizePricing));
@@ -193,31 +196,34 @@ function ServiceCard({
             </p>
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7 shrink-0 opacity-0 group-hover:opacity-100"
-            >
-              <MoreHorizontal className="size-4" />
-              <span className="sr-only">Open menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(pkg)}>
-              <Edit className="mr-2 size-4" />
-              Edit Service
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={() => onDelete(pkg)}
-            >
-              <Trash2 className="mr-2 size-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Edit/Delete pricing controls — grooming_edit_pricing (3B/Table 4) */}
+        {canEdit && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 shrink-0 opacity-0 group-hover:opacity-100"
+              >
+                <MoreHorizontal className="size-4" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onEdit(pkg)}>
+                <Edit className="mr-2 size-4" />
+                Edit Service
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => onDelete(pkg)}
+              >
+                <Trash2 className="mr-2 size-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-3 text-xs">
@@ -387,6 +393,9 @@ function ChargeEditorDialog({
 export function GroomingRates() {
   const queryClient = useQueryClient();
   const { data: services = [] } = useQuery(groomingQueries.packages());
+  // Section 3B / Table 4 — pricing mutations require grooming_edit_pricing
+  // (all-access fallback keeps them for admin outside the RBAC provider).
+  const canEditPricing = usePermission("grooming_edit_pricing");
 
   // Services
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
@@ -559,10 +568,12 @@ export function GroomingRates() {
               Each service has size-based pricing (S/M/L/XL) and an optional
               duration.
             </p>
-            <Button size="sm" onClick={handleServiceNew}>
-              <Plus className="mr-1.5 size-4" />
-              New Service
-            </Button>
+            {canEditPricing && (
+              <Button size="sm" onClick={handleServiceNew}>
+                <Plus className="mr-1.5 size-4" />
+                New Service
+              </Button>
+            )}
           </div>
           {services.length === 0 ? (
             <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed">
@@ -573,10 +584,12 @@ export function GroomingRates() {
                   Create your first grooming service
                 </p>
               </div>
-              <Button size="sm" variant="outline" onClick={handleServiceNew}>
-                <Plus className="mr-1.5 size-4" />
-                Add Service
-              </Button>
+              {canEditPricing && (
+                <Button size="sm" variant="outline" onClick={handleServiceNew}>
+                  <Plus className="mr-1.5 size-4" />
+                  Add Service
+                </Button>
+              )}
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -586,6 +599,7 @@ export function GroomingRates() {
                   pkg={pkg}
                   onEdit={handleServiceEdit}
                   onDelete={handleServiceDelete}
+                  canEdit={canEditPricing}
                 />
               ))}
             </div>
@@ -608,16 +622,18 @@ export function GroomingRates() {
                   manually.
                 </p>
               </div>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditingCharge(null);
-                  setChargeDialogOpen(true);
-                }}
-              >
-                <Plus className="mr-1.5 size-4" />
-                New Charge
-              </Button>
+              {canEditPricing && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditingCharge(null);
+                    setChargeDialogOpen(true);
+                  }}
+                >
+                  <Plus className="mr-1.5 size-4" />
+                  New Charge
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y">
@@ -648,29 +664,33 @@ export function GroomingRates() {
                           {SERVICE_CHARGE_TYPE_LABELS[sc.type]}
                         </p>
                       </div>
-                      <Switch
-                        checked={sc.isActive}
-                        onCheckedChange={() => toggleCharge(sc.id)}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        onClick={() => {
-                          setEditingCharge(sc);
-                          setChargeDialogOpen(true);
-                        }}
-                      >
-                        <Edit className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive size-8"
-                        onClick={() => setDeletingCharge(sc)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      {canEditPricing && (
+                        <>
+                          <Switch
+                            checked={sc.isActive}
+                            onCheckedChange={() => toggleCharge(sc.id)}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            onClick={() => {
+                              setEditingCharge(sc);
+                              setChargeDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive size-8"
+                            onClick={() => setDeletingCharge(sc)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}

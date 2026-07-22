@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { bookings as initialBookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
@@ -41,6 +41,8 @@ import { getTagsByType, getNoteCount } from "@/data/tags-notes";
 import { BookingDateRangeFilter } from "@/components/bookings/BookingDateRangeFilter";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { usePermission } from "@/hooks/use-facility-rbac";
+import { useAssignedScope } from "@/lib/facility-permissions";
+import { scopeBookingsToStaff } from "@/lib/api/booking";
 import { useFieldMask } from "@/lib/staff/mask";
 import { deriveLocationId, getLocationById } from "@/data/locations";
 import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
@@ -151,14 +153,25 @@ const isUpcoming = (dateString: string): boolean => {
 
 export default function FacilityBookingsPage() {
   const router = useRouter();
+  // Section 5B: this table is shared by both portals. In the employee portal the
+  // row must open the detail INSIDE the /employee shell, so the RBAC provider
+  // stays mounted and the detail's gates + scope actually apply.
+  const pathname = usePathname();
+  const inEmployeePortal = pathname?.startsWith("/employee") ?? false;
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
   const { setRequests: setBookingRequests } = useBookingRequestsStore();
   const { currentLocationId, isHQView, isMultiLocation } = useLocationContext();
   // Table 21 masking: booking $ hidden from staff without view_booking_financials;
   // the Revenue KPI is Manager+ (financial_view_revenue).
-  const { maskAmount } = useFieldMask();
+  const { maskAmount, canSee } = useFieldMask();
   const canSeeRevenue = usePermission("financial_view_revenue");
+  // Section 3C / Table 5: without view_booking_financials, OMIT the Cost and
+  // Payment-status columns from the DOM entirely (not just mask the values).
+  const canSeeBookingAmounts = canSee("booking_financials");
+  // Section 8B: when view_bookings resolves to assigned_only, this is the
+  // viewer's fs-* id; otherwise undefined (full access, as admin sees).
+  const assignedStaffId = useAssignedScope("view_bookings");
 
   const [bookings, setBookings] = useState<Booking[]>(
     initialBookings as Booking[],
@@ -168,12 +181,18 @@ export default function FacilityBookingsPage() {
     (booking) => booking.facilityId === facilityId,
   );
 
-  const locationBookings =
+  const locationScopedBookings =
     isMultiLocation && !isHQView && currentLocationId
       ? facilityBookings.filter(
           (b) => deriveLocationId(b.id) === currentLocationId,
         )
       : facilityBookings;
+
+  // Section 8B: restrict to the viewer's assigned bookings via the data-layer
+  // helper when assigned_only; unchanged for full-access viewers (admin).
+  const locationBookings = assignedStaffId
+    ? scopeBookingsToStaff(locationScopedBookings, assignedStaffId)
+    : locationScopedBookings;
 
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 
@@ -382,15 +401,20 @@ export default function FacilityBookingsPage() {
       sortValue: (booking) => booking.status,
       render: (booking) => <StatusBadge type="status" value={booking.status} />,
     },
-    {
-      key: "payment",
-      label: "Payment",
-      icon: DollarSign,
-      defaultVisible: true,
-      render: (booking) => (
-        <StatusBadge type="status" value={booking.paymentStatus} />
-      ),
-    },
+    // Payment-status column — omitted without view_booking_financials (3C).
+    ...(canSeeBookingAmounts
+      ? [
+          {
+            key: "payment",
+            label: "Payment",
+            icon: DollarSign,
+            defaultVisible: true,
+            render: (booking: (typeof bookings)[number]) => (
+              <StatusBadge type="status" value={booking.paymentStatus} />
+            ),
+          } as ColumnDef<(typeof bookings)[number]>,
+        ]
+      : []),
     {
       key: "tags",
       label: "Tags",
@@ -481,19 +505,28 @@ export default function FacilityBookingsPage() {
         );
       },
     },
-    {
-      key: "totalCost",
-      label: "Cost",
-      icon: DollarSign,
-      defaultVisible: true,
-      sortable: true,
-      sortValue: (booking) => booking.totalCost,
-      render: (booking) => (
-        <span className="price-value">
-          {maskAmount(`$${booking.totalCost.toFixed(2)}`, "booking_financials")}
-        </span>
-      ),
-    },
+    // Cost column — omitted without view_booking_financials (3C).
+    ...(canSeeBookingAmounts
+      ? [
+          {
+            key: "totalCost",
+            label: "Cost",
+            icon: DollarSign,
+            defaultVisible: true,
+            sortable: true,
+            sortValue: (booking: (typeof bookings)[number]) =>
+              booking.totalCost,
+            render: (booking: (typeof bookings)[number]) => (
+              <span className="price-value">
+                {maskAmount(
+                  `$${booking.totalCost.toFixed(2)}`,
+                  "booking_financials",
+                )}
+              </span>
+            ),
+          } as ColumnDef<(typeof bookings)[number]>,
+        ]
+      : []),
   ];
 
   const filters: FilterDef[] = [
@@ -783,7 +816,9 @@ export default function FacilityBookingsPage() {
               itemsPerPage={15}
               onRowClick={(booking) =>
                 router.push(
-                  `/facility/dashboard/clients/${booking.clientId}/bookings/${booking.id}`,
+                  inEmployeePortal
+                    ? `/employee/bookings/${booking.id}`
+                    : `/facility/dashboard/clients/${booking.clientId}/bookings/${booking.id}`,
                 )
               }
             />

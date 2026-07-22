@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -108,6 +109,9 @@ function PolicyToggle({
 }
 
 export function GroomingPrepaidPackages() {
+  // Section 3B / Table 4 — package (grooming style/bundle) management requires
+  // grooming_manage_styles (all-access fallback keeps it for admin).
+  const canManageStyles = usePermission("grooming_manage_styles");
   const { data: services = [] } = useQuery(groomingQueries.packages());
   const { data: customerPackages = [] } = useQuery(
     groomingQueries.customerPackages(),
@@ -398,10 +402,12 @@ export function GroomingPrepaidPackages() {
             validity window — like a daycare pass for grooming.
           </p>
         </div>
-        <Button onClick={handleNew}>
-          <Plus className="mr-2 size-4" />
-          New Package
-        </Button>
+        {canManageStyles && (
+          <Button onClick={handleNew}>
+            <Plus className="mr-2 size-4" />
+            New Package
+          </Button>
+        )}
       </div>
 
       {/* Stats */}
@@ -463,35 +469,37 @@ export function GroomingPrepaidPackages() {
         filters={filters}
         searchKey={"name" as keyof PackageRecord}
         searchPlaceholder="Search packages..."
-        actions={(item) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-8">
-                <MoreHorizontal className="size-4" />
-                <span className="sr-only">Open menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() =>
-                  handleEdit(item as unknown as GroomingPrepaidPackage)
-                }
-              >
-                <Edit className="mr-2 size-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={() =>
-                  setDeleting(item as unknown as GroomingPrepaidPackage)
-                }
-              >
-                <Trash2 className="mr-2 size-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        actions={(item) =>
+          canManageStyles ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-8">
+                  <MoreHorizontal className="size-4" />
+                  <span className="sr-only">Open menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() =>
+                    handleEdit(item as unknown as GroomingPrepaidPackage)
+                  }
+                >
+                  <Edit className="mr-2 size-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() =>
+                    setDeleting(item as unknown as GroomingPrepaidPackage)
+                  }
+                >
+                  <Trash2 className="mr-2 size-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null
+        }
       />
 
       {/* Editor Dialog */}
