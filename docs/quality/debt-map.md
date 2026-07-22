@@ -21,7 +21,9 @@ Several domains carry two overlapping systems; editing the wrong one silently do
 - **Loyalty:** editable `useLoyaltyProgram` provider vs. read-only `useLoyaltyConfig`; two loyalty models.
 - **Training:** two parallel enrollment systems.
 - **Calling:** new `CallRoutingRule` (calling module) vs. old communications `RoutingRule`; and three distinct "tag" concepts (`inquiryTag` vs. `ActiveCall.tags` vs. `callLog.tags`).
-  **Do instead:** confirm which model the task targets before editing; trace the provider/hook actually mounted on the route.
+- **Staff identity — three id namespaces for people.** `facilityStaff` (`fs-*`, the RBAC/employee-portal identity), `scheduleEmployees` (`emp-N`, the scheduling module — different people, and it spans the cafe and Laval too), and `users` (numeric, the legacy roster that `staffTasks`, `staffAvailability`, `staffPerformance`, `schedules`, `timeOffRequests` and `shiftSwapRequests` are keyed to). `users` ids 4–9 and `emp-1..6` are the same six people by name; **`fs-*` overlaps with neither**, so there is no mapping to discover — don't invent one.
+  Scheduling is resolved: facility staff are derived into `scheduleEmployees` under their own `fs-*` ids (see the header comment in `src/data/scheduling.ts`), so shifts belong to the signed-in employee by identity. **Still open:** the legacy numeric datasets. `staff-schedule-view.tsx`, `my-tasks-view.tsx`, `availability-view.tsx` and `my-performance-view.tsx` fall back to `users.find(u => u.role === "Staff")`, so those panels show one fixed stranger's records to every employee. **Do instead:** re-key those datasets to `fs-*` (they also feed admin screens — `StaffTasks.tsx`, `staff/performance`), rather than mapping `fs-*` onto a numeric id.
+  **Do instead (generally):** confirm which model the task targets before editing; trace the provider/hook actually mounted on the route.
 
 ### 🟡 Client-component over-reach
 

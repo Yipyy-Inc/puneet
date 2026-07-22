@@ -22,6 +22,84 @@ import type {
   NotificationPreferences,
   BroadcastMessage,
 } from "@/types/scheduling";
+import type { FacilityStaffRole } from "@/types/facility-staff";
+import { facilityStaff } from "@/data/facility-staff";
+
+// ============================================================================
+// Facility staff as schedulable employees
+//
+// The scheduling module grew its own `emp-N` employee namespace, while the
+// employee portal signs people in as facility staff profiles (`fs-*`). Those
+// are different people — the `emp-N` roster covers the cafe and the Laval
+// branch too — so there is no mapping between the two id spaces to discover.
+//
+// Instead the facility's own staff are schedulable employees in their own
+// right: derived here under their real `fs-*` ids and added to dept-1. A shift
+// therefore belongs to the signed-in employee by identity, which is what lets
+// "my shifts" scope without inventing a link table.
+// ============================================================================
+
+/** dept-1 position each facility role works. */
+const FACILITY_ROLE_POSITION: Record<FacilityStaffRole, string> = {
+  owner: "pos-4",
+  admin: "pos-4",
+  manager: "pos-4",
+  supervisor: "pos-5",
+  reception: "pos-1",
+  retail: "pos-1",
+  accountant: "pos-1",
+  groomer: "pos-3",
+  trainer: "pos-7",
+  caretaker: "pos-2",
+  daycare_attendant: "pos-2",
+  boarding_attendant: "pos-2",
+  sanitation: "pos-6",
+};
+
+/** Weekly pattern each facility role works (day offsets from Monday = 0). */
+const FACILITY_ROLE_PATTERN: Record<
+  FacilityStaffRole,
+  { days: number[]; start: string; end: string }
+> = {
+  owner: { days: [1, 2, 3], start: "09:00", end: "17:00" },
+  admin: { days: [1, 2, 3, 4, 5], start: "09:00", end: "17:00" },
+  manager: { days: [1, 2, 3, 4, 5], start: "08:00", end: "16:30" },
+  supervisor: { days: [1, 2, 3, 4], start: "08:00", end: "16:00" },
+  reception: { days: [1, 2, 3, 4, 5], start: "07:30", end: "15:30" },
+  retail: { days: [3, 4, 5, 6], start: "10:00", end: "18:00" },
+  accountant: { days: [1, 3], start: "09:00", end: "15:00" },
+  groomer: { days: [2, 3, 4, 5], start: "09:00", end: "17:00" },
+  trainer: { days: [2, 4, 6], start: "10:00", end: "16:00" },
+  caretaker: { days: [1, 2, 3, 4, 5], start: "06:30", end: "14:30" },
+  daycare_attendant: { days: [1, 2, 3, 4, 5], start: "07:00", end: "15:00" },
+  boarding_attendant: { days: [1, 3, 5, 6], start: "06:30", end: "14:30" },
+  sanitation: { days: [1, 2, 3, 4, 5], start: "16:00", end: "20:00" },
+};
+
+const facilityScheduleEmployees: ScheduleEmployee[] = facilityStaff
+  .filter((s) => s.status === "active")
+  .map((s) => {
+    const employmentType =
+      s.employment.employmentType === "part_time" ? "part_time" : "full_time";
+    return {
+      id: s.id,
+      name: `${s.firstName} ${s.lastName}`,
+      email: s.email,
+      phone: s.phone,
+      avatar: s.avatarUrl,
+      initials: `${s.firstName[0]}${s.lastName[0]}`,
+      departmentIds: ["dept-1"],
+      positionIds: [FACILITY_ROLE_POSITION[s.primaryRole]],
+      primaryPositionId: FACILITY_ROLE_POSITION[s.primaryRole],
+      hireDate: s.employment.hireDate,
+      status: "active" as const,
+      maxHoursPerWeek: employmentType === "part_time" ? 25 : 40,
+      employmentType,
+      role: s.primaryRole,
+    };
+  });
+
+const facilityScheduleEmployeeIds = facilityScheduleEmployees.map((e) => e.id);
 
 // ============================================================================
 // Skills / Certifications
@@ -107,7 +185,15 @@ export const departments: Department[] = [
     facilityId: 1,
     color: "#6366f1",
     description: "Main daycare and boarding facility",
-    employeeIds: ["emp-1", "emp-2", "emp-3", "emp-4", "emp-5", "emp-6"],
+    employeeIds: [
+      "emp-1",
+      "emp-2",
+      "emp-3",
+      "emp-4",
+      "emp-5",
+      "emp-6",
+      ...facilityScheduleEmployeeIds,
+    ],
     isActive: true,
     createdAt: "2025-01-15",
   },
@@ -486,6 +572,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
     employmentType: "part_time",
     role: "Staff",
   },
+  ...facilityScheduleEmployees,
 ];
 
 // ============================================================================
@@ -559,6 +646,15 @@ function generateWeekShifts(
       { days: [1, 3, 5], start: "10:00", end: "16:00", posId: "pos-11" },
     ],
   };
+
+  // Facility staff work the pattern their role implies, so a new staff member
+  // is schedulable without hand-adding a row to the map above.
+  for (const staff of facilityStaff) {
+    const pattern = FACILITY_ROLE_PATTERN[staff.primaryRole];
+    shiftPatterns[staff.id] = [
+      { ...pattern, posId: FACILITY_ROLE_POSITION[staff.primaryRole] },
+    ];
+  }
 
   let shiftIndex = 0;
   for (const emp of deptEmployees) {

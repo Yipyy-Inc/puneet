@@ -51,6 +51,7 @@ import {
   type ShiftTask,
 } from "@/data/staff-availability";
 import { getCurrentUserId } from "@/lib/role-utils";
+import { useMyShifts } from "@/lib/employee-schedule";
 import { users } from "@/data/users";
 
 // Schedule update acknowledgment interface
@@ -116,6 +117,10 @@ function requestStatusBadge(status: string): {
 }
 
 export function StaffScheduleView() {
+  // Legacy numeric identity, still used by the time-off / swap / shift-task
+  // subsystems below. Those datasets are keyed to the older `users` roster,
+  // which has no counterpart for a facility staff profile — resolving them per
+  // viewer needs that data keyed by `fs-*` first (tracked in the debt map).
   const [userId] = useState<string | null>(() => {
     const currentUserId = getCurrentUserId();
     if (currentUserId) return currentUserId;
@@ -182,19 +187,14 @@ export function StaffScheduleView() {
     );
   }, [userId]);
 
-  // Get schedules for this staff member
+  // Section 5E — the grid shows the SIGNED-IN employee's own shifts, resolved
+  // by identity from the real scheduling data (not the legacy `schedules`
+  // sample, which is keyed to a different set of people).
+  const myShifts = useMyShifts();
   const mySchedules = useMemo(() => {
-    if (!userId) return [];
-    const staffId = parseInt(userId);
     const today = new Date().toISOString().split("T")[0];
-
-    return schedules
-      .filter((s) => s.staffId === staffId && s.date >= today)
-      .sort((a, b) => {
-        if (a.date !== b.date) return a.date.localeCompare(b.date);
-        return a.startTime.localeCompare(b.startTime);
-      });
-  }, [userId]);
+    return myShifts.filter((s) => s.date >= today);
+  }, [myShifts]);
 
   // Get pending schedule updates
   const pendingUpdates = useMemo(() => {
