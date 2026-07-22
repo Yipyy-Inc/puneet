@@ -1195,8 +1195,9 @@ export const ROLE_PRESETS: Record<
         "manage_booking_calendar",
         "manage_waitlist",
         "view_grooming_queue",
-        "boarding_view_dashboard",
-        "daycare_view_dashboard",
+        // Reception is front-of-house: it can check daycare guests in
+        // (daycare_check_in_out) but does NOT get the Boarding/Daycare
+        // dashboards — those sections are not_granted for reception (spec 1.2).
         "daycare_check_in_out",
         "view_training_queue",
         "retail_pos_access",

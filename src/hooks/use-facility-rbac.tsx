@@ -129,8 +129,33 @@ const RbacContext = createContext<RbacContextValue | null>(null);
 // Provider
 // ============================================================================
 
-export function FacilityRbacProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<RbacState>(DEFAULT_STATE);
+export function FacilityRbacProvider({
+  children,
+  /**
+   * Fixes the acting viewer to a specific staff id — used by the /employee
+   * portal, where the signed-in employee (the `employee_staff_id` cookie) is
+   * authoritative. When set, this always wins over any stored "viewing as" id
+   * and the provider does not persist to the shared localStorage key. Omit it
+   * (the facility staff layout does) to keep the switchable, persisted viewer.
+   */
+  initialViewerId,
+  previewPermissions,
+}: {
+  children: ReactNode;
+  initialViewerId?: string;
+  /**
+   * Section 7 — "Preview as employee". When set, EVERY permission decision in
+   * the tree resolves from this map instead of a real staff profile, so the
+   * portal renders exactly as a staff member carrying this role's resolved
+   * permissions would see it (same nav, same modules, same scoped data).
+   */
+  previewPermissions?: EffectivePermissions | null;
+}) {
+  const [state, setState] = useState<RbacState>(
+    initialViewerId
+      ? { ...DEFAULT_STATE, viewerId: initialViewerId }
+      : DEFAULT_STATE,
+  );
   const [hydrated, setHydrated] = useState(false);
 
   // Custom roles are read through the roles query layer; their writes go through
@@ -152,7 +177,9 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
         // the query store, so only pull the fields this provider still owns.
         const parsed = JSON.parse(raw) as Partial<RbacState>;
         setState((prev) => ({
-          viewerId: parsed.viewerId ?? prev.viewerId,
+          // In fixed-viewer (employee) mode the identity comes from the session
+          // cookie — never let a stored "viewing as" id override it.
+          viewerId: initialViewerId ?? parsed.viewerId ?? prev.viewerId,
           presetOverrides: parsed.presetOverrides ?? prev.presetOverrides,
           staffOverrides: parsed.staffOverrides ?? prev.staffOverrides,
         }));
@@ -161,16 +188,19 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
       /* ignore */
     }
     setHydrated(true);
-  }, []);
+  }, [initialViewerId]);
 
   useEffect(() => {
     if (!hydrated || typeof window === "undefined") return;
+    // Don't write the employee portal's cookie-driven viewer back into the
+    // shared key (it would bleed into the facility "viewing as" switcher).
+    if (initialViewerId) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
       /* ignore */
     }
-  }, [state, hydrated]);
+  }, [state, hydrated, initialViewerId]);
 
   const viewer = useMemo<StaffProfile>(() => {
     return (
@@ -210,12 +240,21 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
   );
 
   const resolveFor = useCallback(
-    (staff: StaffProfile, key: PermissionKey) =>
-      resolvePermission(withOverrides(staff), key, {
+    (staff: StaffProfile, key: PermissionKey) => {
+      // Section 7: in preview mode every decision comes from the previewed
+      // role's resolved map, not the acting profile.
+      if (previewPermissions) {
+        const scope = previewPermissions[key];
+        return scope === false
+          ? { granted: false, scope: "none" as AccessScope }
+          : { granted: true, scope };
+      }
+      return resolvePermission(withOverrides(staff), key, {
         customRoles,
         presetOverrides: state.presetOverrides,
-      }),
-    [customRoles, state.presetOverrides, withOverrides],
+      });
+    },
+    [customRoles, state.presetOverrides, withOverrides, previewPermissions],
   );
 
   const can = useCallback(
@@ -226,6 +265,8 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
   // TODO: move to server/JWT — resolve against the mock stores for now.
   const resolvePermissions = useCallback(
     (staffId: string): EffectivePermissions => {
+      // Section 7: preview short-circuits — the whole tree sees the role's map.
+      if (previewPermissions) return previewPermissions;
       const staff = facilityStaff.find((s) => s.id === staffId);
       if (!staff) {
         return Object.fromEntries(
@@ -237,7 +278,7 @@ export function FacilityRbacProvider({ children }: { children: ReactNode }) {
         presetOverrides: state.presetOverrides,
       });
     },
-    [customRoles, state.presetOverrides, withOverrides],
+    [customRoles, state.presetOverrides, withOverrides, previewPermissions],
   );
 
   const setStaffPermission = useCallback(
