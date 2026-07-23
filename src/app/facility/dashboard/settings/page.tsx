@@ -111,6 +111,14 @@ const IncidentReportingSettings = dynamic(
     ),
   { ssr: false },
 );
+// Reads the QuickBooks connection store, so it can't render on the server.
+const QuickBooksSettingsEntry = dynamic(
+  () =>
+    import("@/components/integrations/quickbooks/QuickBooksSettingsEntry").then(
+      (mod) => mod.QuickBooksSettingsEntry,
+    ),
+  { ssr: false },
+);
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -4307,52 +4315,15 @@ export default function SettingsPage() {
                     Accounting Integration
                   </CardTitle>
                   <p className="text-muted-foreground mt-1 text-sm">
-                    QuickBooks Online integration (Phase 2)
+                    Post every sale, payment and refund to your books.
                   </p>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  {integrations
-                    .filter((i) => i.category === "accounting")
-                    .map((integration) => (
-                      <div
-                        key={integration.id}
-                        className="space-y-3 rounded-lg border p-4"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="font-semibold">
-                              {integration.name}
-                            </div>
-                            {integration.isEnabled ? (
-                              <Badge variant="default">Connected</Badge>
-                            ) : (
-                              <Badge variant="secondary">Not Connected</Badge>
-                            )}
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              updateIntegrations(
-                                integrations.map((i) =>
-                                  i.id === integration.id
-                                    ? { ...i, isEnabled: !i.isEnabled }
-                                    : i,
-                                ),
-                              );
-                              alert(
-                                `${integration.name} ${integration.isEnabled ? "disconnected" : "connected"} successfully!`,
-                              );
-                            }}
-                          >
-                            {integration.isEnabled ? "Disconnect" : "Connect"}
-                          </Button>
-                        </div>
-                        <div className="text-muted-foreground text-sm">
-                          Sync frequency: Daily
-                        </div>
-                      </div>
-                    ))}
+                <CardContent>
+                  {/* Connecting happens on the integration's own page, which
+                      owns the consent flow, the setup wizard and the sync
+                      dashboard. The old toggle here flipped a flag and alerted
+                      "connected successfully" without connecting anything. */}
+                  <QuickBooksSettingsEntry />
                 </CardContent>
               </Card>
 
