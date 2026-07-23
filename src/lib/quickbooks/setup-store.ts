@@ -33,12 +33,15 @@ export interface QuickBooksSetupState {
   /** The amber gaps they clicked past, carried forward so the setup summary can
    *  show what was skipped rather than letting it disappear. */
   accountWarnings: string[];
+  /** Step 4 (3.4): the facility has been through the mapping screen. */
+  mappingsReviewed: boolean;
 }
 
 export const EMPTY_SETUP: QuickBooksSetupState = Object.freeze({
   companyConfirmed: false,
   accountsReviewed: false,
   accountWarnings: Object.freeze([]) as unknown as string[],
+  mappingsReviewed: false,
 });
 
 type SetupMap = Record<string, QuickBooksSetupState>;

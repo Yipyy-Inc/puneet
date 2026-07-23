@@ -34,6 +34,7 @@ import { QuickBooksAccountHealthCheck } from "./QuickBooksAccountHealthCheck";
 import { QuickBooksCompanyConfirmCard } from "./QuickBooksCompanyConfirmCard";
 import { QuickBooksConsentModal } from "./QuickBooksConsentModal";
 import { QuickBooksEntryPoint } from "./QuickBooksEntryPoint";
+import { QuickBooksMappingScreen } from "./QuickBooksMappingScreen";
 
 // Section 3A RULE: the entry point is a PRE-connection screen. Once a facility
 // has connected, this route is their integration surface, not a sales pitch.
@@ -145,8 +146,8 @@ function ConnectedSummary({ scope }: { scope: QuickBooksScope }) {
           </dl>
 
           <p className="text-muted-foreground bg-muted/40 rounded-md border p-3 text-xs">
-            Setup and the sync dashboard — mapping, activity log and sync
-            settings — aren&apos;t built yet. This page will host them.
+            Sync settings and the activity dashboard aren&apos;t built yet. This
+            page will host them.
           </p>
 
           <div className="flex justify-end">
@@ -214,7 +215,9 @@ export function QuickBooksIntegrationView({
         ? "confirm"
         : !setup.accountsReviewed
           ? "accounts"
-          : "connected";
+          : !setup.mappingsReviewed
+            ? "mapping"
+            : "connected";
 
   return (
     <>
@@ -223,6 +226,7 @@ export function QuickBooksIntegrationView({
       )}
       {step === "confirm" && <QuickBooksCompanyConfirmCard scope={scope} />}
       {step === "accounts" && <QuickBooksAccountHealthCheck scope={scope} />}
+      {step === "mapping" && <QuickBooksMappingScreen scope={scope} />}
       {step === "connected" && <ConnectedSummary scope={scope} />}
 
       {/* Mounted here rather than inside the entry point. Approving writes the
