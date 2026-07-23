@@ -41,8 +41,11 @@ import { clearQuickBooksMappings } from "@/lib/quickbooks/mappings-store";
 import { reconnectQuickBooks } from "@/lib/quickbooks/oauth-mock";
 import { clearQuickBooksData } from "@/lib/quickbooks/qb-data-cache";
 import { resetQuickBooksSetup } from "@/lib/quickbooks/setup-store";
-import { useSyncJobs, type SyncJob } from "@/lib/quickbooks/sync-engine";
+import { useSyncJobs } from "@/lib/quickbooks/sync-engine";
 import { useSyncedDocuments } from "@/lib/quickbooks/synced-documents-store";
+import type { SyncLogStatus } from "@/lib/quickbooks/sync-log";
+
+import { QuickBooksSyncLog } from "./QuickBooksSyncLog";
 
 // ============================================================================
 // The management dashboard (Phase 5.2) — what a connected facility sees.
@@ -52,7 +55,9 @@ import { useSyncedDocuments } from "@/lib/quickbooks/synced-documents-store";
 // from what actually happened.
 // ============================================================================
 
-export type DashboardFilter = "synced" | "pending" | "errors" | "all";
+/** The tiles and the log share ONE status vocabulary. An "errors" tile that
+ *  filtered on a value the log did not use is how two filters drift apart. */
+export type DashboardFilter = SyncLogStatus | "all";
 
 function StatusBar({ scope }: { scope: QuickBooksScope }) {
   const connection = useQuickBooksConnection(scope);
@@ -179,25 +184,6 @@ function StatusBar({ scope }: { scope: QuickBooksScope }) {
   );
 }
 
-function statusLabel(job: SyncJob): { text: string; className: string } {
-  switch (job.status) {
-    case "synced":
-      return {
-        text: "Synced",
-        className: "text-emerald-700 dark:text-emerald-400",
-      };
-    case "failed":
-      return { text: "Failed", className: "text-rose-700 dark:text-rose-400" };
-    case "ignored":
-      return { text: "Ignored", className: "text-muted-foreground" };
-    default:
-      return {
-        text: "Pending",
-        className: "text-amber-700 dark:text-amber-400",
-      };
-  }
-}
-
 export function QuickBooksDashboard({ scope }: { scope: QuickBooksScope }) {
   const jobs = useSyncJobs(scope);
   const documents = useSyncedDocuments(scope);
@@ -206,13 +192,6 @@ export function QuickBooksDashboard({ scope }: { scope: QuickBooksScope }) {
 
   const toggle = (next: DashboardFilter) =>
     setFilter((current) => (current === next ? "all" : next));
-
-  const visible = jobs.filter((j) => {
-    if (filter === "all") return true;
-    if (filter === "synced") return j.status === "synced";
-    if (filter === "pending") return j.status === "pending";
-    return j.status === "failed";
-  });
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
@@ -256,8 +235,8 @@ export function QuickBooksDashboard({ scope }: { scope: QuickBooksScope }) {
               ? { label: "Needs attention", tone: "rose" }
               : undefined
           }
-          onClick={() => toggle("errors")}
-          active={filter === "errors"}
+          onClick={() => toggle("failed")}
+          active={filter === "failed"}
         />
         <KpiTile
           label="Last 30 days"
@@ -268,68 +247,11 @@ export function QuickBooksDashboard({ scope }: { scope: QuickBooksScope }) {
         />
       </div>
 
-      {/* A compact view of what the tiles filter. The full activity log —
-          date range, client search, CSV export, per-row retry — is next. */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="flex items-center justify-between gap-3 border-b p-3">
-            <p className="text-sm font-medium">
-              {filter === "all"
-                ? "Recent syncs"
-                : filter === "synced"
-                  ? "Synced"
-                  : filter === "pending"
-                    ? "Pending"
-                    : "Errors"}
-            </p>
-            {filter !== "all" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => setFilter("all")}
-              >
-                Clear filter
-              </Button>
-            )}
-          </div>
-
-          {visible.length === 0 ? (
-            <p className="text-muted-foreground p-6 text-center text-sm">
-              {jobs.length === 0
-                ? "Nothing has synced yet. Completed sales will appear here."
-                : "No entries match this filter."}
-            </p>
-          ) : (
-            <ul className="divide-y">
-              {visible.slice(0, 25).map((job) => {
-                const status = statusLabel(job);
-                return (
-                  <li
-                    key={job.id}
-                    className="flex flex-wrap items-center gap-x-3 gap-y-1 p-3 text-sm"
-                  >
-                    <span className="min-w-0 flex-1 truncate">
-                      {job.description}
-                    </span>
-                    <span className="text-muted-foreground text-xs tabular-nums">
-                      {formatMoney(job.amount)}
-                    </span>
-                    <span
-                      className={`w-16 text-right text-xs font-medium ${status.className}`}
-                    >
-                      {status.text}
-                    </span>
-                    <span className="text-muted-foreground w-40 truncate text-right text-xs">
-                      {job.quickBooksDocumentNumber ?? job.lastError ?? "—"}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      <QuickBooksSyncLog
+        scope={scope}
+        status={filter}
+        onStatusChange={setFilter}
+      />
     </div>
   );
 }

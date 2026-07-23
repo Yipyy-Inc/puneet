@@ -71,6 +71,13 @@ export interface SyncJob {
   /** Human-readable line for the sync log. */
   description: string;
   amount: number;
+  /** Display fields the activity log needs. Carried on the job rather than
+   *  looked up later: the log is a RECORD, and it has to stay readable after
+   *  the underlying transaction is edited, archived or gone. */
+  transactionDate?: string;
+  clientName?: string;
+  petName?: string;
+  serviceSummary?: string;
   status: SyncJobStatus;
   attemptCount: number;
   /** When the next attempt becomes due. Absent once the job is settled. */
@@ -242,6 +249,10 @@ export interface EnqueueInput {
   documentType: SyncDocumentType;
   description: string;
   amount: number;
+  transactionDate?: string;
+  clientName?: string;
+  petName?: string;
+  serviceSummary?: string;
   payload?: QBInvoiceData;
 }
 
@@ -273,6 +284,10 @@ export function enqueueSync(
     documentType: input.documentType,
     description: input.description,
     amount: input.amount,
+    transactionDate: input.transactionDate,
+    clientName: input.clientName,
+    petName: input.petName,
+    serviceSummary: input.serviceSummary,
     status: "pending",
     attemptCount: 0,
     // No nextRetryAt: the field means "not before this time", and a job that

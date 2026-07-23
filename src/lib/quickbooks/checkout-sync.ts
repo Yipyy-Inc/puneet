@@ -25,6 +25,28 @@ import { getQuickBooksSetup } from "./setup-store";
 // in the checkout screen.
 // ============================================================================
 
+/** What the activity log shows for this sale. Derived once, at enqueue time,
+ *  from the transaction as it was when it completed. */
+function logFields(txn: Transaction) {
+  const services = txn.items
+    .filter((i) => i.itemType === "service")
+    .map((i) => i.productName);
+  const summary =
+    services.length > 0
+      ? services.join(", ")
+      : (txn.bookingService ??
+        txn.items
+          .map((i) => i.productName)
+          .slice(0, 3)
+          .join(", "));
+  return {
+    transactionDate: txn.createdAt,
+    clientName: txn.customerName,
+    petName: txn.petName,
+    serviceSummary: summary || undefined,
+  };
+}
+
 export interface CheckoutSyncOutcome {
   /** Absent when nothing was queued — see `skipped`. */
   job?: SyncJob;
@@ -69,6 +91,7 @@ export function syncCheckoutToQuickBooks(
         documentType: "sales_receipt",
         description: `${txn.customerName ?? "Walk-in"} · ${txn.transactionNumber}`,
         amount: txn.total,
+        ...logFields(txn),
       });
       return { job, skipped: "manual_only", warnings: [] };
     }
@@ -88,6 +111,7 @@ export function syncCheckoutToQuickBooks(
       documentType: "sales_receipt",
       description: `${txn.customerName ?? "Walk-in"} · ${txn.transactionNumber}`,
       amount: txn.total,
+      ...logFields(txn),
     });
 
     return { job, warnings };
