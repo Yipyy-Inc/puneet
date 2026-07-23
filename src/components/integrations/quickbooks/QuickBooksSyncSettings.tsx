@@ -29,7 +29,6 @@ import {
   useQuickBooksData,
 } from "@/lib/quickbooks/qb-data-cache";
 import {
-  historicalRangeDays,
   isLargeHistoricalRange,
   patchQuickBooksSettings,
   useQuickBooksSettings,
@@ -39,6 +38,10 @@ import {
   type TaxHandling,
 } from "@/lib/quickbooks/settings-store";
 import { patchQuickBooksSetup } from "@/lib/quickbooks/setup-store";
+import {
+  historicalEntryCount,
+  historicalWarning,
+} from "@/lib/quickbooks/historical-sync";
 import { runQuickBooksTestSync } from "@/lib/quickbooks/test-sync";
 
 // Step 5 (Table 3) — how syncing behaves, then Finish Setup.
@@ -391,18 +394,27 @@ export function QuickBooksSyncSettings({
                   </div>
                 </div>
 
-                {isLargeHistoricalRange(settings) && (
-                  <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                    <p>
-                      That&apos;s {historicalRangeDays(settings)} days of past
-                      sales. Yipyy will create a QuickBooks entry for every one
-                      of them, and removing them afterwards is manual work in
-                      QuickBooks. Start with a shorter range if you&apos;re
-                      unsure.
-                    </p>
-                  </div>
-                )}
+                {isLargeHistoricalRange(settings) &&
+                  settings.historicalFrom &&
+                  settings.historicalTo && (
+                    <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                      <p>
+                        {historicalWarning(
+                          {
+                            from: settings.historicalFrom,
+                            to: settings.historicalTo,
+                          },
+                          historicalEntryCount({
+                            from: settings.historicalFrom,
+                            to: settings.historicalTo,
+                          }),
+                        )}{" "}
+                        You can run this later from the dashboard once
+                        you&apos;re connected.
+                      </p>
+                    </div>
+                  )}
               </div>
             )}
           </Field>

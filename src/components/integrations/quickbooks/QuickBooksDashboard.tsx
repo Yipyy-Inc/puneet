@@ -59,6 +59,7 @@ import type { SyncLogStatus } from "@/lib/quickbooks/sync-log";
 import { buildMappableGroups } from "@/lib/quickbooks/yipyy-catalog";
 
 import { QuickBooksErrorPanel } from "./QuickBooksErrorPanel";
+import { QuickBooksHistoricalSync } from "./QuickBooksHistoricalSync";
 import { QuickBooksMappingScreen } from "./QuickBooksMappingScreen";
 import { QuickBooksSyncLog } from "./QuickBooksSyncLog";
 
@@ -333,11 +334,14 @@ export function QuickBooksDashboard({ scope }: { scope: QuickBooksScope }) {
       </Tabs>
 
       {tab === "activity" ? (
-        <QuickBooksSyncLog
-          scope={scope}
-          status={filter}
-          onStatusChange={setFilter}
-        />
+        <>
+          <QuickBooksHistoricalSync scope={scope} />
+          <QuickBooksSyncLog
+            scope={scope}
+            status={filter}
+            onStatusChange={setFilter}
+          />
+        </>
       ) : (
         <QuickBooksMappingScreen
           // Remounted when a different group is targeted: `initialExpanded` is
