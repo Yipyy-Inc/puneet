@@ -56,6 +56,7 @@ const DOCUMENT_LABEL: Record<SyncJob["documentType"], string> = {
   invoice: "Invoice",
   refund_receipt: "Refund Receipt",
   credit_memo: "Credit Memo",
+  payment: "Payment",
 };
 
 /**

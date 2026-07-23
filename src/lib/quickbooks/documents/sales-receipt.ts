@@ -9,6 +9,23 @@ import type {
 
 import { isMapped, type MappingSet } from "../mappings-store";
 import type { QuickBooksSettings } from "../settings-store";
+import {
+  appendRoundingLine,
+  findAccountByName,
+  lineTotalCents,
+  resolveCustomer,
+  toCents,
+  toDollars,
+  toQuickBooksPaymentMethod,
+} from "./shared";
+
+// Re-exported: these were defined here before the refund/invoice/credit-memo
+// builders needed them too. Callers that already import them keep working.
+export {
+  toQuickBooksDisplayName,
+  toQuickBooksPaymentMethod,
+  WALK_IN_CUSTOMER,
+} from "./shared";
 
 // ============================================================================
 // Table 4 — a Yipyy checkout becomes a QuickBooks Sales Receipt (Phase 5.1).
@@ -23,11 +40,6 @@ import type { QuickBooksSettings } from "../settings-store";
 //
 // TODO: real QuickBooks API (POST /v3/company/{realmId}/salesreceipt).
 // ============================================================================
-
-const CENTS = 100;
-
-const toCents = (dollars: number): number => Math.round(dollars * CENTS);
-const toDollars = (cents: number): number => cents / CENTS;
 
 export interface SalesReceiptContext {
   data: QuickBooksCompanyData;
@@ -47,102 +59,6 @@ export interface BuiltSalesReceipt {
   customerToCreate?: QuickBooksCustomer;
   /** Surfaced in the sync log — never thrown, never blocking. */
   warnings: string[];
-}
-
-// ── Customer (matched by email, "[Last], [First]") ──────────────────────────
-
-/** QuickBooks sorts by DisplayName, so "Johnson, Alice" keeps a client list
- *  alphabetical by surname the way a bookkeeper expects. */
-export function toQuickBooksDisplayName(fullName: string): string {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "";
-  if (parts.length === 1) return parts[0];
-  const last = parts[parts.length - 1];
-  const first = parts.slice(0, -1).join(" ");
-  return `${last}, ${first}`;
-}
-
-export const WALK_IN_CUSTOMER = "Walk-in Customer";
-
-interface ResolvedCustomer {
-  ref: QuickBooksRef;
-  create?: QuickBooksCustomer;
-  warning?: string;
-}
-
-function resolveCustomer(
-  txn: Transaction,
-  data: QuickBooksCompanyData,
-): ResolvedCustomer {
-  const email = (txn.customerEmail ?? "").trim().toLowerCase();
-
-  if (email) {
-    const match = data.customers.find(
-      (c) => c.PrimaryEmailAddr?.Address?.trim().toLowerCase() === email,
-    );
-    if (match) return { ref: { value: match.Id, name: match.DisplayName } };
-  }
-
-  // A sale with no client on file is a genuine walk-in, not an error.
-  if (!txn.customerName?.trim()) {
-    const walkIn = data.customers.find(
-      (c) => c.DisplayName === WALK_IN_CUSTOMER,
-    );
-    return walkIn
-      ? { ref: { value: walkIn.Id, name: walkIn.DisplayName } }
-      : {
-          ref: { value: "walk-in", name: WALK_IN_CUSTOMER },
-          create: {
-            Id: "walk-in",
-            DisplayName: WALK_IN_CUSTOMER,
-            Active: true,
-            Balance: 0,
-          },
-        };
-  }
-
-  const displayName = toQuickBooksDisplayName(txn.customerName);
-  const byName = data.customers.find((c) => c.DisplayName === displayName);
-  if (byName) {
-    return {
-      ref: { value: byName.Id, name: byName.DisplayName },
-      // Matching on name is a guess; email is the identity. Say so.
-      warning: email
-        ? undefined
-        : `Matched "${displayName}" by name — this sale had no email address on it.`,
-    };
-  }
-
-  const parts = txn.customerName.trim().split(/\s+/);
-  return {
-    ref: { value: `new:${displayName}`, name: displayName },
-    create: {
-      Id: `new:${displayName}`,
-      DisplayName: displayName,
-      GivenName: parts.slice(0, -1).join(" ") || undefined,
-      FamilyName: parts.length > 1 ? parts[parts.length - 1] : undefined,
-      PrimaryEmailAddr: email ? { Address: txn.customerEmail! } : undefined,
-      Active: true,
-      Balance: 0,
-    },
-  };
-}
-
-// ── Payment method ──────────────────────────────────────────────────────────
-
-/** QuickBooks' own payment-method vocabulary is short; anything Yipyy supports
- *  that isn't cash or a card is recorded as "Other" rather than invented. */
-export function toQuickBooksPaymentMethod(method: string): string {
-  switch (method) {
-    case "cash":
-      return "Cash";
-    case "credit":
-    case "debit":
-      return "Credit Card";
-    default:
-      // gift card, store credit, package pass, charge-to-account, split …
-      return "Other";
-  }
 }
 
 // ── Line construction ───────────────────────────────────────────────────────
@@ -225,14 +141,6 @@ function buildItemLines(
   }
 
   return { lines, warnings };
-}
-
-function findAccountByName(
-  data: QuickBooksCompanyData,
-  pattern: RegExp,
-): QuickBooksRef | undefined {
-  const account = data.accounts.find((a) => a.Active && pattern.test(a.Name));
-  return account ? { value: account.Id, name: account.Name } : undefined;
 }
 
 // ── The builder ─────────────────────────────────────────────────────────────
@@ -334,31 +242,12 @@ export function buildServiceSalesReceipt(
   const yipyyTotalCents = toCents(txn.total);
 
   // ── RULE 5A: force the totals to agree ───────────────────────────────────
-  const linesCents = lines.reduce((sum, l) => sum + toCents(l.Amount), 0);
-  const deltaCents = yipyyTotalCents - (linesCents + taxCents);
-
-  if (deltaCents !== 0) {
-    lines.push({
-      LineNum: lines.length + 1,
-      Description: "Rounding adjustment",
-      Amount: toDollars(deltaCents),
-      DetailType: "SalesItemLineDetail",
-      SalesItemLineDetail: {
-        ItemRef: { value: "rounding", name: "Rounding" },
-        ItemAccountRef: findAccountByName(ctx.data, /discount/i),
-        Qty: 1,
-      },
-    });
-
-    // One cent is rounding. More than that is a real disagreement, and quietly
-    // papering over it would hide a pricing or tax bug behind a balanced
-    // receipt — so it balances AND it complains.
-    if (Math.abs(deltaCents) > 1) {
-      warnings.push(
-        `Yipyy total and line total differed by ${toDollars(Math.abs(deltaCents)).toFixed(2)} — forced to match, but this is larger than rounding and worth checking.`,
-      );
-    }
-  }
+  appendRoundingLine(
+    lines,
+    yipyyTotalCents - (lineTotalCents(lines) + taxCents),
+    ctx.data,
+    warnings,
+  );
 
   const memoParts = [
     `Yipyy Booking #${txn.bookingId ?? txn.transactionNumber}`,

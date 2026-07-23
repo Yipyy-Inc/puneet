@@ -55,7 +55,12 @@ export type SyncDocumentType =
   | "sales_receipt"
   | "invoice"
   | "refund_receipt"
-  | "credit_memo";
+  | "credit_memo"
+  /** A payment applied against an invoice. Its own type because the idempotency
+   *  key is derived from (type, transaction) — two payments settling one
+   *  invoice must not collide, so the key is keyed on the payment, not the
+   *  invoice. */
+  | "payment";
 
 export interface SyncJob {
   id: string;

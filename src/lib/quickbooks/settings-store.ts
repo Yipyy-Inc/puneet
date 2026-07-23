@@ -43,12 +43,23 @@ export interface QuickBooksSettings {
   refundHandling: RefundHandling;
   /** Where discount lines post. */
   discountAccountId?: string;
+  /** Payment terms for invoices Yipyy creates (Table 10). */
+  invoiceDueDays?: number;
+  /** Where unspent customer credit sits as a liability. */
+  storeCreditAccountId?: string;
+  /** Where an uncollectable invoice is written off to. */
+  badDebtAccountId?: string;
 }
+
+/** Net 15 — long enough to be payable, short enough that a facility notices an
+ *  unpaid stay before the client's next visit. */
+export const DEFAULT_INVOICE_DUE_DAYS = 15;
 
 export const DEFAULT_SETTINGS: QuickBooksSettings = Object.freeze({
   syncTrigger: "realtime" as const,
   documentRule: "auto" as const,
   syncHistorical: false,
+  invoiceDueDays: DEFAULT_INVOICE_DUE_DAYS,
   taxHandling: "yipyy" as const,
   // Refunds already happened in Yipyy; holding them back would leave the books
   // showing income the facility no longer has.

@@ -41,6 +41,7 @@ import {
   ExternalLink,
   Hash,
 } from "lucide-react";
+import { syncReturnToQuickBooks } from "@/lib/quickbooks/document-sync";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,6 +90,7 @@ import {
   type Transaction,
   type Return,
   type ReturnItem,
+  type StoreCredit,
   type RefundMethod,
   type ReturnReason,
   type CartItem,
@@ -912,11 +914,12 @@ export default function OrdersPage() {
     });
 
     // Create store credit if applicable
+    let issuedStoreCredit: StoreCredit | undefined;
     if (
       returnForm.refundMethod === "store_credit" &&
       selectedTransaction.customerId
     ) {
-      createStoreCredit({
+      issuedStoreCredit = createStoreCredit({
         customerId: selectedTransaction.customerId,
         customerName: selectedTransaction.customerName || "Customer",
         amount: refundTotal,
@@ -938,6 +941,16 @@ export default function OrdersPage() {
         notes: `Issued from return ${newReturn.returnNumber}${refundError ? ` (Override due to: ${refundError})` : ""}`,
       });
     }
+
+    // Send it to QuickBooks. Fire-and-forget on purpose: the client already has
+    // their money back, so a bookkeeping problem belongs in the sync log, never
+    // in this handler.
+    syncReturnToQuickBooks(
+      { facilityId: String(facilityId) },
+      selectedTransaction,
+      newReturn,
+      { storeCredit: issuedStoreCredit },
+    );
 
     // Update transaction status and add return to transaction history
     if (selectedTransaction) {
