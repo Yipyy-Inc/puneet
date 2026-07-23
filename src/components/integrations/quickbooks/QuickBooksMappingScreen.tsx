@@ -11,6 +11,8 @@ import {
   toMapping,
 } from "@/lib/quickbooks/mapping-suggestions";
 import {
+  mappedItemIds,
+  mappedItemNames,
   mappingProgress,
   setQuickBooksMapping,
   useQuickBooksMappings,
@@ -24,6 +26,7 @@ import {
   buildMappableGroups,
   CUSTOMER_MAPPING_NOTE,
   TRANSACTION_COUNT_NOTE,
+  withRetainedMappings,
 } from "@/lib/quickbooks/yipyy-catalog";
 
 import { QuickBooksMappingGroup } from "./QuickBooksMappingGroup";
@@ -40,14 +43,33 @@ import { QuickBooksMappingGroup } from "./QuickBooksMappingGroup";
 export function QuickBooksMappingScreen({
   scope,
   onContinue,
+  mode = "setup",
+  initialExpanded,
 }: {
   scope: QuickBooksScope;
   onContinue?: () => void;
+  /** "manage" is the same screen reached from the dashboard afterwards (4E):
+   *  no wizard step, no Continue — every change is already saved. */
+  mode?: "setup" | "manage";
+  /** Group keys to open on arrival, so "Map it now" lands on the right one. */
+  initialExpanded?: string[];
 }) {
-  const groups = useMemo(() => buildMappableGroups(), []);
   const data = useQuickBooksData(scope);
   const mappings = useQuickBooksMappings(scope);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Deleted-but-mapped items are folded back in: their mapping is still in
+  // force for historical transactions, so it stays visible and editable.
+  const groups = useMemo(
+    () =>
+      withRetainedMappings(
+        buildMappableGroups(),
+        mappedItemIds(mappings),
+        mappedItemNames(mappings),
+      ),
+    [mappings],
+  );
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set(initialExpanded ?? []),
+  );
   const [scrolled, setScrolled] = useState(false);
 
   const suggestions = useMemo(
@@ -70,11 +92,19 @@ export function QuickBooksMappingScreen({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const hasReviewed = expanded.size > 0 && scrolled;
+  // In setup the bulk-confirm has to be earned. A facility returning to manage
+  // their mappings has already been through that, so it's simply available.
+  const hasReviewed = mode === "manage" || (expanded.size > 0 && scrolled);
 
   function confirmAllSuggestions() {
+    const names = new Map(
+      groups.flatMap((g) => g.items).map((i) => [i.id, i.name]),
+    );
     for (const [itemId, suggestion] of Object.entries(suggestions)) {
-      setQuickBooksMapping(scope, itemId, toMapping(suggestion));
+      setQuickBooksMapping(scope, itemId, {
+        ...toMapping(suggestion),
+        name: names.get(itemId),
+      });
     }
   }
 
@@ -88,13 +118,19 @@ export function QuickBooksMappingScreen({
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
-      <div className="space-y-1 text-center">
+      <div
+        data-mode={mode}
+        className="space-y-1 data-[mode=manage]:text-left data-[mode=setup]:text-center"
+      >
         <h1 className="text-xl font-semibold tracking-tight">
-          Map your services to QuickBooks
+          {mode === "manage"
+            ? "Manage mappings"
+            : "Map your services to QuickBooks"}
         </h1>
         <p className="text-muted-foreground text-sm">
-          Tell Yipyy which QuickBooks item and account each thing you sell
-          belongs to.
+          {mode === "manage"
+            ? "Changes save as you make them and apply to the next sync — nothing already in QuickBooks is altered."
+            : "Tell Yipyy which QuickBooks item and account each thing you sell belongs to."}
         </p>
       </div>
 
@@ -205,7 +241,10 @@ export function QuickBooksMappingScreen({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-end gap-3">
+      <div
+        data-mode={mode}
+        className="flex flex-wrap items-center justify-end gap-3 data-[mode=manage]:hidden"
+      >
         {overall.mapped === 0 && (
           <p className="text-muted-foreground text-xs">
             Map at least one item to continue.

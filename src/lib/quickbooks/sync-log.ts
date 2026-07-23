@@ -28,6 +28,9 @@ export interface SyncLogRow {
   documentNumber?: string;
   quickBooksDocumentId?: string;
   error?: string;
+  /** Why someone took this out of the queue by hand. Shown in the row and the
+   *  CSV — an ignored transaction with no stated reason is just a gap. */
+  ignoredReason?: string;
   attemptCount: number;
 }
 
@@ -76,6 +79,7 @@ export function buildSyncLog(
         quickBooksDocumentId:
           doc?.quickBooksDocumentId ?? job.quickBooksDocumentId,
         error: job.lastError,
+        ignoredReason: job.ignoredReason,
         attemptCount: job.attemptCount,
       };
     })
@@ -187,7 +191,7 @@ const CSV_HEADER = [
   "Status",
   "QuickBooks document",
   "Attempts",
-  "Error",
+  "Error / reason",
 ];
 
 const STATUS_LABEL: Record<SyncLogStatus, string> = {
@@ -217,7 +221,9 @@ export function buildSyncLogCsv(rows: SyncLogRow[]): (string | number)[][] {
       STATUS_LABEL[r.status],
       r.documentNumber ?? "",
       r.attemptCount,
-      r.error ?? "",
+      // One column for "what went wrong or why it was skipped" — a row can
+      // only be in one of those states.
+      r.error ?? r.ignoredReason ?? "",
     ]),
   ];
 }

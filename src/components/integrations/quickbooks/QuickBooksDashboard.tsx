@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CalendarRange,
@@ -8,6 +8,7 @@ import {
   Clock,
   Loader2,
   RefreshCw,
+  Sparkles,
   WifiOff,
   XCircle,
 } from "lucide-react";
@@ -25,6 +26,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  clearCatalogWatch,
+  newServiceMessage,
+  newUnmappedItems,
+  observeCatalog,
+  useCatalogWatch,
+} from "@/lib/quickbooks/catalog-watch";
 import {
   disconnectQuickBooks,
   useQuickBooksConnection,
@@ -37,14 +46,20 @@ import {
   formatMoney,
   timeAgo,
 } from "@/lib/quickbooks/dashboard-metrics";
-import { clearQuickBooksMappings } from "@/lib/quickbooks/mappings-store";
+import {
+  clearQuickBooksMappings,
+  useQuickBooksMappings,
+} from "@/lib/quickbooks/mappings-store";
 import { reconnectQuickBooks } from "@/lib/quickbooks/oauth-mock";
 import { clearQuickBooksData } from "@/lib/quickbooks/qb-data-cache";
 import { resetQuickBooksSetup } from "@/lib/quickbooks/setup-store";
 import { useSyncJobs } from "@/lib/quickbooks/sync-engine";
 import { useSyncedDocuments } from "@/lib/quickbooks/synced-documents-store";
 import type { SyncLogStatus } from "@/lib/quickbooks/sync-log";
+import { buildMappableGroups } from "@/lib/quickbooks/yipyy-catalog";
 
+import { QuickBooksErrorPanel } from "./QuickBooksErrorPanel";
+import { QuickBooksMappingScreen } from "./QuickBooksMappingScreen";
 import { QuickBooksSyncLog } from "./QuickBooksSyncLog";
 
 // ============================================================================
@@ -173,6 +188,9 @@ function StatusBar({ scope }: { scope: QuickBooksScope }) {
                 clearQuickBooksData(scope);
                 clearQuickBooksMappings(scope);
                 resetQuickBooksSetup(scope);
+                // The next connection re-baselines the catalog: everything
+                // present then is "existing", not fifty new services.
+                clearCatalogWatch(scope);
               }}
             >
               Disconnect
@@ -184,18 +202,78 @@ function StatusBar({ scope }: { scope: QuickBooksScope }) {
   );
 }
 
+/**
+ * "New service detected" (4E).
+ *
+ * A service created after setup has no mapping, so its revenue heads for the
+ * catch-all account. That is recoverable but invisible, which is why it gets a
+ * banner rather than sitting inside the mapping progress bar.
+ */
+function NewServiceBanner({
+  scope,
+  onMapNow,
+}: {
+  scope: QuickBooksScope;
+  onMapNow: (groupKey: string) => void;
+}) {
+  const watch = useCatalogWatch(scope);
+  const mappings = useQuickBooksMappings(scope);
+  const groups = useMemo(() => buildMappableGroups(), []);
+
+  // Recorded in an effect, not during render: this writes to a store, and the
+  // first visit baselines the whole catalog.
+  useEffect(() => {
+    observeCatalog(
+      scope,
+      groups.flatMap((g) => g.items.map((i) => i.id)),
+    );
+  }, [scope, groups]);
+
+  const fresh = newUnmappedItems(watch, groups, mappings);
+  if (fresh.length === 0) return null;
+
+  return (
+    <Card className="border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/20">
+      <CardContent className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
+        <Sparkles className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+        <p className="min-w-0 flex-1 text-sm text-amber-800 dark:text-amber-300">
+          {newServiceMessage(fresh.map((f) => f.item))}
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-amber-500/40 text-amber-700 dark:text-amber-300"
+          onClick={() => onMapNow(fresh[0].groupKey)}
+        >
+          Map it now
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function QuickBooksDashboard({ scope }: { scope: QuickBooksScope }) {
   const jobs = useSyncJobs(scope);
   const documents = useSyncedDocuments(scope);
   const metrics = buildDashboardMetrics(jobs, documents);
   const [filter, setFilter] = useState<DashboardFilter>("all");
+  const [tab, setTab] = useState<"activity" | "mappings">("activity");
+  const [expandGroup, setExpandGroup] = useState<string[]>([]);
 
   const toggle = (next: DashboardFilter) =>
     setFilter((current) => (current === next ? "all" : next));
 
+  function openMappings(groupKey?: string) {
+    setExpandGroup(groupKey ? [groupKey] : []);
+    setTab("mappings");
+  }
+
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <StatusBar scope={scope} />
+
+      <QuickBooksErrorPanel scope={scope} onManageMappings={openMappings} />
+      <NewServiceBanner scope={scope} onMapNow={openMappings} />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiTile
@@ -247,11 +325,29 @@ export function QuickBooksDashboard({ scope }: { scope: QuickBooksScope }) {
         />
       </div>
 
-      <QuickBooksSyncLog
-        scope={scope}
-        status={filter}
-        onStatusChange={setFilter}
-      />
+      <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+        <TabsList>
+          <TabsTrigger value="activity">Sync activity</TabsTrigger>
+          <TabsTrigger value="mappings">Mappings</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {tab === "activity" ? (
+        <QuickBooksSyncLog
+          scope={scope}
+          status={filter}
+          onStatusChange={setFilter}
+        />
+      ) : (
+        <QuickBooksMappingScreen
+          // Remounted when a different group is targeted: `initialExpanded` is
+          // an arrival state, and arriving twice should open twice.
+          key={expandGroup.join(",")}
+          scope={scope}
+          mode="manage"
+          initialExpanded={expandGroup}
+        />
+      )}
     </div>
   );
 }

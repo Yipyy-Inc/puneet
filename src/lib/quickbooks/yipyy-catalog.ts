@@ -49,6 +49,9 @@ export interface MappableItem {
    *  progress and from the unmapped/catch-all count — calling it "unmapped"
    *  would claim tax posts to a catch-all income account, which it does not. */
   mappedElsewhere?: string;
+  /** No longer in the Yipyy catalog, but still mapped. Kept visible because
+   *  historical transactions reference it — see `withRetainedMappings`. */
+  deleted?: boolean;
   note?: string;
 }
 
@@ -283,6 +286,67 @@ export function buildMappableGroups(): MappableGroup[] {
       ],
     },
   ];
+}
+
+// ── Deleted services (4E) ───────────────────────────────────────────────────
+
+/** Where a retained mapping goes back on the screen, read from its id prefix.
+ *  Add-ons carry the `service:` prefix too, so an ambiguous id lands in
+ *  Services — visible in the wrong group beats invisible. */
+const PREFIX_GROUP: Record<string, MappableGroupKey> = {
+  service: "services",
+  addon: "addons",
+  package: "packages",
+  membership: "memberships",
+  giftcard: "gift_cards",
+  deposit: "deposits",
+  product: "retail",
+  discount: "discounts",
+  surcharge: "fees",
+  tip: "tips",
+  tax: "taxes",
+};
+
+export const DELETED_SERVICE_NOTE =
+  "Deleted service — historical transactions still reference this mapping.";
+
+/**
+ * Put mapped-but-vanished items back into their group.
+ *
+ * RULE: deleting a service does NOT delete its mapping. Last year's Sales
+ * Receipts still point at that income account, and a facility re-running a
+ * report needs to see where that money went. Dropping the row would make the
+ * mapping unreachable while leaving it in force — the worst of both.
+ */
+export function withRetainedMappings(
+  groups: MappableGroup[],
+  mappedIds: string[],
+  /** id → the name it had when it was mapped, if recorded. */
+  names: Record<string, string> = {},
+): MappableGroup[] {
+  const live = new Set(groups.flatMap((g) => g.items).map((i) => i.id));
+  const orphans = mappedIds.filter((id) => !live.has(id));
+  if (orphans.length === 0) return groups;
+
+  const byGroup = new Map<MappableGroupKey, MappableItem[]>();
+  for (const id of orphans) {
+    const key = PREFIX_GROUP[id.split(":")[0]] ?? "services";
+    const item: MappableItem = {
+      id,
+      // The recorded name if we have one; otherwise the id, which is at least
+      // traceable. Never a guess dressed up as a service name.
+      name: names[id] ?? id,
+      type: "Deleted",
+      deleted: true,
+      note: DELETED_SERVICE_NOTE,
+    };
+    byGroup.set(key, [...(byGroup.get(key) ?? []), item]);
+  }
+
+  return groups.map((group) => {
+    const extra = byGroup.get(group.key);
+    return extra ? { ...group, items: [...group.items, ...extra] } : group;
+  });
 }
 
 /** How Yipyy decides which QuickBooks customer a sale belongs to. Shown on the

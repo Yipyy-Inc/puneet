@@ -65,6 +65,10 @@ export function QuickBooksMappingGroup({
   // gesture, not a decision worth surviving a reload.
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  // Snapshotted with each mapping so the row survives the service being
+  // deleted from the catalog.
+  const itemNames = Object.fromEntries(group.items.map((i) => [i.id, i.name]));
+
   const allSelected =
     group.items.length > 0 && selected.size === group.items.length;
 
@@ -76,7 +80,7 @@ export function QuickBooksMappingGroup({
     itemId?: string;
     accountId?: string;
   }): void {
-    setQuickBooksMappings(scope, [...selected], patch);
+    setQuickBooksMappings(scope, [...selected], patch, itemNames);
   }
 
   // Bulk account choices follow the same rule as a single card: a group of
@@ -199,7 +203,12 @@ export function QuickBooksMappingGroup({
                   return updated;
                 })
               }
-              onChange={(patch) => setQuickBooksMapping(scope, item.id, patch)}
+              onChange={(patch) =>
+                setQuickBooksMapping(scope, item.id, {
+                  ...patch,
+                  name: item.name,
+                })
+              }
             />
           ))}
         </CardContent>

@@ -176,6 +176,7 @@ export function QuickBooksSyncLog({
                 <SelectItem value="synced">Synced</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="ignored">Ignored</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -323,6 +324,13 @@ export function QuickBooksSyncLog({
                       title={row.error}
                     >
                       {row.error ?? "Failed"}
+                    </span>
+                  ) : row.status === "ignored" ? (
+                    <span
+                      className="text-muted-foreground truncate text-xs italic"
+                      title={row.ignoredReason}
+                    >
+                      {row.ignoredReason ?? "Ignored"}
                     </span>
                   ) : (
                     <span className="text-muted-foreground text-xs">—</span>

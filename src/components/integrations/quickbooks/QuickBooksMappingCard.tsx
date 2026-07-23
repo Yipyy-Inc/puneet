@@ -66,7 +66,14 @@ export function QuickBooksMappingCard({
         className="mt-1 shrink-0 lg:mt-0"
       />
       <div className="min-w-0 lg:w-2/5">
-        <p className="truncate text-sm font-medium">{item.name}</p>
+        {/* A deleted service is struck through but still editable: the mapping
+            is what last year's receipts point at, so it stays reachable. */}
+        <p
+          data-deleted={Boolean(item.deleted)}
+          className="data-[deleted=true]:text-muted-foreground truncate text-sm font-medium data-[deleted=true]:line-through"
+        >
+          {item.name}
+        </p>
         <p className="text-muted-foreground text-xs">
           {item.type}
           {item.transactionCount !== undefined && (

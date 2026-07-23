@@ -26,6 +26,10 @@ export interface QuickBooksMapping {
   itemId?: string;
   /** QuickBooks Account Id. */
   accountId?: string;
+  /** The Yipyy item's name when it was mapped. Snapshotted so a mapping stays
+   *  readable after the service is deleted from the catalog (4E) — an id alone
+   *  tells nobody which service last year's receipts point at. */
+  name?: string;
 }
 
 /** yipyy item id → mapping */
@@ -131,12 +135,18 @@ export function setQuickBooksMappings(
   scope: QuickBooksScope,
   itemKeys: string[],
   patch: QuickBooksMapping,
+  /** item id → display name, snapshotted alongside the mapping. */
+  names: Record<string, string> = {},
 ): void {
   ensureReady();
   const key = scopeKey(scope);
   const set = { ...(state[key] ?? EMPTY_SET) };
   for (const itemKey of itemKeys) {
-    const next: QuickBooksMapping = { ...set[itemKey], ...patch };
+    const next: QuickBooksMapping = {
+      ...set[itemKey],
+      ...patch,
+      name: names[itemKey] ?? set[itemKey]?.name,
+    };
     if (!next.itemId && !next.accountId) delete set[itemKey];
     else set[itemKey] = next;
   }
@@ -171,8 +181,12 @@ export function mappingProgress(
   groups: MappableGroup[],
   mappings: MappingSet,
 ): MappingProgress {
-  // Items configured elsewhere (tax) are not part of this screens work.
-  const all = groups.flatMap((g) => g.items).filter((i) => !i.mappedElsewhere);
+  // Items configured elsewhere (tax) are not part of this screens work, and
+  // neither are retained mappings for deleted services — counting those would
+  // put work in the denominator that nobody can ever do.
+  const all = groups
+    .flatMap((g) => g.items)
+    .filter((i) => !i.mappedElsewhere && !i.deleted);
   const mapped = all.filter((i) => isMapped(mappings[i.id])).length;
   const total = all.length;
   return {
@@ -187,6 +201,21 @@ export function groupProgress(
   mappings: MappingSet,
 ): MappingProgress {
   return mappingProgress([group], mappings);
+}
+
+/** Ids that carry a usable mapping — the input to `withRetainedMappings`. */
+export function mappedItemIds(mappings: MappingSet): string[] {
+  return Object.keys(mappings).filter((id) => isMapped(mappings[id]));
+}
+
+/** id → the name recorded when it was mapped, for rows whose catalog entry is
+ *  gone. Mappings written before names were snapshotted simply aren't listed. */
+export function mappedItemNames(mappings: MappingSet): Record<string, string> {
+  const names: Record<string, string> = {};
+  for (const [id, mapping] of Object.entries(mappings)) {
+    if (mapping.name) names[id] = mapping.name;
+  }
+  return names;
 }
 
 // ── Resolving a mapping at sync time ────────────────────────────────────────
