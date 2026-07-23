@@ -6,7 +6,11 @@ import type { CheckInConfirmation } from "@/components/facility/grooming/check-i
 import type { MarkReadyConfirmation } from "@/components/facility/grooming/mark-ready-dialog";
 import type { PaymentResult } from "@/components/facility/grooming/payment-dialog";
 import { groomingAddOnsList } from "@/data/grooming-pricing-rules";
-import { redeemPackagePass } from "@/data/customer-packages";
+import {
+  mockCustomerPackages,
+  redeemPackagePass,
+} from "@/data/customer-packages";
+import { syncRedeemedPassToQuickBooks } from "@/lib/quickbooks/document-sync";
 
 export interface CheckInActionDeps {
   clients: Client[];
@@ -456,7 +460,19 @@ export function applyPaymentResult(
       petName: apt.petName,
       serviceLabel: apt.packageName,
     });
-    if (redemption.ok) packagePassesLeft = redemption.passesLeft;
+    if (redemption.ok) {
+      packagePassesLeft = redemption.passesLeft;
+      const pkg = mockCustomerPackages.find(
+        (p) => p.id === result.appliedPackagePassId,
+      );
+      if (pkg) {
+        syncRedeemedPassToQuickBooks({ facilityId: "11" }, pkg, redemption, {
+          petName: apt.petName,
+          serviceName: apt.packageName,
+          customerName: apt.ownerName,
+        });
+      }
+    }
   }
 
   // ── 3. Decrement store credit on the client ────────────────────────────

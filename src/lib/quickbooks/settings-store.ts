@@ -49,6 +49,11 @@ export interface QuickBooksSettings {
   storeCreditAccountId?: string;
   /** Where an uncollectable invoice is written off to. */
   badDebtAccountId?: string;
+  /** The liability booking deposits are held in until checkout (5E). */
+  depositsHeldAccountId?: string;
+  /** Optional contra-revenue account for package-pass redemptions. Must be an
+   *  income account — see documents/package.ts. */
+  packageRedemptionAccountId?: string;
 }
 
 /** Net 15 — long enough to be payable, short enough that a facility notices an

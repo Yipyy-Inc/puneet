@@ -52,6 +52,7 @@ import { computeBookingTotals, findZipTaxRate } from "@/lib/service-areas";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { computePackagePassDiscount } from "@/lib/grooming/package-pass";
 import { redeemPackagePass } from "@/data/customer-packages";
+import { syncRedeemedPassToQuickBooks } from "@/lib/quickbooks/document-sync";
 import {
   STEPS,
   DAYCARE_SUB_STEPS,
@@ -2581,6 +2582,17 @@ export function BookingModal({
             queryKey: ["grooming", "customer-packages"],
           });
           if (result.ok) {
+            // A $0 receipt so the books show the service was delivered against
+            // a package rather than given away.
+            syncRedeemedPassToQuickBooks(
+              { facilityId: "11" },
+              prepaid,
+              result,
+              {
+                petName: primaryPet?.name,
+                serviceName: prepaid.passes[0]?.serviceName,
+              },
+            );
             toast.success(`Redeemed 1 pass from ${prepaid.packageName}`, {
               description: `${result.passesLeft} pass${
                 result.passesLeft === 1 ? "" : "es"

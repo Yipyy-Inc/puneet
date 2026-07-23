@@ -1,5 +1,7 @@
 "use client";
 
+import type { CustomerPackageRecord } from "@/data/customer-packages";
+import { groomingPrepaidPackages } from "@/data/grooming-prepaid-packages";
 import type { Invoice } from "@/types/payments";
 import type { Return, StoreCredit, Transaction } from "@/types/retail";
 
@@ -13,6 +15,17 @@ import {
   buildInvoicePayment,
   type InvoicePaymentInput,
 } from "./documents/invoice";
+import {
+  buildDepositReceipt,
+  buildDepositRefundReceipt,
+  type DepositInput,
+} from "./documents/deposit";
+import {
+  buildPackageRedemptionReceipt,
+  buildPackageSaleReceipt,
+  type PackageRedemptionInput,
+  type PackageSaleInput,
+} from "./documents/package";
 import { buildRefundReceipt } from "./documents/refund-receipt";
 import { getQuickBooksMappings } from "./mappings-store";
 import {
@@ -283,6 +296,232 @@ export function syncInvoiceWriteOffToQuickBooks(
   } catch {
     return {
       warnings: ["QuickBooks sync couldn't be queued for this write-off."],
+    };
+  }
+}
+
+// ── Packages ────────────────────────────────────────────────────────────────
+
+/** A prepaid package was bought. Revenue is recognised here and nowhere else. */
+export function syncPackageSaleToQuickBooks(
+  scope: QuickBooksScope,
+  sale: PackageSaleInput,
+): DocumentSyncOutcome {
+  try {
+    const pre = quickBooksPreflight(scope);
+    if (!pre.ok) return NOTHING(pre.skipped);
+
+    const { warnings } = buildPackageSaleReceipt(sale, {
+      data: getQuickBooksData(scope),
+      mappings: getQuickBooksMappings(scope),
+      settings: pre.settings,
+      catchAllAccountId: ensureUnassignedIncomeAccount(scope).Id,
+    });
+
+    const job = enqueueSync(scope, {
+      transactionId: sale.customerPackageId,
+      documentType: "sales_receipt",
+      description: `${sale.customerName ?? "Walk-in"} · ${sale.packageName}`,
+      amount: sale.packagePrice + (sale.taxAmount ?? 0),
+      transactionDate: sale.purchasedAt,
+      clientName: sale.customerName,
+      serviceSummary: `Package · ${sale.packageName}`,
+    });
+
+    return {
+      job,
+      skipped: pre.manualOnly ? "manual_only" : undefined,
+      warnings,
+    };
+  } catch {
+    return {
+      warnings: ["QuickBooks sync couldn't be queued for this package sale."],
+    };
+  }
+}
+
+/**
+ * A pass was redeemed.
+ *
+ * Queued even though it moves no money: the $0 receipt is what tells the
+ * facility (and their accountant) that the service was delivered against a
+ * package rather than given away.
+ */
+export function syncPackageRedemptionToQuickBooks(
+  scope: QuickBooksScope,
+  redemption: PackageRedemptionInput,
+): DocumentSyncOutcome {
+  try {
+    const pre = quickBooksPreflight(scope);
+    if (!pre.ok) return NOTHING(pre.skipped);
+
+    const { warnings } = buildPackageRedemptionReceipt(redemption, {
+      data: getQuickBooksData(scope),
+      mappings: getQuickBooksMappings(scope),
+      settings: pre.settings,
+      catchAllAccountId: ensureUnassignedIncomeAccount(scope).Id,
+    });
+
+    const job = enqueueSync(scope, {
+      // Keyed on the redemption, not the package: a five-pass package redeems
+      // five times, and keying on the package would record only the first.
+      transactionId: redemption.redemptionId,
+      documentType: "sales_receipt",
+      description: `${redemption.customerName ?? "Client"} · Pass ${redemption.passNumber}/${redemption.passesTotal} · ${redemption.packageName}`,
+      amount: 0,
+      transactionDate: redemption.redeemedAt,
+      clientName: redemption.customerName,
+      petName: redemption.petName,
+      serviceSummary: `${redemption.serviceName} (package pass)`,
+    });
+
+    return {
+      job,
+      skipped: pre.manualOnly ? "manual_only" : undefined,
+      warnings,
+    };
+  } catch {
+    return {
+      warnings: ["QuickBooks sync couldn't be queued for this redemption."],
+    };
+  }
+}
+
+/**
+ * Adapter for the three `redeemPackagePass` call sites.
+ *
+ * They each know a customer package and how many passes are left; none of them
+ * should have to know what a QuickBooks redemption document needs. The pass
+ * number is derived from what redeemPackagePass returned rather than read back
+ * off the record, so it matches the redemption row that call actually created.
+ */
+export function syncRedeemedPassToQuickBooks(
+  scope: QuickBooksScope,
+  pkg: CustomerPackageRecord,
+  result: { passesLeft: number },
+  extras: {
+    serviceName?: string;
+    servicePrice?: number;
+    serviceId?: string;
+    petName?: string;
+    bookingId?: number;
+    customerName?: string;
+    customerEmail?: string;
+  } = {},
+): DocumentSyncOutcome {
+  try {
+    const passNumber = pkg.passesTotal - result.passesLeft;
+    const catalog = groomingPrepaidPackages.find((p) => p.id === pkg.packageId);
+    const catalogService = catalog?.services[0];
+
+    return syncPackageRedemptionToQuickBooks(scope, {
+      customerPackageId: pkg.id,
+      packageName: pkg.packageName,
+      redemptionId: `red-${pkg.id}-${passNumber}`,
+      serviceId: extras.serviceId ?? catalogService?.serviceId,
+      serviceName:
+        extras.serviceName ??
+        catalogService?.serviceName ??
+        pkg.passes[0]?.serviceName ??
+        pkg.packageName,
+      // The per-session price the package was priced against. Without it the
+      // redemption would show a $0 service, which tells nobody what was given.
+      servicePrice: extras.servicePrice ?? catalogService?.pricePerSession ?? 0,
+      redeemedAt: new Date().toISOString(),
+      passNumber,
+      passesTotal: pkg.passesTotal,
+      bookingId: extras.bookingId,
+      petName: extras.petName,
+      customerName: extras.customerName,
+      customerEmail: extras.customerEmail,
+    });
+  } catch {
+    return {
+      warnings: ["QuickBooks sync couldn't be queued for this redemption."],
+    };
+  }
+}
+
+// ── Deposits ────────────────────────────────────────────────────────────────
+
+/** A deposit was taken before the stay. Posts to a liability, not income. */
+export function syncDepositToQuickBooks(
+  scope: QuickBooksScope,
+  deposit: DepositInput,
+): DocumentSyncOutcome {
+  try {
+    if (deposit.amount <= 0) return NOTHING("nothing_to_sync");
+
+    const pre = quickBooksPreflight(scope);
+    if (!pre.ok) return NOTHING(pre.skipped);
+
+    const { warnings } = buildDepositReceipt(deposit, {
+      data: getQuickBooksData(scope),
+      mappings: getQuickBooksMappings(scope),
+      settings: pre.settings,
+    });
+
+    const job = enqueueSync(scope, {
+      transactionId: `deposit:${deposit.depositId}`,
+      documentType: "sales_receipt",
+      description: `${deposit.customerName ?? "Client"} · Booking deposit`,
+      amount: deposit.amount,
+      transactionDate: deposit.collectedAt,
+      clientName: deposit.customerName,
+      petName: deposit.petName,
+      serviceSummary: deposit.serviceName
+        ? `Deposit · ${deposit.serviceName}`
+        : "Booking deposit",
+    });
+
+    return {
+      job,
+      skipped: pre.manualOnly ? "manual_only" : undefined,
+      warnings,
+    };
+  } catch {
+    return {
+      warnings: ["QuickBooks sync couldn't be queued for this deposit."],
+    };
+  }
+}
+
+/** The booking fell through and the deposit went back. */
+export function syncDepositRefundToQuickBooks(
+  scope: QuickBooksScope,
+  deposit: DepositInput & { refundedAt?: string; reason?: string },
+): DocumentSyncOutcome {
+  try {
+    if (deposit.amount <= 0) return NOTHING("nothing_to_sync");
+
+    const pre = quickBooksPreflight(scope);
+    if (!pre.ok) return NOTHING(pre.skipped);
+
+    const { warnings } = buildDepositRefundReceipt(deposit, {
+      data: getQuickBooksData(scope),
+      mappings: getQuickBooksMappings(scope),
+      settings: pre.settings,
+    });
+
+    const job = enqueueSync(scope, {
+      transactionId: `deposit-refund:${deposit.depositId}`,
+      documentType: "refund_receipt",
+      description: `${deposit.customerName ?? "Client"} · Deposit refunded`,
+      amount: deposit.amount,
+      transactionDate: deposit.refundedAt ?? deposit.collectedAt,
+      clientName: deposit.customerName,
+      petName: deposit.petName,
+      serviceSummary: "Deposit refund",
+    });
+
+    return {
+      job,
+      skipped: pre.manualOnly ? "manual_only" : undefined,
+      warnings,
+    };
+  } catch {
+    return {
+      warnings: ["QuickBooks sync couldn't be queued for this deposit refund."],
     };
   }
 }

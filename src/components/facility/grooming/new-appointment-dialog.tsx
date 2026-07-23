@@ -48,6 +48,7 @@ import {
 } from "@/lib/api/grooming";
 import { saveCustomPetPricingOverride } from "@/lib/grooming-pet-pricing-store";
 import { redeemPackagePass } from "@/data/customer-packages";
+import { syncRedeemedPassToQuickBooks } from "@/lib/quickbooks/document-sync";
 import { GroomingWaitlistDialog } from "@/components/bookings/modals/service-details/GroomingWaitlistDialog";
 import { clientQueries } from "@/lib/api/client";
 import {
@@ -1073,6 +1074,12 @@ export function NewAppointmentDialog({
         queryKey: ["grooming", "customer-packages"],
       });
       if (result.ok) {
+        syncRedeemedPassToQuickBooks(
+          { facilityId: "11" },
+          selectedCustomerPackage,
+          result,
+          { petName: form.petName, serviceName: selectedPackage?.name },
+        );
         toast.success(
           `Redeemed 1 pass from ${selectedCustomerPackage.packageName}`,
           {
