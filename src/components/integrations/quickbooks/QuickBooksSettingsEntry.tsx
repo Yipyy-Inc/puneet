@@ -6,6 +6,7 @@ import { ChevronRight, Landmark } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQuickBooksConnection } from "@/lib/quickbooks/connection-store";
+import { withPeriod } from "@/lib/quickbooks/format";
 import { cn } from "@/lib/utils";
 
 // The row inside Settings → Integrations → Accounting. Status only; every
@@ -60,10 +61,8 @@ export function QuickBooksSettingsEntry() {
           </Badge>
         </div>
         <p className="text-muted-foreground text-sm">
-          {/* No trailing period appended — company names routinely end in one
-              ("… Inc."), and the doubled dot looks like a typo. */}
           {connected && connection.companyName
-            ? `Syncing to ${connection.companyName}`
+            ? `Syncing to ${withPeriod(connection.companyName)}`
             : "Sync sales, payments and refunds straight to your accountant's books."}
         </p>
       </div>

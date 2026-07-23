@@ -35,6 +35,8 @@ export interface QuickBooksSetupState {
   accountWarnings: string[];
   /** Step 4 (3.4): the facility has been through the mapping screen. */
   mappingsReviewed: boolean;
+  /** Step 5 (3.5): settings saved and the test sync passed. */
+  setupComplete: boolean;
 }
 
 export const EMPTY_SETUP: QuickBooksSetupState = Object.freeze({
@@ -42,6 +44,7 @@ export const EMPTY_SETUP: QuickBooksSetupState = Object.freeze({
   accountsReviewed: false,
   accountWarnings: Object.freeze([]) as unknown as string[],
   mappingsReviewed: false,
+  setupComplete: false,
 });
 
 type SetupMap = Record<string, QuickBooksSetupState>;

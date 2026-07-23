@@ -35,6 +35,8 @@ import { QuickBooksCompanyConfirmCard } from "./QuickBooksCompanyConfirmCard";
 import { QuickBooksConsentModal } from "./QuickBooksConsentModal";
 import { QuickBooksEntryPoint } from "./QuickBooksEntryPoint";
 import { QuickBooksMappingScreen } from "./QuickBooksMappingScreen";
+import { QuickBooksSetupSuccess } from "./QuickBooksSetupSuccess";
+import { QuickBooksSyncSettings } from "./QuickBooksSyncSettings";
 
 // Section 3A RULE: the entry point is a PRE-connection screen. Once a facility
 // has connected, this route is their integration surface, not a sales pitch.
@@ -200,6 +202,9 @@ export function QuickBooksIntegrationView({
   const connection = useQuickBooksConnection(scope);
   const setup = useQuickBooksSetup(scope);
   const [consentOpen, setConsentOpen] = useState(false);
+  // Held only for the run that just finished: the success screen is a moment,
+  // not a state a facility should land back on after a reload.
+  const [testDocument, setTestDocument] = useState<string | undefined>();
 
   // "Never connected" is the only state the pitch belongs in. An expired or
   // interrupted connection is still a connection — showing the sales page there
@@ -217,7 +222,9 @@ export function QuickBooksIntegrationView({
           ? "accounts"
           : !setup.mappingsReviewed
             ? "mapping"
-            : "connected";
+            : !setup.setupComplete
+              ? "settings"
+              : "connected";
 
   return (
     <>
@@ -227,7 +234,19 @@ export function QuickBooksIntegrationView({
       {step === "confirm" && <QuickBooksCompanyConfirmCard scope={scope} />}
       {step === "accounts" && <QuickBooksAccountHealthCheck scope={scope} />}
       {step === "mapping" && <QuickBooksMappingScreen scope={scope} />}
-      {step === "connected" && <ConnectedSummary scope={scope} />}
+      {step === "settings" && (
+        <QuickBooksSyncSettings scope={scope} onFinished={setTestDocument} />
+      )}
+      {step === "connected" && testDocument && (
+        <QuickBooksSetupSuccess
+          scope={scope}
+          testDocumentNumber={testDocument}
+          onViewDashboard={() => setTestDocument(undefined)}
+        />
+      )}
+      {step === "connected" && !testDocument && (
+        <ConnectedSummary scope={scope} />
+      )}
 
       {/* Mounted here rather than inside the entry point. Approving writes the
           connection, which flips `step` away from "entry" — a modal owned by
