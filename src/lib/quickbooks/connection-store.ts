@@ -311,6 +311,14 @@ export function expireQuickBooksRefreshToken(
 
 export type QuickBooksPauseReason = "expired" | "outage" | "disconnected";
 
+/** The reason as a sentence. The code is for logic; this is for people, and
+ *  rendering the code was leaving "expired" in the middle of a paragraph. */
+export const PAUSE_REASON_TEXT: Record<QuickBooksPauseReason, string> = {
+  expired: "This location's QuickBooks connection has expired.",
+  outage: "QuickBooks is unreachable for this location.",
+  disconnected: "This location isn't connected to QuickBooks.",
+};
+
 /**
  * Whether queued sync jobs should HOLD rather than fail.
  *

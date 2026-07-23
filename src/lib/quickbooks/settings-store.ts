@@ -54,6 +54,10 @@ export interface QuickBooksSettings {
   /** Optional contra-revenue account for package-pass redemptions. Must be an
    *  income account — see documents/package.ts. */
   packageRedemptionAccountId?: string;
+  /** How a multi-location facility maps onto QuickBooks companies (Phase 8).
+   *  Facility-scoped: it decides which scope every other record lives under, so
+   *  it is read from `{facilityId}` even in per-location mode. */
+  multiLocationMode?: "single_company" | "company_per_location";
   /** Tag every document with the QuickBooks Class for its Yipyy location, so
    *  one company's books can still be read per branch (Phase 8). Requires a
    *  plan with Class tracking. */

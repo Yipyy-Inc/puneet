@@ -1,5 +1,7 @@
 "use client";
 
+import { getLocationById } from "@/data/locations";
+
 import {
   getQuickBooksConnection,
   patchQuickBooksConnection,
@@ -58,13 +60,42 @@ const MOCK_COMPANY: QuickBooksConsentCompany = {
   realmId: "9341452093216780",
 };
 
-/** The company the consent screen names before the facility approves anything.
+/**
+ * The company the consent screen names before the facility approves anything.
  *
- *  Intuit renders that screen itself and already knows which company the user
- *  is signed in to, so the simulated one has to know it too — otherwise it
- *  would have to ask "do you approve?" without saying what it is approving. */
-export function getQuickBooksConsentCompany(): Readonly<QuickBooksConsentCompany> {
-  return MOCK_COMPANY;
+ * Intuit renders that screen itself and already knows which company the user
+ * is signed in to, so the simulated one has to know it too — otherwise it
+ * would have to ask "do you approve?" without saying what it is approving.
+ *
+ * A facility running a company PER LOCATION authorises a genuinely different
+ * company each time, so the scope's location is folded into the realm id and
+ * the name. Returning one realm for every branch would model three connections
+ * to the SAME books, which is the exact mistake this mode exists to avoid — and
+ * it would make the per-location isolation impossible to see.
+ */
+export function getQuickBooksConsentCompany(
+  scope?: QuickBooksScope,
+): Readonly<QuickBooksConsentCompany> {
+  if (!scope?.locationId) return MOCK_COMPANY;
+
+  const location = getLocationById(scope.locationId);
+  const suffix = location?.shortCode ?? scope.locationId.toUpperCase();
+  return {
+    ...MOCK_COMPANY,
+    name: `${MOCK_COMPANY.name} — ${location?.city ?? suffix}`,
+    // Deterministic per location: reconnecting the same branch must land on the
+    // same realm, or the "you connected a different company" guard would fire
+    // on every reconnect.
+    realmId: `${MOCK_COMPANY.realmId.slice(0, 12)}${hashSuffix(scope.locationId)}`,
+  };
+}
+
+/** Four stable digits from a location id, so each branch reads as its own
+ *  QuickBooks company without the ids colliding. */
+function hashSuffix(locationId: string): string {
+  let h = 0;
+  for (const ch of locationId) h = (h * 31 + ch.charCodeAt(0)) % 10000;
+  return String(h).padStart(4, "0");
 }
 
 // ── Results ─────────────────────────────────────────────────────────────────
@@ -173,13 +204,14 @@ export async function connectQuickBooks(
     };
   }
 
+  const company = getQuickBooksConsentCompany(scope);
   const connection: QuickBooksConnection = {
     connected: true,
     status: "connected",
-    companyName: MOCK_COMPANY.name,
-    companyCountry: MOCK_COMPANY.country,
-    companyCurrency: MOCK_COMPANY.currency,
-    realmId: MOCK_COMPANY.realmId,
+    companyName: company.name,
+    companyCountry: company.country,
+    companyCurrency: company.currency,
+    realmId: company.realmId,
     accessToken: mockToken("qb-access"),
     refreshToken: mockToken("qb-refresh"),
     accessTokenExpiresAt: plusMinutes(now, ACCESS_TOKEN_TTL_MINUTES),

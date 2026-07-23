@@ -13,6 +13,7 @@ import {
 } from "./documents/gift-card";
 import { buildServiceSalesReceipt } from "./documents/sales-receipt";
 import { facilityLocations } from "./location-classes";
+import { syncScopeForTransaction } from "./location-scopes";
 import { syncInvoiceToQuickBooks } from "./document-sync";
 import { getQuickBooksMappings } from "./mappings-store";
 import {
@@ -109,6 +110,14 @@ export function syncCheckoutToQuickBooks(
     if (txn.status !== "completed") {
       return { skipped: "not_paid", warnings: [] };
     }
+
+    // In per-location mode the sale belongs to its branch's own QuickBooks
+    // company, which is a different scope with a different token set.
+    const routed = syncScopeForTransaction(scope.facilityId, txn.locationId);
+    if (!routed.scope) {
+      return { skipped: "nothing_to_sync", warnings: [routed.problem!] };
+    }
+    scope = routed.scope;
 
     const pre = quickBooksPreflight(scope);
     if (!pre.ok) return { skipped: pre.skipped, warnings: [] };

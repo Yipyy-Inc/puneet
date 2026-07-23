@@ -11,6 +11,7 @@ import {
   BarChart3,
   UserRound,
   GraduationCap,
+  Plug,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -67,6 +68,11 @@ const HQ_NAV: NavGroup[] = [
   {
     label: "Settings",
     items: [
+      {
+        label: "Integrations",
+        href: "/facility/hq/integrations",
+        icon: Plug,
+      },
       { label: "HQ Settings", href: "/facility/hq/settings", icon: Settings },
     ],
   },
