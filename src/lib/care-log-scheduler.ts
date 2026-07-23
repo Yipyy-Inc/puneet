@@ -125,6 +125,43 @@ function buildAlertTags(guest: BoardingGuest): string[] {
   return tags;
 }
 
+// ── Medications given with a meal ───────────────────────────────────────────
+
+/** How far a dose may sit from a meal and still be given with it. Bookings
+ *  schedule meals and meds independently — Buddy eats at 07:30 and takes
+ *  Apoquel at 08:00 — so an exact time match would almost never combine, while
+ *  a whole shift would attach an 11:00 dose to a breakfast already served. */
+const WITH_FOOD_WINDOW_MINUTES = 90;
+
+/** Free-text fallback for bookings written before `withFood` existed. */
+const WITH_FOOD_TEXT =
+  /\bwith\s+(?:a\s+)?(?:food|meal|meals|breakfast|dinner)\b|\bmixed\s+in(?:to)?\s+food\b/i;
+
+/** Whether the parent asked for this dose to go down with a meal. Prefers the
+ *  structured flag set from the booking / check-in form / pet profile. */
+export function medIsWithFood(med: MedicationSchedule): boolean {
+  if (typeof med.withFood === "boolean") return med.withFood;
+  return WITH_FOOD_TEXT.test(med.instructions ?? "");
+}
+
+/** The meal a with-food dose belongs to: the nearest one within the window, or
+ *  none — in which case the dose stays a task of its own. */
+function mealForDose(
+  doseTime: string,
+  meals: ScheduledTask[],
+): ScheduledTask | undefined {
+  let best: ScheduledTask | undefined;
+  let bestGap = Infinity;
+  for (const meal of meals) {
+    const gap = Math.abs(toMinutes(meal.scheduledTime) - toMinutes(doseTime));
+    if (gap <= WITH_FOOD_WINDOW_MINUTES && gap < bestGap) {
+      best = meal;
+      bestGap = gap;
+    }
+  }
+  return best;
+}
+
 // ── In-stay care from incidents (2B) ────────────────────────────────────────
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -321,6 +358,9 @@ export function generateScheduledTasks(
     // Feeding — match guest's per-meal times against feeding steps; if no
     // step covers a meal time, still emit the task (the meal exists for
     // this guest regardless of facility schedule).
+    // Held back from `tasks` until the medication loop has had a chance to fold
+    // with-food doses into them.
+    const meals: ScheduledTask[] = [];
     const matchedTimes = new Set<string>();
     for (const step of feedingSteps) {
       if (!guestMatchesAppliesTo(guest, step.appliesTo, guestTags)) continue;
@@ -328,13 +368,13 @@ export function generateScheduledTasks(
       // Only emit if guest actually has a meal at this time, OR step is a generic feeding step
       if (!guest.feedingTimes.includes(step.time)) continue;
       matchedTimes.add(step.time);
-      tasks.push(
+      meals.push(
         feedingTask(guest, time, alertTags, step.name, step.id, baseTask),
       );
     }
     for (const time of guest.feedingTimes) {
       if (matchedTimes.has(time)) continue;
-      tasks.push(
+      meals.push(
         feedingTask(guest, time, alertTags, undefined, undefined, baseTask),
       );
     }
@@ -345,8 +385,33 @@ export function generateScheduledTasks(
       const frequencyNote = med.frequencyRule
         ? getFrequencyLabel(med.frequencyRule as MedFrequencyRule)
         : undefined;
+      const withFood = medIsWithFood(med);
       for (const time of med.times) {
         const matchedStep = medSteps.find((s) => s.time === time);
+        const taskId = `med-${guest.id}-${med.id}-${time}`;
+
+        // Given with food: hang the dose off the meal instead of standing it up
+        // as its own task, so staff serve and dose in one pass. The dose keeps
+        // the task id it would have had, so its log is unchanged downstream.
+        const meal = withFood ? mealForDose(time, meals) : undefined;
+        if (meal) {
+          meal.withMeds = [
+            ...(meal.withMeds ?? []),
+            {
+              medicationId: med.id,
+              taskId,
+              name: med.medicationName,
+              dosage: med.dosage,
+              method: med.administrationMethod ?? "oral",
+              scheduledTime: time,
+              instructions: med.instructions || undefined,
+              requiresPhotoProof: med.requiresPhotoProof,
+            },
+          ];
+          if (!meal.alertTags.includes("Meds")) meal.alertTags.push("Meds");
+          continue;
+        }
+
         tasks.push({
           ...baseTask,
           id: `med-${guest.id}-${med.id}-${time}`,
@@ -370,6 +435,9 @@ export function generateScheduledTasks(
         });
       }
     }
+
+    // Meals go in now that any with-food doses have been folded onto them.
+    tasks.push(...meals);
 
     // Add-ons — each add-on appears at its scheduled time
     for (const addon of guest.addOns ?? []) {

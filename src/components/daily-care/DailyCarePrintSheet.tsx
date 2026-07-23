@@ -36,6 +36,13 @@ function taskDetailLine(step: DailyCareStep, task: ScheduledTask): string {
   const bits: string[] = [];
   if (task.details && task.details !== step.name) bits.push(task.details);
   if (task.subDetails?.length) bits.push(...task.subDetails);
+  // The folded dose has no line of its own on the sheet staff carry, so it has
+  // to ride on the meal's — otherwise the printout loses it entirely.
+  if (task.withMeds?.length) {
+    bits.push(
+      `WITH MEAL: ${task.withMeds.map((m) => `${m.name} ${m.dosage}`).join(", ")}`,
+    );
+  }
   return bits.join(" · ");
 }
 

@@ -19,6 +19,7 @@ import {
   Image as ImageIcon,
   AlertTriangle,
   UtensilsCrossed,
+  Pill,
 } from "lucide-react";
 import {
   OUTCOME_OPTIONS,
@@ -29,7 +30,11 @@ import { metaFor } from "./task-type-meta";
 import { format12h } from "@/lib/care-log-scheduler";
 import { LogMeta } from "./LogMeta";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import type { ScheduledTask, TaskExecution } from "@/types/care-log";
+import type {
+  ScheduledTask,
+  TaskExecution,
+  MedicationOutcome,
+} from "@/types/care-log";
 
 type Props = {
   open: boolean;
@@ -47,8 +52,18 @@ type Props = {
     /** Time the food was served — set on the serve step, preserved on outcome. */
     servedAt?: string;
     photoUrls?: string[];
+    /** Medication outcomes captured alongside the serve, keyed by the dose's
+     *  own task id so each still writes its own medication log. */
+    medOutcomes?: Record<string, MedicationOutcome>;
   }) => void;
 };
+
+// Reuses the facility's own medication outcomes so a dose logged with a meal
+// reads identically to one logged from the dedicated med modal. "Vomited" is
+// left out: at serve time the dose has only just gone down.
+const MED_CHOICES = OUTCOME_OPTIONS.medication.filter((o) =>
+  ["given", "refused", "skipped"].includes(o.value),
+);
 
 /**
  * Dedicated Feeding log modal with two zones:
@@ -74,6 +89,11 @@ export function FeedingLogModal({
   // Log time: "" = stamp the current time on submit; a value backdates it.
   const [nowValue, setNowValue] = useState("");
   const [logTime, setLogTime] = useState("");
+  // Doses given with this meal. Defaults to "given" — staff serving the bowl
+  // are dosing at the same time, so the common case is a single tap.
+  const [medOutcomes, setMedOutcomes] = useState<
+    Record<string, MedicationOutcome>
+  >({});
 
   // On open: seed from the existing execution when editing, otherwise clear.
   useEffect(() => {
@@ -105,7 +125,12 @@ export function FeedingLogModal({
       setPhotos([]);
       setLogTime("");
     }
-  }, [open, task?.id, existing]);
+    setMedOutcomes(
+      Object.fromEntries(
+        (task?.withMeds ?? []).map((m) => [m.taskId, "given" as const]),
+      ),
+    );
+  }, [open, task?.id, task?.withMeds, existing]);
 
   if (!task) return null;
 
@@ -128,6 +153,10 @@ export function FeedingLogModal({
     .filter(Boolean);
   const hasPlan = planLines.length > 0;
   const avoid = task.avoidList ?? [];
+  const withMeds = task.withMeds ?? [];
+  // Step 2 follow-up: the dose went down with a meal they barely touched.
+  const medFollowUp =
+    withMeds.length > 0 && (outcome === "refused" || outcome === "ate_little");
 
   const addPhoto = () => {
     // TODO: open the real camera / library picker; mock URL for now.
@@ -157,6 +186,8 @@ export function FeedingLogModal({
         staffName: user.name,
         staffInitials: user.initials,
         photoUrls: photos.length > 0 ? photos : undefined,
+        // Each dose still writes its own medication log against its own task id.
+        medOutcomes: withMeds.length > 0 ? medOutcomes : undefined,
       });
       onOpenChange(false);
       return;
@@ -269,17 +300,82 @@ export function FeedingLogModal({
           {/* ── BOTTOM: the log ───────────────────────────────────────────── */}
           {step === "serve" ? (
             // Step 1 — serving. No "how much eaten" yet; that's logged later.
-            <div className="flex items-start gap-2 rounded-md border border-sky-200 bg-sky-50/70 p-3 text-xs dark:border-sky-900/50 dark:bg-sky-950/30">
-              <UtensilsCrossed className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-400" />
-              <div>
-                <p className="font-semibold text-sky-800 dark:text-sky-300">
-                  Mark the food as served
-                </p>
-                <p className="mt-0.5 text-sky-700/90 dark:text-sky-400/80">
-                  Put the food down now. You&apos;ll come back after the meal to
-                  record how much they ate.
-                </p>
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 rounded-md border border-sky-200 bg-sky-50/70 p-3 text-xs dark:border-sky-900/50 dark:bg-sky-950/30">
+                <UtensilsCrossed className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-400" />
+                <div>
+                  <p className="font-semibold text-sky-800 dark:text-sky-300">
+                    Mark the food as served
+                  </p>
+                  <p className="mt-0.5 text-sky-700/90 dark:text-sky-400/80">
+                    Put the food down now. You&apos;ll come back after the meal
+                    to record how much they ate.
+                  </p>
+                </div>
               </div>
+
+              {/* Doses the parent asked to be given with this meal. Captured
+                  here, at serve time, because the pill goes in when the bowl
+                  goes down — one visit per pet, not two. */}
+              {withMeds.length > 0 && (
+                <div className="space-y-2 rounded-md border border-violet-200 bg-violet-50/60 p-3 dark:border-violet-900/50 dark:bg-violet-950/25">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-violet-800 dark:text-violet-300">
+                    <Pill className="size-3.5" />
+                    Give with this meal
+                    <span className="font-normal text-violet-700/80 dark:text-violet-400/70">
+                      · from booking
+                    </span>
+                  </p>
+                  {withMeds.map((med) => (
+                    <div key={med.taskId} className="space-y-1.5">
+                      <div className="text-xs">
+                        <span className="font-medium">
+                          {med.name} {med.dosage}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {" "}
+                          · {med.method.replace(/_/g, " ")}
+                          {med.scheduledTime !== task.scheduledTime &&
+                            ` · due ${format12h(med.scheduledTime)}`}
+                        </span>
+                        {med.instructions && (
+                          <p className="text-muted-foreground mt-0.5">
+                            {med.instructions}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {MED_CHOICES.map((choice) => {
+                          const selected =
+                            medOutcomes[med.taskId] === choice.value;
+                          return (
+                            <button
+                              key={choice.value}
+                              type="button"
+                              onClick={() =>
+                                setMedOutcomes((prev) => ({
+                                  ...prev,
+                                  [med.taskId]:
+                                    choice.value as MedicationOutcome,
+                                }))
+                              }
+                              data-selected={selected}
+                              className="rounded-md border px-2.5 py-1 text-xs font-medium transition-all data-[selected=false]:opacity-60 data-[selected=true]:ring-2 data-[selected=true]:ring-offset-1"
+                            >
+                              <Badge
+                                variant="outline"
+                                className={outcomeBadgeClass(choice.tone)}
+                              >
+                                {choice.label}
+                              </Badge>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             // Step 2 — consumption. Show when it was served, then the chips.
@@ -317,6 +413,21 @@ export function FeedingLogModal({
                   })}
                 </div>
               </div>
+              {medFollowUp && (
+                <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                  <div>
+                    <p className="font-semibold">
+                      This meal carried medication
+                    </p>
+                    <p className="mt-0.5">
+                      {withMeds.map((m) => m.name).join(", ")} went down with
+                      food they barely touched. Check whether a re-dose is
+                      needed — nothing is changed automatically.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -390,7 +501,9 @@ export function FeedingLogModal({
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit}>
             {step === "serve"
-              ? "Mark as served"
+              ? withMeds.length > 0
+                ? "Mark served & meds given"
+                : "Mark as served"
               : existing?.outcome === FEEDING_SERVED
                 ? "Save consumption"
                 : "Update log"}

@@ -61,6 +61,7 @@ import type {
   CleaningDetail,
   AddonLogDetail,
   EnrichmentDetail,
+  MedicationOutcome,
 } from "@/types/care-log";
 import type { DailyCareStep } from "@/types/boarding";
 
@@ -538,12 +539,33 @@ export function DailyCareView() {
     notifyOwner?: boolean;
     addon?: AddonLogDetail;
     enrichment?: EnrichmentDetail;
+    medOutcomes?: Record<string, MedicationOutcome>;
   }) {
     if (!modalState.task) return;
     const task = modalState.task;
     const now = new Date();
     const hh = String(now.getHours()).padStart(2, "0");
     const mm = String(now.getMinutes()).padStart(2, "0");
+
+    // Meds given with a meal are captured on the feeding modal but still write
+    // their own medication records, against the task id each dose would have
+    // had on its own — med history, photo proof and compliance are unchanged.
+    for (const med of task.withMeds ?? []) {
+      const medOutcome = entry.medOutcomes?.[med.taskId];
+      if (!medOutcome) continue;
+      log({
+        taskId: med.taskId,
+        guestId: task.guestId,
+        bookingId: task.bookingId,
+        taskType: "medication",
+        date,
+        executedAt: entry.servedAt ?? entry.executedAt ?? `${hh}:${mm}`,
+        outcome: medOutcome,
+        notes: `Given with ${task.details}`,
+        staffInitials: entry.staffInitials,
+        staffName: entry.staffName,
+      });
+    }
 
     log({
       taskId: task.id,
@@ -629,6 +651,10 @@ export function DailyCareView() {
       // An incident task that requires a photo can't be batch-completed — its
       // photo gate is only satisfiable through the log modal.
       if (t.sourceIncidentId && t.requiresPhotoProof) continue;
+      // A meal carrying medication needs a person: batch-serving it would mark
+      // the food down while the dose goes unrecorded, and the dose has no task
+      // of its own to fall back to. These keep their individual Serve button.
+      if (t.withMeds && t.withMeds.length > 0) continue;
       log({
         taskId: t.id,
         guestId: t.guestId,
@@ -644,11 +670,19 @@ export function DailyCareView() {
       writeIncidentCareLog(t, {});
       count += 1;
     }
+    const withMedsCount = notLogged.filter(
+      (t) => (t.withMeds?.length ?? 0) > 0,
+    ).length;
     toast.success(
       isFeedingStep
         ? `Served ${step.name} to ${count} ${count === 1 ? "pet" : "pets"} — log consumption after the meal.`
         : `Logged ${step.name} for ${count} ${count === 1 ? "pet" : "pets"}.`,
     );
+    if (withMedsCount > 0) {
+      toast.warning(
+        `${withMedsCount} ${withMedsCount === 1 ? "pet needs" : "pets need"} medication with this meal — serve ${withMedsCount === 1 ? "that one" : "those"} individually.`,
+      );
+    }
   };
 
   // Last Call (F1) — open the full-screen rollcall for a requiresHeadCount step.

@@ -23,7 +23,7 @@ import {
   getOutcomeOption,
   FEEDING_SERVED,
 } from "./outcome-meta";
-import { UtensilsCrossed } from "lucide-react";
+import { UtensilsCrossed, Pill } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { petFlagsStore } from "@/data/pet-flags-store";
@@ -113,6 +113,12 @@ export function PetRow({ task, execution, date, onLog, onQuickLog }: Props) {
   const isServed =
     task.taskType === "feeding" && execution?.outcome === FEEDING_SERVED;
   const isLogged = Boolean(execution) && !isServed;
+  const withMeds = task.withMeds ?? [];
+  // A meal that carried medication and came back refused / barely eaten.
+  const medsNeedFollowUp =
+    withMeds.length > 0 &&
+    isLogged &&
+    (execution?.outcome === "refused" || execution?.outcome === "ate_little");
   const quickValue = quickLogOutcome(task);
   const quickLabel = quickValue
     ? getOutcomeOption(task.taskType, quickValue)?.label
@@ -207,6 +213,28 @@ export function PetRow({ task, execution, date, onLog, onQuickLog }: Props) {
           <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400">
             <AlertTriangle className="size-3 shrink-0" />
             Avoid: {task.avoidList.join(", ")}
+          </p>
+        )}
+        {/* Doses the parent asked to be given with this meal — served and
+            given in the same pass, so there is no separate medication row. */}
+        {withMeds.length > 0 && (
+          <p className="mt-0.5 flex items-start gap-1 text-xs font-medium text-violet-700 dark:text-violet-400">
+            <Pill className="mt-0.5 size-3 shrink-0" />
+            <span className="min-w-0">
+              With this meal:{" "}
+              {withMeds.map((m) => `${m.name} ${m.dosage}`).join(" · ")}
+            </span>
+          </p>
+        )}
+        {/* Fork chosen with the user: a refused/barely-eaten meal that carried
+            medication is flagged for follow-up, never silently corrected. */}
+        {medsNeedFollowUp && (
+          <p className="mt-0.5 flex items-start gap-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+            <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+            <span className="min-w-0">
+              Medication went down with a meal they barely touched — check
+              whether a re-dose is needed.
+            </span>
           </p>
         )}
         {isServed && execution && (

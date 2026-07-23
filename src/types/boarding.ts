@@ -101,6 +101,13 @@ export const medicationScheduleSchema = z.object({
   requiresPhotoProof: z.boolean(),
   frequencyRule: medFrequencyRuleSchema.optional(),
   administrationMethod: medAdminMethodSchema.optional(),
+  /** The parent asked for this dose to be given with a meal — set from the
+   *  booking / express check-in / pet profile, where it is captured as
+   *  `adminInstructions: ["with_food"]` or `givenWith: "mixed_in_food"` on the
+   *  richer MedicationItem. Daily Care folds such a dose into the nearest meal
+   *  so staff serve food and give the med in one pass. When a booking predates
+   *  the field, `medIsWithFood` falls back to reading `instructions`. */
+  withFood: z.boolean().optional(),
 });
 
 export type MedicationSchedule = z.infer<typeof medicationScheduleSchema>;

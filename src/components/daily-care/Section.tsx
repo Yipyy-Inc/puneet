@@ -132,9 +132,15 @@ export function Section({
   // Pets with no execution at all — what a batch action (serve-all / mark-all)
   // still has to act on. For feeding this is "not yet served"; for other batch
   // types it equals `remaining`.
-  const notLoggedCount = tasks.filter(
+  const notLogged = tasks.filter(
     (t) => !executions.some((e) => e.taskId === t.id),
+  );
+  // Meals carrying medication are excluded from batch serve — the dose needs a
+  // person, and it has no task of its own to fall back to.
+  const batchMedCount = notLogged.filter(
+    (t) => (t.withMeds?.length ?? 0) > 0,
   ).length;
+  const notLoggedCount = notLogged.length - batchMedCount;
 
   // Last Call (F1): a requiresHeadCount step is complete when its head count has
   // been recorded — not by per-pet logging. The rollcall is the completion gate.
@@ -401,6 +407,19 @@ export function Section({
                   Mark {step.name} as served for all {notLoggedCount}{" "}
                   {notLoggedCount === 1 ? "pet" : "pets"}? You&apos;ll still log
                   how much each ate after the meal.
+                  {batchMedCount > 0 && (
+                    <>
+                      {" "}
+                      <span className="font-medium text-amber-700 dark:text-amber-400">
+                        {batchMedCount}{" "}
+                        {batchMedCount === 1 ? "pet takes" : "pets take"}{" "}
+                        medication with this meal and{" "}
+                        {batchMedCount === 1 ? "is" : "are"} left out — serve{" "}
+                        {batchMedCount === 1 ? "that one" : "those"}{" "}
+                        individually.
+                      </span>
+                    </>
+                  )}
                 </>
               ) : (
                 <>

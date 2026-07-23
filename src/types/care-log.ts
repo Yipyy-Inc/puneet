@@ -173,6 +173,25 @@ export type ScheduledTask = {
   /** For custom steps: the declared Log Type (A7.5) that drives the Custom log
    *  modal's minimal UI. Absent custom steps fall back to the enrichment log. */
   customLogType?: CustomLogType;
+  /** Feeding tasks only: doses to give with this meal. Staff serve the food and
+   *  give these in the same pass, so no separate medication task is emitted. */
+  withMeds?: FeedingMedication[];
+};
+
+/** A medication dose the parent asked to be given WITH a meal, folded onto the
+ *  feeding task by the scheduler. `taskId` is the id the dose would have had as
+ *  a standalone medication task — the medication log is still written against
+ *  it, so med history, photo proof and compliance reporting are unchanged. */
+export type FeedingMedication = {
+  medicationId: string;
+  taskId: string;
+  name: string;
+  dosage: string;
+  method: MedAdminMethod;
+  /** The dose's own scheduled time, which may differ from the meal's. */
+  scheduledTime: string;
+  instructions?: string;
+  requiresPhotoProof?: boolean;
 };
 
 // ── Task execution (the log record itself) ──────────────────────────────────
