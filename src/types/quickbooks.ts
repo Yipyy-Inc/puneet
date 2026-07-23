@@ -135,6 +135,50 @@ export interface QuickBooksTaxCode {
   SalesTaxRateList: { TaxRateDetail: QuickBooksTaxRateDetail[] };
 }
 
+// ── Sales Receipt (Table 4) ─────────────────────────────────────────────────
+
+export interface QuickBooksSalesItemLineDetail {
+  ItemRef: QuickBooksRef;
+  /** Where this line's money lands. QuickBooks normally infers it from the
+   *  item, but Yipyy sends it so a facility's mapping wins. */
+  ItemAccountRef?: QuickBooksRef;
+  UnitPrice?: number;
+  Qty?: number;
+  TaxCodeRef?: QuickBooksRef;
+}
+
+export interface QuickBooksSalesLine {
+  LineNum: number;
+  Description?: string;
+  /** Negative for discounts and for a downward rounding adjustment. */
+  Amount: number;
+  DetailType: "SalesItemLineDetail";
+  SalesItemLineDetail: QuickBooksSalesItemLineDetail;
+}
+
+export interface QuickBooksTxnTaxDetail {
+  TxnTaxCodeRef?: QuickBooksRef;
+  /** The amount Yipyy already charged, not a QuickBooks recalculation. */
+  TotalTax: number;
+}
+
+export interface QuickBooksSalesReceipt {
+  /** Assigned by QuickBooks on create; absent on the document we send. */
+  Id?: string;
+  DocNumber?: string;
+  /** "YYYY-MM-DD" — the date the payment was taken. */
+  TxnDate: string;
+  CustomerRef: QuickBooksRef;
+  DepositToAccountRef?: QuickBooksRef;
+  PaymentMethodRef?: QuickBooksRef;
+  CurrencyRef?: QuickBooksRef;
+  Line: QuickBooksSalesLine[];
+  TxnTaxDetail?: QuickBooksTxnTaxDetail;
+  /** Internal memo — never shown to the client. */
+  PrivateNote?: string;
+  TotalAmt: number;
+}
+
 // ── The company snapshot the cache holds ────────────────────────────────────
 
 /** One read of a QuickBooks company: everything the setup wizard and the

@@ -139,6 +139,20 @@ import {
 } from "@/lib/yipyy-pay-service";
 import { isDeviceReadyForTapToPay } from "@/lib/device-detection";
 import { logPaymentAction } from "@/lib/payment-audit";
+import { syncCheckoutToQuickBooks } from "@/lib/quickbooks/checkout-sync";
+
+// Every completed sale goes through here so the QuickBooks hop lives in ONE
+// place rather than being repeated at each payment path. syncCheckoutToQuickBooks
+// never throws and never blocks — a bookkeeping problem must not fail a sale
+// the client has already paid for.
+function recordSale(
+  input: Parameters<typeof addRetailTransaction>[0],
+  options?: { staffName?: string },
+) {
+  const txn = addRetailTransaction(input);
+  syncCheckoutToQuickBooks({ facilityId: "11" }, txn, options);
+  return txn;
+}
 
 interface CartItemWithId extends CartItem {
   id: string;
@@ -1086,7 +1100,7 @@ export default function POSPage() {
           )
           .join(" | ");
 
-        addRetailTransaction({
+        recordSale({
           items: cart.map(({ id: _id, ...item }) => item),
           subtotal,
           discountTotal,
@@ -1170,7 +1184,7 @@ export default function POSPage() {
         }
 
         // Payment successful - record transaction with Clover details
-        addRetailTransaction({
+        recordSale({
           items: cart.map(({ id: _id, ...item }) => item),
           subtotal,
           discountTotal,
@@ -1244,7 +1258,7 @@ export default function POSPage() {
         }
 
         // Payment successful - record transaction with Yipyy Pay details
-        addRetailTransaction({
+        recordSale({
           items: cart.map(({ id: _id, ...item }) => item),
           subtotal,
           discountTotal,
@@ -1337,7 +1351,7 @@ export default function POSPage() {
         }
 
         // Payment successful - record transaction with Fiserv details
-        addRetailTransaction({
+        recordSale({
           items: cart.map(({ id: _id, ...item }) => item),
           subtotal,
           discountTotal,
@@ -1405,7 +1419,7 @@ export default function POSPage() {
         }
 
         // Non-card payment or Fiserv not enabled - process normally
-        addRetailTransaction({
+        recordSale({
           items: cart.map(({ id: _id, ...item }) => item),
           subtotal,
           discountTotal,
@@ -5449,7 +5463,7 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                             setTapToPayStatus("success");
 
                             // Record transaction
-                            addRetailTransaction({
+                            recordSale({
                               items: cart.map(({ id: _id, ...item }) => item),
                               subtotal,
                               discountTotal,
