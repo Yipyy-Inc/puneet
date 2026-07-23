@@ -27,10 +27,18 @@ export interface QuickBooksSetupState {
    *  they do, no mapping and no syncing should happen — everything downstream
    *  would be pointed at the wrong books. */
   companyConfirmed: boolean;
+  /** Step 3 (3.3): the facility has seen the account health check and moved on.
+   *  Passing it isn't required — clicking past the amber rows is allowed. */
+  accountsReviewed: boolean;
+  /** The amber gaps they clicked past, carried forward so the setup summary can
+   *  show what was skipped rather than letting it disappear. */
+  accountWarnings: string[];
 }
 
 export const EMPTY_SETUP: QuickBooksSetupState = Object.freeze({
   companyConfirmed: false,
+  accountsReviewed: false,
+  accountWarnings: Object.freeze([]) as unknown as string[],
 });
 
 type SetupMap = Record<string, QuickBooksSetupState>;

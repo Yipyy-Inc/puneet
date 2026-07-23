@@ -191,6 +191,20 @@ const ACCOUNTS: QuickBooksAccount[] = [
     Description: "Tips collected on behalf of staff, owed at payroll.",
   },
   {
+    // The catch-all most companies already have. Table 1 lets the three
+    // specific liabilities fall back to a general one, so the health check
+    // needs a real account to name when it does.
+    Id: "105",
+    Name: "Other Current Liabilities",
+    FullyQualifiedName: "Other Current Liabilities",
+    AccountType: "Other Current Liability",
+    AccountSubType: "OtherCurrentLiabilities",
+    Classification: "Liability",
+    CurrentBalance: 0,
+    Active: true,
+    AcctNum: "2000",
+  },
+  {
     Id: "104",
     Name: "GST/QST Payable",
     FullyQualifiedName: "GST/QST Payable",

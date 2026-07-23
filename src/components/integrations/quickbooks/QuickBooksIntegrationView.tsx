@@ -30,6 +30,7 @@ import {
   useQuickBooksSetup,
 } from "@/lib/quickbooks/setup-store";
 
+import { QuickBooksAccountHealthCheck } from "./QuickBooksAccountHealthCheck";
 import { QuickBooksCompanyConfirmCard } from "./QuickBooksCompanyConfirmCard";
 import { QuickBooksConsentModal } from "./QuickBooksConsentModal";
 import { QuickBooksEntryPoint } from "./QuickBooksEntryPoint";
@@ -209,9 +210,11 @@ export function QuickBooksIntegrationView({
   const step =
     connection.status === "disconnected"
       ? "entry"
-      : setup.companyConfirmed
-        ? "connected"
-        : "confirm";
+      : !setup.companyConfirmed
+        ? "confirm"
+        : !setup.accountsReviewed
+          ? "accounts"
+          : "connected";
 
   return (
     <>
@@ -219,6 +222,7 @@ export function QuickBooksIntegrationView({
         <QuickBooksEntryPoint onConnect={() => setConsentOpen(true)} />
       )}
       {step === "confirm" && <QuickBooksCompanyConfirmCard scope={scope} />}
+      {step === "accounts" && <QuickBooksAccountHealthCheck scope={scope} />}
       {step === "connected" && <ConnectedSummary scope={scope} />}
 
       {/* Mounted here rather than inside the entry point. Approving writes the
