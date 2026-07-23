@@ -16,7 +16,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import type { QuickBooksScope } from "@/lib/quickbooks/connection-store";
+import {
+  useQuickBooksConnection,
+  type QuickBooksScope,
+} from "@/lib/quickbooks/connection-store";
+import {
+  canEnableTestMode,
+  enableTestMode,
+  goLive,
+  isTestMode,
+  SANDBOX_COMPANY_NAME,
+  TEST_MODE_EXPLAINER,
+  TEST_MODE_LOCKED_EXPLAINER,
+} from "@/lib/quickbooks/test-mode";
 import {
   CLASS_TRACKING_REQUIRED_MESSAGE,
   facilityLocations,
@@ -121,6 +133,18 @@ export function QuickBooksSyncSettings({
   );
   const classesAvailable = planSupportsClasses(data.plan);
 
+  // Test mode — available only before the first live sync (Phase 10).
+  const connection = useQuickBooksConnection(scope);
+  const testMode = isTestMode(connection);
+  const canTest = testMode || canEnableTestMode(scope);
+  const [testBusy, setTestBusy] = useState(false);
+  async function handleToggleTestMode(next: boolean) {
+    setTestBusy(true);
+    if (next) await enableTestMode(scope);
+    else await goLive(scope);
+    setTestBusy(false);
+  }
+
   const banks = depositAccounts(data);
   const discountChoices = data.accounts.filter(
     (a) => a.Active && a.Classification === "Revenue",
@@ -179,6 +203,35 @@ export function QuickBooksSyncSettings({
 
       <Card>
         <CardContent className="p-0">
+          {/* Test mode first: it's the one setting that changes WHICH books
+              everything below applies to. */}
+          <Field label="Test mode">
+            <div className="flex items-start gap-3">
+              <Switch
+                checked={testMode}
+                disabled={!canTest || testBusy}
+                onCheckedChange={handleToggleTestMode}
+                aria-label="Test mode"
+              />
+              <div className="min-w-0 space-y-1">
+                <p
+                  data-locked={!canTest}
+                  className="data-[locked=true]:text-muted-foreground text-sm"
+                >
+                  Rehearse against a QuickBooks Sandbox
+                  {testMode && (
+                    <span className="ml-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                      ON — {connection.companyName ?? SANDBOX_COMPANY_NAME}
+                    </span>
+                  )}
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  {canTest ? TEST_MODE_EXPLAINER : TEST_MODE_LOCKED_EXPLAINER}
+                </p>
+              </div>
+            </div>
+          </Field>
+
           <Field label="When should Yipyy sync?">
             <RadioGroup
               value={settings.syncTrigger}

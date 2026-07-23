@@ -51,6 +51,10 @@ import {
   useQuickBooksMappings,
 } from "@/lib/quickbooks/mappings-store";
 import { reconnectQuickBooks } from "@/lib/quickbooks/oauth-mock";
+import {
+  documentsForEnvironment,
+  environmentOf,
+} from "@/lib/quickbooks/test-mode";
 import { clearQuickBooksData } from "@/lib/quickbooks/qb-data-cache";
 import { resetQuickBooksSetup } from "@/lib/quickbooks/setup-store";
 import { useSyncJobs } from "@/lib/quickbooks/sync-engine";
@@ -62,6 +66,7 @@ import { QuickBooksErrorPanel } from "./QuickBooksErrorPanel";
 import { QuickBooksHistoricalSync } from "./QuickBooksHistoricalSync";
 import { QuickBooksMappingScreen } from "./QuickBooksMappingScreen";
 import { QuickBooksSyncLog } from "./QuickBooksSyncLog";
+import { QuickBooksTestModeBanner } from "./QuickBooksTestModeBanner";
 
 // ============================================================================
 // The management dashboard (Phase 5.2) — what a connected facility sees.
@@ -79,7 +84,13 @@ function StatusBar({ scope }: { scope: QuickBooksScope }) {
   const connection = useQuickBooksConnection(scope);
   const jobs = useSyncJobs(scope);
   const documents = useSyncedDocuments(scope);
-  const metrics = buildDashboardMetrics(jobs, documents);
+  // Money is shown for the environment in use: a Test-mode dashboard shows its
+  // sandbox rehearsal, a live one never counts test entries as real revenue.
+  const environment = environmentOf(connection);
+  const metrics = buildDashboardMetrics(
+    jobs,
+    documentsForEnvironment(documents, environment),
+  );
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -256,7 +267,11 @@ function NewServiceBanner({
 export function QuickBooksDashboard({ scope }: { scope: QuickBooksScope }) {
   const jobs = useSyncJobs(scope);
   const documents = useSyncedDocuments(scope);
-  const metrics = buildDashboardMetrics(jobs, documents);
+  const connection = useQuickBooksConnection(scope);
+  const metrics = buildDashboardMetrics(
+    jobs,
+    documentsForEnvironment(documents, environmentOf(connection)),
+  );
   const [filter, setFilter] = useState<DashboardFilter>("all");
   const [tab, setTab] = useState<"activity" | "mappings">("activity");
   const [expandGroup, setExpandGroup] = useState<string[]>([]);
@@ -271,6 +286,7 @@ export function QuickBooksDashboard({ scope }: { scope: QuickBooksScope }) {
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
+      <QuickBooksTestModeBanner scope={scope} />
       <StatusBar scope={scope} />
 
       <QuickBooksErrorPanel scope={scope} onManageMappings={openMappings} />

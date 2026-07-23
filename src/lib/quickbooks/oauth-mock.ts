@@ -2,6 +2,8 @@
 
 import { getLocationById } from "@/data/locations";
 
+import { SANDBOX_COMPANY_NAME, SANDBOX_REALM_ID } from "./environments";
+
 import {
   getQuickBooksConnection,
   patchQuickBooksConnection,
@@ -204,14 +206,21 @@ export async function connectQuickBooks(
     };
   }
 
+  // A scope that chose Test mode before connecting keeps it: the consent screen
+  // in production is the sandbox one, and the company it authorises is the
+  // sandbox company.
+  const environment =
+    getQuickBooksConnection(scope).environment ?? "production";
   const company = getQuickBooksConsentCompany(scope);
+  const sandbox = environment === "sandbox";
   const connection: QuickBooksConnection = {
     connected: true,
     status: "connected",
-    companyName: company.name,
+    environment,
+    companyName: sandbox ? SANDBOX_COMPANY_NAME : company.name,
     companyCountry: company.country,
     companyCurrency: company.currency,
-    realmId: company.realmId,
+    realmId: sandbox ? SANDBOX_REALM_ID : company.realmId,
     accessToken: mockToken("qb-access"),
     refreshToken: mockToken("qb-refresh"),
     accessTokenExpiresAt: plusMinutes(now, ACCESS_TOKEN_TTL_MINUTES),

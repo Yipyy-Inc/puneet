@@ -49,7 +49,17 @@ export interface QuickBooksConnection {
   refreshTokenExpiresAt?: string;
   lastSyncAt?: string;
   status: QuickBooksConnectionStatus;
+  /** Which Intuit environment this connection points at (Phase 10). "sandbox"
+   *  is Test mode: a throwaway company for rehearsing the mapping before going
+   *  live. Absent is treated as "production" so existing connections are
+   *  unaffected. */
+  environment?: QuickBooksEnvironment;
 }
+
+/** Intuit runs two entirely separate stacks — a sandbox company for testing and
+ *  the real one. They have different base URLs and different realms; a token for
+ *  one is meaningless against the other. */
+export type QuickBooksEnvironment = "production" | "sandbox";
 
 /** The disconnect confirmation, kept here so no screen paraphrases it into a
  *  promise Yipyy can't keep — disconnecting stops syncing, it does not reach

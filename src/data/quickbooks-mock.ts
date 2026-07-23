@@ -609,6 +609,52 @@ export const QUICKBOOKS_MOCK_COMPANY: QuickBooksCompanyData = {
   plan: "plus",
 };
 
+/**
+ * The Test-mode company (Phase 10).
+ *
+ * Intuit's sandbox is a genuinely separate QuickBooks company on a separate
+ * stack — the whole point is that you can post throwaway transactions into it
+ * without touching your real books. It ships with its own SAMPLE customers so
+ * a facility can tell at a glance they're in the test company, not their own.
+ *
+ * The chart of accounts and item list are DELIBERATELY the same object
+ * references as production here: the reason a facility uses sandbox is to
+ * rehearse the mapping, and that rehearsal is only worth anything if the same
+ * account and item ids exist when they go live. Get this wrong — give sandbox
+ * its own ids — and every mapping made in Test mode breaks the moment they
+ * switch, which is the opposite of the feature.
+ */
+const SANDBOX_CUSTOMERS: QuickBooksCustomer[] = [
+  {
+    Id: "1",
+    DisplayName: "Sample, Amy (Test)",
+    GivenName: "Amy",
+    FamilyName: "Sample",
+    PrimaryEmailAddr: { Address: "amy.sample@sandbox.example" },
+    Active: true,
+    Balance: 0,
+  },
+  {
+    Id: "2",
+    DisplayName: "Walk-in Customer",
+    Active: true,
+    Balance: 0,
+  },
+];
+
+export const QUICKBOOKS_MOCK_COMPANY_SANDBOX: QuickBooksCompanyData = {
+  // Same chart + items + tax as production, so a mapping rehearsed here is valid
+  // the moment the facility goes live.
+  accounts: ACCOUNTS,
+  items: ITEMS,
+  // Sandbox seeds its own sample customers, not the facility's real ones.
+  customers: SANDBOX_CUSTOMERS,
+  taxCodes: TAX_CODES,
+  taxRates: TAX_RATES,
+  classes: CLASSES,
+  plan: "plus",
+};
+
 /** Accounts a plainer set of books simply wouldn't have: the three optional
  *  liabilities from Table 1, breakage, and the service lines this facility
  *  hasn't split out yet. */

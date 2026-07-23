@@ -5,6 +5,7 @@ import { useSyncExternalStore } from "react";
 import {
   QUICKBOOKS_MOCK_COMPANY,
   QUICKBOOKS_MOCK_COMPANY_MINIMAL,
+  QUICKBOOKS_MOCK_COMPANY_SANDBOX,
 } from "@/data/quickbooks-mock";
 import type {
   QuickBooksAccount,
@@ -44,7 +45,7 @@ export type QuickBooksCacheStatus = "empty" | "loading" | "ready" | "error";
 /** Which canned company to read. Pre-wires the sandbox toggle (Phase 10) and,
  *  more immediately, lets the health check be demonstrated against books that
  *  are missing the optional accounts. */
-export type QuickBooksDataVariant = "production" | "minimal";
+export type QuickBooksDataVariant = "production" | "minimal" | "sandbox";
 
 export interface QuickBooksDataCacheEntry extends QuickBooksCompanyData {
   status: QuickBooksCacheStatus;
@@ -142,7 +143,9 @@ function loadCompanyData(
   const source =
     variant === "minimal"
       ? QUICKBOOKS_MOCK_COMPANY_MINIMAL
-      : QUICKBOOKS_MOCK_COMPANY;
+      : variant === "sandbox"
+        ? QUICKBOOKS_MOCK_COMPANY_SANDBOX
+        : QUICKBOOKS_MOCK_COMPANY;
   return {
     accounts: source.accounts.map((a) => ({ ...a })),
     items: source.items.map((i) => ({ ...i })),

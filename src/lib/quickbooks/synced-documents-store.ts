@@ -2,7 +2,11 @@
 
 import { useSyncExternalStore } from "react";
 
-import { scopeKey, type QuickBooksScope } from "./connection-store";
+import {
+  scopeKey,
+  type QuickBooksEnvironment,
+  type QuickBooksScope,
+} from "./connection-store";
 import type { SyncDocumentType } from "./sync-engine";
 
 // ============================================================================
@@ -33,6 +37,9 @@ export interface SyncedDocument {
   description: string;
   /** ISO timestamp of when QuickBooks accepted it. */
   syncedAt: string;
+  /** "sandbox" for a Test-mode entry (Phase 10). Absent means production, so
+   *  documents recorded before Test mode existed count as real. */
+  environment?: QuickBooksEnvironment;
 }
 
 type DocsByScope = Record<string, SyncedDocument[]>;

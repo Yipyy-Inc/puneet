@@ -432,6 +432,9 @@ export async function attemptJob(
       amount: job.amount,
       description: job.description,
       syncedAt: result.syncedAt,
+      // Stamp the environment so a Test-mode entry can never be mistaken for a
+      // real one, and so the production-sync gate (Phase 10) can tell them apart.
+      environment: getQuickBooksConnection(scope).environment ?? "production",
     });
     return updateJob(scope, job.id, {
       status: "synced",
