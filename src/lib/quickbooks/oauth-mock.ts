@@ -5,6 +5,7 @@ import {
   patchQuickBooksConnection,
   setQuickBooksConnection,
   setQuickBooksStatus,
+  QUICKBOOKS_EXPIRED_BANNER,
   type QuickBooksConnection,
   type QuickBooksScope,
 } from "./connection-store";
@@ -187,6 +188,48 @@ export async function connectQuickBooks(
   return { ok: true, connection };
 }
 
+export type QuickBooksReconnectResult =
+  | {
+      ok: true;
+      connection: QuickBooksConnection;
+      /** The facility authorised a DIFFERENT QuickBooks company than before.
+       *  Their service→account mappings point at the old company's accounts and
+       *  items, so the UI must warn and send them back through mapping rather
+       *  than silently syncing into the wrong books. */
+      companyChanged: boolean;
+    }
+  | {
+      ok: false;
+      failure: QuickBooksConnectFailure;
+      message: string;
+      retryable: boolean;
+    };
+
+/**
+ * Re-authorise a scope after an expiry or a disconnect.
+ *
+ * Distinct from connectQuickBooks in one way that matters: mappings and sync
+ * history are kept, so a facility that reconnects doesn't redo its setup. The
+ * mappings themselves live in their own store and are never touched here — what
+ * this adds is the check that keeping them is *safe*, by comparing the realm id
+ * of the company that came back against the one that was mapped.
+ */
+export async function reconnectQuickBooks(
+  scope: QuickBooksScope,
+  options: ConnectQuickBooksOptions = {},
+): Promise<QuickBooksReconnectResult> {
+  const previousRealmId = getQuickBooksConnection(scope).realmId;
+  const result = await connectQuickBooks(scope, options);
+  if (!result.ok) return result;
+  return {
+    ok: true,
+    connection: result.connection,
+    companyChanged: Boolean(
+      previousRealmId && previousRealmId !== result.connection.realmId,
+    ),
+  };
+}
+
 /** Dismissing the consent screen. Pure — the store is never touched. */
 export function cancelQuickBooksConnect(): QuickBooksConnectResult {
   return {
@@ -260,7 +303,11 @@ export function refreshAccessToken(
   const { simulate = "success", now = new Date() } = options;
   const connection = getQuickBooksConnection(scope);
 
-  if (!connection.connected && connection.status !== "outage") {
+  // Order matters. An expired or interrupted connection still HAS a refresh
+  // token and must be reported as such — reporting it as "not connected" would
+  // hide the one state the 7D banner exists for. Only a scope that was never
+  // connected, or was deliberately disconnected, is not_connected.
+  if (connection.status === "disconnected" || !connection.refreshToken) {
     return {
       ok: false,
       failure: "not_connected",
@@ -273,8 +320,7 @@ export function refreshAccessToken(
     return {
       ok: false,
       failure: "refresh_token_expired",
-      message:
-        "Your QuickBooks connection has expired. Reconnect to resume syncing.",
+      message: QUICKBOOKS_EXPIRED_BANNER,
     };
   }
 
@@ -318,8 +364,7 @@ export function ensureFreshAccessToken(
     return {
       ok: false,
       failure: "refresh_token_expired",
-      message:
-        "Your QuickBooks connection has expired. Reconnect to resume syncing.",
+      message: QUICKBOOKS_EXPIRED_BANNER,
     };
   }
 

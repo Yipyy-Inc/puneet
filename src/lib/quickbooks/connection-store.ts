@@ -51,6 +51,16 @@ export interface QuickBooksConnection {
   status: QuickBooksConnectionStatus;
 }
 
+/** The disconnect confirmation, kept here so no screen paraphrases it into a
+ *  promise Yipyy can't keep — disconnecting stops syncing, it does not reach
+ *  into the facility's books. */
+export const QUICKBOOKS_DISCONNECT_CONFIRMATION =
+  "Disconnecting will stop all future syncs. Existing entries in QuickBooks will not be deleted.";
+
+/** The 7D expiry banner (dashboard + anywhere syncing is surfaced). */
+export const QUICKBOOKS_EXPIRED_BANNER =
+  "Your QuickBooks connection has expired. Reconnect to resume syncing.";
+
 /** Which QuickBooks connection a screen is acting on. */
 export interface QuickBooksScope {
   facilityId: string;
@@ -230,3 +240,107 @@ export function removeQuickBooksConnection(scope: QuickBooksScope): void {
   delete next[key];
   commit(next);
 }
+
+/**
+ * Disconnect QuickBooks for a scope. The UI confirms first with
+ * QUICKBOOKS_DISCONNECT_CONFIRMATION.
+ *
+ * Tokens are dropped, but the company reference and `lastSyncAt` are kept:
+ *  • `realmId` lets a later reconnect tell whether the facility came back to
+ *    the SAME QuickBooks company — mappings are only safe to keep if it did.
+ *  • `lastSyncAt` is a fact that happened; clearing it would make the dashboard
+ *    read as though the facility had never synced.
+ * Service→account mappings live in their own store and are deliberately
+ * untouched here, so disconnecting and reconnecting doesn't cost the facility
+ * its setup work.
+ *
+ * TODO: real QuickBooks OAuth 2.0 (Intuit) — also POST the refresh token to the
+ * revocation endpoint server-side; dropping it locally is not a revoke.
+ */
+export function disconnectQuickBooks(
+  scope: QuickBooksScope,
+): QuickBooksConnection {
+  ensureReady();
+  const key = scopeKey(scope);
+  const current = state[key];
+  if (!current) return DISCONNECTED;
+
+  const next: QuickBooksConnection = {
+    connected: false,
+    status: "disconnected",
+    realmId: current.realmId,
+    companyName: current.companyName,
+    companyCountry: current.companyCountry,
+    companyCurrency: current.companyCurrency,
+    lastSyncAt: current.lastSyncAt,
+  };
+  commit({ ...state, [key]: next });
+  return next;
+}
+
+/**
+ * Force the refresh token past its life so the 7D "connection expired" banner
+ * can be demonstrated without waiting 100 days.
+ *
+ * This is a demo affordance, not a code path a real facility reaches — real
+ * expiry arrives on its own and is detected by isRefreshTokenExpired().
+ */
+export function expireQuickBooksRefreshToken(
+  scope: QuickBooksScope,
+): QuickBooksConnection {
+  ensureReady();
+  const key = scopeKey(scope);
+  const current = state[key];
+  if (!current?.connected) return current ?? DISCONNECTED;
+
+  const past = new Date(Date.now() - 60_000).toISOString();
+  const next: QuickBooksConnection = {
+    ...current,
+    connected: false,
+    status: "expired",
+    // Both tokens are dead once the refresh token is: there is nothing left to
+    // renew with, which is exactly why only a reconnect clears this state.
+    accessTokenExpiresAt: past,
+    refreshTokenExpiresAt: past,
+  };
+  commit({ ...state, [key]: next });
+  return next;
+}
+
+// ── Sync gating (7D) ────────────────────────────────────────────────────────
+
+export type QuickBooksPauseReason = "expired" | "outage" | "disconnected";
+
+/**
+ * Whether queued sync jobs should HOLD rather than fail.
+ *
+ * 7D is explicit that an expired connection pauses the queue — the Yipyy
+ * payment already succeeded, and failing its sync would turn a re-authorisation
+ * chore into a pile of false errors. The sync engine calls this before draining
+ * the queue; jobs stay pending and drain once the facility reconnects.
+ */
+export function isQuickBooksSyncPaused(
+  connection: QuickBooksConnection,
+): boolean {
+  return connection.status !== "connected";
+}
+
+/** Why the queue is holding, for the banner the dashboard shows above it. */
+export function quickBooksSyncPauseReason(
+  connection: QuickBooksConnection,
+): QuickBooksPauseReason | null {
+  switch (connection.status) {
+    case "connected":
+      return null;
+    case "expired":
+      return "expired";
+    case "outage":
+      return "outage";
+    case "disconnected":
+      return "disconnected";
+  }
+}
+
+// Reconnect lives in ./oauth-mock (reconnectQuickBooks) — it re-runs the OAuth
+// flow, and importing that here would make this store depend on the module that
+// already depends on it.
