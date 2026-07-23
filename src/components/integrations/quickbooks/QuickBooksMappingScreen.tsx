@@ -1,121 +1,41 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  ArrowRight,
-  CheckCircle2,
-  ChevronDown,
-  Mail,
-  MinusCircle,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, Mail, Sparkles } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import type { QuickBooksScope } from "@/lib/quickbooks/connection-store";
 import {
-  useQuickBooksConnection,
-  type QuickBooksScope,
-} from "@/lib/quickbooks/connection-store";
+  suggestMappings,
+  toMapping,
+} from "@/lib/quickbooks/mapping-suggestions";
 import {
-  groupProgress,
   mappingProgress,
   setQuickBooksMapping,
   useQuickBooksMappings,
 } from "@/lib/quickbooks/mappings-store";
-import { activeItems, useQuickBooksData } from "@/lib/quickbooks/qb-data-cache";
+import {
+  QUICKBOOKS_UNASSIGNED_INCOME,
+  useQuickBooksData,
+} from "@/lib/quickbooks/qb-data-cache";
 import { patchQuickBooksSetup } from "@/lib/quickbooks/setup-store";
 import {
   buildMappableGroups,
   CUSTOMER_MAPPING_NOTE,
   TRANSACTION_COUNT_NOTE,
-  type MappableGroup,
 } from "@/lib/quickbooks/yipyy-catalog";
 
-import { QuickBooksMappingCard } from "./QuickBooksMappingCard";
+import { QuickBooksMappingGroup } from "./QuickBooksMappingGroup";
 
 // ============================================================================
 // Step 4 (Phase 3.4) — map what Yipyy sells to what QuickBooks records.
 //
 // Groups follow Table 2 and start collapsed: this is a long screen, and a
-// facility scrolling past forty retail products to reach Tips would give up.
+// facility scrolling past thirteen retail products to reach Tips would give up.
 // Each header carries its own progress so the collapsed state still says where
 // the work is.
 // ============================================================================
-
-function progressTone(percent: number): string {
-  if (percent >= 100)
-    return "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
-  if (percent >= 50)
-    return "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300";
-  return "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300";
-}
-
-function GroupSection({
-  group,
-  scope,
-  expanded,
-  onToggle,
-}: {
-  group: MappableGroup;
-  scope: QuickBooksScope;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
-  const connection = useQuickBooksConnection(scope);
-  const data = useQuickBooksData(scope);
-  const mappings = useQuickBooksMappings(scope);
-  const progress = groupProgress(group, mappings);
-  const qbItems = activeItems(data);
-
-  return (
-    <Card>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-        className="hover:bg-muted/40 flex w-full items-center gap-3 p-4 text-left transition-colors"
-      >
-        <ChevronDown
-          data-expanded={expanded}
-          className="text-muted-foreground size-4 shrink-0 transition-transform data-[expanded=false]:-rotate-90"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">{group.title}</p>
-          <p className="text-muted-foreground text-xs">{group.description}</p>
-        </div>
-        {group.items.length === 0 ? (
-          <Badge variant="outline" className="text-muted-foreground gap-1">
-            <MinusCircle className="size-3" />
-            None set up
-          </Badge>
-        ) : (
-          <Badge variant="outline" className={progressTone(progress.percent)}>
-            {progress.percent === 100 && (
-              <CheckCircle2 className="mr-1 size-3" />
-            )}
-            {progress.mapped}/{progress.total} mapped
-          </Badge>
-        )}
-      </button>
-
-      {expanded && group.items.length > 0 && (
-        <CardContent className="border-t p-0">
-          {group.items.map((item) => (
-            <QuickBooksMappingCard
-              key={item.id}
-              item={item}
-              mapping={mappings[item.id]}
-              items={qbItems}
-              accounts={data.accounts}
-              realmId={connection.realmId}
-              onChange={(patch) => setQuickBooksMapping(scope, item.id, patch)}
-            />
-          ))}
-        </CardContent>
-      )}
-    </Card>
-  );
-}
 
 export function QuickBooksMappingScreen({
   scope,
@@ -125,16 +45,46 @@ export function QuickBooksMappingScreen({
   onContinue?: () => void;
 }) {
   const groups = useMemo(() => buildMappableGroups(), []);
+  const data = useQuickBooksData(scope);
   const mappings = useQuickBooksMappings(scope);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [scrolled, setScrolled] = useState(false);
+
+  const suggestions = useMemo(
+    () => suggestMappings(groups, data, mappings),
+    [groups, data, mappings],
+  );
+  const suggestionCount = Object.keys(suggestions).length;
 
   const overall = mappingProgress(groups, mappings);
   const unmapped = overall.total - overall.mapped;
+
+  // "Confirm all suggestions" is not the first thing a facility sees. It shows
+  // once they've opened a group and moved down the page — accepting forty
+  // postings sight-unseen is exactly what this screen exists to prevent.
+  useEffect(() => {
+    function onScroll() {
+      if (window.scrollY > 120) setScrolled(true);
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const hasReviewed = expanded.size > 0 && scrolled;
+
+  function confirmAllSuggestions() {
+    for (const [itemId, suggestion] of Object.entries(suggestions)) {
+      setQuickBooksMapping(scope, itemId, toMapping(suggestion));
+    }
+  }
 
   function handleContinue() {
     patchQuickBooksSetup(scope, { mappingsReviewed: true });
     onContinue?.();
   }
+
+  const barTone =
+    overall.percent >= 100 ? "full" : overall.percent >= 50 ? "part" : "low";
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
@@ -161,13 +111,7 @@ export function QuickBooksMappingScreen({
           </div>
           <div className="bg-muted h-2 overflow-hidden rounded-full">
             <div
-              data-tone={
-                overall.percent >= 100
-                  ? "full"
-                  : overall.percent >= 50
-                    ? "part"
-                    : "low"
-              }
+              data-tone={barTone}
               style={{ width: `${overall.percent}%` }}
               className="h-full rounded-full transition-all data-[tone=full]:bg-emerald-500 data-[tone=low]:bg-red-500 data-[tone=part]:bg-amber-500"
             />
@@ -175,16 +119,35 @@ export function QuickBooksMappingScreen({
           <p className="text-muted-foreground text-xs">
             {TRANSACTION_COUNT_NOTE}
           </p>
+
+          {hasReviewed && suggestionCount > 0 && (
+            <div className="flex flex-wrap items-center gap-3 border-t pt-3">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={confirmAllSuggestions}
+                className="border-amber-500/40 text-amber-700 dark:text-amber-300"
+              >
+                <Sparkles className="mr-1.5 size-3.5" />
+                Confirm all {suggestionCount} suggestions
+              </Button>
+              <p className="text-muted-foreground text-xs">
+                Applies every amber suggestion. You can still change any of them
+                afterwards.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* ── Groups (Table 2) ────────────────────────────────────────────── */}
       <div className="space-y-3">
         {groups.map((group) => (
-          <GroupSection
+          <QuickBooksMappingGroup
             key={group.key}
             group={group}
             scope={scope}
+            suggestions={suggestions}
             expanded={expanded.has(group.key)}
             onToggle={() =>
               setExpanded((prev) => {
@@ -227,11 +190,25 @@ export function QuickBooksMappingScreen({
         </CardContent>
       </Card>
 
+      {/* ── The catch-all rule, stated before they commit to it ─────────── */}
+      {unmapped > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+          <p>
+            <span className="font-semibold">
+              {unmapped} unmapped {unmapped === 1 ? "item" : "items"}
+            </span>{" "}
+            will post to &ldquo;{QUICKBOOKS_UNASSIGNED_INCOME}&rdquo;, an
+            account Yipyy creates when you finish setup. Those sales still reach
+            QuickBooks — each one is flagged in the sync log so you can move it
+            later.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-end gap-3">
-        {unmapped > 0 && (
+        {overall.mapped === 0 && (
           <p className="text-muted-foreground text-xs">
-            {unmapped} unmapped {unmapped === 1 ? "item" : "items"} will post to
-            a catch-all income account.
+            Map at least one item to continue.
           </p>
         )}
         <Button

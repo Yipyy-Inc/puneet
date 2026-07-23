@@ -171,7 +171,8 @@ export function mappingProgress(
   groups: MappableGroup[],
   mappings: MappingSet,
 ): MappingProgress {
-  const all = groups.flatMap((g) => g.items);
+  // Items configured elsewhere (tax) are not part of this screens work.
+  const all = groups.flatMap((g) => g.items).filter((i) => !i.mappedElsewhere);
   const mapped = all.filter((i) => isMapped(mappings[i.id])).length;
   const total = all.length;
   return {
@@ -186,4 +187,45 @@ export function groupProgress(
   mappings: MappingSet,
 ): MappingProgress {
   return mappingProgress([group], mappings);
+}
+
+// ── Resolving a mapping at sync time ────────────────────────────────────────
+
+export interface ResolvedMapping {
+  itemId?: string;
+  accountId?: string;
+  /** True when the item had no mapping and fell through to the catch-all. */
+  usedCatchAll: boolean;
+  /** Attached to the sync log so an unassigned posting is visible rather than
+   *  silently absorbed. */
+  warning?: string;
+}
+
+/**
+ * What a transaction line should post to.
+ *
+ * An unmapped item does NOT block the sale — the money already moved in Yipyy,
+ * and refusing to sync would leave the books further from the truth, not
+ * closer. It posts to the catch-all and says so.
+ */
+export function resolveMapping(
+  itemKey: string,
+  itemName: string,
+  mappings: MappingSet,
+  catchAllAccountId: string,
+): ResolvedMapping {
+  const mapping = mappings[itemKey];
+  if (isMapped(mapping)) {
+    return {
+      itemId: mapping?.itemId,
+      accountId: mapping?.accountId,
+      usedCatchAll: false,
+    };
+  }
+  return {
+    itemId: mapping?.itemId,
+    accountId: mapping?.accountId ?? catchAllAccountId,
+    usedCatchAll: true,
+    warning: `"${itemName}" isn't mapped to a QuickBooks account — posted to Yipyy Unassigned Income.`,
+  };
 }

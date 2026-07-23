@@ -271,6 +271,48 @@ export function clearQuickBooksData(scope: QuickBooksScope): void {
   commit(next);
 }
 
+// ── The catch-all for unmapped items ────────────────────────────────────────
+
+export const QUICKBOOKS_UNASSIGNED_INCOME = "Yipyy Unassigned Income";
+
+/**
+ * Ensure the catch-all income account exists, creating it if it doesn't.
+ *
+ * Anything the facility left unmapped posts here rather than being dropped or
+ * blocking the sale — the money moved in Yipyy either way, and an unmapped
+ * service must never be a reason a payment fails to reach the books. Every
+ * transaction that lands here also raises a sync warning, so "unassigned" is
+ * visible rather than a quiet dumping ground.
+ *
+ * Called on Finish Setup (3.5).
+ *
+ * TODO: real QuickBooks Account create (POST /v3/company/{realmId}/account).
+ */
+export function ensureUnassignedIncomeAccount(
+  scope: QuickBooksScope,
+): QuickBooksAccount {
+  const entry = getQuickBooksData(scope);
+  const existing = entry.accounts.find(
+    (a) => a.Name === QUICKBOOKS_UNASSIGNED_INCOME,
+  );
+  if (existing) return existing;
+
+  const account: QuickBooksAccount = {
+    Id: "yipyy-unassigned",
+    Name: QUICKBOOKS_UNASSIGNED_INCOME,
+    FullyQualifiedName: QUICKBOOKS_UNASSIGNED_INCOME,
+    AccountType: "Income",
+    AccountSubType: "OtherPrimaryIncome",
+    Classification: "Revenue",
+    CurrentBalance: 0,
+    Active: true,
+    Description:
+      "Created by Yipyy. Revenue from items that haven't been mapped to an account yet.",
+  };
+  put(scope, { ...entry, accounts: [...entry.accounts, account] });
+  return account;
+}
+
 // ── Selectors for the mapping UI ────────────────────────────────────────────
 
 /** Active accounts of a given type — what the mapping dropdowns and the health

@@ -45,6 +45,10 @@ export interface MappableItem {
    *  silently offering income accounts. */
   postsToLiability?: boolean;
   isContraRevenue?: boolean;
+  /** Configured somewhere other than this screen. Excluded from the mapping
+   *  progress and from the unmapped/catch-all count — calling it "unmapped"
+   *  would claim tax posts to a catch-all income account, which it does not. */
+  mappedElsewhere?: string;
   note?: string;
 }
 
@@ -274,7 +278,7 @@ export function buildMappableGroups(): MappableGroup[] {
           id: "tax:sales",
           name: "Sales tax collected",
           type: "Tax",
-          note: "Mapped to a QuickBooks tax code in sync settings, not to an item.",
+          mappedElsewhere: "Set in sync settings as a QuickBooks tax code",
         },
       ],
     },
