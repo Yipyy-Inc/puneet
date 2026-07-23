@@ -48,7 +48,7 @@ import {
   getQuickBooksData,
 } from "./qb-data-cache";
 import { quickBooksPreflight, type SyncSkipReason } from "./sync-guards";
-import { enqueueSync, type SyncJob } from "./sync-engine";
+import { enqueueSync, processQueue, type SyncJob } from "./sync-engine";
 import { existingDocumentFor, idempotencyKeyFor } from "./sync-engine";
 
 // ============================================================================
@@ -72,6 +72,16 @@ const NOTHING = (skipped: SyncSkipReason): DocumentSyncOutcome => ({
   skipped,
   warnings: [],
 });
+
+/**
+ * Advance the queue after a realtime enqueue, so a job reaches Synced without a
+ * manual push. Fire-and-forget and never awaited — processQueue can't throw, so
+ * a sync problem can never reach the operation that already happened. In manual
+ * mode nothing is kicked: the facility drives the queue themselves.
+ */
+function kickRealtime(scope: QuickBooksScope, manualOnly: boolean): void {
+  if (!manualOnly) void processQueue(scope).catch(() => {});
+}
 
 // ── Refunds ─────────────────────────────────────────────────────────────────
 
@@ -142,7 +152,9 @@ export function syncReturnToQuickBooks(
           )?.quickBooksDocumentId,
         });
 
-    return { job: enqueue(), warnings };
+    const job = enqueue();
+    kickRealtime(scope, pre.manualOnly);
+    return { job, warnings };
   } catch {
     return {
       warnings: ["QuickBooks sync couldn't be queued for this refund."],
@@ -207,7 +219,9 @@ export function syncInvoiceToQuickBooks(
       options.amountPaid ?? 0,
     );
 
-    return { job: enqueue(), warnings };
+    const job = enqueue();
+    kickRealtime(scope, pre.manualOnly);
+    return { job, warnings };
   } catch {
     return {
       warnings: ["QuickBooks sync couldn't be queued for this invoice."],
@@ -307,6 +321,7 @@ export function syncInvoiceWriteOffToQuickBooks(
       serviceSummary: `Bad debt · Invoice ${invoice.invoiceNumber}`,
     });
 
+    kickRealtime(scope, pre.manualOnly);
     return { job, warnings };
   } catch {
     return {
@@ -343,6 +358,7 @@ export function syncPackageSaleToQuickBooks(
       serviceSummary: `Package · ${sale.packageName}`,
     });
 
+    kickRealtime(scope, pre.manualOnly);
     return {
       job,
       skipped: pre.manualOnly ? "manual_only" : undefined,
@@ -390,6 +406,7 @@ export function syncPackageRedemptionToQuickBooks(
       serviceSummary: `${redemption.serviceName} (package pass)`,
     });
 
+    kickRealtime(scope, pre.manualOnly);
     return {
       job,
       skipped: pre.manualOnly ? "manual_only" : undefined,
@@ -488,6 +505,7 @@ export function syncGiftCardSaleToQuickBooks(
       serviceSummary: "Gift card sale",
     });
 
+    kickRealtime(scope, pre.manualOnly);
     return {
       job,
       skipped: pre.manualOnly ? "manual_only" : undefined,
@@ -527,6 +545,7 @@ export function syncGiftCardRedemptionToQuickBooks(
       serviceSummary: `${redemption.serviceName} (gift card)`,
     });
 
+    kickRealtime(scope, pre.manualOnly);
     return {
       job,
       skipped: pre.manualOnly ? "manual_only" : undefined,
@@ -572,6 +591,7 @@ export function syncGiftCardBreakageToQuickBooks(
       serviceSummary: "Gift card breakage",
     });
 
+    kickRealtime(scope, pre.manualOnly);
     return {
       job,
       skipped: pre.manualOnly ? "manual_only" : undefined,
@@ -621,6 +641,7 @@ export function syncMembershipChargeToQuickBooks(
       )}`,
     });
 
+    kickRealtime(scope, pre.manualOnly);
     return {
       job,
       skipped: pre.manualOnly ? "manual_only" : undefined,
@@ -713,6 +734,7 @@ export function syncDepositToQuickBooks(
         : "Booking deposit",
     });
 
+    kickRealtime(scope, pre.manualOnly);
     return {
       job,
       skipped: pre.manualOnly ? "manual_only" : undefined,
@@ -753,6 +775,7 @@ export function syncDepositRefundToQuickBooks(
       serviceSummary: "Deposit refund",
     });
 
+    kickRealtime(scope, pre.manualOnly);
     return {
       job,
       skipped: pre.manualOnly ? "manual_only" : undefined,

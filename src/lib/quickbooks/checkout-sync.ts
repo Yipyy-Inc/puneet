@@ -22,7 +22,7 @@ import {
 } from "./qb-data-cache";
 import type { QuickBooksSettings } from "./settings-store";
 import { quickBooksPreflight, type SyncSkipReason } from "./sync-guards";
-import { enqueueSync, type SyncJob } from "./sync-engine";
+import { enqueueSync, processQueue, type SyncJob } from "./sync-engine";
 
 // ============================================================================
 // The checkout → QuickBooks hop (Phase 5.1).
@@ -197,6 +197,12 @@ export function syncCheckoutToQuickBooks(
       amount: txn.total,
       ...logFields(txn),
     });
+
+    // Realtime means "posts as it's taken": kick the queue so the job advances
+    // to Synced without waiting for a manual push. Fire-and-forget — never
+    // awaited, and processQueue can't throw — so THE RULE holds: a sync problem
+    // never reaches the checkout that already succeeded.
+    void processQueue(scope).catch(() => {});
 
     return { job, warnings };
   } catch {
