@@ -54,6 +54,13 @@ export interface QuickBooksSettings {
   /** Optional contra-revenue account for package-pass redemptions. Must be an
    *  income account — see documents/package.ts. */
   packageRedemptionAccountId?: string;
+  /** Tips are owed to staff, so they sit in a liability until paid out. */
+  tipsPayableAccountId?: string;
+  /** Unspent gift-card balances (5C). */
+  giftCardLiabilityAccountId?: string;
+  /** Where an expired gift-card balance is recognised, if the facility
+   *  recognises breakage at all. */
+  breakageIncomeAccountId?: string;
 }
 
 /** Net 15 — long enough to be payable, short enough that a facility notices an

@@ -279,6 +279,42 @@ export interface QuickBooksCreditMemo {
   TotalAmt: number;
 }
 
+// ── Journal Entry (breakage, and anything with no customer) ─────────────────
+
+export type QuickBooksPostingType = "Debit" | "Credit";
+
+export interface QuickBooksJournalEntryLine {
+  LineNum: number;
+  Description?: string;
+  /** Always positive. Direction is `PostingType`, not the sign. */
+  Amount: number;
+  DetailType: "JournalEntryLineDetail";
+  JournalEntryLineDetail: {
+    PostingType: QuickBooksPostingType;
+    AccountRef: QuickBooksRef;
+    Entity?: QuickBooksRef;
+  };
+}
+
+/**
+ * A movement between two accounts with no sale attached.
+ *
+ * Gift-card breakage is the case here: nobody bought anything and nobody was
+ * refunded — an obligation simply expired, and the liability becomes income.
+ * A Sales Receipt would invent a transaction that never happened.
+ */
+export interface QuickBooksJournalEntry {
+  Id?: string;
+  DocNumber?: string;
+  TxnDate: string;
+  CurrencyRef?: QuickBooksRef;
+  Line: QuickBooksJournalEntryLine[];
+  PrivateNote?: string;
+  /** QuickBooks derives this; Yipyy sends it so the check has something to
+   *  compare against. Debits must equal credits. */
+  TotalAmt?: number;
+}
+
 // ── The company snapshot the cache holds ────────────────────────────────────
 
 /** One read of a QuickBooks company: everything the setup wizard and the

@@ -21,6 +21,21 @@ import {
   type DepositInput,
 } from "./documents/deposit";
 import {
+  buildGiftCardBreakageEntry,
+  buildGiftCardRedemptionReceipt,
+  buildGiftCardSaleReceipt,
+  type GiftCardBreakageInput,
+  type GiftCardRedemptionInput,
+  type GiftCardSaleInput,
+} from "./documents/gift-card";
+import {
+  buildMembershipCancellation,
+  buildMembershipReceipt,
+  membershipPeriodLabel,
+  type MembershipCancellationInput,
+  type MembershipChargeInput,
+} from "./documents/membership";
+import {
   buildPackageRedemptionReceipt,
   buildPackageSaleReceipt,
   type PackageRedemptionInput,
@@ -438,6 +453,230 @@ export function syncRedeemedPassToQuickBooks(
   } catch {
     return {
       warnings: ["QuickBooks sync couldn't be queued for this redemption."],
+    };
+  }
+}
+
+// ── Gift cards ──────────────────────────────────────────────────────────────
+
+/** A gift card was sold. Posts to the liability, never income (5C). */
+export function syncGiftCardSaleToQuickBooks(
+  scope: QuickBooksScope,
+  sale: GiftCardSaleInput,
+): DocumentSyncOutcome {
+  try {
+    if (sale.amount <= 0) return NOTHING("nothing_to_sync");
+
+    const pre = quickBooksPreflight(scope);
+    if (!pre.ok) return NOTHING(pre.skipped);
+
+    const { warnings } = buildGiftCardSaleReceipt(sale, {
+      data: getQuickBooksData(scope),
+      mappings: getQuickBooksMappings(scope),
+      settings: pre.settings,
+      catchAllAccountId: ensureUnassignedIncomeAccount(scope).Id,
+    });
+
+    const job = enqueueSync(scope, {
+      transactionId: `giftcard:${sale.giftCardId}`,
+      documentType: "sales_receipt",
+      description:
+        `${sale.customerName ?? "Walk-in"} · Gift card ${sale.code ?? ""}`.trim(),
+      amount: sale.amount,
+      transactionDate: sale.purchasedAt,
+      clientName: sale.customerName,
+      serviceSummary: "Gift card sale",
+    });
+
+    return {
+      job,
+      skipped: pre.manualOnly ? "manual_only" : undefined,
+      warnings,
+    };
+  } catch {
+    return {
+      warnings: ["QuickBooks sync couldn't be queued for this gift card."],
+    };
+  }
+}
+
+/** A gift card paid for something — where the revenue finally lands. */
+export function syncGiftCardRedemptionToQuickBooks(
+  scope: QuickBooksScope,
+  redemption: GiftCardRedemptionInput,
+): DocumentSyncOutcome {
+  try {
+    const pre = quickBooksPreflight(scope);
+    if (!pre.ok) return NOTHING(pre.skipped);
+
+    const { warnings } = buildGiftCardRedemptionReceipt(redemption, {
+      data: getQuickBooksData(scope),
+      mappings: getQuickBooksMappings(scope),
+      settings: pre.settings,
+      catchAllAccountId: ensureUnassignedIncomeAccount(scope).Id,
+    });
+
+    const job = enqueueSync(scope, {
+      transactionId: `giftcard-redemption:${redemption.redemptionId}`,
+      documentType: "sales_receipt",
+      description: `${redemption.customerName ?? "Client"} · Paid by gift card`,
+      amount: redemption.servicePrice + (redemption.taxAmount ?? 0),
+      transactionDate: redemption.redeemedAt,
+      clientName: redemption.customerName,
+      petName: redemption.petName,
+      serviceSummary: `${redemption.serviceName} (gift card)`,
+    });
+
+    return {
+      job,
+      skipped: pre.manualOnly ? "manual_only" : undefined,
+      warnings,
+    };
+  } catch {
+    return {
+      warnings: [
+        "QuickBooks sync couldn't be queued for this gift-card redemption.",
+      ],
+    };
+  }
+}
+
+/**
+ * A gift card expired with a balance on it.
+ *
+ * Nothing calls this automatically. Recognising breakage is a policy decision
+ * with legal weight — several jurisdictions don't allow gift cards to expire at
+ * all — so it stays a deliberate act.
+ */
+export function syncGiftCardBreakageToQuickBooks(
+  scope: QuickBooksScope,
+  breakage: GiftCardBreakageInput,
+): DocumentSyncOutcome {
+  try {
+    if (breakage.balance <= 0) return NOTHING("nothing_to_sync");
+
+    const pre = quickBooksPreflight(scope);
+    if (!pre.ok) return NOTHING(pre.skipped);
+
+    const { warnings } = buildGiftCardBreakageEntry(breakage, {
+      data: getQuickBooksData(scope),
+      settings: pre.settings,
+    });
+
+    const job = enqueueSync(scope, {
+      transactionId: `breakage:${breakage.giftCardId}`,
+      documentType: "journal_entry",
+      description: `Gift card ${breakage.code ?? breakage.giftCardId} expired`,
+      amount: breakage.balance,
+      transactionDate: breakage.expiredAt,
+      serviceSummary: "Gift card breakage",
+    });
+
+    return {
+      job,
+      skipped: pre.manualOnly ? "manual_only" : undefined,
+      warnings,
+    };
+  } catch {
+    return {
+      warnings: ["QuickBooks sync couldn't be queued for this breakage."],
+    };
+  }
+}
+
+// ── Memberships ─────────────────────────────────────────────────────────────
+
+/** One period of a membership was billed. */
+export function syncMembershipChargeToQuickBooks(
+  scope: QuickBooksScope,
+  charge: MembershipChargeInput,
+): DocumentSyncOutcome {
+  try {
+    if (charge.amount <= 0) return NOTHING("nothing_to_sync");
+
+    const pre = quickBooksPreflight(scope);
+    if (!pre.ok) return NOTHING(pre.skipped);
+
+    const { warnings } = buildMembershipReceipt(charge, {
+      data: getQuickBooksData(scope),
+      mappings: getQuickBooksMappings(scope),
+      settings: pre.settings,
+      catchAllAccountId: ensureUnassignedIncomeAccount(scope).Id,
+    });
+
+    const job = enqueueSync(scope, {
+      // Keyed on the CHARGE, so twelve months of one membership are twelve
+      // documents rather than one that keeps getting deduplicated away.
+      transactionId: `membership:${charge.chargeId}`,
+      documentType: "sales_receipt",
+      description: `${charge.customerName ?? "Client"} · ${charge.planName}${
+        charge.isRenewal ? " (renewal)" : ""
+      }`,
+      amount: charge.amount + (charge.taxAmount ?? 0),
+      transactionDate: charge.chargedAt,
+      clientName: charge.customerName,
+      serviceSummary: `${charge.planName} · ${membershipPeriodLabel(
+        charge.periodStart,
+        charge.cycle,
+      )}`,
+    });
+
+    return {
+      job,
+      skipped: pre.manualOnly ? "manual_only" : undefined,
+      warnings,
+    };
+  } catch {
+    return {
+      warnings: ["QuickBooks sync couldn't be queued for this membership."],
+    };
+  }
+}
+
+/**
+ * A membership was cancelled.
+ *
+ * Returns `nothing_to_sync` when no refund is due — that is the correct
+ * outcome, not a failure: the client keeps the period they paid for and
+ * nothing moved.
+ */
+export function syncMembershipCancellationToQuickBooks(
+  scope: QuickBooksScope,
+  cancellation: MembershipCancellationInput,
+): DocumentSyncOutcome {
+  try {
+    const pre = quickBooksPreflight(scope);
+    if (!pre.ok) return NOTHING(pre.skipped);
+
+    const outcome = buildMembershipCancellation(cancellation, {
+      data: getQuickBooksData(scope),
+      mappings: getQuickBooksMappings(scope),
+      settings: pre.settings,
+      catchAllAccountId: ensureUnassignedIncomeAccount(scope).Id,
+    });
+
+    if (outcome.kind === "no_entry") {
+      return { skipped: "nothing_to_sync", warnings: [] };
+    }
+
+    const job = enqueueSync(scope, {
+      transactionId: `membership-refund:${cancellation.chargeId}`,
+      documentType: "refund_receipt",
+      description: `${cancellation.customerName ?? "Client"} · ${cancellation.planName} cancelled`,
+      amount: outcome.refund.TotalAmt,
+      transactionDate: cancellation.cancelledAt,
+      clientName: cancellation.customerName,
+      serviceSummary: `Pro-rated refund · ${cancellation.planName}`,
+    });
+
+    return {
+      job,
+      skipped: pre.manualOnly ? "manual_only" : undefined,
+      warnings: outcome.warnings,
+    };
+  } catch {
+    return {
+      warnings: ["QuickBooks sync couldn't be queued for this cancellation."],
     };
   }
 }

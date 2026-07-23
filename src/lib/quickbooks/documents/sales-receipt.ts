@@ -220,7 +220,23 @@ export function buildServiceSalesReceipt(
   // ── Tip: a liability, never income ───────────────────────────────────────
   const tipCents = toCents(txn.tipAmount ?? 0);
   if (tipCents > 0) {
-    const tipsRef = findAccountByName(ctx.data, /tip|gratuit/i);
+    // A configured account wins, but only if it's actually a liability: a tip
+    // in an income account is money the facility appears to have earned and
+    // will still have to hand to staff.
+    const configuredTips = ctx.settings.tipsPayableAccountId
+      ? ctx.data.accounts.find(
+          (a) => a.Id === ctx.settings.tipsPayableAccountId,
+        )
+      : undefined;
+    if (configuredTips && configuredTips.Classification !== "Liability") {
+      warnings.push(
+        `The tips account "${configuredTips.Name}" isn't a liability — tips are owed to staff, not earned, so the tip line was posted to a liability account instead.`,
+      );
+    }
+    const tipsRef =
+      configuredTips?.Classification === "Liability"
+        ? { value: configuredTips.Id, name: configuredTips.Name }
+        : findAccountByName(ctx.data, /tip|gratuit/i);
     if (!tipsRef)
       warnings.push(
         "No Tips Payable account — the tip line has no account and would land in income.",

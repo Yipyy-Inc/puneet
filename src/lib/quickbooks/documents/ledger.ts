@@ -1,6 +1,7 @@
 import type {
   QuickBooksCompanyData,
   QuickBooksCreditMemo,
+  QuickBooksJournalEntry,
   QuickBooksRefundReceipt,
   QuickBooksSalesLine,
   QuickBooksSalesReceipt,
@@ -24,7 +25,8 @@ import { toCents, toDollars } from "./shared";
 export type PostableDocument =
   | { kind: "sales_receipt"; document: QuickBooksSalesReceipt }
   | { kind: "refund_receipt"; document: QuickBooksRefundReceipt }
-  | { kind: "credit_memo"; document: QuickBooksCreditMemo };
+  | { kind: "credit_memo"; document: QuickBooksCreditMemo }
+  | { kind: "journal_entry"; document: QuickBooksJournalEntry };
 
 /** Refunds and credit memos reverse what a sale did. */
 function signFor(kind: PostableDocument["kind"]): 1 | -1 {
@@ -32,17 +34,77 @@ function signFor(kind: PostableDocument["kind"]): 1 | -1 {
 }
 
 function linesOf(doc: PostableDocument): QuickBooksSalesLine[] {
-  return doc.document.Line;
+  return doc.kind === "journal_entry" ? [] : doc.document.Line;
 }
 
-/** Net movement per account, in cents. Positive = the account increased
- *  (income earned, liability taken on). */
+/**
+ * Journal entries carry their direction in `PostingType` rather than the sign.
+ *
+ * Translated to this ledger's convention (positive = the account increased):
+ * a CREDIT increases income and liabilities, a DEBIT decreases them. That is
+ * what makes breakage read correctly — the liability goes down, income goes up.
+ */
+function postJournalEntry(
+  entry: QuickBooksJournalEntry,
+  balances: Map<string, number>,
+): void {
+  for (const line of entry.Line) {
+    const detail = line.JournalEntryLineDetail;
+    const accountId = detail.AccountRef?.value;
+    if (!accountId) continue;
+    const cents = toCents(line.Amount);
+    const delta = detail.PostingType === "Credit" ? cents : -cents;
+    balances.set(accountId, (balances.get(accountId) ?? 0) + delta);
+  }
+}
+
+/**
+ * The other side of a receipt: where the money landed.
+ *
+ * A Sales Receipt DEBITS its deposit account. For a bank that is an increase;
+ * for a liability used as the tender (a gift card paying for a service) it is a
+ * decrease. Without this the gift-card liability would only ever go up, because
+ * the drawdown is expressed as the deposit account rather than as a line.
+ *
+ * Only posted when company data is supplied, since the direction depends on the
+ * account's classification.
+ */
+function postDepositSide(
+  accountId: string | undefined,
+  totalCents: number,
+  sign: 1 | -1,
+  data: QuickBooksCompanyData | undefined,
+  balances: Map<string, number>,
+): void {
+  if (!accountId || !data) return;
+  const account = data.accounts.find((a) => a.Id === accountId);
+  if (!account) return;
+  // Debit: assets up, liabilities down.
+  const direction = account.Classification === "Asset" ? 1 : -1;
+  balances.set(
+    accountId,
+    (balances.get(accountId) ?? 0) + sign * direction * totalCents,
+  );
+}
+
+/**
+ * Net movement per account, in cents. Positive = the account increased
+ * (income earned, liability taken on).
+ *
+ * Pass `data` to also post the deposit side of each receipt — needed for any
+ * rule about a liability that is spent as a tender.
+ */
 export function postToLedger(
   documents: PostableDocument[],
+  data?: QuickBooksCompanyData,
 ): Map<string, number> {
   const balances = new Map<string, number>();
 
   for (const doc of documents) {
+    if (doc.kind === "journal_entry") {
+      postJournalEntry(doc.document, balances);
+      continue;
+    }
     const sign = signFor(doc.kind);
     for (const line of linesOf(doc)) {
       const accountId = line.SalesItemLineDetail.ItemAccountRef?.value;
@@ -54,6 +116,16 @@ export function postToLedger(
         (balances.get(accountId) ?? 0) + sign * toCents(line.Amount),
       );
     }
+
+    if (doc.kind !== "credit_memo") {
+      postDepositSide(
+        doc.document.DepositToAccountRef?.value,
+        toCents(doc.document.TotalAmt),
+        sign,
+        data,
+        balances,
+      );
+    }
   }
 
   return balances;
@@ -63,8 +135,9 @@ export function postToLedger(
 export function accountBalance(
   documents: PostableDocument[],
   accountId: string,
+  data?: QuickBooksCompanyData,
 ): number {
-  return toDollars(postToLedger(documents).get(accountId) ?? 0);
+  return toDollars(postToLedger(documents, data).get(accountId) ?? 0);
 }
 
 /** Everything that landed in income, in dollars. */
@@ -78,6 +151,7 @@ export function totalIncome(
       .map((a) => a.Id),
   );
   let cents = 0;
+  // Income is line-based only: the deposit side never touches revenue.
   for (const [accountId, amount] of postToLedger(documents)) {
     if (revenue.has(accountId)) cents += amount;
   }

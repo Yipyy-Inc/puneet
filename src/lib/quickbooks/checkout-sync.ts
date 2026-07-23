@@ -7,6 +7,10 @@ import {
   applyStoreCreditToReceipt,
   storeCreditTendered,
 } from "./documents/credit-memo";
+import {
+  applyGiftCardToReceipt,
+  giftCardTendered,
+} from "./documents/gift-card";
 import { buildServiceSalesReceipt } from "./documents/sales-receipt";
 import { syncInvoiceToQuickBooks } from "./document-sync";
 import { getQuickBooksMappings } from "./mappings-store";
@@ -95,6 +99,8 @@ export function syncCheckoutToQuickBooks(
     bookingDate?: string;
     /** The Credit Memo store credit on this sale is drawn from, when known. */
     creditMemoNumber?: string;
+    /** The gift card this sale was tendered against, when known. */
+    giftCardCode?: string;
   } = {},
 ): CheckoutSyncOutcome {
   try {
@@ -143,13 +149,30 @@ export function syncCheckoutToQuickBooks(
     // Store credit spent on this sale draws the liability down and reduces what
     // was actually banked. Without this the receipt claims cash the facility
     // never received, and the credit balance never clears.
+    let receipt = built.receipt;
+
     const creditApplied = storeCreditTendered(txn);
     if (creditApplied > 0) {
       const applied = applyStoreCreditToReceipt(
-        built.receipt,
+        receipt,
         { amount: creditApplied, memoDocumentNumber: options.creditMemoNumber },
         { data, settings },
       );
+      receipt = applied.receipt;
+      warnings.push(...applied.warnings);
+    }
+
+    // Same treatment for a gift card: it is a tender, not a second sale. The
+    // service keeps its revenue and the liability comes down — building a
+    // separate redemption receipt here would count the income twice.
+    const giftCardApplied = giftCardTendered(txn);
+    if (giftCardApplied > 0) {
+      const applied = applyGiftCardToReceipt(
+        receipt,
+        { amount: giftCardApplied, code: options.giftCardCode },
+        { data, settings },
+      );
+      receipt = applied.receipt;
       warnings.push(...applied.warnings);
     }
 

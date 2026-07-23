@@ -60,7 +60,9 @@ export type SyncDocumentType =
    *  key is derived from (type, transaction) — two payments settling one
    *  invoice must not collide, so the key is keyed on the payment, not the
    *  invoice. */
-  | "payment";
+  | "payment"
+  /** A movement with no customer and no sale — gift-card breakage (5C). */
+  | "journal_entry";
 
 export interface SyncJob {
   id: string;

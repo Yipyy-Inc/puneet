@@ -15,6 +15,17 @@ import {
   type PostableDocument,
 } from "./ledger";
 import {
+  buildGiftCardBreakageEntry,
+  buildGiftCardRedemptionReceipt,
+  buildGiftCardSaleReceipt,
+  giftCardLiabilityAccount,
+  journalEntryBalances,
+} from "./gift-card";
+import {
+  buildMembershipCancellation,
+  buildMembershipReceipt,
+} from "./membership";
+import {
   buildPackageRedemptionReceipt,
   buildPackageSaleReceipt,
 } from "./package";
@@ -300,6 +311,145 @@ export function runQuickBooksMoneyRuleChecks(): MoneyRulesReport {
     "Every redemption receipt totals zero",
     packageRun.slice(1).every((d) => d.document.TotalAmt === 0),
     "The service is shown at full price and cancelled by the pass credit.",
+  );
+
+  // ── Gift cards: the liability's whole life ───────────────────────────────
+  const giftLiability = giftCardLiabilityAccount({ data, settings });
+  if (!giftLiability) {
+    add(
+      "A Gift Card Liability account exists",
+      false,
+      "The mock company has no liability account matching /gift card/i — 5C cannot be evaluated.",
+    );
+  } else {
+    const gcSale = buildGiftCardSaleReceipt(
+      {
+        giftCardId: "gc-1",
+        code: "GC-1001",
+        amount: 100,
+        purchasedAt: "2026-07-01T10:00:00",
+        customerName: "Alice Johnson",
+        customerEmail: "alice@example.com",
+      },
+      ctx,
+    );
+    const gcRedeem = buildGiftCardRedemptionReceipt(
+      {
+        giftCardId: "gc-1",
+        code: "GC-1001",
+        redemptionId: "gcr-1",
+        serviceId: "groom-1",
+        serviceName: "Full Groom",
+        servicePrice: 60,
+        redeemedAt: "2026-07-20T09:00:00",
+        customerName: "Alice Johnson",
+        customerEmail: "alice@example.com",
+      },
+      ctx,
+    );
+    const gcBreakage = buildGiftCardBreakageEntry(
+      {
+        giftCardId: "gc-1",
+        code: "GC-1001",
+        balance: 40,
+        expiredAt: "2027-07-02",
+      },
+      { data, settings },
+    );
+
+    add(
+      "A gift-card sale reaches the liability, never income",
+      totalIncome(
+        [{ kind: "sales_receipt", document: gcSale.receipt }],
+        data,
+      ) === 0,
+      "Selling a promise isn't a sale; the revenue comes when it is redeemed.",
+    );
+    add(
+      "Redeeming a gift card recognises the FULL service price as income",
+      totalIncome(
+        [{ kind: "sales_receipt", document: gcRedeem.receipt }],
+        data,
+      ) === 60,
+      "The card was the tender; the service was the sale.",
+    );
+
+    const gcLife: PostableDocument[] = [
+      { kind: "sales_receipt", document: gcSale.receipt },
+      { kind: "sales_receipt", document: gcRedeem.receipt },
+      { kind: "journal_entry", document: gcBreakage.entry },
+    ];
+    const gcBalance = accountBalance(gcLife, giftLiability.value, data);
+    add(
+      "GIFT CARD RULE — sale, redemption and breakage net the liability to zero",
+      gcBalance === 0,
+      gcBalance === 0
+        ? "$100 sold, $60 spent, $40 expired."
+        : `$${gcBalance.toFixed(2)} is stranded in ${giftLiability.name}.`,
+    );
+    add(
+      "Breakage balances as a journal entry",
+      journalEntryBalances(gcBreakage.entry),
+      "Debits equal credits; the liability moves to Breakage Income.",
+    );
+  }
+
+  // ── Memberships: one document per period ─────────────────────────────────
+  const period = (start: string, chargeId: string) =>
+    buildMembershipReceipt(
+      {
+        chargeId,
+        membershipId: "plan-001",
+        planName: "Daycare Basic",
+        tierLabel: "Silver",
+        amount: 99,
+        cycle: "monthly",
+        periodStart: start,
+        chargedAt: `${start}T06:00:00`,
+        customerName: "Alice Johnson",
+        customerEmail: "alice@example.com",
+      },
+      ctx,
+    ).receipt;
+
+  const july = period("2026-07-01", "ch-jul");
+  const august = period("2026-08-01", "ch-aug");
+
+  add(
+    "A membership charge names the period it covers",
+    (july.Line[0].Description ?? "").includes("2026-07-01 – 2026-07-31"),
+    july.Line[0].Description ?? "",
+  );
+  add(
+    "MEMBERSHIP RULE — each period is its own document and its own revenue",
+    july.Line[0].Description !== august.Line[0].Description &&
+      totalIncome(
+        [
+          { kind: "sales_receipt", document: july },
+          { kind: "sales_receipt", document: august },
+        ],
+        data,
+      ) === 198,
+    "Two months billed, two months of revenue.",
+  );
+
+  const cancelledMembership = buildMembershipCancellation(
+    {
+      chargeId: "ch-jul",
+      membershipId: "plan-001",
+      planName: "Daycare Basic",
+      amount: 99,
+      cycle: "monthly",
+      periodStart: "2026-07-01",
+      chargedAt: "2026-07-01",
+      cancelledAt: "2026-08-01",
+    },
+    ctx,
+  );
+  add(
+    "Cancelling after the period ends produces no entry",
+    cancelledMembership.kind === "no_entry",
+    "Nothing moved, so nothing is recorded.",
   );
 
   return { ok: results.every((r) => r.ok), results };
