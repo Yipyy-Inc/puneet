@@ -11,6 +11,7 @@ import {
   type QBSyncResult,
 } from "@/lib/quickbooks-sync";
 
+import { recordSyncedDocument } from "./synced-documents-store";
 import {
   isQuickBooksSyncPaused,
   getQuickBooksConnection,
@@ -398,6 +399,18 @@ export async function attemptJob(
   const attemptCount = job.attemptCount + 1;
 
   if (result.success) {
+    // The ledger entry outlives the job: money reached the books, and that fact
+    // must survive the queue being pruned.
+    recordSyncedDocument(scope, {
+      transactionId: job.transactionId,
+      jobId: job.id,
+      documentType: job.documentType,
+      quickBooksDocumentId: result.quickbooksPaymentId ?? job.id,
+      documentNumber: result.quickbooksInvoiceId ?? job.transactionId,
+      amount: job.amount,
+      description: job.description,
+      syncedAt: result.syncedAt,
+    });
     return updateJob(scope, job.id, {
       status: "synced",
       attemptCount,
