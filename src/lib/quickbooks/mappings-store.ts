@@ -26,6 +26,9 @@ export interface QuickBooksMapping {
   itemId?: string;
   /** QuickBooks Account Id. */
   accountId?: string;
+  /** QuickBooks Class Id, for a Yipyy location (Phase 8). Locations map to a
+   *  Class rather than to an item + account. */
+  classId?: string;
   /** The Yipyy item's name when it was mapped. Snapshotted so a mapping stays
    *  readable after the service is deleted from the catalog (4E) — an id alone
    *  tells nobody which service last year's receipts point at. */
@@ -126,7 +129,7 @@ export function setQuickBooksMapping(
   // Drop empty entries so "mapped" counts never include a row that was set and
   // then cleared.
   const merged: MappingSet = { ...set, [itemKey]: next };
-  if (!next.itemId && !next.accountId) delete merged[itemKey];
+  if (!next.itemId && !next.accountId && !next.classId) delete merged[itemKey];
   commit({ ...state, [key]: merged });
 }
 
@@ -147,7 +150,7 @@ export function setQuickBooksMappings(
       ...patch,
       name: names[itemKey] ?? set[itemKey]?.name,
     };
-    if (!next.itemId && !next.accountId) delete set[itemKey];
+    if (!next.itemId && !next.accountId && !next.classId) delete set[itemKey];
     else set[itemKey] = next;
   }
   commit({ ...state, [key]: set });
@@ -177,6 +180,19 @@ export function isMapped(mapping: QuickBooksMapping | undefined): boolean {
   return Boolean(mapping?.itemId && mapping?.accountId);
 }
 
+/** A location is mapped when it has a Class — it has no item or account. */
+export function isClassMapped(mapping: QuickBooksMapping | undefined): boolean {
+  return Boolean(mapping?.classId);
+}
+
+/** Whichever kind of "mapped" this row means. */
+export function itemIsMapped(
+  item: { mapsToClass?: boolean },
+  mapping: QuickBooksMapping | undefined,
+): boolean {
+  return item.mapsToClass ? isClassMapped(mapping) : isMapped(mapping);
+}
+
 export function mappingProgress(
   groups: MappableGroup[],
   mappings: MappingSet,
@@ -187,7 +203,7 @@ export function mappingProgress(
   const all = groups
     .flatMap((g) => g.items)
     .filter((i) => !i.mappedElsewhere && !i.deleted);
-  const mapped = all.filter((i) => isMapped(mappings[i.id])).length;
+  const mapped = all.filter((i) => itemIsMapped(i, mappings[i.id])).length;
   const total = all.length;
   return {
     mapped,
@@ -205,7 +221,11 @@ export function groupProgress(
 
 /** Ids that carry a usable mapping — the input to `withRetainedMappings`. */
 export function mappedItemIds(mappings: MappingSet): string[] {
-  return Object.keys(mappings).filter((id) => isMapped(mappings[id]));
+  // Location rows are excluded: they are not catalog items, so a location that
+  // disappears is not a "deleted service".
+  return Object.keys(mappings).filter(
+    (id) => isMapped(mappings[id]) && !id.startsWith("location:"),
+  );
 }
 
 /** id → the name recorded when it was mapped, for rows whose catalog entry is

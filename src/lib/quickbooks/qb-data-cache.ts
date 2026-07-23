@@ -63,6 +63,10 @@ const EMPTY_ENTRY: QuickBooksDataCacheEntry = Object.freeze({
   customers: [],
   taxCodes: [],
   taxRates: [],
+  classes: [],
+  // Nothing has been read yet, so the safest assumption is the plan with the
+  // fewest features: never offer Class tracking on the strength of a guess.
+  plan: "simple_start" as const,
 });
 
 type CacheMap = Record<string, QuickBooksDataCacheEntry>;
@@ -145,6 +149,8 @@ function loadCompanyData(
     customers: source.customers.map((c) => ({ ...c })),
     taxCodes: source.taxCodes.map((t) => ({ ...t })),
     taxRates: source.taxRates.map((r) => ({ ...r })),
+    classes: source.classes.map((c) => ({ ...c })),
+    plan: source.plan,
   };
 }
 

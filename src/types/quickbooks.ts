@@ -103,6 +103,31 @@ export interface QuickBooksCustomer {
   CurrencyRef?: QuickBooksRef;
 }
 
+// ── Class (location tracking, Phase 8) ──────────────────────────────────────
+
+/**
+ * QuickBooks' subscription tier.
+ *
+ * It matters here for one reason: Class tracking — the only way to split one
+ * company's books by location — is a Plus/Advanced feature. On Simple Start or
+ * Essentials the Class entity does not exist, and sending a ClassRef is
+ * rejected outright.
+ */
+export type QuickBooksPlan =
+  | "simple_start"
+  | "essentials"
+  | "plus"
+  | "advanced";
+
+export interface QuickBooksClass {
+  Id: string;
+  Name: string;
+  FullyQualifiedName: string;
+  Active: boolean;
+  SubClass?: boolean;
+  ParentRef?: QuickBooksRef;
+}
+
 // ── Tax ─────────────────────────────────────────────────────────────────────
 
 export interface QuickBooksTaxRate {
@@ -174,6 +199,11 @@ export interface QuickBooksSalesReceipt {
   CurrencyRef?: QuickBooksRef;
   Line: QuickBooksSalesLine[];
   TxnTaxDetail?: QuickBooksTxnTaxDetail;
+  /** The location this sale belongs to, when Class tracking is on (Phase 8).
+   *  Header-level, matching QuickBooks' "one class per transaction" preference:
+   *  a sale happens at one location, so per-line classes would only invite the
+   *  lines to disagree with each other. */
+  ClassRef?: QuickBooksRef;
   /** Internal memo — never shown to the client. */
   PrivateNote?: string;
   TotalAmt: number;
@@ -326,4 +356,7 @@ export interface QuickBooksCompanyData {
   customers: QuickBooksCustomer[];
   taxCodes: QuickBooksTaxCode[];
   taxRates: QuickBooksTaxRate[];
+  /** Empty on plans without Class tracking. */
+  classes: QuickBooksClass[];
+  plan: QuickBooksPlan;
 }

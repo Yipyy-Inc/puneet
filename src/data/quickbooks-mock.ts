@@ -1,4 +1,5 @@
 import type {
+  QuickBooksClass,
   QuickBooksAccount,
   QuickBooksCompanyData,
   QuickBooksCustomer,
@@ -554,6 +555,46 @@ const TAX_CODES: QuickBooksTaxCode[] = [
   },
 ];
 
+// ── Classes (location tracking, Phase 8) ────────────────────────────────────
+
+/**
+ * Classes as a multi-location facility would have set them up: one per branch.
+ *
+ * Named after the neighbourhoods rather than "Location 1/2/3" because that is
+ * what a bookkeeper running a P&L by Class actually wants to read — and because
+ * they then line up with the real Yipyy branches (Plateau, NDG, Laval), which
+ * is what makes the name-match suggestion worth offering at all.
+ *
+ * The inactive one is deliberate: QuickBooks rejects a posting against an
+ * inactive Class, so there has to be one to prove it is never offered.
+ */
+const CLASSES: QuickBooksClass[] = [
+  {
+    Id: "5000000000000001",
+    Name: "Plateau",
+    FullyQualifiedName: "Plateau",
+    Active: true,
+  },
+  {
+    Id: "5000000000000002",
+    Name: "NDG",
+    FullyQualifiedName: "NDG",
+    Active: true,
+  },
+  {
+    Id: "5000000000000003",
+    Name: "Laval",
+    FullyQualifiedName: "Laval",
+    Active: true,
+  },
+  {
+    Id: "5000000000000004",
+    Name: "Retired Kiosk",
+    FullyQualifiedName: "Retired Kiosk",
+    Active: false,
+  },
+];
+
 // ── Datasets ────────────────────────────────────────────────────────────────
 
 /** A well-kept set of books — every account Table 1 wants is present. */
@@ -563,6 +604,9 @@ export const QUICKBOOKS_MOCK_COMPANY: QuickBooksCompanyData = {
   customers: CUSTOMERS,
   taxCodes: TAX_CODES,
   taxRates: TAX_RATES,
+  classes: CLASSES,
+  // Plus: Class tracking is available, so "Track by location" can be switched on.
+  plan: "plus",
 };
 
 /** Accounts a plainer set of books simply wouldn't have: the three optional
@@ -611,4 +655,9 @@ export const QUICKBOOKS_MOCK_COMPANY_MINIMAL: QuickBooksCompanyData = {
     ),
   ),
   taxRates: MINIMAL_TAX_RATES,
+  // Simple Start has no Class entity at all — this is the dataset that proves
+  // the "Track by location" option is correctly greyed out rather than failing
+  // at post time.
+  classes: [],
+  plan: "simple_start",
 };

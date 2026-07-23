@@ -18,6 +18,7 @@ import { peakSurcharges } from "@/data/boarding";
 // ============================================================================
 
 export type MappableGroupKey =
+  | "locations"
   | "services"
   | "addons"
   | "packages"
@@ -49,6 +50,8 @@ export interface MappableItem {
    *  progress and from the unmapped/catch-all count — calling it "unmapped"
    *  would claim tax posts to a catch-all income account, which it does not. */
   mappedElsewhere?: string;
+  /** Maps to a QuickBooks Class rather than an item + account (Phase 8). */
+  mapsToClass?: boolean;
   /** No longer in the Yipyy catalog, but still mapped. Kept visible because
    *  historical transactions reference it — see `withRetainedMappings`. */
   deleted?: boolean;
@@ -176,8 +179,41 @@ function feeItems(): MappableItem[] {
 /** Assemble every group. Empty groups are kept: a facility with no memberships
  *  should see that the row exists and is simply unused, not wonder whether
  *  Yipyy forgot about them. */
-export function buildMappableGroups(): MappableGroup[] {
+export interface MappableGroupOptions {
+  /** Yipyy locations to offer as a Class mapping group (Phase 8). Passing them
+   *  is what turns the feature on for this screen — the group is absent when
+   *  location tracking is off, because mapping branches you aren't tracking is
+   *  work with no effect. */
+  locations?: { id: string; name: string; city?: string; shortCode?: string }[];
+}
+
+export function buildMappableGroups(
+  options: MappableGroupOptions = {},
+): MappableGroup[] {
+  const locationGroup: MappableGroup[] = options.locations?.length
+    ? [
+        {
+          key: "locations" as const,
+          title: "Locations",
+          // First on the screen on purpose: it decides how everything below is
+          // reported, and a facility that maps fifty services and then finds
+          // out none of them are attributed has done the work in the wrong
+          // order.
+          description:
+            "Each location posts under its own QuickBooks Class, so you can run a P&L per branch.",
+          items: options.locations.map((l) => ({
+            id: `location:${l.id}`,
+            name: l.name,
+            type:
+              [l.shortCode, l.city].filter(Boolean).join(" · ") || "Location",
+            mapsToClass: true,
+          })),
+        },
+      ]
+    : [];
+
   return [
+    ...locationGroup,
     {
       key: "services",
       title: "Services",
@@ -294,6 +330,7 @@ export function buildMappableGroups(): MappableGroup[] {
  *  Add-ons carry the `service:` prefix too, so an ambiguous id lands in
  *  Services — visible in the wrong group beats invisible. */
 const PREFIX_GROUP: Record<string, MappableGroupKey> = {
+  location: "locations",
   service: "services",
   addon: "addons",
   package: "packages",

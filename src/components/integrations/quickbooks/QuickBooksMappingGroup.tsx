@@ -25,6 +25,10 @@ import {
   setQuickBooksMappings,
   useQuickBooksMappings,
 } from "@/lib/quickbooks/mappings-store";
+import {
+  selectableClasses,
+  suggestClassForLocation,
+} from "@/lib/quickbooks/location-classes";
 import { activeItems, useQuickBooksData } from "@/lib/quickbooks/qb-data-cache";
 import type { MappableGroup } from "@/lib/quickbooks/yipyy-catalog";
 
@@ -60,6 +64,7 @@ export function QuickBooksMappingGroup({
   const mappings = useQuickBooksMappings(scope);
   const progress = groupProgress(group, mappings);
   const qbItems = activeItems(data);
+  const qbClasses = selectableClasses(data);
 
   // Selection is per-group and deliberately not persisted — it's a working
   // gesture, not a decision worth surviving a reload.
@@ -85,6 +90,7 @@ export function QuickBooksMappingGroup({
 
   // Bulk account choices follow the same rule as a single card: a group of
   // liability items must not be handed income accounts.
+  const isLocationGroup = group.key === "locations";
   const groupIsLiability = group.items.every((i) => i.postsToLiability);
   const bulkAccounts = groupIsLiability
     ? data.accounts.filter((a) => a.Classification === "Liability")
@@ -126,64 +132,73 @@ export function QuickBooksMappingGroup({
       {expanded && group.items.length > 0 && (
         <CardContent className="border-t p-0">
           {/* ── Bulk bar ─────────────────────────────────────────────────── */}
-          <div className="bg-muted/30 flex flex-wrap items-center gap-3 border-b p-3">
-            <label className="flex items-center gap-2 text-xs font-medium">
-              <Checkbox
-                checked={allSelected}
-                onCheckedChange={(next) => toggleAll(next === true)}
-                aria-label={`Select all ${group.title}`}
-              />
-              Select all {group.title.toLowerCase()}
-            </label>
+          {/* Locations have no item/account to bulk-apply — one Class each. */}
+          {!isLocationGroup && (
+            <div className="bg-muted/30 flex flex-wrap items-center gap-3 border-b p-3">
+              <label className="flex items-center gap-2 text-xs font-medium">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={(next) => toggleAll(next === true)}
+                  aria-label={`Select all ${group.title}`}
+                />
+                Select all {group.title.toLowerCase()}
+              </label>
 
-            {selected.size > 0 && (
-              <>
-                <span className="text-muted-foreground text-xs">
-                  {selected.size} selected · apply to all:
-                </span>
-                <Select
-                  value=""
-                  onValueChange={(value) => applyToSelected({ itemId: value })}
-                >
-                  <SelectTrigger className="h-7 w-40 text-xs">
-                    <SelectValue placeholder="Product / Service" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {qbItems.map((qb) => (
-                      <SelectItem key={qb.Id} value={qb.Id} className="text-xs">
-                        {qb.Name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value=""
-                  onValueChange={(value) =>
-                    applyToSelected({ accountId: value })
-                  }
-                >
-                  <SelectTrigger className="h-7 w-40 text-xs">
-                    <SelectValue placeholder="Account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {bulkAccounts.map((a) => (
-                      <SelectItem key={a.Id} value={a.Id} className="text-xs">
-                        {a.Name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => setSelected(new Set())}
-                >
-                  Clear
-                </Button>
-              </>
-            )}
-          </div>
+              {selected.size > 0 && (
+                <>
+                  <span className="text-muted-foreground text-xs">
+                    {selected.size} selected · apply to all:
+                  </span>
+                  <Select
+                    value=""
+                    onValueChange={(value) =>
+                      applyToSelected({ itemId: value })
+                    }
+                  >
+                    <SelectTrigger className="h-7 w-40 text-xs">
+                      <SelectValue placeholder="Product / Service" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {qbItems.map((qb) => (
+                        <SelectItem
+                          key={qb.Id}
+                          value={qb.Id}
+                          className="text-xs"
+                        >
+                          {qb.Name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value=""
+                    onValueChange={(value) =>
+                      applyToSelected({ accountId: value })
+                    }
+                  >
+                    <SelectTrigger className="h-7 w-40 text-xs">
+                      <SelectValue placeholder="Account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bulkAccounts.map((a) => (
+                        <SelectItem key={a.Id} value={a.Id} className="text-xs">
+                          {a.Name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setSelected(new Set())}
+                  >
+                    Clear
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
 
           {group.items.map((item) => (
             <QuickBooksMappingCard
@@ -192,6 +207,17 @@ export function QuickBooksMappingGroup({
               mapping={mappings[item.id]}
               items={qbItems}
               accounts={data.accounts}
+              classes={item.mapsToClass ? qbClasses : undefined}
+              suggestedClass={
+                item.mapsToClass
+                  ? suggestClassForLocation(
+                      // The row already carries what the matcher reads: the
+                      // location's name, and its short code as the type prefix.
+                      { name: item.name, shortCode: item.type.split(" · ")[0] },
+                      qbClasses,
+                    )
+                  : undefined
+              }
               realmId={connection.realmId}
               suggestion={suggestions[item.id]}
               selected={selected.has(item.id)}

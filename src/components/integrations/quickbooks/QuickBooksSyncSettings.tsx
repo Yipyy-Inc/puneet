@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AlertTriangle, Loader2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,12 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { QuickBooksScope } from "@/lib/quickbooks/connection-store";
+import {
+  CLASS_TRACKING_REQUIRED_MESSAGE,
+  facilityLocations,
+  PLAN_LABEL,
+  planSupportsClasses,
+} from "@/lib/quickbooks/location-classes";
 import {
   depositAccounts,
   ensureUnassignedIncomeAccount,
@@ -103,6 +109,14 @@ export function QuickBooksSyncSettings({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stranded, setStranded] = useState<string | undefined>();
+
+  // Phase 8 — the branch list comes from the HQ/locations model, not a list
+  // invented for this screen.
+  const locations = useMemo(
+    () => facilityLocations(scope.facilityId),
+    [scope.facilityId],
+  );
+  const classesAvailable = planSupportsClasses(data.plan);
 
   const banks = depositAccounts(data);
   const discountChoices = data.accounts.filter(
@@ -270,6 +284,56 @@ export function QuickBooksSyncSettings({
               </label>
             </RadioGroup>
           </Field>
+
+          {/* Phase 8 — only worth showing to a facility that has branches. A
+              single-location business has nothing to split. */}
+          {locations.length > 1 && (
+            <Field
+              label="Track by location"
+              hint="Tag every document with the QuickBooks Class for the branch it came from, so one company's books still give you a P&L per location."
+            >
+              <div className="flex items-start gap-3">
+                <Switch
+                  checked={
+                    Boolean(settings.trackByLocation) && classesAvailable
+                  }
+                  disabled={!classesAvailable}
+                  onCheckedChange={(v) => set({ trackByLocation: v })}
+                  aria-label="Track by location"
+                />
+                <div className="min-w-0 space-y-1">
+                  <p
+                    data-disabled={!classesAvailable}
+                    className="data-[disabled=true]:text-muted-foreground text-sm"
+                  >
+                    {locations.length} locations ·{" "}
+                    {locations
+                      .slice(0, 3)
+                      .map((l) => l.name)
+                      .join(", ")}
+                    {locations.length > 3 ? "…" : ""}
+                  </p>
+                  {classesAvailable ? (
+                    settings.trackByLocation && (
+                      <p className="text-muted-foreground text-xs">
+                        Map each location to a Class on the next step.
+                      </p>
+                    )
+                  ) : (
+                    // The RULE: say what's missing and which plan has it,
+                    // rather than letting them switch it on and collect
+                    // rejected postings for a month.
+                    <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                      {CLASS_TRACKING_REQUIRED_MESSAGE}
+                      <span className="text-muted-foreground ml-1 font-normal">
+                        This company is on {PLAN_LABEL[data.plan]}.
+                      </span>
+                    </p>
+                  )}
+                </div>
+              </div>
+            </Field>
+          )}
 
           <Field
             label="Discount account"

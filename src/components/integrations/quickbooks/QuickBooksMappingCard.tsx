@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Landmark, Package } from "lucide-react";
+import { Building2, ExternalLink, Landmark, Package } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,7 +16,11 @@ import { quickBooksCreateAccountUrl } from "@/lib/quickbooks/account-requirement
 import type { MappingSuggestion } from "@/lib/quickbooks/mapping-suggestions";
 import type { QuickBooksMapping } from "@/lib/quickbooks/mappings-store";
 import type { MappableItem } from "@/lib/quickbooks/yipyy-catalog";
-import type { QuickBooksAccount, QuickBooksItem } from "@/types/quickbooks";
+import type {
+  QuickBooksAccount,
+  QuickBooksClass,
+  QuickBooksItem,
+} from "@/types/quickbooks";
 
 // One row of the mapping screen: the Yipyy item on the left, the two
 // QuickBooks choices on the right.
@@ -26,6 +30,8 @@ export function QuickBooksMappingCard({
   mapping,
   items,
   accounts,
+  classes = [],
+  suggestedClass,
   realmId,
   suggestion,
   selected,
@@ -36,6 +42,9 @@ export function QuickBooksMappingCard({
   mapping: QuickBooksMapping | undefined;
   items: QuickBooksItem[];
   accounts: QuickBooksAccount[];
+  /** Only passed for location rows (Phase 8). */
+  classes?: QuickBooksClass[];
+  suggestedClass?: QuickBooksClass;
   realmId?: string;
   suggestion?: MappingSuggestion;
   selected: boolean;
@@ -91,9 +100,55 @@ export function QuickBooksMappingCard({
         )}
       </div>
 
-      {/* An item configured elsewhere gets no dropdowns — offering them would
-          imply a choice that has no effect here. */}
-      {item.mappedElsewhere ? (
+      {/* A location maps to ONE thing — a Class — so it gets one dropdown
+          rather than the item/account pair, which would be meaningless here. */}
+      {item.mapsToClass ? (
+        <div className="flex-1 space-y-1">
+          <label className="text-muted-foreground flex items-center gap-1 text-[11px]">
+            <Building2 className="size-3" />
+            QuickBooks Class
+          </label>
+          <Select
+            value={mapping?.classId ?? ""}
+            onValueChange={(value) => onChange({ classId: value })}
+          >
+            <SelectTrigger className="h-8 w-full text-xs">
+              <SelectValue
+                placeholder={
+                  suggestedClass ? (
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground">
+                        {suggestedClass.Name}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className="border-amber-500/30 bg-amber-500/10 px-1 py-0 text-[9px] text-amber-700 dark:text-amber-300"
+                      >
+                        Suggested
+                      </Badge>
+                    </span>
+                  ) : (
+                    "Choose a class"
+                  )
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {classes.map((c) => (
+                <SelectItem key={c.Id} value={c.Id} className="text-xs">
+                  {c.Name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {classes.length === 0 && (
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              This QuickBooks company has no classes yet — create one per
+              location, then reconnect to pick it up.
+            </p>
+          )}
+        </div>
+      ) : item.mappedElsewhere ? (
         <p className="text-muted-foreground flex-1 text-xs italic">
           {item.mappedElsewhere}
         </p>

@@ -54,6 +54,10 @@ export interface QuickBooksSettings {
   /** Optional contra-revenue account for package-pass redemptions. Must be an
    *  income account — see documents/package.ts. */
   packageRedemptionAccountId?: string;
+  /** Tag every document with the QuickBooks Class for its Yipyy location, so
+   *  one company's books can still be read per branch (Phase 8). Requires a
+   *  plan with Class tracking. */
+  trackByLocation?: boolean;
   /** Tips are owed to staff, so they sit in a liability until paid out. */
   tipsPayableAccountId?: string;
   /** Unspent gift-card balances (5C). */

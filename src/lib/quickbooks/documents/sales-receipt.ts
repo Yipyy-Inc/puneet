@@ -7,6 +7,7 @@ import type {
   QuickBooksSalesReceipt,
 } from "@/types/quickbooks";
 
+import { resolveLocationClass } from "../location-classes";
 import { isMapped, type MappingSet } from "../mappings-store";
 import type { QuickBooksSettings } from "../settings-store";
 import {
@@ -51,6 +52,8 @@ export interface SalesReceiptContext {
   staffName?: string;
   /** Booking date for the memo, when it differs from the payment date. */
   bookingDate?: string;
+  /** Yipyy locations, so an unmapped one can be named in the warning (Phase 8). */
+  locations?: { id: string; name: string }[];
 }
 
 export interface BuiltSalesReceipt {
@@ -271,6 +274,21 @@ export function buildServiceSalesReceipt(
   if (ctx.staffName) memoParts.push(ctx.staffName);
   memoParts.push(ctx.bookingDate ?? txn.createdAt.slice(0, 10));
 
+  // ── Location → Class (Phase 8) ───────────────────────────────────────────
+  // Only when the facility asked for it: an unrequested ClassRef on a plan that
+  // has classes is still a claim about the books nobody made.
+  let classRef;
+  if (ctx.settings.trackByLocation) {
+    const resolved = resolveLocationClass(
+      txn.locationId,
+      ctx.mappings,
+      ctx.data,
+      ctx.locations,
+    );
+    classRef = resolved.classRef;
+    if (resolved.warning) warnings.push(resolved.warning);
+  }
+
   const depositAccount = ctx.settings.depositAccountId
     ? ctx.data.accounts.find((a) => a.Id === ctx.settings.depositAccountId)
     : undefined;
@@ -283,6 +301,7 @@ export function buildServiceSalesReceipt(
       ? { value: depositAccount.Id, name: depositAccount.Name }
       : undefined,
     PaymentMethodRef: { value: toQuickBooksPaymentMethod(txn.paymentMethod) },
+    ClassRef: classRef,
     CurrencyRef: { value: "CAD" },
     Line: lines,
     TxnTaxDetail:

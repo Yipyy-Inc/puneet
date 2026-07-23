@@ -12,6 +12,7 @@ import {
   giftCardTendered,
 } from "./documents/gift-card";
 import { buildServiceSalesReceipt } from "./documents/sales-receipt";
+import { facilityLocations } from "./location-classes";
 import { syncInvoiceToQuickBooks } from "./document-sync";
 import { getQuickBooksMappings } from "./mappings-store";
 import {
@@ -143,6 +144,10 @@ export function syncCheckoutToQuickBooks(
       catchAllAccountId: catchAll.Id,
       staffName: options.staffName,
       bookingDate: options.bookingDate,
+      // Phase 8 — so an unmapped branch can be named in the warning.
+      locations: settings.trackByLocation
+        ? facilityLocations(scope.facilityId)
+        : undefined,
     });
     const warnings = [...built.warnings];
 

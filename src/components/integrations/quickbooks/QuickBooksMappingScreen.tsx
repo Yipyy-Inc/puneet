@@ -21,6 +21,11 @@ import {
   QUICKBOOKS_UNASSIGNED_INCOME,
   useQuickBooksData,
 } from "@/lib/quickbooks/qb-data-cache";
+import {
+  facilityLocations,
+  planSupportsClasses,
+} from "@/lib/quickbooks/location-classes";
+import { useQuickBooksSettings } from "@/lib/quickbooks/settings-store";
 import { patchQuickBooksSetup } from "@/lib/quickbooks/setup-store";
 import {
   buildMappableGroups,
@@ -56,16 +61,26 @@ export function QuickBooksMappingScreen({
 }) {
   const data = useQuickBooksData(scope);
   const mappings = useQuickBooksMappings(scope);
+  const settings = useQuickBooksSettings(scope);
+  // Phase 8 — the Locations group only exists when the facility asked to track
+  // by location AND the plan can actually do it.
+  const locations = useMemo(
+    () =>
+      settings.trackByLocation && planSupportsClasses(data.plan)
+        ? facilityLocations(scope.facilityId)
+        : [],
+    [settings.trackByLocation, data.plan, scope.facilityId],
+  );
   // Deleted-but-mapped items are folded back in: their mapping is still in
   // force for historical transactions, so it stays visible and editable.
   const groups = useMemo(
     () =>
       withRetainedMappings(
-        buildMappableGroups(),
+        buildMappableGroups({ locations }),
         mappedItemIds(mappings),
         mappedItemNames(mappings),
       ),
-    [mappings],
+    [mappings, locations],
   );
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(initialExpanded ?? []),
