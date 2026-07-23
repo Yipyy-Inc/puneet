@@ -2,22 +2,16 @@
 
 import { useState } from "react";
 import {
-  AlertTriangle,
   BookOpenCheck,
   Coins,
   Landmark,
   Link2,
-  Loader2,
   PawPrint,
   Sparkles,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { connectQuickBooks } from "@/lib/quickbooks/oauth-mock";
-import { readQuickBooksData } from "@/lib/quickbooks/qb-data-cache";
-import type { QuickBooksScope } from "@/lib/quickbooks/connection-store";
-
 import { QuickBooksAccessModal } from "./QuickBooksAccessModal";
 
 // Step 0 — the pre-connection entry point (Section 3A). Carries the visual
@@ -43,29 +37,16 @@ const BENEFITS = [
   },
 ] as const;
 
-export function QuickBooksEntryPoint({ scope }: { scope: QuickBooksScope }) {
+export function QuickBooksEntryPoint({
+  onConnect,
+}: {
+  /** Opens the consent modal. The modal itself is mounted by the parent view,
+   *  not here: approving updates the connection store, which routes this
+   *  component off screen — and it would take the modal, and its success
+   *  panel, down with it. */
+  onConnect: () => void;
+}) {
   const [accessOpen, setAccessOpen] = useState(false);
-  const [connecting, setConnecting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleConnect() {
-    setConnecting(true);
-    setError(null);
-    // TODO (Part 3.2): open the consent modal and let it drive this — the modal
-    // is where the facility picks a company and presses Connect. Calling the
-    // mock flow directly keeps this step usable until that lands.
-    const result = await connectQuickBooks(scope);
-    if (!result.ok) {
-      setError(result.message);
-      setConnecting(false);
-      return;
-    }
-    // The company read is a separate call, exactly as it is against the real
-    // API. A failure here doesn't undo the connection — the health check's
-    // "Re-check" retries it.
-    await readQuickBooksData(scope);
-    setConnecting(false);
-  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -92,29 +73,16 @@ export function QuickBooksEntryPoint({ scope }: { scope: QuickBooksScope }) {
             </p>
           </div>
 
-          {error && (
-            <div
-              role="alert"
-              className="mx-auto flex max-w-md items-start gap-2 rounded-md border border-red-300 bg-red-50 p-3 text-left text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
-            >
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-              <p>{error}</p>
-            </div>
-          )}
-
           <div className="space-y-3">
+            {/* Connecting, its pending state, the success panel and the
+                failure/"Try again" path all live inside the consent modal —
+                the same place the facility grants access. */}
             <Button
               size="lg"
-              onClick={handleConnect}
-              disabled={connecting}
+              onClick={onConnect}
               className="h-12 bg-emerald-600 px-8 text-base text-white hover:bg-emerald-700"
             >
-              {connecting && <Loader2 className="mr-2 size-4 animate-spin" />}
-              {connecting
-                ? "Connecting…"
-                : error
-                  ? "Try again"
-                  : "Connect to QuickBooks"}
+              Connect to QuickBooks
             </Button>
             <div>
               <button

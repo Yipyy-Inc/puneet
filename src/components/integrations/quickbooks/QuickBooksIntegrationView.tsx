@@ -25,7 +25,13 @@ import {
 } from "@/lib/quickbooks/connection-store";
 import { reconnectQuickBooks } from "@/lib/quickbooks/oauth-mock";
 import { clearQuickBooksData } from "@/lib/quickbooks/qb-data-cache";
+import {
+  resetQuickBooksSetup,
+  useQuickBooksSetup,
+} from "@/lib/quickbooks/setup-store";
 
+import { QuickBooksCompanyConfirmCard } from "./QuickBooksCompanyConfirmCard";
+import { QuickBooksConsentModal } from "./QuickBooksConsentModal";
 import { QuickBooksEntryPoint } from "./QuickBooksEntryPoint";
 
 // Section 3A RULE: the entry point is a PRE-connection screen. Once a facility
@@ -169,8 +175,10 @@ function ConnectedSummary({ scope }: { scope: QuickBooksScope }) {
                 disconnectQuickBooks(scope);
                 // The cached chart of accounts belongs to the company that was
                 // just released; keeping it would let the next connect open on
-                // another company's accounts.
+                // another company's accounts. The same goes for the confirm
+                // answer — the next company has to be confirmed on its own.
                 clearQuickBooksData(scope);
+                resetQuickBooksSetup(scope);
               }}
             >
               Disconnect
@@ -188,12 +196,41 @@ export function QuickBooksIntegrationView({
   scope: QuickBooksScope;
 }) {
   const connection = useQuickBooksConnection(scope);
+  const setup = useQuickBooksSetup(scope);
+  const [consentOpen, setConsentOpen] = useState(false);
 
   // "Never connected" is the only state the pitch belongs in. An expired or
   // interrupted connection is still a connection — showing the sales page there
   // would lose the facility their mappings and their reconnect path.
-  if (connection.status === "disconnected") {
-    return <QuickBooksEntryPoint scope={scope} />;
-  }
-  return <ConnectedSummary scope={scope} />;
+  //
+  // Step 2 (3C) reads the PERSISTED setup store, not component state, so a
+  // facility that connects and then reloads still gets asked. Being silently
+  // treated as confirmed is how entries end up in the wrong company's books.
+  const step =
+    connection.status === "disconnected"
+      ? "entry"
+      : setup.companyConfirmed
+        ? "connected"
+        : "confirm";
+
+  return (
+    <>
+      {step === "entry" && (
+        <QuickBooksEntryPoint onConnect={() => setConsentOpen(true)} />
+      )}
+      {step === "confirm" && <QuickBooksCompanyConfirmCard scope={scope} />}
+      {step === "connected" && <ConnectedSummary scope={scope} />}
+
+      {/* Mounted here rather than inside the entry point. Approving writes the
+          connection, which flips `step` away from "entry" — a modal owned by
+          that branch would unmount mid-flow and its success panel would never
+          be seen. */}
+      <QuickBooksConsentModal
+        open={consentOpen}
+        scope={scope}
+        onOpenChange={setConsentOpen}
+        onContinue={() => setConsentOpen(false)}
+      />
+    </>
+  );
 }

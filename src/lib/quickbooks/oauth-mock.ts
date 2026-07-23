@@ -44,22 +44,28 @@ export const QUICKBOOKS_CONSENT = {
   writes: ["Sales receipts", "Invoices", "Refund receipts", "Credit memos"],
 } as const;
 
-interface MockCompany {
+export interface QuickBooksConsentCompany {
   name: string;
   country: string;
   currency: string;
   realmId: string;
 }
 
-/** The company the mock consent screen returns. Deliberately not exported:
- *  callers learn the company from the connection they get back, exactly as
- *  they would from a real token exchange. */
-const MOCK_COMPANY: MockCompany = {
+const MOCK_COMPANY: QuickBooksConsentCompany = {
   name: "Yipyy Pet Services Inc.",
   country: "CA",
   currency: "CAD",
   realmId: "9341452093216780",
 };
+
+/** The company the consent screen names before the facility approves anything.
+ *
+ *  Intuit renders that screen itself and already knows which company the user
+ *  is signed in to, so the simulated one has to know it too — otherwise it
+ *  would have to ask "do you approve?" without saying what it is approving. */
+export function getQuickBooksConsentCompany(): Readonly<QuickBooksConsentCompany> {
+  return MOCK_COMPANY;
+}
 
 // ── Results ─────────────────────────────────────────────────────────────────
 
@@ -230,8 +236,18 @@ export async function reconnectQuickBooks(
   };
 }
 
-/** Dismissing the consent screen. Pure — the store is never touched. */
-export function cancelQuickBooksConnect(): QuickBooksConnectResult {
+/** The failure half of QuickBooksConnectResult. */
+export type QuickBooksConnectFailureResult = Extract<
+  QuickBooksConnectResult,
+  { ok: false }
+>;
+
+/** Dismissing the consent screen. Pure — the store is never touched.
+ *
+ *  Typed as the failure variant rather than the full union: cancelling never
+ *  produces a connection, and saying so spares every caller a narrowing check
+ *  for a branch that cannot happen. */
+export function cancelQuickBooksConnect(): QuickBooksConnectFailureResult {
   return {
     ok: false,
     failure: "cancelled",
