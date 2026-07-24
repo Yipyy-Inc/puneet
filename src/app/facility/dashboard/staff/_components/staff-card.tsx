@@ -95,8 +95,8 @@ export function StaffCard({
     progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
   // Table 5 — "not started after N days" staff-card alert (configurable).
-  const notStartedCfg = useStaffHrConfig().notificationTriggers
-    .onboarding_not_started;
+  const notStartedCfg =
+    useStaffHrConfig().notificationTriggers.onboarding_not_started;
   const daysInvited = onboarding ? daysSinceInvite(onboarding) : 0;
   const notStartedAlert =
     profile.status === "invited" &&

@@ -157,7 +157,8 @@ export function StaffDocumentsTab({ staff }: { staff: StaffProfile }) {
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium">{doc.name}</div>
                   <p className="text-muted-foreground flex items-center gap-1 text-[11px]">
-                    <Lock className="size-2.5" /> Retained until {doc.retainUntil}
+                    <Lock className="size-2.5" /> Retained until{" "}
+                    {doc.retainUntil}
                   </p>
                 </div>
               </div>

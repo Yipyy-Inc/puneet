@@ -11,11 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  CheckCircle2,
-  MessageSquarePlus,
-  AlertTriangle,
-} from "lucide-react";
+import { CheckCircle2, MessageSquarePlus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import type { StaffProfile } from "@/types/facility-staff";
 import {

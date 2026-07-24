@@ -705,7 +705,8 @@ export const STAFF_NOTIF_TRIGGERS: {
   {
     key: "offboarding_started",
     label: "Offboarding started",
-    description: "Notify the manager when a termination creates offboarding tasks.",
+    description:
+      "Notify the manager when a termination creates offboarding tasks.",
     recipient: "manager",
     channels: ["inApp", "email"],
   },
@@ -719,7 +720,8 @@ export const STAFF_NOTIF_TRIGGERS: {
   {
     key: "offboarding_overdue",
     label: "Offboarding task overdue",
-    description: "Remind the manager daily while required offboarding tasks are overdue.",
+    description:
+      "Remind the manager daily while required offboarding tasks are overdue.",
     recipient: "manager",
     channels: ["inApp", "email"],
   },
@@ -748,7 +750,12 @@ function seedNotificationTriggers(): Record<
     staff_invited: { enabled: true, inApp: false, email: true },
     onboarding_submitted: { enabled: true, inApp: true, email: true },
     onboarding_link_expired: { enabled: true, inApp: true, email: false },
-    onboarding_not_started: { enabled: true, inApp: true, email: false, days: 3 },
+    onboarding_not_started: {
+      enabled: true,
+      inApp: true,
+      email: false,
+      days: 3,
+    },
     onboarding_overdue: { enabled: true, inApp: true, email: true },
     account_activated: { enabled: true, inApp: false, email: true },
     onboarding_change_requested: { enabled: true, inApp: false, email: true },
@@ -908,7 +915,8 @@ function seedOffboardingTasks(): OffboardingTask[] {
     {
       id: "off-revoke-access",
       name: "Revoke system & building access",
-      description: "Disable logins, door codes, alarm codes and building entry.",
+      description:
+        "Disable logins, door codes, alarm codes and building entry.",
       assignedTo: "manager",
       due: "on_termination",
       required: true,
@@ -1755,14 +1763,19 @@ export function isOnboardingStarted(inst: OnboardingInstance): boolean {
 }
 
 /** Whole days elapsed since the invite was sent (0 if unknown). */
-export function daysSinceInvite(inst: OnboardingInstance, today = new Date()): number {
+export function daysSinceInvite(
+  inst: OnboardingInstance,
+  today = new Date(),
+): number {
   if (!inst.invitedAt) return 0;
   const ms = today.getTime() - new Date(inst.invitedAt).getTime();
   return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
 }
 
 /** Invites whose link has expired unused, not yet alerted. */
-export function getExpiredOnboardingInvites(now = new Date()): OnboardingInstance[] {
+export function getExpiredOnboardingInvites(
+  now = new Date(),
+): OnboardingInstance[] {
   return Object.values(hrStore.instances).filter(
     (i) =>
       !i.submittedAt &&
@@ -1795,7 +1808,10 @@ export function getOverdueOnboarding(today: string): OnboardingInstance[] {
     return deadline.toISOString().split("T")[0] < today;
   });
 }
-export function markOnboardingDeadlineReminded(staffId: string, today: string): void {
+export function markOnboardingDeadlineReminded(
+  staffId: string,
+  today: string,
+): void {
   const inst = hrStore.instances[staffId];
   if (!inst) return;
   commit({
@@ -1817,7 +1833,10 @@ export function getOffboardingDueToday(today: string): OffboardingInstance[] {
     );
   });
 }
-export function markOffboardingDueTodayNotified(staffId: string, today: string): void {
+export function markOffboardingDueTodayNotified(
+  staffId: string,
+  today: string,
+): void {
   const inst = hrStore.offboardingInstances[staffId];
   if (!inst) return;
   commit({

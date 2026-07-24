@@ -120,8 +120,7 @@ function OffboardingGroup({
       <ul className="divide-y">
         {instance.tasks.map((task) => {
           const complete = Boolean(task.completedAt);
-          const overdue =
-            !complete && !!task.dueDate && task.dueDate < today;
+          const overdue = !complete && !!task.dueDate && task.dueDate < today;
           return (
             <li key={task.id} className="flex items-start gap-3 px-4 py-3">
               <Checkbox

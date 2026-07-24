@@ -33,7 +33,9 @@ export function StaffRolesTab({
     () => resolveAllPermissions(draft, { customRoles, presetOverrides }),
     [draft, customRoles, presetOverrides],
   );
-  const grantedCount = Object.values(effective).filter((v) => v !== false).length;
+  const grantedCount = Object.values(effective).filter(
+    (v) => v !== false,
+  ).length;
   const overrideCount = Object.keys(draft.permissionOverrides).length;
 
   return (

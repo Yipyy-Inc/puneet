@@ -46,7 +46,12 @@ function seedRows(staffId: string): DayRow[] {
           startTime: existing.startTime,
           endTime: existing.endTime,
         }
-      : { dayOfWeek: dow, isAvailable: false, startTime: "09:00", endTime: "17:00" };
+      : {
+          dayOfWeek: dow,
+          isAvailable: false,
+          startTime: "09:00",
+          endTime: "17:00",
+        };
   });
 }
 
@@ -61,11 +66,14 @@ export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
 
   const facility =
     staffAvailability.find((a) => a.staffId === staff.id)?.facility ??
-    FACILITY_LOCATIONS.find((l) => l.id === staff.assignedLocations[0])?.label ??
+    FACILITY_LOCATIONS.find((l) => l.id === staff.assignedLocations[0])
+      ?.label ??
     "Main";
 
   const update = (dow: number, patch: Partial<DayRow>) => {
-    setRows((rs) => rs.map((r) => (r.dayOfWeek === dow ? { ...r, ...patch } : r)));
+    setRows((rs) =>
+      rs.map((r) => (r.dayOfWeek === dow ? { ...r, ...patch } : r)),
+    );
     setDirty(true);
   };
 
@@ -73,7 +81,12 @@ export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
   const activeDays = rows.filter((r) => r.isAvailable).length;
 
   const save = () => {
-    upsertStaffAvailabilityForStaff(staff.id, fullNameOf(staff), facility, rows);
+    upsertStaffAvailabilityForStaff(
+      staff.id,
+      fullNameOf(staff),
+      facility,
+      rows,
+    );
     setDirty(false);
     toast.success("Availability template updated");
   };
@@ -84,16 +97,17 @@ export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
         <Info className="mt-0.5 size-3.5 shrink-0 text-sky-600 dark:text-sky-400" />
         <span>
           This is {staff.firstName}&apos;s weekly availability{" "}
-          <strong>template</strong> — the hours they can work. Editing it updates
-          the template used to build future schedules. It does not change
-          shifts that are already approved or published.
+          <strong>template</strong> — the hours they can work. Editing it
+          updates the template used to build future schedules. It does not
+          change shifts that are already approved or published.
         </span>
       </div>
 
       <div className="border-border/60 overflow-hidden rounded-xl border">
         <div className="text-muted-foreground bg-muted/40 flex items-center gap-2 border-b px-4 py-2 text-xs font-medium">
           <CalendarClock className="size-3.5" />
-          Weekly availability · {activeDays} day{activeDays === 1 ? "" : "s"} set
+          Weekly availability · {activeDays} day{activeDays === 1 ? "" : "s"}{" "}
+          set
         </div>
         <div className="divide-y">
           {rows.map((row) => (
@@ -142,7 +156,9 @@ export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
                   )}
                 </div>
               ) : (
-                <span className="text-muted-foreground text-xs">Unavailable</span>
+                <span className="text-muted-foreground text-xs">
+                  Unavailable
+                </span>
               )}
             </div>
           ))}

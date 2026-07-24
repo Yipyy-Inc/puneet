@@ -12,9 +12,9 @@ The repo had no test runner — "green" meant `typecheck` + `lint` + `build` plu
 manual look at the touched journey (see [AGENTS.md](../../../AGENTS.md)). The
 staff-portal nav-parity work (one shared nav definition, an employee sidebar that
 mirrors the facility sidebar, a per-feature RBAC switchboard) has an acceptance
-checklist (Z.1) whose scenarios are inherently browser-level: *sign in as a
+checklist (Z.1) whose scenarios are inherently browser-level: _sign in as a
 staff member, look at the rendered sidebar, click into a page, confirm a
-restricted URL is blocked.* Those cannot be proven by `typecheck`/`lint`/`build`,
+restricted URL is blocked._ Those cannot be proven by `typecheck`/`lint`/`build`,
 and re-verifying them by hand on every change is exactly the kind of regression
 risk a smoke test removes.
 

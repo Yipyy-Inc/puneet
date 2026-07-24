@@ -214,7 +214,9 @@ export function OnboardingSubmissionReview({
     return (
       <div className="border-border/60 text-muted-foreground flex flex-col items-center gap-2 rounded-xl border border-dashed py-8 text-center text-sm">
         <Inbox className="size-6" />
-        No self-serve submission yet. It appears here once {profile.firstName}{" "}
+        No self-serve submission yet. It appears here once {
+          profile.firstName
+        }{" "}
         starts their onboarding link.
       </div>
     );

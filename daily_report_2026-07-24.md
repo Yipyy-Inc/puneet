@@ -130,8 +130,8 @@ _24/07 — Parité complète du portail Employé_
 
 ## 📊 Suivi
 
-| Indicateur | Valeur |
-|---|---|
-| ⏱️ Heures travaillées | `~14` h  |
-| 🖥️ Avancement Frontend | `95` % |
-| ⚙️ Avancement Backend | `N/A` _(projet mock — pas de backend réel ; couche de données mock complète)_ |
+| Indicateur             | Valeur                                                                        |
+| ---------------------- | ----------------------------------------------------------------------------- |
+| ⏱️ Heures travaillées  | `~14` h                                                                       |
+| 🖥️ Avancement Frontend | `95` %                                                                        |
+| ⚙️ Avancement Backend  | `N/A` _(projet mock — pas de backend réel ; couche de données mock complète)_ |

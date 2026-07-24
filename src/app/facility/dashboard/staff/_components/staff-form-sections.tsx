@@ -169,7 +169,10 @@ export function ProfileSection({
         </FieldRow>
       </div>
 
-      <FieldRow label="Job title" hint="Shown alongside the role on their card.">
+      <FieldRow
+        label="Job title"
+        hint="Shown alongside the role on their card."
+      >
         <Input
           value={draft.jobTitle ?? ""}
           onChange={(e) => update("jobTitle", e.target.value)}

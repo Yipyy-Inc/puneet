@@ -147,7 +147,10 @@ export function OffboardingTab({ staff }: { staff: StaffProfile }) {
       )}
 
       {/* Final documents */}
-      <FinalDocuments staff={staff} retentionYears={config.hrDocRetentionYears} />
+      <FinalDocuments
+        staff={staff}
+        retentionYears={config.hrDocRetentionYears}
+      />
     </div>
   );
 }
@@ -223,7 +226,9 @@ function OffboardingTaskRow({
               </Badge>
             )}
             {task.required && !complete && (
-              <span className="text-muted-foreground text-[10px]">Required</span>
+              <span className="text-muted-foreground text-[10px]">
+                Required
+              </span>
             )}
           </div>
 
@@ -236,7 +241,9 @@ function OffboardingTaskRow({
           <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
             <span>{ASSIGNEE_LABEL[task.assignedTo] ?? task.assignedTo}</span>
             {task.dueDate && (
-              <span className={cn(overdue && "text-rose-600 dark:text-rose-400")}>
+              <span
+                className={cn(overdue && "text-rose-600 dark:text-rose-400")}
+              >
                 · Due {task.dueDate}
               </span>
             )}
@@ -420,7 +427,8 @@ function FinalDocuments({
                     })}
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <Lock className="size-2.5" /> Retained until {doc.retainUntil}
+                    <Lock className="size-2.5" /> Retained until{" "}
+                    {doc.retainUntil}
                   </span>
                 </p>
               </div>
