@@ -25,6 +25,12 @@ import {
   LogOut,
   ChevronDown,
   MoreHorizontal,
+  Calendar,
+  CheckSquare,
+  CalendarClock,
+  FolderOpen,
+  TrendingUp,
+  FileText,
 } from "lucide-react";
 import { facilityStaff } from "@/data/facility-staff";
 import { setUserRole, clearEmployeeStaffId } from "@/lib/role-utils";
@@ -62,6 +68,24 @@ async function employeeTopBarCounts() {
 function getInitials(firstName: string, lastName: string) {
   return `${firstName[0]}${lastName[0]}`.toUpperCase();
 }
+
+// Personal, always-on self-service — the employee's "My Workspace". These used
+// to be a sidebar group; to mirror the facility portal (whose sidebar carries no
+// personal items) they now live in the avatar dropdown. Clock in/out and the
+// notification bell are the two personal actions that stay as header buttons.
+const MY_WORKSPACE_LINKS = [
+  { href: "/employee/schedule", label: "My Schedule", icon: Calendar },
+  { href: "/employee/tasks", label: "My Tasks", icon: CheckSquare },
+  {
+    href: "/employee/availability",
+    label: "Availability",
+    icon: CalendarClock,
+  },
+  { href: "/employee/documents", label: "My Documents", icon: FolderOpen },
+  { href: "/employee/performance", label: "My Performance", icon: TrendingUp },
+  { href: "/employee/write-ups", label: "My Write-ups", icon: FileText },
+  { href: "/employee/settings", label: "Settings", icon: Settings },
+] as const;
 
 export function EmployeeHeader({ staffId }: { staffId: string }) {
   const staff = facilityStaff.find((s) => s.id === staffId);
@@ -206,9 +230,26 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
             </DropdownMenuLabel>
 
             <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs font-normal">
+              My Workspace
+            </DropdownMenuLabel>
+            {MY_WORKSPACE_LINKS.map((link) => (
+              <DropdownMenuItem
+                key={link.href}
+                asChild
+                className="cursor-pointer gap-2"
+              >
+                <Link href={link.href}>
+                  <link.icon className="size-4" />
+                  {link.label}
+                </Link>
+              </DropdownMenuItem>
+            ))}
+
+            <DropdownMenuSeparator />
             <DropdownMenuItem asChild className="cursor-pointer gap-2">
               <Link href="/profile">
-                <Settings className="size-4" />
+                <User className="size-4" />
                 Profile Settings
               </Link>
             </DropdownMenuItem>

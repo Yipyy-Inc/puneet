@@ -1,20 +1,14 @@
-import { EmployeeGroomingModule } from "@/components/employee/EmployeeGroomingModule";
-import { RequireAnyPermission } from "@/components/employee/AccessRestricted";
+import GroomingPage from "@/app/facility/dashboard/services/grooming/page";
+import { RequirePermission } from "@/components/employee/AccessRestricted";
 
-// Section 5A — /employee/grooming renders the SAME grooming module as admin
-// (same tabs + components), gated per-key inside those shared components.
-// Route-level gate mirrors the nav section's keys so the URL isn't reachable
-// by staff who have no grooming access at all.
+// Reuses the real facility grooming module (the Check-In Board etc.) — NOT a
+// separate "Grooming Queue" screen — gated on the same key the nav item uses.
+// assigned_only viewers still reach it, scoped to their own work in the data
+// layer (8B), exactly like /employee/bookings reuses the facility bookings page.
 export default function EmployeeGroomingPage() {
   return (
-    <RequireAnyPermission
-      permKeys={[
-        "view_grooming_queue",
-        "grooming_view_own_calendar",
-        "grooming_view_all_calendars",
-      ]}
-    >
-      <EmployeeGroomingModule />
-    </RequireAnyPermission>
+    <RequirePermission permKey="view_grooming_queue">
+      <GroomingPage />
+    </RequirePermission>
   );
 }

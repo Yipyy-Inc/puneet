@@ -35,6 +35,7 @@ export type AccessScope =
 
 export type PermissionKey =
   // ── Personal / always-on (every account, non-removable) ──────────────────
+  | "view_dashboard"
   | "view_own_schedule"
   | "view_team_schedule"
   | "view_own_documents"
@@ -69,6 +70,9 @@ export type PermissionKey =
   | "view_client_documents"
   // ── Bookings & scheduling ────────────────────────────────────────────────
   | "view_bookings"
+  | "view_occupancy_calendar"
+  | "view_estimates"
+  | "view_evaluations"
   | "create_bookings"
   | "edit_bookings"
   | "cancel_bookings"
@@ -179,6 +183,7 @@ export type PermissionKey =
   | "ops_view_reports"
   | "ops_manage_tasks"
   | "ops_manage_checklists"
+  | "view_petcams"
   // ── Staff management ─────────────────────────────────────────────────────
   | "view_staff"
   | "view_staff_permissions"
@@ -203,6 +208,8 @@ export type PermissionKey =
   | "settings_subscription"
   | "settings_billing"
   | "settings_manage_forms"
+  | "view_waivers"
+  | "view_intake_forms"
   | "settings_manage_notifications"
   | "settings_manage_taxes"
   | "settings_audit_log"
@@ -482,6 +489,7 @@ export const ACCESS_SCOPE_META: Record<
 
 // The "Personal" tab — every account gets these and they cannot be revoked.
 export const ALWAYS_ON_PERMISSIONS: PermissionKey[] = [
+  "view_dashboard",
   "view_own_schedule",
   "view_team_schedule",
   "view_own_documents",
@@ -513,6 +521,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     description:
       "Every account gets these — schedule, docs, tasks, own account",
     permissions: [
+      { key: "view_dashboard", label: "View dashboard" },
       { key: "view_own_schedule", label: "View own schedule" },
       { key: "view_team_schedule", label: "View team schedule" },
       { key: "view_own_documents", label: "View own documents" },
@@ -571,6 +580,9 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     description: "Create, edit, cancel, and manage the calendar",
     permissions: [
       { key: "view_bookings", label: "View bookings" },
+      { key: "view_occupancy_calendar", label: "View occupancy calendar" },
+      { key: "view_estimates", label: "View estimates" },
+      { key: "view_evaluations", label: "View evaluations" },
       { key: "create_bookings", label: "Create bookings" },
       { key: "edit_bookings", label: "Edit bookings" },
       { key: "cancel_bookings", label: "Cancel bookings" },
@@ -774,6 +786,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: "ops_view_reports", label: "View operations reports" },
       { key: "ops_manage_tasks", label: "Manage team tasks" },
       { key: "ops_manage_checklists", label: "Manage checklists" },
+      { key: "view_petcams", label: "View live pet cams" },
     ],
   },
   {
@@ -830,6 +843,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: "settings_subscription", label: "Manage subscription" },
       { key: "settings_billing", label: "Manage billing" },
       { key: "settings_manage_forms", label: "Manage forms" },
+      { key: "view_waivers", label: "View digital waivers" },
+      { key: "view_intake_forms", label: "View intake forms" },
       {
         key: "settings_manage_notifications",
         label: "Manage notification settings",
@@ -960,6 +975,9 @@ export const ROLE_PRESETS: Record<
         "view_client_documents",
         // Bookings
         "view_bookings",
+        "view_occupancy_calendar",
+        "view_estimates",
+        "view_evaluations",
         "create_bookings",
         "edit_bookings",
         "cancel_bookings",
@@ -1054,6 +1072,7 @@ export const ROLE_PRESETS: Record<
         "ops_view_reports",
         "ops_manage_tasks",
         "ops_manage_checklists",
+        "view_petcams",
         // Staff management
         "view_staff",
         "view_staff_permissions",
@@ -1070,6 +1089,8 @@ export const ROLE_PRESETS: Record<
         // Settings (limited)
         "settings_general",
         "settings_manage_forms",
+        "view_waivers",
+        "view_intake_forms",
         "settings_manage_notifications",
         // HQ (read)
         "hq_view",
@@ -1111,6 +1132,11 @@ export const ROLE_PRESETS: Record<
         "view_all_calendars",
         "manage_booking_calendar",
         "manage_waitlist",
+        // Nav defaults (4.3): a floor lead sees the full booking-desk surface.
+        "view_occupancy_calendar",
+        "view_estimates",
+        "view_evaluations",
+        "view_petcams",
         "view_grooming_queue",
         "grooming_view_all_calendars",
         "boarding_view_dashboard",
@@ -1197,6 +1223,11 @@ export const ROLE_PRESETS: Record<
         "view_all_calendars",
         "manage_booking_calendar",
         "manage_waitlist",
+        // Nav defaults (4.3): the generous front-desk booking surface.
+        "view_occupancy_calendar",
+        "view_estimates",
+        "view_evaluations",
+        "view_petcams",
         "view_grooming_queue",
         // Reception is front-of-house: it can check daycare guests in
         // (daycare_check_in_out) but does NOT get the Boarding/Daycare
@@ -1246,6 +1277,9 @@ export const ROLE_PRESETS: Record<
         "add_pet_notes",
         "view_pet_medical",
         "view_bookings",
+        // Nav defaults (4.3): Calendar + Clients ON for a groomer position.
+        "view_all_calendars",
+        "view_client_list",
         "view_grooming_queue",
         "grooming_view_own_calendar",
         "perform_grooming",
@@ -1279,6 +1313,9 @@ export const ROLE_PRESETS: Record<
         "add_pet_notes",
         "view_pet_medical",
         "view_bookings",
+        // Nav defaults (4.3): Calendar + Clients ON for a trainer position.
+        "view_all_calendars",
+        "view_client_list",
         "view_training_queue",
         "training_view_own_calendar",
         "run_training_sessions",
@@ -1311,6 +1348,10 @@ export const ROLE_PRESETS: Record<
         "add_pet_notes",
         "view_pet_medical",
         "view_bookings",
+        // Nav defaults (4.3): occupancy board + client list + inbox for care.
+        "view_occupancy_calendar",
+        "view_client_list",
+        "messages_view_inbox",
         "boarding_view_dashboard",
         "boarding_daily_care_log",
         "boarding_log_feeding",
@@ -1350,6 +1391,11 @@ export const ROLE_PRESETS: Record<
         "view_pet_records",
         "add_pet_notes",
         "view_bookings",
+        // Nav defaults (4.3): Daily Care, Occupancy, Clients, Inbox for daycare.
+        "boarding_daily_care_log",
+        "view_occupancy_calendar",
+        "view_client_list",
+        "messages_view_inbox",
         "daycare_view_dashboard",
         "daycare_check_in_out",
         "daycare_log_activity",
@@ -1386,6 +1432,10 @@ export const ROLE_PRESETS: Record<
         "add_pet_notes",
         "view_pet_medical",
         "view_bookings",
+        // Nav defaults (4.3): occupancy board + client list + inbox for care.
+        "view_occupancy_calendar",
+        "view_client_list",
+        "messages_view_inbox",
         "boarding_view_dashboard",
         "boarding_daily_care_log",
         "boarding_assign_kennels",
@@ -1472,6 +1522,9 @@ export const ROLE_PRESETS: Record<
         "financial_manage_gift_cards",
         "financial_manage_payouts",
         "financial_view_labor_cost",
+        // Nav default (4.3): the Reports & Analytics nav item is gated on
+        // ops_view_reports, so an accountant needs it to keep Reports.
+        "ops_view_reports",
         "scheduling_view_labor_cost",
         "view_payroll",
         "retail_view_reports",

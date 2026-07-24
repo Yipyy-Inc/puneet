@@ -13,14 +13,7 @@ import {
   SidebarGroupLabel,
 } from "@/components/ui/sidebar";
 import {
-  LayoutDashboard,
-  Calendar,
-  CalendarClock,
   Sparkles,
-  FolderOpen,
-  TrendingUp,
-  FileText,
-  Bell,
   Scissors,
   Moon,
   Sun,
@@ -28,60 +21,35 @@ import {
   Users,
   UserCog,
   MonitorSpeaker,
-  Settings,
+  type LucideIcon,
 } from "lucide-react";
 import { facilityStaff } from "@/data/facility-staff";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 import type { FacilityStaffRole } from "@/types/facility-staff";
-import { getOperationsNav, type NavItem } from "@/lib/nav/operations-nav";
-
-// Re-export the shared nav surface so existing importers keep resolving here.
-export {
-  getOperationsNav,
-  OPERATIONS_NAV_MODEL,
-  type NavItem,
-  type NavSection,
-} from "@/lib/nav/operations-nav";
+import { NAV_SECTIONS } from "@/lib/nav/facility-nav";
+import { toEmployeeRoute } from "@/lib/nav/employee-nav";
 
 // ============================================================================
-// Permission-driven employee navigation (Sections 2 / 3A, spec Table 3)
+// Permission-driven employee navigation — a PURE mirror of the facility sidebar.
 //
-// The sidebar makes NO role-name decisions — there is no NAV_BY_ROLE anymore.
-// It reads the acting viewer's effective permissions from the RBAC engine
-// (useFacilityRbac → resolvePermissions, the aggregate of useCan/usePermission)
-// and renders a fixed two-section shell:
-//
-//   • "My Workspace" — personal items, backed by ALWAYS_ON_PERMISSIONS, that
-//      render for every account and are NEVER gated.
-//   • "Operations"  — a declarative NAV_MODEL; each section and item renders
-//      per the engine (visible iff its permKey resolves to granted OR
-//      assigned_only, i.e. `perms[key] !== false`). 3A: a section shows iff at
-//      least one of its items is visible.
-//
-// The Operations model itself (NAV_MODEL + getOperationsNav) lives in the shared
-// single source of truth at @/lib/nav/operations-nav and is re-exported above.
+// The sidebar makes NO role-name decisions and has NO personal "My Workspace"
+// group. Exactly like the facility sidebar, personal/self-service actions live
+// in the top header (EmployeeHeader — clock in/out, the notification bell, and
+// the avatar dropdown's My Schedule / My Tasks / Availability / Documents /
+// Performance / Write-ups / Settings). The sidebar renders ONLY the shared nav
+// model (@/lib/nav/facility-nav NAV_SECTIONS), filtered to the viewer's
+// permissions: an item shows iff its permKey is granted (`perms[key] !== false`),
+// a section iff at least one of its items is granted.
 // ============================================================================
 
-/**
- * "My Workspace" — always rendered, never gated. Backed by
- * ALWAYS_ON_PERMISSIONS (view_own_schedule, manage_own_tasks, …), which every
- * account holds. (Clock in / out is the always-on action in EmployeeHeader /
- * the mobile bar, not a page, so it has no nav row here.)
- */
-export const MY_WORKSPACE_ITEMS: NavItem[] = [
-  { title: "Dashboard", url: "/employee", icon: LayoutDashboard },
-  { title: "My Schedule", url: "/employee/schedule", icon: Calendar },
-  { title: "My Tasks", url: "/employee/tasks", icon: Sparkles },
-  { title: "Availability", url: "/employee/availability", icon: CalendarClock },
-  { title: "My Documents", url: "/employee/documents", icon: FolderOpen },
-  { title: "My Performance", url: "/employee/performance", icon: TrendingUp },
-  { title: "My Write-ups", url: "/employee/write-ups", icon: FileText },
-  // Personal notification center — always-on (B.1 gates this route on nothing).
-  { title: "Notifications", url: "/employee/notifications", icon: Bell },
-  // Settings — always-on: My Profile + My Notifications are personal. Facility
-  // admin sections inside appear only when the viewer holds the key.
-  { title: "Settings", url: "/employee/settings", icon: Settings },
-];
+/** A rendered nav row (a nav-section item mapped into the employee shell). */
+type SidebarRow = {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  /** Match the pathname exactly for the active state (else prefix-match). */
+  exact?: boolean;
+};
 
 // Identity card (display only — never a permission decision).
 const ROLE_ICON: Record<FacilityStaffRole, React.ElementType> = {
@@ -139,17 +107,27 @@ export function EmployeeSidebar({ staffId }: { staffId: string }) {
   const role = staff?.primaryRole ?? "reception";
   const Icon = ROLE_ICON[role];
 
-  // Resolve THIS staff member's effective permissions and gate the Operations
-  // nav from them — no role-name branching anywhere below.
-  const operations = getOperationsNav(resolvePermissions(staffId));
+  // Resolve THIS staff member's effective permissions and mirror the facility
+  // sidebar: render the shared NAV_SECTIONS, filtered so an item shows iff its
+  // permKey is granted and a section shows iff at least one item survives (3A).
+  // No role-name branching — identical structure/order/labels/links to facility.
+  const perms = resolvePermissions(staffId);
+  const navSections = NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items
+      .filter((item) => perms[item.permKey] !== false)
+      // Employees stay in the /employee shell — each item points at its
+      // employee-shell route, which re-renders the same facility page behind
+      // RequirePermission (the same permKey that gated the nav item).
+      .map((item) => ({ ...item, url: toEmployeeRoute(item.url) })),
+  })).filter((section) => section.items.length > 0);
 
-  const renderItem = (item: NavItem) => {
+  const renderItem = (item: SidebarRow) => {
     const ItemIcon = item.icon;
     const base = item.url.split("?")[0];
-    const isActive =
-      base === "/employee"
-        ? pathname === "/employee"
-        : pathname === base || pathname.startsWith(base + "/");
+    const isActive = item.exact
+      ? pathname === base
+      : pathname === base || pathname.startsWith(base + "/");
     return (
       <SidebarMenuItem key={item.url}>
         <SidebarMenuButton asChild isActive={isActive}>
@@ -182,26 +160,18 @@ export function EmployeeSidebar({ staffId }: { staffId: string }) {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {/* My Workspace — always on. */}
-        <SidebarGroup>
-          <SidebarGroupLabel>My Workspace</SidebarGroupLabel>
-          <SidebarMenu>{MY_WORKSPACE_ITEMS.map(renderItem)}</SidebarMenu>
-        </SidebarGroup>
-
-        {/* Operations — permission-gated modules (3A). */}
-        {operations.length > 0 && (
-          <>
-            <SidebarGroup className="pb-0">
-              <SidebarGroupLabel>Operations</SidebarGroupLabel>
-            </SidebarGroup>
-            {operations.map((section) => (
-              <SidebarGroup key={section.id}>
-                <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
-                <SidebarMenu>{section.items.map(renderItem)}</SidebarMenu>
-              </SidebarGroup>
-            ))}
-          </>
-        )}
+        {/* Pure facility mirror — same sections, order, labels, and page links
+            as the facility sidebar, filtered to the employee's permissions.
+            Labeled sections show their header; standalone sections render
+            headerless. Personal items live in the header (see EmployeeHeader). */}
+        {navSections.map((section) => (
+          <SidebarGroup key={section.id}>
+            {section.label && (
+              <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
+            )}
+            <SidebarMenu>{section.items.map(renderItem)}</SidebarMenu>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
     </Sidebar>
   );

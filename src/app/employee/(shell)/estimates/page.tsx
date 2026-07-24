@@ -1,12 +1,11 @@
 import EstimatesPage from "@/app/facility/dashboard/estimates/page";
 import { RequirePermission } from "@/components/employee/AccessRestricted";
 
-// Estimates are booking quotes. Gated on view_bookings (the broadly-granted
-// booking key reception carries); create_bookings would also fit if a stricter
-// gate is wanted.
+// Estimates are booking quotes. Gated on the dedicated per-feature key so the
+// nav toggle and route access track together (4.1).
 export default function EmployeeEstimatesPage() {
   return (
-    <RequirePermission permKey="view_bookings">
+    <RequirePermission permKey="view_estimates">
       <EstimatesPage />
     </RequirePermission>
   );

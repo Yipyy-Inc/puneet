@@ -1,11 +1,11 @@
 import PetCamsPage from "@/app/facility/dashboard/petcams/page";
 import { RequirePermission } from "@/components/employee/AccessRestricted";
 
-// No dedicated pet-cams key exists. Live cameras are a guest-monitoring surface,
-// so we gate on the nearest broadly-granted operational key, view_bookings.
+// Live cameras are a guest-monitoring surface — gated on their dedicated
+// per-feature key so the nav toggle and route access track together (4.1).
 export default function EmployeePetCamsPage() {
   return (
-    <RequirePermission permKey="view_bookings">
+    <RequirePermission permKey="view_petcams">
       <PetCamsPage />
     </RequirePermission>
   );

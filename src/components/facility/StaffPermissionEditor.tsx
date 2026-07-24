@@ -18,13 +18,13 @@ import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 import {
   ACCESS_SCOPE_META,
   ALWAYS_ON_PERMISSIONS,
-  PERMISSION_GROUPS,
   ROLE_PRESETS,
   resolvePermission,
   type PermissionKey,
   type FacilityStaffRole,
 } from "@/types/facility-staff";
 import { facilityStaff, upsertFacilityStaff } from "@/data/facility-staff";
+import { POSITION_EDITOR_GROUPS } from "@/lib/nav/facility-nav";
 import {
   RolePill,
   fullNameOf,
@@ -55,7 +55,9 @@ export function StaffPermissionEditor({
   } = useFacilityRbac();
 
   const staff = facilityStaff.find((s) => s.id === staffId);
-  const [activeGroupId, setActiveGroupId] = useState(PERMISSION_GROUPS[0].id);
+  const [activeGroupId, setActiveGroupId] = useState(
+    POSITION_EDITOR_GROUPS[0].id,
+  );
   const [previewOpen, setPreviewOpen] = useState(false);
   // Role edits write through the shared directory; bump to re-read `staff`.
   const [, bumpRoles] = useReducer((x: number) => x + 1, 0);
@@ -153,8 +155,8 @@ export function StaffPermissionEditor({
   };
 
   const activeGroup =
-    PERMISSION_GROUPS.find((g) => g.id === activeGroupId) ??
-    PERMISSION_GROUPS[0];
+    POSITION_EDITOR_GROUPS.find((g) => g.id === activeGroupId) ??
+    POSITION_EDITOR_GROUPS[0];
 
   return (
     <div className="space-y-4">
@@ -253,7 +255,7 @@ export function StaffPermissionEditor({
       <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
         {/* Category accordion */}
         <div className="space-y-1">
-          {PERMISSION_GROUPS.map((group) => {
+          {POSITION_EDITOR_GROUPS.map((group) => {
             const keys = group.permissions.map((p) => p.key);
             const n = overridesInGroup(keys);
             const active = group.id === activeGroupId;

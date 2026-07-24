@@ -88,7 +88,9 @@ const QUICK_ACTIONS: QuickAction[] = [
     id: "daycare",
     permKeys: ["daycare_check_in_out"],
     label: "View daycare board",
-    href: "/employee/daycare",
+    // Daycare has no standalone page — occupancy is the Occupancy Calendar
+    // (kennel-view). Every daycare_check_in_out holder also holds view_bookings.
+    href: "/employee/kennel-view",
     primaryRoles: ["daycare_attendant"],
   },
   {
@@ -190,8 +192,11 @@ const SERVICE_SHORTCUTS: QuickAccessCandidate[] = [
   },
   {
     title: "Boarding",
-    description: "Boarding dashboard",
-    href: "/employee/boarding",
+    description: "Boarding occupancy",
+    // Boarding has no standalone page — occupancy lives on the Occupancy
+    // Calendar (kennel-view). Every boarding_view_dashboard holder also holds
+    // view_bookings, so the target is always reachable.
+    href: "/employee/kennel-view",
     icon: Moon,
     accent: "text-indigo-600",
     permKeys: ["boarding_view_dashboard"],
@@ -199,8 +204,10 @@ const SERVICE_SHORTCUTS: QuickAccessCandidate[] = [
   },
   {
     title: "Daycare",
-    description: "Daycare board",
-    href: "/employee/daycare",
+    description: "Daycare occupancy",
+    // Daycare has no standalone page — see Boarding above; routed to the
+    // Occupancy Calendar (kennel-view), reachable via view_bookings.
+    href: "/employee/kennel-view",
     icon: Sun,
     accent: "text-orange-600",
     permKeys: ["daycare_view_dashboard"],

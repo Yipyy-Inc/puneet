@@ -26,7 +26,8 @@ import {
 } from "@/components/ui/sheet";
 import { facilityStaff } from "@/data/facility-staff";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
-import { getOperationsNav } from "@/lib/nav/operations-nav";
+import { NAV_SECTIONS } from "@/lib/nav/facility-nav";
+import { toEmployeeRoute } from "@/lib/nav/employee-nav";
 import {
   fullNameOf,
   RolePill,
@@ -57,17 +58,26 @@ export function EmployeeBottomNav({ staffId }: { staffId: string }) {
   const { resolvePermissions } = useFacilityRbac();
   const staff = facilityStaff.find((s) => s.id === staffId);
 
-  // Role-contextual slot = the viewer's first permitted Operations section (A2
-  // nav), mirroring the sidebar's permission-gated NAV_MODEL — never a role name.
-  const operations = getOperationsNav(resolvePermissions(staffId));
-  const roleSection = operations[0];
-  const roleSlot: NavSlot = roleSection?.items[0]
+  // Role-contextual slot = the viewer's first permitted module in the shared
+  // facility nav (mirrors the sidebar's permission-gated NAV_SECTIONS — never a
+  // role name). Skip the always-on Dashboard section so the slot is a real
+  // work module; label it by its section header when it has one.
+  const perms = resolvePermissions(staffId);
+  const navSections = NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => perms[item.permKey] !== false),
+  })).filter((section) => section.items.length > 0);
+  const primarySection =
+    navSections.find((s) => s.id !== "dashboard") ?? navSections[0];
+  const primaryItem = primarySection?.items[0];
+  const roleSlot: NavSlot = primaryItem
     ? {
-        title: roleSection.label,
-        url: roleSection.items[0].url,
-        icon: roleSection.items[0].icon,
+        title: primarySection.label ?? primaryItem.title,
+        // Stay in the employee shell — map the facility url to its wrapper route.
+        url: toEmployeeRoute(primaryItem.url),
+        icon: primaryItem.icon,
       }
-    : { title: "Clients", url: "/employee/clients", icon: Users };
+    : { title: "Customer", url: "/employee/clients", icon: Users };
 
   const tabs: NavSlot[] = [
     { title: "Home", url: "/employee", icon: Home },

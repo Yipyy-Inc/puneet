@@ -1,32 +1,27 @@
 /**
- * Guards against nav drift between the facility (admin) sidebar and the employee
- * sidebar. Both are meant to answer to ONE shared definition —
- * `src/lib/nav/operations-nav.ts` (OPERATIONS_MODULES). The employee sidebar is
- * fully DERIVED from it; the facility sidebar is validated against it here.
+ * Guards employee-nav integrity now that BOTH sidebars render from ONE shared
+ * definition — `src/lib/nav/facility-nav.ts` (NAV_SECTIONS). The employee portal
+ * keeps users inside the /employee shell by mapping every facility nav url to an
+ * employee-shell route (`src/lib/nav/employee-nav.ts`), each of which re-renders
+ * the real facility page behind <RequirePermission>.
  *
  *   bun run check:nav-parity
  *
- * The failure this prevents: a module is added to the admin sidebar but the
- * matching permKey'd row is forgotten in the employee nav, so a staff member who
- * is granted that module can never reach it.
+ * The failures this prevents:
+ *   • a NAV_SECTIONS item has no employee-shell mapping → a staff member granted
+ *     that feature would be sent to the /facility url and leave the shell, or
+ *   • the mapping points at an /employee route that has no page.tsx → a 404.
  *
- * For every module route in `facility-admin-sidebar.tsx`, this asserts that the
- * shared registry has an entry (matched by `facilityRoute`). That entry either:
- *   • has an `employeeRoute` → the employee nav mirrors it (verified against the
- *     derived OPERATIONS_NAV_MODEL), or
- *   • has `employeeRoute: null` → a DOCUMENTED admin-only module (allowed).
- * An admin route missing from the registry entirely is drift → exit 1.
- *
- * Exits 0 when in lockstep, 1 on drift, so it can be plugged into CI alongside
- * check:pricing / check:settings-wiring.
+ * Because there is now a single nav definition, "parity" is no longer facility
+ * vs. employee model drift; it is: every shared nav item has a working, gated
+ * employee route. Exits 0 when that holds, 1 otherwise, so it can sit in CI
+ * alongside check:pricing / check:settings-wiring.
  */
 
-import { readFileSync } from "fs";
+import { existsSync } from "fs";
 import { join } from "path";
-import {
-  OPERATIONS_MODULES,
-  OPERATIONS_NAV_MODEL,
-} from "@/lib/nav/operations-nav";
+import { NAV_SECTIONS } from "@/lib/nav/facility-nav";
+import { toEmployeeRoute, unmappedNavUrls } from "@/lib/nav/employee-nav";
 
 const ANSI = {
   reset: "\x1b[0m",
@@ -37,113 +32,84 @@ const ANSI = {
   yellow: "\x1b[33m",
 };
 
-const FACILITY_SIDEBAR = join(
-  "src",
-  "components",
-  "layout",
-  "facility-admin-sidebar.tsx",
-);
+const SHELL_DIR = join("src", "app", "employee", "(shell)");
 
-// The portal home is not a module — it maps to the employee's My Workspace
-// "Dashboard", not to a permission-gated Operations row.
-const HOME_ROUTES = new Set(["/facility/dashboard"]);
+/** Filesystem path of the page.tsx that serves an /employee route. */
+function pagePathFor(route: string): string {
+  const sub = route === "/employee" ? "" : route.slice("/employee".length);
+  return join(SHELL_DIR, sub, "page.tsx");
+}
 
-// Every /facility/... url declared in the admin sidebar (deduped).
-const source = readFileSync(FACILITY_SIDEBAR, "utf8");
-const facilityRoutes = [
-  ...new Set(
-    [...source.matchAll(/url:\s*"(\/facility[^"]+)"/g)].map((m) => m[1]),
-  ),
-].filter((url) => !HOME_ROUTES.has(url));
-
-// Registry, indexed by the admin route it represents.
-const byFacilityRoute = new Map(
-  OPERATIONS_MODULES.filter((m) => m.facilityRoute != null).map((m) => [
-    m.facilityRoute as string,
-    m,
-  ]),
-);
-
-// Every employee URL actually rendered by the derived employee model.
-const employeeUrls = new Set(
-  OPERATIONS_NAV_MODEL.flatMap((s) => s.items.map((i) => i.url)),
+const navItems = NAV_SECTIONS.flatMap((s) =>
+  s.items.map((i) => ({ title: i.title, url: i.url })),
 );
 
 interface Problem {
   route: string;
-  kind: "unregistered" | "missing-employee-row";
+  kind: "unmapped" | "missing-page";
   detail: string;
 }
 const problems: Problem[] = [];
-const adminOnly: string[] = [];
-const mirrored: string[] = [];
+const ok: string[] = [];
 
-for (const route of facilityRoutes) {
-  const mod = byFacilityRoute.get(route);
-  if (!mod) {
+// 1) Every nav item must have an employee-shell mapping.
+for (const url of unmappedNavUrls()) {
+  problems.push({
+    route: url,
+    kind: "unmapped",
+    detail:
+      "no entry in EMPLOYEE_ROUTE_BY_FACILITY_URL — add one in " +
+      "src/lib/nav/employee-nav.ts (and a wrapper under employee/(shell)/).",
+  });
+}
+
+// 2) Every mapped employee route must resolve to a real page.tsx.
+for (const item of navItems) {
+  const employeeRoute = toEmployeeRoute(item.url);
+  if (employeeRoute === item.url) continue; // unmapped — already reported above
+  if (!existsSync(pagePathFor(employeeRoute))) {
     problems.push({
-      route,
-      kind: "unregistered",
-      detail:
-        "not in OPERATIONS_MODULES — add an entry with its permKey and an " +
-        "employeeRoute (or employeeRoute:null if it is intentionally admin-only).",
+      route: item.url,
+      kind: "missing-page",
+      detail: `maps to ${employeeRoute}, but ${pagePathFor(
+        employeeRoute,
+      )} does not exist. Add a ~10-line wrapper (facility page + <RequirePermission>).`,
     });
     continue;
   }
-  if (mod.employeeRoute == null) {
-    adminOnly.push(route);
-    continue;
-  }
-  // The derived model must actually render the employee row for this module.
-  if (!employeeUrls.has(mod.employeeRoute)) {
-    problems.push({
-      route,
-      kind: "missing-employee-row",
-      detail: `registry maps it to ${mod.employeeRoute}, but that row is absent from the derived employee nav.`,
-    });
-    continue;
-  }
-  mirrored.push(route);
+  ok.push(`${item.url} → ${employeeRoute}`);
 }
 
 console.log(
-  `${ANSI.bold}Nav parity · ${facilityRoutes.length} facility module route${
-    facilityRoutes.length === 1 ? "" : "s"
+  `${ANSI.bold}Nav parity · ${navItems.length} shared nav item${
+    navItems.length === 1 ? "" : "s"
   }${ANSI.reset}`,
 );
 console.log(
-  `  ${ANSI.green}${mirrored.length} mirrored in employee nav${ANSI.reset} · ` +
-    `${ANSI.yellow}${adminOnly.length} documented admin-only${ANSI.reset} · ` +
-    `${ANSI.red}${problems.length} drift${ANSI.reset}`,
+  `  ${ANSI.green}${ok.length} routed to a working employee page${ANSI.reset} · ` +
+    `${ANSI.red}${problems.length} problem${
+      problems.length === 1 ? "" : "s"
+    }${ANSI.reset}`,
 );
 console.log();
 
-for (const route of adminOnly) {
-  const mod = byFacilityRoute.get(route)!;
-  console.log(
-    `  ${ANSI.yellow}ADMIN-ONLY${ANSI.reset}  ${route} ${ANSI.dim}(${mod.id} — no employee page by design)${ANSI.reset}`,
-  );
-}
-
 for (const p of problems) {
-  console.log(`  ${ANSI.red}DRIFT${ANSI.reset}  ${p.route}`);
+  const tag = p.kind === "unmapped" ? "UNMAPPED" : "MISSING PAGE";
+  console.log(`  ${ANSI.red}${tag}${ANSI.reset}  ${p.route}`);
   console.log(`          ${ANSI.dim}${p.detail}${ANSI.reset}`);
 }
 
 console.log();
 if (problems.length === 0) {
   console.log(
-    `${ANSI.green}${ANSI.bold}✓ Facility and employee navs are in lockstep${ANSI.reset}`,
+    `${ANSI.green}${ANSI.bold}✓ Every shared nav item has a working, gated employee route${ANSI.reset}`,
   );
   process.exit(0);
 } else {
   console.log(
-    `${ANSI.red}${ANSI.bold}✗ ${problems.length} nav drift${
+    `${ANSI.red}${ANSI.bold}✗ ${problems.length} nav problem${
       problems.length === 1 ? "" : "s"
-    } — an admin module has no matching employee entry${ANSI.reset}`,
-  );
-  console.log(
-    `${ANSI.yellow}Register each route in src/lib/nav/operations-nav.ts so both sidebars stay derived from one definition.${ANSI.reset}`,
+    } — a shared nav item can't be reached inside the employee shell${ANSI.reset}`,
   );
   process.exit(1);
 }

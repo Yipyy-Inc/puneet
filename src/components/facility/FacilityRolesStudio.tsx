@@ -64,6 +64,7 @@ import {
   type PermissionKey,
 } from "@/types/facility-staff";
 import { facilityStaff } from "@/data/facility-staff";
+import { POSITION_EDITOR_GROUPS } from "@/lib/nav/facility-nav";
 import { RoleIcon } from "@/app/facility/dashboard/staff/_components/staff-shared";
 
 // ============================================================================
@@ -991,7 +992,10 @@ export function PermissionsGrid({
 
   return (
     <div className="space-y-3">
-      {PERMISSION_GROUPS.map((group) => {
+      {/* Nav features first (grouped by nav section — "build a position"), then
+          the advanced granular permissions. Same set of keys as PERMISSION_GROUPS,
+          just regrouped so each appears exactly once. */}
+      {POSITION_EDITOR_GROUPS.map((group) => {
         const isCore = group.id === "core";
         const isCollapsed = collapsed.has(group.id);
         const grantableKeys = group.permissions
