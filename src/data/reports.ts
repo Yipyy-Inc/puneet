@@ -112,17 +112,34 @@ export const calculateRetentionRate = (
   };
 };
 
-export const getTopCustomers = (facilityId: number, limit: number = 10) => {
+export const getTopCustomers = (
+  facilityId: number,
+  limit: number = 10,
+  from?: string,
+  to?: string,
+) => {
+  // Optional date-window filter (date-only string compare, cycle-free).
+  const inWindow = (startDate: string) => {
+    if (!from || !to) return true;
+    const d = startDate.split("T")[0];
+    return d >= from && d <= to;
+  };
   const facilityClients = clients.filter((c) => {
     const clientBookings = bookings.filter(
-      (b) => b.facilityId === facilityId && b.clientId === c.id,
+      (b) =>
+        b.facilityId === facilityId &&
+        b.clientId === c.id &&
+        inWindow(b.startDate),
     );
     return clientBookings.length > 0;
   });
 
   const clientStats = facilityClients.map((client) => {
     const clientBookings = bookings.filter(
-      (b) => b.facilityId === facilityId && b.clientId === client.id,
+      (b) =>
+        b.facilityId === facilityId &&
+        b.clientId === client.id &&
+        inWindow(b.startDate),
     );
     const totalSpent = clientBookings
       .filter((b) => b.paymentStatus === "paid")

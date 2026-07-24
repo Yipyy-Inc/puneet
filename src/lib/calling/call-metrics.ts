@@ -1,5 +1,5 @@
 import type { CallLog } from "@/types/communications";
-import type { AICallSummary, InquiryTag } from "@/types/calling";
+import type { AICallSummary, InquiryTag, CallAnalytics } from "@/types/calling";
 
 // ============================================================
 // Core calling metrics — all derived from the call-log table so
@@ -334,4 +334,118 @@ export function computeStaffPerformance(
     followUpRate: a.fuTotal ? (a.fuResolved / a.fuTotal) * 100 : null,
     avgDuration: a.durations.length ? mean(a.durations) : null,
   }));
+}
+
+// ============================================================
+// CallAnalytics — the owner-facing analytics dashboard shape,
+// derived from the real call-log table (replaces the static
+// callAnalytics blob). Revenue is estimated from booking-created
+// outcomes × an average booking value (call logs carry no dollar
+// amount); everything else is a direct aggregation of the logs.
+// ============================================================
+
+const CALL_AVG_BOOKING_VALUE = 75;
+
+const INQUIRY_REASON_LABELS: Record<string, string> = {
+  boarding: "Boarding inquiry",
+  grooming: "Grooming appointment",
+  billing: "Billing question",
+  reception: "Reception / general",
+  emergency: "Emergency",
+  training: "Training inquiry",
+};
+
+export function buildCallAnalytics(
+  logs: CallLog[],
+  summaries: AICallSummary[],
+): CallAnalytics {
+  const m = computeCallMetrics(logs, summaries);
+  const total = logs.length;
+
+  const bookingCreated = logs.filter(
+    (c) => c.outcome === "booking_created",
+  ).length;
+  const inbound = logs.filter((c) => c.type === "inbound").length;
+
+  // Hourly volume (0–23) from real call timestamps.
+  const hourly = Array.from({ length: 24 }, (_, hour) => ({ hour, calls: 0 }));
+  for (const c of logs) {
+    const h = new Date(c.timestamp).getHours();
+    if (h >= 0 && h < 24) hourly[h].calls += 1;
+  }
+
+  // Repeat callers — distinct clients who called more than once.
+  const byClient = new Map<number, number>();
+  for (const c of logs)
+    if (typeof c.clientId === "number")
+      byClient.set(c.clientId, (byClient.get(c.clientId) ?? 0) + 1);
+  const repeatCallers = [...byClient.values()].filter((n) => n > 1).length;
+
+  // Abandoned — missed inbound calls that had spent time in the queue.
+  const abandonedCalls = logs.filter(
+    (c) => c.status === "missed" && typeof c.queueWaitSeconds === "number",
+  ).length;
+
+  // Per-staff performance from the handledBy field.
+  const staffMap = new Map<
+    string,
+    {
+      handled: number;
+      missed: number;
+      booked: number;
+      waitSum: number;
+      waitN: number;
+    }
+  >();
+  for (const c of logs) {
+    if (!c.handledBy) continue;
+    const s = staffMap.get(c.handledBy) ?? {
+      handled: 0,
+      missed: 0,
+      booked: 0,
+      waitSum: 0,
+      waitN: 0,
+    };
+    s.handled += 1;
+    if (c.status === "missed") s.missed += 1;
+    if (c.outcome === "booking_created") s.booked += 1;
+    if (typeof c.queueWaitSeconds === "number") {
+      s.waitSum += c.queueWaitSeconds;
+      s.waitN += 1;
+    }
+    staffMap.set(c.handledBy, s);
+  }
+  const staffPerformance = [...staffMap.entries()]
+    .map(([name, s]) => ({
+      name,
+      callsHandled: s.handled,
+      avgResponseTime: s.waitN > 0 ? Math.round(s.waitSum / s.waitN) : 0,
+      missedCalls: s.missed,
+      conversionRate:
+        s.handled > 0 ? Math.round((s.booked / s.handled) * 100) : 0,
+    }))
+    .sort((a, b) => b.callsHandled - a.callsHandled);
+
+  // Top call reasons from the IVR inquiry tag.
+  const topCallReasons = m.byIvrOption.map(({ tag, count }) => ({
+    reason: INQUIRY_REASON_LABELS[tag] ?? tag,
+    count,
+  }));
+
+  return {
+    period: "Last 30 days",
+    totalCalls: total,
+    missedCalls: m.missed,
+    avgAnswerTime: m.avgQueueWait,
+    conversionRate: total > 0 ? Math.round((bookingCreated / total) * 100) : 0,
+    revenueFromCalls: bookingCreated * CALL_AVG_BOOKING_VALUE,
+    avgCallDuration: m.avgDuration,
+    abandonedCalls,
+    repeatCallers,
+    leadConversionRate:
+      inbound > 0 ? Math.round((bookingCreated / inbound) * 100) : 0,
+    hourlyVolume: hourly,
+    staffPerformance,
+    topCallReasons,
+  };
 }

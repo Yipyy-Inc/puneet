@@ -144,3 +144,57 @@ export function computeProgramPerformance(input: {
     nonMemberRetention: retainedShare(nonMemberClientIds),
   };
 }
+
+// ─── Monthly points activity (earned vs redeemed) ────────────────────────────
+
+export interface PointsActivityPoint {
+  month: string;
+  earned: number;
+  redeemed: number;
+  net: number;
+}
+
+/**
+ * Real monthly points-earned-vs-redeemed series over the trailing `months`,
+ * aggregated from members' points history (earned entries are positive;
+ * redeemed entries are stored negative, so their magnitude is summed). Empty
+ * months render as zero. `now` is injected for determinism.
+ */
+export function pointsActivityByMonth(
+  history: { date: string; points: number; type: string }[],
+  now: string,
+  months = 12,
+): PointsActivityPoint[] {
+  const nowD = new Date(now);
+  const order: string[] = [];
+  const buckets = new Map<string, { earned: number; redeemed: number }>();
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(
+      Date.UTC(nowD.getUTCFullYear(), nowD.getUTCMonth() - i, 1),
+    );
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    order.push(key);
+    buckets.set(key, { earned: 0, redeemed: 0 });
+  }
+  for (const h of history) {
+    const d = new Date(h.date);
+    if (!Number.isFinite(d.getTime())) continue;
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    const b = buckets.get(key);
+    if (!b) continue;
+    if (h.type === "earned") b.earned += h.points;
+    else if (h.type === "redeemed") b.redeemed += Math.abs(h.points);
+  }
+  return order.map((key) => {
+    const b = buckets.get(key) ?? { earned: 0, redeemed: 0 };
+    const label = new Date(`${key}-01T00:00:00Z`).toLocaleDateString("en-US", {
+      month: "short",
+    });
+    return {
+      month: label,
+      earned: b.earned,
+      redeemed: b.redeemed,
+      net: b.earned - b.redeemed,
+    };
+  });
+}

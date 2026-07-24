@@ -1,19 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { facilityUtilization, utilizationComparison } from "@/data/analytics";
-import { Building2, TrendingUp, BarChart3, Award } from "lucide-react";
+import { BedDouble, TrendingUp, Award, Grid3x3 } from "lucide-react";
 import {
-  LineChart,
-  Line,
-  BarChart,
+  Area,
+  AreaChart,
   Bar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
+  BarChart,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -21,199 +16,179 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import {
+  chartColor,
+  axisTick,
+  gridProps,
+  legendProps,
+  axisLabel,
+  ReportTooltip,
+  tickFmt,
+} from "@/components/reports/chart-kit";
+import { formatCount, formatCurrency, formatPercent } from "@/lib/format";
+import {
+  capacityUtilization,
+  occupancy,
+  bookingHeatmap,
+} from "@/lib/report-data-sources";
+import {
+  ReportRangePicker,
+  defaultReportRange,
+  formatRangeLabel,
+  type ReportRange,
+} from "@/components/reports/report-range-picker";
+
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const HOURS = Array.from({ length: 15 }, (_, i) => i + 6); // 06:00–20:00
+
+function hourLabel(h: number): string {
+  const suffix = h < 12 ? "a" : "p";
+  const base = h % 12 === 0 ? 12 : h % 12;
+  return `${base}${suffix}`;
+}
 
 export function FacilityUtilizationMetrics() {
-  const comparison = utilizationComparison;
-  const systemAvg = comparison.systemAverage;
+  const [range, setRange] = useState<ReportRange>(() =>
+    defaultReportRange("90d"),
+  );
+  const rangeLabel = formatRangeLabel(range);
+  const cap = capacityUtilization(range);
+  const occ = occupancy(range);
+  const heatmap = bookingHeatmap(range);
 
-  // Prepare radar chart data for facility comparison
-  const radarData = comparison.facilities.map((facility) => ({
-    facility: facility.facilityName.split(" ")[0], // First word only
-    utilization: facility.utilizationRate,
-    occupancy: facility.occupancyRate,
-    efficiency: facility.efficiency,
+  const avgBoardingOcc =
+    occ.length > 0
+      ? occ.reduce((s, d) => s + d.occupancyRate, 0) / occ.length
+      : 0;
+  const peakBoardingOcc = occ.reduce((m, d) => Math.max(m, d.occupancyRate), 0);
+  const totalRevenue = cap.reduce((s, c) => s + c.revenue, 0);
+  const busiest = cap.reduce(
+    (m, c) => (c.peakUtilizationRate > m.peakUtilizationRate ? c : m),
+    cap[0] ?? { service: "—", peakUtilizationRate: 0 },
+  );
+
+  const utilChart = cap.map((c) => ({
+    service: c.service,
+    avg: c.utilizationRate,
+    peak: c.peakUtilizationRate,
   }));
+
+  const heatMax = heatmap.reduce((m, c) => Math.max(m, c.count), 0);
+  const heatAt = (dow: number, hour: number) =>
+    heatmap.find((c) => c.dow === dow && c.hour === hour)?.count ?? 0;
+
+  const kpis = [
+    {
+      label: "Avg Boarding Occupancy",
+      value: formatPercent(avgBoardingOcc),
+      hint: "Daily kennel fill",
+      icon: BedDouble,
+      gradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+    },
+    {
+      label: "Peak Boarding Occupancy",
+      value: formatPercent(peakBoardingOcc),
+      hint: "Busiest day in range",
+      icon: TrendingUp,
+      gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    },
+    {
+      label: "Busiest Service",
+      value: busiest.service,
+      hint: `${formatPercent(busiest.peakUtilizationRate)} peak`,
+      icon: Award,
+      gradient: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+    },
+    {
+      label: "Booking Revenue",
+      value: formatCurrency(totalRevenue),
+      hint: `Across services · ${rangeLabel}`,
+      icon: TrendingUp,
+      gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      {/* Key Metrics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="shadow-card border-0">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-muted-foreground mb-1 text-sm font-medium">
-                  System Average
-                </p>
-                <div className="flex items-baseline gap-2">
-                  <h3 className="text-2xl font-bold tracking-tight">
-                    {systemAvg.toFixed(1)}%
-                  </h3>
-                </div>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  Utilization rate
-                </p>
-              </div>
-              <div
-                className="flex h-11 w-11 items-center justify-center rounded-xl"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                }}
-              >
-                <BarChart3 className="size-5 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-card border-0">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-muted-foreground mb-1 text-sm font-medium">
-                  Top Performer
-                </p>
-                <div className="flex items-baseline gap-2">
-                  <h3 className="text-lg font-bold tracking-tight">
-                    {comparison.topPerformer}
-                  </h3>
-                </div>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  {comparison.facilities[0].utilizationRate}% utilization
-                </p>
-              </div>
-              <div
-                className="flex h-11 w-11 items-center justify-center rounded-xl"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                }}
-              >
-                <Award className="size-5 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-card border-0">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-muted-foreground mb-1 text-sm font-medium">
-                  Total Facilities
-                </p>
-                <div className="flex items-baseline gap-2">
-                  <h3 className="text-2xl font-bold tracking-tight">
-                    {facilityUtilization.length}
-                  </h3>
-                </div>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  Active locations
-                </p>
-              </div>
-              <div
-                className="flex h-11 w-11 items-center justify-center rounded-xl"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-                }}
-              >
-                <Building2 className="size-5 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-card border-0">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-muted-foreground mb-1 text-sm font-medium">
-                  Avg Efficiency
-                </p>
-                <div className="flex items-baseline gap-2">
-                  <h3 className="text-2xl font-bold tracking-tight">
-                    {(
-                      comparison.facilities.reduce(
-                        (sum, f) => sum + f.efficiency,
-                        0,
-                      ) / comparison.facilities.length
-                    ).toFixed(1)}
-                    %
-                  </h3>
-                </div>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  Resource efficiency
-                </p>
-              </div>
-              <div
-                className="flex h-11 w-11 items-center justify-center rounded-xl"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-                }}
-              >
-                <TrendingUp className="size-5 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Date-range control — drives every tile and chart below */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">
+            Facility Utilization
+          </h2>
+          <p className="text-muted-foreground text-sm">{rangeLabel}</p>
+        </div>
+        <ReportRangePicker value={range} onChange={setRange} />
       </div>
 
-      {/* Facility Comparison Charts */}
+      {/* KPI cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {kpis.map((kpi) => (
+          <Card key={kpi.label} className="shadow-card border-0">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-muted-foreground mb-1 text-sm font-medium">
+                    {kpi.label}
+                  </p>
+                  <h3 className="text-2xl font-bold tracking-tight">
+                    {kpi.value}
+                  </h3>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    {kpi.hint}
+                  </p>
+                </div>
+                <div
+                  className="flex size-11 items-center justify-center rounded-xl"
+                  style={{ background: kpi.gradient }}
+                >
+                  <kpi.icon className="size-5 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Utilization Rate Comparison */}
+        {/* Utilization by service */}
         <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
-              Utilization Rate Comparison
+              Utilization by Service
             </CardTitle>
             <p className="text-muted-foreground text-sm">
-              Compare facility utilization across locations
+              Average &amp; peak daily occupancy vs capacity
             </p>
           </CardHeader>
           <CardContent>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={comparison.facilities} layout="vertical">
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#e2e8f0"
-                    horizontal={false}
-                  />
+                <BarChart data={utilChart}>
+                  <CartesianGrid {...gridProps} />
                   <XAxis
-                    type="number"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                    tickFormatter={(value) => `${value}%`}
+                    dataKey="service"
+                    tick={axisTick}
+                    label={axisLabel("Service", "x")}
                   />
                   <YAxis
-                    dataKey="facilityName"
-                    type="category"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#64748b", fontSize: 12 }}
-                    width={120}
+                    tick={axisTick}
+                    tickFormatter={tickFmt("percent")}
+                    label={axisLabel("Utilization", "y")}
                   />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      border: "none",
-                      borderRadius: "12px",
-                      boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
-                    }}
-                    formatter={(value: number | undefined) => [
-                      `${value || 0}%`,
-                      "",
-                    ]}
+                  <Tooltip content={<ReportTooltip format="percent" />} />
+                  <Legend {...legendProps} />
+                  <Bar
+                    dataKey="avg"
+                    name="Avg"
+                    fill={chartColor(0)}
+                    radius={[4, 4, 0, 0]}
                   />
                   <Bar
-                    dataKey="utilizationRate"
-                    fill="#3b82f6"
-                    radius={[0, 8, 8, 0]}
-                    name="Utilization Rate"
+                    dataKey="peak"
+                    name="Peak"
+                    fill={chartColor(2)}
+                    radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -221,186 +196,208 @@ export function FacilityUtilizationMetrics() {
           </CardContent>
         </Card>
 
-        {/* Multi-Metric Radar Chart */}
+        {/* Boarding occupancy trend */}
         <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
-              Performance Radar
+              Boarding Occupancy Trend
             </CardTitle>
             <p className="text-muted-foreground text-sm">
-              Multi-dimensional performance comparison
+              Daily kennel fill rate over the period
             </p>
           </CardHeader>
           <CardContent>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={radarData}>
-                  <PolarGrid stroke="#e2e8f0" />
-                  <PolarAngleAxis
-                    dataKey="facility"
-                    tick={{ fill: "#64748b", fontSize: 12 }}
+                <AreaChart data={occ}>
+                  <defs>
+                    <linearGradient id="occTrend" x1="0" y1="0" x2="0" y2="1">
+                      <stop
+                        offset="0%"
+                        stopColor={chartColor(0)}
+                        stopOpacity={0.35}
+                      />
+                      <stop
+                        offset="100%"
+                        stopColor={chartColor(0)}
+                        stopOpacity={0}
+                      />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid {...gridProps} />
+                  <XAxis
+                    dataKey="date"
+                    tick={axisTick}
+                    minTickGap={28}
+                    tickFormatter={(v: string) => v.slice(5)}
+                    label={axisLabel("Date", "x")}
                   />
-                  <PolarRadiusAxis
-                    angle={90}
+                  <YAxis
+                    tick={axisTick}
                     domain={[0, 100]}
-                    tick={{ fill: "#94a3b8", fontSize: 10 }}
+                    tickFormatter={tickFmt("percent")}
+                    label={axisLabel("Occupancy %", "y")}
                   />
-                  <Radar
-                    name="Utilization"
-                    dataKey="utilization"
-                    stroke="#3b82f6"
-                    fill="#3b82f6"
-                    fillOpacity={0.3}
-                  />
-                  <Radar
+                  <Tooltip content={<ReportTooltip format="percent" />} />
+                  <Legend {...legendProps} />
+                  <Area
+                    type="monotone"
+                    dataKey="occupancyRate"
                     name="Occupancy"
-                    dataKey="occupancy"
-                    stroke="#10b981"
-                    fill="#10b981"
-                    fillOpacity={0.3}
+                    stroke={chartColor(0)}
+                    fill="url(#occTrend)"
+                    strokeWidth={2}
                   />
-                  <Radar
-                    name="Efficiency"
-                    dataKey="efficiency"
-                    stroke="#f59e0b"
-                    fill="#f59e0b"
-                    fillOpacity={0.3}
-                  />
-                  <Legend />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      border: "none",
-                      borderRadius: "12px",
-                      boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
-                    }}
-                  />
-                </RadarChart>
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Detailed Facility Metrics */}
+      {/* Day-of-week × hour heatmap */}
       <Card className="shadow-card border-0">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">
-            Facility Utilization Details
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+            <Grid3x3 className="size-4" />
+            Booking Heatmap
           </CardTitle>
           <p className="text-muted-foreground text-sm">
-            Comprehensive utilization metrics by facility
+            Booking density by day of week &amp; hour of day
           </p>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {facilityUtilization.map((facility) => (
+          {heatMax === 0 ? (
+            <div className="text-muted-foreground py-8 text-center text-sm">
+              No bookings in this period
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <div className="min-w-[560px]">
+                {/* Hour header */}
+                <div className="flex">
+                  <div className="w-10 shrink-0" />
+                  {HOURS.map((h) => (
+                    <div
+                      key={h}
+                      className="text-muted-foreground flex-1 text-center text-[10px]"
+                    >
+                      {hourLabel(h)}
+                    </div>
+                  ))}
+                </div>
+                {/* Rows */}
+                {DOW.map((day, dow) => (
+                  <div key={day} className="flex items-center">
+                    <div className="text-muted-foreground w-10 shrink-0 text-xs font-medium">
+                      {day}
+                    </div>
+                    {HOURS.map((h) => {
+                      const count = heatAt(dow, h);
+                      const intensity = heatMax > 0 ? count / heatMax : 0;
+                      return (
+                        <div key={h} className="flex-1 p-0.5">
+                          <div
+                            className="flex aspect-square items-center justify-center rounded-sm text-[10px] font-medium"
+                            style={{
+                              // Sequential heat scale (intensity ramp).
+                              backgroundColor:
+                                count > 0
+                                  ? `rgba(37, 99, 235, ${0.15 + 0.85 * intensity})`
+                                  : "hsl(var(--muted))",
+                              color:
+                                intensity > 0.5
+                                  ? "white"
+                                  : "hsl(var(--muted-foreground))",
+                            }}
+                            title={`${day} ${hourLabel(h)}: ${count} booking${count === 1 ? "" : "s"}`}
+                          >
+                            {count > 0 ? count : ""}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Capacity used vs available + revenue per slot */}
+      <Card className="shadow-card border-0">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">
+            Capacity &amp; Revenue per Slot
+          </CardTitle>
+          <p className="text-muted-foreground text-sm">
+            Capacity used vs available and revenue per available slot
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2">
+            {cap.map((c) => (
               <div
-                key={facility.id}
+                key={c.service}
                 className="bg-muted/30 hover:bg-muted/50 rounded-xl p-4 transition-colors"
               >
                 <div className="mb-3 flex items-start justify-between">
                   <div>
-                    <h4 className="text-lg font-semibold">
-                      {facility.facilityName}
-                    </h4>
+                    <h4 className="text-base font-semibold">{c.service}</h4>
                     <p className="text-muted-foreground text-sm">
-                      Capacity: {facility.totalCapacity} units
+                      {formatCount(c.capacity)} slots ·{" "}
+                      {formatCount(c.bookings)} bookings
                     </p>
                   </div>
                   <Badge
                     variant={
-                      facility.utilizationRate >= 80 ? "default" : "secondary"
+                      c.peakUtilizationRate >= 50 ? "default" : "secondary"
                     }
                     className="text-xs"
                   >
-                    {facility.utilizationRate >= 80 ? "High" : "Moderate"}{" "}
-                    Utilization
+                    {formatPercent(c.peakUtilizationRate)} peak
                   </Badge>
                 </div>
 
-                <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
+                <div className="mb-3 grid grid-cols-3 gap-3 text-center">
                   <div>
-                    <p className="text-muted-foreground text-xs">Utilization</p>
-                    <p className="text-xl font-bold">
-                      {facility.utilizationRate}%
+                    <p className="text-muted-foreground text-xs">Peak Used</p>
+                    <p className="text-lg font-bold tabular-nums">
+                      {formatCount(c.peakUsed)}/{formatCount(c.capacity)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Occupancy</p>
-                    <p className="text-xl font-bold">
-                      {facility.occupancyRate}%
+                    <p className="text-muted-foreground text-xs">Avg Used</p>
+                    <p className="text-lg font-bold tabular-nums">
+                      {c.avgUsed}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Efficiency</p>
-                    <p className="text-xl font-bold">
-                      {facility.resourceEfficiency}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs">
-                      Avg Occupancy
-                    </p>
-                    <p className="text-xl font-bold">
-                      {facility.averageOccupancy}/{facility.totalCapacity}
+                    <p className="text-muted-foreground text-xs">Rev / Slot</p>
+                    <p className="text-lg font-bold tabular-nums">
+                      {formatCurrency(c.revenuePerAvailableSlot)}
                     </p>
                   </div>
                 </div>
 
-                {/* Utilization Bar */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">
-                      Hours Utilization
+                      Peak utilization
                     </span>
                     <span className="font-medium">
-                      {facility.bookedHours} / {facility.availableHours} hours
+                      {formatPercent(c.peakUtilizationRate)}
                     </span>
                   </div>
-                  <div className="bg-muted h-3 w-full rounded-full">
+                  <div className="bg-muted h-2 w-full rounded-full">
                     <div
-                      className={`h-3 rounded-full transition-all ${
-                        facility.utilizationRate >= 80
-                          ? "bg-success"
-                          : facility.utilizationRate >= 60
-                            ? "bg-warning"
-                            : "bg-destructive"
-                      } `}
-                      style={{ width: `${facility.utilizationRate}%` }}
+                      className="h-2 rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(c.peakUtilizationRate, 100)}%`,
+                        backgroundColor: chartColor(0),
+                      }}
                     />
-                  </div>
-                </div>
-
-                {/* Weekly Trend Mini Chart */}
-                <div className="border-border mt-4 border-t pt-4">
-                  <p className="text-muted-foreground mb-2 text-xs">
-                    Weekly Trend
-                  </p>
-                  <div className="h-16">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={facility.utilizationTrend}>
-                        <Line
-                          type="monotone"
-                          dataKey="rate"
-                          stroke="#3b82f6"
-                          strokeWidth={2}
-                          dot={false}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "#ffffff",
-                            border: "none",
-                            borderRadius: "8px",
-                            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-                          }}
-                          formatter={(value: number | undefined) => [
-                            `${value || 0}%`,
-                            "Rate",
-                          ]}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
                   </div>
                 </div>
               </div>
@@ -408,66 +405,6 @@ export function FacilityUtilizationMetrics() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Resource Allocation Summary */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="shadow-card border-0">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">
-              Total Capacity
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center">
-              <p className="text-4xl font-bold">
-                {facilityUtilization.reduce(
-                  (sum, f) => sum + f.totalCapacity,
-                  0,
-                )}
-              </p>
-              <p className="text-muted-foreground mt-2 text-sm">
-                Total system capacity (units)
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-card border-0">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Total Hours</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center">
-              <p className="text-4xl font-bold">
-                {facilityUtilization
-                  .reduce((sum, f) => sum + f.bookedHours, 0)
-                  .toLocaleString()}
-              </p>
-              <p className="text-muted-foreground mt-2 text-sm">
-                Booked hours this month
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-card border-0">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">
-              Peak Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center">
-              <p className="text-4xl font-bold">
-                {Math.max(...facilityUtilization.map((f) => f.peakOccupancy))}
-              </p>
-              <p className="text-muted-foreground mt-2 text-sm">
-                Highest occupancy reached
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

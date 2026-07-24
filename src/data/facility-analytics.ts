@@ -1,10 +1,13 @@
 // Real-computed analytics for the facility profile Overview KPIs and Reports
-// tab — derived from actual payments, bookings, clients and the facility
-// record (no hardcoded report numbers). All transactional data currently
-// lives on facility 11; other facilities legitimately compute to ~0/empty.
+// tab — derived from the SAME operational stores as report-data-sources
+// (bookings + retail POS transactions), plus clients and the facility record,
+// so the profile and the Reports & Analytics surfaces never disagree and a new
+// booking or sale shows up in both (no hardcoded report numbers, no separate
+// `payments` store). All transactional data currently lives on facility 11;
+// other facilities legitimately compute to ~0/empty.
 
-import { payments } from "@/data/payments";
 import { bookings } from "@/data/bookings";
+import { getAllTransactions } from "@/data/retail";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import type { FacilityReport, OverviewKpis } from "@/types/facility-analytics";
@@ -29,8 +32,31 @@ function monthKey(date: Date): string {
   return `${date.getFullYear()}-${date.getMonth()}`;
 }
 
-function paymentAmount(p: (typeof payments)[number]): number {
-  return (p.totalAmount ?? p.amount ?? 0) as number;
+// Revenue = non-cancelled booking value + retail product-line sales — the SAME
+// model report-data-sources uses for the Reports & Analytics surfaces, so the
+// profile Overview/Reports and the reports never disagree and a new booking or
+// sale shows up in both. (Previously this read the separate, un-rolled
+// `payments` store, which was stale and blind to retail POS sales.) Retail rows
+// carry no facilityId, so they are attributed to the operational facility (the
+// only one with booking activity — `hasOps`).
+function bookingRevenueInRange(
+  facBookings: typeof bookings,
+  inWin: (iso: string) => boolean,
+): number {
+  return facBookings
+    .filter((b) => b.status !== "cancelled" && inWin(b.startDate))
+    .reduce((s, b) => s + (b.totalCost ?? 0), 0);
+}
+
+function retailRevenueInRange(inWin: (iso: string) => boolean): number {
+  let sum = 0;
+  for (const t of getAllTransactions()) {
+    if (t.status !== "completed" || !inWin(t.createdAt)) continue;
+    sum += t.items
+      .filter((i) => i.itemType === "product")
+      .reduce((s, i) => s + (i.total ?? 0), 0);
+  }
+  return sum;
 }
 
 function pctChange(current: number, previous: number): number {
@@ -49,8 +75,8 @@ function clientName(clientId: number): string {
 
 // Stable positive weight for a location name (FNV-1a), used to allocate the
 // facility's real combined totals into per-location shares. The combined value
-// is real (actual payments/staff/clients); the per-location split is a
-// deterministic allocation, not a fabricated figure.
+// is real (bookings + retail revenue / staff / clients); the per-location split
+// is a deterministic allocation, not a fabricated figure.
 function locationWeight(name: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < name.length; i++) {
@@ -77,15 +103,11 @@ export function buildOverviewKpis(
     return d <= now && (windowStart === null || d >= windowStart);
   };
 
+  const facBookings = bookings.filter((b) => b.facilityId === facilityId);
+  const hasOps = facBookings.length > 0;
   const combinedRevenue = Math.round(
-    payments
-      .filter(
-        (p) =>
-          p.facilityId === facilityId &&
-          p.status === "completed" &&
-          inWindow(p.createdAt),
-      )
-      .reduce((sum, p) => sum + paymentAmount(p), 0),
+    bookingRevenueInRange(facBookings, inWindow) +
+      (hasOps ? retailRevenueInRange(inWindow) : 0),
   );
   const combinedStaff = facility?.usersList.length ?? 0;
   const combinedActive =
@@ -184,16 +206,14 @@ export function buildFacilityReport(
     return d >= prevFrom && d < from;
   };
 
-  const facPayments = payments.filter(
-    (p) => p.facilityId === facilityId && p.status === "completed",
-  );
   const facBookings = bookings.filter((b) => b.facilityId === facilityId);
+  const hasOps = facBookings.length > 0;
 
-  const paymentsInRange = facPayments.filter((p) => inRange(p.createdAt));
   const bookingsInRange = facBookings.filter((b) => inRange(b.startDate));
 
   const totalRevenue = Math.round(
-    paymentsInRange.reduce((s, p) => s + paymentAmount(p), 0),
+    bookingRevenueInRange(facBookings, inRange) +
+      (hasOps ? retailRevenueInRange(inRange) : 0),
   );
   const totalBookings = bookingsInRange.length;
   const avgBookingValue =
@@ -204,21 +224,15 @@ export function buildFacilityReport(
         )
       : 0;
 
-  const clientsInRange = new Set([
-    ...bookingsInRange.map((b) => b.clientId),
-    ...paymentsInRange.map((p) => p.clientId),
-  ]);
+  const clientsInRange = new Set(bookingsInRange.map((b) => b.clientId));
   const activeClients = clientsInRange.size;
 
   // Growth vs the immediately preceding period of the same length.
-  const prevRevenue = facPayments
-    .filter((p) => inPrev(p.createdAt))
-    .reduce((s, p) => s + paymentAmount(p), 0);
+  const prevRevenue =
+    bookingRevenueInRange(facBookings, inPrev) +
+    (hasOps ? retailRevenueInRange(inPrev) : 0);
   const prevBookings = facBookings.filter((b) => inPrev(b.startDate));
-  const prevClients = new Set([
-    ...prevBookings.map((b) => b.clientId),
-    ...facPayments.filter((p) => inPrev(p.createdAt)).map((p) => p.clientId),
-  ]);
+  const prevClients = new Set(prevBookings.map((b) => b.clientId));
 
   // Revenue by service (from booking value).
   const serviceTotals = new Map<string, number>();
@@ -240,9 +254,10 @@ export function buildFacilityReport(
   const monthlyRevenue = [];
   for (let i = displayMonths - 1; i >= 0; i--) {
     const m = subMonths(now, i);
-    const revenue = facPayments
-      .filter((p) => sameMonth(new Date(p.createdAt), m))
-      .reduce((s, p) => s + paymentAmount(p), 0);
+    const inMonth = (iso: string) => sameMonth(new Date(iso), m);
+    const revenue =
+      bookingRevenueInRange(facBookings, inMonth) +
+      (hasOps ? retailRevenueInRange(inMonth) : 0);
     const count = facBookings.filter((b) =>
       sameMonth(new Date(b.startDate), m),
     ).length;
@@ -299,14 +314,11 @@ export function buildFacilityReport(
   // Top clients by spend.
   const spendByClient = new Map<number, { visits: number; spent: number }>();
   for (const b of bookingsInRange) {
+    if (b.status === "cancelled") continue;
     const e = spendByClient.get(b.clientId) ?? { visits: 0, spent: 0 };
     e.visits += 1;
+    e.spent += b.totalCost ?? 0;
     spendByClient.set(b.clientId, e);
-  }
-  for (const p of paymentsInRange) {
-    const e = spendByClient.get(p.clientId) ?? { visits: 0, spent: 0 };
-    e.spent += paymentAmount(p);
-    spendByClient.set(p.clientId, e);
   }
   const topClients = [...spendByClient.entries()]
     .map(([id, e]) => ({

@@ -11,6 +11,14 @@ import {
   Legend,
 } from "recharts";
 import { hexFromKey } from "@/lib/hq/location-styles";
+import {
+  ReportTooltip,
+  axisTick,
+  axisLabel,
+  gridProps,
+  legendProps,
+  tickFmt,
+} from "@/components/reports/chart-kit";
 
 interface Props {
   /** New vs returning clients per location (X-axis = location short code). */
@@ -29,35 +37,19 @@ export function ClientGrowthChart({ data, height = 280 }: Props) {
         margin={{ top: 8, right: 16, left: 8, bottom: 0 }}
         barCategoryGap={24}
       >
-        <CartesianGrid
-          strokeDasharray="3 3"
-          className="stroke-border/40"
-          vertical={false}
-        />
+        <CartesianGrid {...gridProps} />
         <XAxis
           dataKey="name"
-          tick={{ fontSize: 11, fill: "currentColor" }}
-          stroke="currentColor"
-          className="text-muted-foreground"
+          tick={axisTick}
+          label={axisLabel("Location", "x")}
         />
         <YAxis
-          tick={{ fontSize: 11, fill: "currentColor" }}
-          stroke="currentColor"
-          className="text-muted-foreground"
+          tick={axisTick}
+          tickFormatter={tickFmt("compactNumber")}
+          label={axisLabel("Clients", "y")}
         />
-        <Tooltip
-          contentStyle={{
-            borderRadius: 8,
-            border: "1px solid hsl(var(--border))",
-            background: "hsl(var(--popover))",
-            fontSize: 12,
-          }}
-          formatter={(value, name) => [
-            Number(value ?? 0).toLocaleString(),
-            name,
-          ]}
-        />
-        <Legend wrapperStyle={{ fontSize: 12 }} />
+        <Tooltip content={<ReportTooltip format="number" />} />
+        <Legend {...legendProps} />
         <Bar
           dataKey="new"
           name="New clients"

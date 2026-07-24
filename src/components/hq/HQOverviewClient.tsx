@@ -153,6 +153,13 @@ export function HQOverviewClient({ metrics, locations }: Props) {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {[
           {
+            href: "/facility/hq/reports",
+            icon: BarChart3,
+            label: "HQ Analytics",
+            sub: "Consolidated & per-location charts",
+            tone: "sky" as LocationColorKey,
+          },
+          {
             href: "/facility/hq/comparison",
             icon: BarChart3,
             label: "Location Comparison",

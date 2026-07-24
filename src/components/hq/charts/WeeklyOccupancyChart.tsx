@@ -12,6 +12,14 @@ import {
 } from "recharts";
 import type { Location } from "@/types/location";
 import { locationHex } from "@/lib/hq/location-styles";
+import {
+  ReportTooltip,
+  axisTick,
+  axisLabel,
+  gridProps,
+  legendProps,
+  tickFmt,
+} from "@/components/reports/chart-kit";
 
 interface Props {
   data: {
@@ -30,6 +38,8 @@ export function WeeklyOccupancyChart({
   height = 240,
   isPercentage = true,
 }: Props) {
+  const locName = (id: string) =>
+    locations.find((l) => l.id === id)?.name ?? id;
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart
@@ -37,46 +47,25 @@ export function WeeklyOccupancyChart({
         margin={{ top: 8, right: 16, left: 8, bottom: 0 }}
         barCategoryGap={20}
       >
-        <CartesianGrid
-          strokeDasharray="3 3"
-          className="stroke-border/40"
-          vertical={false}
-        />
-        <XAxis
-          dataKey="week"
-          tick={{ fontSize: 10, fill: "currentColor" }}
-          stroke="currentColor"
-          className="text-muted-foreground"
-        />
+        <CartesianGrid {...gridProps} />
+        <XAxis dataKey="week" tick={axisTick} label={axisLabel("Week", "x")} />
         <YAxis
           domain={isPercentage ? [0, 100] : undefined}
-          tickFormatter={(v) => (isPercentage ? `${v}%` : String(v))}
-          tick={{ fontSize: 11, fill: "currentColor" }}
-          stroke="currentColor"
-          className="text-muted-foreground"
+          tick={axisTick}
+          tickFormatter={tickFmt(isPercentage ? "percent" : "compactNumber")}
+          label={axisLabel(isPercentage ? "Occupancy %" : "Occupancy", "y")}
         />
         <Tooltip
-          contentStyle={{
-            borderRadius: 8,
-            border: "1px solid hsl(var(--border))",
-            background: "hsl(var(--popover))",
-            fontSize: 12,
-          }}
-          formatter={(value, name) => {
-            const loc = locations.find((l) => l.id === name);
-            const num = Number(value ?? 0);
-            return [
-              isPercentage ? `${num}%` : String(num),
-              loc?.name ?? String(name),
-            ];
-          }}
+          content={
+            <ReportTooltip
+              format={isPercentage ? "percent" : "number"}
+              nameFormatter={locName}
+            />
+          }
         />
         <Legend
-          formatter={(value: string) => {
-            const loc = locations.find((l) => l.id === value);
-            return loc?.name ?? value;
-          }}
-          wrapperStyle={{ fontSize: 12 }}
+          {...legendProps}
+          formatter={(value: string) => locName(value)}
         />
         {locations.map((loc) => (
           <Bar

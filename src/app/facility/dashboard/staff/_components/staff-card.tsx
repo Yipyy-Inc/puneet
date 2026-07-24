@@ -25,6 +25,9 @@ import {
   Pencil,
   Trash2,
   RefreshCw,
+  CheckCircle2,
+  Bell,
+  AlertTriangle,
 } from "lucide-react";
 import type { StaffProfile } from "@/types/facility-staff";
 import { FACILITY_LOCATIONS } from "@/data/facility-staff";
@@ -38,6 +41,18 @@ import {
 import { StatusBadge } from "./status-change-dialog";
 import { getLatestStaffAuditEntry } from "@/lib/staff-audit";
 import { useFacilityRbac, usePermission } from "@/hooks/use-facility-rbac";
+import {
+  useOnboardingInstance,
+  onboardingProgress,
+  useStaffHrConfig,
+  isOnboardingStarted,
+  daysSinceInvite,
+} from "@/data/staff-onboarding";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface StaffCardProps {
   profile: StaffProfile;
@@ -47,6 +62,8 @@ interface StaffCardProps {
   onTransfer: (p: StaffProfile) => void;
   onDelete: (p: StaffProfile) => void;
   onStatusChange: (p: StaffProfile) => void;
+  onReview: (p: StaffProfile) => void;
+  onRemind: (p: StaffProfile) => void;
 }
 
 export function StaffCard({
@@ -57,6 +74,8 @@ export function StaffCard({
   onTransfer,
   onDelete,
   onStatusChange,
+  onReview,
+  onRemind,
 }: StaffCardProps) {
   const { viewer } = useFacilityRbac();
   // Table 4 — editing staff requires manage_staff (admin: all-access fallback).
@@ -64,6 +83,28 @@ export function StaffCard({
   const canSeeAudit =
     viewer.primaryRole === "owner" || viewer.primaryRole === "manager";
   const latestEntry = canSeeAudit ? getLatestStaffAuditEntry(profile.id) : null;
+
+  // Derived status: onboarding submitted, awaiting manager review/activation.
+  const onboarding = useOnboardingInstance(profile.id);
+  const pendingReview =
+    profile.status === "invited" &&
+    Boolean(onboarding?.submittedAt) &&
+    !onboarding?.reviewedAt;
+  const progress = onboardingProgress(onboarding);
+  const progressPct =
+    progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
+
+  // Table 5 — "not started after N days" staff-card alert (configurable).
+  const notStartedCfg = useStaffHrConfig().notificationTriggers
+    .onboarding_not_started;
+  const daysInvited = onboarding ? daysSinceInvite(onboarding) : 0;
+  const notStartedAlert =
+    profile.status === "invited" &&
+    !pendingReview &&
+    notStartedCfg.enabled &&
+    !!onboarding &&
+    !isOnboardingStarted(onboarding) &&
+    daysInvited >= (notStartedCfg.days ?? 3);
 
   const locationLabels = profile.assignedLocations
     .map((id) => FACILITY_LOCATIONS.find((l) => l.id === id)?.label)
@@ -162,7 +203,76 @@ export function StaffCard({
                 profile.status === "terminated") && (
                 <StatusBadge status={profile.status} />
               )}
+              {profile.status === "invited" && !pendingReview && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+                    >
+                      <span className="size-1.5 rounded-full bg-amber-400" />
+                      Invited
+                      {progress.total > 0
+                        ? ` · ${progress.done}/${progress.total}`
+                        : ""}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    className="w-64"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="text-sm font-medium">
+                      Onboarding progress
+                    </div>
+                    <div className="text-muted-foreground mt-0.5 text-xs">
+                      {progress.done} of {progress.total} sections complete
+                    </div>
+                    <div className="bg-muted mt-2 h-1.5 w-full overflow-hidden rounded-full">
+                      <div
+                        className="h-full rounded-full bg-emerald-600 transition-all"
+                        style={{ width: `${progressPct}%` }}
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      className="mt-3 w-full gap-1.5"
+                      onClick={() => onRemind(profile)}
+                    >
+                      <Bell className="size-3.5" /> Remind employee
+                    </Button>
+                  </PopoverContent>
+                </Popover>
+              )}
+              {notStartedAlert && (
+                <span
+                  title={`Invited ${daysInvited} days ago — onboarding not started`}
+                  className="inline-flex items-center gap-1 rounded-full border border-red-300 bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
+                >
+                  <AlertTriangle className="size-3" />
+                  Not started · {daysInvited}d
+                </span>
+              )}
+              {pendingReview && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+                  <span className="size-1.5 rounded-full bg-emerald-500" />
+                  Onboarding complete — pending review
+                </span>
+              )}
             </div>
+
+            {pendingReview && (
+              <Button
+                size="sm"
+                className="mt-3 w-full gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReview(profile);
+                }}
+              >
+                <CheckCircle2 className="size-4" /> Review &amp; activate
+              </Button>
+            )}
           </div>
         </div>
 

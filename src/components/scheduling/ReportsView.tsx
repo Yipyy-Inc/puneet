@@ -42,7 +42,15 @@ import {
   frequentSwappers,
   openShiftAnalytics,
   dailyLaborCost,
+  punctuality,
 } from "@/lib/scheduling-reports";
+import {
+  staffPerformance,
+  laborCost,
+  groomingAnalytics,
+} from "@/lib/report-data-sources";
+import { formatCurrency, formatCount, formatPercent } from "@/lib/format";
+import { downloadReportCsv } from "@/lib/report-export";
 import {
   departments,
   positions as allPositions,
@@ -195,6 +203,47 @@ export function ReportsView() {
     [scopedShifts, range],
   );
 
+  // ─── Staff performance (sales + labor + productivity), facility-wide over the
+  // selected window. Sales/appointments come from transactions + grooming
+  // appointments attributed to each staff member; labor from shift × pay rate.
+  const drRange = useMemo(
+    () => ({ from: range.start, to: range.end }),
+    [range],
+  );
+  const staffPerf = useMemo(() => staffPerformance(drRange), [drRange]);
+  const labor = useMemo(() => laborCost(drRange), [drRange]);
+  const grooming = useMemo(() => groomingAnalytics(drRange), [drRange]);
+  const punct = useMemo(
+    () => punctuality(scopedShifts, timeClockEntries, range),
+    [scopedShifts, range],
+  );
+
+  const staffRows = useMemo(() => {
+    const salesByName = new Map(
+      staffPerf.map((p) => [p.staffName.toLowerCase(), p]),
+    );
+    return labor
+      .map((l) => {
+        const sp = salesByName.get(l.staffName.toLowerCase());
+        return {
+          id: l.staffId,
+          name: l.staffName,
+          hours: l.hoursWorked,
+          laborCost: l.laborCost,
+          revenue: l.revenue,
+          laborPct: l.laborCostPct,
+          salesPerHour:
+            sp?.salesPerHour ??
+            (l.hoursWorked > 0 ? l.revenue / l.hoursWorked : 0),
+        };
+      })
+      .filter((r) => r.hours > 0 || r.revenue > 0)
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [labor, staffPerf]);
+
+  const totalSales = staffPerf.reduce((s, p) => s + p.revenue, 0);
+  const totalLaborCost = labor.reduce((s, l) => s + l.laborCost, 0);
+
   // ─── Top-line metrics
   const totalHours = empHours.reduce((s, r) => s + r.scheduledHours, 0);
   const totalCost = empHours.reduce((s, r) => s + r.cost, 0);
@@ -203,6 +252,38 @@ export function ReportsView() {
 
   // ─── Coverage heatmap min/max for color scaling
   const maxStaff = Math.max(1, ...coverage.map((c) => c.staffCount));
+
+  // Export the staff performance + department hours currently displayed for the
+  // selected window (and department scope) as one CSV — real rows, not a stub.
+  const handleExport = () => {
+    const rows: (string | number)[][] = [];
+    rows.push(["Workforce Report", `${range.start} to ${range.end}`]);
+    rows.push([]);
+    rows.push(["Staff Performance"]);
+    rows.push([
+      "Staff",
+      "Hours",
+      "Labor Cost",
+      "Revenue",
+      "Labor %",
+      "Sales / Hour",
+    ]);
+    for (const s of staffRows)
+      rows.push([
+        s.name,
+        s.hours,
+        s.laborCost,
+        s.revenue,
+        s.laborPct,
+        Math.round(s.salesPerHour * 100) / 100,
+      ]);
+    rows.push([]);
+    rows.push(["Hours by Department"]);
+    rows.push(["Department", "Scheduled Hours", "Labor Cost"]);
+    for (const d of deptHours)
+      rows.push([d.department.name, d.scheduledHours, d.laborCost]);
+    downloadReportCsv(`workforce-report_${range.start}_${range.end}.csv`, rows);
+  };
 
   return (
     <div className="space-y-5 p-6">
@@ -241,7 +322,7 @@ export function ReportsView() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="mr-1 size-3.5" />
             Export
           </Button>
@@ -283,6 +364,9 @@ export function ReportsView() {
           </TabsTrigger>
           <TabsTrigger value="cost">
             <BarChart3 className="mr-1 size-3.5" /> Labor cost
+          </TabsTrigger>
+          <TabsTrigger value="staff">
+            <TrendingUp className="mr-1 size-3.5" /> Staff performance
           </TabsTrigger>
           <TabsTrigger value="coverage">
             <Activity className="mr-1 size-3.5" /> Coverage
@@ -417,6 +501,138 @@ export function ReportsView() {
             </CardHeader>
             <CardContent>
               <LaborCostChart data={costSeries} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Staff performance tab ───────────────────────────────── */}
+        <TabsContent value="staff" className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <KpiCard
+              icon={TrendingUp}
+              label="Attributed sales"
+              value={formatCurrency(totalSales)}
+              accent="emerald"
+            />
+            <KpiCard
+              icon={BarChart3}
+              label="Labor cost"
+              value={formatCurrency(totalLaborCost)}
+              accent="blue"
+            />
+            <KpiCard
+              icon={Clock}
+              label="On-time (clocked)"
+              value={punct.clocked > 0 ? formatPercent(punct.onTimeRate) : "—"}
+              accent={punct.onTimeRate >= 90 ? "emerald" : "amber"}
+            />
+            <KpiCard
+              icon={Activity}
+              label="Shifts clocked"
+              value={`${punct.clocked} / ${punct.scheduled}`}
+              accent="amber"
+            />
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Sales &amp; labor by staff
+              </CardTitle>
+              <p className="text-muted-foreground text-xs">
+                Sales attributed via POS transactions + grooming appointments;
+                labor from scheduled shifts × pay rate. Booking revenue
+                (boarding/daycare/training) is not attributed to an individual,
+                so labor % reflects staff-attributed sales only.
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              {staffRows.length === 0 ? (
+                <p className="text-muted-foreground p-6 text-center text-sm">
+                  No staff activity in this period.
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Staff</TableHead>
+                      <TableHead className="text-right">Hours</TableHead>
+                      <TableHead className="text-right">Sales</TableHead>
+                      <TableHead className="text-right">Labor Cost</TableHead>
+                      <TableHead className="text-right">Labor %</TableHead>
+                      <TableHead className="text-right">Sales / Hr</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {staffRows.map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell className="text-sm font-medium">
+                          {r.name}
+                        </TableCell>
+                        <TableCell className="text-right text-sm tabular-nums">
+                          {r.hours.toFixed(1)}h
+                        </TableCell>
+                        <TableCell className="text-right text-sm tabular-nums">
+                          {formatCurrency(r.revenue)}
+                        </TableCell>
+                        <TableCell className="text-right text-sm tabular-nums">
+                          {formatCurrency(r.laborCost)}
+                        </TableCell>
+                        <TableCell className="text-right text-sm tabular-nums">
+                          {r.revenue > 0 ? formatPercent(r.laborPct) : "—"}
+                        </TableCell>
+                        <TableCell className="text-right text-sm tabular-nums">
+                          {formatCurrency(r.salesPerHour)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Appointments per groomer
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {grooming.byGroomer.length === 0 ? (
+                <p className="text-muted-foreground p-6 text-center text-sm">
+                  No grooming appointments in this period.
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Groomer</TableHead>
+                      <TableHead className="text-right">Appointments</TableHead>
+                      <TableHead className="text-right">Revenue</TableHead>
+                      <TableHead className="text-right">Avg Ticket</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {grooming.byGroomer.map((g) => (
+                      <TableRow key={g.stylistId}>
+                        <TableCell className="text-sm font-medium">
+                          {g.name}
+                        </TableCell>
+                        <TableCell className="text-right text-sm tabular-nums">
+                          {formatCount(g.appointments)}
+                        </TableCell>
+                        <TableCell className="text-right text-sm tabular-nums">
+                          {formatCurrency(g.revenue)}
+                        </TableCell>
+                        <TableCell className="text-right text-sm tabular-nums">
+                          {formatCurrency(g.avgTicket)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

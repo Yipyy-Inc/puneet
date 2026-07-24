@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,52 +15,67 @@ import {
   ClipboardList,
   CheckCircle2,
   ShieldAlert,
+  Save,
 } from "lucide-react";
 import { FacilityRbacProvider, usePermission } from "@/hooks/use-facility-rbac";
 import {
-  ROLE_META,
+  ROLE_PRESETS,
+  buildDefaultNotifications,
+  type FacilityStaffRole,
   type PermissionKey,
   type StaffProfile,
 } from "@/types/facility-staff";
-import { facilityStaff, FACILITY_LOCATIONS } from "@/data/facility-staff";
+import {
+  facilityStaff,
+  FACILITY_LOCATIONS,
+  upsertFacilityStaff,
+} from "@/data/facility-staff";
+import {
+  useOnboardingInstance,
+  useOnboarding,
+  getOnboarding,
+  initOnboarding,
+} from "@/data/staff-onboarding";
+import { ReviewActivateDialog } from "../_components/review-activate-dialog";
 import {
   RolePill,
   StaffAvatar,
   fullNameOf,
   formatRelative,
 } from "../_components/staff-shared";
-import { StaffPermissionEditor } from "@/components/facility/StaffPermissionEditor";
-import { EmployeeFilesTab } from "../_components/employee-files-tab";
-import { WriteUpsTab } from "../_components/write-ups-tab";
 import {
-  ScheduleTab,
-  OnboardingTab,
-  NotesTab,
-  PerformanceTab,
-  type ShiftItem,
-  type NoteEntry,
-} from "./staff-profile-tabs";
-import {
-  useOnboarding,
-  getOnboarding,
-  initOnboarding,
-} from "@/data/staff-onboarding";
+  ProfileSection,
+  LocationsSection,
+  AccessSection,
+  NotificationsSection,
+  PayrollSection,
+  type SectionUpdate,
+} from "../_components/staff-form-sections";
+import { StaffRolesTab } from "../_components/staff-roles-tab";
+import { StaffAvailabilityTab } from "../_components/staff-availability-tab";
+import { StaffDocumentsTab } from "../_components/staff-documents-tab";
+import { StaffTasksSection } from "../_components/staff-tasks-section";
+import { OffboardingTab } from "../_components/offboarding-tab";
+import { OnboardingTab, PerformanceTab } from "./staff-profile-tabs";
 
-// Table 19 tab definitions. `require` is the minimum permission to see the tab —
-// Permissions is Admin+ (manage_roles), the rest Manager+.
+// Table 4 tab set. `require` is the minimum permission to see the tab.
 const TAB_DEFS: { id: string; label: string; require: PermissionKey }[] = [
-  { id: "overview", label: "Overview", require: "view_staff" },
-  { id: "schedule", label: "Schedule", require: "scheduling_view_all" },
-  { id: "permissions", label: "Permissions", require: "manage_roles" },
-  { id: "documents", label: "Documents", require: "manage_staff" },
+  { id: "profile", label: "Profile", require: "view_staff" },
+  { id: "roles", label: "Roles & positions", require: "manage_roles" },
+  { id: "locations", label: "Locations", require: "manage_staff" },
   { id: "onboarding", label: "Onboarding", require: "manage_onboarding" },
-  { id: "writeups", label: "Write-Ups", require: "manage_writeups" },
-  { id: "notes", label: "Notes", require: "view_staff" },
+  { id: "access", label: "Access & overrides", require: "manage_roles" },
+  { id: "availability", label: "Availability", require: "scheduling_view_all" },
+  { id: "notifications", label: "Notifications", require: "manage_staff" },
+  { id: "payroll", label: "Payroll", require: "view_payroll" },
+  { id: "documents", label: "Documents", require: "manage_staff" },
   {
     id: "performance",
     label: "Performance",
     require: "view_staff_performance",
   },
+  // Offboarding — only surfaced for terminated staff (see visibleTabs filter).
+  { id: "offboarding", label: "Offboarding", require: "manage_onboarding" },
 ];
 
 const STATUS_META: Record<
@@ -82,7 +98,7 @@ const STATUS_META: Record<
     dot: "bg-zinc-400",
   },
   terminated: {
-    label: "Inactive",
+    label: "Former employee",
     cls: "border-rose-200 text-rose-700 dark:text-rose-300",
     dot: "bg-rose-500",
   },
@@ -101,43 +117,50 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
 
   // Permission gates (stable hook order — one call per distinct key).
   const canViewStaff = usePermission("view_staff");
-  const canSchedule = usePermission("scheduling_view_all");
   const canManageRoles = usePermission("manage_roles");
   const canManageStaff = usePermission("manage_staff");
   const canOnboarding = usePermission("manage_onboarding");
-  const canWriteups = usePermission("manage_writeups");
+  const canSchedule = usePermission("scheduling_view_all");
+  const canViewPayroll = usePermission("view_payroll");
   const canPerformance = usePermission("view_staff_performance");
 
   const allowed: Record<PermissionKey, boolean> = useMemo(
     () =>
       ({
         view_staff: canViewStaff,
-        scheduling_view_all: canSchedule,
         manage_roles: canManageRoles,
         manage_staff: canManageStaff,
         manage_onboarding: canOnboarding,
-        manage_writeups: canWriteups,
+        scheduling_view_all: canSchedule,
+        view_payroll: canViewPayroll,
         view_staff_performance: canPerformance,
       }) as Record<PermissionKey, boolean>,
     [
       canViewStaff,
-      canSchedule,
       canManageRoles,
       canManageStaff,
       canOnboarding,
-      canWriteups,
+      canSchedule,
+      canViewPayroll,
       canPerformance,
     ],
   );
 
-  // Lifted local state (survives tab switches; mock only).
-  const [shifts, setShifts] = useState<ShiftItem[]>([]);
-  const [internalNote, setInternalNote] = useState(
-    () => staff?.employment.notes ?? "",
+  // Editable draft — a clone so edits don't mutate the store until saved.
+  const [draft, setDraft] = useState<StaffProfile | null>(() =>
+    staff ? { ...staff } : null,
   );
-  const [noteLog, setNoteLog] = useState<NoteEntry[]>([]);
 
-  // Onboarding checklist (store-backed, Area F). Seed an invited hire's default.
+  // Onboarding review/activation (derived pending-review state).
+  const onboardingInstance = useOnboardingInstance(staffId);
+  const pendingReview =
+    staff?.status === "invited" &&
+    Boolean(onboardingInstance?.submittedAt) &&
+    !onboardingInstance?.reviewedAt;
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [, bumpProfile] = useReducer((x: number) => x + 1, 0);
+
+  // Onboarding checklist (store-backed). Seed an invited hire's default.
   const onboarding = useOnboarding(staff?.id);
   useEffect(() => {
     if (
@@ -155,7 +178,7 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
     return staff && staff.status !== "invited" ? 100 : 0;
   }, [onboarding, staff]);
 
-  const [active, setActive] = useState("overview");
+  const [active, setActive] = useState("profile");
 
   if (!staff) {
     return (
@@ -178,7 +201,46 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
     );
   }
 
-  const visibleTabs = TAB_DEFS.filter((t) => allowed[t.require]);
+  const workingDraft = draft ?? staff;
+  const dirty = JSON.stringify(workingDraft) !== JSON.stringify(staff);
+
+  const update: SectionUpdate = (key, value) =>
+    setDraft((d) => ({ ...(d ?? staff), [key]: value }));
+
+  function onRoleChange(role: FacilityStaffRole) {
+    setDraft((d) => {
+      const base = d ?? staff;
+      if (!base) return d;
+      const additionalRoles = base.additionalRoles.filter((r) => r !== role);
+      return {
+        ...base,
+        primaryRole: role,
+        additionalRoles,
+        serviceAssignments: Array.from(
+          new Set([
+            ...ROLE_PRESETS[role].services,
+            ...additionalRoles.flatMap((r) => ROLE_PRESETS[r].services),
+          ]),
+        ),
+        notifications: buildDefaultNotifications(role),
+        permissionOverrides: {},
+      };
+    });
+  }
+
+  const saveProfile = () => {
+    if (!draft) return;
+    upsertFacilityStaff(draft);
+    bumpProfile();
+    toast.success(`${fullNameOf(draft)}'s profile updated`);
+  };
+  const discard = () => setDraft({ ...staff });
+
+  const visibleTabs = TAB_DEFS.filter(
+    (t) =>
+      allowed[t.require] &&
+      (t.id !== "offboarding" || staff.status === "terminated"),
+  );
   const status = STATUS_META[staff.status];
   const locationLabels = staff.assignedLocations
     .map((id) => FACILITY_LOCATIONS.find((l) => l.id === id)?.label)
@@ -267,6 +329,36 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
         </p>
       </div>
 
+      {/* Pending onboarding review — Review & activate */}
+      {pendingReview && canOnboarding && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/30">
+          <div className="flex items-center gap-2 text-sm">
+            <CheckCircle2 className="size-4 text-emerald-600" />
+            <span className="font-medium">
+              Onboarding complete — pending review
+            </span>
+          </div>
+          <Button
+            size="sm"
+            className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+            onClick={() => setReviewOpen(true)}
+          >
+            Review &amp; activate
+          </Button>
+        </div>
+      )}
+
+      <ReviewActivateDialog
+        profile={reviewOpen ? staff : null}
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        onActivated={(next) => {
+          upsertFacilityStaff(next);
+          setDraft({ ...next });
+          bumpProfile();
+        }}
+      />
+
       {/* Tabs */}
       <Tabs value={active} onValueChange={setActive}>
         <TabsList className="flex-wrap">
@@ -277,40 +369,23 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
           ))}
         </TabsList>
 
-        <TabsContent value="overview" className="mt-4">
-          <OverviewTab
-            staff={staff}
-            locationLabels={locationLabels}
-            onboardingPct={onboardingPct}
-          />
+        <TabsContent value="profile" className="mt-4">
+          <ProfileSection draft={workingDraft} update={update} />
         </TabsContent>
 
-        {allowed.scheduling_view_all && (
-          <TabsContent value="schedule" className="mt-4">
-            <ScheduleTab
-              shifts={shifts}
-              onAdd={(shift) =>
-                setShifts((prev) => [
-                  ...prev,
-                  { ...shift, id: `sh-${prev.length}-${shift.date}` },
-                ])
-              }
-              onRemove={(id) =>
-                setShifts((prev) => prev.filter((s) => s.id !== id))
-              }
+        {allowed.manage_roles && (
+          <TabsContent value="roles" className="mt-4">
+            <StaffRolesTab
+              draft={workingDraft}
+              update={update}
+              onRoleChange={onRoleChange}
             />
           </TabsContent>
         )}
 
-        {allowed.manage_roles && (
-          <TabsContent value="permissions" className="mt-4">
-            <StaffPermissionEditor staffId={staff.id} />
-          </TabsContent>
-        )}
-
         {allowed.manage_staff && (
-          <TabsContent value="documents" className="mt-4">
-            <EmployeeFilesTab profile={staff} />
+          <TabsContent value="locations" className="mt-4">
+            <LocationsSection draft={workingDraft} update={update} />
           </TabsContent>
         )}
 
@@ -320,95 +395,73 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
           </TabsContent>
         )}
 
-        {allowed.manage_writeups && (
-          <TabsContent value="writeups" className="mt-4">
-            <WriteUpsTab profile={staff} />
+        {allowed.manage_roles && (
+          <TabsContent value="access" className="mt-4">
+            <AccessSection draft={workingDraft} update={update} />
           </TabsContent>
         )}
 
-        <TabsContent value="notes" className="mt-4">
-          <NotesTab
-            internalNote={internalNote}
-            onSaveInternal={setInternalNote}
-            log={noteLog}
-            onAddLog={(body) =>
-              setNoteLog((prev) => [
-                {
-                  id: `n-${prev.length}`,
-                  body,
-                  at: new Date().toISOString(),
-                },
-                ...prev,
-              ])
-            }
-          />
-        </TabsContent>
+        {allowed.scheduling_view_all && (
+          <TabsContent value="availability" className="mt-4">
+            <StaffAvailabilityTab staff={staff} />
+          </TabsContent>
+        )}
+
+        {allowed.manage_staff && (
+          <TabsContent value="notifications" className="mt-4">
+            <NotificationsSection draft={workingDraft} update={update} />
+          </TabsContent>
+        )}
+
+        {allowed.view_payroll && (
+          <TabsContent value="payroll" className="mt-4">
+            <PayrollSection draft={workingDraft} update={update} />
+          </TabsContent>
+        )}
+
+        {allowed.manage_staff && (
+          <TabsContent value="documents" className="mt-4">
+            <StaffDocumentsTab staff={staff} />
+          </TabsContent>
+        )}
 
         {allowed.view_staff_performance && (
           <TabsContent value="performance" className="mt-4">
             <PerformanceTab profile={staff} onboardingPct={onboardingPct} />
           </TabsContent>
         )}
+
+        {allowed.manage_onboarding && staff.status === "terminated" && (
+          <TabsContent value="offboarding" className="mt-4">
+            <OffboardingTab staff={staff} />
+          </TabsContent>
+        )}
       </Tabs>
-    </div>
-  );
-}
 
-function OverviewTab({
-  staff,
-  locationLabels,
-  onboardingPct,
-}: {
-  staff: StaffProfile;
-  locationLabels: string[];
-  onboardingPct: number;
-}) {
-  return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <div className="border-border/60 bg-card rounded-xl border p-4">
-        <div className="mb-3 text-sm font-semibold">Contact</div>
-        <dl className="space-y-2 text-sm">
-          <Row label="Email" value={staff.email} />
-          <Row label="Phone" value={staff.phone || "—"} />
-          <Row
-            label="Employment"
-            value={staff.employment.employmentType.replace("_", "-")}
-          />
-          <Row
-            label="Locations"
-            value={
-              locationLabels.length === FACILITY_LOCATIONS.length
-                ? "All locations"
-                : locationLabels.join(" · ") || "—"
-            }
-          />
-        </dl>
-      </div>
+      {/* Tasks — open work assigned to this employee, for manager context.
+          Active employees only (departed staff have no live assignments). */}
+      {staff.status === "active" && <StaffTasksSection staff={staff} />}
 
-      <div className="border-border/60 bg-card rounded-xl border p-4">
-        <div className="mb-3 text-sm font-semibold">At a glance</div>
-        <dl className="space-y-2 text-sm">
-          <Row
-            label="Primary role"
-            value={ROLE_META[staff.primaryRole].label}
-          />
-          <Row
-            label="Upcoming shifts"
-            value={String(staff.upcomingAppointments)}
-          />
-          <Row label="Open tasks" value={String(staff.openTasks)} />
-          <Row label="Onboarding" value={`${onboardingPct}%`} />
-        </dl>
-      </div>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="truncate font-medium">{value}</dd>
+      {/* Sticky save bar — appears whenever the profile draft has edits */}
+      {dirty && (
+        <div className="bg-card sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 shadow-lg">
+          <span className="text-muted-foreground text-sm">
+            You have unsaved changes to {staff.firstName}&apos;s profile.
+          </span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={discard}>
+              Discard
+            </Button>
+            <Button
+              size="sm"
+              className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={saveProfile}
+            >
+              <Save className="size-4" /> Save changes
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

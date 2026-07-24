@@ -280,3 +280,49 @@ export function dailyLaborCost(
     .map(([date, v]) => ({ date, ...v }))
     .sort((a, b) => a.date.localeCompare(b.date));
 }
+
+// ─── Punctuality (on-time %) ─────────────────────────────────────────────────
+
+export interface PunctualityStats {
+  /** Scheduled shifts in the range. */
+  scheduled: number;
+  /** …of which had a time-clock entry (only these carry a real punctuality signal). */
+  clocked: number;
+  onTime: number;
+  late: number;
+  /** onTime ÷ clocked — over shifts with actual clock data (excludes unclocked shifts). */
+  onTimeRate: number;
+}
+
+/**
+ * On-time / late rollup for the range, from shift ↔ time-clock reconciliation.
+ * The rate is computed over CLOCKED shifts only — shifts with no time-clock
+ * entry carry no punctuality signal (they'd otherwise be miscounted as
+ * no-shows), so they are excluded from the denominator.
+ */
+export function punctuality(
+  shifts: ScheduleShift[],
+  entries: TimeClockEntry[],
+  range: { start: string; end: string },
+): PunctualityStats {
+  const scoped = shifts.filter(
+    (s) =>
+      s.status !== "cancelled" &&
+      s.employeeId &&
+      inRange(s.date, range.start, range.end),
+  );
+  const { records } = reconcileBatch(scoped, entries);
+  const clocked = records.filter((r) => r.actualHours !== null);
+  const onTime = clocked.filter((r) => r.status === "on_time").length;
+  const late = clocked.filter((r) => r.status === "late").length;
+  return {
+    scheduled: records.length,
+    clocked: clocked.length,
+    onTime,
+    late,
+    onTimeRate:
+      clocked.length > 0
+        ? Math.round((onTime / clocked.length) * 1000) / 10
+        : 0,
+  };
+}

@@ -11,6 +11,14 @@ import {
   Legend,
 } from "recharts";
 import { hexFromKey } from "@/lib/hq/location-styles";
+import {
+  ReportTooltip,
+  axisTick,
+  axisLabel,
+  gridProps,
+  legendProps,
+  tickFmt,
+} from "@/components/reports/chart-kit";
 
 interface Props {
   /** One focused location's boarding + daycare occupancy over time. */
@@ -27,30 +35,16 @@ export function OccupancyTrendChart({ data, height = 280 }: Props) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
-        <XAxis
-          dataKey="week"
-          tick={{ fontSize: 10, fill: "currentColor" }}
-          stroke="currentColor"
-          className="text-muted-foreground"
-        />
+        <CartesianGrid {...gridProps} />
+        <XAxis dataKey="week" tick={axisTick} label={axisLabel("Week", "x")} />
         <YAxis
           domain={[0, 100]}
-          tickFormatter={(v) => `${v}%`}
-          tick={{ fontSize: 11, fill: "currentColor" }}
-          stroke="currentColor"
-          className="text-muted-foreground"
+          tick={axisTick}
+          tickFormatter={tickFmt("percent")}
+          label={axisLabel("Occupancy %", "y")}
         />
-        <Tooltip
-          contentStyle={{
-            borderRadius: 8,
-            border: "1px solid hsl(var(--border))",
-            background: "hsl(var(--popover))",
-            fontSize: 12,
-          }}
-          formatter={(value, name) => [`${Number(value ?? 0)}%`, name]}
-        />
-        <Legend wrapperStyle={{ fontSize: 12 }} />
+        <Tooltip content={<ReportTooltip format="percent" />} />
+        <Legend {...legendProps} />
         {SERIES.map((s) => (
           <Line
             key={s.key}

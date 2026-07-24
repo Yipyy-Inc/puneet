@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,8 +18,13 @@ import {
   revenueTrend12Months,
   weeklyOccupancy,
   serviceMix,
+  locationComparisonData,
   type WeeklyOccupancyRow,
 } from "@/data/hq-analytics";
+import { formatCurrency } from "@/lib/format";
+import { HQStaffPerformanceReport } from "./reports/HQStaffPerformanceReport";
+import { HQClientActivityReport } from "./reports/HQClientActivityReport";
+import { HQTransferImpactReport } from "./reports/HQTransferImpactReport";
 
 const RevenueTrendLineChart = dynamic(
   () =>
@@ -56,11 +62,6 @@ function ChartSkeleton({ height }: { height: number }) {
 
 interface Props {
   locations: Location[];
-  monthlyRevenueByLocation: {
-    locationId: string;
-    locationName: string;
-    revenue: number;
-  }[];
 }
 
 function flattenWeekly(
@@ -73,11 +74,37 @@ function flattenWeekly(
   }));
 }
 
-export function HQAnalyticsPanel({
-  locations,
-  monthlyRevenueByLocation,
-}: Props) {
-  // Underperformer detection: > 1 standard deviation below mean revenue.
+const ALL = "all";
+
+export function HQAnalyticsPanel({ locations }: Props) {
+  const [selected, setSelected] = useState<string>(ALL);
+  const isAll = selected === ALL;
+
+  // Per-location revenue this month, derived from the location-comparison set.
+  const monthlyRevenueByLocation = useMemo(
+    () =>
+      locationComparisonData.map((l) => ({
+        locationId: l.locationId,
+        locationName: l.name,
+        revenue: l.revenue,
+      })),
+    [],
+  );
+
+  // Locations in scope for every chart — the whole network, or the one picked.
+  const shownLocations = useMemo(
+    () => (isAll ? locations : locations.filter((l) => l.id === selected)),
+    [isAll, locations, selected],
+  );
+  const shownRevenue = useMemo(
+    () =>
+      isAll
+        ? monthlyRevenueByLocation
+        : monthlyRevenueByLocation.filter((r) => r.locationId === selected),
+    [isAll, monthlyRevenueByLocation, selected],
+  );
+
+  // Underperformer / top-performer detection (network view only).
   const revenues = monthlyRevenueByLocation.map((r) => r.revenue);
   const mean = revenues.reduce((a, b) => a + b, 0) / revenues.length;
   const sd =
@@ -85,20 +112,22 @@ export function HQAnalyticsPanel({
       revenues.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) /
         revenues.length,
     ) || 1;
-  const underperformers = monthlyRevenueByLocation
-    .filter((r) => r.revenue < mean - sd * 0.6)
-    .map((r) => r.locationId);
+  const underperformers = isAll
+    ? monthlyRevenueByLocation
+        .filter((r) => r.revenue < mean - sd * 0.6)
+        .map((r) => r.locationId)
+    : [];
   const topPerformerId = monthlyRevenueByLocation.reduce((top, r) =>
     r.revenue > top.revenue ? r : top,
   ).locationId;
 
-  // Month-over-month delta on the network
+  // Network month-over-month delta.
   const trend = revenueTrend12Months as unknown as {
     month: string;
     [locationId: string]: number | string;
   }[];
   const totalsByMonth = trend.map((row) =>
-    locations.reduce(
+    shownLocations.reduce(
       (sum, l) =>
         sum + (typeof row[l.id] === "number" ? (row[l.id] as number) : 0),
       0,
@@ -112,15 +141,66 @@ export function HQAnalyticsPanel({
       ? 0
       : ((lastMonthTotal - previousMonthTotal) / previousMonthTotal) * 100;
 
-  // Top service across the network
-  const topService = serviceMix.reduce((top, s) =>
-    s.total > top.total ? s : top,
+  // Service mix — network totals, or the selected location's slice.
+  const scopedServiceMix = useMemo(
+    () =>
+      isAll
+        ? serviceMix
+        : serviceMix
+            .map((s) => ({
+              ...s,
+              total: s.byLocation[selected] ?? 0,
+            }))
+            .filter((s) => s.total > 0),
+    [isAll, selected],
   );
-  const totalServiceRev = serviceMix.reduce((sum, s) => sum + s.total, 0);
+  const topService = scopedServiceMix.length
+    ? scopedServiceMix.reduce((top, s) => (s.total > top.total ? s : top))
+    : null;
+  const totalServiceRev = scopedServiceMix.reduce((sum, s) => sum + s.total, 0);
 
   return (
     <div className="space-y-6">
-      {/* ── 12-month revenue trend ──────────────────────────────────────── */}
+      {/* ── Location filter — drives every chart & section below ── */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-muted-foreground text-sm font-medium">
+          Location:
+        </span>
+        <button
+          onClick={() => setSelected(ALL)}
+          className={cn(
+            "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
+            isAll
+              ? "bg-foreground text-background border-transparent"
+              : "text-muted-foreground hover:bg-muted",
+          )}
+        >
+          All Locations
+        </button>
+        {locations.map((loc) => {
+          const active = selected === loc.id;
+          return (
+            <button
+              key={loc.id}
+              onClick={() => setSelected(loc.id)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
+                active
+                  ? "bg-foreground text-background border-transparent"
+                  : "text-muted-foreground hover:bg-muted",
+              )}
+            >
+              <span
+                className="size-2 rounded-full"
+                style={{ backgroundColor: loc.color }}
+              />
+              {loc.name}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── 12-month revenue trend ── */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -129,7 +209,9 @@ export function HQAnalyticsPanel({
                 Revenue Trend · 12 Months
               </CardTitle>
               <p className="text-muted-foreground text-xs">
-                Each line is one location — spot seasonality and divergence
+                {isAll
+                  ? "Each line is one location — spot seasonality and divergence"
+                  : "Selected location's monthly revenue"}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -151,17 +233,17 @@ export function HQAnalyticsPanel({
                 {monthlyDelta.toFixed(1)}% MoM
               </Badge>
               <Badge variant="outline" className="text-[11px]">
-                ${(lastMonthTotal / 1000).toFixed(1)}k last month
+                {formatCurrency(lastMonthTotal)} last month
               </Badge>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <RevenueTrendLineChart data={trend} locations={locations} />
+          <RevenueTrendLineChart data={trend} locations={shownLocations} />
         </CardContent>
       </Card>
 
-      {/* ── Revenue per location bar + service mix donut ───────────────── */}
+      {/* ── Revenue per location + service mix ── */}
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
@@ -171,7 +253,9 @@ export function HQAnalyticsPanel({
                   Revenue by Location · This Month
                 </CardTitle>
                 <p className="text-muted-foreground text-xs">
-                  Side by side — who&apos;s leading, who&apos;s lagging
+                  {isAll
+                    ? "Side by side — who's leading, who's lagging"
+                    : "Selected location"}
                 </p>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -189,7 +273,7 @@ export function HQAnalyticsPanel({
                     </Badge>
                   );
                 })}
-                {topPerformerId && (
+                {isAll && topPerformerId && (
                   <Badge className="gap-1 bg-amber-500 text-[11px] text-white hover:bg-amber-500">
                     <Trophy className="size-3" />
                     {
@@ -203,8 +287,8 @@ export function HQAnalyticsPanel({
           </CardHeader>
           <CardContent>
             <RevenueByLocationBar
-              data={monthlyRevenueByLocation}
-              locations={locations}
+              data={shownRevenue}
+              locations={shownLocations}
             />
           </CardContent>
         </Card>
@@ -215,22 +299,30 @@ export function HQAnalyticsPanel({
               Service Mix
             </CardTitle>
             <p className="text-muted-foreground text-xs">
-              Revenue by service · all locations
+              Revenue by service ·{" "}
+              {isAll
+                ? "all locations"
+                : (locations.find((l) => l.id === selected)?.name ?? "")}
             </p>
           </CardHeader>
           <CardContent>
-            <ServiceMixChart data={serviceMix} />
-            <div className="bg-muted/40 mt-2 rounded-md px-3 py-2 text-[11px]">
-              <span className="text-muted-foreground">Top earner:</span>{" "}
-              <strong>{topService.service}</strong> · $
-              {topService.total.toLocaleString()} (
-              {((topService.total / totalServiceRev) * 100).toFixed(0)}%)
-            </div>
+            <ServiceMixChart data={scopedServiceMix} />
+            {topService && (
+              <div className="bg-muted/40 mt-2 rounded-md px-3 py-2 text-[11px]">
+                <span className="text-muted-foreground">Top earner:</span>{" "}
+                <strong>{topService.service}</strong> ·{" "}
+                {formatCurrency(topService.total)} (
+                {totalServiceRev > 0
+                  ? ((topService.total / totalServiceRev) * 100).toFixed(0)
+                  : 0}
+                %)
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* ── Weekly occupancy split: daycare vs boarding ─────────────────── */}
+      {/* ── Weekly occupancy: daycare vs boarding ── */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-2">
@@ -247,7 +339,7 @@ export function HQAnalyticsPanel({
           <CardContent>
             <WeeklyOccupancyChart
               data={flattenWeekly(weeklyOccupancy, "daycare")}
-              locations={locations}
+              locations={shownLocations}
             />
           </CardContent>
         </Card>
@@ -267,7 +359,7 @@ export function HQAnalyticsPanel({
           <CardContent>
             <WeeklyOccupancyChart
               data={flattenWeekly(weeklyOccupancy, "boarding")}
-              locations={locations.filter((l) =>
+              locations={shownLocations.filter((l) =>
                 l.services.includes("boarding"),
               )}
             />
@@ -275,7 +367,7 @@ export function HQAnalyticsPanel({
         </Card>
       </div>
 
-      {/* ── Service revenue per location stacked breakdown ──────────────── */}
+      {/* ── Service revenue per location stacked ── */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold">
@@ -286,7 +378,7 @@ export function HQAnalyticsPanel({
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
-          {serviceMix.map((row) => {
+          {scopedServiceMix.map((row) => {
             const total = row.total || 1;
             return (
               <div key={row.service} className="space-y-1.5">
@@ -299,18 +391,18 @@ export function HQAnalyticsPanel({
                     {row.service}
                   </span>
                   <span className="text-muted-foreground tabular-nums">
-                    ${row.total.toLocaleString()}
+                    {formatCurrency(row.total)}
                   </span>
                 </div>
                 <div className="bg-muted flex h-5 w-full overflow-hidden rounded-md">
-                  {locations.map((loc) => {
+                  {shownLocations.map((loc) => {
                     const v = row.byLocation[loc.id] ?? 0;
                     if (v <= 0) return null;
                     const pct = (v / total) * 100;
                     return (
                       <div
                         key={loc.id}
-                        title={`${loc.name}: $${v.toLocaleString()} (${pct.toFixed(0)}%)`}
+                        title={`${loc.name}: ${formatCurrency(v)} (${pct.toFixed(0)}%)`}
                         className="h-full transition-all duration-200 hover:opacity-80"
                         style={{ width: `${pct}%`, backgroundColor: loc.color }}
                       />
@@ -318,7 +410,7 @@ export function HQAnalyticsPanel({
                   })}
                 </div>
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px]">
-                  {locations.map((loc) => {
+                  {shownLocations.map((loc) => {
                     const v = row.byLocation[loc.id] ?? 0;
                     if (v <= 0) return null;
                     return (
@@ -330,7 +422,7 @@ export function HQAnalyticsPanel({
                           className="size-1.5 rounded-full"
                           style={{ backgroundColor: loc.color }}
                         />
-                        {loc.shortCode} ${(v / 1000).toFixed(1)}k
+                        {loc.shortCode} {formatCurrency(v)}
                       </span>
                     );
                   })}
@@ -340,6 +432,22 @@ export function HQAnalyticsPanel({
           })}
         </CardContent>
       </Card>
+
+      {/* ── Staff performance + client activity + transfer impact ── */}
+      <HQStaffPerformanceReport
+        locations={locations}
+        selectedLocation={selected}
+      />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <HQClientActivityReport
+          locations={locations}
+          selectedLocation={selected}
+        />
+        <HQTransferImpactReport
+          locations={locations}
+          selectedLocation={selected}
+        />
+      </div>
     </div>
   );
 }

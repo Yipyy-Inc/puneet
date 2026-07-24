@@ -35,12 +35,28 @@ import {
   getSalesByStaff,
   getSalesByCategory,
   getSalesLinkedToServices,
+  getInventorySummary,
+  getServiceAttachRate,
   type TopProduct,
   type SalesByStaff,
   type SalesByCategory,
   type SalesLinkedToServices,
+  type LowStockItem,
+  type ServiceAttachRate,
 } from "@/lib/retail-reports";
 import { getAllTransactions, type Transaction } from "@/data/retail";
+import { downloadReportCsv } from "@/lib/report-export";
+import { formatCurrency, formatCount, formatPercent } from "@/lib/format";
+import {
+  ReportTooltip,
+  axisLabel,
+  axisTick,
+  gridProps,
+  legendProps,
+  tickFmt,
+  chartColor,
+} from "@/components/reports/chart-kit";
+import { Boxes, AlertTriangle, Link2 } from "lucide-react";
 import {
   getPaymentMethodLabel,
   formatTransactionTimestamp,
@@ -128,6 +144,13 @@ export default function RetailReportsPage() {
     [startDate, endDate],
   );
 
+  const inventory = useMemo(() => getInventorySummary(), []);
+
+  const attach = useMemo(
+    () => getServiceAttachRate(startDate, endDate),
+    [startDate, endDate],
+  );
+
   // Calculate totals
   const totalSales = salesByPeriod.reduce((sum, item) => sum + item.sales, 0);
   const totalTransactions = salesByPeriod.reduce(
@@ -175,21 +198,27 @@ export default function RetailReportsPage() {
       key: "revenue",
       label: "Revenue",
       defaultVisible: true,
-      render: (item) => `$${item.revenue.toFixed(2)}`,
+      render: (item) => formatCurrency(item.revenue),
     },
     {
       key: "cost",
       label: "Cost",
       defaultVisible: true,
-      render: (item) => `$${item.cost.toFixed(2)}`,
+      render: (item) => formatCurrency(item.cost),
     },
     {
       key: "profit",
       label: "Profit",
       defaultVisible: true,
       render: (item) => (
-        <span className={item.profit >= 0 ? "text-green-600" : "text-red-600"}>
-          ${item.profit.toFixed(2)}
+        <span
+          className={
+            item.profit >= 0
+              ? "text-emerald-600 dark:text-emerald-400"
+              : "text-red-600 dark:text-red-400"
+          }
+        >
+          {formatCurrency(item.profit)}
         </span>
       ),
     },
@@ -202,7 +231,7 @@ export default function RetailReportsPage() {
           variant={item.profitMargin >= 30 ? "default" : "secondary"}
           className="gap-1"
         >
-          {item.profitMargin.toFixed(1)}%
+          {formatPercent(item.profitMargin)}
         </Badge>
       ),
     },
@@ -228,13 +257,13 @@ export default function RetailReportsPage() {
       key: "revenue",
       label: "Revenue",
       defaultVisible: true,
-      render: (item) => `$${item.revenue.toFixed(2)}`,
+      render: (item) => formatCurrency(item.revenue),
     },
     {
       key: "averageTransaction",
       label: "Avg Transaction",
       defaultVisible: true,
-      render: (item) => `$${item.averageTransaction.toFixed(2)}`,
+      render: (item) => formatCurrency(item.averageTransaction),
     },
   ];
 
@@ -258,15 +287,21 @@ export default function RetailReportsPage() {
       key: "revenue",
       label: "Revenue",
       defaultVisible: true,
-      render: (item) => `$${item.revenue.toFixed(2)}`,
+      render: (item) => formatCurrency(item.revenue),
     },
     {
       key: "profit",
       label: "Profit",
       defaultVisible: true,
       render: (item) => (
-        <span className={item.profit >= 0 ? "text-green-600" : "text-red-600"}>
-          ${item.profit.toFixed(2)}
+        <span
+          className={
+            item.profit >= 0
+              ? "text-emerald-600 dark:text-emerald-400"
+              : "text-red-600 dark:text-red-400"
+          }
+        >
+          {formatCurrency(item.profit)}
         </span>
       ),
     },
@@ -279,9 +314,87 @@ export default function RetailReportsPage() {
           variant={item.profitMargin >= 30 ? "default" : "secondary"}
           className="gap-1"
         >
-          {item.profitMargin.toFixed(1)}%
+          {formatPercent(item.profitMargin)}
         </Badge>
       ),
+    },
+  ];
+
+  const lowStockColumns: ColumnDef<LowStockItem>[] = [
+    { key: "name", label: "Product / Variant", defaultVisible: true },
+    { key: "sku", label: "SKU", defaultVisible: true },
+    {
+      key: "stock",
+      label: "In Stock",
+      defaultVisible: true,
+      render: (item) => (
+        <span
+          className={
+            item.stock <= 0
+              ? "font-semibold text-red-600 dark:text-red-400"
+              : "font-medium text-amber-600 dark:text-amber-400"
+          }
+        >
+          {formatCount(item.stock)}
+        </span>
+      ),
+    },
+    {
+      key: "minStock",
+      label: "Reorder At",
+      defaultVisible: true,
+      render: (item) => formatCount(item.minStock),
+    },
+    {
+      key: "status",
+      label: "Status",
+      defaultVisible: true,
+      render: (item) => (
+        <Badge variant={item.stock <= 0 ? "destructive" : "secondary"}>
+          {item.stock <= 0 ? "Out of stock" : "Low stock"}
+        </Badge>
+      ),
+    },
+  ];
+
+  const attachColumns: ColumnDef<ServiceAttachRate>[] = [
+    {
+      key: "serviceType",
+      label: "Service",
+      defaultVisible: true,
+      render: (item) => (
+        <Badge variant="outline" className="capitalize">
+          {item.serviceType}
+        </Badge>
+      ),
+    },
+    {
+      key: "serviceTransactions",
+      label: "Service Txns",
+      defaultVisible: true,
+      render: (item) => formatCount(item.serviceTransactions),
+    },
+    {
+      key: "withRetailAddOn",
+      label: "With Add-On",
+      defaultVisible: true,
+      render: (item) => formatCount(item.withRetailAddOn),
+    },
+    {
+      key: "attachRate",
+      label: "Attach Rate",
+      defaultVisible: true,
+      render: (item) => (
+        <Badge variant={item.attachRate >= 25 ? "default" : "secondary"}>
+          {formatPercent(item.attachRate)}
+        </Badge>
+      ),
+    },
+    {
+      key: "addOnRevenue",
+      label: "Add-On Revenue",
+      defaultVisible: true,
+      render: (item) => formatCurrency(item.addOnRevenue),
     },
   ];
 
@@ -310,9 +423,55 @@ export default function RetailReportsPage() {
       key: "revenue",
       label: "Revenue",
       defaultVisible: true,
-      render: (item) => `$${item.revenue.toFixed(2)}`,
+      render: (item) => formatCurrency(item.revenue),
     },
   ];
+
+  // Export the currently-displayed data (all sections, current range) as one
+  // CSV. Reflects the active date range via the same memoized selectors that
+  // feed the charts — not an empty template.
+  const handleExport = () => {
+    const rangeLabel =
+      dateRange === "custom"
+        ? `${customStartDate || "start"}_${customEndDate || "end"}`
+        : dateRange;
+    const rows: (string | number)[][] = [];
+    rows.push(["Retail Reports", rangeLabel]);
+    rows.push([]);
+    rows.push([`Sales by ${period}`]);
+    rows.push(["Date", "Sales", "Transactions", "Items"]);
+    for (const s of salesByPeriod)
+      rows.push([s.date, s.sales, s.transactions, s.items]);
+    rows.push([]);
+    rows.push(["Top Products"]);
+    rows.push(["Product", "SKU", "Qty Sold", "Revenue", "Profit", "Margin %"]);
+    for (const p of topProducts)
+      rows.push([
+        p.productName,
+        p.sku,
+        p.quantitySold,
+        p.revenue,
+        p.profit,
+        p.profitMargin,
+      ]);
+    rows.push([]);
+    rows.push(["Sales by Category"]);
+    rows.push(["Category", "Revenue", "Transactions", "Items", "Profit"]);
+    for (const c of salesByCategory)
+      rows.push([c.category, c.revenue, c.transactions, c.itemsSold, c.profit]);
+    rows.push([]);
+    rows.push(["Sales by Staff"]);
+    rows.push(["Staff", "Transactions", "Revenue", "Items", "Avg Txn"]);
+    for (const s of salesByStaff)
+      rows.push([
+        s.staffName,
+        s.transactions,
+        s.revenue,
+        s.itemsSold,
+        s.averageTransaction,
+      ]);
+    downloadReportCsv(`retail-reports_${rangeLabel}.csv`, rows);
+  };
 
   return (
     <div className="space-y-6">
@@ -324,7 +483,7 @@ export default function RetailReportsPage() {
             Comprehensive sales, inventory, and performance analytics
           </p>
         </div>
-        <Button>
+        <Button onClick={handleExport}>
           <Download className="mr-2 size-4" />
           Export All Reports
         </Button>
@@ -410,9 +569,11 @@ export default function RetailReportsPage() {
             <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalSales.toFixed(2)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(totalSales)}
+            </div>
             <p className="text-muted-foreground text-xs">
-              {totalTransactions} transactions
+              {formatCount(totalTransactions)} transactions
             </p>
           </CardContent>
         </Card>
@@ -422,7 +583,7 @@ export default function RetailReportsPage() {
             <Package className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalItems}</div>
+            <div className="text-2xl font-bold">{formatCount(totalItems)}</div>
             <p className="text-muted-foreground text-xs">Total units</p>
           </CardContent>
         </Card>
@@ -432,9 +593,11 @@ export default function RetailReportsPage() {
             <TrendingUp className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalProfit.toFixed(2)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(totalProfit)}
+            </div>
             <p className="text-muted-foreground text-xs">
-              {averageProfitMargin.toFixed(1)}% avg margin
+              {formatPercent(averageProfitMargin)} avg margin
             </p>
           </CardContent>
         </Card>
@@ -447,10 +610,9 @@ export default function RetailReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              $
-              {totalTransactions > 0
-                ? (totalSales / totalTransactions).toFixed(2)
-                : "0.00"}
+              {formatCurrency(
+                totalTransactions > 0 ? totalSales / totalTransactions : 0,
+              )}
             </div>
             <p className="text-muted-foreground text-xs">Per transaction</p>
           </CardContent>
@@ -466,6 +628,7 @@ export default function RetailReportsPage() {
           <TabsTrigger value="staff">Sales by Staff</TabsTrigger>
           <TabsTrigger value="category">Sales by Category</TabsTrigger>
           <TabsTrigger value="services">Linked to Services</TabsTrigger>
+          <TabsTrigger value="inventory">Inventory</TabsTrigger>
           <TabsTrigger value="reconciliation">Reconciliation</TabsTrigger>
         </TabsList>
 
@@ -483,9 +646,18 @@ export default function RetailReportsPage() {
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
                 <LineChart data={salesByPeriod}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid {...gridProps} />
                   <XAxis
                     dataKey="date"
+                    tick={axisTick}
+                    label={axisLabel(
+                      period === "month"
+                        ? "Month"
+                        : period === "week"
+                          ? "Week"
+                          : "Date",
+                      "x",
+                    )}
                     tickFormatter={(value) => {
                       if (period === "day") {
                         return new Date(value).toLocaleDateString("en-US", {
@@ -499,27 +671,34 @@ export default function RetailReportsPage() {
                       }
                     }}
                   />
-                  <YAxis />
-                  <Tooltip
-                    formatter={(value: unknown) => {
-                      const numValue = typeof value === "number" ? value : 0;
-                      return `$${numValue.toFixed(2)}`;
-                    }}
+                  <YAxis
+                    tick={axisTick}
+                    tickFormatter={tickFmt("compactCurrency")}
+                    label={axisLabel("Sales", "y")}
                   />
-                  <Legend />
+                  <Tooltip
+                    content={
+                      <ReportTooltip
+                        format={{ sales: "currency", transactions: "number" }}
+                      />
+                    }
+                  />
+                  <Legend {...legendProps} />
                   <Line
                     type="monotone"
                     dataKey="sales"
-                    stroke="#8884d8"
-                    name="Sales ($)"
+                    stroke={chartColor(0)}
+                    name="Sales"
                     strokeWidth={2}
+                    dot={false}
                   />
                   <Line
                     type="monotone"
                     dataKey="transactions"
-                    stroke="#82ca9d"
+                    stroke={chartColor(1)}
                     name="Transactions"
                     strokeWidth={2}
+                    dot={false}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -594,9 +773,18 @@ export default function RetailReportsPage() {
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
                 <BarChart data={profitMarginReport}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid {...gridProps} />
                   <XAxis
                     dataKey="period"
+                    tick={axisTick}
+                    label={axisLabel(
+                      period === "month"
+                        ? "Month"
+                        : period === "week"
+                          ? "Week"
+                          : "Date",
+                      "x",
+                    )}
                     tickFormatter={(value) => {
                       if (period === "day") {
                         return new Date(value).toLocaleDateString("en-US", {
@@ -610,17 +798,16 @@ export default function RetailReportsPage() {
                       }
                     }}
                   />
-                  <YAxis />
-                  <Tooltip
-                    formatter={(value: unknown) => {
-                      const numValue = typeof value === "number" ? value : 0;
-                      return `$${numValue.toFixed(2)}`;
-                    }}
+                  <YAxis
+                    tick={axisTick}
+                    tickFormatter={tickFmt("compactCurrency")}
+                    label={axisLabel("Amount", "y")}
                   />
-                  <Legend />
-                  <Bar dataKey="revenue" fill="#8884d8" name="Revenue" />
-                  <Bar dataKey="cost" fill="#ffc658" name="Cost" />
-                  <Bar dataKey="profit" fill="#82ca9d" name="Profit" />
+                  <Tooltip content={<ReportTooltip format="currency" />} />
+                  <Legend {...legendProps} />
+                  <Bar dataKey="revenue" fill={chartColor(0)} name="Revenue" />
+                  <Bar dataKey="cost" fill={chartColor(3)} name="Cost" />
+                  <Bar dataKey="profit" fill={chartColor(1)} name="Profit" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -669,6 +856,83 @@ export default function RetailReportsPage() {
 
         {/* Sales Linked to Services */}
         <TabsContent value="services" className="space-y-4">
+          {/* Add-on attach rate */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Add-On Attach Rate
+                </CardTitle>
+                <Link2 className="text-muted-foreground size-4" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatPercent(attach.attachRate)}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  {formatCount(attach.withRetailAddOn)} of{" "}
+                  {formatCount(attach.serviceTransactions)} service txns
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Add-On Revenue
+                </CardTitle>
+                <DollarSign className="text-muted-foreground size-4" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(attach.addOnRevenue)}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  Retail attached to services
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Service Transactions
+                </CardTitle>
+                <ShoppingBag className="text-muted-foreground size-4" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCount(attach.serviceTransactions)}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  Linked to a service
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Attach Rate by Service</CardTitle>
+              <CardDescription>
+                Share of each service&apos;s transactions that also sold a
+                retail product
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {attach.byService.length === 0 ? (
+                <div className="text-muted-foreground py-8 text-center">
+                  No service-linked transactions in this period
+                </div>
+              ) : (
+                <DataTable
+                  data={attach.byService}
+                  columns={attachColumns}
+                  searchKey="serviceType"
+                  searchPlaceholder="Search services..."
+                />
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Sales Linked to Services</CardTitle>
@@ -688,6 +952,103 @@ export default function RetailReportsPage() {
                   columns={salesLinkedToServicesColumns}
                   searchKey="serviceType"
                   searchPlaceholder="Search services..."
+                />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Inventory Value & Low Stock */}
+        <TabsContent value="inventory" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Inventory at Cost
+                </CardTitle>
+                <Boxes className="text-muted-foreground size-4" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(inventory.costValue)}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  {formatCount(inventory.skuCount)} SKUs tracked
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Retail Value
+                </CardTitle>
+                <DollarSign className="text-muted-foreground size-4" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(inventory.retailValue)}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  At current sell prices
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Potential Profit
+                </CardTitle>
+                <TrendingUp className="text-muted-foreground size-4" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(inventory.potentialProfit)}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  If all stock sells through
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Units in Stock
+                </CardTitle>
+                <Package className="text-muted-foreground size-4" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCount(inventory.totalUnits)}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  Across all products
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="size-4 text-amber-500" />
+                Low Stock ({formatCount(inventory.lowStockCount)})
+              </CardTitle>
+              <CardDescription>
+                Products &amp; variants at or below their reorder point ·{" "}
+                {formatCount(inventory.outOfStockCount)} out of stock
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {inventory.lowStock.length === 0 ? (
+                <div className="text-muted-foreground py-8 text-center">
+                  All products are above their reorder point
+                </div>
+              ) : (
+                <DataTable
+                  data={inventory.lowStock}
+                  columns={lowStockColumns}
+                  searchKey="name"
+                  searchPlaceholder="Search products..."
                 />
               )}
             </CardContent>
@@ -868,7 +1229,7 @@ function ReconciliationTable({
       label: "Amount",
       icon: DollarSign,
       defaultVisible: true,
-      render: (item) => `$${(item.total as number).toFixed(2)}`,
+      render: (item) => formatCurrency(item.total as number),
     },
     {
       key: "bookingReference",

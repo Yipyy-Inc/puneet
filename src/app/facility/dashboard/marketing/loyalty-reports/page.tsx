@@ -17,7 +17,6 @@ import {
   Users,
   Gift,
   Download,
-  Calendar,
   ArrowUpRight,
   DollarSign,
   MessageSquare,
@@ -51,13 +50,19 @@ import {
 } from "@/data/loyalty-accounts";
 import { getRedemptionsByFacility } from "@/data/loyalty-redemptions";
 import { bookings } from "@/data/bookings";
-import { computeProgramPerformance } from "@/lib/loyalty/program-metrics";
+import {
+  computeProgramPerformance,
+  pointsActivityByMonth,
+  redemptionDollarValue,
+} from "@/lib/loyalty/program-metrics";
 import { referralsOverTime } from "@/lib/loyalty/referral-metrics";
 import { computeLoyaltyRoi } from "@/lib/loyalty/roi-metrics";
+import { downloadReportCsv } from "@/lib/report-export";
 import { MemberLifecycleFunnel } from "@/components/loyalty/MemberLifecycleFunnel";
 import { RewardTypeBreakdown } from "@/components/loyalty/RewardTypeBreakdown";
 import { PointsLiabilityReport } from "@/components/loyalty/PointsLiabilityReport";
 import { BadgeAchievementReport } from "@/components/loyalty/BadgeAchievementReport";
+import { RevenueReportLoyaltySection } from "@/components/loyalty/RevenueReportLoyaltySection";
 
 // Mock facility ID - TODO: Get from context
 const MOCK_FACILITY_ID = 1;
@@ -242,41 +247,25 @@ export default function LoyaltyReportsPage() {
     };
   }, []);
 
-  // Points activity over time (last 12 months) — deterministic mock data
-  const pointsActivityData = useMemo(() => {
-    const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    const seedEarned = [
-      4200, 3100, 5800, 2900, 4700, 3500, 6100, 2400, 5300, 3800, 4900, 3200,
-    ];
-    const seedRedeemed = [
-      1800, 900, 2100, 1300, 1600, 700, 2400, 1100, 1900, 1400, 2000, 800,
-    ];
-    const now = new Date();
-    return Array.from({ length: 12 }, (_, idx) => {
-      const monthIdx = (now.getMonth() - 11 + idx + 12) % 12;
-      const earned = seedEarned[idx];
-      const redeemed = seedRedeemed[idx];
-      return {
-        month: monthNames[monthIdx],
-        earned,
-        redeemed,
-        net: earned - redeemed,
-      };
-    });
+  // Rewards issued value + count, from real redemption records.
+  const rewards = useMemo(() => {
+    const redemptions = getRedemptionsByFacility(MOCK_FACILITY_ID);
+    return {
+      count: redemptions.length,
+      value: redemptions.reduce((s, r) => s + redemptionDollarValue(r), 0),
+    };
   }, []);
+
+  // Points activity over time — real, from members' points history.
+  const pointsActivityData = useMemo(
+    () =>
+      pointsActivityByMonth(
+        customerLoyaltyData.flatMap((c) => c.pointsHistory),
+        PERF_NOW_ISO,
+        12,
+      ),
+    [],
+  );
 
   // Tier distribution
   const tierDistribution = useMemo(() => {
@@ -338,6 +327,31 @@ export default function LoyaltyReportsPage() {
     );
   }
 
+  // Export the displayed loyalty KPIs + referral series as a real CSV.
+  const handleExport = () => {
+    const rows: (string | number)[][] = [];
+    rows.push(["Loyalty & Referral Report"]);
+    rows.push([]);
+    rows.push(["ROI"]);
+    rows.push(["Incremental Revenue", roi.headlineIncrementalRevenue]);
+    rows.push(["Rewards Cost (this month)", roi.thisMonthRewardsCost]);
+    rows.push(["ROI (this month)", roi.thisMonthRoi]);
+    rows.push([]);
+    rows.push(["Program Performance"]);
+    rows.push(["Total Members", performance.totalMembers]);
+    rows.push(["Members Redeemed", performance.membersRedeemed]);
+    rows.push(["Redemption Rate %", performance.redemptionRate]);
+    rows.push(["Member Retention %", performance.memberRetention]);
+    rows.push(["Non-Member Retention %", performance.nonMemberRetention]);
+    rows.push(["Revenue Retained", performance.revenueRetained]);
+    rows.push([]);
+    rows.push(["Referrals by Week"]);
+    rows.push(["Week", "Sent", "Completed"]);
+    for (const w of referralTimeSeries)
+      rows.push([w.week, w.sent, w.completed]);
+    downloadReportCsv("loyalty-report.csv", rows);
+  };
+
   return (
     <LoyaltyModuleGuard requirePermission="reports">
       <div className="container mx-auto space-y-6 p-6">
@@ -351,11 +365,7 @@ export default function LoyaltyReportsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Calendar className="mr-2 size-4" />
-              {dateRange.startDate} - {dateRange.endDate}
-            </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="mr-2 size-4" />
               Export
             </Button>
@@ -408,6 +418,18 @@ export default function LoyaltyReportsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Loyalty & referral revenue impact — real points/rewards/referrals + ROI */}
+        <RevenueReportLoyaltySection
+          loyaltyPointsEarned={loyaltyStats.totalPointsIssued}
+          rewardsRedeemed={rewards.count}
+          rewardsValue={rewards.value}
+          referralRewardsIssued={referralStats.completedReferrals}
+          referralRewardsValue={referralStats.revenueFromReferrals}
+          incrementalRevenue={roi.headlineIncrementalRevenue}
+          roiPercent={roi.thisMonthRoi}
+          period={dateRange}
+        />
 
         {/* Program performance (this month) — deep-linked from the Loyalty banner */}
         <div className="grid gap-4 md:grid-cols-3">

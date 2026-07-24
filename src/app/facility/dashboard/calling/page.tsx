@@ -86,10 +86,10 @@ import {
   ivrConfig,
   voicemailGreetings,
   defaultCallingSettings,
-  callAnalytics,
   missedCallTasks,
   callRoutingRules,
 } from "@/data/calling";
+import { buildCallAnalytics } from "@/lib/calling/call-metrics";
 import type { ActiveCall, MissedCallTask } from "@/types/calling";
 import { toast } from "sonner";
 import { LocationScopePicker } from "@/components/hq/LocationScopePicker";
@@ -949,6 +949,12 @@ export default function CallingPage() {
     } catch {}
     filtersHydrated.current = true;
   }, []);
+
+  // Owner-facing call analytics, derived from the real call-log seed.
+  const derivedCallAnalytics = useMemo(
+    () => buildCallAnalytics(logs, aiCallSummaries),
+    [logs],
+  );
 
   const filteredCalls = useMemo(() => {
     const { from, to } = dateRangeBounds(dateRange, customFrom, customTo);
@@ -1825,7 +1831,7 @@ export default function CallingPage() {
               canViewStaffReport={canViewQa}
             />
             <CallAnalyticsDashboard
-              data={callAnalytics}
+              data={derivedCallAnalytics}
               flaggedThisWeek={flaggedThisWeek}
             />
           </TabsContent>

@@ -3,6 +3,8 @@
 import { ArrowRight, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
+import { DeltaBadge } from "@/components/ui/delta-badge";
+import type { Delta } from "@/lib/format";
 
 export type KpiTone =
   | "indigo"
@@ -21,6 +23,8 @@ interface KpiTileProps {
   trail?: { label: string; value: number | string }[];
   /** Optional colored sub-label below the hint (e.g. an SLA-breach warning). */
   alert?: { label: string; tone?: "rose" | "amber" };
+  /** Optional period-over-period delta (▲/▼ vs previous period), shown by the hint. */
+  delta?: Delta;
   /** Optional footer call-to-action, rendered as a "label →" link. */
   link?: { label: string; onClick: () => void };
   onClick?: () => void;
@@ -123,6 +127,7 @@ export function KpiTile({
   tone = "indigo",
   trail,
   alert,
+  delta,
   link,
   onClick,
   active,
@@ -184,10 +189,15 @@ export function KpiTile({
           <p className="text-xl/tight font-semibold tracking-tight tabular-nums">
             {value}
           </p>
-          {hint && (
-            <p className="text-muted-foreground line-clamp-1 text-[11px]">
-              {hint}
-            </p>
+          {(delta || hint) && (
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0">
+              {delta && <DeltaBadge delta={delta} />}
+              {hint && (
+                <p className="text-muted-foreground line-clamp-1 text-[11px]">
+                  {hint}
+                </p>
+              )}
+            </div>
           )}
           {alert && (
             <p

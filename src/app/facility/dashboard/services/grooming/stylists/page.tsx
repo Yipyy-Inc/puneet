@@ -86,6 +86,14 @@ import {
   calculateStylistThirtyDayStats,
 } from "@/lib/stylist-performance";
 import { Checkbox } from "@/components/ui/checkbox";
+import { groomingAnalytics } from "@/lib/report-data-sources";
+import {
+  ReportRangePicker,
+  defaultReportRange,
+  formatRangeLabel,
+  type ReportRange,
+} from "@/components/reports/report-range-picker";
+import { formatCurrency, formatCount, formatPercent } from "@/lib/format";
 
 type MergedStylist = {
   staffId: string;
@@ -367,13 +375,18 @@ export default function StylistsPage() {
     [],
   );
 
+  const [analyticsRange, setAnalyticsRange] = useState<ReportRange>(() =>
+    defaultReportRange("90d"),
+  );
+  const analyticsRangeLabel = formatRangeLabel(analyticsRange);
+  const grooming = useMemo(
+    () => groomingAnalytics(analyticsRange),
+    [analyticsRange],
+  );
+
   const activeStylists = mergedStylists.filter(
     (s) => s.status === "active",
   ).length;
-  const totalAppointments = mergedStylists.reduce(
-    (sum, s) => sum + s.totalAppointments,
-    0,
-  );
   const ratedStylists = mergedStylists.filter((s) => s.rating > 0);
   const avgRating =
     ratedStylists.length > 0
@@ -389,10 +402,6 @@ export default function StylistsPage() {
         experiencedStylists.length
       : 0;
 
-  const totalRevenue = Array.from(stylistMetrics.values()).reduce(
-    (sum, m) => sum + m.totalRevenue,
-    0,
-  );
   const avgCancellationRate =
     stylistMetrics.size > 0
       ? Array.from(stylistMetrics.values()).reduce(
@@ -1075,8 +1084,22 @@ export default function StylistsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Analytics date-range control — drives the grooming KPI tiles below */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">
+            Grooming Analytics
+          </h2>
+          <p className="text-muted-foreground text-sm">{analyticsRangeLabel}</p>
+        </div>
+        <ReportRangePicker
+          value={analyticsRange}
+          onChange={setAnalyticsRange}
+        />
+      </div>
+
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-6">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -1100,9 +1123,11 @@ export default function StylistsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {totalAppointments.toLocaleString()}
+              {formatCount(grooming.appointments)}
             </div>
-            <p className="text-muted-foreground text-xs">All time</p>
+            <p className="text-muted-foreground text-xs">
+              {analyticsRangeLabel}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -1140,7 +1165,9 @@ export default function StylistsPage() {
             <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(grooming.revenue)}
+            </div>
             <p className="text-muted-foreground text-xs">
               From completed appointments
             </p>
@@ -1158,6 +1185,30 @@ export default function StylistsPage() {
               {avgCancellationRate.toFixed(1)}%
             </div>
             <p className="text-muted-foreground text-xs">Team average</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Ticket</CardTitle>
+            <DollarSign className="text-muted-foreground size-4" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatCurrency(grooming.avgTicket)}
+            </div>
+            <p className="text-muted-foreground text-xs">Per appointment</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Rebook Rate</CardTitle>
+            <Users className="text-muted-foreground size-4" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatPercent(grooming.rebookRate)}
+            </div>
+            <p className="text-muted-foreground text-xs">Repeat clients</p>
           </CardContent>
         </Card>
       </div>

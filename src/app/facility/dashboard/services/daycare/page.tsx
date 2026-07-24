@@ -17,8 +17,11 @@ import {
   getCurrentCheckedInCount,
   getCheckedInBySize,
 } from "@/data/daycare";
+import { daycareAnalytics } from "@/lib/report-data-sources";
+import { formatCurrency, formatCount } from "@/lib/format";
 
 export default function DaycareDashboardPage() {
+  const analytics = daycareAnalytics();
   const currentCount = getCurrentCheckedInCount();
   const capacityPercentage = (currentCount / daycareCapacity.total) * 100;
   const checkedInBySize = getCheckedInBySize();
@@ -29,13 +32,6 @@ export default function DaycareDashboardPage() {
   const checkedOutToday = daycareCheckIns.filter(
     (c) => c.status === "checked-out",
   ).length;
-
-  // Calculate revenue for today (mock)
-  const todayRevenue = checkedInPets.reduce((acc, pet) => {
-    if (pet.rateType === "full-day") return acc + 40;
-    if (pet.rateType === "half-day") return acc + 25;
-    return acc + 32; // hourly estimate
-  }, 0);
 
   const getCapacityColor = (percentage: number) => {
     if (percentage >= 90) return "bg-destructive";
@@ -114,28 +110,28 @@ export default function DaycareDashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Currently Checked In"
-          value={currentCount}
+          value={formatCount(currentCount)}
           subtitle="Active daycare guests"
           icon={PawPrint}
           variant="primary"
         />
         <StatCard
           title="Checked Out Today"
-          value={checkedOutToday}
+          value={formatCount(checkedOutToday)}
           subtitle="Completed visits"
           icon={CheckCircle}
           variant="success"
         />
         <StatCard
           title="Today's Revenue"
-          value={`$${todayRevenue}`}
+          value={formatCurrency(analytics.todayRevenue)}
           subtitle="From daycare services"
           icon={DollarSign}
           variant="info"
         />
         <StatCard
           title="Avg. Stay Duration"
-          value="6.5 hrs"
+          value={`${analytics.avgStayHours} hrs`}
           subtitle="Today's average"
           icon={Clock}
           variant="secondary"

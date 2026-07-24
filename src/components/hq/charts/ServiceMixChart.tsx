@@ -9,6 +9,7 @@ import {
   Legend,
 } from "recharts";
 import type { ServiceMixRow } from "@/data/hq-analytics";
+import { ReportTooltip } from "@/components/reports/chart-kit";
 
 interface Props {
   data: ServiceMixRow[];
@@ -39,16 +40,9 @@ export function ServiceMixChart({ data, height = 260 }: Props) {
           ))}
         </Pie>
         <Tooltip
-          contentStyle={{
-            borderRadius: 8,
-            border: "1px solid hsl(var(--border))",
-            background: "hsl(var(--popover))",
-            fontSize: 12,
-          }}
-          formatter={(value) => [
-            `$${Number(value ?? 0).toLocaleString()}`,
-            "Revenue",
-          ]}
+          content={
+            <ReportTooltip format="currency" nameFormatter={() => "Revenue"} />
+          }
         />
         <Legend
           verticalAlign="bottom"

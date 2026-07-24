@@ -251,7 +251,9 @@ export interface PayrollConfig {
 
 export interface EmploymentDetails {
   hireDate: string;
-  employmentType: "full_time" | "part_time" | "contractor" | "seasonal";
+  /** A configured employment-type value (StaffHrConfig.employmentTypes). Left as
+   *  a string so the facility can add custom types (e.g. volunteer, intern). */
+  employmentType: string;
   notes: string;
 }
 
@@ -286,15 +288,11 @@ export interface StaffProfile {
   status: "active" | "invited" | "inactive" | "terminated";
   /** ISO timestamp of the last status change */
   statusChangedAt?: string;
-  /** Reason code for the current status (set when moving to inactive or terminated) */
-  statusReason?:
-    | "vacation"
-    | "medical_leave"
-    | "resigned"
-    | "terminated_cause"
-    | "performance"
-    | "rehired"
-    | "other";
+  /** Reason for the current status (set when moving to inactive or terminated).
+   *  A configured value: inactive/active reasons are built-in slugs; termination
+   *  reasons come from StaffHrConfig.terminationReasons (editable), so this is a
+   *  string rather than a fixed union. */
+  statusReason?: string;
   /** Free-text note added when the status was last changed */
   statusNote?: string;
   lastActive: string;

@@ -1,5 +1,6 @@
 import { smartInsightTemplates } from "@/data/smart-insights";
 import { generateCallingInsights } from "@/lib/smart-insights/calling-insights";
+import { generateDerivedInsights } from "@/lib/smart-insights/derived-insights";
 import {
   getSettings,
   mergeInsightState,
@@ -28,6 +29,7 @@ function resolveAll(facilityId: number): Insight[] {
   const all = [
     ...smartInsightTemplates,
     ...generateCallingInsights(facilityId),
+    ...generateDerivedInsights(facilityId),
   ];
   const merged = mergeInsightState(all, facilityId);
   const settings = getSettings(facilityId);

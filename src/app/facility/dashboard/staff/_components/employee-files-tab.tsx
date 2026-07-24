@@ -46,6 +46,7 @@ import type { EmployeeDocument, EmployeeDocType } from "@/types/scheduling";
 import type { StaffProfile } from "@/types/facility-staff";
 import { fullNameOf } from "./staff-shared";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
+import { notifyStaffLifecycle } from "@/lib/staff-notifications";
 
 // ── Type metadata ─────────────────────────────────────────────────────────────
 
@@ -315,6 +316,17 @@ export function EmployeeFilesTab({ profile }: EmployeeFilesTabProps) {
       departmentId: profile.employment.employmentType ?? "",
     };
     setFiles((prev) => [newDoc, ...prev]);
+    // Table 5 — optional employee notification when a manager adds an HR doc.
+    notifyStaffLifecycle("hr_doc_added", {
+      email: {
+        kind: "hr_doc",
+        staffId: profile.id,
+        staffName: fullName,
+        to: profile.email,
+        subject: "A document was added to your HR file",
+        body: `${newDoc.name} was added to your records.`,
+      },
+    });
     setUploadOpen(false);
   };
 

@@ -1,6 +1,42 @@
 import type { Booking } from "@/types/booking";
 
-export const bookings: Booking[] = [
+// The rows below are authored on a fixed relative timeline. At read time we roll
+// the whole set forward so the most recent booking always lands on "today",
+// keeping revenue/occupancy/booking reports populated for the trailing
+// 30/90/365-day default windows regardless of the calendar date. This mirrors
+// the getDateString(n) pattern in retail.ts / grooming.ts — stored data never
+// contains a raw Date.now(); dates are derived relative to the current date
+// when the module is first read. A single uniform shift preserves the authored
+// spacing between bookings (and keeps the legacy 2024 rows as older history).
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function shiftIsoDate(iso: string, days: number): string {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().split("T")[0];
+}
+
+function rollBookingsToToday(seed: Booking[]): Booking[] {
+  const latest = seed.reduce(
+    (max, b) => (b.startDate > max ? b.startDate : max),
+    seed[0]?.startDate ?? "",
+  );
+  if (!latest) return seed;
+  const today = new Date().toISOString().split("T")[0];
+  const deltaDays = Math.round(
+    (new Date(today + "T00:00:00Z").getTime() -
+      new Date(latest + "T00:00:00Z").getTime()) /
+      DAY_MS,
+  );
+  if (deltaDays === 0) return seed;
+  return seed.map((b) => ({
+    ...b,
+    startDate: shiftIsoDate(b.startDate, deltaDays),
+    endDate: shiftIsoDate(b.endDate, deltaDays),
+  }));
+}
+
+const bookingSeeds: Booking[] = [
   // ═══════════════════════════════════════════════════════════════════
   // #1 — ESTIMATE: Deposit required, no payment yet
   // Test: Blue deposit banner, View Estimate, Charge Deposit button
@@ -2210,3 +2246,5 @@ export const bookings: Booking[] = [
     },
   },
 ];
+
+export const bookings: Booking[] = rollBookingsToToday(bookingSeeds);

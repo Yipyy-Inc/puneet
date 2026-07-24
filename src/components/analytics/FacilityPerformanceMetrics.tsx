@@ -27,6 +27,16 @@ import {
   PolarRadiusAxis,
   Radar,
 } from "recharts";
+import {
+  chartColor,
+  axisTick,
+  gridProps,
+  legendProps,
+  axisLabel,
+  ReportTooltip,
+  tickFmt,
+} from "@/components/reports/chart-kit";
+import { formatCompactCurrency, formatPercent } from "@/lib/format";
 
 export function FacilityPerformanceMetrics() {
   // Calculate system totals
@@ -65,7 +75,7 @@ export function FacilityPerformanceMetrics() {
       label: "Revenue",
       render: (item) => (
         <span className="font-semibold">
-          ${(item.totalRevenue / 1000).toFixed(0)}K
+          {formatCompactCurrency(item.totalRevenue)}
         </span>
       ),
     },
@@ -85,7 +95,7 @@ export function FacilityPerformanceMetrics() {
             }
           >
             {item.revenueGrowth > 0 ? "+" : ""}
-            {item.revenueGrowth}%
+            {formatPercent(item.revenueGrowth)}
           </span>
         </div>
       ),
@@ -101,7 +111,7 @@ export function FacilityPerformanceMetrics() {
               style={{ width: `${item.staffEfficiency}%` }}
             />
           </div>
-          <span className="text-sm">{item.staffEfficiency}%</span>
+          <span className="text-sm">{formatPercent(item.staffEfficiency)}</span>
         </div>
       ),
     },
@@ -144,11 +154,11 @@ export function FacilityPerformanceMetrics() {
                 </p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-2xl font-bold tracking-tight">
-                    ${(totalRevenue / 1000).toFixed(0)}K
+                    {formatCompactCurrency(totalRevenue)}
                   </h3>
                   <span className="text-success inline-flex items-center text-xs font-medium">
                     <TrendingUp className="mr-0.5 size-3" />+
-                    {avgGrowth.toFixed(1)}%
+                    {formatPercent(avgGrowth)}
                   </span>
                 </div>
                 <p className="text-muted-foreground mt-0.5 text-xs">
@@ -177,7 +187,7 @@ export function FacilityPerformanceMetrics() {
                 </p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-2xl font-bold tracking-tight">
-                    +{avgGrowth.toFixed(1)}%
+                    +{formatPercent(avgGrowth)}
                   </h3>
                 </div>
                 <p className="text-muted-foreground mt-0.5 text-xs">
@@ -271,16 +281,12 @@ export function FacilityPerformanceMetrics() {
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={facilityPerformance}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#e2e8f0"
-                  vertical={false}
-                />
+                <CartesianGrid {...gridProps} />
                 <XAxis
                   dataKey="facilityName"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#94a3b8", fontSize: 11 }}
+                  tick={axisTick}
                   angle={-45}
                   textAnchor="end"
                   height={100}
@@ -288,24 +294,16 @@ export function FacilityPerformanceMetrics() {
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  tickFormatter={(value) => `$${value / 1000}K`}
+                  tick={axisTick}
+                  tickFormatter={tickFmt("compactCurrency")}
+                  label={axisLabel("Revenue", "y")}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#ffffff",
-                    border: "none",
-                    borderRadius: "12px",
-                    boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
-                  }}
-                  formatter={(value: number | undefined) => [
-                    `$${(value || 0).toLocaleString()}`,
-                    "Revenue",
-                  ]}
-                />
+                <Tooltip content={<ReportTooltip format="currency" />} />
+                <Legend {...legendProps} />
                 <Bar
                   dataKey="totalRevenue"
-                  fill="#3b82f6"
+                  name="Revenue"
+                  fill={chartColor(0)}
                   radius={[8, 8, 0, 0]}
                 />
               </BarChart>
@@ -329,53 +327,43 @@ export function FacilityPerformanceMetrics() {
             <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart data={radarData}>
-                  <PolarGrid stroke="#e2e8f0" />
-                  <PolarAngleAxis
-                    dataKey="facility"
-                    tick={{ fill: "#64748b", fontSize: 12 }}
-                  />
+                  <PolarGrid stroke="hsl(var(--border))" />
+                  <PolarAngleAxis dataKey="facility" tick={axisTick} />
                   <PolarRadiusAxis
                     angle={90}
                     domain={[0, 100]}
-                    tick={{ fill: "#94a3b8", fontSize: 10 }}
+                    tick={axisTick}
                   />
                   <Radar
                     name="Staff Efficiency"
                     dataKey="efficiency"
-                    stroke="#3b82f6"
-                    fill="#3b82f6"
+                    stroke={chartColor(0)}
+                    fill={chartColor(0)}
                     fillOpacity={0.2}
                   />
                   <Radar
                     name="Customer Satisfaction"
                     dataKey="satisfaction"
-                    stroke="#10b981"
-                    fill="#10b981"
+                    stroke={chartColor(1)}
+                    fill={chartColor(1)}
                     fillOpacity={0.2}
                   />
                   <Radar
                     name="Service Quality"
                     dataKey="quality"
-                    stroke="#f59e0b"
-                    fill="#f59e0b"
+                    stroke={chartColor(2)}
+                    fill={chartColor(2)}
                     fillOpacity={0.2}
                   />
                   <Radar
                     name="Retention"
                     dataKey="retention"
-                    stroke="#8b5cf6"
-                    fill="#8b5cf6"
+                    stroke={chartColor(3)}
+                    fill={chartColor(3)}
                     fillOpacity={0.2}
                   />
-                  <Legend />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      border: "none",
-                      borderRadius: "12px",
-                      boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
-                    }}
-                  />
+                  <Legend {...legendProps} />
+                  <Tooltip content={<ReportTooltip format="number" />} />
                 </RadarChart>
               </ResponsiveContainer>
             </div>
@@ -396,48 +384,34 @@ export function FacilityPerformanceMetrics() {
             <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={facilityPerformance} layout="vertical">
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#e2e8f0"
-                    horizontal={false}
-                  />
+                  <CartesianGrid {...gridProps} vertical horizontal={false} />
                   <XAxis
                     type="number"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                    tickFormatter={(value) => `${value}%`}
+                    tick={axisTick}
+                    tickFormatter={tickFmt("percent")}
+                    label={axisLabel("Growth", "x")}
                   />
                   <YAxis
                     dataKey="facilityName"
                     type="category"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "#64748b", fontSize: 11 }}
+                    tick={axisTick}
                     width={130}
                   />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      border: "none",
-                      borderRadius: "12px",
-                      boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
-                    }}
-                    formatter={(value: number | undefined) => [
-                      `${value || 0}%`,
-                      "",
-                    ]}
-                  />
-                  <Legend />
+                  <Tooltip content={<ReportTooltip format="percent" />} />
+                  <Legend {...legendProps} />
                   <Bar
                     dataKey="monthlyGrowthRate"
-                    fill="#10b981"
+                    fill={chartColor(1)}
                     radius={[0, 4, 4, 0]}
                     name="Monthly Growth"
                   />
                   <Bar
                     dataKey="revenueGrowth"
-                    fill="#3b82f6"
+                    fill={chartColor(0)}
                     radius={[0, 4, 4, 0]}
                     name="Revenue Growth"
                   />
@@ -503,10 +477,11 @@ export function FacilityPerformanceMetrics() {
                 <div>
                   <p className="text-muted-foreground mb-1 text-xs">Revenue</p>
                   <p className="text-lg font-bold">
-                    ${(facility.totalRevenue / 1000).toFixed(0)}K
+                    {formatCompactCurrency(facility.totalRevenue)}
                   </p>
                   <div className="text-success mt-0.5 flex items-center gap-1 text-xs">
-                    <TrendingUp className="size-3" />+{facility.revenueGrowth}%
+                    <TrendingUp className="size-3" />+
+                    {formatPercent(facility.revenueGrowth)}
                   </div>
                 </div>
 
@@ -514,7 +489,7 @@ export function FacilityPerformanceMetrics() {
                   <p className="text-muted-foreground mb-1 text-xs">Staff</p>
                   <p className="text-lg font-bold">{facility.employeeCount}</p>
                   <p className="text-muted-foreground mt-0.5 text-xs">
-                    ${(facility.revenuePerEmployee / 1000).toFixed(1)}K/emp
+                    {formatCompactCurrency(facility.revenuePerEmployee)}/emp
                   </p>
                 </div>
 
@@ -523,7 +498,7 @@ export function FacilityPerformanceMetrics() {
                     Efficiency
                   </p>
                   <p className="text-lg font-bold">
-                    {facility.staffEfficiency}%
+                    {formatPercent(facility.staffEfficiency)}
                   </p>
                   <div className="bg-muted mt-1 h-1 w-full rounded-full">
                     <div
@@ -553,7 +528,7 @@ export function FacilityPerformanceMetrics() {
                     Retention
                   </p>
                   <p className="text-lg font-bold">
-                    {facility.customerRetention}%
+                    {formatPercent(facility.customerRetention)}
                   </p>
                   <p className="text-muted-foreground mt-0.5 text-xs">
                     NPS: {facility.nps}

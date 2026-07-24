@@ -69,6 +69,12 @@ import { ExerciseLibrarySection } from "@/components/facility/training/exercise-
 import { TrainingModuleSettings } from "@/components/facility/training/training-module-settings";
 import { CustomEmailDomainSettings } from "@/components/facility/CustomEmailDomainSettings";
 import { SmartInsightsSettings } from "@/components/smart-insights/SmartInsightsSettings";
+import { StaffHrConfigSettings } from "@/components/facility/staff-hr/StaffHrConfigSettings";
+import { EmploymentTypesSettings } from "@/components/facility/staff-hr/EmploymentTypesSettings";
+import { TerminationReasonsSettings } from "@/components/facility/staff-hr/TerminationReasonsSettings";
+import { OnboardingTemplatesSettings } from "@/components/facility/staff-hr/OnboardingTemplatesSettings";
+import { OffboardingTemplatesSettings } from "@/components/facility/staff-hr/OffboardingTemplatesSettings";
+import { StaffNotificationSettings } from "@/components/facility/staff-hr/StaffNotificationSettings";
 
 const AddOnsSettings = dynamic(
   () =>
@@ -4600,6 +4606,43 @@ export default function SettingsPage() {
           {activeSection === "roles-permissions" && (
             <div className="space-y-6">
               <FacilityRolesStudio />
+            </div>
+          )}
+
+          {/* Staff & HR — Manager/Owner only (gated in the sidebar) */}
+          {activeSection === "onboarding-templates" && (
+            <div className="space-y-6">
+              <OnboardingTemplatesSettings />
+            </div>
+          )}
+          {activeSection === "offboarding-templates" && (
+            <div className="space-y-6">
+              <OffboardingTemplatesSettings />
+            </div>
+          )}
+          {activeSection === "employment-types" && (
+            <div className="space-y-6">
+              <EmploymentTypesSettings />
+            </div>
+          )}
+          {activeSection === "termination-reasons" && (
+            <div className="space-y-6">
+              <TerminationReasonsSettings />
+            </div>
+          )}
+          {activeSection === "staff-roles" && (
+            <div className="space-y-6">
+              <FacilityRolesStudio />
+            </div>
+          )}
+          {activeSection === "hr-config" && (
+            <div className="space-y-6">
+              <StaffHrConfigSettings />
+            </div>
+          )}
+          {activeSection === "staff-notifications" && (
+            <div className="space-y-6">
+              <StaffNotificationSettings />
             </div>
           )}
 

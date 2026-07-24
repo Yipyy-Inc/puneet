@@ -19,7 +19,9 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { messagingAnalytics } from "@/data/messaging";
+import { threadMeta } from "@/data/messaging";
+import { messages } from "@/data/communications-hub";
+import { buildMessagingAnalytics } from "@/lib/messaging/messaging-metrics";
 
 const ChartsBundle = dynamic(
   () =>
@@ -142,8 +144,20 @@ const DATE_RANGES: { key: DateRange; label: string }[] = [
 ];
 
 export function MessagingAnalyticsView() {
-  const data = messagingAnalytics;
   const [range, setRange] = useState<DateRange>("30d");
+  // Re-derive on range change. The message seed is static (not rolled to today),
+  // so the window is anchored to the most recent message rather than now — a
+  // trailing-from-today window would exclude every message and blank the view.
+  const data = useMemo(() => {
+    const days = range === "7d" ? 7 : range === "30d" ? 30 : 90;
+    const times = messages.map((m) => new Date(m.timestamp).getTime());
+    const anchor = times.length ? Math.max(...times) : 0;
+    const cutoff = anchor - days * 24 * 60 * 60 * 1000;
+    const scoped = messages.filter(
+      (m) => new Date(m.timestamp).getTime() >= cutoff,
+    );
+    return buildMessagingAnalytics(scoped, threadMeta);
+  }, [range]);
   const rangeLabel =
     DATE_RANGES.find((r) => r.key === range)?.label ?? data.period;
 

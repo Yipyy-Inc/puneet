@@ -15,6 +15,10 @@ interface RevenueReportLoyaltySectionProps {
   rewardsValue: number;
   referralRewardsIssued: number;
   referralRewardsValue: number;
+  /** Incremental revenue attributed to loyalty members (from computeLoyaltyRoi). */
+  incrementalRevenue: number;
+  /** This-month loyalty ROI %, from computeLoyaltyRoi. */
+  roiPercent: number;
   period: {
     startDate: string;
     endDate: string;
@@ -27,6 +31,8 @@ export function RevenueReportLoyaltySection({
   rewardsValue,
   referralRewardsIssued,
   referralRewardsValue,
+  incrementalRevenue,
+  roiPercent,
   period: _period,
 }: RevenueReportLoyaltySectionProps) {
   const formatCurrency = (amount: number) => {
@@ -127,21 +133,49 @@ export function RevenueReportLoyaltySection({
           </div>
         </div>
 
-        {/* Summary */}
+        {/* ROI summary — incremental revenue vs cost of rewards */}
         <div className="bg-muted/50 mt-4 rounded-lg border p-4">
-          <div className="flex items-center justify-between">
+          <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
             <div>
-              <div className="text-sm font-semibold">Total Loyalty Impact</div>
               <div className="text-muted-foreground text-xs">
-                Combined value of all rewards and referrals
+                Incremental Revenue
+              </div>
+              <div className="text-xl font-bold text-green-600 dark:text-green-400">
+                {formatCurrency(incrementalRevenue)}
+              </div>
+              <div className="text-muted-foreground text-xs">
+                From members vs non-members
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+            <div className="text-muted-foreground self-center text-center text-lg">
+              −
+            </div>
+            <div>
+              <div className="text-muted-foreground text-xs">
+                Cost of Rewards
+              </div>
+              <div className="text-xl font-bold text-red-600 dark:text-red-400">
                 {formatCurrency(rewardsValue + referralRewardsValue)}
               </div>
               <div className="text-muted-foreground text-xs">
-                Net impact on revenue
+                Rewards + referrals issued
+              </div>
+            </div>
+            <div className="text-muted-foreground self-center text-center text-lg">
+              =
+            </div>
+            <div>
+              <div className="text-muted-foreground text-xs">
+                Net Impact · ROI
+              </div>
+              <div className="text-xl font-bold">
+                {formatCurrency(
+                  incrementalRevenue - (rewardsValue + referralRewardsValue),
+                )}
+              </div>
+              <div className="text-muted-foreground text-xs">
+                {roiPercent >= 0 ? "+" : ""}
+                {roiPercent}% ROI this month
               </div>
             </div>
           </div>

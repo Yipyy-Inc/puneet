@@ -28,12 +28,15 @@ import {
   getOccupancyStats,
   BoardingGuest,
 } from "@/data/boarding";
+import { boardingAnalytics } from "@/lib/report-data-sources";
+import { formatCurrency, formatPercent } from "@/lib/format";
 
 export default function BoardingDashboardPage() {
   const [guests] = useState<BoardingGuest[]>(boardingGuests);
 
   const currentGuests = getCurrentGuests();
   const occupancyStats = getOccupancyStats();
+  const analytics = boardingAnalytics();
 
   // Filter for today's arrivals and departures (using mock date for demo)
   const today = "2026-04-26";
@@ -52,13 +55,6 @@ export default function BoardingDashboardPage() {
     (acc, g) => acc + g.totalPrice,
     0,
   );
-  const avgStayLength =
-    currentGuests.length > 0
-      ? Math.round(
-          currentGuests.reduce((acc, g) => acc + g.totalNights, 0) /
-            currentGuests.length,
-        )
-      : 0;
 
   // Pets needing attention (medications or allergies)
   const petsWithMedications = currentGuests.filter(
@@ -160,7 +156,7 @@ export default function BoardingDashboardPage() {
         <StatCard
           title="Current Guests"
           value={currentGuests.length}
-          subtitle="Pets currently boarding"
+          subtitle={`${formatPercent(analytics.occupancyRate)} occupancy`}
           icon={Bed}
           variant="primary"
         />
@@ -180,10 +176,31 @@ export default function BoardingDashboardPage() {
         />
         <StatCard
           title="Current Revenue"
-          value={`$${currentRevenue.toLocaleString()}`}
+          value={formatCurrency(currentRevenue)}
           subtitle="From active stays"
           icon={DollarSign}
           variant="info"
+        />
+        <StatCard
+          title="Avg Daily Rate"
+          value={formatCurrency(analytics.adr)}
+          subtitle="Per guest, per night"
+          icon={DollarSign}
+          variant="primary"
+        />
+        <StatCard
+          title="Avg Length of Stay"
+          value={`${analytics.avgLengthOfStay} nights`}
+          subtitle="Across active guests"
+          icon={Clock}
+          variant="info"
+        />
+        <StatCard
+          title="Booking Revenue"
+          value={formatCurrency(analytics.revenue)}
+          subtitle="On-site guests"
+          icon={DollarSign}
+          variant="success"
         />
       </div>
 
@@ -313,7 +330,9 @@ export default function BoardingDashboardPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium">${guest.totalPrice}</p>
+                      <p className="font-medium">
+                        {formatCurrency(guest.totalPrice)}
+                      </p>
                       <p className="text-muted-foreground text-xs">
                         <Phone className="mr-1 inline size-3" />
                         {guest.ownerPhone}
@@ -336,7 +355,7 @@ export default function BoardingDashboardPage() {
               Current Boarding Guests
             </CardTitle>
             <span className="text-muted-foreground text-sm">
-              Avg. stay: {avgStayLength} nights
+              Avg. stay: {analytics.avgLengthOfStay} nights
             </span>
           </div>
         </CardHeader>

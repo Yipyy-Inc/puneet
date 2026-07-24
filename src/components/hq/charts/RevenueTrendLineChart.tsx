@@ -12,6 +12,14 @@ import {
 } from "recharts";
 import type { Location } from "@/types/location";
 import { locationHex } from "@/lib/hq/location-styles";
+import {
+  ReportTooltip,
+  axisTick,
+  axisLabel,
+  gridProps,
+  legendProps,
+  tickFmt,
+} from "@/components/reports/chart-kit";
 
 interface Props {
   data: { month: string; [locationId: string]: number | string }[];
@@ -24,43 +32,28 @@ export function RevenueTrendLineChart({
   locations,
   height = 280,
 }: Props) {
+  const locName = (id: string) =>
+    locations.find((l) => l.id === id)?.name ?? id;
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
+        <CartesianGrid {...gridProps} />
         <XAxis
           dataKey="month"
-          tick={{ fontSize: 11, fill: "currentColor" }}
-          stroke="currentColor"
-          className="text-muted-foreground"
+          tick={axisTick}
+          label={axisLabel("Month", "x")}
         />
         <YAxis
-          tickFormatter={(v) => `$${(Number(v) / 1000).toFixed(0)}k`}
-          tick={{ fontSize: 11, fill: "currentColor" }}
-          stroke="currentColor"
-          className="text-muted-foreground"
+          tick={axisTick}
+          tickFormatter={tickFmt("compactCurrency")}
+          label={axisLabel("Revenue", "y")}
         />
         <Tooltip
-          contentStyle={{
-            borderRadius: 8,
-            border: "1px solid hsl(var(--border))",
-            background: "hsl(var(--popover))",
-            fontSize: 12,
-          }}
-          formatter={(value, name) => {
-            const loc = locations.find((l) => l.id === name);
-            return [
-              `$${Number(value ?? 0).toLocaleString()}`,
-              loc?.name ?? String(name),
-            ];
-          }}
+          content={<ReportTooltip format="currency" nameFormatter={locName} />}
         />
         <Legend
-          formatter={(value: string) => {
-            const loc = locations.find((l) => l.id === value);
-            return loc?.name ?? value;
-          }}
-          wrapperStyle={{ fontSize: 12 }}
+          {...legendProps}
+          formatter={(value: string) => locName(value)}
         />
         {locations.map((loc) => (
           <Line

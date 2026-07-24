@@ -854,3 +854,38 @@ export const getPendingSwapRequests = () =>
 
 export const getSickCallInsNeedingCoverage = () =>
   sickCallIns.filter((s) => s.coverageStatus === "needs_coverage");
+
+/**
+ * Replace a staff member's weekly availability (mock — mutates the seed array).
+ * Called from the public onboarding flow so the employee availability page
+ * (which seeds from this array) reflects what the new hire set during onboarding.
+ */
+export function upsertStaffAvailabilityForStaff(
+  staffId: string,
+  staffName: string,
+  facility: string,
+  rows: {
+    dayOfWeek: number;
+    isAvailable: boolean;
+    startTime: string;
+    endTime: string;
+  }[],
+): void {
+  for (let i = staffAvailability.length - 1; i >= 0; i--) {
+    if (staffAvailability[i].staffId === staffId)
+      staffAvailability.splice(i, 1);
+  }
+  let maxId = staffAvailability.reduce((m, a) => Math.max(m, a.id), 0);
+  for (const r of rows) {
+    staffAvailability.push({
+      id: ++maxId,
+      staffId,
+      staffName,
+      dayOfWeek: r.dayOfWeek,
+      startTime: r.startTime,
+      endTime: r.endTime,
+      isAvailable: r.isAvailable,
+      facility,
+    });
+  }
+}

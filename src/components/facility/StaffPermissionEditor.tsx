@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useReducer, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -19,14 +19,17 @@ import {
   ACCESS_SCOPE_META,
   ALWAYS_ON_PERMISSIONS,
   PERMISSION_GROUPS,
+  ROLE_PRESETS,
   resolvePermission,
   type PermissionKey,
+  type FacilityStaffRole,
 } from "@/types/facility-staff";
-import { facilityStaff } from "@/data/facility-staff";
+import { facilityStaff, upsertFacilityStaff } from "@/data/facility-staff";
 import {
   RolePill,
   fullNameOf,
 } from "@/app/facility/dashboard/staff/_components/staff-shared";
+import { AdditionalRolesGrid } from "@/app/facility/dashboard/staff/_components/additional-roles-grid";
 
 // Per-staff permission override editor (spec 6.3). Renders inside the staff
 // profile's Permissions tab (C2). MUST be mounted within a FacilityRbacProvider
@@ -54,6 +57,25 @@ export function StaffPermissionEditor({
   const staff = facilityStaff.find((s) => s.id === staffId);
   const [activeGroupId, setActiveGroupId] = useState(PERMISSION_GROUPS[0].id);
   const [previewOpen, setPreviewOpen] = useState(false);
+  // Role edits write through the shared directory; bump to re-read `staff`.
+  const [, bumpRoles] = useReducer((x: number) => x + 1, 0);
+
+  // Toggle an additional preset role — permissions + services union with the
+  // primary (RBAC resolves the permission union from every role).
+  function toggleAdditionalRole(role: FacilityStaffRole, on: boolean) {
+    if (!staff) return;
+    const additionalRoles = on
+      ? [...staff.additionalRoles, role]
+      : staff.additionalRoles.filter((r) => r !== role);
+    const serviceAssignments = Array.from(
+      new Set([
+        ...ROLE_PRESETS[staff.primaryRole].services,
+        ...additionalRoles.flatMap((r) => ROLE_PRESETS[r].services),
+      ]),
+    );
+    upsertFacilityStaff({ ...staff, additionalRoles, serviceAssignments });
+    bumpRoles();
+  }
 
   if (!staff) {
     return (
@@ -207,6 +229,23 @@ export function StaffPermissionEditor({
               </Button>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Additional roles — editable; permissions & services union with primary */}
+      <div className="border-border/60 bg-card/60 rounded-2xl border p-4">
+        <div className="text-sm font-semibold">Additional roles (optional)</div>
+        <p className="text-muted-foreground mt-0.5 text-xs">
+          Layer preset roles on top of {staff.firstName}&apos;s primary role.
+          Permissions and services are the union; the primary role still drives
+          their dashboard default view.
+        </p>
+        <div className="mt-3">
+          <AdditionalRolesGrid
+            primaryRole={staff.primaryRole}
+            additionalRoles={staff.additionalRoles}
+            onToggle={toggleAdditionalRole}
+          />
         </div>
       </div>
 

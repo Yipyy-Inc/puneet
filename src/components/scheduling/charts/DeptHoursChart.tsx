@@ -4,11 +4,22 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+
+import {
+  axisLabel,
+  axisTick,
+  chartColor,
+  gridProps,
+  legendProps,
+  ReportTooltip,
+  tickFmt,
+} from "@/components/reports/chart-kit";
 
 interface Props {
   data: { name: string; hours: number; cost: number }[];
@@ -26,19 +37,24 @@ export function DeptHoursChart({ data }: Props) {
     <div className="h-[220px] w-full">
       <ResponsiveContainer>
         <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-          <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-          <YAxis tick={{ fontSize: 11 }} />
-          <Tooltip
-            formatter={(value, name) => {
-              const v = typeof value === "number" ? value : 0;
-              if (name === "hours") return [`${v}h`, "Hours"];
-              if (name === "cost") return [`$${v}`, "Cost"];
-              return [String(value), String(name)];
-            }}
-            contentStyle={{ fontSize: 12 }}
+          <CartesianGrid {...gridProps} />
+          <XAxis
+            dataKey="name"
+            tick={axisTick}
+            label={axisLabel("Department", "x")}
           />
-          <Bar dataKey="hours" fill="#6366f1" radius={[4, 4, 0, 0]} />
+          <YAxis
+            tick={axisTick}
+            tickFormatter={tickFmt("compactNumber")}
+            label={axisLabel("Hours", "y")}
+          />
+          <Tooltip
+            content={
+              <ReportTooltip format={{ hours: "number", cost: "currency" }} />
+            }
+          />
+          <Legend {...legendProps} />
+          <Bar dataKey="hours" fill={chartColor(1)} radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

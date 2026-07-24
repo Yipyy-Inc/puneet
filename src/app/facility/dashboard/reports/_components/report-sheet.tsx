@@ -1,11 +1,27 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useState, type ReactNode } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  Area,
+  AreaChart,
+} from "recharts";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Download, Clock } from "lucide-react";
+import {
+  Clock,
+  DollarSign,
+  CalendarCheck,
+  Users,
+  BedDouble,
+} from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@/components/ui/data-table";
 import {
@@ -16,24 +32,62 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  generateOccupancyReport,
   generateNoShowReport,
   generateCancellationReport,
   getTopCustomers,
-  type OccupancyReportData,
-  type NoShowReportData,
-  type CancellationReportData,
 } from "@/data/reports";
+import { getStaffTimeByService } from "@/lib/analytics-utils";
 import {
-  getRevenueByService,
-  getStaffTimeByService,
-} from "@/lib/analytics-utils";
+  revenueByService,
+  occupancy,
+  clientMetrics,
+  revenueSummary,
+} from "@/lib/report-data-sources";
+import {
+  RevenueReportBody,
+  revenueKpis,
+  revenueDailyRows,
+} from "@/components/financial/RevenueReport";
+import type { DateRange } from "@/types/facility-analytics";
 import { ExportReportModal } from "@/components/reports/ExportReportModal";
+import { ReportShell, type ReportKpi } from "@/components/reports/report-shell";
+import {
+  ReportChartCard,
+  ReportTooltip,
+  axisLabel,
+  axisTick,
+  gridProps,
+  legendProps,
+  tickFmt,
+} from "@/components/reports/chart-kit";
+import {
+  defaultReportRange,
+  previousWindow,
+  type ReportRange,
+} from "@/components/reports/report-range-picker";
+import {
+  formatCurrency,
+  formatCurrencyWhole,
+  formatCount,
+  formatPercent,
+  computeDelta,
+} from "@/lib/format";
 import type { ReportEntry } from "./reports-hub";
 
 type ReportWithCategory = ReportEntry & {
   categoryTier: "Essential" | "Beneficial";
 };
+
+/** Everything a report needs to render inside the shared ReportShell. */
+interface ReportView {
+  kpis: ReportKpi[];
+  body: ReactNode;
+  exportData: Record<string, unknown>[];
+  isEmpty: boolean;
+  emptyTitle: string;
+}
+
+const toDR = (r: ReportRange): DateRange => ({ from: r.from, to: r.to });
 
 // ── Coming Soon ───────────────────────────────────────────────────────────────
 
@@ -64,135 +118,89 @@ function ComingSoon({
   );
 }
 
-// ── Revenue by Service ────────────────────────────────────────────────────────
+// ── Revenue by Service / Total Revenue ──────────────────────────────────────
 
-function RevenueContent({ facilityId }: { facilityId: number }) {
-  const revenueData = getRevenueByService(facilityId);
-  const staffData = getStaffTimeByService(facilityId);
-  const totalRevenue = revenueData.reduce((s, r) => s + r.revenue, 0);
-  const totalBookings = revenueData.reduce((s, r) => s + r.bookings, 0);
+function buildRevenueView(range: ReportRange, facilityId: number): ReportView {
+  const cur = revenueByService(toDR(range));
+  const prev = revenueByService(previousWindow(range));
+  const staffData = getStaffTimeByService(facilityId, range.from, range.to);
 
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          {
-            label: "Total Revenue",
-            value: `$${totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
-          },
-          { label: "Total Bookings", value: totalBookings.toString() },
-          {
-            label: "Avg / Booking",
-            value: `$${totalBookings > 0 ? (totalRevenue / totalBookings).toFixed(2) : "0.00"}`,
-          },
-        ].map((tile) => (
-          <div
-            key={tile.label}
-            className="bg-card rounded-lg border p-3 text-center"
+  const sum = (rows: typeof cur, key: "revenue" | "bookings") =>
+    rows.reduce((s, r) => s + r[key], 0);
+  const curRevenue = sum(cur, "revenue");
+  const prevRevenue = sum(prev, "revenue");
+  const curBookings = sum(cur, "bookings");
+  const prevBookings = sum(prev, "bookings");
+  const curAov = curBookings > 0 ? curRevenue / curBookings : 0;
+  const prevAov = prevBookings > 0 ? prevRevenue / prevBookings : 0;
+
+  const kpis: ReportKpi[] = [
+    {
+      label: "Total Revenue",
+      value: formatCurrency(curRevenue),
+      icon: DollarSign,
+      tone: "emerald",
+      delta: computeDelta(curRevenue, prevRevenue),
+      hint: "vs. prev. period",
+    },
+    {
+      label: "Total Bookings",
+      value: formatCount(curBookings),
+      icon: CalendarCheck,
+      tone: "indigo",
+      delta: computeDelta(curBookings, prevBookings),
+      hint: "vs. prev. period",
+    },
+    {
+      label: "Avg / Booking",
+      value: formatCurrency(curAov),
+      icon: DollarSign,
+      tone: "violet",
+      delta: computeDelta(curAov, prevAov),
+      hint: "vs. prev. period",
+    },
+  ];
+
+  const body = (
+    <div className="space-y-4">
+      <ReportChartCard
+        title="Revenue by Service"
+        subtitle="Booked service revenue in the selected period"
+        height={280}
+        isEmpty={cur.length === 0}
+        emptyMessage="No revenue in this period"
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={cur}
+            margin={{ top: 8, right: 16, bottom: 24, left: 8 }}
           >
-            <p className="text-muted-foreground text-xs">{tile.label}</p>
-            <p className="mt-0.5 text-xl font-bold tabular-nums">
-              {tile.value}
-            </p>
-          </div>
-        ))}
-      </div>
+            <CartesianGrid {...gridProps} />
+            <XAxis
+              dataKey="service"
+              tick={axisTick}
+              label={axisLabel("Service", "x")}
+            />
+            <YAxis
+              tick={axisTick}
+              tickFormatter={tickFmt("compactCurrency")}
+              label={axisLabel("Revenue", "y")}
+            />
+            <Tooltip
+              cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }}
+              content={<ReportTooltip format="currency" />}
+            />
+            <Legend {...legendProps} />
+            <Bar dataKey="revenue" name="Revenue" radius={[4, 4, 0, 0]}>
+              {cur.map((row) => (
+                <Cell key={row.service} fill={row.color} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </ReportChartCard>
 
-      {/* Distribution bar */}
-      <div>
-        <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-widest uppercase">
-          Revenue Distribution
-        </p>
-        <div className="flex h-4 overflow-hidden rounded-full">
-          {revenueData.map((row) => {
-            const pct =
-              totalRevenue > 0 ? (row.revenue / totalRevenue) * 100 : 0;
-            return pct >= 1 ? (
-              <div
-                key={row.service}
-                className="transition-all"
-                style={{ width: `${pct}%`, backgroundColor: row.color }}
-                title={`${row.service}: ${pct.toFixed(0)}%`}
-              />
-            ) : null;
-          })}
-        </div>
-        <div className="mt-2 flex flex-wrap gap-3">
-          {revenueData.map((row) => (
-            <span key={row.service} className="flex items-center gap-1.5">
-              <span
-                className="inline-block size-2 rounded-full"
-                style={{ backgroundColor: row.color }}
-              />
-              <span className="text-muted-foreground text-xs">
-                {row.service}
-              </span>
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Revenue table */}
-      <div>
-        <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-widest uppercase">
-          By Service
-        </p>
-        <div className="space-y-0.5">
-          <div className="text-muted-foreground grid grid-cols-5 gap-3 border-b px-2 pb-2 text-xs font-semibold">
-            <span className="col-span-2">Service</span>
-            <span className="text-right">Revenue</span>
-            <span className="text-right">Bookings</span>
-            <span className="text-right">Avg</span>
-          </div>
-          {revenueData.map((row) => {
-            const pct =
-              totalRevenue > 0
-                ? Math.round((row.revenue / totalRevenue) * 100)
-                : 0;
-            return (
-              <div
-                key={row.service}
-                className="hover:bg-muted/30 grid grid-cols-5 items-center gap-3 rounded-md px-2 py-2.5"
-              >
-                <div className="col-span-2 flex items-center gap-2">
-                  <span
-                    className="size-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: row.color }}
-                  />
-                  <span className="text-sm font-medium">{row.service}</span>
-                  <span className="text-muted-foreground text-xs">{pct}%</span>
-                </div>
-                <span className="text-right text-sm tabular-nums">
-                  $
-                  {row.revenue.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                  })}
-                </span>
-                <span className="text-right text-sm tabular-nums">
-                  {row.bookings}
-                </span>
-                <span className="text-muted-foreground text-right text-sm tabular-nums">
-                  ${row.avgPerBooking.toFixed(2)}
-                </span>
-              </div>
-            );
-          })}
-          <Separator className="my-1" />
-          <div className="grid grid-cols-5 gap-3 px-2 pt-1 text-sm font-semibold">
-            <span className="col-span-2">Total</span>
-            <span className="text-right tabular-nums">
-              $
-              {totalRevenue.toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-              })}
-            </span>
-            <span className="text-right tabular-nums">{totalBookings}</span>
-            <span />
-          </div>
-        </div>
-      </div>
-
-      {/* Staff time */}
+      {/* Staff time by service */}
       <div>
         <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-widest uppercase">
           Staff Time by Service
@@ -216,51 +224,75 @@ function RevenueContent({ facilityId }: { facilityId: number }) {
                 <span className="text-sm font-medium">{row.service}</span>
               </div>
               <span className="text-right text-sm tabular-nums">
-                {row.hours}h
+                {formatCount(row.hours)}h
               </span>
               <span className="text-muted-foreground text-right text-sm">
-                {row.staffCount}
+                {formatCount(row.staffCount)}
               </span>
             </div>
           ))}
         </div>
-        <div className="mt-3 flex h-3 overflow-hidden rounded-full">
-          {staffData.map((row) =>
-            row.percentage >= 1 ? (
-              <div
-                key={row.service}
-                style={{
-                  width: `${row.percentage}%`,
-                  backgroundColor: row.color,
-                }}
-              />
-            ) : null,
-          )}
-        </div>
       </div>
     </div>
   );
+
+  return {
+    kpis,
+    body,
+    exportData: cur.map((r) => ({
+      Service: r.service,
+      Revenue: r.revenue,
+      Bookings: r.bookings,
+      "Avg / Booking": r.bookings > 0 ? r.revenue / r.bookings : 0,
+      "Share %": r.percentage,
+    })),
+    isEmpty: cur.length === 0,
+    emptyTitle: "No revenue in this period",
+  };
 }
 
-// ── Occupancy ─────────────────────────────────────────────────────────────────
+// ── Occupancy ────────────────────────────────────────────────────────────────
 
-function OccupancyContent({
-  facilityId,
-  start,
-  end,
-}: {
-  facilityId: number;
-  start: string;
-  end: string;
-}) {
-  const data = generateOccupancyReport(facilityId, start, end);
-  const totalRevenue = data.reduce((s, d) => s + d.revenue, 0);
-  const avgOccupancy =
-    data.length > 0
-      ? data.reduce((s, d) => s + d.occupancyRate, 0) / data.length
+function buildOccupancyView(range: ReportRange): ReportView {
+  const data = occupancy(toDR(range));
+  const prev = occupancy(previousWindow(range));
+
+  const avg = (rows: typeof data) =>
+    rows.length > 0
+      ? rows.reduce((s, d) => s + d.occupancyRate, 0) / rows.length
       : 0;
+  const curAvg = avg(data);
+  const prevAvg = avg(prev);
+  const curRevenue = data.reduce((s, d) => s + d.revenue, 0);
+  const prevRevenue = prev.reduce((s, d) => s + d.revenue, 0);
+  const peak = data.reduce((m, d) => Math.max(m, d.occupancyRate), 0);
 
-  const columns: ColumnDef<OccupancyReportData>[] = [
+  const kpis: ReportKpi[] = [
+    {
+      label: "Avg Occupancy",
+      value: formatPercent(curAvg),
+      icon: BedDouble,
+      tone: "indigo",
+      delta: computeDelta(curAvg, prevAvg),
+      hint: "vs. prev. period",
+    },
+    {
+      label: "Peak Occupancy",
+      value: formatPercent(peak),
+      icon: BedDouble,
+      tone: "violet",
+    },
+    {
+      label: "Boarding Revenue",
+      value: formatCurrencyWhole(curRevenue),
+      icon: DollarSign,
+      tone: "emerald",
+      delta: computeDelta(curRevenue, prevRevenue),
+      hint: "vs. prev. period",
+    },
+  ];
+
+  const columns: ColumnDef<(typeof data)[number]>[] = [
     {
       accessorKey: "date",
       header: "Date",
@@ -269,52 +301,77 @@ function OccupancyContent({
     {
       accessorKey: "occupancyRate",
       header: "Occupancy",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <span className="w-12 text-sm tabular-nums">
-            {row.original.occupancyRate.toFixed(1)}%
-          </span>
-          <div className="bg-muted h-1.5 w-20 overflow-hidden rounded-full">
-            <div
-              className="bg-primary h-1.5 rounded-full"
-              style={{
-                width: `${Math.min(row.original.occupancyRate, 100)}%`,
-              }}
-            />
-          </div>
-        </div>
-      ),
+      cell: ({ row }) => formatPercent(row.original.occupancyRate),
     },
     {
-      accessorKey: "occupiedKennels",
+      accessorKey: "occupied",
       header: "Occupied",
       cell: ({ row }) =>
-        `${row.original.occupiedKennels} / ${row.original.totalKennels}`,
+        `${formatCount(row.original.occupied)} / ${formatCount(row.original.capacity)}`,
     },
     {
       accessorKey: "revenue",
       header: "Revenue",
-      cell: ({ row }) => `$${row.original.revenue.toFixed(2)}`,
+      cell: ({ row }) => formatCurrency(row.original.revenue),
     },
   ];
 
-  return (
+  const hasData = data.some((d) => d.occupied > 0);
+  const body = (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: "Avg Occupancy", value: `${avgOccupancy.toFixed(1)}%` },
-          { label: "Total Revenue", value: `$${totalRevenue.toFixed(0)}` },
-          { label: "Days in Range", value: data.length.toString() },
-        ].map((t) => (
-          <div
-            key={t.label}
-            className="bg-card rounded-lg border p-3 text-center"
+      <ReportChartCard
+        title="Occupancy Rate"
+        subtitle="Daily boarding kennel fill rate"
+        height={260}
+        isEmpty={!hasData}
+        emptyMessage="No boarding occupancy in this period"
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart
+            data={data}
+            margin={{ top: 8, right: 16, bottom: 24, left: 8 }}
           >
-            <p className="text-muted-foreground text-xs">{t.label}</p>
-            <p className="mt-0.5 text-xl font-bold tabular-nums">{t.value}</p>
-          </div>
-        ))}
-      </div>
+            <defs>
+              <linearGradient id="occFill" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="0%"
+                  stopColor="var(--chart-1)"
+                  stopOpacity={0.35}
+                />
+                <stop
+                  offset="100%"
+                  stopColor="var(--chart-1)"
+                  stopOpacity={0}
+                />
+              </linearGradient>
+            </defs>
+            <CartesianGrid {...gridProps} />
+            <XAxis
+              dataKey="date"
+              tick={axisTick}
+              minTickGap={28}
+              tickFormatter={(v: string) => v.slice(5)}
+              label={axisLabel("Date", "x")}
+            />
+            <YAxis
+              tick={axisTick}
+              domain={[0, 100]}
+              tickFormatter={tickFmt("percent")}
+              label={axisLabel("Occupancy %", "y")}
+            />
+            <Tooltip content={<ReportTooltip format="percent" />} />
+            <Legend {...legendProps} />
+            <Area
+              type="monotone"
+              dataKey="occupancyRate"
+              name="Occupancy"
+              stroke="var(--chart-1)"
+              fill="url(#occFill)"
+              strokeWidth={2}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </ReportChartCard>
       <DataTable
         columns={columns}
         data={data}
@@ -323,23 +380,51 @@ function OccupancyContent({
       />
     </div>
   );
+
+  return {
+    kpis,
+    body,
+    exportData: data.map((d) => ({
+      Date: d.date,
+      "Occupancy %": d.occupancyRate,
+      Occupied: d.occupied,
+      Capacity: d.capacity,
+      Revenue: d.revenue,
+    })),
+    isEmpty: !hasData,
+    emptyTitle: "No boarding occupancy in this period",
+  };
 }
 
-// ── No-Shows ──────────────────────────────────────────────────────────────────
+// ── No-Shows / Cancellations (shared table shape) ───────────────────────────
 
-function NoShowContent({
-  facilityId,
-  start,
-  end,
-}: {
-  facilityId: number;
-  start: string;
-  end: string;
-}) {
-  const data = generateNoShowReport(facilityId, start, end);
+function buildNoShowView(range: ReportRange, facilityId: number): ReportView {
+  const data = generateNoShowReport(facilityId, range.from, range.to);
+  const prevWin = previousWindow(range);
+  const prev = generateNoShowReport(facilityId, prevWin.from, prevWin.to);
   const totalLost = data.reduce((s, d) => s + d.revenue, 0);
+  const prevLost = prev.reduce((s, d) => s + d.revenue, 0);
 
-  const columns: ColumnDef<NoShowReportData>[] = [
+  const kpis: ReportKpi[] = [
+    {
+      label: "No-Shows",
+      value: formatCount(data.length),
+      icon: CalendarCheck,
+      tone: "rose",
+      delta: computeDelta(data.length, prev.length),
+      hint: "vs. prev. period",
+    },
+    {
+      label: "Lost Revenue",
+      value: formatCurrency(totalLost),
+      icon: DollarSign,
+      tone: "amber",
+      delta: computeDelta(totalLost, prevLost),
+      hint: "vs. prev. period",
+    },
+  ];
+
+  const columns: ColumnDef<(typeof data)[number]>[] = [
     {
       accessorKey: "date",
       header: "Date",
@@ -360,48 +445,63 @@ function NoShowContent({
     {
       accessorKey: "revenue",
       header: "Lost Revenue",
-      cell: ({ row }) => `$${row.original.revenue.toFixed(2)}`,
+      cell: ({ row }) => formatCurrency(row.original.revenue),
     },
   ];
 
-  return (
-    <div className="space-y-4">
-      <div className="border-destructive/20 bg-destructive/5 flex items-center gap-2 rounded-lg border px-3 py-2.5">
-        <span className="text-destructive text-sm font-medium">
-          Total Lost Revenue:
-        </span>
-        <span className="text-destructive text-sm font-bold">
-          ${totalLost.toFixed(2)}
-        </span>
-        <span className="text-muted-foreground ml-1 text-xs">
-          across {data.length} no-show{data.length !== 1 ? "s" : ""}
-        </span>
-      </div>
+  return {
+    kpis,
+    body: (
       <DataTable
         columns={columns}
         data={data}
         searchColumn="clientName"
         searchPlaceholder="Search by client..."
       />
-    </div>
-  );
+    ),
+    exportData: data.map((d) => ({
+      Date: d.date,
+      Client: d.clientName,
+      Pet: d.petName,
+      Service: d.service,
+      Time: d.scheduledTime,
+      "Lost Revenue": d.revenue,
+    })),
+    isEmpty: data.length === 0,
+    emptyTitle: "No no-shows in this period",
+  };
 }
 
-// ── Cancelled Bookings ────────────────────────────────────────────────────────
-
-function CancellationContent({
-  facilityId,
-  start,
-  end,
-}: {
-  facilityId: number;
-  start: string;
-  end: string;
-}) {
-  const data = generateCancellationReport(facilityId, start, end);
+function buildCancellationView(
+  range: ReportRange,
+  facilityId: number,
+): ReportView {
+  const data = generateCancellationReport(facilityId, range.from, range.to);
+  const prevWin = previousWindow(range);
+  const prev = generateCancellationReport(facilityId, prevWin.from, prevWin.to);
   const totalRefunds = data.reduce((s, d) => s + d.refundAmount, 0);
+  const prevRefunds = prev.reduce((s, d) => s + d.refundAmount, 0);
 
-  const columns: ColumnDef<CancellationReportData>[] = [
+  const kpis: ReportKpi[] = [
+    {
+      label: "Cancellations",
+      value: formatCount(data.length),
+      icon: CalendarCheck,
+      tone: "amber",
+      delta: computeDelta(data.length, prev.length),
+      hint: "vs. prev. period",
+    },
+    {
+      label: "Refunds Issued",
+      value: formatCurrency(totalRefunds),
+      icon: DollarSign,
+      tone: "rose",
+      delta: computeDelta(totalRefunds, prevRefunds),
+      hint: "vs. prev. period",
+    },
+  ];
+
+  const columns: ColumnDef<(typeof data)[number]>[] = [
     {
       accessorKey: "date",
       header: "Date",
@@ -431,40 +531,69 @@ function CancellationContent({
     {
       accessorKey: "refundAmount",
       header: "Refund",
-      cell: ({ row }) => `$${row.original.refundAmount.toFixed(2)}`,
+      cell: ({ row }) => formatCurrency(row.original.refundAmount),
     },
   ];
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 rounded-lg border border-orange-500/20 bg-orange-50 px-3 py-2.5 dark:bg-orange-950/20">
-        <span className="text-sm font-medium text-orange-700 dark:text-orange-400">
-          Total Refunds Issued:
-        </span>
-        <span className="text-sm font-bold text-orange-700 dark:text-orange-400">
-          ${totalRefunds.toFixed(2)}
-        </span>
-        <span className="text-muted-foreground ml-1 text-xs">
-          across {data.length} cancellation{data.length !== 1 ? "s" : ""}
-        </span>
-      </div>
+  return {
+    kpis,
+    body: (
       <DataTable
         columns={columns}
         data={data}
         searchColumn="clientName"
         searchPlaceholder="Search by client..."
       />
-    </div>
-  );
+    ),
+    exportData: data.map((d) => ({
+      Date: d.date,
+      Client: d.clientName,
+      Pet: d.petName,
+      Service: d.service,
+      Notice: d.advanceNotice,
+      Reason: d.reason ?? "",
+      Refund: d.refundAmount,
+    })),
+    isEmpty: data.length === 0,
+    emptyTitle: "No cancellations in this period",
+  };
 }
 
 // ── Customer Value ────────────────────────────────────────────────────────────
 
-function CustomerValueContent({ facilityId }: { facilityId: number }) {
-  const data = getTopCustomers(facilityId, 20);
-  type CustomerRow = (typeof data)[0];
+function buildCustomerView(range: ReportRange, facilityId: number): ReportView {
+  const data = getTopCustomers(facilityId, 20, range.from, range.to);
+  const cm = clientMetrics(toDR(range));
+  const cmPrev = clientMetrics(previousWindow(range));
 
-  const columns: ColumnDef<CustomerRow>[] = [
+  const kpis: ReportKpi[] = [
+    {
+      label: "Active Clients",
+      value: formatCount(cm.activeClients),
+      icon: Users,
+      tone: "indigo",
+      delta: computeDelta(cm.activeClients, cmPrev.activeClients),
+      hint: "vs. prev. period",
+    },
+    {
+      label: "New Clients",
+      value: formatCount(cm.newClients),
+      icon: Users,
+      tone: "emerald",
+      delta: computeDelta(cm.newClients, cmPrev.newClients),
+      hint: "vs. prev. period",
+    },
+    {
+      label: "Avg LTV",
+      value: formatCurrency(cm.avgLtv),
+      icon: DollarSign,
+      tone: "violet",
+      delta: computeDelta(cm.avgLtv, cmPrev.avgLtv),
+      hint: "vs. prev. period",
+    },
+  ];
+
+  const columns: ColumnDef<(typeof data)[number]>[] = [
     {
       accessorKey: "client.name",
       header: "Client",
@@ -481,19 +610,19 @@ function CustomerValueContent({ facilityId }: { facilityId: number }) {
     {
       accessorKey: "totalSpent",
       header: "Total Spent",
-      cell: ({ row }) => `$${row.original.totalSpent.toFixed(2)}`,
+      cell: ({ row }) => formatCurrency(row.original.totalSpent),
     },
     {
       accessorKey: "averageOrderValue",
       header: "AOV",
-      cell: ({ row }) => `$${row.original.averageOrderValue.toFixed(2)}`,
+      cell: ({ row }) => formatCurrency(row.original.averageOrderValue),
     },
     {
       accessorKey: "clv",
       header: "CLV (Est.)",
       cell: ({ row }) => (
         <span className="text-primary font-semibold">
-          ${row.original.clv.toFixed(2)}
+          {formatCurrency(row.original.clv)}
         </span>
       ),
     },
@@ -507,45 +636,68 @@ function CustomerValueContent({ facilityId }: { facilityId: number }) {
     },
   ];
 
-  const totalLTV = data.reduce((s, d) => s + d.clv, 0);
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: "Clients Shown", value: data.length.toString() },
-          {
-            label: "Total Revenue",
-            value: `$${data.reduce((s, d) => s + d.totalSpent, 0).toFixed(0)}`,
-          },
-          { label: "Combined CLV", value: `$${totalLTV.toFixed(0)}` },
-        ].map((t) => (
-          <div
-            key={t.label}
-            className="bg-card rounded-lg border p-3 text-center"
-          >
-            <p className="text-muted-foreground text-xs">{t.label}</p>
-            <p className="mt-0.5 text-xl font-bold tabular-nums">{t.value}</p>
-          </div>
-        ))}
-      </div>
+  return {
+    kpis,
+    body: (
       <DataTable
         columns={columns}
         data={data}
         searchColumn="client.name"
         searchPlaceholder="Search clients..."
       />
-    </div>
-  );
+    ),
+    exportData: data.map((d) => ({
+      Client: d.client.name,
+      Email: d.client.email,
+      Bookings: d.totalBookings,
+      "Total Spent": d.totalSpent,
+      AOV: d.averageOrderValue,
+      CLV: d.clv,
+      "Last Visit": d.lastBookingDate ?? "",
+    })),
+    isEmpty: data.length === 0,
+    emptyTitle: "No client activity in this period",
+  };
+}
+
+// ── Total Revenue (full financial report) ───────────────────────────────────
+
+function buildTotalRevenueView(range: ReportRange): ReportView {
+  const dr = toDR(range);
+  const summary = revenueSummary(dr);
+  return {
+    kpis: revenueKpis(dr),
+    body: <RevenueReportBody range={dr} />,
+    exportData: revenueDailyRows(dr),
+    isEmpty: summary.transactions === 0,
+    emptyTitle: "No transactions in this period",
+  };
+}
+
+function buildView(
+  reportId: string,
+  range: ReportRange,
+  facilityId: number,
+): ReportView | null {
+  switch (reportId) {
+    case "total-revenue":
+      return buildTotalRevenueView(range);
+    case "revenue-by-service":
+      return buildRevenueView(range, facilityId);
+    case "occupancy-report":
+      return buildOccupancyView(range);
+    case "no-shows":
+      return buildNoShowView(range, facilityId);
+    case "cancelled-bookings":
+      return buildCancellationView(range, facilityId);
+    case "customer-value":
+      return buildCustomerView(range, facilityId);
+    default:
+      return null;
+  }
 }
 
 // ── Sheet ─────────────────────────────────────────────────────────────────────
-
-const RANGE_REPORTS = new Set([
-  "occupancy-report",
-  "no-shows",
-  "cancelled-bookings",
-]);
 
 export function ReportSheet({
   report,
@@ -556,62 +708,15 @@ export function ReportSheet({
   facilityId: number;
   onClose: () => void;
 }) {
-  const today = new Date().toISOString().split("T")[0];
-  const monthStart = new Date(
-    new Date().getFullYear(),
-    new Date().getMonth(),
-    1,
-  )
-    .toISOString()
-    .split("T")[0];
-
-  const [dateRange, setDateRange] = useState({ start: monthStart, end: today });
+  const [range, setRange] = useState<ReportRange>(() =>
+    defaultReportRange("90d"),
+  );
   const [showExport, setShowExport] = useState(false);
 
-  const showDatePicker =
-    report?.implemented && RANGE_REPORTS.has(report?.id ?? "");
-
-  function renderContent() {
-    if (!report) return null;
-    if (!report.implemented) {
-      return <ComingSoon name={report.name} description={report.description} />;
-    }
-    switch (report.id) {
-      case "revenue-by-service":
-      case "total-revenue":
-        return <RevenueContent facilityId={facilityId} />;
-      case "occupancy-report":
-        return (
-          <OccupancyContent
-            facilityId={facilityId}
-            start={dateRange.start}
-            end={dateRange.end}
-          />
-        );
-      case "no-shows":
-        return (
-          <NoShowContent
-            facilityId={facilityId}
-            start={dateRange.start}
-            end={dateRange.end}
-          />
-        );
-      case "cancelled-bookings":
-        return (
-          <CancellationContent
-            facilityId={facilityId}
-            start={dateRange.start}
-            end={dateRange.end}
-          />
-        );
-      case "customer-value":
-        return <CustomerValueContent facilityId={facilityId} />;
-      default:
-        return (
-          <ComingSoon name={report.name} description={report.description} />
-        );
-    }
-  }
+  const view =
+    report?.implemented && report
+      ? buildView(report.id, range, facilityId)
+      : null;
 
   return (
     <>
@@ -627,48 +732,24 @@ export function ReportSheet({
                 {report?.description ?? ""}
               </DialogDescription>
             </DialogHeader>
-
-            {(showDatePicker || report?.implemented) && (
-              <div className="mt-3 flex items-center gap-2">
-                {showDatePicker && (
-                  <>
-                    <Input
-                      type="date"
-                      value={dateRange.start}
-                      onChange={(e) =>
-                        setDateRange((r) => ({ ...r, start: e.target.value }))
-                      }
-                      className="h-8 w-[140px] text-xs"
-                    />
-                    <span className="text-muted-foreground text-xs">to</span>
-                    <Input
-                      type="date"
-                      value={dateRange.end}
-                      onChange={(e) =>
-                        setDateRange((r) => ({ ...r, end: e.target.value }))
-                      }
-                      className="h-8 w-[140px] text-xs"
-                    />
-                  </>
-                )}
-                {report?.implemented && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="ml-auto h-8"
-                    onClick={() => setShowExport(true)}
-                  >
-                    <Download className="mr-1.5 size-3.5" />
-                    Export
-                  </Button>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto px-6 py-5">
-            {renderContent()}
+            {!report ? null : !view ? (
+              <ComingSoon name={report.name} description={report.description} />
+            ) : (
+              <ReportShell
+                range={range}
+                onRangeChange={setRange}
+                onExport={() => setShowExport(true)}
+                kpis={view.kpis}
+                isEmpty={view.isEmpty}
+                emptyTitle={view.emptyTitle}
+              >
+                {view.body}
+              </ReportShell>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -677,7 +758,7 @@ export function ReportSheet({
         <DialogContent className="max-w-2xl">
           <ExportReportModal
             type={report?.id ?? ""}
-            data={[]}
+            data={view?.exportData ?? []}
             onClose={() => setShowExport(false)}
           />
         </DialogContent>

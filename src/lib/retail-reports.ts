@@ -3,6 +3,8 @@
 import {
   getAllTransactions,
   products,
+  getInventoryValue,
+  getLowStockProducts,
   type Product,
   type ProductVariant,
 } from "@/data/retail";
@@ -414,4 +416,174 @@ export function getSalesLinkedToServices(
   });
 
   return Array.from(serviceMap.values()).sort((a, b) => b.revenue - a.revenue);
+}
+
+// ── Inventory value / low-stock summary ─────────────────────────────────────
+
+const roundCents = (n: number) => Math.round(n * 100) / 100;
+
+export interface LowStockItem {
+  name: string;
+  sku: string;
+  stock: number;
+  minStock: number;
+}
+
+export interface InventorySummary {
+  /** Stock valued at cost (Σ stock × costPrice). */
+  costValue: number;
+  /** Stock valued at retail price (Σ stock × price). */
+  retailValue: number;
+  /** retailValue − costValue. */
+  potentialProfit: number;
+  totalUnits: number;
+  skuCount: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  lowStock: LowStockItem[];
+}
+
+/**
+ * Current inventory valuation + low-stock summary, derived from the product
+ * catalog (products + variants). Reuses getInventoryValue/getLowStockProducts.
+ */
+export function getInventorySummary(): InventorySummary {
+  const { cost, retail } = getInventoryValue();
+
+  let totalUnits = 0;
+  let skuCount = 0;
+  let outOfStock = 0;
+  for (const p of products) {
+    const units = p.hasVariants ? p.variants : [p];
+    for (const u of units) {
+      totalUnits += u.stock;
+      skuCount += 1;
+      if (u.stock <= 0) outOfStock += 1;
+    }
+  }
+
+  const lowStock: LowStockItem[] = getLowStockProducts()
+    .map((it) => ({
+      name: it.name,
+      sku: it.sku,
+      stock: it.stock,
+      minStock: it.minStock,
+    }))
+    .sort((a, b) => a.stock - b.stock);
+
+  return {
+    costValue: roundCents(cost),
+    retailValue: roundCents(retail),
+    potentialProfit: roundCents(retail - cost),
+    totalUnits,
+    skuCount,
+    lowStockCount: lowStock.length,
+    outOfStockCount: outOfStock,
+    lowStock,
+  };
+}
+
+// ── Retail add-on attach rate ───────────────────────────────────────────────
+
+export interface ServiceAttachRate {
+  serviceType: string;
+  /** Transactions linked to this service. */
+  serviceTransactions: number;
+  /** …of which also sold a retail product. */
+  withRetailAddOn: number;
+  /** withRetailAddOn / serviceTransactions × 100. */
+  attachRate: number;
+  /** Product revenue attached to this service. */
+  addOnRevenue: number;
+}
+
+export interface ServiceAttachSummary {
+  serviceTransactions: number;
+  withRetailAddOn: number;
+  attachRate: number;
+  addOnRevenue: number;
+  byService: ServiceAttachRate[];
+}
+
+/**
+ * Add-on attach rate: of completed transactions linked to a service
+ * (bookingService set), the share that also sold a retail product line item,
+ * overall and per service. Derived purely from getAllTransactions() line items.
+ */
+export function getServiceAttachRate(
+  startDate?: Date,
+  endDate?: Date,
+): ServiceAttachSummary {
+  const transactions = getAllTransactions();
+  const now = new Date();
+  const end = endDate || now;
+  const start = startDate || new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const linked = transactions.filter((txn) => {
+    const d = new Date(txn.createdAt);
+    return (
+      txn.status === "completed" &&
+      d >= start &&
+      d <= end &&
+      !!txn.bookingService
+    );
+  });
+
+  const map = new Map<
+    string,
+    {
+      serviceTransactions: number;
+      withRetailAddOn: number;
+      addOnRevenue: number;
+    }
+  >();
+  let totalSvc = 0;
+  let totalAttached = 0;
+  let totalAddOnRevenue = 0;
+
+  for (const txn of linked) {
+    const svc = txn.bookingService as string;
+    const productItems = txn.items.filter((i) => i.itemType === "product");
+    const hasAddOn = productItems.length > 0;
+    const addOnRevenue = productItems.reduce((s, i) => s + (i.total ?? 0), 0);
+
+    const e = map.get(svc) ?? {
+      serviceTransactions: 0,
+      withRetailAddOn: 0,
+      addOnRevenue: 0,
+    };
+    e.serviceTransactions += 1;
+    if (hasAddOn) {
+      e.withRetailAddOn += 1;
+      e.addOnRevenue += addOnRevenue;
+    }
+    map.set(svc, e);
+
+    totalSvc += 1;
+    if (hasAddOn) {
+      totalAttached += 1;
+      totalAddOnRevenue += addOnRevenue;
+    }
+  }
+
+  const byService: ServiceAttachRate[] = [...map.entries()]
+    .map(([serviceType, e]) => ({
+      serviceType,
+      serviceTransactions: e.serviceTransactions,
+      withRetailAddOn: e.withRetailAddOn,
+      attachRate:
+        e.serviceTransactions > 0
+          ? roundCents((e.withRetailAddOn / e.serviceTransactions) * 100)
+          : 0,
+      addOnRevenue: roundCents(e.addOnRevenue),
+    }))
+    .sort((a, b) => b.serviceTransactions - a.serviceTransactions);
+
+  return {
+    serviceTransactions: totalSvc,
+    withRetailAddOn: totalAttached,
+    attachRate: totalSvc > 0 ? roundCents((totalAttached / totalSvc) * 100) : 0,
+    addOnRevenue: roundCents(totalAddOnRevenue),
+    byService,
+  };
 }

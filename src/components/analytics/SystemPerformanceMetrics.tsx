@@ -21,8 +21,19 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from "recharts";
+import {
+  chartColor,
+  axisTick,
+  gridProps,
+  legendProps,
+  axisLabel,
+  ReportTooltip,
+  tickFmt,
+} from "@/components/reports/chart-kit";
+import { formatCount, formatPercent, formatCompactNumber } from "@/lib/format";
 
 export function SystemPerformanceMetrics() {
   const metrics = systemPerformance;
@@ -35,14 +46,9 @@ export function SystemPerformanceMetrics() {
   };
 
   // Calculate additional metrics
-  const successRate = (
-    (metrics.successfulRequests / metrics.totalRequests) *
-    100
-  ).toFixed(2);
-  const failureRate = (
-    (metrics.failedRequests / metrics.totalRequests) *
-    100
-  ).toFixed(2);
+  const successRate =
+    (metrics.successfulRequests / metrics.totalRequests) * 100;
+  const failureRate = (metrics.failedRequests / metrics.totalRequests) * 100;
 
   return (
     <div className="space-y-6">
@@ -57,7 +63,7 @@ export function SystemPerformanceMetrics() {
                 </p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-2xl font-bold tracking-tight">
-                    {metrics.systemUptime}%
+                    {formatPercent(metrics.systemUptime)}
                   </h3>
                   <CheckCircle2 className="text-success size-5" />
                 </div>
@@ -114,14 +120,14 @@ export function SystemPerformanceMetrics() {
                 </p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-2xl font-bold tracking-tight">
-                    {metrics.errorRate}%
+                    {formatPercent(metrics.errorRate)}
                   </h3>
                   <span className="text-success inline-flex items-center text-xs font-medium">
                     Low
                   </span>
                 </div>
                 <p className="text-muted-foreground mt-0.5 text-xs">
-                  {metrics.failedRequests.toLocaleString()} errors
+                  {formatCount(metrics.failedRequests)} errors
                 </p>
               </div>
               <div
@@ -146,11 +152,11 @@ export function SystemPerformanceMetrics() {
                 </p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-2xl font-bold tracking-tight">
-                    {metrics.activeUsers.toLocaleString()}
+                    {formatCount(metrics.activeUsers)}
                   </h3>
                 </div>
                 <p className="text-muted-foreground mt-0.5 text-xs">
-                  {metrics.totalSessions.toLocaleString()} sessions
+                  {formatCount(metrics.totalSessions)} sessions
                 </p>
               </div>
               <div
@@ -183,44 +189,41 @@ export function SystemPerformanceMetrics() {
               <AreaChart data={metrics.uptimeTrend}>
                 <defs>
                   <linearGradient id="colorUptime" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                    <stop
+                      offset="0%"
+                      stopColor={chartColor(0)}
+                      stopOpacity={0.3}
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor={chartColor(0)}
+                      stopOpacity={0}
+                    />
                   </linearGradient>
                 </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#e2e8f0"
-                  vertical={false}
-                />
+                <CartesianGrid {...gridProps} />
                 <XAxis
                   dataKey="date"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
+                  tick={axisTick}
+                  label={axisLabel("Week", "x")}
                 />
                 <YAxis
                   domain={[99, 100]}
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  tickFormatter={(value) => `${value}%`}
+                  tick={axisTick}
+                  tickFormatter={tickFmt("percent")}
+                  label={axisLabel("Uptime", "y")}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#ffffff",
-                    border: "none",
-                    borderRadius: "12px",
-                    boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
-                  }}
-                  formatter={(value: number | undefined) => [
-                    `${value || 0}%`,
-                    "Uptime",
-                  ]}
-                />
+                <Tooltip content={<ReportTooltip format="percent" />} />
+                <Legend {...legendProps} />
                 <Area
                   type="monotone"
                   dataKey="uptime"
-                  stroke="#10b981"
+                  name="Uptime"
+                  stroke={chartColor(0)}
                   strokeWidth={3}
                   fill="url(#colorUptime)"
                 />
@@ -235,7 +238,7 @@ export function SystemPerformanceMetrics() {
               >
                 <p className="text-muted-foreground text-xs">{week.date}</p>
                 <p className="text-success mt-1 text-xl font-bold">
-                  {week.uptime}%
+                  {formatPercent(week.uptime)}
                 </p>
               </div>
             ))}
@@ -258,30 +261,24 @@ export function SystemPerformanceMetrics() {
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={metrics.errorTrend}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#e2e8f0"
-                    vertical={false}
-                  />
+                  <CartesianGrid {...gridProps} />
                   <XAxis
                     dataKey="date"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
+                    tick={axisTick}
+                    label={axisLabel("Week", "x")}
                   />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
+                    tick={axisTick}
+                    tickFormatter={tickFmt("compactNumber")}
+                    label={axisLabel("Errors", "y")}
                   />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      border: "none",
-                      borderRadius: "12px",
-                      boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
-                    }}
-                  />
+                  <Tooltip content={<ReportTooltip format="number" />} />
+                  <Legend {...legendProps} />
+                  {/* Red is semantic here — an error/critical series. */}
                   <Bar
                     dataKey="errors"
                     fill="#ef4444"
@@ -311,7 +308,7 @@ export function SystemPerformanceMetrics() {
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-sm font-medium">Total Requests</span>
                   <span className="text-2xl font-bold">
-                    {(metrics.totalRequests / 1000000).toFixed(2)}M
+                    {formatCompactNumber(metrics.totalRequests)}
                   </span>
                 </div>
                 <div className="bg-muted h-3 w-full rounded-full">
@@ -331,10 +328,10 @@ export function SystemPerformanceMetrics() {
                   </div>
                   <div className="text-right">
                     <span className="text-xl font-bold">
-                      {(metrics.successfulRequests / 1000000).toFixed(2)}M
+                      {formatCompactNumber(metrics.successfulRequests)}
                     </span>
                     <span className="text-muted-foreground ml-2 text-sm">
-                      ({successRate}%)
+                      ({formatPercent(successRate, 2)})
                     </span>
                   </div>
                 </div>
@@ -355,10 +352,10 @@ export function SystemPerformanceMetrics() {
                   </div>
                   <div className="text-right">
                     <span className="text-xl font-bold">
-                      {metrics.failedRequests.toLocaleString()}
+                      {formatCount(metrics.failedRequests)}
                     </span>
                     <span className="text-muted-foreground ml-2 text-sm">
-                      ({failureRate}%)
+                      ({formatPercent(failureRate, 2)})
                     </span>
                   </div>
                 </div>
@@ -375,13 +372,13 @@ export function SystemPerformanceMetrics() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Success Rate</span>
                   <Badge variant="default" className="text-xs">
-                    {successRate}%
+                    {formatPercent(successRate, 2)}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Error Rate</span>
                   <Badge variant="secondary" className="text-xs">
-                    {metrics.errorRate}%
+                    {formatPercent(metrics.errorRate)}
                   </Badge>
                 </div>
               </div>
@@ -471,7 +468,7 @@ export function SystemPerformanceMetrics() {
               <div>
                 <p className="text-muted-foreground text-xs">Total Sessions</p>
                 <p className="text-2xl font-bold">
-                  {(metrics.totalSessions / 1000).toFixed(1)}K
+                  {formatCompactNumber(metrics.totalSessions)}
                 </p>
               </div>
             </div>

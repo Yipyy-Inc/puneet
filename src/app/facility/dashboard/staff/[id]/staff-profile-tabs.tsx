@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import {
   CalendarClock,
   Plus,
@@ -39,6 +40,7 @@ import {
   setOnboardingTaskComplete,
   ONBOARDING_TYPE_LABEL,
 } from "@/data/staff-onboarding";
+import { OnboardingSubmissionReview } from "../_components/onboarding-submission-view";
 
 // Local editable models — this is a mock with no fs-* shift/task/rating join, so
 // these tabs are genuine admin-editable state rather than fabricated read-only
@@ -192,25 +194,28 @@ export function OnboardingTab({ staff }: { staff: StaffProfile }) {
 
   if (tasks.length === 0) {
     return (
-      <div className="border-border/60 flex flex-col items-center gap-2 rounded-xl border border-dashed py-10 text-center">
-        <GraduationCap className="text-muted-foreground/50 size-7" />
-        <p className="text-sm font-medium">No onboarding checklist yet</p>
-        <p className="text-muted-foreground max-w-xs text-xs">
-          Start a role-appropriate checklist for {staff.firstName}.
-        </p>
-        <Button
-          size="sm"
-          className="mt-1"
-          onClick={() =>
-            initOnboarding(
-              staff.id,
-              staff.primaryRole,
-              staff.employment.hireDate,
-            )
-          }
-        >
-          <Plus className="size-3.5" /> Start onboarding checklist
-        </Button>
+      <div className="space-y-5">
+        <div className="border-border/60 flex flex-col items-center gap-2 rounded-xl border border-dashed py-10 text-center">
+          <GraduationCap className="text-muted-foreground/50 size-7" />
+          <p className="text-sm font-medium">No onboarding checklist yet</p>
+          <p className="text-muted-foreground max-w-xs text-xs">
+            Start a role-appropriate checklist for {staff.firstName}.
+          </p>
+          <Button
+            size="sm"
+            className="mt-1"
+            onClick={() =>
+              initOnboarding(
+                staff.id,
+                staff.primaryRole,
+                staff.employment.hireDate,
+              )
+            }
+          >
+            <Plus className="size-3.5" /> Start onboarding checklist
+          </Button>
+        </div>
+        <OnboardingSubmissionReview profile={staff} />
       </div>
     );
   }
@@ -373,6 +378,10 @@ export function OnboardingTab({ staff }: { staff: StaffProfile }) {
           </Button>
         </div>
       </div>
+
+      <Separator />
+
+      <OnboardingSubmissionReview profile={staff} />
     </div>
   );
 }

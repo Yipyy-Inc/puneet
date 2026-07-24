@@ -47,66 +47,25 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import {
+  axisLabel,
+  axisTick,
+  gridProps,
+  legendProps,
+  ReportTooltip,
+  tickFmt,
+} from "@/components/reports/chart-kit";
+import {
+  formatCount,
+  formatCurrency,
+  formatCurrencyWhole,
+  formatPercent,
+} from "@/lib/format";
 
 interface FacilityReportsProps {
   facilityId: number;
   facilityName: string;
 }
-
-interface TooltipProps {
-  active?: boolean;
-  payload?: Array<{
-    name: string;
-    value: number;
-    color: string;
-    payload?: { percentage: number };
-  }>;
-  label?: string;
-}
-
-const formatCurrencyValue = (value: number) => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-};
-
-const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-popover rounded-lg border p-3 shadow-lg">
-        <p className="text-sm font-medium">{label}</p>
-        {payload.map((entry, index: number) => (
-          <p key={index} className="text-sm" style={{ color: entry.color }}>
-            {entry.name}:{" "}
-            {typeof entry.value === "number" &&
-            entry.name.toLowerCase().includes("revenue")
-              ? formatCurrencyValue(entry.value)
-              : entry.value}
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
-};
-
-const PieTooltip = ({ active, payload }: TooltipProps) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-popover rounded-lg border p-3 shadow-lg">
-        <p className="text-sm font-medium">{payload[0].name}</p>
-        <p className="text-sm">{formatCurrencyValue(payload[0].value)}</p>
-        <p className="text-muted-foreground text-xs">
-          {payload[0].payload?.percentage}% of total
-        </p>
-      </div>
-    );
-  }
-  return null;
-};
 
 const COLORS = [
   "#8b5cf6",
@@ -126,8 +85,6 @@ export function FacilityReports({
   const { data, isLoading } = useQuery(
     facilitiesQueries.report(facilityId, rangeMonths),
   );
-
-  const formatCurrency = formatCurrencyValue;
 
   if (isLoading || !data) {
     return (
@@ -197,12 +154,12 @@ export function FacilityReports({
               <div>
                 <p className="text-muted-foreground text-xs">Total Revenue</p>
                 <p className="mt-1 text-2xl font-bold">
-                  {formatCurrency(data.summary.totalRevenue)}
+                  {formatCurrencyWhole(data.summary.totalRevenue)}
                 </p>
                 <div className="mt-1 flex items-center gap-1">
                   <TrendingUp className="text-success size-3" />
                   <span className="text-success text-xs font-medium">
-                    +{data.summary.revenueGrowth.toFixed(1)}%
+                    +{formatPercent(data.summary.revenueGrowth)}
                   </span>
                 </div>
               </div>
@@ -225,12 +182,12 @@ export function FacilityReports({
               <div>
                 <p className="text-muted-foreground text-xs">Total Bookings</p>
                 <p className="mt-1 text-2xl font-bold">
-                  {data.summary.totalBookings}
+                  {formatCount(data.summary.totalBookings)}
                 </p>
                 <div className="mt-1 flex items-center gap-1">
                   <TrendingUp className="text-success size-3" />
                   <span className="text-success text-xs font-medium">
-                    +{data.summary.bookingGrowth.toFixed(1)}%
+                    +{formatPercent(data.summary.bookingGrowth)}
                   </span>
                 </div>
               </div>
@@ -253,12 +210,12 @@ export function FacilityReports({
               <div>
                 <p className="text-muted-foreground text-xs">Active Clients</p>
                 <p className="mt-1 text-2xl font-bold">
-                  {data.summary.activeClients}
+                  {formatCount(data.summary.activeClients)}
                 </p>
                 <div className="mt-1 flex items-center gap-1">
                   <TrendingUp className="text-success size-3" />
                   <span className="text-success text-xs font-medium">
-                    +{data.summary.clientGrowth.toFixed(1)}%
+                    +{formatPercent(data.summary.clientGrowth)}
                   </span>
                 </div>
               </div>
@@ -283,7 +240,7 @@ export function FacilityReports({
                   Avg. Booking Value
                 </p>
                 <p className="mt-1 text-2xl font-bold">
-                  {formatCurrency(data.summary.avgBookingValue)}
+                  {formatCurrencyWhole(data.summary.avgBookingValue)}
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
                   Per transaction
@@ -394,29 +351,33 @@ export function FacilityReports({
                           />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        className="stroke-muted"
-                      />
+                      <CartesianGrid {...gridProps} />
                       <XAxis
                         dataKey="month"
-                        className="text-xs"
-                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                        tick={axisTick}
+                        label={axisLabel("Month", "x")}
                       />
                       <YAxis
                         yAxisId="left"
-                        className="text-xs"
-                        tick={{ fill: "hsl(var(--muted-foreground))" }}
-                        tickFormatter={(v) => `$${v / 1000}k`}
+                        tick={axisTick}
+                        tickFormatter={tickFmt("compactCurrency")}
+                        label={axisLabel("Revenue", "y")}
                       />
                       <YAxis
                         yAxisId="right"
                         orientation="right"
-                        className="text-xs"
-                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                        tick={axisTick}
+                        tickFormatter={tickFmt("compactNumber")}
+                        label={axisLabel("Bookings", "y")}
                       />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
+                      <Tooltip
+                        content={
+                          <ReportTooltip
+                            format={{ revenue: "currency", bookings: "number" }}
+                          />
+                        }
+                      />
+                      <Legend {...legendProps} />
                       <Area
                         yAxisId="left"
                         type="monotone"
@@ -476,12 +437,8 @@ export function FacilityReports({
                           />
                         ))}
                       </Pie>
-                      <Tooltip content={<PieTooltip />} />
-                      <Legend
-                        formatter={(value) => (
-                          <span className="text-sm">{value}</span>
-                        )}
-                      />
+                      <Tooltip content={<ReportTooltip format="currency" />} />
+                      <Legend {...legendProps} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -602,21 +559,19 @@ export function FacilityReports({
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data.monthlyRevenue}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      className="stroke-muted"
-                    />
+                    <CartesianGrid {...gridProps} />
                     <XAxis
                       dataKey="month"
-                      className="text-xs"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      tick={axisTick}
+                      label={axisLabel("Month", "x")}
                     />
                     <YAxis
-                      className="text-xs"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
-                      tickFormatter={(v) => `$${v / 1000}k`}
+                      tick={axisTick}
+                      tickFormatter={tickFmt("compactCurrency")}
+                      label={axisLabel("Revenue", "y")}
                     />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<ReportTooltip format="currency" />} />
+                    <Legend {...legendProps} />
                     <Line
                       type="monotone"
                       dataKey="revenue"
@@ -635,7 +590,7 @@ export function FacilityReports({
                     Total (6 months)
                   </p>
                   <p className="text-lg font-bold">
-                    {formatCurrency(
+                    {formatCurrencyWhole(
                       data.monthlyRevenue.reduce(
                         (sum, m) => sum + m.revenue,
                         0,
@@ -648,7 +603,7 @@ export function FacilityReports({
                     Monthly Average
                   </p>
                   <p className="text-lg font-bold">
-                    {formatCurrency(
+                    {formatCurrencyWhole(
                       data.monthlyRevenue.reduce(
                         (sum, m) => sum + m.revenue,
                         0,
@@ -672,26 +627,22 @@ export function FacilityReports({
               <div className="h-[250px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data.revenueByService} layout="vertical">
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      className="stroke-muted"
-                      horizontal={true}
-                      vertical={false}
-                    />
+                    <CartesianGrid {...gridProps} />
                     <XAxis
                       type="number"
-                      className="text-xs"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
-                      tickFormatter={(v) => `$${v / 1000}k`}
+                      tick={axisTick}
+                      tickFormatter={tickFmt("compactCurrency")}
+                      label={axisLabel("Revenue", "x")}
                     />
                     <YAxis
                       type="category"
                       dataKey="name"
-                      className="text-xs"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      tick={axisTick}
                       width={80}
+                      label={axisLabel("Service", "y")}
                     />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<ReportTooltip format="currency" />} />
+                    <Legend {...legendProps} />
                     <Bar dataKey="value" name="Revenue" radius={[0, 4, 4, 0]}>
                       {data.revenueByService.map((entry, index) => (
                         <Cell
@@ -727,21 +678,19 @@ export function FacilityReports({
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data.bookingsByDay}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      className="stroke-muted"
-                    />
+                    <CartesianGrid {...gridProps} />
                     <XAxis
                       dataKey="day"
-                      className="text-xs"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      tick={axisTick}
+                      label={axisLabel("Day", "x")}
                     />
                     <YAxis
-                      className="text-xs"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      tick={axisTick}
+                      tickFormatter={tickFmt("compactNumber")}
+                      label={axisLabel("Bookings", "y")}
                     />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend />
+                    <Tooltip content={<ReportTooltip format="number" />} />
+                    <Legend {...legendProps} />
                     <Bar
                       dataKey="bookings"
                       name="Total Bookings"
@@ -765,17 +714,24 @@ export function FacilityReports({
                 <div>
                   <p className="text-muted-foreground text-xs">Weekly Total</p>
                   <p className="text-lg font-bold">
-                    {data.bookingsByDay.reduce((sum, d) => sum + d.bookings, 0)}
+                    {formatCount(
+                      data.bookingsByDay.reduce(
+                        (sum, d) => sum + d.bookings,
+                        0,
+                      ),
+                    )}
                   </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Daily Average</p>
                   <p className="text-lg font-bold">
-                    {Math.round(
-                      data.bookingsByDay.reduce(
-                        (sum, d) => sum + d.bookings,
-                        0,
-                      ) / 7,
+                    {formatCount(
+                      Math.round(
+                        data.bookingsByDay.reduce(
+                          (sum, d) => sum + d.bookings,
+                          0,
+                        ) / 7,
+                      ),
                     )}
                   </p>
                 </div>
@@ -789,7 +745,7 @@ export function FacilityReports({
               <CardContent className="p-5 text-center">
                 <p className="text-muted-foreground text-xs">Completion Rate</p>
                 <p className="text-success mt-2 text-3xl font-bold">
-                  {data.bookingMetrics.completionRate}%
+                  {formatPercent(data.bookingMetrics.completionRate)}
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
                   +2.3% from last month
@@ -802,7 +758,7 @@ export function FacilityReports({
                   Cancellation Rate
                 </p>
                 <p className="text-warning mt-2 text-3xl font-bold">
-                  {data.bookingMetrics.cancellationRate}%
+                  {formatPercent(data.bookingMetrics.cancellationRate)}
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
                   -1.2% from last month
@@ -813,7 +769,7 @@ export function FacilityReports({
               <CardContent className="p-5 text-center">
                 <p className="text-muted-foreground text-xs">No-Show Rate</p>
                 <p className="mt-2 text-3xl font-bold">
-                  {data.bookingMetrics.noShowRate}%
+                  {formatPercent(data.bookingMetrics.noShowRate)}
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
                   -0.5% from last month
@@ -866,21 +822,19 @@ export function FacilityReports({
                         />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      className="stroke-muted"
-                    />
+                    <CartesianGrid {...gridProps} />
                     <XAxis
                       dataKey="month"
-                      className="text-xs"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      tick={axisTick}
+                      label={axisLabel("Month", "x")}
                     />
                     <YAxis
-                      className="text-xs"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      tick={axisTick}
+                      tickFormatter={tickFmt("compactNumber")}
+                      label={axisLabel("Clients", "y")}
                     />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend />
+                    <Tooltip content={<ReportTooltip format="number" />} />
+                    <Legend {...legendProps} />
                     <Area
                       type="monotone"
                       dataKey="newClients"

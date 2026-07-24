@@ -16,6 +16,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/use-facility-rbac";
+import { DeltaBadge } from "@/components/ui/delta-badge";
+import {
+  formatCurrencyWhole,
+  formatCount,
+  formatPercent,
+  type Delta,
+} from "@/lib/format";
 import { ReportSheet } from "./report-sheet";
 
 type ReportTier = "Essential" | "Beneficial";
@@ -43,6 +50,14 @@ interface KPIs {
   retentionRate: number;
   activeClients: number;
   aov: number;
+}
+
+interface KpiDeltas {
+  revenue: Delta;
+  bookings: Delta;
+  occupancy: Delta;
+  activeClients: Delta;
+  aov: Delta;
 }
 
 const CATALOG: ReportCategory[] = [
@@ -488,10 +503,12 @@ function KpiTile({
   label,
   value,
   sub,
+  delta,
 }: {
   label: string;
   value: string;
   sub: string;
+  delta?: Delta;
 }) {
   return (
     <div className="bg-card space-y-1 rounded-xl border p-4 shadow-sm">
@@ -499,7 +516,10 @@ function KpiTile({
         {label}
       </p>
       <p className="text-2xl leading-none font-bold tabular-nums">{value}</p>
-      <p className="text-muted-foreground text-xs">{sub}</p>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0">
+        {delta && <DeltaBadge delta={delta} />}
+        <p className="text-muted-foreground text-xs">{sub}</p>
+      </div>
     </div>
   );
 }
@@ -583,9 +603,11 @@ function CategorySection({
 
 export function ReportsHub({
   kpis,
+  deltas,
   facilityId,
 }: {
   kpis: KPIs;
+  deltas: KpiDeltas;
   facilityId: number;
 }) {
   const [search, setSearch] = useState("");
@@ -643,36 +665,41 @@ export function ReportsHub({
       >
         {canSeeRevenue && (
           <KpiTile
-            label="Revenue (MTD)"
-            value={`$${kpis.totalRevenue.toLocaleString("en-US", { maximumFractionDigits: 0 })}`}
-            sub="Month to date"
+            label="Revenue"
+            value={formatCurrencyWhole(kpis.totalRevenue)}
+            sub="Last 6 months"
+            delta={deltas.revenue}
           />
         )}
         <KpiTile
-          label="Bookings (MTD)"
-          value={kpis.totalBookings.toString()}
-          sub="Month to date"
+          label="Bookings"
+          value={formatCount(kpis.totalBookings)}
+          sub="Last 6 months"
+          delta={deltas.bookings}
         />
         <KpiTile
           label="Occupancy"
-          value={`${kpis.occupancyRate.toFixed(1)}%`}
+          value={formatPercent(kpis.occupancyRate)}
           sub="Boarding fill rate"
+          delta={deltas.occupancy}
         />
         <KpiTile
           label="Retention"
-          value={`${kpis.retentionRate.toFixed(1)}%`}
+          value={formatPercent(kpis.retentionRate)}
           sub="3-month window"
         />
         <KpiTile
           label="Active Clients"
-          value={kpis.activeClients.toString()}
+          value={formatCount(kpis.activeClients)}
           sub="With bookings"
+          delta={deltas.activeClients}
         />
         {canSeeRevenue && (
           <KpiTile
             label="Avg Order"
-            value={`$${kpis.aov.toFixed(0)}`}
+            value={formatCurrencyWhole(kpis.aov)}
             sub="Per booking"
+            delta={deltas.aov}
           />
         )}
       </div>

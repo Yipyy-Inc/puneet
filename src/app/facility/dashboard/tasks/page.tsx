@@ -14,6 +14,7 @@ import {
   Plus,
   CheckCircle2,
   AlertTriangle,
+  UserX,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { TaskWizard } from "./TaskWizard";
@@ -23,6 +24,7 @@ import {
   standaloneTasks,
   workTaskLibrary,
 } from "@/data/work-tasks";
+import { getOffboardingInstances } from "@/data/staff-onboarding";
 
 const ShiftTasksTab = dynamic(
   () => import("./ShiftTasksTab").then((m) => m.ShiftTasksTab),
@@ -38,6 +40,10 @@ const StandaloneTasksTab = dynamic(
 );
 const TaskLibraryTab = dynamic(
   () => import("./TaskLibraryTab").then((m) => m.TaskLibraryTab),
+  { ssr: false },
+);
+const OffboardingTasksTab = dynamic(
+  () => import("./OffboardingTasksTab").then((m) => m.OffboardingTasksTab),
   { ssr: false },
 );
 
@@ -163,6 +169,22 @@ export default function TaskManagementPage() {
     (t) => t.status === "pending" || t.status === "in_progress",
   ).length;
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const offboardingInstances = getOffboardingInstances();
+  const offboardingOpen = offboardingInstances.reduce(
+    (n, i) => n + i.tasks.filter((t) => !t.completedAt).length,
+    0,
+  );
+  const offboardingOverdue = offboardingInstances.reduce(
+    (n, i) =>
+      n +
+      i.tasks.filter(
+        (t) =>
+          t.required && !t.completedAt && t.dueDate && t.dueDate < todayStr,
+      ).length,
+    0,
+  );
+
   return (
     <div className="space-y-5 p-5 md:p-7">
       {/* Page header */}
@@ -218,6 +240,22 @@ export default function TaskManagementPage() {
             Task Library
             <TabCount n={workTaskLibrary.filter((t) => t.isActive).length} />
           </TabsTrigger>
+          {offboardingOpen > 0 && (
+            <TabsTrigger
+              value="offboarding"
+              className="gap-1.5 text-xs sm:text-sm"
+            >
+              <UserX className="size-4" />
+              Offboarding
+              {offboardingOverdue > 0 ? (
+                <Badge className="ml-1.5 h-4 min-w-4 rounded-full bg-red-500 px-1 text-[9px] text-white">
+                  {offboardingOverdue}
+                </Badge>
+              ) : (
+                <TabCount n={offboardingOpen} />
+              )}
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <div className="mt-5">
@@ -232,6 +270,9 @@ export default function TaskManagementPage() {
           </TabsContent>
           <TabsContent value="library">
             <TaskLibraryTab />
+          </TabsContent>
+          <TabsContent value="offboarding">
+            <OffboardingTasksTab />
           </TabsContent>
         </div>
       </Tabs>

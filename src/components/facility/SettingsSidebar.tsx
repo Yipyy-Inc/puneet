@@ -27,6 +27,12 @@ import {
   Sparkles,
   Globe,
   Siren,
+  ClipboardList,
+  LogOut,
+  Briefcase,
+  UserX,
+  UserCog,
+  SlidersHorizontal,
 } from "lucide-react";
 import { UserCircle } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
@@ -88,6 +94,14 @@ export const SETTINGS_SECTION_KEYS: Record<string, PermissionKey> = {
   yipyygo: "manage_facility_settings",
   audit: "settings_audit_log",
   hq: "hq_manage_settings",
+  // Staff & HR — Manager/Owner only.
+  "onboarding-templates": "manage_onboarding",
+  "offboarding-templates": "manage_onboarding",
+  "employment-types": "manage_onboarding",
+  "termination-reasons": "manage_onboarding",
+  "staff-roles": "manage_onboarding",
+  "hr-config": "manage_onboarding",
+  "staff-notifications": "manage_onboarding",
 };
 
 /** True when the acting viewer may open a settings section. Personal sections
@@ -198,6 +212,54 @@ const STATIC_GROUPS: SettingsGroup[] = [
       { id: "tags-notes", label: "Tags & Notes", icon: Tag },
       { id: "yipyygo", label: "Yipyy Express Check-in", icon: FileText },
       { id: "audit", label: "Audit Log", icon: History },
+    ],
+  },
+  {
+    // Staff & HR — Manager/Owner only (every section gated on manage_onboarding).
+    label: "Staff & HR",
+    sections: [
+      {
+        id: "onboarding-templates",
+        label: "Onboarding Templates",
+        icon: ClipboardList,
+        permKey: "manage_onboarding",
+      },
+      {
+        id: "offboarding-templates",
+        label: "Offboarding Templates",
+        icon: LogOut,
+        permKey: "manage_onboarding",
+      },
+      {
+        id: "employment-types",
+        label: "Employment Types",
+        icon: Briefcase,
+        permKey: "manage_onboarding",
+      },
+      {
+        id: "termination-reasons",
+        label: "Termination Reasons",
+        icon: UserX,
+        permKey: "manage_onboarding",
+      },
+      {
+        id: "staff-roles",
+        label: "Roles",
+        icon: UserCog,
+        permKey: "manage_onboarding",
+      },
+      {
+        id: "hr-config",
+        label: "Onboarding & HR",
+        icon: SlidersHorizontal,
+        permKey: "manage_onboarding",
+      },
+      {
+        id: "staff-notifications",
+        label: "Notifications",
+        icon: Bell,
+        permKey: "manage_onboarding",
+      },
     ],
   },
   {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,6 @@ import {
   ArrowUpDown,
   Filter,
   ArrowLeftRight,
-  UserPlus,
   LayoutGrid,
   List,
   Mail,
@@ -48,10 +47,20 @@ import {
   upsertFacilityStaff,
   FACILITY_LOCATIONS,
 } from "@/data/facility-staff";
-import { initOnboarding } from "@/data/staff-onboarding";
+import {
+  initOnboarding,
+  regenerateOnboardingToken,
+  createOnboardingInstance,
+  resolveTemplateForRole,
+  recordOnboardingEmail,
+} from "@/data/staff-onboarding";
+import { toast } from "sonner";
+import { OnboardingProgressList } from "./_components/onboarding-progress-list";
 import { StaffCard } from "./_components/staff-card";
 import { StaffProfileSheet } from "./_components/staff-profile-sheet";
 import { StaffFormDialog } from "./_components/staff-form-dialog";
+import { ResendInviteDialog } from "./_components/resend-invite-dialog";
+import { ReviewActivateDialog } from "./_components/review-activate-dialog";
 import { RoleAccessMatrix } from "./_components/role-matrix";
 import { StatusChangeDialog } from "./_components/status-change-dialog";
 import {
@@ -71,6 +80,7 @@ import {
   logInvitationSent,
 } from "@/lib/staff-audit";
 import { useFacilityRbac, usePermission } from "@/hooks/use-facility-rbac";
+import { runOnboardingNotificationSweep } from "@/lib/staff-notifications";
 
 const ROLE_FILTERS: { value: FacilityStaffRole | "all"; label: string }[] = [
   { value: "all", label: "All roles" },
@@ -84,6 +94,11 @@ const ROLE_FILTERS: { value: FacilityStaffRole | "all"; label: string }[] = [
   { value: "sanitation", label: "Sanitation" },
 ];
 
+// A staff member counts under a role if it's their primary OR an additional
+// role — so a multi-role staffer appears in every matching filter tab.
+const staffHasRole = (s: StaffProfile, role: FacilityStaffRole) =>
+  s.primaryRole === role || s.additionalRoles.includes(role);
+
 export default function FacilityStaffPage() {
   const { viewer } = useFacilityRbac();
   // Table 4 — editing staff (Add / Edit, incl. the form's payroll fields)
@@ -95,9 +110,9 @@ export default function FacilityStaffPage() {
     "all",
   );
   const [locationFilter, setLocationFilter] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState<"active" | "on_leave" | "former">(
-    "active",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "active" | "onboarding" | "on_leave" | "former"
+  >("active");
   const [view, setView] = useState<"grid" | "list">("grid");
 
   const [viewing, setViewing] = useState<StaffProfile | null>(null);
@@ -106,16 +121,24 @@ export default function FacilityStaffPage() {
   const [deleting, setDeleting] = useState<StaffProfile | null>(null);
   const [transferring, setTransferring] = useState<StaffProfile | null>(null);
   const [inviteTarget, setInviteTarget] = useState<StaffProfile | null>(null);
+  const [reviewTarget, setReviewTarget] = useState<StaffProfile | null>(null);
   const [departmentsOpen, setDepartmentsOpen] = useState(false);
   const [statusChanging, setStatusChanging] = useState<StaffProfile | null>(
     null,
   );
 
+  // Onboarding notification sweep — expired invite links (once) + past-deadline
+  // reminders (daily), deduped in the store. Runs when the manager opens the
+  // directory (mock stand-in for a scheduled job).
+  useEffect(() => {
+    runOnboardingNotificationSweep(new Date().toISOString().slice(0, 10));
+  }, []);
+
   // Tab-level base set
   const tabFiltered = useMemo(() => {
     return staff.filter((s) => {
-      if (activeTab === "active")
-        return s.status === "active" || s.status === "invited";
+      if (activeTab === "active") return s.status === "active";
+      if (activeTab === "onboarding") return s.status === "invited";
       if (activeTab === "on_leave") return s.status === "inactive";
       return s.status === "terminated";
     });
@@ -123,7 +146,7 @@ export default function FacilityStaffPage() {
 
   const filtered = useMemo(() => {
     return tabFiltered.filter((s) => {
-      if (roleFilter !== "all" && s.primaryRole !== roleFilter) return false;
+      if (roleFilter !== "all" && !staffHasRole(s, roleFilter)) return false;
       if (
         locationFilter !== "all" &&
         !s.assignedLocations.includes(locationFilter)
@@ -205,6 +228,33 @@ export default function FacilityStaffPage() {
   function openAddNew() {
     setEditing(null);
     setFormOpen(true);
+  }
+
+  // One-tap reminder — reissues the onboarding link and "sends" a mock reminder.
+  function handleRemind(p: StaffProfile) {
+    const inst =
+      regenerateOnboardingToken(p.id) ??
+      createOnboardingInstance(
+        p.id,
+        resolveTemplateForRole(p.primaryRole)?.id ?? "",
+      );
+    recordOnboardingEmail({
+      kind: "reminder",
+      staffId: p.id,
+      staffName: fullNameOf(p),
+      to: p.email,
+      subject: "Reminder: finish your onboarding",
+      body: `Hi ${p.firstName}, a friendly reminder to complete your onboarding. Your link: /onboard/${inst.token}`,
+    });
+    logInvitationSent(
+      { subjectId: p.id, subjectName: fullNameOf(p) },
+      {
+        actorId: viewer.id,
+        actorName: fullNameOf(viewer),
+        actorRole: viewer.primaryRole,
+      },
+    );
+    toast.success(`Reminder sent to ${p.email}`);
   }
 
   function handleStatusChange(
@@ -412,10 +462,9 @@ export default function FacilityStaffPage() {
           {/* Role chip strip */}
           <div className="scrollbar-hidden -mx-1 mt-2.5 flex gap-0.5 overflow-x-auto px-1 pb-px">
             {ROLE_FILTERS.map((r) => {
-              const count =
-                r.value === "all"
-                  ? tabFiltered.length
-                  : tabFiltered.filter((s) => s.primaryRole === r.value).length;
+              const count = tabFiltered.filter(
+                (s) => r.value === "all" || staffHasRole(s, r.value),
+              ).length;
               const active = roleFilter === r.value;
               return (
                 <button
@@ -457,12 +506,19 @@ export default function FacilityStaffPage() {
             setActiveTab("active");
             setRoleFilter("all");
           }}
-          count={
-            staff.filter((s) => s.status === "active" || s.status === "invited")
-              .length
-          }
+          count={staff.filter((s) => s.status === "active").length}
         >
           Active employees
+        </TabButton>
+        <TabButton
+          active={activeTab === "onboarding"}
+          onClick={() => {
+            setActiveTab("onboarding");
+            setRoleFilter("all");
+          }}
+          count={staff.filter((s) => s.status === "invited").length}
+        >
+          Onboarding in progress
         </TabButton>
         <TabButton
           active={activeTab === "on_leave"}
@@ -497,6 +553,12 @@ export default function FacilityStaffPage() {
             </p>
           </CardContent>
         </Card>
+      ) : activeTab === "onboarding" ? (
+        <OnboardingProgressList
+          profiles={filtered}
+          onRemind={handleRemind}
+          onView={setViewing}
+        />
       ) : view === "grid" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((profile) => (
@@ -509,6 +571,8 @@ export default function FacilityStaffPage() {
               onTransfer={setTransferring}
               onDelete={setDeleting}
               onStatusChange={setStatusChanging}
+              onReview={setReviewTarget}
+              onRemind={handleRemind}
             />
           ))}
         </div>
@@ -663,50 +727,33 @@ export default function FacilityStaffPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Invite confirm */}
-      <Dialog
+      {/* Send / resend onboarding invite — branded preview + testable link */}
+      <ResendInviteDialog
+        profile={inviteTarget}
         open={!!inviteTarget}
         onOpenChange={(v) => !v && setInviteTarget(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Send invitation</DialogTitle>
-            <DialogDescription>
-              {inviteTarget && (
-                <>
-                  We&apos;ll email {inviteTarget.email} an invite link to join
-                  Yipyy and set their password.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setInviteTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (inviteTarget) {
-                  logInvitationSent(
-                    {
-                      subjectId: inviteTarget.id,
-                      subjectName: fullNameOf(inviteTarget),
-                    },
-                    {
-                      actorId: viewer.id,
-                      actorName: fullNameOf(viewer),
-                      actorRole: viewer.primaryRole,
-                    },
-                  );
-                }
-                setInviteTarget(null);
-              }}
-            >
-              <UserPlus className="size-4" /> Send invite
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onSent={(p) =>
+          logInvitationSent(
+            { subjectId: p.id, subjectName: fullNameOf(p) },
+            {
+              actorId: viewer.id,
+              actorName: fullNameOf(viewer),
+              actorRole: viewer.primaryRole,
+            },
+          )
+        }
+      />
+
+      {/* Review submitted onboarding + activate the account */}
+      <ReviewActivateDialog
+        profile={reviewTarget}
+        open={!!reviewTarget}
+        onOpenChange={(v) => !v && setReviewTarget(null)}
+        onActivated={(next) => {
+          setStaff((list) => list.map((s) => (s.id === next.id ? next : s)));
+          upsertFacilityStaff(next);
+        }}
+      />
 
       {/* Status change dialog */}
       <StatusChangeDialog
