@@ -581,3 +581,68 @@ export const facilityStaff: StaffProfile[] = [
     tipsRate: 0,
   }),
 ];
+
+// ============================================================================
+// Live directory mutations (mock, no backend).
+//
+// Create / edit in Staff Management writes THROUGH this shared array so every
+// consumer that resolves a profile by id sees the new hire immediately:
+//   • use-facility-rbac  → the employee's nav + screen gates
+//   • StaffPermissionEditor / AccessTab → per-person overrides
+//   • StaffPreviewDialog → "Preview as this employee"
+//   • /employee (portal) + /employee/select (sign-in picker)
+// Without this, a newly-created staff lived only in the Staff page's local
+// React state and was invisible to all of the above (resolvePermissions →
+// all-denied, editor → "not found").
+//
+// Additions/edits persist to localStorage and replay on the next client load,
+// so the flow survives a navigation or reload. The static seed above is never
+// rewritten; persistence is a client-only overlay.
+// ============================================================================
+
+const STAFF_DIRECTORY_KEY = "facility-staff-directory-v1";
+const upsertedIds = new Set<string>();
+
+function persistDirectory(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const payload = [...upsertedIds]
+      .map((id) => facilityStaff.find((s) => s.id === id))
+      .filter(Boolean);
+    localStorage.setItem(STAFF_DIRECTORY_KEY, JSON.stringify(payload));
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Insert or replace a staff profile in the shared directory. Every id-based
+ * consumer (RBAC resolution, permission editors, preview, employee portal)
+ * reads this same array, so the change is visible everywhere at once.
+ */
+export function upsertFacilityStaff(profile: StaffProfile): void {
+  const idx = facilityStaff.findIndex((s) => s.id === profile.id);
+  if (idx === -1) facilityStaff.unshift(profile);
+  else facilityStaff[idx] = profile;
+  upsertedIds.add(profile.id);
+  persistDirectory();
+}
+
+// Replay persisted create/edit overlays on client init.
+if (typeof window !== "undefined") {
+  try {
+    const raw = localStorage.getItem(STAFF_DIRECTORY_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw) as StaffProfile[];
+      for (const p of saved) {
+        if (!p?.id) continue;
+        const idx = facilityStaff.findIndex((s) => s.id === p.id);
+        if (idx === -1) facilityStaff.unshift(p);
+        else facilityStaff[idx] = p;
+        upsertedIds.add(p.id);
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+}

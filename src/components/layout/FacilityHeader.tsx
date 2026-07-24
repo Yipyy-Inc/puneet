@@ -22,6 +22,7 @@ import { facilities } from "@/data/facilities";
 import { bookings as initialBookings } from "@/data/bookings";
 import { clients as initialClients } from "@/data/clients";
 import { useBookingModal } from "@/hooks/use-booking-modal";
+import { usePermission } from "@/hooks/use-facility-rbac";
 
 import type { AdditionalContact, Client } from "@/types/client";
 import type { NewBooking, Booking } from "@/types/booking";
@@ -66,9 +67,26 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
   );
   const clients = initialClients as Client[];
 
+  // Each quick-action is gated by the permission its underlying flow requires.
+  // The facility admin (and the no-provider fallback) resolve every key to
+  // granted, so this menu is unchanged there; in the /employee portal the RBAC
+  // viewer is the signed-in staff member, so ungranted actions drop out — and
+  // the whole "+ New" button hides when the viewer can create nothing.
+  const canNewClient = usePermission("create_clients");
+  const canNewBooking = usePermission("create_bookings");
+  const canRetailSale = usePermission("retail_process_sale");
+  const canNewEstimate = usePermission("create_bookings");
+  const canDaycareCheckin = usePermission("daycare_check_in_out");
+  const anyQuickAction =
+    canNewClient ||
+    canNewBooking ||
+    canRetailSale ||
+    canNewEstimate ||
+    canDaycareCheckin;
+
   const facility = facilities.find((f) => f.id === facilityId);
 
-  if (!facility) {
+  if (!facility || !anyQuickAction) {
     return null;
   }
 
@@ -167,65 +185,83 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
             </TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={() => setIsCreateClientModalOpen(true)}>
-              <User className="mr-2 size-4" />
-              {t("New Client")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                openBookingModal({
-                  clients: clients.filter((c) => c.facility === facility.name),
-                  facilityId: facilityId,
-                  facilityName: facility.name,
-                  onCreateBooking: handleCreateBooking,
-                  preSelectedService: sectionService,
-                  lockService: !!sectionService,
-                })
-              }
-            >
-              <Calendar className="mr-2 size-4" />
-              {t("New Booking")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                window.location.href =
-                  "/facility/dashboard/services/retail?mode=new-sale";
-              }}
-            >
-              <ShoppingBag className="mr-2 size-4" />
-              {t("Retail Sale")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                openBookingModal({
-                  clients: clients.filter((c) => c.facility === facility.name),
-                  facilityId: facilityId,
-                  facilityName: facility.name,
-                  onCreateBooking: handleCreateBooking,
-                  isEstimateMode: true,
-                  preSelectedService: sectionService,
-                  lockService: !!sectionService,
-                });
-              }}
-            >
-              <FileText className="mr-2 size-4" />
-              {t("New Estimate")}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleQuickDaycareCheckIn}>
-              <Zap className="mr-2 size-4" />
-              {t("Quick Daycare Check-in")}
-            </DropdownMenuItem>
+            {canNewClient && (
+              <DropdownMenuItem
+                onClick={() => setIsCreateClientModalOpen(true)}
+              >
+                <User className="mr-2 size-4" />
+                {t("New Client")}
+              </DropdownMenuItem>
+            )}
+            {canNewBooking && (
+              <DropdownMenuItem
+                onClick={() =>
+                  openBookingModal({
+                    clients: clients.filter(
+                      (c) => c.facility === facility.name,
+                    ),
+                    facilityId: facilityId,
+                    facilityName: facility.name,
+                    onCreateBooking: handleCreateBooking,
+                    preSelectedService: sectionService,
+                    lockService: !!sectionService,
+                  })
+                }
+              >
+                <Calendar className="mr-2 size-4" />
+                {t("New Booking")}
+              </DropdownMenuItem>
+            )}
+            {canRetailSale && (
+              <DropdownMenuItem
+                onClick={() => {
+                  window.location.href =
+                    "/facility/dashboard/services/retail?mode=new-sale";
+                }}
+              >
+                <ShoppingBag className="mr-2 size-4" />
+                {t("Retail Sale")}
+              </DropdownMenuItem>
+            )}
+            {canNewEstimate && (
+              <DropdownMenuItem
+                onClick={() => {
+                  openBookingModal({
+                    clients: clients.filter(
+                      (c) => c.facility === facility.name,
+                    ),
+                    facilityId: facilityId,
+                    facilityName: facility.name,
+                    onCreateBooking: handleCreateBooking,
+                    isEstimateMode: true,
+                    preSelectedService: sectionService,
+                    lockService: !!sectionService,
+                  });
+                }}
+              >
+                <FileText className="mr-2 size-4" />
+                {t("New Estimate")}
+              </DropdownMenuItem>
+            )}
+            {canDaycareCheckin && (
+              <DropdownMenuItem onClick={handleQuickDaycareCheckIn}>
+                <Zap className="mr-2 size-4" />
+                {t("Quick Daycare Check-in")}
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </TooltipProvider>
 
-      {/* Create Client Modal */}
-      <CreateClientModal
-        open={isCreateClientModalOpen}
-        onOpenChange={setIsCreateClientModalOpen}
-        onSave={handleCreateClient}
-        facilityName={facility.name}
-      />
+      {/* Create Client Modal — only mounted when the viewer can create clients. */}
+      {canNewClient && (
+        <CreateClientModal
+          open={isCreateClientModalOpen}
+          onOpenChange={setIsCreateClientModalOpen}
+          onSave={handleCreateClient}
+          facilityName={facility.name}
+        />
+      )}
     </>
   );
 }

@@ -37,7 +37,7 @@ import {
 } from "./staff-shared";
 import { StatusBadge } from "./status-change-dialog";
 import { getLatestStaffAuditEntry } from "@/lib/staff-audit";
-import { useFacilityRbac } from "@/hooks/use-facility-rbac";
+import { useFacilityRbac, usePermission } from "@/hooks/use-facility-rbac";
 
 interface StaffCardProps {
   profile: StaffProfile;
@@ -59,6 +59,8 @@ export function StaffCard({
   onStatusChange,
 }: StaffCardProps) {
   const { viewer } = useFacilityRbac();
+  // Table 4 — editing staff requires manage_staff (admin: all-access fallback).
+  const canManageStaff = usePermission("manage_staff");
   const canSeeAudit =
     viewer.primaryRole === "owner" || viewer.primaryRole === "manager";
   const latestEntry = canSeeAudit ? getLatestStaffAuditEntry(profile.id) : null;
@@ -120,9 +122,11 @@ export function StaffCard({
                       <ExternalLink className="size-4" /> Open full profile
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onEdit(profile)}>
-                    <Pencil className="size-4" /> Edit profile
-                  </DropdownMenuItem>
+                  {canManageStaff && (
+                    <DropdownMenuItem onClick={() => onEdit(profile)}>
+                      <Pencil className="size-4" /> Edit profile
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => onStatusChange(profile)}>
                     <RefreshCw className="size-4" /> Change status

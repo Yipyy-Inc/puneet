@@ -1125,6 +1125,11 @@ export const ROLE_PRESETS: Record<
         "view_training_queue",
         "retail_pos_access",
         "retail_process_sale",
+        "retail_process_return",
+        "retail_apply_discount",
+        // A shift lead needs to see booking amounts on the floor.
+        "view_booking_financials",
+        "financial_view_amounts",
         "scheduling_view_all",
         "scheduling_edit_shifts",
         "scheduling_approve_time_off",
@@ -1220,6 +1225,7 @@ export const ROLE_PRESETS: Record<
         "check_in_out",
         "log_incidents",
         "ops_incidents_view",
+        "ops_manage_tasks",
         "view_inventory",
         "communicate_clients",
       ],
@@ -1250,6 +1256,12 @@ export const ROLE_PRESETS: Record<
         "check_in_out",
         "messages_view_inbox",
         "messages_send",
+        // Generous day-to-day: their task board, incident reporting, and the
+        // pet's documents (waivers/agreements) for the client they're serving.
+        "ops_manage_tasks",
+        "log_incidents",
+        "ops_incidents_view",
+        "view_client_documents",
       ],
       "assigned_shifts",
     ),
@@ -1278,6 +1290,12 @@ export const ROLE_PRESETS: Record<
         "check_in_out",
         "messages_view_inbox",
         "messages_send",
+        // Generous day-to-day: their task board, incident reporting, and the
+        // pet's documents for the client they're training.
+        "ops_manage_tasks",
+        "log_incidents",
+        "ops_incidents_view",
+        "view_client_documents",
       ],
       "assigned_shifts",
     ),
@@ -1313,6 +1331,12 @@ export const ROLE_PRESETS: Record<
         "log_play_sessions",
         "log_incidents",
         "log_cleaning",
+        // Generous day-to-day: task board, viewing logged incidents, and
+        // identifying the owner of a pet in their care.
+        "ops_manage_tasks",
+        "ops_incidents_view",
+        "view_clients",
+        "view_client_contact_info",
       ],
       "anytime",
     ),
@@ -1341,6 +1365,13 @@ export const ROLE_PRESETS: Record<
         "log_play_sessions",
         "log_incidents",
         "log_cleaning",
+        // Generous day-to-day: task board, viewing logged incidents, the pet's
+        // medical (needed to administer meds safely), and the owner's identity.
+        "ops_manage_tasks",
+        "ops_incidents_view",
+        "view_pet_medical",
+        "view_clients",
+        "view_client_contact_info",
       ],
       "assigned_shifts",
     ),
@@ -1368,8 +1399,15 @@ export const ROLE_PRESETS: Record<
         "log_feedings",
         "log_medications",
         "log_potty_breaks",
+        "log_play_sessions",
         "log_incidents",
         "log_cleaning",
+        // Generous day-to-day: task board, viewing logged incidents, and
+        // identifying the owner of a boarding guest.
+        "ops_manage_tasks",
+        "ops_incidents_view",
+        "view_clients",
+        "view_client_contact_info",
       ],
       "anytime",
     ),
@@ -1400,6 +1438,12 @@ export const ROLE_PRESETS: Record<
         "manage_supplies",
         "messages_view_inbox",
         "messages_send",
+        // Generous day-to-day: task board, selling/redeeming gift cards at the
+        // register, seeing amounts they charge, and reaching the account owner.
+        "ops_manage_tasks",
+        "financial_manage_gift_cards",
+        "financial_view_amounts",
+        "view_client_contact_info",
       ],
       "operating_hours",
     ),
@@ -1448,7 +1492,18 @@ export const ROLE_PRESETS: Record<
   },
   sanitation: {
     permissions: preset(
-      ["log_cleaning", "check_in_out", "view_inventory", "manage_supplies"],
+      [
+        "log_cleaning",
+        "check_in_out",
+        "view_inventory",
+        "manage_supplies",
+        // Sanitation is task/checklist-driven; it must also be able to flag and
+        // see a hazard/incident it comes across.
+        "ops_manage_tasks",
+        "ops_manage_checklists",
+        "log_incidents",
+        "ops_incidents_view",
+      ],
       "assigned_shifts",
     ),
     services: ["sanitation"],

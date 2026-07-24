@@ -24,10 +24,12 @@ import {
   ArrowLeftRight,
   UserPlus,
   Pencil,
+  Eye,
   LockKeyhole,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { StaffPreviewDialog } from "@/components/facility/StaffPreviewDialog";
 import {
   ROLE_META,
   NOTIFICATION_EVENT_META,
@@ -81,107 +83,135 @@ export function StaffProfileSheet({
   const canSeePayroll = can("view_payroll");
   const canSeeAudit =
     viewer.primaryRole === "owner" || viewer.primaryRole === "manager";
+  const [previewOpen, setPreviewOpen] = useState(false);
   if (!profile) return null;
 
   return (
-    <Dialog open={!!profile} onOpenChange={onOpenChange}>
-      <DialogPortal>
-        <DialogOverlay className="backdrop-blur-sm" />
-        <DialogPrimitive.Content
-          data-slot="dialog-content"
-          className={cn(
-            "bg-background fixed top-[50%] left-[50%] z-50 flex flex-col",
-            "max-h-[90vh] w-full max-w-2xl",
-            "-translate-x-1/2 -translate-y-1/2",
-            "overflow-hidden rounded-xl border shadow-2xl",
-            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
-            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
-            "duration-200",
-          )}
-        >
-          <Header profile={profile} />
+    <>
+      <Dialog open={!!profile} onOpenChange={onOpenChange}>
+        <DialogPortal>
+          <DialogOverlay className="backdrop-blur-sm" />
+          <DialogPrimitive.Content
+            data-slot="dialog-content"
+            className={cn(
+              "bg-background fixed top-[50%] left-[50%] z-50 flex flex-col",
+              "max-h-[90vh] w-full max-w-2xl",
+              "-translate-x-1/2 -translate-y-1/2",
+              "overflow-hidden rounded-xl border shadow-2xl",
+              "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+              "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+              "duration-200",
+            )}
+          >
+            <Header profile={profile} />
 
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <div className="px-6 pb-6">
-              <Tabs defaultValue="overview">
-                <ScrollableTabsBar>
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="px-6 pb-6">
+                <Tabs defaultValue="overview">
+                  <ScrollableTabsBar>
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    {canSeeAccess && (
+                      <TabsTrigger value="access">Access</TabsTrigger>
+                    )}
+                    <TabsTrigger value="services">Services</TabsTrigger>
+                    <TabsTrigger value="documents">Documents</TabsTrigger>
+                    <TabsTrigger value="warnings">Warnings</TabsTrigger>
+                    <TabsTrigger value="notifications">
+                      Notifications
+                    </TabsTrigger>
+                    {canSeePayroll && (
+                      <TabsTrigger value="payroll">Payroll</TabsTrigger>
+                    )}
+                    {canSeeAudit && (
+                      <TabsTrigger value="audit">Audit trail</TabsTrigger>
+                    )}
+                  </ScrollableTabsBar>
+
+                  <TabsContent value="overview" className="mt-4 space-y-4">
+                    <OverviewTab profile={profile} />
+                  </TabsContent>
                   {canSeeAccess && (
-                    <TabsTrigger value="access">Access</TabsTrigger>
+                    <TabsContent value="access" className="mt-4 space-y-4">
+                      <AccessTab profile={profile} onUpdate={onUpdate} />
+                    </TabsContent>
                   )}
-                  <TabsTrigger value="services">Services</TabsTrigger>
-                  <TabsTrigger value="documents">Documents</TabsTrigger>
-                  <TabsTrigger value="warnings">Warnings</TabsTrigger>
-                  <TabsTrigger value="notifications">Notifications</TabsTrigger>
+                  <TabsContent value="services" className="mt-4 space-y-4">
+                    <ServicesTab profile={profile} />
+                  </TabsContent>
+                  <TabsContent value="documents" className="mt-4 space-y-4">
+                    <EmployeeFilesTab profile={profile} />
+                  </TabsContent>
+                  <TabsContent value="warnings" className="mt-4 space-y-4">
+                    <WarningsTab profile={profile} />
+                  </TabsContent>
+                  <TabsContent value="notifications" className="mt-4 space-y-4">
+                    <NotificationsTab profile={profile} />
+                  </TabsContent>
                   {canSeePayroll && (
-                    <TabsTrigger value="payroll">Payroll</TabsTrigger>
+                    <TabsContent value="payroll" className="mt-4 space-y-4">
+                      <PayrollTab profile={profile} />
+                    </TabsContent>
                   )}
                   {canSeeAudit && (
-                    <TabsTrigger value="audit">Audit trail</TabsTrigger>
+                    <TabsContent value="audit" className="mt-4">
+                      <StaffAuditTrail staffId={profile.id} />
+                    </TabsContent>
                   )}
-                </ScrollableTabsBar>
+                </Tabs>
+              </div>
+            </div>
 
-                <TabsContent value="overview" className="mt-4 space-y-4">
-                  <OverviewTab profile={profile} />
-                </TabsContent>
+            <div className="bg-background/80 flex shrink-0 items-center justify-between gap-2 border-t px-6 py-4 backdrop-blur-sm">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onInvite(profile)}
+                >
+                  <UserPlus className="size-4" />
+                  {profile.status === "invited"
+                    ? "Resend invite"
+                    : "Send invite"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onTransfer(profile)}
+                >
+                  <ArrowLeftRight className="size-4" />
+                  Transfer appts
+                </Button>
+                {/* Verify the new hire's granted access before they log in —
+                  renders their /employee portal as they'd see it. */}
                 {canSeeAccess && (
-                  <TabsContent value="access" className="mt-4 space-y-4">
-                    <AccessTab profile={profile} onUpdate={onUpdate} />
-                  </TabsContent>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPreviewOpen(true)}
+                  >
+                    <Eye className="size-4" />
+                    Preview as employee
+                  </Button>
                 )}
-                <TabsContent value="services" className="mt-4 space-y-4">
-                  <ServicesTab profile={profile} />
-                </TabsContent>
-                <TabsContent value="documents" className="mt-4 space-y-4">
-                  <EmployeeFilesTab profile={profile} />
-                </TabsContent>
-                <TabsContent value="warnings" className="mt-4 space-y-4">
-                  <WarningsTab profile={profile} />
-                </TabsContent>
-                <TabsContent value="notifications" className="mt-4 space-y-4">
-                  <NotificationsTab profile={profile} />
-                </TabsContent>
-                {canSeePayroll && (
-                  <TabsContent value="payroll" className="mt-4 space-y-4">
-                    <PayrollTab profile={profile} />
-                  </TabsContent>
-                )}
-                {canSeeAudit && (
-                  <TabsContent value="audit" className="mt-4">
-                    <StaffAuditTrail staffId={profile.id} />
-                  </TabsContent>
-                )}
-              </Tabs>
+              </div>
+              {/* Table 4 — editing requires manage_staff (admin: all-access). */}
+              {can("manage_staff") && (
+                <Button size="sm" onClick={() => onEdit(profile)}>
+                  <Pencil className="size-4" />
+                  Edit profile
+                </Button>
+              )}
             </div>
-          </div>
+          </DialogPrimitive.Content>
+        </DialogPortal>
+      </Dialog>
 
-          <div className="bg-background/80 flex shrink-0 items-center justify-between gap-2 border-t px-6 py-4 backdrop-blur-sm">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onInvite(profile)}
-              >
-                <UserPlus className="size-4" />
-                {profile.status === "invited" ? "Resend invite" : "Send invite"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onTransfer(profile)}
-              >
-                <ArrowLeftRight className="size-4" />
-                Transfer appts
-              </Button>
-            </div>
-            <Button size="sm" onClick={() => onEdit(profile)}>
-              <Pencil className="size-4" />
-              Edit profile
-            </Button>
-          </div>
-        </DialogPrimitive.Content>
-      </DialogPortal>
-    </Dialog>
+      {/* Read-only simulation of this staff member's /employee portal. */}
+      <StaffPreviewDialog
+        staffId={previewOpen ? profile.id : null}
+        onClose={() => setPreviewOpen(false)}
+      />
+    </>
   );
 }
 

@@ -50,7 +50,15 @@ import { EvaluationBookingWizardSettings } from "@/components/facility/Evaluatio
 import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
 import { ServiceNotificationSettings } from "@/components/facility/ServiceNotificationSettings";
 import { TipSettings } from "@/components/facility/TipSettings";
-import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
+import {
+  SettingsSidebar,
+  canAccessSettingsSection,
+} from "@/components/facility/SettingsSidebar";
+import { MyAccountSettings } from "@/components/facility/MyAccountSettings";
+import {
+  useEffectivePermissions,
+  useFacilityRbac,
+} from "@/hooks/use-facility-rbac";
 import { EvaluationReportCardBuilder } from "@/components/evaluations/EvaluationReportCardBuilder";
 import { EvaluationFormBuilder } from "@/components/evaluations/EvaluationFormBuilder";
 import { EstimateFollowUpSettings } from "@/components/estimates/EstimateFollowUpSettings";
@@ -3728,11 +3736,25 @@ function NotificationSettingsCard() {
 export default function SettingsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const permissions = useEffectivePermissions();
+  const { viewer } = useFacilityRbac();
   const requestedSection = searchParams.get("section");
-  const initialSection =
+  const normalizedRequest =
     requestedSection === "form-permissions"
       ? "roles-permissions"
-      : (requestedSection ?? "business");
+      : requestedSection;
+  // Admins who can open Business land there; everyone else (an employee with
+  // only personal access) defaults to My Profile.
+  const fallbackSection = canAccessSettingsSection("business", permissions)
+    ? "business"
+    : "my-profile";
+  // Guard deep-links: opening ?section=taxes without the grant falls back to the
+  // personal default rather than an empty/forbidden section.
+  const initialSection =
+    normalizedRequest &&
+    canAccessSettingsSection(normalizedRequest, permissions)
+      ? normalizedRequest
+      : fallbackSection;
   const [activeSection, setActiveSection] = useState(initialSection);
   // Mobile is single-panel: show the section list, then drill into the chosen
   // section (with a Back button). Desktop shows list + content side by side, so
@@ -3857,6 +3879,13 @@ export default function SettingsPage() {
             <ArrowLeft className="size-4" />
             All settings
           </button>
+
+          {/* My Account — personal sections, always available (spec: employees
+              keep the settings they DO have). */}
+          {activeSection === "my-profile" && <MyAccountSettings />}
+          {activeSection === "my-notifications" && (
+            <StaffNotificationPreferences staffId={viewer.id} />
+          )}
 
           {/* Business Configuration */}
           {activeSection === "business" && (

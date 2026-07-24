@@ -59,7 +59,7 @@ import {
 } from "@/types/facility-staff";
 import { FACILITY_LOCATIONS } from "@/data/facility-staff";
 import { RoleIcon, ServiceIcon } from "./staff-shared";
-import { useFacilityRbac } from "@/hooks/use-facility-rbac";
+import { useFacilityRbac, usePermission } from "@/hooks/use-facility-rbac";
 import { CustomRoleQuickCreateDialog } from "./custom-role-quick-create-dialog";
 
 const ROLE_ORDER: FacilityStaffRole[] = [
@@ -181,6 +181,13 @@ function StaffFormDialogBody({
     () => editing ?? emptyProfile(),
   );
 
+  // Table 5 — the Payroll (compensation) section is omitted without view_payroll
+  // (admin resolves to all-access via the fallback).
+  const canViewPayroll = usePermission("view_payroll");
+  const visibleSections = SECTIONS.filter(
+    (s) => s.id !== "payroll" || canViewPayroll,
+  );
+
   function update<K extends keyof StaffProfile>(
     key: K,
     value: StaffProfile[K],
@@ -223,7 +230,7 @@ function StaffFormDialogBody({
       <div className="flex min-h-0 flex-1">
         {/* Sidebar */}
         <nav className="bg-muted/40 hidden w-56 shrink-0 border-r p-3 md:block">
-          {SECTIONS.map((s) => {
+          {visibleSections.map((s) => {
             const Icon = s.icon;
             const active = section === s.id;
             return (
@@ -256,7 +263,7 @@ function StaffFormDialogBody({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {SECTIONS.map((s) => (
+                {visibleSections.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.label}
                   </SelectItem>
@@ -286,7 +293,7 @@ function StaffFormDialogBody({
           {section === "notifications" && (
             <NotificationsSection draft={draft} update={update} />
           )}
-          {section === "payroll" && (
+          {section === "payroll" && canViewPayroll && (
             <PayrollSection draft={draft} update={update} />
           )}
         </div>

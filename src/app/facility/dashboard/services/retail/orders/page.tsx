@@ -113,6 +113,7 @@ import { retailConfig } from "@/data/retail-config";
 import { InvoiceImportDialog } from "@/components/retail/InvoiceImportDialog";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { hasPermission, getCurrentUserId } from "@/lib/role-utils";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import {
   getPaymentMethodLabel,
   formatTransactionTimestamp,
@@ -130,6 +131,9 @@ export default function OrdersPage() {
   const canOverrideRefund =
     hasPermission(facilityRole, "process_refund", currentUserId || undefined) &&
     isManager;
+  // Table 4 — starting a return/refund requires retail_process_return (resolved
+  // for the acting viewer; admin keeps it via the all-access fallback).
+  const canProcessReturn = usePermission("retail_process_return");
 
   const [selectedTab, setSelectedTab] = useState<
     "orders" | "suppliers" | "transactions"
@@ -1817,14 +1821,17 @@ export default function OrdersPage() {
                   >
                     View Details
                   </DropdownMenuItem>
-                  {(item as Transaction).status === "completed" && (
-                    <DropdownMenuItem
-                      onClick={() => handleInitiateReturn(item as Transaction)}
-                    >
-                      <RotateCcw className="mr-2 size-4" />
-                      Return / Refund
-                    </DropdownMenuItem>
-                  )}
+                  {(item as Transaction).status === "completed" &&
+                    canProcessReturn && (
+                      <DropdownMenuItem
+                        onClick={() =>
+                          handleInitiateReturn(item as Transaction)
+                        }
+                      >
+                        <RotateCcw className="mr-2 size-4" />
+                        Return / Refund
+                      </DropdownMenuItem>
+                    )}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}

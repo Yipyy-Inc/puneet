@@ -113,6 +113,7 @@ import { giftCards } from "@/data/payments";
 import { retailConfig } from "@/data/retail-config";
 import { hasPermission, getCurrentUserId } from "@/lib/role-utils";
 import { useFacilityRole } from "@/hooks/use-facility-role";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import {
   getFiservConfig,
   getTokenizedCardsByClient,
@@ -163,11 +164,11 @@ export default function POSPage() {
   const searchParams = useSearchParams();
   const { role: facilityRole } = useFacilityRole();
   const currentUserId = getCurrentUserId();
-  const canApplyDiscount = hasPermission(
-    facilityRole,
-    "apply_discount",
-    currentUserId || undefined,
-  );
+  // Table 4 — POS controls gate on the acting RBAC viewer (the signed-in
+  // employee in the /employee portal; admin resolves to all-access). Discount
+  // uses the retail-specific key; Charge requires take-payment rights.
+  const canApplyDiscount = usePermission("retail_apply_discount");
+  const canCharge = usePermission("financial_take_payment");
   const isManager = facilityRole === "manager" || facilityRole === "owner";
   const searchInputRef = useRef<HTMLInputElement>(null);
   const lastProcessedScanRef = useRef({ code: "", at: 0 });
@@ -2821,90 +2822,92 @@ export default function POSPage() {
                 </>
               )}
 
-              <div className="space-y-3 pt-3">
-                {/* Payment Methods */}
-                <div className="space-y-2">
-                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-                    Payment Method
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
+              {/* All charge affordances require financial_take_payment. */}
+              {canCharge && (
+                <div className="space-y-3 pt-3">
+                  {/* Payment Methods */}
+                  <div className="space-y-2">
+                    <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                      Payment Method
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        className="gap-2"
+                        disabled={cart.length === 0}
+                        onClick={() => {
+                          setPaymentForm({
+                            ...paymentForm,
+                            method: "cash",
+                            splitPayments: false,
+                            chargeType: "pay_now",
+                          });
+                          setIsPaymentModalOpen(true);
+                        }}
+                      >
+                        <Banknote className="size-4" />
+                        Cash
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="gap-2"
+                        disabled={cart.length === 0}
+                        onClick={() => {
+                          setPaymentForm({
+                            ...paymentForm,
+                            method: "credit",
+                            splitPayments: false,
+                            chargeType: "pay_now",
+                          });
+                          setIsPaymentModalOpen(true);
+                        }}
+                      >
+                        <CreditCard className="size-4" />
+                        Card
+                      </Button>
+                    </div>
                     <Button
                       variant="outline"
-                      className="gap-2"
+                      className="w-full gap-2"
                       disabled={cart.length === 0}
                       onClick={() => {
                         setPaymentForm({
                           ...paymentForm,
-                          method: "cash",
-                          splitPayments: false,
+                          splitPayments: true,
                           chargeType: "pay_now",
+                          payments: [
+                            { method: "credit", amount: grandTotal / 2 },
+                            { method: "cash", amount: grandTotal / 2 },
+                          ],
                         });
                         setIsPaymentModalOpen(true);
                       }}
                     >
-                      <Banknote className="size-4" />
-                      Cash
+                      <SplitSquareHorizontal className="size-4" />
+                      Split Payment
                     </Button>
                     <Button
                       variant="outline"
-                      className="gap-2"
+                      className="w-full gap-2"
                       disabled={cart.length === 0}
                       onClick={() => {
-                        setPaymentForm({
-                          ...paymentForm,
-                          method: "credit",
-                          splitPayments: false,
-                          chargeType: "pay_now",
-                        });
-                        setIsPaymentModalOpen(true);
-                      }}
-                    >
-                      <CreditCard className="size-4" />
-                      Card
-                    </Button>
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2"
-                    disabled={cart.length === 0}
-                    onClick={() => {
-                      setPaymentForm({
-                        ...paymentForm,
-                        splitPayments: true,
-                        chargeType: "pay_now",
-                        payments: [
-                          { method: "credit", amount: grandTotal / 2 },
-                          { method: "cash", amount: grandTotal / 2 },
-                        ],
-                      });
-                      setIsPaymentModalOpen(true);
-                    }}
-                  >
-                    <SplitSquareHorizontal className="size-4" />
-                    Split Payment
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2"
-                    disabled={cart.length === 0}
-                    onClick={() => {
-                      const facility = facilities.find(
-                        (f: { id: number }) => f.id === 11,
-                      );
-                      const w = window.open(
-                        "",
-                        "_blank",
-                        "width=500,height=600",
-                      );
-                      if (!w) return;
-                      const itemsHtml = cart
-                        .map(
-                          (item) =>
-                            `<div class="row"><span>${item.productName}${item.quantity > 1 ? ` × ${item.quantity}` : ""}</span><span>$${item.total.toFixed(2)}</span></div>`,
-                        )
-                        .join("");
-                      w.document
-                        .write(`<!DOCTYPE html><html><head><title>Receipt</title>
+                        const facility = facilities.find(
+                          (f: { id: number }) => f.id === 11,
+                        );
+                        const w = window.open(
+                          "",
+                          "_blank",
+                          "width=500,height=600",
+                        );
+                        if (!w) return;
+                        const itemsHtml = cart
+                          .map(
+                            (item) =>
+                              `<div class="row"><span>${item.productName}${item.quantity > 1 ? ` × ${item.quantity}` : ""}</span><span>$${item.total.toFixed(2)}</span></div>`,
+                          )
+                          .join("");
+                        w.document
+                          .write(`<!DOCTYPE html><html><head><title>Receipt</title>
 <style>body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:420px;margin:0 auto}
 .row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #eee}
 .row.total{border-top:2px solid #111;border-bottom:none;font-weight:700;font-size:15px;padding-top:10px}
@@ -2927,50 +2930,72 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
 <div class="footer">${receiptConfig.footer.trim() || "Thank you for your purchase!"}<br>${facility?.name ?? ""}</div>
 <script>window.print()</script>
 </body></html>`);
-                      w.document.close();
-                    }}
-                  >
-                    <Printer className="size-4" />
-                    Print Receipt
-                  </Button>
-                </div>
+                        w.document.close();
+                      }}
+                    >
+                      <Printer className="size-4" />
+                      Print Receipt
+                    </Button>
+                  </div>
 
-                {/* Charge Options - Only show if customer is selected */}
-                {selectedClientId && selectedClientId !== "__walk_in__" && (
-                  <>
-                    <Separator />
-                    <div className="space-y-2">
-                      <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-                        Charge Options
-                      </p>
+                  {/* Charge Options - Only show if customer is selected */}
+                  {selectedClientId && selectedClientId !== "__walk_in__" && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                          Charge Options
+                        </p>
 
-                      {/* Add to Booking */}
-                      {bookableBookings.length > 0 && (
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start gap-2"
-                          disabled={cart.length === 0}
-                          onClick={() => {
-                            setPaymentForm({
-                              ...paymentForm,
-                              chargeType: "add_to_booking",
-                              selectedBookingId: null,
-                            });
-                            setIsBookingSelectModalOpen(true);
-                          }}
-                        >
-                          <Calendar className="size-4" />
-                          Add to Booking / Reservation
-                          {bookableBookings.length > 0 && (
+                        {/* Add to Booking */}
+                        {bookableBookings.length > 0 && (
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start gap-2"
+                            disabled={cart.length === 0}
+                            onClick={() => {
+                              setPaymentForm({
+                                ...paymentForm,
+                                chargeType: "add_to_booking",
+                                selectedBookingId: null,
+                              });
+                              setIsBookingSelectModalOpen(true);
+                            }}
+                          >
+                            <Calendar className="size-4" />
+                            Add to Booking / Reservation
+                            {bookableBookings.length > 0 && (
+                              <Badge variant="secondary" className="ml-auto">
+                                {bookableBookings.length} available
+                              </Badge>
+                            )}
+                          </Button>
+                        )}
+
+                        {/* Charge to Active Stay */}
+                        {activeStays.length > 0 && (
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start gap-2"
+                            disabled={cart.length === 0}
+                            onClick={() => {
+                              setPaymentForm({
+                                ...paymentForm,
+                                chargeType: "charge_to_active_stay",
+                                selectedBookingId: activeStays[0]?.id || null,
+                              });
+                              setIsPaymentModalOpen(true);
+                            }}
+                          >
+                            <LinkIcon className="size-4" />
+                            Charge to Active Stay
                             <Badge variant="secondary" className="ml-auto">
-                              {bookableBookings.length} available
+                              {activeStays.length} active
                             </Badge>
-                          )}
-                        </Button>
-                      )}
+                          </Button>
+                        )}
 
-                      {/* Charge to Active Stay */}
-                      {activeStays.length > 0 && (
+                        {/* Charge to Account */}
                         <Button
                           variant="outline"
                           className="w-full justify-start gap-2"
@@ -2978,40 +3003,19 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                           onClick={() => {
                             setPaymentForm({
                               ...paymentForm,
-                              chargeType: "charge_to_active_stay",
-                              selectedBookingId: activeStays[0]?.id || null,
+                              chargeType: "charge_to_account",
                             });
                             setIsPaymentModalOpen(true);
                           }}
                         >
-                          <LinkIcon className="size-4" />
-                          Charge to Active Stay
-                          <Badge variant="secondary" className="ml-auto">
-                            {activeStays.length} active
-                          </Badge>
+                          <CreditCard className="size-4" />
+                          Charge to Account / Card on File
                         </Button>
-                      )}
-
-                      {/* Charge to Account */}
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start gap-2"
-                        disabled={cart.length === 0}
-                        onClick={() => {
-                          setPaymentForm({
-                            ...paymentForm,
-                            chargeType: "charge_to_account",
-                          });
-                          setIsPaymentModalOpen(true);
-                        }}
-                      >
-                        <CreditCard className="size-4" />
-                        Charge to Account / Card on File
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

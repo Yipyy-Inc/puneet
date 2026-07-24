@@ -21,6 +21,7 @@
     "check:settings-wiring": "bun scripts/check-settings-wiring.ts",
     "check:quickbooks": "bun scripts/check-quickbooks-money-rules.ts",
     "check:dialog-widths": "bun scripts/check-dialog-widths.ts",
+    "check:nav-parity": "bun scripts/check-nav-parity.ts",
     "prepare": "husky"
   },
   "dependencies": {

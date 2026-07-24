@@ -44,6 +44,9 @@ import { cn } from "@/lib/utils";
 
 interface FacilityNotificationsDropdownProps {
   facilityId?: number;
+  /** Where "View all notifications →" points. Defaults to the facility center;
+   *  the employee portal passes its own in-portal route. */
+  viewAllHref?: string;
 }
 
 // An unread urgent notification needs action: it floats to the top under the
@@ -167,6 +170,7 @@ function NotificationRow({
 
 export function FacilityNotificationsDropdown({
   facilityId = 11,
+  viewAllHref = "/facility/notifications",
 }: FacilityNotificationsDropdownProps) {
   const base = useFacilityNotifications();
   const schedule = useScheduleNotifications();
@@ -330,7 +334,7 @@ export function FacilityNotificationsDropdown({
               {categorySummary}
             </span>
             <Link
-              href="/facility/notifications"
+              href={viewAllHref}
               className="text-primary shrink-0 text-xs font-medium hover:underline"
               onClick={() => setOpen(false)}
             >

@@ -16,33 +16,32 @@ import {
   LayoutDashboard,
   Calendar,
   CalendarClock,
-  CalendarDays,
   Sparkles,
   FolderOpen,
   TrendingUp,
   FileText,
-  ClipboardList,
-  ClipboardCheck,
-  AlertTriangle,
-  Inbox,
-  Phone,
+  Bell,
   Scissors,
   Moon,
-  Dog,
   Sun,
   Dumbbell,
   Users,
-  ShoppingBag,
   UserCog,
   MonitorSpeaker,
+  Settings,
 } from "lucide-react";
 import { facilityStaff } from "@/data/facility-staff";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
-import type {
-  EffectivePermissions,
-  FacilityStaffRole,
-  PermissionKey,
-} from "@/types/facility-staff";
+import type { FacilityStaffRole } from "@/types/facility-staff";
+import { getOperationsNav, type NavItem } from "@/lib/nav/operations-nav";
+
+// Re-export the shared nav surface so existing importers keep resolving here.
+export {
+  getOperationsNav,
+  OPERATIONS_NAV_MODEL,
+  type NavItem,
+  type NavSection,
+} from "@/lib/nav/operations-nav";
 
 // ============================================================================
 // Permission-driven employee navigation (Sections 2 / 3A, spec Table 3)
@@ -58,26 +57,10 @@ import type {
 //      per the engine (visible iff its permKey resolves to granted OR
 //      assigned_only, i.e. `perms[key] !== false`). 3A: a section shows iff at
 //      least one of its items is visible.
+//
+// The Operations model itself (NAV_MODEL + getOperationsNav) lives in the shared
+// single source of truth at @/lib/nav/operations-nav and is re-exported above.
 // ============================================================================
-
-export interface NavItem {
-  title: string;
-  url: string;
-  icon: React.ElementType;
-  /** Item-visibility permission key. Omitted → always render (My Workspace). */
-  permKey?: PermissionKey;
-}
-
-export interface NavSection {
-  id: string;
-  label: string;
-  /**
-   * The section's primary visibility key (spec Table 3). Effective visibility is
-   * the OR of the items' keys — a section shows if ANY item is visible (3A).
-   */
-  permKey?: PermissionKey;
-  items: NavItem[];
-}
 
 /**
  * "My Workspace" — always rendered, never gated. Backed by
@@ -93,232 +76,12 @@ export const MY_WORKSPACE_ITEMS: NavItem[] = [
   { title: "My Documents", url: "/employee/documents", icon: FolderOpen },
   { title: "My Performance", url: "/employee/performance", icon: TrendingUp },
   { title: "My Write-ups", url: "/employee/write-ups", icon: FileText },
+  // Personal notification center — always-on (B.1 gates this route on nothing).
+  { title: "Notifications", url: "/employee/notifications", icon: Bell },
+  // Settings — always-on: My Profile + My Notifications are personal. Facility
+  // admin sections inside appear only when the viewer holds the key.
+  { title: "Settings", url: "/employee/settings", icon: Settings },
 ];
-
-/**
- * "Operations" — declarative, permission-gated. Keys are the REAL
- * {@link PermissionKey} values (the spec's Table 3 uses shorthand names, e.g.
- * "view_boarding_dashboard" → `boarding_view_dashboard`, "access_point_of_sale"
- * → `retail_pos_access`, "view_message_inbox" → `messages_view_inbox`).
- *
- * Only sections that have a real /employee route today are listed. The
- * remaining Table 3 sections are enumerated below with their keys — move each
- * into this model when its route lands (Parts 5–7), no logic change needed:
- *   Facility Calendar → view_all_calendars
- *   Marketing → marketing_view                  Smart Insights → ops_smart_insights
- *   Staff → view_staff                          Inventory → view_inventory
- *   Settings → settings_general                 HQ → hq_view
- */
-export const OPERATIONS_NAV_MODEL: NavSection[] = [
-  {
-    id: "bookings",
-    label: "Bookings",
-    permKey: "view_bookings",
-    items: [
-      {
-        title: "Bookings",
-        url: "/employee/bookings",
-        icon: ClipboardList,
-        permKey: "view_bookings",
-      },
-    ],
-  },
-  {
-    id: "grooming",
-    label: "Grooming",
-    permKey: "view_grooming_queue",
-    items: [
-      {
-        title: "Today's Queue",
-        url: "/employee/grooming",
-        icon: Scissors,
-        permKey: "view_grooming_queue",
-      },
-      {
-        title: "My Calendar",
-        url: "/employee/grooming?view=mine",
-        icon: CalendarDays,
-        permKey: "grooming_view_own_calendar",
-      },
-      {
-        title: "Full Calendar",
-        url: "/employee/grooming?view=all",
-        icon: CalendarDays,
-        permKey: "grooming_view_all_calendars",
-      },
-    ],
-  },
-  {
-    id: "boarding",
-    label: "Boarding",
-    permKey: "boarding_view_dashboard",
-    items: [
-      {
-        title: "Boarding",
-        url: "/employee/boarding",
-        icon: Moon,
-        permKey: "boarding_view_dashboard",
-      },
-      {
-        title: "Kennel View",
-        url: "/employee/kennel",
-        icon: Dog,
-        permKey: "boarding_view_dashboard",
-      },
-    ],
-  },
-  {
-    id: "daycare",
-    label: "Daycare",
-    permKey: "daycare_view_dashboard",
-    items: [
-      {
-        title: "Daycare",
-        url: "/employee/daycare",
-        icon: Sun,
-        permKey: "daycare_view_dashboard",
-      },
-      // Duplicate destination with Boarding — collapses to its first permitted
-      // occurrence via the URL-dedup in getOperationsNav.
-      {
-        title: "Kennel View",
-        url: "/employee/kennel",
-        icon: Dog,
-        permKey: "daycare_view_dashboard",
-      },
-    ],
-  },
-  {
-    id: "daily-care",
-    label: "Daily Care",
-    permKey: "boarding_daily_care_log",
-    // Table 3: log_feedings OR boarding_daily_care_log — OR expressed as two
-    // same-URL items (deduped), so boarding staff AND daycare attendants see it
-    // while a groomer (perform_grooming only) does not (5D).
-    items: [
-      {
-        title: "Daily Care",
-        url: "/employee/daily-care",
-        icon: ClipboardCheck,
-        permKey: "boarding_daily_care_log",
-      },
-      {
-        title: "Daily Care",
-        url: "/employee/daily-care",
-        icon: ClipboardCheck,
-        permKey: "log_feedings",
-      },
-    ],
-  },
-  {
-    id: "training",
-    label: "Training",
-    permKey: "training_view_own_calendar",
-    // OR across the trainer key and the manager-oversight key (same route,
-    // deduped) so trainers AND managers see Training, but reception — which has
-    // only view_training_queue — does not (spec 1.2 acceptance).
-    items: [
-      {
-        title: "Training",
-        url: "/employee/training",
-        icon: Dumbbell,
-        permKey: "training_view_own_calendar",
-      },
-      {
-        title: "Training",
-        url: "/employee/training",
-        icon: Dumbbell,
-        permKey: "training_manage_programs",
-      },
-    ],
-  },
-  {
-    id: "inbox",
-    label: "Inbox",
-    permKey: "messages_view_inbox",
-    items: [
-      {
-        title: "Inbox",
-        url: "/employee/inbox",
-        icon: Inbox,
-        permKey: "messages_view_inbox",
-      },
-    ],
-  },
-  {
-    id: "calling",
-    label: "Calling",
-    permKey: "calling_view",
-    items: [
-      {
-        title: "Calling",
-        url: "/employee/calling",
-        icon: Phone,
-        permKey: "calling_view",
-      },
-    ],
-  },
-  {
-    id: "incidents",
-    label: "Incidents",
-    permKey: "ops_incidents_view",
-    items: [
-      {
-        title: "Incidents",
-        url: "/employee/incidents",
-        icon: AlertTriangle,
-        permKey: "ops_incidents_view",
-      },
-    ],
-  },
-  {
-    id: "clients",
-    label: "Clients",
-    permKey: "view_client_list",
-    items: [
-      {
-        title: "Clients",
-        url: "/employee/clients",
-        icon: Users,
-        permKey: "view_client_list",
-      },
-    ],
-  },
-  {
-    id: "retail",
-    label: "Retail / POS",
-    permKey: "retail_pos_access",
-    items: [
-      {
-        title: "Retail",
-        url: "/employee/retail",
-        icon: ShoppingBag,
-        permKey: "retail_pos_access",
-      },
-    ],
-  },
-];
-
-/**
- * Build the visible Operations nav from an effective-permission map (F0.2 /
- * spec 3A). An item shows iff its `permKey` is granted or assigned_only
- * (`perms[key] !== false`); a section shows iff it has at least one visible
- * item. Duplicate destinations (e.g. Kennel View under Boarding and Daycare)
- * collapse to their first permitted occurrence.
- */
-export function getOperationsNav(perms: EffectivePermissions): NavSection[] {
-  const has = (key?: PermissionKey) => key == null || perms[key] !== false;
-  const seen = new Set<string>();
-
-  return OPERATIONS_NAV_MODEL.map((section) => {
-    const items = section.items.filter((item) => {
-      if (!has(item.permKey) || seen.has(item.url)) return false;
-      seen.add(item.url);
-      return true;
-    });
-    return { ...section, items };
-  }).filter((section) => section.items.length > 0);
-}
 
 // Identity card (display only — never a permission decision).
 const ROLE_ICON: Record<FacilityStaffRole, React.ElementType> = {

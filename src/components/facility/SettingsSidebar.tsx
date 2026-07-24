@@ -28,6 +28,7 @@ import {
   Globe,
   Siren,
 } from "lucide-react";
+import { UserCircle } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import {
   Collapsible,
@@ -35,11 +36,68 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useUiText } from "@/hooks/use-ui-text";
+import { useEffectivePermissions } from "@/hooks/use-facility-rbac";
+import type { PermissionKey } from "@/types/facility-staff";
 
 export interface SettingsSection {
   id: string;
   label: string;
   icon: React.ElementType;
+  /**
+   * Facility-admin sections carry the permission that gates them. Personal
+   * sections (My Account) omit it and always render. The facility admin holds
+   * every key, so it sees the full list; an employee sees only what's granted
+   * (personal always, admin sections per key) — "same component, filtered".
+   */
+  permKey?: PermissionKey;
+}
+
+/** The controlling permission for each facility-admin settings section. The
+ *  page reuses this to guard deep-links and pick a visible default. */
+export const SETTINGS_SECTION_KEYS: Record<string, PermissionKey> = {
+  business: "settings_general",
+  notifications: "settings_manage_notifications",
+  "smart-insights": "manage_facility_settings",
+  "custom-email-domain": "manage_facility_settings",
+  weather: "settings_general",
+  integrations: "manage_integrations",
+  "mobile-app": "manage_facility_settings",
+  boarding: "manage_services",
+  daycare: "manage_services",
+  grooming: "manage_services",
+  training: "manage_services",
+  addons: "manage_services",
+  "form-requirements": "settings_manage_forms",
+  "form-notifications": "settings_manage_forms",
+  "roles-permissions": "manage_roles",
+  "pet-breeds": "manage_facility_settings",
+  "care-tasks": "manage_facility_settings",
+  evaluations: "manage_facility_settings",
+  "booking-statuses": "manage_facility_settings",
+  "checkin-requirements": "manage_facility_settings",
+  "incident-reporting": "manage_facility_settings",
+  retail: "manage_facility_settings",
+  "pricing-rules": "manage_rates",
+  "estimate-settings": "manage_rates",
+  "deposit-rules": "manage_rates",
+  "invoice-template": "manage_facility_settings",
+  financial: "settings_billing",
+  taxes: "settings_manage_taxes",
+  subscription: "settings_subscription",
+  "tags-notes": "manage_facility_settings",
+  yipyygo: "manage_facility_settings",
+  audit: "settings_audit_log",
+  hq: "hq_manage_settings",
+};
+
+/** True when the acting viewer may open a settings section. Personal sections
+ *  (no key in the map) are always allowed. */
+export function canAccessSettingsSection(
+  id: string,
+  permissions: Record<string, unknown>,
+): boolean {
+  const key = SETTINGS_SECTION_KEYS[id];
+  return !key || permissions[key] !== false;
 }
 
 interface SettingsGroup {
@@ -49,9 +107,23 @@ interface SettingsGroup {
 
 const STATIC_GROUPS: SettingsGroup[] = [
   {
+    // Personal — always visible, no permission required (spec: employees keep
+    // the settings they DO have). Rendered first so it's the natural default.
+    label: "My Account",
+    sections: [
+      { id: "my-profile", label: "My Profile", icon: UserCircle },
+      { id: "my-notifications", label: "My Notifications", icon: Bell },
+    ],
+  },
+  {
     label: "General",
     sections: [
-      { id: "business", label: "Business", icon: Building2 },
+      {
+        id: "business",
+        label: "Business",
+        icon: Building2,
+        permKey: "settings_general",
+      },
       { id: "notifications", label: "Notifications", icon: Bell },
       { id: "smart-insights", label: "Smart Insights", icon: Sparkles },
       { id: "custom-email-domain", label: "Custom Email Domain", icon: Bell },
@@ -145,25 +217,37 @@ export function SettingsSidebar({
 }: SettingsSidebarProps) {
   const { t } = useUiText();
   const { modules } = useCustomServices();
+  const permissions = useEffectivePermissions();
   const activeModules = modules.filter((m) => m.status === "active");
 
-  // Build groups with dynamic custom modules
+  // Build groups with dynamic custom modules, then filter each section by the
+  // acting viewer's permissions: personal sections always show; facility-admin
+  // sections show only when granted. Custom module config follows manage_services.
   const groups: SettingsGroup[] = STATIC_GROUPS.map((group) => {
-    if (group.label === "Services" && activeModules.length > 0) {
-      return {
-        ...group,
-        sections: [
-          ...group.sections,
-          ...activeModules.map((m) => ({
-            id: `custom-${m.slug}`,
-            label: m.name,
-            icon: Puzzle,
-          })),
-        ],
-      };
-    }
-    return group;
-  });
+    const base =
+      group.label === "Services" && activeModules.length > 0
+        ? {
+            ...group,
+            sections: [
+              ...group.sections,
+              ...activeModules.map((m) => ({
+                id: `custom-${m.slug}`,
+                label: m.name,
+                icon: Puzzle,
+                permKey: "manage_services" as PermissionKey,
+              })),
+            ],
+          }
+        : group;
+    return {
+      ...base,
+      sections: base.sections.filter(
+        (s) =>
+          canAccessSettingsSection(s.id, permissions) &&
+          (!s.permKey || permissions[s.permKey] !== false),
+      ),
+    };
+  }).filter((group) => group.sections.length > 0);
 
   return (
     <nav className="w-full space-y-1 lg:w-56">

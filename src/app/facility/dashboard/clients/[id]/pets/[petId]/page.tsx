@@ -72,6 +72,7 @@ import { NotesButton } from "@/components/shared/NotesButton";
 import { TagsButton } from "@/components/shared/TagsButton";
 import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
 import { useFacilityRole } from "@/hooks/use-facility-role";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import { hasPermission } from "@/lib/role-utils";
 
 /* ── Report-card theme visuals ────────────────────────────────────── */
@@ -192,6 +193,13 @@ export default function PetDetailPage({
     "add_pet_notes",
     userId ?? undefined,
   );
+  // Table 4/5 — editing the pet requires edit rights; the Medical & Diet fields
+  // are additionally gated on edit_pet_medical, so a records-only editor can
+  // update general info while medical stays read-only. Admin (all-access
+  // fallback) keeps every control.
+  const canEditPetRecords = usePermission("edit_pet_records");
+  const canEditPetMedical = usePermission("edit_pet_medical");
+  const canEditPet = canEditPetRecords || canEditPetMedical;
   const [activeEvaluation, setActiveEvaluation] = useState<Evaluation | null>(
     null,
   );
@@ -399,14 +407,16 @@ export default function PetDetailPage({
               </>
             ) : (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(true)}
-                >
-                  <Edit className="mr-1 size-4" />
-                  Edit
-                </Button>
+                {canEditPet && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    <Edit className="mr-1 size-4" />
+                    Edit
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -727,7 +737,7 @@ export default function PetDetailPage({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {isEditing && editedPet ? (
+                {isEditing && editedPet && canEditPetMedical ? (
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="allergies">Allergies</Label>

@@ -4,7 +4,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,53 +21,43 @@ import {
   Building2,
   User,
   Shield,
+  Settings,
   LogOut,
-  RefreshCw,
   ChevronDown,
+  MoreHorizontal,
 } from "lucide-react";
 import { facilityStaff } from "@/data/facility-staff";
 import { setUserRole, clearEmployeeStaffId } from "@/lib/role-utils";
-import type { FacilityStaffRole } from "@/types/facility-staff";
+import { usePermission } from "@/hooks/use-facility-rbac";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";
 import { ClockInOut } from "@/components/employee/ClockInOut";
+import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
+import { MobileSearch } from "@/components/search/MobileSearch";
+import { FacilityHeader } from "@/components/layout/FacilityHeader";
+import { TopBarIconsNext } from "@/components/layout/TopBarIconsNext";
+import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
+import { FacilityNotificationsDropdown } from "@/components/facility/FacilityNotificationsDropdown";
+import { getUnreadMessagesCount } from "@/lib/messaging-unread";
 
-const ROLE_LABEL: Record<FacilityStaffRole, string> = {
-  owner: "Owner / Admin",
-  admin: "Admin",
-  manager: "Manager",
-  supervisor: "Supervisor",
-  reception: "Reception",
-  groomer: "Groomer",
-  trainer: "Trainer",
-  caretaker: "Caretaker",
-  daycare_attendant: "Daycare Attendant",
-  boarding_attendant: "Boarding Staff",
-  retail: "Retail Associate",
-  accountant: "Accountant",
-  sanitation: "Sanitation",
-};
+// ============================================================================
+// Employee top bar — the SAME header the facility admin sees (search, "+ New",
+// Messages, Bell, Avatar), reusing the facility header components directly so it
+// is visually indistinguishable. The only difference is permission scoping:
+//   • Global search + Bell + Avatar — always on (personal utilities).
+//   • "+ New" — each menu item is gated inside FacilityHeader; the whole button
+//     hides when the viewer can create nothing.
+//   • Messages — gated on messages_view_inbox.
+// ClockInOut takes the facility header's leftmost-action slot (where the admin
+// header shows Calling): it is the employee's core always-on action.
+// ============================================================================
 
-const ROLE_COLOR: Record<FacilityStaffRole, string> = {
-  owner: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  admin: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  manager:
-    "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
-  supervisor:
-    "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
-  reception: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
-  groomer: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
-  trainer:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-  caretaker: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300",
-  daycare_attendant:
-    "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
-  boarding_attendant:
-    "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
-  retail:
-    "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950 dark:text-fuchsia-300",
-  accountant: "bg-lime-100 text-lime-700 dark:bg-lime-950 dark:text-lime-300",
-  sanitation: "bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300",
-};
+// Stable (module-level) counts source for the Messages badge — reads the real
+// mock message data. Stable identity keeps TopBarIcons' polling effect from
+// re-subscribing every render.
+async function employeeTopBarCounts() {
+  return { unreadMessages: getUnreadMessagesCount() };
+}
 
 function getInitials(firstName: string, lastName: string) {
   return `${firstName[0]}${lastName[0]}`.toUpperCase();
@@ -71,7 +65,12 @@ function getInitials(firstName: string, lastName: string) {
 
 export function EmployeeHeader({ staffId }: { staffId: string }) {
   const staff = facilityStaff.find((s) => s.id === staffId);
-  const role = staff?.primaryRole ?? "reception";
+  const isWide = useMediaQuery("(min-width: 1280px)", true);
+
+  // Header-control gates (resolved for the signed-in employee via the RBAC
+  // boundary). Search's "create customer" affordance follows create_clients.
+  const canViewMessages = usePermission("messages_view_inbox");
+  const canCreateClients = usePermission("create_clients");
 
   const switchToFacility = () => {
     setUserRole("facility_admin");
@@ -92,37 +91,81 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
     window.location.href = "/employee/select";
   };
 
+  // Secondary items (Messages + language). Inline on desktop; collapsed into the
+  // overflow popover below xl — exactly one branch mounts. Mirrors the facility
+  // header's FacilityHeaderActions.
+  const secondary = (
+    <>
+      {canViewMessages && (
+        <TopBarIconsNext
+          getCounts={employeeTopBarCounts}
+          messagesHref="/employee/inbox"
+        />
+      )}
+      <HeaderDropdown />
+    </>
+  );
+
+  const initials = staff ? getInitials(staff.firstName, staff.lastName) : "?";
+  const avatarStyle = {
+    backgroundColor: (staff?.colorHex ?? "#666") + "33",
+    color: staff?.colorHex ?? "#666",
+  };
+
   return (
-    <header className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b px-4 backdrop-blur-sm sm:px-6">
-      <div className="flex items-center gap-3">
+    <header className="from-background to-muted/20 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-linear-to-r px-4 backdrop-blur-sm sm:px-6">
+      {/* Left — global search (always on; scoped to what the viewer can see). */}
+      <div className="flex min-w-0 items-center gap-3">
         <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors md:hidden" />
-        <div className="hidden items-center gap-2 sm:flex">
-          <span className="text-sm font-semibold">Employee Portal</span>
-          <span className="text-muted-foreground text-sm">·</span>
-          <Badge className={`text-xs ${ROLE_COLOR[role]}`} variant="secondary">
-            {ROLE_LABEL[role]}
-          </Badge>
-        </div>
+        <GlobalSearchNext
+          className="hidden w-[460px] max-w-[480px] min-w-0 sm:flex"
+          canCreateCustomer={canCreateClients}
+        />
+        <MobileSearch
+          className="sm:hidden"
+          canCreateCustomer={canCreateClients}
+        />
       </div>
 
-      <div className="flex items-center gap-2">
-        {/* Core action — clock in / out (all viewports) */}
+      {/* Right — action cluster (mirrors FacilityHeaderActions). */}
+      <div className="flex shrink-0 items-center gap-1">
+        {/* Leftmost action — clock in / out, the employee's always-on core
+            action (the slot the admin header gives to Calling). */}
         <ClockInOut staffId={staffId} />
 
-        {/* Switch employee — quick access */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="hidden gap-1.5 text-xs sm:flex"
-          asChild
-        >
-          <Link href="/employee/select">
-            <RefreshCw className="size-3.5" />
-            Switch Employee
-          </Link>
-        </Button>
+        {/* "+ New" — self-gates its items; renders nothing if none permitted. */}
+        <FacilityHeader facilityId={11} />
 
-        {/* User avatar + context menu */}
+        {isWide ? (
+          <div className="flex items-center gap-1">{secondary}</div>
+        ) : (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="More options"
+                className="hover:bg-muted size-9 rounded-xl"
+              >
+                <MoreHorizontal className="size-5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-auto max-w-[80vw] p-2">
+              <div className="flex flex-wrap items-center justify-end gap-1">
+                {secondary}
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
+
+        {/* Notification bell — always on; the personal center lives in-portal. */}
+        <FacilityNotificationsDropdown
+          facilityId={11}
+          viewAllHref="/employee/notifications"
+        />
+
+        {/* Avatar / profile menu — role-colored initials, Profile Settings,
+            portal + employee switching, and Logout. */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -133,12 +176,9 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
                 <AvatarImage src={staff?.avatarUrl} />
                 <AvatarFallback
                   className="text-xs font-medium"
-                  style={{
-                    backgroundColor: (staff?.colorHex ?? "#666") + "33",
-                    color: staff?.colorHex ?? "#666",
-                  }}
+                  style={avatarStyle}
                 >
-                  {staff ? getInitials(staff.firstName, staff.lastName) : "?"}
+                  {initials}
                 </AvatarFallback>
               </Avatar>
               {staff && (
@@ -153,14 +193,8 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
             <DropdownMenuLabel className="flex items-center gap-2">
               <Avatar className="size-8">
                 <AvatarImage src={staff?.avatarUrl} />
-                <AvatarFallback
-                  className="text-xs"
-                  style={{
-                    backgroundColor: (staff?.colorHex ?? "#666") + "33",
-                    color: staff?.colorHex ?? "#666",
-                  }}
-                >
-                  {staff ? getInitials(staff.firstName, staff.lastName) : "?"}
+                <AvatarFallback className="text-xs" style={avatarStyle}>
+                  {initials}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -172,10 +206,17 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
             </DropdownMenuLabel>
 
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild className="cursor-pointer gap-2">
+              <Link href="/profile">
+                <Settings className="size-4" />
+                Profile Settings
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs font-normal">
               Switch Portal
             </DropdownMenuLabel>
-
             <DropdownMenuItem
               onClick={switchToFacility}
               className="cursor-pointer gap-2"
@@ -210,7 +251,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
               className="text-destructive focus:text-destructive cursor-pointer gap-2"
             >
               <LogOut className="size-4" />
-              Exit Employee Portal
+              Log Out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

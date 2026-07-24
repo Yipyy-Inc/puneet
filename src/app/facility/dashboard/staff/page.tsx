@@ -43,7 +43,11 @@ import {
   type FacilityStaffRole,
   type StaffProfile,
 } from "@/types/facility-staff";
-import { facilityStaff, FACILITY_LOCATIONS } from "@/data/facility-staff";
+import {
+  facilityStaff,
+  upsertFacilityStaff,
+  FACILITY_LOCATIONS,
+} from "@/data/facility-staff";
 import { initOnboarding } from "@/data/staff-onboarding";
 import { StaffCard } from "./_components/staff-card";
 import { StaffProfileSheet } from "./_components/staff-profile-sheet";
@@ -66,7 +70,7 @@ import {
   logStaffDeleted,
   logInvitationSent,
 } from "@/lib/staff-audit";
-import { useFacilityRbac } from "@/hooks/use-facility-rbac";
+import { useFacilityRbac, usePermission } from "@/hooks/use-facility-rbac";
 
 const ROLE_FILTERS: { value: FacilityStaffRole | "all"; label: string }[] = [
   { value: "all", label: "All roles" },
@@ -82,6 +86,9 @@ const ROLE_FILTERS: { value: FacilityStaffRole | "all"; label: string }[] = [
 
 export default function FacilityStaffPage() {
   const { viewer } = useFacilityRbac();
+  // Table 4 — editing staff (Add / Edit, incl. the form's payroll fields)
+  // requires manage_staff; admin resolves to all-access via the fallback.
+  const canManageStaff = usePermission("manage_staff");
   const [staff, setStaff] = useState<StaffProfile[]>(facilityStaff);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<FacilityStaffRole | "all">(
@@ -183,6 +190,9 @@ export default function FacilityStaffPage() {
       copy[idx] = next;
       return copy;
     });
+    // Write through to the shared directory so RBAC, the permission editors,
+    // Preview, and the /employee portal all resolve this profile by id.
+    upsertFacilityStaff(next);
     setViewing(null);
   }
 
@@ -222,6 +232,7 @@ export default function FacilityStaffPage() {
       );
     }
 
+    const statusChangedAt = new Date().toISOString();
     setStaff((list) =>
       list.map((s) =>
         s.id === profileId
@@ -230,11 +241,20 @@ export default function FacilityStaffPage() {
               status: newStatus,
               statusReason: reason,
               statusNote: note || undefined,
-              statusChangedAt: new Date().toISOString(),
+              statusChangedAt,
             }
           : s,
       ),
     );
+    if (target) {
+      upsertFacilityStaff({
+        ...target,
+        status: newStatus,
+        statusReason: reason,
+        statusNote: note || undefined,
+        statusChangedAt,
+      });
+    }
     // If we're viewing this profile, update it
     setViewing((v) => {
       if (!v || v.id !== profileId) return v;
@@ -273,9 +293,11 @@ export default function FacilityStaffPage() {
             <Button variant="outline">
               <ArrowUpDown className="size-4" /> Sort staff
             </Button>
-            <Button onClick={openAddNew}>
-              <Plus className="size-4" /> Add new staff
-            </Button>
+            {canManageStaff && (
+              <Button onClick={openAddNew}>
+                <Plus className="size-4" /> Add new staff
+              </Button>
+            )}
           </div>
         </div>
 
@@ -495,6 +517,7 @@ export default function FacilityStaffPage() {
           profiles={filtered}
           onView={setViewing}
           onEdit={openEdit}
+          canEdit={canManageStaff}
         />
       )}
 
@@ -516,6 +539,10 @@ export default function FacilityStaffPage() {
             copy[idx] = next;
             return copy;
           });
+          // Persist per-person role/override edits to the shared directory so
+          // resolvePermissions picks them up (staffOverridesFor falls back to
+          // the profile's permissionOverrides).
+          upsertFacilityStaff(next);
           setViewing(next);
         }}
       />
@@ -762,10 +789,12 @@ function StaffListView({
   profiles,
   onView,
   onEdit,
+  canEdit,
 }: {
   profiles: StaffProfile[];
   onView: (p: StaffProfile) => void;
   onEdit: (p: StaffProfile) => void;
+  canEdit: boolean;
 }) {
   return (
     <Card>
@@ -833,16 +862,18 @@ function StaffListView({
                     {formatRelative(p.lastActive)}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit(p);
-                      }}
-                    >
-                      Edit
-                    </Button>
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(p);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}

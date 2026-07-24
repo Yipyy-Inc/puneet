@@ -14,6 +14,7 @@ import {
   FolderOpen,
   TrendingUp,
   FileText,
+  Bell,
 } from "lucide-react";
 import {
   Sheet,
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/sheet";
 import { facilityStaff } from "@/data/facility-staff";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
-import { getOperationsNav } from "./EmployeeSidebar";
+import { getOperationsNav } from "@/lib/nav/operations-nav";
 import {
   fullNameOf,
   RolePill,
@@ -45,6 +46,7 @@ const isActive = (pathname: string, url: string) =>
 // The account links surfaced in the Profile sheet (beyond the fixed tabs).
 const ACCOUNT_LINKS: NavSlot[] = [
   { title: "Availability", url: "/employee/availability", icon: CalendarClock },
+  { title: "Notifications", url: "/employee/notifications", icon: Bell },
   { title: "My Documents", url: "/employee/documents", icon: FolderOpen },
   { title: "My Performance", url: "/employee/performance", icon: TrendingUp },
   { title: "My HR Records", url: "/employee/write-ups", icon: FileText },
