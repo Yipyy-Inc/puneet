@@ -15,6 +15,7 @@ import { WriteUpAckBanner } from "@/components/employee/WriteUpAckBanner";
 import { EmployeeBottomNav } from "@/components/employee/EmployeeBottomNav";
 import { RegisterOpenGate } from "@/components/employee/RegisterOpenGate";
 import { RegisterCloseReminder } from "@/components/employee/RegisterCloseReminder";
+import { RegisterCloseWatcher } from "@/components/employee/RegisterCloseWatcher";
 
 export default async function EmployeeShellLayout({
   children,
@@ -55,6 +56,10 @@ export default async function EmployeeShellLayout({
                         <SidebarInset className="flex min-h-screen flex-col">
                           <WriteUpAckBanner staffId={staffId} />
                           <EmployeeHeader staffId={staffId} />
+                          {/* Past-closing "count & close" nudge (closing_time
+                              mode) — supports opener ≠ closer. */}
+                          <RegisterCloseWatcher staffId={staffId} />
+
                           {/* pb clears the fixed mobile bottom-nav (I1). */}
                           <main className="flex-1 overflow-x-hidden pb-16 md:pb-0">
                             {children}

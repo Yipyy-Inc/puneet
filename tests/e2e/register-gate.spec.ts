@@ -12,23 +12,26 @@ import path from "node:path";
 // ============================================================================
 
 const STORAGE_KEY = "facility-rbac-state-v1";
+const HR_KEY = "yipyy-staff-onboarding-v2"; // StaffHrConfig persistence
 const SHOTS =
   process.env.PWV_SHOTS ??
   "C:/Users/merie/AppData/Local/Temp/claude/c--dev-puneet/972b865b-3d4c-498d-8480-5f5908c6c228/scratchpad";
 
 type Overrides = Record<string, { granted: boolean; scope: string }>;
+type HrConfig = Record<string, unknown>;
 
 async function signInAs(
   context: BrowserContext,
   page: Page,
   staffId: string,
   overrides: Overrides = {},
+  hrConfig: HrConfig = {},
 ) {
   await context.addCookies([
     { name: "employee_staff_id", value: staffId, url: "http://localhost:3000" },
   ]);
   await context.addInitScript(
-    ({ key, id, ov }) => {
+    ({ key, id, ov, hrKey, hr }) => {
       window.localStorage.setItem(
         key,
         JSON.stringify({
@@ -37,8 +40,18 @@ async function signInAs(
           staffOverrides: { [id]: ov },
         }),
       );
+      if (Object.keys(hr).length > 0) {
+        // Deep-merged into the default config on load (config.* keys).
+        window.localStorage.setItem(hrKey, JSON.stringify({ config: hr }));
+      }
     },
-    { key: STORAGE_KEY, id: staffId, ov: overrides },
+    {
+      key: STORAGE_KEY,
+      id: staffId,
+      ov: overrides,
+      hrKey: HR_KEY,
+      hr: hrConfig,
+    },
   );
   await page.goto("/employee");
 }
@@ -74,13 +87,22 @@ test.describe("Daily Register open/close gate", () => {
     });
   });
 
-  test("clocking out with the drawer open pops the close-count reminder", async ({
+  test("[opener-closes mode] the opener's clock-out pops the close-count reminder", async ({
     page,
     context,
   }) => {
-    await signInAs(context, page, "fs-rec-01");
+    // Single-cashier mode: the person who opened is reminded on clock-out.
+    await signInAs(
+      context,
+      page,
+      "fs-rec-01",
+      {},
+      {
+        registerCloseReminder: "opener_clock_out",
+      },
+    );
 
-    // Open the register through the gate.
+    // Open the register through the gate (this staff is now the opener).
     await page.getByRole("spinbutton").first().fill("12");
     await page.getByRole("button", { name: /Open register/i }).click();
     await expect(sidebar(page)).toBeVisible({ timeout: 30_000 });
@@ -96,6 +118,37 @@ test.describe("Daily Register open/close gate", () => {
       page.getByText(/Close Out Today.s Register/i).first(),
     ).toBeVisible({ timeout: 15_000 });
     await page.screenshot({ path: path.join(SHOTS, "register-03-close.png") });
+  });
+
+  test("[handover] a mid-shift clock-out does NOT force the register closed", async ({
+    page,
+    context,
+  }) => {
+    // Manual mode stands in for the shift-handover guarantee: clocking out with
+    // the drawer open must NOT pop the close flow, so a morning cashier can
+    // leave and an evening cashier closes later. (closing_time behaves the same
+    // before the facility's closing time.)
+    await signInAs(
+      context,
+      page,
+      "fs-rec-01",
+      {},
+      {
+        registerCloseReminder: "manual",
+      },
+    );
+
+    await page.getByRole("spinbutton").first().fill("12");
+    await page.getByRole("button", { name: /Open register/i }).click();
+    await expect(sidebar(page)).toBeVisible({ timeout: 30_000 });
+
+    await page.getByRole("button", { name: /Clock in/i }).click();
+    await page.getByRole("button", { name: /Confirm clock in/i }).click();
+    await page.getByRole("button", { name: /Clock out/i }).click();
+    await page.getByRole("button", { name: /Yes, clock out/i }).click();
+
+    // No forced close-count dialog.
+    await expect(page.getByText(/Close Out Today.s Register/i)).toHaveCount(0);
   });
 
   test("staff without register access are never gated", async ({

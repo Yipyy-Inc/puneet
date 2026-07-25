@@ -769,6 +769,11 @@ function seedNotificationTriggers(): Record<
 }
 
 // ── Facility Staff & HR config ──────────────────────────────────────────────
+export type RegisterCloseReminderMode =
+  | "closing_time"
+  | "opener_clock_out"
+  | "manual";
+
 export interface StaffHrConfig {
   /** Employment-type slugs (displayed humanized). Feeds the Add-staff dropdown. */
   employmentTypes: string[];
@@ -788,6 +793,15 @@ export interface StaffHrConfig {
    *  clock-out / logout (default true). When off, the Daily Register is
    *  optional and never gates the portal. */
   requireRegisterOpenOnLogin: boolean;
+  /** When the "count & close the drawer" reminder fires (default
+   *  "closing_time"). Supports shift handovers where a different person opens
+   *  and closes:
+   *   • "closing_time"    — at/after the facility's closing time, for whoever's
+   *     on shift; mid-day departures are NOT prompted.
+   *   • "opener_clock_out"— only the person who opened is reminded, on their
+   *     clock-out / logout (single-cashier facilities).
+   *   • "manual"          — no auto reminder; staff close from the register. */
+  registerCloseReminder: RegisterCloseReminderMode;
   /** Per-facility staff-lifecycle notification triggers (Table 5). */
   notificationTriggers: Record<StaffNotifTriggerKey, StaffNotifTrigger>;
 }
@@ -1033,6 +1047,9 @@ function seedConfig(): StaffHrConfig {
     // Default ON — no one forgets to count the cash (open on login, close on
     // clock-out / logout).
     requireRegisterOpenOnLogin: true,
+    // Default: remind at closing time so a different person can open (morning)
+    // and close (evening) — mid-day departures aren't prompted.
+    registerCloseReminder: "closing_time",
     notificationTriggers: seedNotificationTriggers(),
   };
 }

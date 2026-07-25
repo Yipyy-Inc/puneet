@@ -42,6 +42,8 @@ import {
   requestRegisterClose,
 } from "@/lib/cash-register-store";
 import { resolveRegisterContext } from "@/lib/employee/register-context";
+import { shouldPromptCloseOnExit } from "@/lib/register-hours";
+import { useStaffHrConfig } from "@/data/staff-onboarding";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";
 import { ClockInOut } from "@/components/employee/ClockInOut";
@@ -108,6 +110,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
   const canCall = usePermission("calling_view");
   const canBookingRequests = usePermission("manage_booking_calendar");
   const canOpenRegister = usePermission("open_close_register");
+  const { registerCloseReminder } = useStaffHrConfig();
 
   const switchToFacility = () => {
     setUserRole("facility_admin");
@@ -124,12 +127,16 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
   };
 
   const logout = () => {
-    // Don't let an authorized cashier leave with the drawer open — pop the
+    // Don't let the closing cashier leave with the drawer open — pop the
     // count-and-close flow first; logging out again after closing proceeds.
+    // Mode-aware (spec: opener ≠ closer) so a mid-day handover isn't blocked.
     if (canOpenRegister) {
       const ctx = resolveRegisterContext(staffId);
       const session = getTodaySession(ctx.facilityId, ctx.locationId);
-      if (session?.status === "open") {
+      if (
+        session &&
+        shouldPromptCloseOnExit(session, ctx.staffName, registerCloseReminder)
+      ) {
         requestRegisterClose(session.id);
         toast.warning("Count & close the register before logging out.");
         return;

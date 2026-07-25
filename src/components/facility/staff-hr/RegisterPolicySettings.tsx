@@ -3,9 +3,27 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Vault } from "lucide-react";
 import { toast } from "sonner";
-import { useStaffHrConfig, saveStaffHrConfig } from "@/data/staff-onboarding";
+import {
+  useStaffHrConfig,
+  saveStaffHrConfig,
+  type RegisterCloseReminderMode,
+} from "@/data/staff-onboarding";
+import { todayCloseTime } from "@/lib/register-hours";
+
+const CLOSE_REMINDER_LABELS: Record<RegisterCloseReminderMode, string> = {
+  closing_time: "At closing time — any cashier (recommended)",
+  opener_clock_out: "When the person who opened clocks out (single cashier)",
+  manual: "Manual only — close from the register page",
+};
 
 /** Facility control over the mandatory cash-register open/close flow. Default
  *  ON so staff with register access must count the drawer open before they can
@@ -22,6 +40,13 @@ export function RegisterPolicySettings() {
         : "Register open/close is no longer mandatory",
     );
   };
+
+  const setCloseReminder = (mode: RegisterCloseReminderMode) => {
+    saveStaffHrConfig({ registerCloseReminder: mode });
+    toast.success("Close-reminder setting updated");
+  };
+
+  const closeTime = todayCloseTime();
 
   return (
     <Card>
@@ -54,6 +79,48 @@ export function RegisterPolicySettings() {
             checked={config.requireRegisterOpenOnLogin}
             onCheckedChange={setRequireOpen}
           />
+        </div>
+
+        <div className="space-y-2 rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <Label htmlFor="register-close-reminder">
+              When to remind staff to close the register
+            </Label>
+            <p className="text-muted-foreground text-xs">
+              Supports shift handovers — a different person can open (morning)
+              and close (evening).
+            </p>
+          </div>
+          <Select
+            value={config.registerCloseReminder}
+            onValueChange={(v) =>
+              setCloseReminder(v as RegisterCloseReminderMode)
+            }
+          >
+            <SelectTrigger id="register-close-reminder" className="w-full">
+              <SelectValue>
+                {CLOSE_REMINDER_LABELS[config.registerCloseReminder]}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="closing_time">
+                At closing time — any cashier (recommended)
+              </SelectItem>
+              <SelectItem value="opener_clock_out">
+                When the person who opened clocks out (single cashier)
+              </SelectItem>
+              <SelectItem value="manual">
+                Manual only — close from the register page
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          {config.registerCloseReminder === "closing_time" && (
+            <p className="text-muted-foreground text-xs">
+              {closeTime
+                ? `Today's closing time is ${closeTime} (from your business hours). Mid-day departures aren't prompted.`
+                : "The facility is closed today, so no closing reminder will fire."}
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>

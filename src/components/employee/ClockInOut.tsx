@@ -17,6 +17,7 @@ import {
   requestRegisterClose,
 } from "@/lib/cash-register-store";
 import { resolveRegisterContext } from "@/lib/employee/register-context";
+import { shouldPromptCloseOnExit } from "@/lib/register-hours";
 
 // Core staff action — works on all viewports (large tap target). The button
 // NEVER toggles on the first click: it opens the shared ClockConfirm step, and
@@ -25,7 +26,11 @@ import { resolveRegisterContext } from "@/lib/employee/register-context";
 // on the clock-out toast.
 export function ClockInOut({ staffId }: { staffId: string }) {
   const { clockedIn, clockedInAt } = useClock(staffId);
-  const { requireClockInConfirm, requireClockOutConfirm } = useStaffHrConfig();
+  const {
+    requireClockInConfirm,
+    requireClockOutConfirm,
+    registerCloseReminder,
+  } = useStaffHrConfig();
   const canOpenRegister = usePermission("open_close_register");
   const [open, setOpen] = useState(false);
   // Brief post-action lockout so a stray double-tap (tap-through on the
@@ -59,12 +64,17 @@ export function ClockInOut({ staffId }: { staffId: string }) {
     const startedAt = clockedInAt;
     const res = clockOut(staffId);
     startCooldown();
-    // End-of-shift close reminder: if this employee can work the register and
-    // today's drawer is still open, prompt them to count & close it.
+    // End-of-shift close reminder — mode-aware so a mid-day handover doesn't
+    // force the morning opener to close (spec: opener ≠ closer).
     if (canOpenRegister) {
       const ctx = resolveRegisterContext(staffId);
       const session = getTodaySession(ctx.facilityId, ctx.locationId);
-      if (session?.status === "open") requestRegisterClose(session.id);
+      if (
+        session &&
+        shouldPromptCloseOnExit(session, ctx.staffName, registerCloseReminder)
+      ) {
+        requestRegisterClose(session.id);
+      }
     }
     const worked =
       res.lastSessionMinutes != null
