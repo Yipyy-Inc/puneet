@@ -777,6 +777,12 @@ export interface StaffHrConfig {
   inviteExpiryDays: number;
   completionDeadlineDays: number;
   hrDocRetentionYears: number;
+  /** Require the two-step confirm before clocking IN (default true). When off,
+   *  clocking in is a single tap. */
+  requireClockInConfirm: boolean;
+  /** Require the two-step confirm before clocking OUT (default true). When off,
+   *  clocking out is a single tap. */
+  requireClockOutConfirm: boolean;
   /** Per-facility staff-lifecycle notification triggers (Table 5). */
   notificationTriggers: Record<StaffNotifTriggerKey, StaffNotifTrigger>;
 }
@@ -1016,6 +1022,9 @@ function seedConfig(): StaffHrConfig {
     inviteExpiryDays: 7,
     completionDeadlineDays: 14,
     hrDocRetentionYears: 7,
+    // Default ON so the client's 2-step clock requirement holds out of the box.
+    requireClockInConfirm: true,
+    requireClockOutConfirm: true,
     notificationTriggers: seedNotificationTriggers(),
   };
 }

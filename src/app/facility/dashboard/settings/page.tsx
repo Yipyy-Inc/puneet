@@ -70,6 +70,7 @@ import { TrainingModuleSettings } from "@/components/facility/training/training-
 import { CustomEmailDomainSettings } from "@/components/facility/CustomEmailDomainSettings";
 import { SmartInsightsSettings } from "@/components/smart-insights/SmartInsightsSettings";
 import { StaffHrConfigSettings } from "@/components/facility/staff-hr/StaffHrConfigSettings";
+import { ClockConfirmationSettings } from "@/components/facility/staff-hr/ClockConfirmationSettings";
 import { EmploymentTypesSettings } from "@/components/facility/staff-hr/EmploymentTypesSettings";
 import { TerminationReasonsSettings } from "@/components/facility/staff-hr/TerminationReasonsSettings";
 import { OnboardingTemplatesSettings } from "@/components/facility/staff-hr/OnboardingTemplatesSettings";
@@ -4638,6 +4639,7 @@ export default function SettingsPage() {
           {activeSection === "hr-config" && (
             <div className="space-y-6">
               <StaffHrConfigSettings />
+              <ClockConfirmationSettings />
             </div>
           )}
           {activeSection === "staff-notifications" && (

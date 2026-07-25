@@ -394,6 +394,9 @@ const CUSTOM_ROLE_PERMISSIONS_KEY = "facility_custom_role_permissions";
 const USER_PERMISSION_OVERRIDES_KEY = "facility_user_permission_overrides";
 const CURRENT_USER_ID_KEY = "facility_current_user_id";
 const EMPLOYEE_STAFF_ID_COOKIE = "employee_staff_id";
+/** sessionStorage marker (login timestamp, ms) so the employee dashboard can
+ *  show its one-time welcome banner right after a fresh sign-in / switch. */
+export const EMPLOYEE_WELCOME_TS_KEY = "yipyy-employee-welcome-ts";
 
 // Get/set which staff member is being impersonated in the employee portal
 export function getEmployeeStaffId(): string | null {
@@ -406,6 +409,12 @@ export function getEmployeeStaffId(): string | null {
 export function setEmployeeStaffId(staffId: string): void {
   if (typeof document === "undefined") return;
   document.cookie = `${EMPLOYEE_STAFF_ID_COOKIE}=${staffId}; path=/; max-age=31536000`;
+  // Mark this as a fresh login so the dashboard plays its one-time welcome.
+  try {
+    window.sessionStorage.setItem(EMPLOYEE_WELCOME_TS_KEY, String(Date.now()));
+  } catch {
+    /* sessionStorage unavailable (private mode) — banner just won't show */
+  }
 }
 
 export function clearEmployeeStaffId(): void {

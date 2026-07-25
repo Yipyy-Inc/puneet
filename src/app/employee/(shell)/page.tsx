@@ -16,10 +16,14 @@ export default async function EmployeePage() {
   const staff = facilityStaff.find((s) => s.id === staffId) ?? facilityStaff[0];
 
   return (
-    <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
+    <div className="flex-1 p-4 pt-6 md:p-8">
+      {/* One-time welcome — owns its own bottom margin so it collapses cleanly
+          away after login without leaving a gap above the dashboard. */}
       <EmployeeGreetingHeader staff={staff} />
-      <WeatherWidget />
-      <DashboardShell />
+      <div className="space-y-6">
+        <WeatherWidget />
+        <DashboardShell />
+      </div>
     </div>
   );
 }

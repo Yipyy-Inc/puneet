@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { EMPLOYEE_WELCOME_TS_KEY } from "@/lib/role-utils";
 import {
   Scissors,
   Sun,
@@ -74,62 +75,130 @@ function getInitials(firstName: string, lastName: string) {
   return `${firstName[0]}${lastName[0]}`.toUpperCase();
 }
 
+// Only replay for a genuinely fresh login, not on every return to Home.
+const RECENT_LOGIN_WINDOW_MS = 20_000;
+const VISIBLE_MS = 4_500; // a few seconds on screen
+const EXIT_MS = 500; // matches the transition duration below
+
 export function EmployeeGreetingHeader({ staff }: { staff: StaffProfile }) {
   const role = staff.primaryRole;
   const RoleIcon = ROLE_ICON[role];
   // Read the clock once at mount (purity: no argless Date in the render body).
   const [greeting] = useState(() => timeOfDayGreeting(new Date().getHours()));
 
+  // The banner is a one-time welcome: it mounts, animates in, holds for a few
+  // seconds, then smoothly collapses away — but ONLY right after a fresh login
+  // (the `setEmployeeStaffId` marker), never on ordinary visits to Home.
+  const [mounted, setMounted] = useState(false); // present in the DOM
+  const [visible, setVisible] = useState(false); // animated-in vs collapsed
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const raf = useRef<number | null>(null);
+
+  useEffect(() => {
+    let ts: number | null = null;
+    try {
+      const raw = window.sessionStorage.getItem(EMPLOYEE_WELCOME_TS_KEY);
+      ts = raw ? Number(raw) : null;
+    } catch {
+      /* sessionStorage unavailable */
+    }
+    const fresh =
+      ts != null &&
+      Number.isFinite(ts) &&
+      Date.now() - ts < RECENT_LOGIN_WINDOW_MS;
+    if (!fresh) return;
+
+    // State changes run off the effect body (timer / rAF callbacks) so the
+    // banner mounts collapsed, then flips to visible on a later frame — a real
+    // enter transition rather than an instant appearance.
+    const enter = setTimeout(() => {
+      setMounted(true);
+      raf.current = requestAnimationFrame(() =>
+        requestAnimationFrame(() => setVisible(true)),
+      );
+    }, 0);
+    const hold = setTimeout(() => {
+      setVisible(false); // begin the smooth exit
+      // Consume the marker on dismissal so returning to Home won't replay it.
+      try {
+        window.sessionStorage.removeItem(EMPLOYEE_WELCOME_TS_KEY);
+      } catch {
+        /* ignore */
+      }
+    }, VISIBLE_MS);
+    const drop = setTimeout(() => setMounted(false), VISIBLE_MS + EXIT_MS);
+    timers.current.push(enter, hold, drop);
+    return () => {
+      if (raf.current != null) cancelAnimationFrame(raf.current);
+      timers.current.forEach(clearTimeout);
+      timers.current = [];
+    };
+  }, []);
+
+  if (!mounted) return null;
+
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl bg-linear-to-r ${ROLE_GRADIENT[role]} p-6 text-white shadow-md`}
+      aria-hidden={!visible}
+      className={`overflow-hidden transition-all duration-500 ease-out ${
+        visible
+          ? "mb-6 max-h-64 translate-y-0 opacity-100"
+          : "mb-0 max-h-0 -translate-y-2 opacity-0"
+      }`}
     >
-      <div className="flex items-center gap-4">
-        <Avatar className="size-16 shadow-lg ring-2 ring-white/30">
-          <AvatarImage src={staff.avatarUrl} />
-          <AvatarFallback
-            className="text-xl font-bold"
-            style={{ backgroundColor: "rgba(255,255,255,0.2)", color: "white" }}
-          >
-            {getInitials(staff.firstName, staff.lastName)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-white/80">{greeting},</p>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {staff.firstName} {staff.lastName}
-          </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <Badge
-              variant="secondary"
-              className="border-white/20 bg-white/20 text-white hover:bg-white/30"
+      <div
+        className={`relative overflow-hidden rounded-2xl bg-linear-to-r ${ROLE_GRADIENT[role]} p-6 text-white shadow-md`}
+      >
+        <div className="flex items-center gap-4">
+          <Avatar className="size-16 shadow-lg ring-2 ring-white/30">
+            <AvatarImage src={staff.avatarUrl} />
+            <AvatarFallback
+              className="text-xl font-bold"
+              style={{
+                backgroundColor: "rgba(255,255,255,0.2)",
+                color: "white",
+              }}
             >
-              <RoleIcon className="mr-1 size-3" />
-              {ROLE_LABEL[role]}
-            </Badge>
-            {staff.additionalRoles.map((r) => (
+              {getInitials(staff.firstName, staff.lastName)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-white/80">{greeting},</p>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {staff.firstName} {staff.lastName}
+            </h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
               <Badge
-                key={r}
                 variant="secondary"
-                className="border-white/10 bg-white/10 text-xs text-white/80"
+                className="border-white/20 bg-white/20 text-white hover:bg-white/30"
               >
-                +{r.replace(/_/g, " ")}
+                <RoleIcon className="mr-1 size-3" />
+                {ROLE_LABEL[role]}
               </Badge>
-            ))}
+              {staff.additionalRoles.map((r) => (
+                <Badge
+                  key={r}
+                  variant="secondary"
+                  className="border-white/10 bg-white/10 text-xs text-white/80"
+                >
+                  +{r.replace(/_/g, " ")}
+                </Badge>
+              ))}
+            </div>
+          </div>
+          <div className="hidden text-right text-sm text-white/70 sm:block">
+            <p>{staff.email}</p>
+            <p className="mt-0.5">
+              {staff.assignedLocations.length === 1
+                ? "1 location"
+                : `${staff.assignedLocations.length} locations`}
+            </p>
           </div>
         </div>
-        <div className="hidden text-right text-sm text-white/70 sm:block">
-          <p>{staff.email}</p>
-          <p className="mt-0.5">
-            {staff.assignedLocations.length === 1
-              ? "1 location"
-              : `${staff.assignedLocations.length} locations`}
-          </p>
-        </div>
+        {/* decorative */}
+        <div className="pointer-events-none absolute -top-8 -right-8 size-40 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute right-20 -bottom-10 size-32 rounded-full bg-white/5" />
       </div>
-      {/* decorative */}
-      <div className="pointer-events-none absolute -top-8 -right-8 size-40 rounded-full bg-white/5" />
-      <div className="pointer-events-none absolute right-20 -bottom-10 size-32 rounded-full bg-white/5" />
     </div>
   );
 }

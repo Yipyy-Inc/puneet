@@ -31,6 +31,7 @@ import {
   FolderOpen,
   TrendingUp,
   FileText,
+  Phone,
 } from "lucide-react";
 import { facilityStaff } from "@/data/facility-staff";
 import { setUserRole, clearEmployeeStaffId } from "@/lib/role-utils";
@@ -38,6 +39,9 @@ import { usePermission } from "@/hooks/use-facility-rbac";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";
 import { ClockInOut } from "@/components/employee/ClockInOut";
+import { OnTheClockPill } from "@/components/employee/OnTheClockPill";
+import { HeaderNavIconButton } from "@/components/layout/HeaderNavIconButton";
+import { toEmployeeRoute } from "@/lib/nav/employee-nav";
 import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
 import { MobileSearch } from "@/components/search/MobileSearch";
 import { FacilityHeader } from "@/components/layout/FacilityHeader";
@@ -95,6 +99,8 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
   // boundary). Search's "create customer" affordance follows create_clients.
   const canViewMessages = usePermission("messages_view_inbox");
   const canCreateClients = usePermission("create_clients");
+  const canCall = usePermission("calling_view");
+  const canBookingRequests = usePermission("manage_booking_calendar");
 
   const switchToFacility = () => {
     setUserRole("facility_admin");
@@ -115,11 +121,26 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
     window.location.href = "/employee/select";
   };
 
-  // Secondary items (Messages + language). Inline on desktop; collapsed into the
-  // overflow popover below xl — exactly one branch mounts. Mirrors the facility
-  // header's FacilityHeaderActions.
+  // Secondary items (Calling · Booking Requests · Messages · language). Inline
+  // on desktop; collapsed into the overflow popover below xl — exactly one
+  // branch mounts. Mirrors the facility header's FacilityHeaderActions, and
+  // keeps the phone top bar from crowding while still exposing every action.
   const secondary = (
     <>
+      {canCall && (
+        <HeaderNavIconButton
+          href={toEmployeeRoute("/facility/dashboard/calling")}
+          label="Calling"
+          icon={Phone}
+        />
+      )}
+      {canBookingRequests && (
+        <HeaderNavIconButton
+          href={toEmployeeRoute("/facility/dashboard/online-booking")}
+          label="Booking Requests"
+          icon={CalendarClock}
+        />
+      )}
       {canViewMessages && (
         <TopBarIconsNext
           getCounts={employeeTopBarCounts}
@@ -154,7 +175,9 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
       {/* Right — action cluster (mirrors FacilityHeaderActions). */}
       <div className="flex shrink-0 items-center gap-1">
         {/* Leftmost action — clock in / out, the employee's always-on core
-            action (the slot the admin header gives to Calling). */}
+            action (the slot the admin header gives to Calling). The pill beside
+            it makes the current clock state impossible to miss. */}
+        <OnTheClockPill staffId={staffId} />
         <ClockInOut staffId={staffId} />
 
         {/* "+ New" — self-gates its items; renders nothing if none permitted. */}

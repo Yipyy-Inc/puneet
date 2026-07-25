@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Clock, LogIn, LogOut } from "lucide-react";
+import { ClockConfirm } from "@/components/employee/ClockConfirm";
+import { useStaffHrConfig } from "@/data/staff-onboarding";
 import { cn } from "@/lib/utils";
 import { formatElapsed } from "@/lib/scheduling-utils";
 import type {
@@ -75,6 +77,10 @@ function ShiftRow({
   const timer = useTimer(
     entry?.status === "clocked_in" ? entry.clockedInAt : undefined,
   );
+  // Route both actions through the shared two-step confirm (unless the facility
+  // has turned that direction's confirmation off, then it's a single tap).
+  const { requireClockInConfirm, requireClockOutConfirm } = useStaffHrConfig();
+  const [confirm, setConfirm] = useState<null | "in" | "out">(null);
 
   if (!employee) return null;
 
@@ -118,7 +124,9 @@ function ShiftRow({
           <Button
             size="sm"
             variant="outline"
-            onClick={onClockIn}
+            onClick={() =>
+              requireClockInConfirm ? setConfirm("in") : onClockIn()
+            }
             className="gap-1.5"
           >
             <LogIn className="size-3.5" />
@@ -129,7 +137,9 @@ function ShiftRow({
           <Button
             size="sm"
             variant="outline"
-            onClick={onClockOut}
+            onClick={() =>
+              requireClockOutConfirm ? setConfirm("out") : onClockOut()
+            }
             className="gap-1.5 border-orange-300 text-orange-600 hover:bg-orange-50"
           >
             <LogOut className="size-3.5" />
@@ -140,6 +150,21 @@ function ShiftRow({
           <span className="text-muted-foreground text-xs">Clocked out</span>
         )}
       </div>
+
+      <ClockConfirm
+        open={confirm !== null}
+        onOpenChange={(o) => {
+          if (!o) setConfirm(null);
+        }}
+        clockedIn={confirm === "out"}
+        clockedInAt={entry?.clockedInAt}
+        subjectName={employee.name}
+        onConfirm={() => {
+          if (confirm === "out") onClockOut();
+          else onClockIn();
+          setConfirm(null);
+        }}
+      />
     </div>
   );
 }

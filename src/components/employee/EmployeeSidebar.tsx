@@ -11,7 +11,11 @@ import {
   SidebarMenuItem,
   SidebarGroup,
   SidebarGroupLabel,
+  SidebarRail,
+  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 import {
   Sparkles,
   Scissors,
@@ -103,6 +107,8 @@ const ROLE_COLOR: Record<FacilityStaffRole, string> = {
 export function EmployeeSidebar({ staffId }: { staffId: string }) {
   const pathname = usePathname();
   const { resolvePermissions } = useFacilityRbac();
+  const { state } = useSidebar();
+  const collapsed = state === "collapsed";
   const staff = facilityStaff.find((s) => s.id === staffId);
   const role = staff?.primaryRole ?? "reception";
   const Icon = ROLE_ICON[role];
@@ -130,7 +136,8 @@ export function EmployeeSidebar({ staffId }: { staffId: string }) {
       : pathname === base || pathname.startsWith(base + "/");
     return (
       <SidebarMenuItem key={item.url}>
-        <SidebarMenuButton asChild isActive={isActive}>
+        {/* tooltip surfaces the label when the sidebar is collapsed to icons. */}
+        <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
           <Link href={item.url}>
             <ItemIcon className="size-4" />
             <span>{item.title}</span>
@@ -141,23 +148,36 @@ export function EmployeeSidebar({ staffId }: { staffId: string }) {
   };
 
   return (
-    <Sidebar>
-      <SidebarHeader className="border-b px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div
-            className={`flex size-8 items-center justify-center rounded-lg bg-linear-to-br ${ROLE_COLOR[role]}`}
-          >
-            <Icon className="size-4 text-white" />
+    // collapsible="icon" + the SidebarTrigger below give the employee sidebar
+    // the same desktop open/close as the facility sidebar (GenericSidebar).
+    <Sidebar collapsible="icon">
+      <SidebarHeader
+        className={cn("border-b", collapsed ? "px-1 py-2" : "px-4 py-3")}
+      >
+        {collapsed ? (
+          <div className="flex justify-center">
+            <SidebarTrigger />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{ROLE_LABEL[role]}</p>
-            {staff && (
-              <p className="text-muted-foreground truncate text-xs">
-                {staff.firstName} {staff.lastName}
+        ) : (
+          <div className="flex items-center gap-2">
+            <div
+              className={`flex size-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br ${ROLE_COLOR[role]}`}
+            >
+              <Icon className="size-4 text-white" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">
+                {ROLE_LABEL[role]}
               </p>
-            )}
+              {staff && (
+                <p className="text-muted-foreground truncate text-xs">
+                  {staff.firstName} {staff.lastName}
+                </p>
+              )}
+            </div>
+            <SidebarTrigger className="shrink-0" />
           </div>
-        </div>
+        )}
       </SidebarHeader>
       <SidebarContent>
         {/* Pure facility mirror — same sections, order, labels, and page links
@@ -173,6 +193,8 @@ export function EmployeeSidebar({ staffId }: { staffId: string }) {
           </SidebarGroup>
         ))}
       </SidebarContent>
+      {/* Thin edge affordance to collapse/expand by clicking the border. */}
+      <SidebarRail />
     </Sidebar>
   );
 }
