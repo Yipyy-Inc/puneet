@@ -53,20 +53,16 @@ test.describe("Daily Register open/close gate", () => {
   }) => {
     await signInAs(context, page, "fs-rec-01"); // reception — has open_close_register
 
-    // The gate blocks the whole portal with the opening-count flow.
+    // The gate blocks the whole portal with a single opening-count panel.
     await expect(
       page.getByRole("heading", { name: /Start your day/i }),
     ).toBeVisible();
     await expect(sidebar(page)).toHaveCount(0); // portal not rendered while gated
     await page.screenshot({ path: path.join(SHOTS, "register-01-gate.png") });
 
-    // Open the count dialog, count the drawer, and start the day.
-    await page.getByRole("button", { name: /Count opening float/i }).click();
-    await expect(
-      page.getByRole("dialog").getByText(/Open Today.s Register/i),
-    ).toBeVisible();
+    // Count the drawer inline and open the register.
     await page.getByRole("spinbutton").first().fill("12");
-    await page.getByRole("button", { name: /Start day/i }).click();
+    await page.getByRole("button", { name: /Open register/i }).click();
 
     // Gate clears → the real portal (sidebar) is now reachable.
     await expect(sidebar(page)).toBeVisible({ timeout: 30_000 });
@@ -85,9 +81,8 @@ test.describe("Daily Register open/close gate", () => {
     await signInAs(context, page, "fs-rec-01");
 
     // Open the register through the gate.
-    await page.getByRole("button", { name: /Count opening float/i }).click();
     await page.getByRole("spinbutton").first().fill("12");
-    await page.getByRole("button", { name: /Start day/i }).click();
+    await page.getByRole("button", { name: /Open register/i }).click();
     await expect(sidebar(page)).toBeVisible({ timeout: 30_000 });
 
     // Clock in, then clock out (two-step confirm each).
