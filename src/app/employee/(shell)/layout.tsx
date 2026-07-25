@@ -13,6 +13,8 @@ import { EmployeeSidebar } from "@/components/employee/EmployeeSidebar";
 import { EmployeeHeader } from "@/components/employee/EmployeeHeader";
 import { WriteUpAckBanner } from "@/components/employee/WriteUpAckBanner";
 import { EmployeeBottomNav } from "@/components/employee/EmployeeBottomNav";
+import { RegisterOpenGate } from "@/components/employee/RegisterOpenGate";
+import { RegisterCloseReminder } from "@/components/employee/RegisterCloseReminder";
 
 export default async function EmployeeShellLayout({
   children,
@@ -32,39 +34,49 @@ export default async function EmployeeShellLayout({
     // default. Downstream screens read it via usePermission / useCan /
     // useEffectivePermissions / useFacilityViewer.
     <EmployeeRbacBoundary staffId={staffId}>
-      {/* Section 5A: the employee portal renders the SAME admin module
+      {/* Mandatory cash-count gate: for staff with register access, blocks the
+          whole portal with the opening-count flow until today's drawer is open
+          (facility-toggleable). Sits outside the heavy provider stack so it
+          renders instantly and nothing else mounts while gated. */}
+      <RegisterOpenGate staffId={staffId}>
+        {/* Section 5A: the employee portal renders the SAME admin module
           components (grooming, bookings, clients), so it must supply the same
           provider stack the facility layout does — otherwise those shared
           components throw (e.g. useLoyaltyEngine needs LoyaltyProgramProvider). */}
-      <LocationContextProviderWrapper>
-        <SettingsProviderWrapper>
-          <LoyaltyProgramProvider>
-            <BookingModalProviderWrapper>
-              <CallAvailabilityProvider>
-                <CallTagsProvider>
-                  <ReputationProvider>
-                    <SidebarProvider>
-                      <EmployeeSidebar staffId={staffId} />
-                      <SidebarInset className="flex min-h-screen flex-col">
-                        <WriteUpAckBanner staffId={staffId} />
-                        <EmployeeHeader staffId={staffId} />
-                        {/* pb clears the fixed mobile bottom-nav (I1). */}
-                        <main className="flex-1 overflow-x-hidden pb-16 md:pb-0">
-                          {children}
-                        </main>
-                        <footer className="text-muted-foreground flex items-center justify-center border-t px-4 py-3 pb-20 text-xs md:pb-3">
-                          © 2026 Yipyy · Employee Portal
-                        </footer>
-                      </SidebarInset>
-                      <EmployeeBottomNav staffId={staffId} />
-                    </SidebarProvider>
-                  </ReputationProvider>
-                </CallTagsProvider>
-              </CallAvailabilityProvider>
-            </BookingModalProviderWrapper>
-          </LoyaltyProgramProvider>
-        </SettingsProviderWrapper>
-      </LocationContextProviderWrapper>
+        <LocationContextProviderWrapper>
+          <SettingsProviderWrapper>
+            <LoyaltyProgramProvider>
+              <BookingModalProviderWrapper>
+                <CallAvailabilityProvider>
+                  <CallTagsProvider>
+                    <ReputationProvider>
+                      <SidebarProvider>
+                        <EmployeeSidebar staffId={staffId} />
+                        <SidebarInset className="flex min-h-screen flex-col">
+                          <WriteUpAckBanner staffId={staffId} />
+                          <EmployeeHeader staffId={staffId} />
+                          {/* pb clears the fixed mobile bottom-nav (I1). */}
+                          <main className="flex-1 overflow-x-hidden pb-16 md:pb-0">
+                            {children}
+                          </main>
+                          <footer className="text-muted-foreground flex items-center justify-center border-t px-4 py-3 pb-20 text-xs md:pb-3">
+                            © 2026 Yipyy · Employee Portal
+                          </footer>
+                        </SidebarInset>
+                        <EmployeeBottomNav staffId={staffId} />
+                        {/* Close reminder: pops the count-and-close flow when an
+                          authorized employee clocks out / logs out with the
+                          drawer still open. */}
+                        <RegisterCloseReminder staffId={staffId} />
+                      </SidebarProvider>
+                    </ReputationProvider>
+                  </CallTagsProvider>
+                </CallAvailabilityProvider>
+              </BookingModalProviderWrapper>
+            </LoyaltyProgramProvider>
+          </SettingsProviderWrapper>
+        </LocationContextProviderWrapper>
+      </RegisterOpenGate>
     </EmployeeRbacBoundary>
   );
 }

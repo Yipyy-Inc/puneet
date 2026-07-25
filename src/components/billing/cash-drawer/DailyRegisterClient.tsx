@@ -15,23 +15,28 @@ import {
   ListChecks,
   ShieldCheck,
 } from "lucide-react";
-import { mockRegisterSessions } from "@/data/cash-drawer";
 import type {
   CashMovement,
   ClosingCount,
   Currency,
   OpeningCount,
-  RegisterSession,
 } from "@/data/cash-drawer";
 import { payments } from "@/data/payments";
 import { CAD_DENOMINATIONS, USD_DENOMINATIONS } from "@/data/cash-drawer";
 import {
-  classifyVariance,
   computeTrackedTotal,
   getActiveSession,
   liveCashCaptured,
   movementsNet,
 } from "@/lib/cash-register";
+import {
+  addMovement,
+  closeRegister,
+  openRegister,
+  removeMovement,
+  updateManagerNote,
+  useRegisterSessions,
+} from "@/lib/cash-register-store";
 import { ActiveSessionPanel } from "./ActiveSessionPanel";
 import { NoSessionPanel } from "./NoSessionPanel";
 import { OpenDayDialog } from "./OpenDayDialog";
@@ -62,8 +67,7 @@ export function DailyRegisterClient({
   const symbol = currency === "CAD" ? "CA$" : "$";
   const fmt = (n: number) => `${symbol}${Math.abs(n).toFixed(2)}`;
 
-  const [sessions, setSessions] =
-    useState<RegisterSession[]>(mockRegisterSessions);
+  const sessions = useRegisterSessions();
   const [tab, setTab] = useState<"today" | "ledger" | "reports" | "history">(
     "today",
   );
@@ -98,81 +102,28 @@ export function DailyRegisterClient({
     return closedSorted[0]?.closing?.drawerTotal;
   }, [sessions]);
 
-  // ---- handlers ----
+  // ---- handlers (delegate to the shared register store) ----
   const handleOpen = (opening: OpeningCount) => {
-    const todayDate = new Date().toISOString().split("T")[0];
-    const newSession: RegisterSession = {
-      id: `rs-${todayDate}-${Date.now()}`,
-      facilityId,
-      locationId,
-      businessDate: todayDate,
-      status: "open",
-      opening,
-      closing: null,
-      movements: [],
-      capturedTxns: [],
-      cashCaptured: 0,
-      trackedTotal: 0,
-      variance: null,
-      varianceStatus: null,
-      managerNote: "",
-      lockedAt: null,
-    };
-    setSessions((prev) => [newSession, ...prev]);
+    openRegister(facilityId, locationId, opening);
   };
 
   const handleAddMovement = (m: CashMovement) => {
     if (!active) return;
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === active.id ? { ...s, movements: [...s.movements, m] } : s,
-      ),
-    );
+    addMovement(active.id, m);
   };
 
   const handleRemoveMovement = (id: string) => {
     if (!active) return;
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === active.id
-          ? { ...s, movements: s.movements.filter((m) => m.id !== id) }
-          : s,
-      ),
-    );
+    removeMovement(active.id, id);
   };
 
   const handleCloseOut = (closing: ClosingCount, managerNote: string) => {
     if (!active) return;
-    const tracked = computeTrackedTotal(
-      active.opening.floatTotal,
-      live.total,
-      active.movements,
-    );
-    const variance = closing.drawerTotal - tracked;
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === active.id
-          ? {
-              ...s,
-              status: "closed",
-              closing,
-              capturedTxns: live.txns,
-              cashCaptured: live.total,
-              trackedTotal: tracked,
-              variance,
-              varianceStatus: classifyVariance(variance),
-              managerNote,
-              lockedAt: new Date().toISOString(),
-            }
-          : s,
-      ),
-    );
+    closeRegister(active.id, closing, managerNote);
   };
 
   const handleUpdateManagerNote = (sessionId: string, note: string) => {
-    setSessions((prev) =>
-      prev.map((s) => (s.id === sessionId ? { ...s, managerNote: note } : s)),
-    );
+    updateManagerNote(sessionId, note);
   };
 
   // ---- KPI strip ----

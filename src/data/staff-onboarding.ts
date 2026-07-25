@@ -783,6 +783,11 @@ export interface StaffHrConfig {
   /** Require the two-step confirm before clocking OUT (default true). When off,
    *  clocking out is a single tap. */
   requireClockOutConfirm: boolean;
+  /** Force staff with register access to count the drawer OPEN before they can
+   *  use the rest of the portal, and remind them to count it CLOSED on
+   *  clock-out / logout (default true). When off, the Daily Register is
+   *  optional and never gates the portal. */
+  requireRegisterOpenOnLogin: boolean;
   /** Per-facility staff-lifecycle notification triggers (Table 5). */
   notificationTriggers: Record<StaffNotifTriggerKey, StaffNotifTrigger>;
 }
@@ -1025,6 +1030,9 @@ function seedConfig(): StaffHrConfig {
     // Default ON so the client's 2-step clock requirement holds out of the box.
     requireClockInConfirm: true,
     requireClockOutConfirm: true,
+    // Default ON — no one forgets to count the cash (open on login, close on
+    // clock-out / logout).
+    requireRegisterOpenOnLogin: true,
     notificationTriggers: seedNotificationTriggers(),
   };
 }

@@ -34,8 +34,14 @@ import {
   Phone,
 } from "lucide-react";
 import { facilityStaff } from "@/data/facility-staff";
+import { toast } from "sonner";
 import { setUserRole, clearEmployeeStaffId } from "@/lib/role-utils";
 import { usePermission } from "@/hooks/use-facility-rbac";
+import {
+  getTodaySession,
+  requestRegisterClose,
+} from "@/lib/cash-register-store";
+import { resolveRegisterContext } from "@/lib/employee/register-context";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";
 import { ClockInOut } from "@/components/employee/ClockInOut";
@@ -101,6 +107,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
   const canCreateClients = usePermission("create_clients");
   const canCall = usePermission("calling_view");
   const canBookingRequests = usePermission("manage_booking_calendar");
+  const canOpenRegister = usePermission("open_close_register");
 
   const switchToFacility = () => {
     setUserRole("facility_admin");
@@ -117,6 +124,17 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
   };
 
   const logout = () => {
+    // Don't let an authorized cashier leave with the drawer open — pop the
+    // count-and-close flow first; logging out again after closing proceeds.
+    if (canOpenRegister) {
+      const ctx = resolveRegisterContext(staffId);
+      const session = getTodaySession(ctx.facilityId, ctx.locationId);
+      if (session?.status === "open") {
+        requestRegisterClose(session.id);
+        toast.warning("Count & close the register before logging out.");
+        return;
+      }
+    }
     clearEmployeeStaffId();
     window.location.href = "/employee/select";
   };

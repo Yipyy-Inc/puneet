@@ -161,6 +161,7 @@ export type PermissionKey =
   | "financial_manage_gift_cards"
   | "financial_manage_payouts"
   | "financial_view_labor_cost"
+  | "open_close_register"
   // ── Marketing ────────────────────────────────────────────────────────────
   | "marketing_view"
   | "marketing_create_campaigns"
@@ -752,6 +753,11 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: "financial_manage_gift_cards", label: "Manage gift cards" },
       { key: "financial_manage_payouts", label: "Manage payouts" },
       { key: "financial_view_labor_cost", label: "View labor cost" },
+      {
+        key: "open_close_register",
+        label: "Open / close cash register",
+        hint: "Count the drawer to start & end the day (Daily Register)",
+      },
     ],
   },
   {
@@ -1050,6 +1056,7 @@ export const ROLE_PRESETS: Record<
         "financial_manage_invoices",
         "financial_manage_gift_cards",
         "financial_view_labor_cost",
+        "open_close_register",
         // Marketing
         "marketing_view",
         "marketing_create_campaigns",
@@ -1250,6 +1257,7 @@ export const ROLE_PRESETS: Record<
         "financial_view_amounts",
         "financial_manage_invoices",
         "financial_manage_gift_cards",
+        "open_close_register",
         "marketing_view",
         "check_in_out",
         "log_incidents",

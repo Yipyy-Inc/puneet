@@ -47,6 +47,7 @@ export const EMPLOYEE_ROUTE_BY_FACILITY_URL: Record<string, string> = {
   "/facility/dashboard/petcams": "/employee/petcams",
   // Financial
   "/facility/dashboard/billing": "/employee/billing",
+  "/facility/dashboard/billing/cash-drawer": "/employee/register",
   "/facility/settings/billing": "/employee/subscription-billing",
   "/facility/dashboard/gift-cards": "/employee/gift-cards",
   // Reports

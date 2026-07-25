@@ -11,6 +11,12 @@ import {
 } from "@/components/employee/ClockConfirm";
 import { useClock, clockIn, clockOut } from "@/lib/employee/clock-store";
 import { useStaffHrConfig } from "@/data/staff-onboarding";
+import { usePermission } from "@/hooks/use-facility-rbac";
+import {
+  getTodaySession,
+  requestRegisterClose,
+} from "@/lib/cash-register-store";
+import { resolveRegisterContext } from "@/lib/employee/register-context";
 
 // Core staff action — works on all viewports (large tap target). The button
 // NEVER toggles on the first click: it opens the shared ClockConfirm step, and
@@ -20,6 +26,7 @@ import { useStaffHrConfig } from "@/data/staff-onboarding";
 export function ClockInOut({ staffId }: { staffId: string }) {
   const { clockedIn, clockedInAt } = useClock(staffId);
   const { requireClockInConfirm, requireClockOutConfirm } = useStaffHrConfig();
+  const canOpenRegister = usePermission("open_close_register");
   const [open, setOpen] = useState(false);
   // Brief post-action lockout so a stray double-tap (tap-through on the
   // just-closed dialog) can't immediately reopen and flip state again.
@@ -52,6 +59,13 @@ export function ClockInOut({ staffId }: { staffId: string }) {
     const startedAt = clockedInAt;
     const res = clockOut(staffId);
     startCooldown();
+    // End-of-shift close reminder: if this employee can work the register and
+    // today's drawer is still open, prompt them to count & close it.
+    if (canOpenRegister) {
+      const ctx = resolveRegisterContext(staffId);
+      const session = getTodaySession(ctx.facilityId, ctx.locationId);
+      if (session?.status === "open") requestRegisterClose(session.id);
+    }
     const worked =
       res.lastSessionMinutes != null
         ? ` · ${clockElapsedLabel(startedAt, new Date(res.clockedOutAt ?? "").getTime())} worked`

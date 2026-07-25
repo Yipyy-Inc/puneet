@@ -23,6 +23,7 @@ import {
   Camera,
   DollarSign,
   CreditCard,
+  Vault,
   Gift,
   BarChart3,
   Megaphone,
@@ -266,6 +267,12 @@ export const NAV_SECTIONS: NavSection[] = [
         url: "/facility/dashboard/billing",
         icon: DollarSign,
         permKey: "financial_take_payment",
+      },
+      {
+        title: "Daily Register",
+        url: "/facility/dashboard/billing/cash-drawer",
+        icon: Vault,
+        permKey: "open_close_register",
       },
       {
         title: "Subscription & Billing",
