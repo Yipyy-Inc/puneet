@@ -1,7 +1,7 @@
-import { createBrowserClient } from "@supabase/ssr";
+import { createBrowserClient as createSsrBrowserClient } from "@supabase/ssr";
 
 import type { Database } from "@/types/database";
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./env";
+import { supabaseConfig } from "./env";
 
 // ============================================================================
 // Browser Supabase client.
@@ -15,8 +15,15 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./env";
 //
 // Reads still flow through the `src/lib/api/` query factories, so swapping a
 // domain from mock to real data stays a one-file change.
+//
+// Named `createBrowserClient`, not `createClient`, to pair unambiguously with
+// `createServerClient` in ./server. `server-only` stops the server client
+// leaking into the browser, but nothing stops the reverse — using this one in
+// a server context would silently lose cookie-based auth, so the names carry
+// that distinction.
 // ============================================================================
 
-export function createClient() {
-  return createBrowserClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export function createBrowserClient() {
+  const { url, publishableKey } = supabaseConfig();
+  return createSsrBrowserClient<Database>(url, publishableKey);
 }

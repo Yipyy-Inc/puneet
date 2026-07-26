@@ -1,5 +1,15 @@
 // ============================================================================
-// Supabase connection config, validated once.
+// Supabase connection config.
+//
+// Validated LAZILY, on first use — deliberately not at module scope. Next
+// inlines NEXT_PUBLIC_* at build time, so a module-scope throw would fail
+// `next build` on any machine without these set: CI, a fresh clone, a
+// contributor who only wants to run typecheck. Worse, the error would name
+// this file rather than whatever imported it, so the person who broke the
+// build would have no idea why.
+//
+// Failing on first *use* keeps the build independent of project config while
+// still refusing to run half-configured.
 //
 // Both values are safe in the browser by design — the publishable key
 // identifies the project, it does not authorise anything on its own. Every
@@ -16,18 +26,30 @@ function required(name: string, value: string | undefined): string {
   if (!value) {
     throw new Error(
       `Missing ${name}. Copy .env.example to .env.local and fill it in — ` +
-        `the values are in the Supabase dashboard under Settings > API.`,
+        `the values are in the Supabase dashboard under Project Settings > API. ` +
+        `Deployed environments need it set in the Vercel project too, before ` +
+        `the build: NEXT_PUBLIC_* are inlined at build time, not read at runtime.`,
     );
   }
   return value;
 }
 
-export const SUPABASE_URL = required(
-  "NEXT_PUBLIC_SUPABASE_URL",
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-);
-
-export const SUPABASE_PUBLISHABLE_KEY = required(
-  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-);
+/**
+ * Project URL and publishable key, validated on call.
+ *
+ * The `process.env.X` references are written out in full rather than looked up
+ * dynamically, because Next only inlines NEXT_PUBLIC_* when it can see the
+ * literal property access at build time.
+ */
+export function supabaseConfig(): { url: string; publishableKey: string } {
+  return {
+    url: required(
+      "NEXT_PUBLIC_SUPABASE_URL",
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+    ),
+    publishableKey: required(
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    ),
+  };
+}

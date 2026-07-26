@@ -1,10 +1,10 @@
 import "server-only";
 
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient as createSsrServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 import type { Database } from "@/types/database";
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./env";
+import { supabaseConfig } from "./env";
 
 // ============================================================================
 // Server-side Supabase client — for Server Components, Route Handlers and
@@ -18,12 +18,17 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./env";
 //
 // `server-only` makes importing this from a client component a build error
 // rather than a silent leak.
+//
+// Named `createServerClient`, not `createClient`, so that importing it
+// alongside the browser factory needs no alias. The two have very different
+// blast radii and an aliasing slip would be silent.
 // ============================================================================
 
-export async function createClient() {
+export async function createServerClient() {
+  const { url, publishableKey } = supabaseConfig();
   const cookieStore = await cookies();
 
-  return createServerClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  return createSsrServerClient<Database>(url, publishableKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -34,11 +39,11 @@ export async function createClient() {
             cookieStore.set(name, value, options);
           }
         } catch {
-          // Server Components cannot set cookies. That is expected and safe
-          // to swallow *provided* something else refreshes the session —
-          // today nothing does, because there is no auth flow yet. When one
-          // lands, add the standard `updateSession` middleware; without it
-          // tokens expire mid-session and reads start returning empty.
+          // Server Components cannot set cookies. That is expected and safe to
+          // swallow *provided* something else refreshes the session — today
+          // nothing does, because there is no auth flow yet. When one lands,
+          // add the standard `updateSession` middleware; without it tokens
+          // expire mid-session and reads start returning empty.
         }
       },
     },
@@ -53,7 +58,7 @@ export async function createClient() {
  * `getUser()` validates the JWT against Supabase before returning.
  */
 export async function getCurrentUser() {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
