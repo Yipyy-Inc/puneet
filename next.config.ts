@@ -2,6 +2,17 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  typescript: {
+    // Type checking is NOT skipped — it is moved, not removed. `bun run
+    // typecheck` runs in the husky pre-commit and pre-push hooks and, crucially,
+    // as its own unbypassable CI job (.github/workflows/ci.yml). Letting
+    // `next build` run tsc a fourth time over ~213k lines of TSX pushed the
+    // Vercel builder past its 8 GB heap: deployment dpl_7tc137yhs died with
+    // SIGKILL 29s into "Running TypeScript" (Vercel flagged it
+    // buildMachineUpgradeReason: "out-of-memory"). Do not flip this back
+    // without first removing the CI typecheck job — the gate lives there now.
+    ignoreBuildErrors: true,
+  },
   images: {
     remotePatterns: [
       {
