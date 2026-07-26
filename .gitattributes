@@ -1,0 +1,24 @@
+# Normalize line endings so the repo behaves the same on Windows and Linux.
+#
+# Without this, `core.autocrlf=true` (the Windows default) rewrites files to
+# CRLF on checkout, while .prettierrc pins `"endOfLine": "lf"`. The result is
+# that `bun run format:check` fails locally on files nobody edited — every
+# `git checkout`, merge, or branch switch re-breaks them — while CI on Linux
+# passes, so the failure looks like a phantom.
+#
+# `eol=lf` makes the working tree match what git already stores.
+* text=auto eol=lf
+
+# Binary assets must never be line-ending converted.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.pdf   binary
+*.zip   binary
