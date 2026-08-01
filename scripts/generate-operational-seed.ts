@@ -69,7 +69,7 @@ w("-- as a signed-in user and therefore exercises RLS on the way in.");
 w("--");
 w("-- Idempotent: rows carry deterministic uuids and upsert.");
 w(
-  `-- Clients: ${rows.clients.length}  Pets: ${rows.pets.length}  Bookings: ${rows.bookings.length}`,
+  `-- Clients: ${rows.clients.length}  Pets: ${rows.pets.length}  Staff: ${rows.staff.length}  Bookings: ${rows.bookings.length}`,
 );
 if (rows.pulledIn.length) {
   w("--");
@@ -150,6 +150,20 @@ section("pets", () => {
   }
 });
 
+section("staff", () => {
+  for (const row of rows.staff) {
+    insert("staff", row, [
+      "first_name",
+      "last_name",
+      "email",
+      "phone",
+      "primary_role",
+      "status",
+      "details",
+    ]);
+  }
+});
+
 // Bookings in chunks — by far the largest section.
 const PER_SECTION = 7;
 for (let i = 0; i < rows.bookings.length; i += PER_SECTION) {
@@ -204,6 +218,7 @@ writeFileSync(
 
 console.log(`clients:  ${rows.clients.length}`);
 console.log(`pets:     ${rows.pets.length}`);
+console.log(`staff:    ${rows.staff.length}`);
 console.log(
   `bookings: ${rows.bookings.length}${rows.skippedBookings ? ` (${rows.skippedBookings} skipped — unknown client)` : ""}`,
 );

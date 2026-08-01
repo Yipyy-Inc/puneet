@@ -30,9 +30,11 @@
 
 import { clients } from "../../src/data/clients";
 import { bookings } from "../../src/data/bookings";
+import { facilityStaff } from "../../src/data/facility-staff";
 import type { Booking } from "../../src/types/booking";
 import type { Client } from "../../src/types/client";
 import type { Pet } from "../../src/types/pet";
+import type { StaffProfile } from "../../src/types/facility-staff";
 import { instantFromWallClock } from "../../src/lib/time/facility-time";
 
 export const DEMO_FACILITY_LEGACY_ID = "11";
@@ -69,12 +71,14 @@ function omit<T extends object>(
 export type ClientRow = Record<string, unknown>;
 export type PetRow = Record<string, unknown>;
 export type BookingRow = Record<string, unknown>;
+export type StaffRow = Record<string, unknown>;
 
 export type SeedRows = {
   clients: ClientRow[];
   pets: PetRow[];
   bookings: BookingRow[];
   bookingPets: { booking_id: string; pet_id: string }[];
+  staff: StaffRow[];
   pulledIn: Client[];
   remaps: string[];
   skippedBookings: number;
@@ -213,6 +217,69 @@ export function buildSeedRows(opts: {
       ]),
     }));
 
+  // ── Staff ─────────────────────────────────────────────────────────────────
+  // Deterministic uuid from the mock's string id, so both seed paths agree and
+  // bookings can point at a staff row without a lookup.
+  const staffUuid = (legacyId: string) => {
+    let hash = 0;
+    for (const ch of legacyId) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+    return `f0000000-0000-4000-8000-${hash.toString(16).padStart(12, "0")}`;
+  };
+
+  const staffRows: StaffRow[] = facilityStaff.map((p: StaffProfile) => ({
+    id: staffUuid(p.id),
+    facility_id: opts.facilityId,
+    legacy_id: p.id,
+    first_name: p.firstName,
+    last_name: p.lastName,
+    email: p.email,
+    phone: p.phone ?? null,
+    job_title: p.jobTitle ?? null,
+    avatar_url: p.avatarUrl ?? null,
+    color_hex: p.colorHex ?? null,
+    primary_role: p.primaryRole,
+    additional_roles: p.additionalRoles ?? [],
+    service_assignments: p.serviceAssignments ?? [],
+    status: p.status,
+    status_changed_at: p.statusChangedAt ?? null,
+    status_reason: p.statusReason ?? null,
+    status_note: p.statusNote ?? null,
+    show_on_calendar: p.showOnCalendar ?? true,
+    last_active: p.lastActive ?? null,
+    details: omit(p, [
+      "id",
+      "firstName",
+      "lastName",
+      "email",
+      "phone",
+      "jobTitle",
+      "avatarUrl",
+      "colorHex",
+      "primaryRole",
+      "additionalRoles",
+      "serviceAssignments",
+      "status",
+      "statusChangedAt",
+      "statusReason",
+      "statusNote",
+      "showOnCalendar",
+      "lastActive",
+    ]),
+  }));
+
+  /**
+   * Bookings name their staff member as a display string. Where that string
+   * matches a real staff record, point the booking at it — which is what
+   * finally replaces src/lib/api/booking.ts inventing an assignment by
+   * rotating bookings across a staff pool.
+   *
+   * Unmatched names keep assigned_staff_name and a null id, honestly: "we do
+   * not know who served this" beats a plausible guess.
+   */
+  const staffByName = new Map<string, string>(
+    facilityStaff.map((p) => [`${p.firstName} ${p.lastName}`, staffUuid(p.id)]),
+  );
+
   const bookingRows: BookingRow[] = [];
   const bookingPets: { booking_id: string; pet_id: string }[] = [];
   let skippedBookings = 0;
@@ -243,6 +310,8 @@ export function buildSeedRows(opts: {
         opts.timeZone,
       ),
       assigned_staff_name: b.assignedStaff ?? null,
+      assigned_staff_id:
+        staffByName.get(b.assignedStaff ?? b.stylistPreference ?? "") ?? null,
       base_price: b.basePrice ?? 0,
       discount: b.discount ?? 0,
       total_cost: b.totalCost ?? 0,
@@ -281,6 +350,7 @@ export function buildSeedRows(opts: {
     pets: petRows,
     bookings: bookingRows,
     bookingPets,
+    staff: staffRows,
     pulledIn,
     remaps,
     skippedBookings,

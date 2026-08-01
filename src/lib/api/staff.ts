@@ -5,6 +5,9 @@ import {
   staffDocuments,
   staffCertifications,
 } from "@/data/staff-tasks";
+import { facilityStaff } from "@/data/facility-staff";
+import type { StaffProfile } from "@/types/facility-staff";
+import { liveFetch } from "./live-fetch";
 import {
   shiftTasks,
   shiftSwapRequests,
@@ -14,7 +17,26 @@ import {
   shiftTemplates,
 } from "@/data/staff-availability";
 
+/**
+ * Staff profiles from Postgres, with the mock array as the signed-out
+ * fallback. The 47 files that still import `facilityStaff` directly are the
+ * follow-up — this is the seam they move onto, one at a time.
+ */
+async function fetchStaffProfiles(): Promise<StaffProfile[]> {
+  return liveFetch<StaffProfile[]>("/api/staff", () => facilityStaff, "staff");
+}
+
 export const staffQueries = {
+  /** Every staff member at the caller's facility. */
+  profiles: () => ({
+    queryKey: ["staff", "profiles"] as const,
+    queryFn: async () => fetchStaffProfiles(),
+  }),
+  profile: (staffId: string) => ({
+    queryKey: ["staff", "profiles", staffId] as const,
+    queryFn: async () =>
+      (await fetchStaffProfiles()).find((p) => p.id === staffId) ?? null,
+  }),
   taskTemplates: () => ({
     queryKey: ["staff", "task-templates"] as const,
     queryFn: async () => taskTemplates,
