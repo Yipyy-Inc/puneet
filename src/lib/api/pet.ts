@@ -7,27 +7,40 @@ import {
   careInstructions,
 } from "@/data/pet-data";
 import type { Pet } from "@/types/pet";
+import { liveFetch } from "./live-fetch";
 
 const allPets: Pet[] = clients.flatMap((c) => c.pets as Pet[]);
+
+/** Real pets; mocks only when signed out. */
+async function fetchPets(clientRef?: number): Promise<Pet[]> {
+  const search = clientRef ? `?clientRef=${clientRef}` : "";
+  return liveFetch<Pet[]>(
+    `/api/pets${search}`,
+    () =>
+      clientRef
+        ? ((clients.find((c) => c.id === clientRef)?.pets as Pet[]) ?? [])
+        : allPets,
+    "pets",
+  );
+}
 
 export const petQueries = {
   all: () => ({
     queryKey: ["pets"] as const,
-    queryFn: async () => allPets,
+    queryFn: async () => fetchPets(),
   }),
   detail: (id: number) => ({
     queryKey: ["pets", id] as const,
-    queryFn: async () => allPets.find((p) => p.id === id),
+    queryFn: async () => (await fetchPets()).find((p) => p.id === id),
   }),
   byClient: (clientId: number) => ({
     queryKey: ["pets", "by-client", clientId] as const,
-    queryFn: async () =>
-      clients.find((c) => c.id === clientId)?.pets as Pet[] | undefined,
+    queryFn: async () => fetchPets(clientId),
   }),
   evaluations: (petId: number) => ({
     queryKey: ["pets", petId, "evaluations"] as const,
     queryFn: async () => {
-      const pet = allPets.find((p) => p.id === petId);
+      const pet = (await fetchPets()).find((p) => p.id === petId);
       return pet?.evaluations ?? [];
     },
   }),

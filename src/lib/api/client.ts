@@ -2,6 +2,7 @@ import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { resolveBookingStaffId } from "./booking";
 import type { Client } from "@/types/client";
+import { liveFetch } from "./live-fetch";
 
 // ============================================================================
 // Section 8B — viewer scoping (assigned_only). A client is "assigned to" a
@@ -30,6 +31,11 @@ export function isClientAssignedTo(client: Client, staffId: string): boolean {
   return assignedClientIds(staffId).has(client.id);
 }
 
+/** Real clients, with their pets nested; mocks only when signed out. */
+async function fetchClients(): Promise<Client[]> {
+  return liveFetch<Client[]>("/api/clients", () => clients, "clients");
+}
+
 export const clientQueries = {
   /**
    * All clients, or — when `assignedStaffId` is passed (the viewer's id when
@@ -38,20 +44,23 @@ export const clientQueries = {
    */
   all: (opts?: { assignedStaffId?: string }) => ({
     queryKey: ["clients", opts?.assignedStaffId ?? "all"] as const,
-    queryFn: async (): Promise<Client[]> =>
-      opts?.assignedStaffId
-        ? scopeClientsToStaff(clients, opts.assignedStaffId)
-        : clients,
+    queryFn: async (): Promise<Client[]> => {
+      const list = await fetchClients();
+      return opts?.assignedStaffId
+        ? scopeClientsToStaff(list, opts.assignedStaffId)
+        : list;
+    },
   }),
   detail: (id: number) => ({
     queryKey: ["clients", id] as const,
-    queryFn: async () => clients.find((c) => c.id === id) ?? null,
+    queryFn: async () =>
+      (await fetchClients()).find((c) => c.id === id) ?? null,
   }),
   search: (query: string) => ({
     queryKey: ["clients", "search", query] as const,
     queryFn: async () => {
       const q = query.toLowerCase();
-      return clients.filter(
+      return (await fetchClients()).filter(
         (c) =>
           c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q),
       );

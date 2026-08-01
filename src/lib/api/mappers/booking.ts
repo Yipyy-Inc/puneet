@@ -1,5 +1,10 @@
-import type { Booking } from "@/types/booking";
-import type { Tables } from "@/types/database";
+import type { Booking, NewBooking } from "@/types/booking";
+import type { Tables, TablesInsert } from "@/types/database";
+import {
+  DEFAULT_TIMEZONE,
+  instantFromWallClock,
+  wallClockParts,
+} from "@/lib/time/facility-time";
 
 // ============================================================================
 // Database row -> the Booking object the app already expects.
@@ -23,38 +28,6 @@ type BookingRow = Tables<"bookings"> & {
   facilities?: { timezone: string } | null;
   booking_pets?: { pets: { ref: number } | null }[] | null;
 };
-
-const DEFAULT_TIMEZONE = "America/Toronto";
-
-/**
- * Split a stored instant into the facility's wall-clock date and time.
- *
- * The zone must be the FACILITY's, not the server's and not the viewer's. A
- * booking is "2pm at the kennel" — it does not become 3pm because the person
- * looking at the roster is in another country, and it must not shift because a
- * build ran in a different region. Getting this wrong is invisible in
- * development and moves every appointment in production.
- */
-function wallClockParts(timestamp: string, timeZone: string) {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone,
-      hour12: false,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-      .formatToParts(new Date(timestamp))
-      .map((p) => [p.type, p.value]),
-  );
-  return {
-    date: `${parts.year}-${parts.month}-${parts.day}`,
-    // Intl renders midnight as "24" in some locales/engines under hour12:false.
-    time: `${parts.hour === "24" ? "00" : parts.hour}:${parts.minute}`,
-  };
-}
 
 export type BookingWithRowId = Booking & {
   /** The uuid primary key. Needed to write; ignored by everything that reads. */
@@ -119,3 +92,106 @@ export const BOOKING_SELECT = `
   facilities!inner ( timezone ),
   booking_pets ( pets ( ref ) )
 ` as const;
+
+// ── Writing ─────────────────────────────────────────────────────────────────
+
+/** Fields hoisted into columns; everything else on a booking becomes `details`. */
+const COLUMN_FIELDS = [
+  "id",
+  "rowId",
+  "clientId",
+  "petId",
+  "facilityId",
+  "service",
+  "serviceType",
+  "status",
+  "paymentStatus",
+  "startDate",
+  "endDate",
+  "checkInTime",
+  "checkOutTime",
+  "basePrice",
+  "discount",
+  "totalCost",
+  "tipAmount",
+  "specialRequests",
+  "assignedStaff",
+];
+
+/**
+ * The inverse of rowToBooking, for inserts and updates.
+ *
+ * The caller resolves the ids — this deliberately does not look anything up.
+ * A mapper that queries is a mapper you cannot reason about, and the route
+ * already has to resolve the facility and client to authorise the write.
+ *
+ * `partial` matters for PATCH: an update must not blank every column the
+ * caller left out, which is what a full mapping of a Partial<NewBooking>
+ * would do.
+ */
+export function bookingToRow(
+  input: Partial<NewBooking>,
+  context: {
+    facilityId: string;
+    clientRowId?: string;
+    locationId?: string | null;
+    timeZone: string;
+  },
+): Partial<TablesInsert<"bookings">> {
+  const row: Partial<TablesInsert<"bookings">> = {};
+
+  if (context.clientRowId) row.client_id = context.clientRowId;
+  if (context.locationId !== undefined) row.location_id = context.locationId;
+  row.facility_id = context.facilityId;
+
+  if (input.service !== undefined) row.service = input.service;
+  if (input.serviceType !== undefined) row.service_type = input.serviceType;
+  if (input.status !== undefined) {
+    row.status = input.status as TablesInsert<"bookings">["status"];
+  }
+  if (input.paymentStatus !== undefined) {
+    row.payment_status = input.paymentStatus;
+  }
+  if (input.assignedStaff !== undefined) {
+    row.assigned_staff_name = input.assignedStaff;
+  }
+  if (input.basePrice !== undefined) row.base_price = input.basePrice;
+  if (input.discount !== undefined) row.discount = input.discount;
+  if (input.totalCost !== undefined) row.total_cost = input.totalCost;
+  if (input.tipAmount !== undefined) row.tip_amount = input.tipAmount;
+  if (input.specialRequests !== undefined) {
+    row.special_requests = input.specialRequests;
+  }
+
+  // Dates are the facility's wall clock on the way in, exactly as on the way
+  // out — see lib/time/facility-time.ts for why that is not negotiable.
+  if (input.startDate) {
+    row.start_at = instantFromWallClock(
+      input.startDate,
+      input.checkInTime ?? "00:00",
+      context.timeZone,
+    );
+  }
+  if (input.endDate) {
+    row.end_at = instantFromWallClock(
+      input.endDate,
+      input.checkOutTime ?? input.checkInTime ?? "23:59",
+      context.timeZone,
+    );
+  }
+
+  const details: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (!COLUMN_FIELDS.includes(key) && value !== undefined) {
+      details[key] = value;
+    }
+  }
+  // Cast to the generated Json type: the long tail is genuinely arbitrary
+  // JSON-serialisable product data, and enumerating it here would just be the
+  // Booking type written twice.
+  if (Object.keys(details).length > 0) {
+    row.details = details as TablesInsert<"bookings">["details"];
+  }
+
+  return row;
+}
