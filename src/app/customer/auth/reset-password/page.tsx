@@ -1,305 +1,74 @@
-"use client";
-
-import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { toast } from "sonner";
+import { ArrowLeft } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Eye, EyeOff, Lock, Loader2, ArrowLeft } from "lucide-react";
-import { getErrorMessage } from "@/lib/errors";
+import { AuthCard } from "@/components/auth/AuthCard";
+import { getCurrentUser } from "@/lib/supabase/server";
+import { ResetPasswordForm } from "./_client";
 
-function ResetPasswordForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token");
+export const metadata: Metadata = { title: "Reset password — Yipyy" };
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    password: "",
-    confirmPassword: "",
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isValidToken, setIsValidToken] = useState<boolean | null>(null);
+// This page's entire job is asking "is there a recovery session?", so it can
+// never be prerendered. Without this Next tries to build it statically and the
+// build fails wherever Supabase env vars are absent — which is exactly what
+// happened in CI while passing locally off .env.local.
+//
+// The rule generalises: any page that reads the session needs this. Layouts
+// get away without it because getViewer swallows a missing-config error and
+// falls through to the legacy path; getCurrentUser deliberately does not.
+export const dynamic = "force-dynamic";
 
-  useEffect(() => {
-    // Validate token on mount
-    if (!token) {
-      setIsValidToken(false);
-      return;
-    }
+// ============================================================================
+// Set a new password after following a recovery link.
+//
+// The old version read a `?token=` param and validated it against a stub that
+// resolved after 500ms — every link looked valid, and no link did anything.
+//
+// The real flow does not put a token on this page at all. /auth/callback
+// exchanges the emailed code for a session first and then sends the browser
+// here; possession of that session IS the proof. So the check below is simply
+// "is anyone signed in" — if the link expired, was already used, or someone
+// navigated here directly, there is no session and we say so plainly rather
+// than showing a form that cannot work.
+// ============================================================================
 
-    const validateToken = async (t: string) => {
-      try {
-        // TODO: Replace with actual API call to validate token
-        await checkResetToken(t);
-        setIsValidToken(true);
-      } catch {
-        setIsValidToken(false);
-        toast.error("Invalid or expired reset link");
-      }
-    };
+export default async function ResetPasswordPage() {
+  const user = await getCurrentUser();
 
-    validateToken(token);
-  }, [token]);
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    } else if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters";
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "Please confirm your password";
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm() || !token) {
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      // TODO: Replace with actual API call
-      await resetPassword(token, formData.password);
-      toast.success("Password reset successfully!");
-      router.push("/customer/auth/login");
-    } catch (error: unknown) {
-      toast.error(
-        getErrorMessage(error) || "Failed to reset password. Please try again.",
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Placeholder functions - replace with actual API calls
-  const checkResetToken = async (_token: string) => {
-    // TODO: API call to validate reset token
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  };
-
-  const resetPassword = async (_token: string, _password: string) => {
-    // TODO: API call to reset password
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  };
-
-  if (isValidToken === null) {
+  if (!user) {
     return (
-      <div className="from-background via-muted/20 to-background flex min-h-screen items-center justify-center bg-linear-to-br p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-center">
-              <Loader2 className="text-muted-foreground size-6 animate-spin" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (isValidToken === false) {
-    return (
-      <div className="from-background via-muted/20 to-background flex min-h-screen items-center justify-center bg-linear-to-br p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1 text-center">
-            <div className="mb-4 flex justify-center">
-              <Image
-                src="/yipyy-transparent.png"
-                alt="Yipyy"
-                width={120}
-                height={48}
-                className="h-12 w-auto"
-              />
-            </div>
-            <CardTitle className="text-2xl font-bold">
-              Invalid reset link
-            </CardTitle>
-            <CardDescription>
-              This password reset link is invalid or has expired
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-destructive/10 text-destructive rounded-lg p-4 text-sm">
-              Please request a new password reset link.
-            </div>
-            <div className="flex flex-col gap-2">
-              <Button
-                onClick={() => router.push("/customer/auth/forgot-password")}
-                className="w-full"
-              >
-                Request new reset link
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => router.push("/customer/auth/login")}
-                className="w-full"
-              >
-                <ArrowLeft className="mr-2 size-4" />
-                Back to login
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="from-background via-muted/20 to-background flex min-h-screen items-center justify-center bg-linear-to-br p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="mb-4 flex justify-center">
-            <Image
-              src="/yipyy-transparent.png"
-              alt="Yipyy"
-              width={120}
-              height={48}
-              className="h-12 w-auto"
-            />
-          </div>
-          <CardTitle className="text-2xl font-bold">
-            Reset your password
-          </CardTitle>
-          <CardDescription>Enter your new password below</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">New Password</Label>
-              <div className="relative">
-                <Lock className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  className="px-9"
-                  aria-invalid={errors.password ? "true" : "false"}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
-                >
-                  {showPassword ? (
-                    <EyeOff className="size-4" />
-                  ) : (
-                    <Eye className="size-4" />
-                  )}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="text-destructive text-sm">{errors.password}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
-              <div className="relative">
-                <Lock className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={formData.confirmPassword}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      confirmPassword: e.target.value,
-                    })
-                  }
-                  className="px-9"
-                  aria-invalid={errors.confirmPassword ? "true" : "false"}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="size-4" />
-                  ) : (
-                    <Eye className="size-4" />
-                  )}
-                </button>
-              </div>
-              {errors.confirmPassword && (
-                <p className="text-destructive text-sm">
-                  {errors.confirmPassword}
-                </p>
-              )}
-            </div>
-
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  Resetting password...
-                </>
-              ) : (
-                "Reset password"
-              )}
-            </Button>
-          </form>
-
-          <div className="text-center">
-            <Link
-              href="/customer/auth/login"
-              className="text-primary inline-flex items-center text-sm hover:underline"
-            >
-              <ArrowLeft className="mr-1 size-3" />
-              Back to login
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-export default function ResetPasswordPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="from-background via-muted/20 to-background flex min-h-screen items-center justify-center bg-linear-to-br p-4">
-          <Card className="w-full max-w-md">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-center">
-                <Loader2 className="text-muted-foreground size-6 animate-spin" />
-              </div>
-            </CardContent>
-          </Card>
+      <AuthCard
+        title="Invalid reset link"
+        description="This password reset link has expired, was already used, or was opened out of order."
+      >
+        <div className="bg-destructive/10 text-destructive rounded-lg p-4 text-sm">
+          Reset links work once and last one hour. Request a fresh one and open
+          it in the same browser.
         </div>
-      }
+        <div className="flex flex-col gap-2">
+          <Button asChild className="w-full">
+            <Link href="/customer/auth/forgot-password">
+              Request new reset link
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" className="w-full">
+            <Link href="/login">
+              <ArrowLeft className="mr-2 size-4" />
+              Back to sign in
+            </Link>
+          </Button>
+        </div>
+      </AuthCard>
+    );
+  }
+
+  return (
+    <AuthCard
+      title="Reset your password"
+      description={`Choose a new password for ${user.email}`}
     >
       <ResetPasswordForm />
-    </Suspense>
+    </AuthCard>
   );
 }

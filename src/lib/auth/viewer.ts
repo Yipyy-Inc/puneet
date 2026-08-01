@@ -165,6 +165,43 @@ export function belongsToFacility(viewer: Viewer, facilityId: string): boolean {
   );
 }
 
+// ── Where a given identity belongs ──────────────────────────────────────────
+// One sign-in serves every kind of account, so something has to decide which
+// portal a person lands in. That decision is here rather than in the sign-in
+// action so the gates and the action cannot disagree about it.
+
+/** Roles that run the business and get the full facility admin portal. */
+const FACILITY_ADMIN_ROLES = new Set<string>([
+  "owner",
+  "admin",
+  "manager",
+  "supervisor",
+]);
+
+export function landingPathForClaims(
+  isPlatformAdmin: boolean,
+  memberships: ViewerMembership[],
+): string {
+  if (isPlatformAdmin) return "/dashboard";
+
+  // No membership means this is a pet owner, not staff.
+  const primary = memberships[0];
+  if (!primary) return "/customer/dashboard";
+
+  if (memberships.some((m) => FACILITY_ADMIN_ROLES.has(m.role))) {
+    return "/facility/dashboard";
+  }
+  if (primary.role === "groomer") return "/groomer/dashboard";
+
+  // Everyone else on staff — caretakers, reception, trainers, retail — works
+  // out of the employee schedule.
+  return "/employee/schedule";
+}
+
+export function landingPathFor(viewer: Viewer): string {
+  return landingPathForClaims(viewer.isPlatformAdmin, viewer.memberships);
+}
+
 // ── Portal gates ────────────────────────────────────────────────────────────
 // One gate per portal, so the rule lives next to the identity rather than being
 // re-derived from cookies in each layout.
@@ -208,6 +245,27 @@ export function canAccessFacilityPortal(viewer: Viewer): boolean {
 export function canAccessAdminPortal(viewer: Viewer): boolean {
   if (!isAuthEnforced()) return viewer.legacyRole !== "facility_admin";
   return viewer.isPlatformAdmin;
+}
+
+/**
+ * Customer portal. Any signed-in identity qualifies — a pet owner has no
+ * membership by design, and staff are often customers of their own facility,
+ * so requiring the ABSENCE of a membership would lock them out of their own
+ * bookings.
+ */
+export function canAccessCustomerPortal(viewer: Viewer): boolean {
+  if (!isAuthEnforced()) return true;
+  return viewer.source === "session";
+}
+
+/**
+ * Staff-facing portals: groomer, staff and employee. Any active membership,
+ * whatever the role — these are the day-to-day work surfaces, and which one
+ * you land on is decided by landingPathForClaims, not by who may enter.
+ */
+export function canAccessStaffPortal(viewer: Viewer): boolean {
+  if (!isAuthEnforced()) return true;
+  return viewer.isPlatformAdmin || viewer.memberships.length > 0;
 }
 
 /**

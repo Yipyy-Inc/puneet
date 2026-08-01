@@ -5,22 +5,19 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Calendar } from "lucide-react";
 import { getCurrentUserId } from "@/lib/role-utils";
 import { users } from "@/data/users";
-import { useRouter } from "next/navigation";
+import { signOutEverywhere } from "@/lib/auth/sign-out-client";
 
 export function StaffHeader() {
-  const router = useRouter();
   const userId = getCurrentUserId();
   const staffMember = userId
     ? users.find((u) => u.id.toString() === userId || u.email === userId)
     : users.find((u) => u.role === "Staff") || null;
 
+  // Was: clear a `current_user_id` cookie and localStorage key that nothing
+  // ever set — the real one is `facility_current_user_id` — and route to the
+  // login page without ending any session.
   const handleLogout = () => {
-    // Clear user ID
-    if (typeof document !== "undefined") {
-      document.cookie = "current_user_id=; path=/; max-age=0";
-      localStorage.removeItem("current_user_id");
-    }
-    router.push("/staff/auth/login");
+    void signOutEverywhere();
   };
 
   return (

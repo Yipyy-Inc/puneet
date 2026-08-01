@@ -1,5 +1,6 @@
 "use client";
 
+import { signOutEverywhere } from "@/lib/auth/sign-out-client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -143,7 +144,9 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
       }
     }
     clearEmployeeStaffId();
-    window.location.href = "/employee/select";
+    // Ends the Supabase session too, rather than only forgetting which staff
+    // record was selected — this is the Logout item, not a staff switcher.
+    void signOutEverywhere();
   };
 
   // Secondary items (Calling · Booking Requests · Messages · language). Inline

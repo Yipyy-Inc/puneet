@@ -1,5 +1,6 @@
 "use client";
 
+import { signOutEverywhere } from "@/lib/auth/sign-out-client";
 import {
   Activity,
   AlertTriangle,
@@ -343,7 +344,7 @@ export function AppSidebar() {
   ];
 
   const handleLogout = () => {
-    // TODO: Implement logout logic
+    void signOutEverywhere();
   };
 
   return (
