@@ -26,6 +26,7 @@ import {
 } from "@/types/facility-staff";
 import { facilityStaff } from "@/data/facility-staff";
 import { setFacilityRoleCookie } from "@/lib/facility-role";
+import { useDbPermissions } from "@/hooks/use-db-permissions";
 import {
   roleQueries,
   useCreateCustomRole,
@@ -494,21 +495,37 @@ export function useFacilityViewer() {
 /**
  * The full effective permission map for the acting viewer. Guards, the dynamic
  * sidebar, and field-masking read from this single source of truth.
+ *
+ * The DATABASE is that source when there is a session — see
+ * use-db-permissions.ts. The client-side cascade below it computes the same
+ * rules from a mock staff array and overrides held in localStorage, which is
+ * both a second implementation and an editable one.
+ *
+ * The legacy path stays as the fallback while AUTH_ENFORCED is off, because
+ * most of the app is still browsed signed-out and blanking every guarded
+ * control would look like a bug rather than a policy.
  */
 export function useEffectivePermissions(): EffectivePermissions {
   const { viewer, resolvePermissions } = useFacilityRbac();
-  return useMemo(
+  const fromDb = useDbPermissions();
+
+  const legacy = useMemo(
     () => resolvePermissions(viewer.id),
     [resolvePermissions, viewer.id],
   );
+
+  return fromDb ?? legacy;
 }
 
 /**
  * Does the acting viewer have `key` (with any scope)? The ergonomic check every
- * guard/sidebar/mask should call. Delegates to the provider's single resolver.
+ * guard/sidebar/mask should call.
  */
 export function usePermission(key: PermissionKey): boolean {
   const { can } = useFacilityRbac();
+  const fromDb = useDbPermissions();
+
+  if (fromDb) return fromDb[key] !== false && fromDb[key] !== undefined;
   return can(key);
 }
 
@@ -519,6 +536,10 @@ export function usePermission(key: PermissionKey): boolean {
  */
 export function useCan(key: PermissionKey): AccessScope | false {
   const { viewer, resolveFor } = useFacilityRbac();
+  const fromDb = useDbPermissions();
+
+  if (fromDb) return fromDb[key] ?? false;
+
   const { granted, scope } = resolveFor(viewer, key);
   return granted ? scope : false;
 }
