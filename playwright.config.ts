@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { defineConfig, devices } from "@playwright/test";
 
 /**
@@ -11,6 +13,24 @@ import { defineConfig, devices } from "@playwright/test";
  */
 const PORT = 3000;
 const BASE_URL = `http://localhost:${PORT}`;
+
+/**
+ * Bun loads .env.local for `bun run dev`, so the SERVER sees AUTH_ENFORCED —
+ * but Playwright's runner is node and does not, so specs could not tell which
+ * regime they were testing. Reading it here means a spec that only applies
+ * under enforcement can skip itself instead of failing with a puzzle.
+ *
+ * Deliberately minimal: KEY=value, no quoting or interpolation. If this ever
+ * needs to grow, use a real dotenv rather than extending it.
+ */
+try {
+  for (const line of readFileSync(".env.local", "utf8").split("\n")) {
+    const match = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
+    if (match && !process.env[match[1]!]) process.env[match[1]!] = match[2]!;
+  }
+} catch {
+  /* no .env.local — CI, or a fresh clone */
+}
 
 export default defineConfig({
   testDir: "./tests/e2e",

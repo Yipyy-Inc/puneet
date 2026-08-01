@@ -18,6 +18,7 @@ export default async function CustomerLayout({
   children: React.ReactNode;
 }) {
   await guardPortal({
+    portal: "customer",
     allow: canAccessCustomerPortal,
     publicPrefixes: ["/customer/auth"],
   });

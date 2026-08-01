@@ -15,6 +15,7 @@ export default async function StaffLayout({
   children: React.ReactNode;
 }) {
   const viewer = await guardPortal({
+    portal: "staff",
     allow: canAccessStaffPortal,
     publicPrefixes: ["/staff/auth"],
   });

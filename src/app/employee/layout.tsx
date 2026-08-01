@@ -19,7 +19,7 @@ export default async function EmployeeLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await guardPortal({ allow: canAccessStaffPortal });
+  await guardPortal({ portal: "staff", allow: canAccessStaffPortal });
 
   return <>{children}</>;
 }

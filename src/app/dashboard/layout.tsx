@@ -27,6 +27,7 @@ export default async function DashboardLayout({
   // get sent to their own portal, everyone else is let through. After it, the
   // only way in is the platform-admin flag on the profile.
   await guardPortal({
+    portal: "admin",
     allow: canAccessAdminPortal,
     whenWrongPortal: "/facility/dashboard",
   });

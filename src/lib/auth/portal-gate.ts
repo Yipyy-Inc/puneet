@@ -7,6 +7,7 @@ import {
   getViewer,
   isAuthEnforced,
   landingPathFor,
+  type Portal,
   type Viewer,
 } from "./viewer";
 
@@ -39,10 +40,17 @@ async function currentPathname(): Promise<string> {
 }
 
 export async function guardPortal({
+  portal,
   allow,
   publicPrefixes = [],
   whenWrongPortal,
 }: {
+  /**
+   * Which portal this is. Enforcement is per-portal, and a denial under
+   * enforcement is routed differently from a legacy one, so the gate has to
+   * know which regime it is in rather than asking about the whole app.
+   */
+  portal: Portal;
   /** Gate for this portal, from viewer.ts — already flag-aware. */
   allow: (viewer: Viewer) => boolean;
   /**
@@ -69,7 +77,7 @@ export async function guardPortal({
 
   // Signed out and signed in as the wrong person are different problems: one
   // needs a login, the other needs somewhere else to go.
-  if (isAuthEnforced()) {
+  if (isAuthEnforced(portal)) {
     if (viewer.source !== "session") {
       const next = pathname ? `?next=${encodeURIComponent(pathname)}` : "";
       redirect(`/login${next}`);
