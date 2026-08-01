@@ -1,5 +1,10 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import {
+  canAccessFacilityPortal,
+  canManageCustomers,
+  getViewer,
+  isAuthEnforced,
+} from "@/lib/auth/viewer";
 import { FacilitySidebar } from "@/components/layout/facility-admin-sidebar";
 import {
   SidebarInset,
@@ -28,16 +33,23 @@ export default async function FacilityLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const userRole = cookieStore.get("user_role")?.value;
+  // One identity for the whole portal, from the signed JWT when there is a
+  // session. The gate itself still answers with the old cookie rule until
+  // AUTH_ENFORCED is switched on — see lib/auth/viewer.ts.
+  const viewer = await getViewer();
 
-  // Gate the facility portal to facility_admin. Super admins are also allowed
-  // through so they can review facility/HQ features without switching roles.
-  // No role set (undefined) defaults to facility_admin for testing.
-  const allowedRoles = ["facility_admin", "super_admin"];
-  if (userRole && !allowedRoles.includes(userRole)) {
-    redirect("/dashboard");
+  if (!canAccessFacilityPortal(viewer)) {
+    // Signed out under enforcement is a different failure from signed in as
+    // the wrong person: one needs a login, the other needs somewhere else to
+    // go. Sending the first case to /dashboard would just bounce them back.
+    redirect(
+      isAuthEnforced() && viewer.source !== "session"
+        ? "/customer/auth/login"
+        : "/dashboard",
+    );
   }
+
+  const canCreateCustomer = canManageCustomers(viewer);
 
   return (
     <LocationContextProviderWrapper>
@@ -55,11 +67,11 @@ export default async function FacilityLayout({
                           <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors md:hidden" />
                           <GlobalSearchNext
                             className="hidden w-[460px] max-w-[480px] min-w-0 sm:flex"
-                            canCreateCustomer={userRole === "facility_admin"}
+                            canCreateCustomer={canCreateCustomer}
                           />
                           <MobileSearch
                             className="sm:hidden"
-                            canCreateCustomer={userRole === "facility_admin"}
+                            canCreateCustomer={canCreateCustomer}
                           />
                         </div>
                         <FacilityHeaderActions facilityId={11} />

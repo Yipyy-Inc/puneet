@@ -1,5 +1,9 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import {
+  canAccessAdminPortal,
+  getViewer,
+  isAuthEnforced,
+} from "@/lib/auth/viewer";
 import { AppSidebar } from "@/components/layout/super-admin-sidebar";
 import { Metadata } from "next";
 import {
@@ -23,15 +27,19 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const userRole = cookieStore.get("user_role")?.value;
+  const viewer = await getViewer();
 
-  // If user is facility_admin, redirect to facility dashboard
-  if (userRole === "facility_admin") {
-    redirect("/facility/dashboard");
+  // Until AUTH_ENFORCED is on this is the old rule verbatim: facility admins
+  // get sent to their own portal, everyone else is let through. After it, the
+  // only way in is the platform-admin flag on the profile.
+  if (!canAccessAdminPortal(viewer)) {
+    redirect(
+      isAuthEnforced() && viewer.source !== "session"
+        ? "/customer/auth/login"
+        : "/facility/dashboard",
+    );
   }
 
-  // Allow access for super_admin or no role (defaults to super_admin)
   return (
     <SidebarProvider>
       <AppSidebar />

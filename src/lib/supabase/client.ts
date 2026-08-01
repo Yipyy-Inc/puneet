@@ -21,6 +21,18 @@ import { supabaseConfig } from "./env";
 // leaking into the browser, but nothing stops the reverse — using this one in
 // a server context would silently lose cookie-based auth, so the names carry
 // that distinction.
+//
+// COOKIE VISIBILITY — a real tradeoff, taken deliberately.
+// This client reads the session from the auth cookie, which therefore CANNOT be
+// httpOnly. That is @supabase/ssr's default and the price of browser-side
+// Realtime and Storage: an XSS can read the access token (short-lived, and
+// refresh rotates it, but it is readable).
+//
+// The alternative is forcing `httpOnly: true` in the setAll() of ./server and
+// ./proxy, which hardens against token theft and makes this file unusable —
+// Realtime and Storage would then need a server-issued token or a proxied
+// route. Nothing uses this client yet, so that door is still open. Revisit it
+// before the first Realtime subscription ships, not after.
 // ============================================================================
 
 export function createBrowserClient() {
