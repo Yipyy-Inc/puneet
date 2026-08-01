@@ -9,6 +9,16 @@ import { ResetPasswordForm } from "./_client";
 
 export const metadata: Metadata = { title: "Reset password — Yipyy" };
 
+// This page's entire job is asking "is there a recovery session?", so it can
+// never be prerendered. Without this Next tries to build it statically and the
+// build fails wherever Supabase env vars are absent — which is exactly what
+// happened in CI while passing locally off .env.local.
+//
+// The rule generalises: any page that reads the session needs this. Layouts
+// get away without it because getViewer swallows a missing-config error and
+// falls through to the legacy path; getCurrentUser deliberately does not.
+export const dynamic = "force-dynamic";
+
 // ============================================================================
 // Set a new password after following a recovery link.
 //
