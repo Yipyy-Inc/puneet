@@ -40,6 +40,37 @@ export async function liveFetch<T>(
   return (await response.json()) as T;
 }
 
+/**
+ * A write that is genuinely optional because there is nowhere to send it:
+ * signed out, there is no session and no rows to own. Returns `null` on 401
+ * and behaves exactly like `liveWrite` otherwise — a real failure still
+ * throws.
+ *
+ * Only for state that also has a local home (the role editor's localStorage
+ * fallback). Never for a write whose whole purpose is to persist.
+ */
+export async function liveWriteOptional<T>(
+  path: string,
+  method: "POST" | "PATCH" | "PUT",
+  body: unknown,
+): Promise<T | null> {
+  const response = await fetch(path, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (response.status === 401) return null;
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((b: { error?: string }) => b.error)
+      .catch(() => null);
+    throw new Error(detail ?? `Request failed (${response.status})`);
+  }
+  return (await response.json()) as T;
+}
+
 /** Write helper — no fallback, because a write must never silently no-op. */
 export async function liveWrite<T>(
   path: string,
