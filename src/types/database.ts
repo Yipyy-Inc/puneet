@@ -686,6 +686,42 @@ export type Database = {
           },
         ];
       };
+      staff_permissions: {
+        Row: {
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+          staff_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+          staff_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          permission_key?: string;
+          scope?: Database["public"]["Enums"]["access_scope"];
+          staff_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_permissions_permission_key_fkey";
+            columns: ["permission_key"];
+            isOneToOne: false;
+            referencedRelation: "permissions";
+            referencedColumns: ["key"];
+          },
+          {
+            foreignKeyName: "staff_permissions_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           avatar_url: string | null;
