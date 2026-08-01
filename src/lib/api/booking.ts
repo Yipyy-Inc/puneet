@@ -93,6 +93,50 @@ export function isPetAssignedTo(petId: number, staffId: string): boolean {
   return assignedPetIds(staffId).has(petId);
 }
 
+// ============================================================================
+// Reading bookings — Postgres when there is a session, mocks otherwise.
+//
+// The rows are real (see supabase/migrations/…_clients_pets_bookings.sql and
+// scripts/apply-operational-seed.ts), but RLS scopes them to the signed-in
+// caller. With AUTH_ENFORCED off, most of the app is still browsed signed-out,
+// and switching hard would turn every booking screen blank — indistinguishable
+// from a bug.
+//
+// So: ask the API, and fall back to the mocks on 401 only. Any OTHER failure
+// propagates, because a 500 or a broken shape must not be silently papered
+// over with fixtures that look plausible.
+//
+// This fallback dies with AUTH_ENFORCED. When every portal requires a session,
+// there is no signed-out case left to serve.
+// ============================================================================
+
+let warnedAboutFallback = false;
+
+async function fetchBookings(params?: {
+  clientRef?: number;
+}): Promise<Booking[]> {
+  const search = params?.clientRef ? `?clientRef=${params.clientRef}` : "";
+  const response = await fetch(`/api/bookings${search}`);
+
+  if (response.status === 401) {
+    if (!warnedAboutFallback) {
+      warnedAboutFallback = true;
+      console.info(
+        "[bookings] not signed in — serving mock data. Sign in to read the real rows.",
+      );
+    }
+    return params?.clientRef
+      ? bookings.filter((b) => b.clientId === params.clientRef)
+      : bookings;
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to load bookings (${response.status})`);
+  }
+
+  return (await response.json()) as Booking[];
+}
+
 export const bookingQueries = {
   /**
    * All bookings, or — when `assignedStaffId` is passed (the viewer's id when
@@ -102,22 +146,26 @@ export const bookingQueries = {
    */
   all: (opts?: { assignedStaffId?: string }) => ({
     queryKey: ["bookings", opts?.assignedStaffId ?? "all"] as const,
-    queryFn: async () =>
-      opts?.assignedStaffId
-        ? scopeBookingsToStaff(bookings, opts.assignedStaffId)
-        : bookings,
+    queryFn: async () => {
+      const list = await fetchBookings();
+      return opts?.assignedStaffId
+        ? scopeBookingsToStaff(list, opts.assignedStaffId)
+        : list;
+    },
   }),
   detail: (id: number) => ({
     queryKey: ["bookings", id] as const,
-    queryFn: async () => bookings.find((b) => b.id === id),
+    queryFn: async () => (await fetchBookings()).find((b) => b.id === id),
   }),
   byClient: (clientId: number) => ({
     queryKey: ["bookings", "by-client", clientId] as const,
-    queryFn: async () => bookings.filter((b) => b.clientId === clientId),
+    queryFn: async () => fetchBookings({ clientRef: clientId }),
   }),
   byFacility: (facilityId: number) => ({
     queryKey: ["bookings", "by-facility", facilityId] as const,
-    queryFn: async () => bookings.filter((b) => b.facilityId === facilityId),
+    // No facility filter is sent: RLS already scopes rows to the caller's
+    // facility, and a client-supplied facility id is not a boundary anyway.
+    queryFn: async () => fetchBookings(),
   }),
   requests: () => ({
     queryKey: ["booking-requests"] as const,
