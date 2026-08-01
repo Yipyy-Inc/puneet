@@ -243,4 +243,134 @@ test.describe("role editor writes", () => {
     };
     expect(bodyAgain.staff["fs-groom-01"]).toBeUndefined();
   });
+
+  test("a per-staff override moves the person it names", async ({ page }) => {
+    // The check above proves storage. This one proves effect — the dev
+    // accounts have staff records linked to their memberships, so layer 3 can
+    // finally resolve for somebody. Without that link the override is written
+    // and inert, which is indistinguishable from broken.
+    await signIn(page, "owner@yipyy.dev");
+    await setOverride(page, {
+      kind: "staff",
+      staffId: "fs-dev-groomer",
+      key: "manage_roles",
+      setting: { granted: true, scope: "anytime" },
+    });
+
+    await signOut(page);
+    await signIn(page, "groomer@yipyy.dev");
+    // No role a groomer holds grants manage_roles; only the person override does.
+    expect((await permissions(page)).manage_roles).toBe("anytime");
+
+    await signOut(page);
+    await signIn(page, "owner@yipyy.dev");
+    await setOverride(page, {
+      kind: "staff",
+      staffId: "fs-dev-groomer",
+      key: "manage_roles",
+      setting: null,
+    });
+
+    await signOut(page);
+    await signIn(page, "groomer@yipyy.dev");
+    expect((await permissions(page)).manage_roles).toBe("none");
+  });
+
+  test("a custom role grants through the cascade", async ({ page }) => {
+    const roleId = "custom-e2e-senior-groomer";
+    const custom = (body: unknown) =>
+      page.request.put("/api/roles/custom", { data: body });
+
+    await signIn(page, "owner@yipyy.dev");
+    await custom({ kind: "delete", id: roleId }); // clear a failed prior run
+
+    const created = await custom({
+      kind: "upsert",
+      role: {
+        id: roleId,
+        label: "Senior Groomer (e2e)",
+        description: "",
+        accent: "",
+        ring: "",
+        icon: "Sparkles",
+        permissions: {},
+        createdAt: new Date().toISOString(),
+      },
+    });
+    expect(created.status()).toBe(200);
+
+    await custom({
+      kind: "permission",
+      id: roleId,
+      key: "manage_staff",
+      scope: "operating_hours",
+    });
+
+    // Defining the role changes nothing until somebody holds it.
+    await signOut(page);
+    await signIn(page, "groomer@yipyy.dev");
+    expect((await permissions(page)).manage_staff).toBe("none");
+
+    await signOut(page);
+    await signIn(page, "owner@yipyy.dev");
+    const assigned = await custom({
+      kind: "assignments",
+      staffId: "fs-dev-groomer",
+      roleIds: [roleId],
+    });
+    expect(assigned.status()).toBe(200);
+
+    // Now it does — via the fourth branch of the union, not a preset.
+    await signOut(page);
+    await signIn(page, "groomer@yipyy.dev");
+    expect((await permissions(page)).manage_staff).toBe("operating_hours");
+
+    // Unassigning is what takes it away again, and the role itself survives.
+    await signOut(page);
+    await signIn(page, "owner@yipyy.dev");
+    await custom({
+      kind: "assignments",
+      staffId: "fs-dev-groomer",
+      roleIds: [],
+    });
+
+    await signOut(page);
+    await signIn(page, "groomer@yipyy.dev");
+    expect((await permissions(page)).manage_staff).toBe("none");
+
+    await signOut(page);
+    await signIn(page, "owner@yipyy.dev");
+    const listed = (await (
+      await page.request.get("/api/roles/custom")
+    ).json()) as { roles: Record<string, { label: string }> };
+    expect(listed.roles[roleId]?.label).toBe("Senior Groomer (e2e)");
+
+    expect((await custom({ kind: "delete", id: roleId })).status()).toBe(200);
+  });
+
+  test("a manager cannot create or assign custom roles", async ({ page }) => {
+    await signIn(page, "manager@yipyy.dev");
+    const refused = await page.request.put("/api/roles/custom", {
+      data: {
+        kind: "upsert",
+        role: {
+          id: "custom-e2e-forbidden",
+          label: "Should not exist",
+          description: "",
+          accent: "",
+          ring: "",
+          icon: "Sparkles",
+          permissions: {},
+          createdAt: new Date().toISOString(),
+        },
+      },
+    });
+    expect(refused.status()).toBe(403);
+
+    // And nothing was created — a 403 that still wrote would be worse than a 200.
+    const listed = (await (
+      await page.request.get("/api/roles/custom")
+    ).json()) as { roles: Record<string, unknown> };
+    expect(listed.roles["custom-e2e-forbidden"]).toBeUndefined();
+  });
 });

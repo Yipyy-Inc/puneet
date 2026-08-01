@@ -18,6 +18,7 @@ import {
   Save,
 } from "lucide-react";
 import { FacilityRbacProvider, usePermission } from "@/hooks/use-facility-rbac";
+import { useSetStaffCustomRoles } from "@/lib/api/roles";
 import {
   ROLE_PRESETS,
   buildDefaultNotifications,
@@ -151,6 +152,8 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
     staff ? { ...staff } : null,
   );
 
+  const { mutate: setStaffCustomRoles } = useSetStaffCustomRoles();
+
   // Onboarding review/activation (derived pending-review state).
   const onboardingInstance = useOnboardingInstance(staffId);
   const pendingReview =
@@ -231,6 +234,14 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
   const saveProfile = () => {
     if (!draft) return;
     upsertFacilityStaff(draft);
+    // Custom-role assignments are the one part of this profile that the
+    // database already owns — they feed private.resolve_permission. Saving
+    // them only into the mock array would mean the roles shown here and the
+    // permissions actually enforced disagree.
+    setStaffCustomRoles({
+      staffId: draft.id,
+      roleIds: draft.customRoleIds ?? [],
+    });
     bumpProfile();
     toast.success(`${fullNameOf(draft)}'s profile updated`);
   };

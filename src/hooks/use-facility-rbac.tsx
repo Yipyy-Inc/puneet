@@ -164,7 +164,8 @@ export function FacilityRbacProvider({
   // Custom roles are read through the roles query layer; their writes go through
   // the mutations below. viewerId stays local to this provider.
   const { data: customRolesData } = useQuery(roleQueries.customRoles());
-  const customRoles = customRolesData ?? EMPTY_CUSTOM_ROLES;
+  const customRoles = customRolesData?.roles ?? EMPTY_CUSTOM_ROLES;
+  const customAssignments = customRolesData?.assignments;
 
   // The two DB-backed layers of the cascade. `undefined` while loading and
   // `null` when signed out; in both cases the local state below is what the UI
@@ -254,12 +255,20 @@ export function FacilityRbacProvider({
 
   // Overlay the provider's per-staff overrides onto the profile before resolving
   // so guards/sidebar/masks reflect per-staff edits, not just the baked seed.
+  //
+  // Custom-role assignments are overlaid the same way and for the same reason:
+  // once the database has answered, staff_custom_roles is who actually holds a
+  // role. The mock profile's own customRoleIds is a seed, and showing it while
+  // Postgres says otherwise is the bug this whole change is about.
   const withOverrides = useCallback(
     (staff: StaffProfile): StaffProfile => ({
       ...staff,
       permissionOverrides: staffOverridesFor(staff.id),
+      customRoleIds: customAssignments
+        ? (customAssignments[staff.id] ?? [])
+        : staff.customRoleIds,
     }),
-    [staffOverridesFor],
+    [staffOverridesFor, customAssignments],
   );
 
   const resolveFor = useCallback(

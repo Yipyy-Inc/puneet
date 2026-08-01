@@ -471,6 +471,116 @@ export type Database = {
           },
         ];
       };
+      facility_custom_roles: {
+        Row: {
+          accent: string;
+          created_at: string;
+          description: string;
+          facility_id: string;
+          icon: string;
+          id: string;
+          label: string;
+          legacy_id: string | null;
+          ring: string;
+          updated_at: string;
+        };
+        Insert: {
+          accent?: string;
+          created_at?: string;
+          description?: string;
+          facility_id: string;
+          icon?: string;
+          id?: string;
+          label: string;
+          legacy_id?: string | null;
+          ring?: string;
+          updated_at?: string;
+        };
+        Update: {
+          accent?: string;
+          created_at?: string;
+          description?: string;
+          facility_id?: string;
+          icon?: string;
+          id?: string;
+          label?: string;
+          legacy_id?: string | null;
+          ring?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_custom_roles_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      facility_custom_role_permissions: {
+        Row: {
+          custom_role_id: string;
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+        };
+        Insert: {
+          custom_role_id: string;
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+        };
+        Update: {
+          custom_role_id?: string;
+          permission_key?: string;
+          scope?: Database["public"]["Enums"]["access_scope"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_custom_role_permissions_custom_role_id_fkey";
+            columns: ["custom_role_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_custom_roles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_custom_role_permissions_permission_key_fkey";
+            columns: ["permission_key"];
+            isOneToOne: false;
+            referencedRelation: "permissions";
+            referencedColumns: ["key"];
+          },
+        ];
+      };
+      staff_custom_roles: {
+        Row: {
+          custom_role_id: string;
+          staff_id: string;
+        };
+        Insert: {
+          custom_role_id: string;
+          staff_id: string;
+        };
+        Update: {
+          custom_role_id?: string;
+          staff_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_custom_roles_custom_role_id_fkey";
+            columns: ["custom_role_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_custom_roles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_custom_roles_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       locations: {
         Row: {
           created_at: string;

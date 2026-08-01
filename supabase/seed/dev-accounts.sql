@@ -121,3 +121,62 @@ select p.email,
   left join public.facility_memberships m on m.profile_id = p.id
  where p.email like '%@yipyy.dev'
  order by p.is_platform_admin desc, m.role nulls last, p.email;
+
+-- ============================================================================
+-- Staff records for the dev accounts.
+--
+-- Added because the permission cascade had become unobservable. Layer 3
+-- (staff_permissions) and custom-role assignments both hang off a STAFF row,
+-- and private.resolve_permission reaches them through staff.membership_id.
+-- Every one of the 18 seeded staff records has membership_id NULL — they are
+-- mock people with no account — so those layers could be written and would
+-- never resolve for anybody.
+--
+-- These five are staff of the demo facility who genuinely do have accounts, so
+-- linking them is not a fiction. The existing 18 are left exactly as they are:
+-- attaching Émilie's staff record to owner@yipyy.dev would be inventing an
+-- identity to make a test pass.
+-- ============================================================================
+
+do $$
+declare
+  v_fac_id uuid;
+  r        record;
+begin
+  select id into v_fac_id from public.facilities where legacy_id = '11';
+  if v_fac_id is null then
+    raise notice 'Facility 11 missing — run facility-11-data.sql first.';
+    return;
+  end if;
+
+  for r in
+    select m.id as membership_id, m.role, p.email, p.full_name
+      from public.facility_memberships m
+      join public.profiles p on p.id = m.profile_id
+     where p.email like '%@yipyy.dev'
+       and m.facility_id = v_fac_id
+  loop
+    insert into public.staff (
+      facility_id, membership_id, legacy_id,
+      first_name, last_name, email, primary_role, status
+    )
+    values (
+      v_fac_id,
+      r.membership_id,
+      'fs-dev-' || r.role::text,
+      split_part(coalesce(r.full_name, r.email), ' ', 1),
+      coalesce(nullif(split_part(coalesce(r.full_name, ''), ' ', 2), ''), 'Dev'),
+      r.email,
+      r.role,
+      'active'
+    )
+    on conflict (legacy_id) do update
+      set membership_id = excluded.membership_id,
+          primary_role  = excluded.primary_role;
+  end loop;
+end $$;
+
+select s.legacy_id, s.email, s.primary_role, s.membership_id is not null as linked
+  from public.staff s
+ where s.legacy_id like 'fs-dev-%'
+ order by s.legacy_id;
