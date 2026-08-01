@@ -130,7 +130,7 @@ export type Database = {
             foreignKeyName: "bookings_assigned_staff_id_fkey";
             columns: ["assigned_staff_id"];
             isOneToOne: false;
-            referencedRelation: "facility_memberships";
+            referencedRelation: "staff";
             referencedColumns: ["id"];
           },
           {
@@ -592,6 +592,99 @@ export type Database = {
           key?: string;
         };
         Relationships: [];
+      };
+      staff: {
+        Row: {
+          additional_roles: Database["public"]["Enums"]["facility_staff_role"][];
+          avatar_url: string | null;
+          color_hex: string | null;
+          created_at: string;
+          details: Json;
+          email: string;
+          facility_id: string;
+          first_name: string;
+          id: string;
+          job_title: string | null;
+          last_active: string | null;
+          last_name: string;
+          legacy_id: string | null;
+          membership_id: string | null;
+          phone: string | null;
+          primary_role: Database["public"]["Enums"]["facility_staff_role"];
+          service_assignments: Database["public"]["Enums"]["service_module"][];
+          show_on_calendar: boolean;
+          status: string;
+          status_changed_at: string | null;
+          status_note: string | null;
+          status_reason: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          additional_roles?: Database["public"]["Enums"]["facility_staff_role"][];
+          avatar_url?: string | null;
+          color_hex?: string | null;
+          created_at?: string;
+          details?: Json;
+          email: string;
+          facility_id: string;
+          first_name: string;
+          id?: string;
+          job_title?: string | null;
+          last_active?: string | null;
+          last_name: string;
+          legacy_id?: string | null;
+          membership_id?: string | null;
+          phone?: string | null;
+          primary_role: Database["public"]["Enums"]["facility_staff_role"];
+          service_assignments?: Database["public"]["Enums"]["service_module"][];
+          show_on_calendar?: boolean;
+          status?: string;
+          status_changed_at?: string | null;
+          status_note?: string | null;
+          status_reason?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          additional_roles?: Database["public"]["Enums"]["facility_staff_role"][];
+          avatar_url?: string | null;
+          color_hex?: string | null;
+          created_at?: string;
+          details?: Json;
+          email?: string;
+          facility_id?: string;
+          first_name?: string;
+          id?: string;
+          job_title?: string | null;
+          last_active?: string | null;
+          last_name?: string;
+          legacy_id?: string | null;
+          membership_id?: string | null;
+          phone?: string | null;
+          primary_role?: Database["public"]["Enums"]["facility_staff_role"];
+          service_assignments?: Database["public"]["Enums"]["service_module"][];
+          show_on_calendar?: boolean;
+          status?: string;
+          status_changed_at?: string | null;
+          status_note?: string | null;
+          status_reason?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_membership_id_fkey";
+            columns: ["membership_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_memberships";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       profiles: {
         Row: {

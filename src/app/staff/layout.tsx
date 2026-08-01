@@ -21,7 +21,9 @@ export default async function StaffLayout({
 
   return (
     <>
-      <LegacyIdentityBridge staffId={legacyStaffIdForEmail(viewer.email)} />
+      <LegacyIdentityBridge
+        staffId={await legacyStaffIdForEmail(viewer.email)}
+      />
       <StaffShell>{children}</StaffShell>
     </>
   );

@@ -98,10 +98,11 @@ async function upsert(
 }
 
 console.log("\nwriting (through RLS, as a real signed-in user):");
-// Order matters: pets reference clients, bookings reference clients, and
-// booking_pets references both.
+// Order matters: pets reference clients; bookings reference clients AND
+// staff; booking_pets references bookings and pets.
 await upsert("clients", rows.clients);
 await upsert("pets", rows.pets);
+await upsert("staff", rows.staff);
 await upsert("bookings", rows.bookings);
 // Insert-or-IGNORE, not upsert. booking_pets is a pure join table — both
 // columns are the primary key, so there is nothing an update could change.

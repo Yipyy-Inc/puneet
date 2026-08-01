@@ -21,7 +21,9 @@ export default async function GroomerLayout({
 
   return (
     <>
-      <LegacyIdentityBridge staffId={legacyStaffIdForEmail(viewer.email)} />
+      <LegacyIdentityBridge
+        staffId={await legacyStaffIdForEmail(viewer.email)}
+      />
       <GroomerShell>{children}</GroomerShell>
     </>
   );
