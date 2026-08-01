@@ -17,7 +17,7 @@ import {
   ShieldAlert,
   Save,
 } from "lucide-react";
-import { FacilityRbacProvider, usePermission } from "@/hooks/use-facility-rbac";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import { useSetStaffCustomRoles } from "@/lib/api/roles";
 import {
   ROLE_PRESETS,
@@ -106,11 +106,10 @@ const STATUS_META: Record<
 };
 
 export function StaffProfileView({ staffId }: { staffId: string }) {
-  return (
-    <FacilityRbacProvider>
-      <StaffProfileInner staffId={staffId} />
-    </FacilityRbacProvider>
-  );
+  // The provider now lives at the facility layout, holding the identity
+  // resolved from the session. Mounting a second one here would shadow it with
+  // a fresh default — which is to say, with the owner.
+  return <StaffProfileInner staffId={staffId} />;
 }
 
 function StaffProfileInner({ staffId }: { staffId: string }) {
