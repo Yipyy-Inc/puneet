@@ -1,21 +1,25 @@
 import type { NextRequest } from "next/server";
 
-import { updateSession } from "@/lib/supabase/middleware";
+import { updateSession } from "@/lib/supabase/proxy";
 
 // ============================================================================
-// The only middleware in this app, and it stays that way deliberately.
+// The only proxy in this app, and it stays that way deliberately.
+//
+// (`proxy.ts` is what Next 16 renamed the `middleware.ts` convention to — same
+// signature, same matcher, the function is just called `proxy` now. Supabase's
+// own docs still show this as middleware.ts.)
 //
 // Its single job is refreshing the Supabase session — Server Components cannot
 // write cookies, so without this a rotated token has nowhere to land and reads
 // quietly start returning empty. Authorisation lives in the layouts, where the
 // requested portal is known.
 //
-// Keeping it thin is also what keeps self-hosting cheap: Edge Middleware is the
-// least portable part of the platform, so business logic here would be the
-// hardest thing to move.
+// Keeping it thin is also what keeps self-hosting cheap: this runs at the edge
+// and is the least portable part of the platform, so business logic here would
+// be the hardest thing to move.
 // ============================================================================
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   return updateSession(request);
 }
 

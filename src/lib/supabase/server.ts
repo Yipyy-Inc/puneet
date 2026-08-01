@@ -40,10 +40,10 @@ export async function createServerClient() {
           }
         } catch {
           // Server Components cannot set cookies. That is expected and safe to
-          // swallow *provided* something else refreshes the session — today
-          // nothing does, because there is no auth flow yet. When one lands,
-          // add the standard `updateSession` middleware; without it tokens
-          // expire mid-session and reads start returning empty.
+          // swallow *because* something else refreshes the session:
+          // `updateSession` in lib/supabase/proxy.ts, wired up at src/proxy.ts.
+          // Delete that and this catch turns into a silent bug — tokens expire
+          // mid-session and reads start returning empty.
         }
       },
     },

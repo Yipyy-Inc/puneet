@@ -43,9 +43,16 @@ export type Viewer = {
   email: string | null;
   isPlatformAdmin: boolean;
   memberships: ViewerMembership[];
+  /**
+   * The `user_role` cookie, read on every path rather than only the legacy one.
+   * The portal gates below need it to reproduce today's behaviour *exactly*
+   * while AUTH_ENFORCED is off — including for someone who has signed in.
+   * Deleted along with the flag.
+   */
+  legacyRole: string | null;
 };
 
-const ANONYMOUS: Viewer = {
+const ANONYMOUS: Omit<Viewer, "legacyRole"> = {
   source: "anonymous",
   userId: null,
   email: null,
@@ -92,7 +99,7 @@ function readMemberships(claims: unknown): ViewerMembership[] {
   });
 }
 
-async function viewerFromSession(): Promise<Viewer | null> {
+async function viewerFromSession(): Promise<Omit<Viewer, "legacyRole"> | null> {
   let supabase: Awaited<ReturnType<typeof createServerClient>>;
   try {
     supabase = await createServerClient();
@@ -127,25 +134,27 @@ async function viewerFromSession(): Promise<Viewer | null> {
  * "allow everything" for local testing. Preserved verbatim so nothing changes
  * until AUTH_ENFORCED is switched on.
  */
-async function viewerFromLegacyCookie(): Promise<Viewer> {
-  const cookieStore = await cookies();
-  const userRole = cookieStore.get("user_role")?.value;
-
+function viewerFromLegacyCookie(
+  legacyRole: string | null,
+): Omit<Viewer, "legacyRole"> {
   return {
     source: "legacy-cookie",
     userId: null,
     email: null,
     // Absent cookie historically defaulted to super_admin on /dashboard.
-    isPlatformAdmin: userRole === undefined || userRole === "super_admin",
+    isPlatformAdmin: legacyRole === null || legacyRole === "super_admin",
     memberships: [],
   };
 }
 
 export async function getViewer(): Promise<Viewer> {
+  const cookieStore = await cookies();
+  const legacyRole = cookieStore.get("user_role")?.value ?? null;
+
   const fromSession = await viewerFromSession();
-  if (fromSession) return fromSession;
-  if (isAuthEnforced()) return ANONYMOUS;
-  return viewerFromLegacyCookie();
+  if (fromSession) return { ...fromSession, legacyRole };
+  if (isAuthEnforced()) return { ...ANONYMOUS, legacyRole };
+  return { ...viewerFromLegacyCookie(legacyRole), legacyRole };
 }
 
 /** True when the viewer holds any active membership at `facilityId`. */
@@ -154,4 +163,66 @@ export function belongsToFacility(viewer: Viewer, facilityId: string): boolean {
     viewer.isPlatformAdmin ||
     viewer.memberships.some((m) => m.facilityId === facilityId)
   );
+}
+
+// ── Portal gates ────────────────────────────────────────────────────────────
+// One gate per portal, so the rule lives next to the identity rather than being
+// re-derived from cookies in each layout.
+//
+// Each has two arms. While AUTH_ENFORCED is off the answer is today's
+// cookie rule, verbatim — signing in must not be able to lock anyone out of a
+// portal mid-build. Once it is on, the answer comes from the signed token.
+//
+// WHAT A DENIED GATE ACTUALLY DOES — measured, not assumed.
+// `redirect()` from these layouts is a SOFT redirect: because the layout
+// streams, headers are already sent, so Next returns HTTP 200 with a
+// NEXT_REDIRECT instruction in the RSC payload and the client router performs
+// the navigation. Verified with curl: the response is a ~32KB shell containing
+// the redirect and none of the portal's content, because the layout throws
+// before its children render.
+//
+// So these gates are routing, not the security boundary. The boundary is RLS —
+// a denied caller who ignores the redirect still gets zero rows, because the
+// database filters on the JWT rather than on where the browser ended up. Do not
+// let a future "just skip the gate for X" argument treat this as the last line
+// of defence; it is the first.
+
+const LEGACY_FACILITY_ROLES = ["facility_admin", "super_admin"];
+
+/**
+ * Facility portal. Any active membership admits you; platform admins are let
+ * through so they can review facility and HQ features without swapping
+ * identity — which is what the old cookie rule allowed too.
+ */
+export function canAccessFacilityPortal(viewer: Viewer): boolean {
+  if (!isAuthEnforced()) {
+    return (
+      viewer.legacyRole === null ||
+      LEGACY_FACILITY_ROLES.includes(viewer.legacyRole)
+    );
+  }
+  return viewer.isPlatformAdmin || viewer.memberships.length > 0;
+}
+
+/** Platform super-admin portal. Nothing but the platform-admin flag. */
+export function canAccessAdminPortal(viewer: Viewer): boolean {
+  if (!isAuthEnforced()) return viewer.legacyRole !== "facility_admin";
+  return viewer.isPlatformAdmin;
+}
+
+/**
+ * Coarse "can this person create records for the facility" check, used for
+ * a couple of header affordances.
+ *
+ * This is a placeholder, and deliberately a shallow one: the real answer lives
+ * in `private.resolve_permission`, which resolves a permission key through the
+ * three-layer cascade (role preset → facility override → per-staff override)
+ * to an access_scope rather than a boolean. Route this through that function
+ * once the permission catalog is wired to the UI — do not grow this list.
+ */
+const MANAGING_ROLES = new Set(["owner", "admin", "manager"]);
+
+export function canManageCustomers(viewer: Viewer): boolean {
+  if (!isAuthEnforced()) return viewer.legacyRole === "facility_admin";
+  return viewer.memberships.some((m) => MANAGING_ROLES.has(m.role));
 }

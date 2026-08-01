@@ -39,7 +39,28 @@ function firstIssue(error: z.ZodError): string {
   return error.issues[0]?.message ?? "Check the details and try again.";
 }
 
-export async function signIn(formData: FormData): Promise<AuthResult> {
+/**
+ * Where to land after signing in. Validated here rather than on the client:
+ * the client computes a suggestion, the server decides. Anything that could
+ * leave the origin — an absolute URL, a protocol-relative `//evil.com`, a
+ * backslash Windows/older browsers normalise to a slash — falls back.
+ */
+function safeInternalPath(value: FormDataEntryValue | null, fallback: string) {
+  if (typeof value !== "string") return fallback;
+  if (!value.startsWith("/")) return fallback;
+  if (value.startsWith("//") || value.startsWith("/\\")) return fallback;
+  return value;
+}
+
+/**
+ * Shaped for `useActionState`, which is what lets the form work before React
+ * hydrates: the browser posts to the action directly, so the sign-in button is
+ * live on first paint instead of silently doing nothing until the JS lands.
+ */
+export async function signIn(
+  _prevState: AuthResult,
+  formData: FormData,
+): Promise<AuthResult> {
   const parsed = credentialsSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -53,7 +74,9 @@ export async function signIn(formData: FormData): Promise<AuthResult> {
   // that difference is an account-enumeration oracle.
   if (error) return { error: "Those details don't match an account." };
 
-  return { error: null };
+  // Redirect from the server so the session cookie and the navigation land in
+  // the same response; a client-side push can race the cookie write.
+  redirect(safeInternalPath(formData.get("redirectTo"), "/customer/dashboard"));
 }
 
 export async function signUp(formData: FormData): Promise<AuthResult> {
