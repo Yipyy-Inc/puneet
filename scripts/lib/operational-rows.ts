@@ -33,6 +33,7 @@ import { bookings } from "../../src/data/bookings";
 import type { Booking } from "../../src/types/booking";
 import type { Client } from "../../src/types/client";
 import type { Pet } from "../../src/types/pet";
+import { instantFromWallClock } from "../../src/lib/time/facility-time";
 
 export const DEMO_FACILITY_LEGACY_ID = "11";
 const DEMO_FACILITY_NAME = "Example Pet Care Facility";
@@ -63,63 +64,6 @@ function omit<T extends object>(
     if (!keys.includes(k) && v !== undefined) out[k] = v;
   }
   return out;
-}
-
-/**
- * How far `timeZone` is from UTC at a given instant, in minutes.
- * Derived from Intl rather than hardcoded so DST is handled for free.
- */
-function offsetMinutes(instant: Date, timeZone: string): number {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      hour12: false,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    })
-      .formatToParts(instant)
-      .map((p) => [p.type, p.value]),
-  );
-  const asIfUtc = Date.UTC(
-    Number(parts.year),
-    Number(parts.month) - 1,
-    Number(parts.day),
-    Number(parts.hour),
-    Number(parts.minute),
-    Number(parts.second),
-  );
-  return (asIfUtc - instant.getTime()) / 60000;
-}
-
-/**
- * Mock "YYYY-MM-DD" + "HH:MM" -> an ISO instant.
- *
- * The mock times are the FACILITY's wall clock: "check in at 14:00" means two
- * in the afternoon where the dogs are, not 14:00 UTC. Sending the naive string
- * let Postgres read it as UTC, and a 14:00 booking came back as 15:00 — every
- * appointment silently shifted by the server's offset.
- *
- * Two passes because the first offset is measured at the wrong instant; the
- * second corrects it when the guess landed on the other side of a DST change.
- */
-function timestamp(
-  date: string,
-  time: string | undefined,
-  fallback: string,
-  timeZone: string,
-): string {
-  const wallClock = new Date(`${date}T${time ?? fallback}:00Z`);
-  const first = offsetMinutes(wallClock, timeZone);
-  let instant = new Date(wallClock.getTime() - first * 60000);
-  const second = offsetMinutes(instant, timeZone);
-  if (second !== first) {
-    instant = new Date(wallClock.getTime() - second * 60000);
-  }
-  return instant.toISOString();
 }
 
 export type ClientRow = Record<string, unknown>;
@@ -288,11 +232,14 @@ export function buildSeedRows(opts: {
       service_type: b.serviceType ?? null,
       status: b.status,
       payment_status: b.paymentStatus,
-      start_at: timestamp(b.startDate, b.checkInTime, "00:00", opts.timeZone),
-      end_at: timestamp(
+      start_at: instantFromWallClock(
+        b.startDate,
+        b.checkInTime ?? "00:00",
+        opts.timeZone,
+      ),
+      end_at: instantFromWallClock(
         b.endDate,
-        b.checkOutTime ?? b.checkInTime,
-        "23:59",
+        b.checkOutTime ?? b.checkInTime ?? "23:59",
         opts.timeZone,
       ),
       assigned_staff_name: b.assignedStaff ?? null,

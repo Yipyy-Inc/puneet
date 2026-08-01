@@ -3,6 +3,7 @@ import { BOOKING_REQUESTS } from "@/data/booking-requests";
 import { facilityStaff } from "@/data/facility-staff";
 import type { Booking, NewBooking } from "@/types/booking";
 import type { ServiceModule } from "@/types/facility-staff";
+import { liveFetch, liveWrite } from "./live-fetch";
 
 // ============================================================================
 // Section 8B — viewer scoping (assigned_only)
@@ -110,31 +111,18 @@ export function isPetAssignedTo(petId: number, staffId: string): boolean {
 // there is no signed-out case left to serve.
 // ============================================================================
 
-let warnedAboutFallback = false;
-
 async function fetchBookings(params?: {
   clientRef?: number;
 }): Promise<Booking[]> {
   const search = params?.clientRef ? `?clientRef=${params.clientRef}` : "";
-  const response = await fetch(`/api/bookings${search}`);
-
-  if (response.status === 401) {
-    if (!warnedAboutFallback) {
-      warnedAboutFallback = true;
-      console.info(
-        "[bookings] not signed in — serving mock data. Sign in to read the real rows.",
-      );
-    }
-    return params?.clientRef
-      ? bookings.filter((b) => b.clientId === params.clientRef)
-      : bookings;
-  }
-
-  if (!response.ok) {
-    throw new Error(`Failed to load bookings (${response.status})`);
-  }
-
-  return (await response.json()) as Booking[];
+  return liveFetch<Booking[]>(
+    `/api/bookings${search}`,
+    () =>
+      params?.clientRef
+        ? bookings.filter((b) => b.clientId === params.clientRef)
+        : bookings,
+    "bookings",
+  );
 }
 
 export const bookingQueries = {
@@ -174,19 +162,12 @@ export const bookingQueries = {
 };
 
 export const bookingMutations = {
-  create: async (data: NewBooking): Promise<Booking> => {
-    const newId = Math.max(...bookings.map((b) => b.id), 0) + 1;
-    const booking: Booking = { ...data, id: newId };
-    bookings.push(booking);
-    return booking;
-  },
+  create: async (data: NewBooking): Promise<Booking> =>
+    liveWrite<Booking>("/api/bookings", "POST", data),
+
   update: async (
     id: number,
     data: Partial<NewBooking>,
-  ): Promise<Booking | undefined> => {
-    const index = bookings.findIndex((b) => b.id === id);
-    if (index === -1) return undefined;
-    bookings[index] = { ...bookings[index], ...data };
-    return bookings[index];
-  },
+  ): Promise<Booking | undefined> =>
+    liveWrite<Booking>(`/api/bookings/${id}`, "PATCH", data),
 };

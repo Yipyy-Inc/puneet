@@ -654,7 +654,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      link_client_record: {
+        Args: Record<PropertyKey, never>;
+        Returns: string | null;
+      };
     };
     Enums: {
       access_scope: "anytime" | "operating_hours" | "assigned_shifts" | "none";

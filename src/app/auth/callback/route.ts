@@ -54,9 +54,26 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createServerClient();
 
+  /**
+   * Once the address is verified, attach the account to any client record the
+   * facility already holds for it. Idempotent and a no-op when there is no
+   * match, so it is safe on every callback — including password recovery.
+   *
+   * Failure here must not break the flow: the link is a convenience, and a
+   * user who cannot sign in because a lookup failed is a far worse outcome
+   * than one whose history takes a little longer to appear.
+   */
+  async function linkClientRecord() {
+    const { error } = await supabase.rpc("link_client_record");
+    if (error) {
+      console.warn(`[auth/callback] client link skipped: ${error.message}`);
+    }
+  }
+
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) return failure(request, error.message);
+    await linkClientRecord();
     return NextResponse.redirect(new URL(next, request.url));
   }
 
@@ -66,6 +83,7 @@ export async function GET(request: NextRequest) {
       token_hash: tokenHash,
     });
     if (error) return failure(request, error.message);
+    await linkClientRecord();
     return NextResponse.redirect(new URL(next, request.url));
   }
 

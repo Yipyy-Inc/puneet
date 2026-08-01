@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
-import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import { useSettings } from "@/hooks/use-settings";
 import { Button } from "@/components/ui/button";
@@ -239,7 +238,6 @@ export default function SignUpPage() {
     // is stored regardless of whether confirmation is still pending.
     savePreferredLanguageForEmail(formData.email, language);
     applyAccountLocale(language);
-    addLocalClientRecord(formData, language);
 
     setIsLoading(false);
 
@@ -252,43 +250,6 @@ export default function SignUpPage() {
     // Confirmation off — signUp redirected server-side and we never get here.
     toast.success("Account created successfully!");
     router.push(redirectTo);
-  };
-
-  /**
-   * BRIDGE — delete when a `clients` table exists.
-   *
-   * The customer portal reads its client records from the `clients` mock
-   * array, and Postgres has no equivalent table yet (orgs, facilities,
-   * locations, profiles and memberships are real; customers are not). Without
-   * this, a real signup produces a real Supabase account that the customer
-   * pages cannot find anything for.
-   *
-   * It is in-memory only and does not survive a reload — which is precisely
-   * why the clients table is the next schema to land, not something to paper
-   * over further.
-   */
-  const addLocalClientRecord = (
-    data: typeof formData,
-    preferredLanguage: string | undefined,
-  ) => {
-    const email = data.email.trim().toLowerCase();
-    if (clients.some((client) => client.email.trim().toLowerCase() === email)) {
-      return;
-    }
-
-    const maxId = clients.reduce((max, client) => Math.max(max, client.id), 0);
-    clients.push({
-      id: maxId + 1,
-      name: data.name.trim(),
-      email: data.email.trim(),
-      phone: "",
-      preferredLanguage,
-      status: "active",
-      facility: targetFacilityName ?? "Example Pet Care Facility",
-      address: { street: "", city: "", state: "", zip: "", country: "" },
-      additionalContacts: [],
-      pets: [],
-    });
   };
 
   return (
