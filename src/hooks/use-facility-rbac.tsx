@@ -25,6 +25,7 @@ import {
   type StaffProfile,
 } from "@/types/facility-staff";
 import { facilityStaff } from "@/data/facility-staff";
+import { staffQueries } from "@/lib/api/staff";
 import { setFacilityRoleCookie } from "@/lib/facility-role";
 import { useDbPermissions } from "@/hooks/use-db-permissions";
 import {
@@ -57,6 +58,24 @@ interface RbacContextValue {
   viewer: StaffProfile;
   viewerId: string;
   setViewerId: (id: string) => void;
+  /**
+   * Whether `setViewerId` does anything. A switcher UI should hide itself when
+   * this is false rather than render a control that silently ignores clicks.
+   */
+  canSwitchViewer: boolean;
+  /**
+   * False for the moment between mount and the staff roster arriving, when
+   * `viewer` is a fallback rather than the person the session names. UI that
+   * shows WHO you are should draw a placeholder until this is true.
+   */
+  viewerResolved: boolean;
+  /**
+   * The roster identities resolve against: Postgres rows when there is a
+   * session, the mock array when there is not. Anything offering a choice of
+   * staff must read THIS, not the mock array — offering an id the provider
+   * cannot resolve silently selects somebody else.
+   */
+  staff: StaffProfile[];
   /** All custom roles, keyed by id. */
   customRoles: CustomRolesById;
   /** Preset permission overrides, keyed by role then permission. */
@@ -142,10 +161,25 @@ export function FacilityRbacProvider({
    * (the facility staff layout does) to keep the switchable, persisted viewer.
    */
   initialViewerId,
+  allowViewerSwitch,
   previewPermissions,
 }: {
   children: ReactNode;
   initialViewerId?: string;
+  /**
+   * Whether the "viewing as" switcher may change who the tree thinks you are.
+   *
+   * Defaults to `initialViewerId == null`, which reproduces the old behaviour
+   * exactly: the employee portal passed an id and got a fixed viewer, the
+   * facility staff section passed none and got a switchable one.
+   *
+   * The facility portal now passes it explicitly, because "switchable" there
+   * meant ANY visitor could type an id into localStorage and have the UI redraw
+   * as the owner. Permissions stopped following that in PR #99 — they come from
+   * the database now — but the identity did, and a groomer looking at the
+   * owner's name and profile is its own problem.
+   */
+  allowViewerSwitch?: boolean;
   /**
    * Section 7 — "Preview as employee". When set, EVERY permission decision in
    * the tree resolves from this map instead of a real staff profile, so the
@@ -154,6 +188,7 @@ export function FacilityRbacProvider({
    */
   previewPermissions?: EffectivePermissions | null;
 }) {
+  const canSwitch = allowViewerSwitch ?? initialViewerId == null;
   const [state, setState] = useState<RbacState>(
     initialViewerId
       ? { ...DEFAULT_STATE, viewerId: initialViewerId }
@@ -166,6 +201,20 @@ export function FacilityRbacProvider({
   const { data: customRolesData } = useQuery(roleQueries.customRoles());
   const customRoles = customRolesData?.roles ?? EMPTY_CUSTOM_ROLES;
   const customAssignments = customRolesData?.assignments;
+
+  // The roster this provider resolves identities against.
+  //
+  // It used to be the mock array, full stop, which quietly broke the moment an
+  // id came from anywhere real: `initialViewerId` resolved from a session finds
+  // no match in the mock array, and `.find() ?? facilityStaff[0]` then hands
+  // back SOMEBODY ELSE rather than failing. A staff member appearing as a
+  // colleague is worse than an error, because nothing looks wrong.
+  //
+  // staffQueries.profiles() serves Postgres rows when there is a session and
+  // the same mock array when there is not, so both ids resolve in their own
+  // world.
+  const { data: dbStaff } = useQuery(staffQueries.profiles());
+  const staffList = dbStaff ?? facilityStaff;
 
   // The two DB-backed layers of the cascade. `undefined` while loading and
   // `null` when signed out; in both cases the local state below is what the UI
@@ -191,9 +240,12 @@ export function FacilityRbacProvider({
         // the query store, so only pull the fields this provider still owns.
         const parsed = JSON.parse(raw) as Partial<RbacState>;
         setState((prev) => ({
-          // In fixed-viewer (employee) mode the identity comes from the session
-          // cookie — never let a stored "viewing as" id override it.
-          viewerId: initialViewerId ?? parsed.viewerId ?? prev.viewerId,
+          // A stored "viewing as" id is only allowed to win where switching is
+          // allowed. Everywhere else the identity came from a verified session
+          // and localStorage does not get a vote.
+          viewerId: canSwitch
+            ? (parsed.viewerId ?? initialViewerId ?? prev.viewerId)
+            : (initialViewerId ?? prev.viewerId),
           presetOverrides: parsed.presetOverrides ?? prev.presetOverrides,
           staffOverrides: parsed.staffOverrides ?? prev.staffOverrides,
         }));
@@ -202,25 +254,36 @@ export function FacilityRbacProvider({
       /* ignore */
     }
     setHydrated(true);
-  }, [initialViewerId]);
+  }, [initialViewerId, canSwitch]);
 
   useEffect(() => {
     if (!hydrated || typeof window === "undefined") return;
-    // Don't write the employee portal's cookie-driven viewer back into the
-    // shared key (it would bleed into the facility "viewing as" switcher).
-    if (initialViewerId) return;
+    // Don't write a session-derived viewer back into the shared key — it would
+    // bleed into the switcher and outlive the session that produced it.
+    if (!canSwitch) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
       /* ignore */
     }
-  }, [state, hydrated, initialViewerId]);
+  }, [state, hydrated, canSwitch]);
 
-  const viewer = useMemo<StaffProfile>(() => {
-    return (
-      facilityStaff.find((s) => s.id === state.viewerId) ?? facilityStaff[0]
-    );
-  }, [state.viewerId]);
+  // `staffList[0]` is a reasonable default for the SWITCHABLE case, where the
+  // viewer is a choice rather than a fact. It is a bad one for a
+  // session-derived identity that has not arrived yet: the roster loads
+  // asynchronously, so for the first paint "fs-dev-groomer" is absent and the
+  // fallback renders a COLLEAGUE'S name and role. Correct a moment later, wrong
+  // in the meantime, and wrong in the way nobody notices.
+  //
+  // `viewerResolved` is what lets a caller draw a placeholder instead. It does
+  // not change `viewer` itself, because every consumer needs a profile to read;
+  // it marks the one moment when that profile is not yet the right person.
+  const resolvedViewer = useMemo(
+    () => staffList.find((s) => s.id === state.viewerId),
+    [staffList, state.viewerId],
+  );
+  const viewer = resolvedViewer ?? staffList[0];
+  const viewerResolved = resolvedViewer != null;
 
   // Mirror the active viewer's role into a server-readable cookie so server-side
   // route guards (e.g. the owner-only Documents / Yipyy Agreements area) can
@@ -246,11 +309,9 @@ export function FacilityRbacProvider({
       // though it were in force.
       const edited = dbOverrides ? undefined : state.staffOverrides[staffId];
       if (edited) return edited;
-      return (
-        facilityStaff.find((s) => s.id === staffId)?.permissionOverrides ?? {}
-      );
+      return staffList.find((s) => s.id === staffId)?.permissionOverrides ?? {};
     },
-    [dbOverrides, state.staffOverrides],
+    [dbOverrides, staffList, state.staffOverrides],
   );
 
   // Overlay the provider's per-staff overrides onto the profile before resolving
@@ -299,7 +360,7 @@ export function FacilityRbacProvider({
     (staffId: string): EffectivePermissions => {
       // Section 7: preview short-circuits — the whole tree sees the role's map.
       if (previewPermissions) return previewPermissions;
-      const staff = facilityStaff.find((s) => s.id === staffId);
+      const staff = staffList.find((s) => s.id === staffId);
       if (!staff) {
         return Object.fromEntries(
           ALL_PERMISSION_KEYS.map((k) => [k, false]),
@@ -310,7 +371,13 @@ export function FacilityRbacProvider({
         presetOverrides,
       });
     },
-    [customRoles, presetOverrides, withOverrides, previewPermissions],
+    [
+      customRoles,
+      presetOverrides,
+      withOverrides,
+      previewPermissions,
+      staffList,
+    ],
   );
 
   const setStaffPermission = useCallback(
@@ -329,7 +396,7 @@ export function FacilityRbacProvider({
         // on top of any pre-existing seed rather than wiping it.
         const base =
           prev.staffOverrides[staffId] ??
-          facilityStaff.find((s) => s.id === staffId)?.permissionOverrides ??
+          staffList.find((s) => s.id === staffId)?.permissionOverrides ??
           {};
         const current = { ...base };
         if (setting === null) {
@@ -343,7 +410,7 @@ export function FacilityRbacProvider({
         };
       });
     },
-    [setStaffPermissionMutate],
+    [setStaffPermissionMutate, staffList],
   );
 
   const resetStaffOverrides = useCallback(
@@ -466,15 +533,25 @@ export function FacilityRbacProvider({
     setState((prev) => ({ ...prev, presetOverrides: {} }));
   }, [presetOverrides, setFacilityRolePermissionMutate]);
 
-  const setViewerId = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, viewerId: id }));
-  }, []);
+  const setViewerId = useCallback(
+    (id: string) => {
+      // A no-op rather than a throw: callers render a switcher that is simply
+      // absent where switching is not allowed, and a stray call from a stale
+      // component must not break the page.
+      if (!canSwitch) return;
+      setState((prev) => ({ ...prev, viewerId: id }));
+    },
+    [canSwitch],
+  );
 
   const value = useMemo<RbacContextValue>(
     () => ({
       viewer,
       viewerId: state.viewerId,
       setViewerId,
+      canSwitchViewer: canSwitch,
+      viewerResolved,
+      staff: staffList,
       customRoles,
       presetOverrides,
       can,
@@ -494,6 +571,9 @@ export function FacilityRbacProvider({
     [
       viewer,
       state.viewerId,
+      canSwitch,
+      viewerResolved,
+      staffList,
       customRoles,
       presetOverrides,
       setViewerId,
@@ -531,6 +611,9 @@ export function useFacilityRbac(): RbacContextValue {
       viewer: owner,
       viewerId: owner.id,
       setViewerId: () => {},
+      canSwitchViewer: false,
+      viewerResolved: true,
+      staff: facilityStaff,
       customRoles: {},
       presetOverrides: {},
       can: () => true,
@@ -559,8 +642,24 @@ export function useFacilityRbac(): RbacContextValue {
 }
 
 export function useFacilityViewer() {
-  const { viewer, viewerId, setViewerId, can } = useFacilityRbac();
-  return { viewer, viewerId, setViewerId, can };
+  const {
+    viewer,
+    viewerId,
+    setViewerId,
+    canSwitchViewer,
+    viewerResolved,
+    staff,
+    can,
+  } = useFacilityRbac();
+  return {
+    viewer,
+    viewerId,
+    setViewerId,
+    canSwitchViewer,
+    viewerResolved,
+    staff,
+    can,
+  };
 }
 
 /**
