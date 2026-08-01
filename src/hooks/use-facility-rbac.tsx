@@ -32,6 +32,8 @@ import {
   useCreateCustomRole,
   useDeleteCustomRole,
   useSetCustomRolePermission,
+  useSetFacilityRolePermission,
+  useSetStaffPermission,
   useUpdateCustomRole,
 } from "@/lib/api/roles";
 
@@ -160,14 +162,24 @@ export function FacilityRbacProvider({
   const [hydrated, setHydrated] = useState(false);
 
   // Custom roles are read through the roles query layer; their writes go through
-  // the mutations below. viewerId + presetOverrides stay local to this provider.
+  // the mutations below. viewerId stays local to this provider.
   const { data: customRolesData } = useQuery(roleQueries.customRoles());
   const customRoles = customRolesData ?? EMPTY_CUSTOM_ROLES;
+
+  // The two DB-backed layers of the cascade. `undefined` while loading and
+  // `null` when signed out; in both cases the local state below is what the UI
+  // shows, for the same reason use-db-permissions falls back — most of the app
+  // is still browsed signed-out until AUTH_ENFORCED flips, and blanking the
+  // editor would look like a bug rather than a sign-in prompt.
+  const { data: dbOverrides } = useQuery(roleQueries.overrides());
 
   const { mutate: createRoleMutate } = useCreateCustomRole();
   const { mutate: updateRoleMutate } = useUpdateCustomRole();
   const { mutate: deleteRoleMutate } = useDeleteCustomRole();
   const { mutate: setRolePermissionMutate } = useSetCustomRolePermission();
+  const { mutate: setFacilityRolePermissionMutate } =
+    useSetFacilityRolePermission();
+  const { mutate: setStaffPermissionMutate } = useSetStaffPermission();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -217,17 +229,27 @@ export function FacilityRbacProvider({
     setFacilityRoleCookie(viewer.primaryRole);
   }, [viewer.primaryRole, hydrated]);
 
-  // A staff member's effective override map: the provider's edited overrides if
-  // an entry exists, otherwise the profile's baked seed.
+  // What a role means at this facility. The database's answer wins when there
+  // is one, because that is what RLS will enforce; the local blob is only the
+  // signed-out fallback.
+  const presetOverrides = dbOverrides?.facilityRoles ?? state.presetOverrides;
+
+  // A staff member's effective override map, most authoritative first: the
+  // database, then this browser's edits, then the profile's baked seed.
   const staffOverridesFor = useCallback(
     (staffId: string): Partial<Record<PermissionKey, PermissionSetting>> => {
-      const edited = state.staffOverrides[staffId];
+      const stored = dbOverrides?.staff[staffId];
+      if (stored) return stored;
+      // Deliberately NOT consulted once the database has answered: a stale
+      // local edit that Postgres does not know about must not resurface as
+      // though it were in force.
+      const edited = dbOverrides ? undefined : state.staffOverrides[staffId];
       if (edited) return edited;
       return (
         facilityStaff.find((s) => s.id === staffId)?.permissionOverrides ?? {}
       );
     },
-    [state.staffOverrides],
+    [dbOverrides, state.staffOverrides],
   );
 
   // Overlay the provider's per-staff overrides onto the profile before resolving
@@ -252,10 +274,10 @@ export function FacilityRbacProvider({
       }
       return resolvePermission(withOverrides(staff), key, {
         customRoles,
-        presetOverrides: state.presetOverrides,
+        presetOverrides,
       });
     },
-    [customRoles, state.presetOverrides, withOverrides, previewPermissions],
+    [customRoles, presetOverrides, withOverrides, previewPermissions],
   );
 
   const can = useCallback(
@@ -276,10 +298,10 @@ export function FacilityRbacProvider({
       }
       return resolveAllPermissions(withOverrides(staff), {
         customRoles,
-        presetOverrides: state.presetOverrides,
+        presetOverrides,
       });
     },
-    [customRoles, state.presetOverrides, withOverrides, previewPermissions],
+    [customRoles, presetOverrides, withOverrides, previewPermissions],
   );
 
   const setStaffPermission = useCallback(
@@ -288,6 +310,11 @@ export function FacilityRbacProvider({
       key: PermissionKey,
       setting: PermissionSetting | null,
     ) => {
+      // Postgres is where this has to land — staff_permissions is layer 3 of
+      // the cascade RLS evaluates. The local edit below is what the editor
+      // shows while signed out.
+      setStaffPermissionMutate({ staffId, key, setting });
+
       setState((prev) => {
         // Seed a fresh entry from the profile's baked overrides so edits build
         // on top of any pre-existing seed rather than wiping it.
@@ -307,15 +334,25 @@ export function FacilityRbacProvider({
         };
       });
     },
-    [],
+    [setStaffPermissionMutate],
   );
 
-  const resetStaffOverrides = useCallback((staffId: string) => {
-    setState((prev) => ({
-      ...prev,
-      staffOverrides: { ...prev.staffOverrides, [staffId]: {} },
-    }));
-  }, []);
+  const resetStaffOverrides = useCallback(
+    (staffId: string) => {
+      // Only the keys the database actually holds — the baked mock seed has no
+      // row to delete, and issuing deletes for it would be noise.
+      for (const key of Object.keys(
+        dbOverrides?.staff[staffId] ?? {},
+      ) as PermissionKey[]) {
+        setStaffPermissionMutate({ staffId, key, setting: null });
+      }
+      setState((prev) => ({
+        ...prev,
+        staffOverrides: { ...prev.staffOverrides, [staffId]: {} },
+      }));
+    },
+    [dbOverrides, setStaffPermissionMutate],
+  );
 
   const createCustomRole = useCallback(
     (
@@ -364,6 +401,10 @@ export function FacilityRbacProvider({
       key: PermissionKey,
       scope: AccessScope | "revoked" | null,
     ) => {
+      // The edit that counts: facility_role_permissions is what
+      // private.resolve_permission reads. Everything below is presentation.
+      setFacilityRolePermissionMutate({ role, key, scope });
+
       setState((prev) => {
         const current = { ...(prev.presetOverrides[role] ?? {}) };
         if (scope === null) {
@@ -380,20 +421,41 @@ export function FacilityRbacProvider({
         return { ...prev, presetOverrides: nextOverrides };
       });
     },
-    [],
+    [setFacilityRolePermissionMutate],
   );
 
-  const resetPresetRole = useCallback((role: FacilityStaffRole) => {
-    setState((prev) => {
-      const next = { ...prev.presetOverrides };
-      delete next[role];
-      return { ...prev, presetOverrides: next };
-    });
-  }, []);
+  // Resetting is a delete per key rather than one call, because the override
+  // tables are keyed per permission. Clearing them only in local state would
+  // leave the row in Postgres still in force — the same lie this change exists
+  // to remove, just behind a different button.
+  const resetPresetRole = useCallback(
+    (role: FacilityStaffRole) => {
+      for (const key of Object.keys(
+        presetOverrides[role] ?? {},
+      ) as PermissionKey[]) {
+        setFacilityRolePermissionMutate({ role, key, scope: null });
+      }
+      setState((prev) => {
+        const next = { ...prev.presetOverrides };
+        delete next[role];
+        return { ...prev, presetOverrides: next };
+      });
+    },
+    [presetOverrides, setFacilityRolePermissionMutate],
+  );
 
   const resetAllPresets = useCallback(() => {
+    for (const [role, keys] of Object.entries(presetOverrides)) {
+      for (const key of Object.keys(keys) as PermissionKey[]) {
+        setFacilityRolePermissionMutate({
+          role: role as FacilityStaffRole,
+          key,
+          scope: null,
+        });
+      }
+    }
     setState((prev) => ({ ...prev, presetOverrides: {} }));
-  }, []);
+  }, [presetOverrides, setFacilityRolePermissionMutate]);
 
   const setViewerId = useCallback((id: string) => {
     setState((prev) => ({ ...prev, viewerId: id }));
@@ -405,7 +467,7 @@ export function FacilityRbacProvider({
       viewerId: state.viewerId,
       setViewerId,
       customRoles,
-      presetOverrides: state.presetOverrides,
+      presetOverrides,
       can,
       resolveFor,
       resolvePermissions,
@@ -424,7 +486,7 @@ export function FacilityRbacProvider({
       viewer,
       state.viewerId,
       customRoles,
-      state.presetOverrides,
+      presetOverrides,
       setViewerId,
       can,
       resolveFor,

@@ -40,10 +40,10 @@ export async function liveFetch<T>(
   return (await response.json()) as T;
 }
 
-/** POST/PATCH helper — no fallback, because a write must never silently no-op. */
+/** Write helper — no fallback, because a write must never silently no-op. */
 export async function liveWrite<T>(
   path: string,
-  method: "POST" | "PATCH",
+  method: "POST" | "PATCH" | "PUT",
   body: unknown,
 ): Promise<T> {
   const response = await fetch(path, {
