@@ -1,5 +1,6 @@
 "use client";
 
+import { signOutEverywhere } from "@/lib/auth/sign-out-client";
 import { useEffect } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { FacilitySwitcher } from "./FacilitySwitcher";
@@ -273,8 +274,7 @@ export function CustomerHeader() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
-                // TODO: Implement logout
-                window.location.href = "/customer/auth/login";
+                void signOutEverywhere();
               }}
               className="text-destructive focus:text-destructive cursor-pointer"
             >

@@ -20,8 +20,31 @@ import { supabaseConfig } from "./env";
 // membership claims. This does one job: keep the session alive.
 // ============================================================================
 
+/**
+ * Copy the request headers and stamp the current path onto them.
+ *
+ * Layouts cannot see the pathname — Next deliberately does not pass it — but a
+ * portal gate needs it for two things: to leave its own /auth/* screens
+ * reachable (gating them would make signing in impossible), and to build a
+ * `?next=` so a bounced user returns where they were headed.
+ *
+ * `set` rather than `append`, so a client that sends its own x-pathname header
+ * cannot smuggle a value past the gate.
+ *
+ * Rebuilt on each call rather than captured once: request.cookies.set() writes
+ * back through to the cookie header, so headers snapshotted before the refresh
+ * would carry the OLD session and undo the token rotation.
+ */
+function headersWithPathname(request: NextRequest): Headers {
+  const headers = new Headers(request.headers);
+  headers.set("x-pathname", request.nextUrl.pathname);
+  return headers;
+}
+
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  let response = NextResponse.next({
+    request: { headers: headersWithPathname(request) },
+  });
 
   // This runs on every request, so an unconfigured environment must not take
   // the whole site down — it should behave exactly as it did before auth
@@ -45,7 +68,9 @@ export async function updateSession(request: NextRequest) {
         for (const { name, value } of cookiesToSet) {
           request.cookies.set(name, value);
         }
-        response = NextResponse.next({ request });
+        response = NextResponse.next({
+          request: { headers: headersWithPathname(request) },
+        });
         for (const { name, value, options } of cookiesToSet) {
           response.cookies.set(name, value, options);
         }

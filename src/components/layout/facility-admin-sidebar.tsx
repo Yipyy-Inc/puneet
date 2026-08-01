@@ -1,5 +1,6 @@
 "use client";
 
+import { signOutEverywhere } from "@/lib/auth/sign-out-client";
 import { useMemo } from "react";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
@@ -61,7 +62,7 @@ export function FacilitySidebar() {
   }, [highPriorityCount, permissions]);
 
   const handleLogout = () => {
-    // TODO: Implement logout logic
+    void signOutEverywhere();
   };
 
   const facility = facilities.find((f) => f.id === facilityId);

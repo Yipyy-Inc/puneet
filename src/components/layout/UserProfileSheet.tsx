@@ -1,5 +1,6 @@
 "use client";
 
+import { signOutEverywhere } from "@/lib/auth/sign-out-client";
 import { useState, useEffect, useTransition } from "react";
 
 import Link from "next/link";
@@ -232,8 +233,7 @@ export function UserProfileSheet({
   };
 
   const handleLogout = () => {
-    // Implement logout logic here
-    console.log("Logout clicked");
+    void signOutEverywhere();
   };
 
   return (

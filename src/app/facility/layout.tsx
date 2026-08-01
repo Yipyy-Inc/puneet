@@ -1,10 +1,5 @@
-import { redirect } from "next/navigation";
-import {
-  canAccessFacilityPortal,
-  canManageCustomers,
-  getViewer,
-  isAuthEnforced,
-} from "@/lib/auth/viewer";
+import { canAccessFacilityPortal, canManageCustomers } from "@/lib/auth/viewer";
+import { guardPortal } from "@/lib/auth/portal-gate";
 import { FacilitySidebar } from "@/components/layout/facility-admin-sidebar";
 import {
   SidebarInset,
@@ -34,20 +29,12 @@ export default async function FacilityLayout({
   children: React.ReactNode;
 }) {
   // One identity for the whole portal, from the signed JWT when there is a
-  // session. The gate itself still answers with the old cookie rule until
+  // session. The gate still answers with the old cookie rule until
   // AUTH_ENFORCED is switched on — see lib/auth/viewer.ts.
-  const viewer = await getViewer();
-
-  if (!canAccessFacilityPortal(viewer)) {
-    // Signed out under enforcement is a different failure from signed in as
-    // the wrong person: one needs a login, the other needs somewhere else to
-    // go. Sending the first case to /dashboard would just bounce them back.
-    redirect(
-      isAuthEnforced() && viewer.source !== "session"
-        ? "/customer/auth/login"
-        : "/dashboard",
-    );
-  }
+  const viewer = await guardPortal({
+    allow: canAccessFacilityPortal,
+    whenWrongPortal: "/dashboard",
+  });
 
   const canCreateCustomer = canManageCustomers(viewer);
 
