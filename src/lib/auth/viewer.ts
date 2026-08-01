@@ -24,7 +24,13 @@ import { createServerClient } from "@/lib/supabase/server";
 //
 //   AUTH_ENFORCED unset/false  session if there is one, else fall back to the
 //                              legacy cookies — today's behaviour exactly
-//   AUTH_ENFORCED=true         a session is required; no session means denied
+//   AUTH_ENFORCED=true         a session is required everywhere
+//   AUTH_ENFORCED=admin        ...only for the platform portal
+//   AUTH_ENFORCED=admin,staff  ...for a chosen set
+//
+// Per-portal because all-at-once is not a cutover, it is a coin flip. Six
+// portals with different audiences fail differently, and turning them on
+// together means debugging six unrelated problems in one sitting.
 //
 // Flip it per environment (preview first), then delete the legacy branch and
 // this flag once every portal has a working sign-in.
@@ -60,8 +66,31 @@ const ANONYMOUS: Omit<Viewer, "legacyRole"> = {
   memberships: [],
 };
 
-export function isAuthEnforced(): boolean {
-  return process.env.AUTH_ENFORCED === "true";
+/** The gated surfaces. `staff` covers the groomer, staff and employee portals. */
+export type Portal = "admin" | "facility" | "customer" | "staff";
+
+const ALL_PORTALS: Portal[] = ["admin", "facility", "customer", "staff"];
+
+function enforcedPortals(): Set<Portal> {
+  const raw = process.env.AUTH_ENFORCED?.trim();
+  if (!raw || raw === "false") return new Set();
+  if (raw === "true") return new Set(ALL_PORTALS);
+
+  const named = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s): s is Portal => (ALL_PORTALS as string[]).includes(s));
+  return new Set(named);
+}
+
+/**
+ * With a portal: is that portal enforced? Without: is EVERY portal enforced —
+ * which is the only condition under which the legacy identity fallback can be
+ * dropped entirely.
+ */
+export function isAuthEnforced(portal?: Portal): boolean {
+  const enforced = enforcedPortals();
+  return portal ? enforced.has(portal) : enforced.size === ALL_PORTALS.length;
 }
 
 /**
@@ -232,19 +261,31 @@ const LEGACY_FACILITY_ROLES = ["facility_admin", "super_admin"];
  * identity — which is what the old cookie rule allowed too.
  */
 export function canAccessFacilityPortal(viewer: Viewer): boolean {
-  if (!isAuthEnforced()) {
+  if (!isAuthEnforced("facility")) {
     return (
       viewer.legacyRole === null ||
       LEGACY_FACILITY_ROLES.includes(viewer.legacyRole)
     );
   }
-  return viewer.isPlatformAdmin || viewer.memberships.length > 0;
+  return (
+    viewer.source === "session" &&
+    (viewer.isPlatformAdmin || viewer.memberships.length > 0)
+  );
 }
 
-/** Platform super-admin portal. Nothing but the platform-admin flag. */
+/**
+ * Platform super-admin portal. Nothing but the platform-admin flag.
+ *
+ * `source === "session"` is not belt-and-braces, it is load-bearing. While any
+ * portal is still unenforced, getViewer keeps returning the legacy fallback for
+ * a visitor with no session — and that fallback sets `isPlatformAdmin: true`
+ * when the `user_role` cookie is ABSENT, because that is what the old rule did.
+ * Checking the flag alone would therefore admit the exact anonymous visitor
+ * this gate exists to stop.
+ */
 export function canAccessAdminPortal(viewer: Viewer): boolean {
-  if (!isAuthEnforced()) return viewer.legacyRole !== "facility_admin";
-  return viewer.isPlatformAdmin;
+  if (!isAuthEnforced("admin")) return viewer.legacyRole !== "facility_admin";
+  return viewer.source === "session" && viewer.isPlatformAdmin;
 }
 
 /**
@@ -254,7 +295,7 @@ export function canAccessAdminPortal(viewer: Viewer): boolean {
  * bookings.
  */
 export function canAccessCustomerPortal(viewer: Viewer): boolean {
-  if (!isAuthEnforced()) return true;
+  if (!isAuthEnforced("customer")) return true;
   return viewer.source === "session";
 }
 
@@ -264,8 +305,11 @@ export function canAccessCustomerPortal(viewer: Viewer): boolean {
  * you land on is decided by landingPathForClaims, not by who may enter.
  */
 export function canAccessStaffPortal(viewer: Viewer): boolean {
-  if (!isAuthEnforced()) return true;
-  return viewer.isPlatformAdmin || viewer.memberships.length > 0;
+  if (!isAuthEnforced("staff")) return true;
+  return (
+    viewer.source === "session" &&
+    (viewer.isPlatformAdmin || viewer.memberships.length > 0)
+  );
 }
 
 /**
@@ -281,6 +325,8 @@ export function canAccessStaffPortal(viewer: Viewer): boolean {
 const MANAGING_ROLES = new Set(["owner", "admin", "manager"]);
 
 export function canManageCustomers(viewer: Viewer): boolean {
-  if (!isAuthEnforced()) return viewer.legacyRole === "facility_admin";
+  if (!isAuthEnforced("facility")) {
+    return viewer.legacyRole === "facility_admin";
+  }
   return viewer.memberships.some((m) => MANAGING_ROLES.has(m.role));
 }

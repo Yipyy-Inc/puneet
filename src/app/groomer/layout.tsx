@@ -15,6 +15,7 @@ export default async function GroomerLayout({
   children: React.ReactNode;
 }) {
   const viewer = await guardPortal({
+    portal: "staff",
     allow: canAccessStaffPortal,
     publicPrefixes: ["/groomer/auth"],
   });

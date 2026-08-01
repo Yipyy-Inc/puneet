@@ -32,6 +32,7 @@ export default async function FacilityLayout({
   // session. The gate still answers with the old cookie rule until
   // AUTH_ENFORCED is switched on — see lib/auth/viewer.ts.
   const viewer = await guardPortal({
+    portal: "facility",
     allow: canAccessFacilityPortal,
     whenWrongPortal: "/dashboard",
   });
