@@ -30,6 +30,21 @@
 -- membership gets it in `memberships`; flipping is_platform_admin is
 -- reflected; and a membership set is_active = false disappears from the token,
 -- so suspending a staff member revokes access on the next refresh.
+--
+-- End-to-end, with the hook enabled: signing in as a user with one membership
+-- yielded a token carrying that membership; `permissions` returned 168 rows
+-- where anon sees 0; and with TWO facilities in the table the user saw exactly
+-- one — their own. Tenant isolation demonstrated, not assumed.
+--
+-- SEEDING USERS VIA SQL — the trap that costs an hour:
+-- auth.users has confirmation_token, recovery_token, email_change,
+-- email_change_token_new, email_change_token_current, phone_change,
+-- phone_change_token and reauthentication_token as NULLABLE columns, but
+-- GoTrue scans them into non-nullable Go strings. Insert a row leaving them
+-- NULL and every sign-in fails with an EMPTY error message — no code, no
+-- detail, nothing in the client. Always set them to '' explicitly. Prefer the
+-- auth API over direct inserts where you can; note it rejects reserved TLDs
+-- such as .test, so use a real domain for fixtures.
 -- ============================================================================
 
 create or replace function private.custom_access_token_hook(event jsonb)
