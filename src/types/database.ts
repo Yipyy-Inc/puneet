@@ -751,6 +751,13 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: string | null;
       };
+      my_permissions: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+        }[];
+      };
     };
     Enums: {
       access_scope: "anytime" | "operating_hours" | "assigned_shifts" | "none";
