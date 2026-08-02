@@ -55,6 +55,25 @@ const NAV_KEYS = [
 const GRANT = { granted: true, scope: "anytime" as const };
 const REVOKE = { granted: false, scope: "none" as const };
 
+/**
+ * Why every sign-in below revokes `open_close_register`.
+ *
+ * The employee shell is wrapped in RegisterOpenGate: anyone who can open the
+ * till is blocked by a full-screen "Start your day — count the drawer" panel
+ * until today's drawer is counted open, and the sidebar is not rendered at all
+ * while that is up. Nathalie is a manager, so she holds the permission, so
+ * these two tests were reading a sidebar that did not exist — they failed on
+ * `sidebar.getByRole("link").first()` being invisible and read as a nav
+ * regression, which is not what was wrong.
+ *
+ * Revoking it rather than counting the drawer open keeps each test about one
+ * thing; register-gate.spec.ts already owns the gate itself and uses this same
+ * escape for its "never gated" case. The only nav consequence is that "Daily
+ * Register" is absent from the sidebar under test, and nothing here asserts on
+ * it.
+ */
+const NO_REGISTER: Overrides = { open_close_register: REVOKE };
+
 type Overrides = Record<string, { granted: boolean; scope: string }>;
 
 /** Seed the cookie + RBAC localStorage BEFORE any app JS runs, then land in the
@@ -113,7 +132,7 @@ test.describe("Staff portal nav parity", () => {
     page,
     context,
   }) => {
-    await signInAs(context, page, "fs-mgr-01"); // Nathalie, primaryRole manager
+    await signInAs(context, page, "fs-mgr-01", NO_REGISTER); // Nathalie, manager
 
     const items = await sidebarItems(page);
 
@@ -160,10 +179,14 @@ test.describe("Staff portal nav parity", () => {
     page,
     context,
   }) => {
-    await signInAs(context, page, "fs-mgr-01");
+    await signInAs(context, page, "fs-mgr-01", NO_REGISTER);
     const sidebar = page.locator('[data-slot="sidebar-inner"]').first();
     await sidebar.getByRole("link", { name: "Grooming", exact: true }).click();
-    await expect(page).toHaveURL(/\/employee\/grooming/);
+    // Generous, because the dev server compiles /employee/grooming on the first
+    // hit and that can outlast the default assertion timeout. It passed
+    // whenever the route happened to be warm and failed when it was not, which
+    // is the worst kind of red: real-looking and about nothing.
+    await expect(page).toHaveURL(/\/employee\/grooming/, { timeout: 90_000 });
     // The facility grooming module renders its Check-In board, NOT a bespoke
     // "Grooming Queue" screen.
     await expect(page.getByText("Grooming Queue", { exact: true })).toHaveCount(

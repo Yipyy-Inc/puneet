@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { PASSWORD } from "./_auth";
 
 // ============================================================================
 // /api/staff does not hand out what the caller may not see.
@@ -18,8 +19,6 @@ import { test, expect, type Page } from "@playwright/test";
 // src/app/api/staff/route.ts and re-run. Every "cannot see" expectation below
 // should go red.
 // ============================================================================
-
-const PASSWORD = "YipyyDev!2026";
 
 /** A seeded colleague with a full sensitive tail — pay, code, notes, overrides. */
 const COLLEAGUE = "fs-board-01";

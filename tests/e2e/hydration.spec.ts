@@ -5,6 +5,7 @@ import {
   type BrowserContext,
   type Page,
 } from "@playwright/test";
+import { PASSWORD } from "./_auth";
 
 // ============================================================================
 // No hydration mismatches on the surfaces a signed-in person lands on.
@@ -31,8 +32,6 @@ import {
 //     permission, which is what the server's SSR fallback already assumes, so
 //     permission-shaped mismatches would agree by accident and stay hidden.
 // ============================================================================
-
-const PASSWORD = "YipyyDev!2026";
 
 const FACILITY_ROUTES = [
   "/facility/dashboard",
