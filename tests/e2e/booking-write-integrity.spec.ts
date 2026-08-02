@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { PASSWORD } from "./_auth";
 
 // ============================================================================
 // A customer cannot book on their own terms.
@@ -26,8 +27,6 @@ import { test, expect, type Page } from "@playwright/test";
 // hole was PostgREST, where the same customer sets the price directly, and
 // only supabase/tests/booking-write-integrity.sql reaches that.
 // ============================================================================
-
-const PASSWORD = "YipyyDev!2026";
 
 /** Alice Johnson — the seeded client behind customer@yipyy.dev. */
 const CUSTOMER_CLIENT_REF = 15;

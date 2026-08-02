@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { PASSWORD } from "./_auth";
 
 // ============================================================================
 // The role editor edits what Postgres enforces.
@@ -16,8 +17,6 @@ import { test, expect, type Page } from "@playwright/test";
 // real override rows and removes them again; a failure mid-run can leave one
 // behind, which the first step clears.
 // ============================================================================
-
-const PASSWORD = "YipyyDev!2026";
 
 type PermissionMap = Record<string, string>;
 
