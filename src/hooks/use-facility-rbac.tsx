@@ -350,12 +350,34 @@ export function FacilityRbacProvider({
     [customRoles, presetOverrides, withOverrides, previewPermissions],
   );
 
+  // What the DATABASE says about the person holding this session, seeded by
+  // the server in the facility layout so it is present on the very first
+  // render. `null` when signed out.
+  const dbPermissions = useDbPermissions();
+
+  // Precedence: preview beats everything (it is a deliberate "show me their
+  // view"), then the database, then the legacy cascade for signed-out browsing.
+  //
+  // `can` reads the database directly rather than going through `resolveFor`,
+  // because resolveFor answers about ANY staff member and the database only
+  // answers about the caller. Callers of `can` were the last group still on the
+  // mock cascade while usePermission/useCan had moved over — same question,
+  // two answers, depending on which hook a component happened to reach for.
   const can = useCallback(
-    (key: PermissionKey) => resolveFor(viewer, key).granted,
-    [viewer, resolveFor],
+    (key: PermissionKey) => {
+      if (previewPermissions) return previewPermissions[key] !== false;
+      // An ABSENT key is not a grant. my_permissions() returns a row for every
+      // key — including 'none' for denials — so a gap means the map is
+      // incomplete, and the safe reading of "no answer" is no.
+      if (dbPermissions) {
+        const scope = dbPermissions[key];
+        return scope !== false && scope !== undefined;
+      }
+      return resolveFor(viewer, key).granted;
+    },
+    [viewer, resolveFor, dbPermissions, previewPermissions],
   );
 
-  // TODO: move to server/JWT — resolve against the mock stores for now.
   const resolvePermissions = useCallback(
     (staffId: string): EffectivePermissions => {
       // Section 7: preview short-circuits — the whole tree sees the role's map.
@@ -690,12 +712,14 @@ export function useEffectivePermissions(): EffectivePermissions {
 /**
  * Does the acting viewer have `key` (with any scope)? The ergonomic check every
  * guard/sidebar/mask should call.
+ *
+ * Now just `can` — the provider applies the same precedence (preview, then the
+ * database, then the legacy cascade), so the two cannot drift apart. They used
+ * to: this hook consulted the database while `can` did not, and which answer a
+ * component got depended on which hook it happened to import.
  */
 export function usePermission(key: PermissionKey): boolean {
   const { can } = useFacilityRbac();
-  const fromDb = useDbPermissions();
-
-  if (fromDb) return fromDb[key] !== false && fromDb[key] !== undefined;
   return can(key);
 }
 

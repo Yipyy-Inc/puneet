@@ -86,6 +86,40 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Pets are resolved and checked BEFORE the booking is written.
+  //
+  // booking_pets refuses a pet that does not belong to the booking's client
+  // (20260802120000), and there is no DELETE policy on bookings — by design,
+  // a booking is cancelled, not erased. So a rejection discovered after the
+  // insert cannot be tidied up: it would leave a booking with no animals on
+  // it and no way to withdraw it. Checking first is what keeps that row from
+  // existing at all.
+  const petRefs = Array.isArray(input.petId) ? input.petId : [input.petId];
+  const wanted = petRefs.filter((ref): ref is number => ref != null);
+
+  // RLS-scoped, so a caller who cannot see a pet gets nothing back for it and
+  // the count check below is what turns that into a refusal.
+  const { data: pets } = wanted.length
+    ? await supabase.from("pets").select("id, client_id").in("ref", wanted)
+    : { data: [] };
+
+  const resolved = pets ?? [];
+  if (resolved.length !== wanted.length) {
+    return NextResponse.json(
+      { error: "One or more of those pets could not be found." },
+      { status: 422 },
+    );
+  }
+  if (resolved.some((p) => p.client_id !== client.id)) {
+    // The attack the database also refuses: attaching somebody else's animal
+    // to your own booking, which the facility would read as consent to hand
+    // that animal over.
+    return NextResponse.json(
+      { error: "Those pets are not registered to this client." },
+      { status: 403 },
+    );
+  }
+
   const row = bookingToRow(input, {
     facilityId: facility.facilityId,
     clientRowId: client.id,
@@ -109,21 +143,25 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Pets are a join table. Written after the booking so a rejected insert
-  // above leaves nothing behind.
-  const petRefs = Array.isArray(input.petId) ? input.petId : [input.petId];
-  const wanted = petRefs.filter((ref): ref is number => ref != null);
+  // The join rows. Pre-validated above, so a refusal here means the caller
+  // may create a booking but not crew one — reported rather than swallowed,
+  // because an unchecked insert would answer 201 for a booking with no
+  // animals on it.
+  if (resolved.length > 0) {
+    const { error: petError } = await supabase
+      .from("booking_pets")
+      .insert(resolved.map((p) => ({ booking_id: created.id, pet_id: p.id })));
 
-  if (wanted.length > 0) {
-    const { data: pets } = await supabase
-      .from("pets")
-      .select("id")
-      .in("ref", wanted);
-
-    if (pets?.length) {
-      await supabase
-        .from("booking_pets")
-        .insert(pets.map((p) => ({ booking_id: created.id, pet_id: p.id })));
+    if (petError) {
+      // Deliberately NOT "the booking was not created" — it was, and there is
+      // no delete policy to undo it. Saying so is better than a tidy lie.
+      return NextResponse.json(
+        {
+          error:
+            "The booking was created but its pets could not be attached. Ask a manager to add them.",
+        },
+        { status: petError.code === "42501" ? 403 : 500 },
+      );
     }
   }
 
