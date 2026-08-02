@@ -1,5 +1,5 @@
 import type { StaffProfile } from "@/types/facility-staff";
-import type { Tables } from "@/types/database";
+import type { Tables, TablesInsert } from "@/types/database";
 
 // ============================================================================
 // Database row -> the StaffProfile the app already expects.
@@ -46,6 +46,99 @@ export function rowToStaffProfile(row: StaffRow): StaffProfileWithRowId {
 }
 
 export const STAFF_SELECT = `*` as const;
+
+// ── The way back ────────────────────────────────────────────────────────────
+// Mirrors rowToStaffProfile. Fields that are COLUMNS are written as columns;
+// everything else is the `details` tail, exactly as the read direction assumes.
+//
+// Only what it is GIVEN is mapped, so a partial update stays partial. That
+// matters more here than elsewhere: this shape carries payroll and permission
+// overrides, and a full-replace mapper would blank whichever of them the
+// caller left out.
+const COLUMN_FIELDS = [
+  "id",
+  "rowId",
+  "firstName",
+  "lastName",
+  "email",
+  "phone",
+  "jobTitle",
+  "avatarUrl",
+  "colorHex",
+  "primaryRole",
+  "additionalRoles",
+  "serviceAssignments",
+  "status",
+  "statusChangedAt",
+  "statusReason",
+  "statusNote",
+  "showOnCalendar",
+  "lastActive",
+];
+
+/**
+ * `""` is not a timestamp, and it is what comes back out of the read mapper.
+ *
+ * `rowToStaffProfile` turns a null `last_active` into an empty string, because
+ * the client type says `lastActive: string`. Round-trip that — read a profile,
+ * change a phone number, send it back — and Postgres is asked to store `""` in
+ * a `timestamptz`, which is a 500 rather than a null.
+ *
+ * It only bites on staff who have never been active, which is why the first
+ * test to hit it was the one editing a dev account rather than a seeded one.
+ */
+function timestampOrNull(value: string | undefined): string | null {
+  return value && value.trim() !== "" ? value : null;
+}
+
+export function staffToRow(
+  input: Partial<StaffProfile>,
+  context: { facilityId?: string; legacyId?: string },
+): Partial<TablesInsert<"staff">> {
+  const row: Partial<TablesInsert<"staff">> = {};
+
+  if (context.facilityId) row.facility_id = context.facilityId;
+  if (context.legacyId) row.legacy_id = context.legacyId;
+
+  if (input.firstName !== undefined) row.first_name = input.firstName;
+  if (input.lastName !== undefined) row.last_name = input.lastName;
+  if (input.email !== undefined) row.email = input.email;
+  if (input.phone !== undefined) row.phone = input.phone;
+  if (input.jobTitle !== undefined) row.job_title = input.jobTitle;
+  if (input.avatarUrl !== undefined) row.avatar_url = input.avatarUrl;
+  if (input.colorHex !== undefined) row.color_hex = input.colorHex;
+  if (input.primaryRole !== undefined) row.primary_role = input.primaryRole;
+  if (input.additionalRoles !== undefined) {
+    row.additional_roles = input.additionalRoles;
+  }
+  if (input.serviceAssignments !== undefined) {
+    row.service_assignments = input.serviceAssignments;
+  }
+  if (input.status !== undefined) row.status = input.status;
+  if (input.statusChangedAt !== undefined) {
+    row.status_changed_at = timestampOrNull(input.statusChangedAt);
+  }
+  if (input.statusReason !== undefined) row.status_reason = input.statusReason;
+  if (input.statusNote !== undefined) row.status_note = input.statusNote;
+  if (input.showOnCalendar !== undefined) {
+    row.show_on_calendar = input.showOnCalendar;
+  }
+  if (input.lastActive !== undefined) {
+    row.last_active = timestampOrNull(input.lastActive);
+  }
+
+  const details: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (!COLUMN_FIELDS.includes(key) && value !== undefined) {
+      details[key] = value;
+    }
+  }
+  if (Object.keys(details).length > 0) {
+    row.details = details as TablesInsert<"staff">["details"];
+  }
+
+  return row;
+}
 
 // ============================================================================
 // Redaction — because RLS gates rows, not columns.

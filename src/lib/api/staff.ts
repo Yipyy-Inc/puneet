@@ -1,3 +1,7 @@
+"use client";
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import {
   taskTemplates,
   staffTasks,
@@ -7,7 +11,7 @@ import {
 } from "@/data/staff-tasks";
 import { facilityStaff } from "@/data/facility-staff";
 import type { StaffProfile } from "@/types/facility-staff";
-import { liveFetch } from "./live-fetch";
+import { liveFetch, liveWrite } from "./live-fetch";
 import {
   shiftTasks,
   shiftSwapRequests,
@@ -102,3 +106,46 @@ export const staffQueries = {
     queryFn: async () => shiftTemplates,
   }),
 };
+
+// ============================================================================
+// Writes.
+//
+// `liveWrite`, not `liveWriteOptional`: a staff edit has nowhere else to go.
+// Signed out these must fail loudly rather than pretend, because the only
+// alternative — a local copy — is what the screens are being moved OFF.
+//
+// The RESPONSE is the source of truth for what happened, not the payload that
+// was sent. The database silently reverts fields the caller may not set
+// (20260802140000), so a mutation that optimistically kept its own input would
+// show an edit that was thrown away. Every hook below returns what came back.
+// ============================================================================
+
+/** Add someone to the roster. Requires `manage_staff`, enforced by RLS. */
+export function useCreateStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (profile: Partial<StaffProfile>) =>
+      liveWrite<StaffProfile>("/api/staff", "POST", profile),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["staff", "profiles"] }),
+  });
+}
+
+/**
+ * Change someone's record. Send only what changed — the route merges onto the
+ * stored row, so a partial patch cannot blank the fields it omits.
+ */
+export function useUpdateStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      staffId,
+      patch,
+    }: {
+      staffId: string;
+      patch: Partial<StaffProfile>;
+    }) => liveWrite<StaffProfile>(`/api/staff/${staffId}`, "PATCH", patch),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["staff", "profiles"] }),
+  });
+}

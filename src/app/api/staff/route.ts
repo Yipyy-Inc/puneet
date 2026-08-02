@@ -1,12 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
-import { holds, myPermissions } from "@/lib/auth/permissions";
-import {
-  STAFF_SELECT,
-  redactStaffProfile,
-  rowToStaffProfile,
-} from "@/lib/api/mappers/staff";
+import { STAFF_SELECT, staffToRow } from "@/lib/api/mappers/staff";
+import { staffResponder } from "@/lib/api/staff-response";
+import { getFacilityContext } from "@/lib/api/facility-context";
+import type { StaffProfile } from "@/types/facility-staff";
 
 // ============================================================================
 // Staff at the caller's facility.
@@ -19,11 +17,14 @@ import {
 //
 // RLS cannot help with that. It gates rows, not columns, so a policy that lets
 // you see a colleague lets you see every column of them. Column-level access
-// has to be decided above the database, which is here.
+// has to be decided above the database, which is here — via staffResponder, so
+// that GET and the writes below cannot drift apart.
 //
-// The permissions used are the DATABASE's answer (`my_permissions()`), not the
-// client's opinion of itself — the same map /api/permissions returns, resolved
-// server-side where it can decide what leaves rather than what gets drawn.
+// WHAT MAY BE WRITTEN is decided BELOW this file, in the database
+// (20260802140000). A staff row feeds the permission cascade — resolve_permission
+// reads roles from it — so "who may change which column" is not something a
+// route handler can be trusted with. PostgREST is reachable directly with the
+// anon key and a session cookie; this file is a convenience, not a gate.
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -36,34 +37,84 @@ export async function GET() {
 
   const supabase = await createServerClient();
 
-  const [{ data, error }, permissions] = await Promise.all([
+  const [{ data, error }, responder] = await Promise.all([
     supabase.from("staff").select(STAFF_SELECT).order("legacy_id"),
-    myPermissions(),
+    staffResponder(user.email),
   ]);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const grants = {
-    payroll: holds(permissions, "view_payroll"),
-    permissions: holds(permissions, "view_staff_permissions"),
-    hr: holds(permissions, "manage_staff"),
-  };
+  return NextResponse.json(data.map(responder.toResponse));
+}
 
-  // Which row is the caller's own. Matched on the VERIFIED session email, the
-  // same bridge lib/auth/legacy-identity.ts uses. Lowercased both sides
-  // because the staff table does not constrain case and a mismatch here fails
-  // in the safe direction — you would be redacted from your own record, which
-  // is confusing but not a leak.
-  const email = user.email?.trim().toLowerCase();
+export async function POST(request: NextRequest) {
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
 
-  const profiles = data.map((row) => {
-    const profile = rowToStaffProfile(row);
-    const isSelf =
-      email != null && profile.email?.trim().toLowerCase() === email;
-    return redactStaffProfile(profile, grants, isSelf);
+  const input = (await request.json()) as Partial<StaffProfile>;
+
+  if (!input.firstName || !input.lastName || !input.email) {
+    return NextResponse.json(
+      { error: "A name and an email address are required." },
+      { status: 422 },
+    );
+  }
+  if (!input.primaryRole) {
+    return NextResponse.json(
+      { error: "A primary role is required." },
+      { status: 422 },
+    );
+  }
+
+  const supabase = await createServerClient();
+  const facility = await getFacilityContext();
+  if (!facility) {
+    return NextResponse.json({ error: "Facility not found." }, { status: 500 });
+  }
+
+  // A fresh "fs-*" id rather than letting legacy_id fall back to the uuid.
+  // 47 files still key people by that shape, and a new hire whose id does not
+  // look like the others is a person who quietly goes missing from whichever
+  // screen has not moved onto the API yet.
+  const legacyId = `fs-${crypto.randomUUID().slice(0, 8)}`;
+
+  const row = staffToRow(input, {
+    facilityId: facility.facilityId,
+    legacyId,
   });
 
-  return NextResponse.json(profiles);
+  const { data: created, error } = await supabase
+    .from("staff")
+    .insert(row as never)
+    .select(STAFF_SELECT)
+    .single();
+
+  if (error) {
+    // 42501 is the RLS refusal (no manage_staff here); 23505 is a duplicate,
+    // which for this table means the email is already on the roster.
+    if (error.code === "42501") {
+      return NextResponse.json(
+        { error: "Not allowed to add staff at this facility." },
+        { status: 403 },
+      );
+    }
+    if (error.code === "23505") {
+      return NextResponse.json(
+        { error: "Someone with that email is already on the roster." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Echoed back through the SAME redaction as GET. The trigger may have
+  // stripped a salary this caller was not allowed to set, and the response has
+  // to show what was stored rather than what was sent — otherwise the UI
+  // displays a figure the database rejected.
+  const responder = await staffResponder(user.email);
+  return NextResponse.json(responder.toResponse(created), { status: 201 });
 }
