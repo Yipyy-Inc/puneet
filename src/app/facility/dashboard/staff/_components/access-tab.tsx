@@ -324,26 +324,45 @@ function PermissionsSection({
   resolveFor: (p: StaffProfile, k: PermissionKey) => PermissionSetting;
   customRoleLabels: Record<string, string>;
 }) {
+  // The per-person overrides are withheld without `view_staff_permissions`.
+  // Nothing below can be shown honestly without them — the resolved column
+  // would silently omit whatever an override changes — and editing would be
+  // destructive, since a save writes back only the overrides in hand and drops
+  // the rest.
+  const overrides = profile.permissionOverrides;
+
   const rows = useMemo(() => {
     return PERMISSION_GROUPS.map((g) => ({
       ...g,
       permissions: g.permissions.map((p) => {
         const resolved = resolveFor(profile, p.key);
-        const override = profile.permissionOverrides[p.key];
+        const override = overrides?.[p.key];
         return { ...p, resolved, override };
       }),
     }));
-  }, [profile, resolveFor]);
+  }, [profile, overrides, resolveFor]);
 
   const totalGranted = rows.reduce(
     (n, g) => n + g.permissions.filter((p) => p.resolved.granted).length,
     0,
   );
-  const overrideCount = Object.keys(profile.permissionOverrides).length;
+
+  if (!overrides) {
+    return (
+      <div className="text-muted-foreground rounded-md border border-dashed p-6 text-center text-sm">
+        Permissions are hidden.
+        <div className="mt-1 text-xs">
+          Requires the “View staff permissions” permission.
+        </div>
+      </div>
+    );
+  }
+
+  const overrideCount = Object.keys(overrides).length;
 
   function applyScope(key: PermissionKey, next: AccessScope | "reset") {
     if (!onUpdate) return;
-    const nextOverrides = { ...profile.permissionOverrides };
+    const nextOverrides = { ...overrides };
     if (next === "reset") {
       delete nextOverrides[key];
     } else if (next === "none") {

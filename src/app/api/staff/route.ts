@@ -1,20 +1,29 @@
 import { NextResponse } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
-import { STAFF_SELECT, rowToStaffProfile } from "@/lib/api/mappers/staff";
+import { holds, myPermissions } from "@/lib/auth/permissions";
+import {
+  STAFF_SELECT,
+  redactStaffProfile,
+  rowToStaffProfile,
+} from "@/lib/api/mappers/staff";
 
 // ============================================================================
 // Staff at the caller's facility.
 //
-// RLS decides what comes back: anyone with a membership can see their
+// RLS decides WHICH ROWS come back: anyone with a membership can see their
 // colleagues, because rotas, calendars and handovers are unusable otherwise.
-// Being able to see that a groomer exists is not the sensitive part — payroll
-// and permission overrides are, and those ride along in `details`.
+// Being able to see that a groomer exists is not the sensitive part — payroll,
+// HR notes, the clock-in code and the permission overrides are, and those ride
+// along in `details`.
 //
-// That is a gap worth naming rather than leaving implied: this route returns
-// the whole row to anyone who can read it. Splitting the sensitive tail behind
-// `view_staff_performance` / `view_staff_permissions` is the follow-up, and it
-// belongs here in the route, since RLS gates rows and not columns.
+// RLS cannot help with that. It gates rows, not columns, so a policy that lets
+// you see a colleague lets you see every column of them. Column-level access
+// has to be decided above the database, which is here.
+//
+// The permissions used are the DATABASE's answer (`my_permissions()`), not the
+// client's opinion of itself — the same map /api/permissions returns, resolved
+// server-side where it can decide what leaves rather than what gets drawn.
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -27,14 +36,34 @@ export async function GET() {
 
   const supabase = await createServerClient();
 
-  const { data, error } = await supabase
-    .from("staff")
-    .select(STAFF_SELECT)
-    .order("legacy_id");
+  const [{ data, error }, permissions] = await Promise.all([
+    supabase.from("staff").select(STAFF_SELECT).order("legacy_id"),
+    myPermissions(),
+  ]);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data.map(rowToStaffProfile));
+  const grants = {
+    payroll: holds(permissions, "view_payroll"),
+    permissions: holds(permissions, "view_staff_permissions"),
+    hr: holds(permissions, "manage_staff"),
+  };
+
+  // Which row is the caller's own. Matched on the VERIFIED session email, the
+  // same bridge lib/auth/legacy-identity.ts uses. Lowercased both sides
+  // because the staff table does not constrain case and a mismatch here fails
+  // in the safe direction — you would be redacted from your own record, which
+  // is confusing but not a leak.
+  const email = user.email?.trim().toLowerCase();
+
+  const profiles = data.map((row) => {
+    const profile = rowToStaffProfile(row);
+    const isSelf =
+      email != null && profile.email?.trim().toLowerCase() === email;
+    return redactStaffProfile(profile, grants, isSelf);
+  });
+
+  return NextResponse.json(profiles);
 }

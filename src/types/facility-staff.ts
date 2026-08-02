@@ -262,7 +262,11 @@ export interface EmploymentDetails {
   /** A configured employment-type value (StaffHrConfig.employmentTypes). Left as
    *  a string so the facility can add custom types (e.g. volunteer, intern). */
   employmentType: string;
-  notes: string;
+  /** Free-text HR notes. `undefined` means WITHHELD — the caller lacks
+   *  `manage_staff` on someone else's record. `""` means there are none.
+   *  Do not collapse the two: "no notes" and "notes you may not read" look the
+   *  same on screen and are not the same thing. */
+  notes?: string;
 }
 
 export interface ClockInSettings {
@@ -289,9 +293,13 @@ export interface StaffProfile {
   showOnCalendar: boolean;
   calendarAccess: CalendarAccess;
   clockIn: ClockInSettings;
-  permissionOverrides: Partial<Record<PermissionKey, PermissionSetting>>;
+  /** `undefined` means WITHHELD (no `view_staff_permissions` on someone
+   *  else's record) — distinct from `{}`, which means "no overrides set". */
+  permissionOverrides?: Partial<Record<PermissionKey, PermissionSetting>>;
   notifications: Record<NotificationEvent, NotificationScope>;
-  payroll: PayrollConfig;
+  /** `undefined` means WITHHELD (no `view_payroll` on someone else's record).
+   *  Never fall back to zeroes: `$0/hr` renders as a fact about their pay. */
+  payroll?: PayrollConfig;
   employment: EmploymentDetails;
   status: "active" | "invited" | "inactive" | "terminated";
   /** ISO timestamp of the last status change */
@@ -1649,9 +1657,14 @@ export function resolvePermission(
   key: PermissionKey,
   ctx: ResolvePermissionContext = {},
 ): PermissionSetting {
-  if (staff.permissionOverrides[key]) {
-    return staff.permissionOverrides[key]!;
-  }
+  // Absent overrides mean WITHHELD, not "none set" — the caller lacks
+  // `view_staff_permissions` on this person. The cascade then resolves from
+  // roles alone, which under-reports: it can say "denied" where an override
+  // grants. That is the safe direction for drawing UI, and it is never the
+  // enforcement — RLS and my_permissions() answer for the person themselves,
+  // with the overrides they cannot see.
+  const override = staff.permissionOverrides?.[key];
+  if (override) return override;
 
   const scopes: AccessScope[] = [];
   const primary = scopeForRole(staff.primaryRole, key, ctx.presetOverrides);
