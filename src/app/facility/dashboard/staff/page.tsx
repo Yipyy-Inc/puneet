@@ -42,11 +42,12 @@ import {
   type FacilityStaffRole,
   type StaffProfile,
 } from "@/types/facility-staff";
-import {
-  facilityStaff,
-  upsertFacilityStaff,
-  FACILITY_LOCATIONS,
-} from "@/data/facility-staff";
+import { useQuery } from "@tanstack/react-query";
+import { staffQueries, useCreateStaff, useUpdateStaff } from "@/lib/api/staff";
+// `upsertFacilityStaff` still writes the mock directory, which the 46 files
+// that have not moved yet continue to read. Kept in step with the API write
+// until they do; it becomes dead the moment the last of them migrates.
+import { upsertFacilityStaff, FACILITY_LOCATIONS } from "@/data/facility-staff";
 import {
   initOnboarding,
   regenerateOnboardingToken,
@@ -104,7 +105,21 @@ export default function FacilityStaffPage() {
   // Table 4 — editing staff (Add / Edit, incl. the form's payroll fields)
   // requires manage_staff; admin resolves to all-access via the fallback.
   const canManageStaff = usePermission("manage_staff");
-  const [staff, setStaff] = useState<StaffProfile[]>(facilityStaff);
+
+  // THE ROSTER COMES FROM POSTGRES.
+  //
+  // This was `useState(facilityStaff)` — the mock array, edited in place. Every
+  // change survived until the next reload and then quietly wasn't there, which
+  // is a worse failure than an error because it looks like it worked.
+  //
+  // `staffQueries.profiles()` serves real rows when there is a session and the
+  // same mock array when there is not, so signed-out browsing is unchanged
+  // while AUTH_ENFORCED is off. The writes below go to /api/staff, where the
+  // database decides what a caller may actually change.
+  const { data: roster, isLoading } = useQuery(staffQueries.profiles());
+  const staff = useMemo(() => roster ?? [], [roster]);
+  const { mutateAsync: createStaff } = useCreateStaff();
+  const { mutateAsync: updateStaff } = useUpdateStaff();
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<FacilityStaffRole | "all">(
     "all",
@@ -195,24 +210,39 @@ export default function FacilityStaffPage() {
       subjectName: `${next.firstName} ${next.lastName}`.trim(),
     };
 
-    setStaff((list) => {
-      const idx = list.findIndex((s) => s.id === next.id);
-      if (idx === -1) {
-        // New staff member
-        logStaffCreated(subject, actor, next.primaryRole);
-        // Auto-populate a role-appropriate onboarding checklist (spec F1).
-        initOnboarding(next.id, next.primaryRole, next.employment.hireDate);
-        return [next, ...list];
+    const existing = staff.find((s) => s.id === next.id);
+
+    // Fire-and-report rather than fire-and-forget. The database silently
+    // reverts fields this caller may not set, so the SAVED record is what gets
+    // logged and shown — logging `next` would record a raise that never
+    // happened.
+    void (async () => {
+      try {
+        const saved = existing
+          ? await updateStaff({ staffId: next.id, patch: next })
+          : await createStaff(next);
+
+        if (existing) {
+          const changes = diffProfile(existing, saved);
+          if (changes.length > 0) logStaffUpdated(subject, actor, changes);
+        } else {
+          logStaffCreated(subject, actor, saved.primaryRole);
+          // Auto-populate a role-appropriate onboarding checklist (spec F1).
+          initOnboarding(
+            saved.id,
+            saved.primaryRole,
+            saved.employment.hireDate,
+          );
+        }
+        upsertFacilityStaff(saved);
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Could not save the profile.",
+        );
       }
-      // Existing — diff and log
-      const changes = diffProfile(list[idx], next);
-      if (changes.length > 0) {
-        logStaffUpdated(subject, actor, changes);
-      }
-      const copy = [...list];
-      copy[idx] = next;
-      return copy;
-    });
+    })();
     // Write through to the shared directory so RBAC, the permission editors,
     // Preview, and the /employee portal all resolve this profile by id.
     upsertFacilityStaff(next);
@@ -283,39 +313,30 @@ export default function FacilityStaffPage() {
     }
 
     const statusChangedAt = new Date().toISOString();
-    setStaff((list) =>
-      list.map((s) =>
-        s.id === profileId
-          ? {
-              ...s,
-              status: newStatus,
-              statusReason: reason,
-              statusNote: note || undefined,
-              statusChangedAt,
-            }
-          : s,
-      ),
-    );
-    if (target) {
-      upsertFacilityStaff({
-        ...target,
-        status: newStatus,
-        statusReason: reason,
-        statusNote: note || undefined,
-        statusChangedAt,
-      });
-    }
-    // If we're viewing this profile, update it
-    setViewing((v) => {
-      if (!v || v.id !== profileId) return v;
-      return {
-        ...v,
-        status: newStatus,
-        statusReason: reason,
-        statusNote: note || undefined,
-        statusChangedAt: new Date().toISOString(),
-      };
-    });
+    const patch = {
+      status: newStatus,
+      statusReason: reason,
+      statusNote: note || undefined,
+      statusChangedAt,
+    };
+
+    void (async () => {
+      try {
+        const saved = await updateStaff({ staffId: profileId, patch });
+        if (target) upsertFacilityStaff({ ...target, ...patch });
+        // Reflect the SAVED record in the open sheet, not the requested one.
+        // Status is manager-only, so a caller without it gets the row back
+        // unchanged — and the sheet should say so rather than show the change
+        // they asked for.
+        setViewing((v) => (v && v.id === profileId ? saved : v));
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Could not change the status.",
+        );
+      }
+    })();
   }
 
   return (
@@ -543,7 +564,19 @@ export default function FacilityStaffPage() {
       </div>
 
       {/* Directory */}
-      {filtered.length === 0 ? (
+      {isLoading ? (
+        // The roster is fetched now rather than imported, so there is a moment
+        // with nothing in it. "No staff match those filters" during that moment
+        // would be a claim about the facility rather than about the request.
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+            <Users className="text-muted-foreground size-8 animate-pulse" />
+            <div className="text-muted-foreground text-sm">
+              Loading the team…
+            </div>
+          </CardContent>
+        </Card>
+      ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center gap-2 py-12 text-center">
             <Users className="text-muted-foreground size-8" />
@@ -596,18 +629,25 @@ export default function FacilityStaffPage() {
         onInvite={setInviteTarget}
         onTransfer={setTransferring}
         onUpdate={(next) => {
-          setStaff((list) => {
-            const idx = list.findIndex((s) => s.id === next.id);
-            if (idx === -1) return list;
-            const copy = [...list];
-            copy[idx] = next;
-            return copy;
-          });
-          // Persist per-person role/override edits to the shared directory so
-          // resolvePermissions picks them up (staffOverridesFor falls back to
-          // the profile's permissionOverrides).
-          upsertFacilityStaff(next);
-          setViewing(next);
+          void (async () => {
+            try {
+              const saved = await updateStaff({
+                staffId: next.id,
+                patch: next,
+              });
+              // Persist per-person role/override edits to the shared directory
+              // so resolvePermissions picks them up (staffOverridesFor falls
+              // back to the profile's permissionOverrides).
+              upsertFacilityStaff(saved);
+              setViewing(saved);
+            } catch (error) {
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : "Could not save that change.",
+              );
+            }
+          })();
         }}
       />
 
@@ -625,14 +665,21 @@ export default function FacilityStaffPage() {
       {/* Delete confirm */}
       <Dialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
         <DialogContent>
+          {/* An employment record is not deleted, it is ENDED — the same call
+              bookings makes, and for the same reason. There is no delete policy
+              on `staff`: erasing the row would take the audit trail, the past
+              appointments and the payroll history with it. The copy says what
+              actually happens now that the write reaches a database rather
+              than a local array. */}
           <DialogHeader>
-            <DialogTitle>Delete staff profile</DialogTitle>
+            <DialogTitle>End employment</DialogTitle>
             <DialogDescription>
               {deleting && (
                 <>
-                  Remove {fullNameOf(deleting)}? They&apos;ll lose access
-                  immediately. Assigned appointments will need to be
-                  transferred.
+                  Mark {fullNameOf(deleting)} as terminated? They&apos;ll lose
+                  access immediately and move to the Former tab. Assigned
+                  appointments will need to be transferred. Their record is kept
+                  — payroll history and the audit trail depend on it.
                 </>
               )}
             </DialogDescription>
@@ -656,12 +703,17 @@ export default function FacilityStaffPage() {
                       actorRole: viewer.primaryRole,
                     },
                   );
-                  setStaff((l) => l.filter((s) => s.id !== deleting.id));
+                  handleStatusChange(
+                    deleting.id,
+                    "terminated",
+                    "other",
+                    "Ended from the staff directory.",
+                  );
                 }
                 setDeleting(null);
               }}
             >
-              Delete profile
+              End employment
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -750,8 +802,21 @@ export default function FacilityStaffPage() {
         open={!!reviewTarget}
         onOpenChange={(v) => !v && setReviewTarget(null)}
         onActivated={(next) => {
-          setStaff((list) => list.map((s) => (s.id === next.id ? next : s)));
-          upsertFacilityStaff(next);
+          void (async () => {
+            try {
+              const saved = await updateStaff({
+                staffId: next.id,
+                patch: next,
+              });
+              upsertFacilityStaff(saved);
+            } catch (error) {
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : "Could not activate that account.",
+              );
+            }
+          })();
         }}
       />
 
