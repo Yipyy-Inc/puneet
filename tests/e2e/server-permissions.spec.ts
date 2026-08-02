@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { PASSWORD } from "./_auth";
 
 // ============================================================================
 // The SERVER renders the right permissions, not owner defaults.
@@ -20,7 +21,6 @@ import { test, expect, type Page } from "@playwright/test";
 // src/app/facility/layout.tsx. The groomer check should go red.
 // ============================================================================
 
-const PASSWORD = "YipyyDev!2026";
 const STAFF_PAGE = "/facility/dashboard/staff";
 const OWNER_ONLY = "Add new staff";
 

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { PASSWORD } from "./_auth";
 
 // ============================================================================
 // The platform portal requires a real session.
@@ -15,8 +16,6 @@ import { test, expect, type Page } from "@playwright/test";
 // route handler. What stops them there is RLS, which is why the last check
 // asks the API rather than the page.
 // ============================================================================
-
-const PASSWORD = "YipyyDev!2026";
 
 async function signIn(page: Page, email: string) {
   await page.goto("/login");
