@@ -354,34 +354,40 @@ export function diffProfile(
   );
   push("Hire date", prev.employment.hireDate, next.employment.hireDate);
 
-  // Payroll
-  if (prev.payroll.hourlyRate !== next.payroll.hourlyRate) {
-    push(
-      "Hourly rate",
-      prev.payroll.hourlyRate > 0 ? `$${prev.payroll.hourlyRate}/hr` : "—",
-      next.payroll.hourlyRate > 0 ? `$${next.payroll.hourlyRate}/hr` : "—",
-    );
-  }
-  if (
-    prev.payroll.generalServiceCommission !==
-    next.payroll.generalServiceCommission
-  ) {
-    push(
-      "Service commission",
-      prev.payroll.generalServiceCommission > 0
-        ? `${prev.payroll.generalServiceCommission}%`
-        : "—",
-      next.payroll.generalServiceCommission > 0
-        ? `${next.payroll.generalServiceCommission}%`
-        : "—",
-    );
-  }
-  if (prev.payroll.tipsRate !== next.payroll.tipsRate) {
-    push(
-      "Tips rate",
-      prev.payroll.tipsRate > 0 ? `${prev.payroll.tipsRate}% retained` : "None",
-      next.payroll.tipsRate > 0 ? `${next.payroll.tipsRate}% retained` : "None",
-    );
+  // Payroll — only when BOTH sides carry it.
+  //
+  // `payroll` is absent when the caller lacks `view_payroll`, so a one-sided
+  // comparison would read as a change from nothing to something and write an
+  // audit entry disclosing the very figure that was withheld. Someone without
+  // the permission cannot edit these fields either, so skipping loses nothing.
+  const prevPay = prev.payroll;
+  const nextPay = next.payroll;
+  if (prevPay && nextPay) {
+    if (prevPay.hourlyRate !== nextPay.hourlyRate) {
+      push(
+        "Hourly rate",
+        prevPay.hourlyRate > 0 ? `$${prevPay.hourlyRate}/hr` : "—",
+        nextPay.hourlyRate > 0 ? `$${nextPay.hourlyRate}/hr` : "—",
+      );
+    }
+    if (prevPay.generalServiceCommission !== nextPay.generalServiceCommission) {
+      push(
+        "Service commission",
+        prevPay.generalServiceCommission > 0
+          ? `${prevPay.generalServiceCommission}%`
+          : "—",
+        nextPay.generalServiceCommission > 0
+          ? `${nextPay.generalServiceCommission}%`
+          : "—",
+      );
+    }
+    if (prevPay.tipsRate !== nextPay.tipsRate) {
+      push(
+        "Tips rate",
+        prevPay.tipsRate > 0 ? `${prevPay.tipsRate}% retained` : "None",
+        nextPay.tipsRate > 0 ? `${nextPay.tipsRate}% retained` : "None",
+      );
+    }
   }
 
   return changes;

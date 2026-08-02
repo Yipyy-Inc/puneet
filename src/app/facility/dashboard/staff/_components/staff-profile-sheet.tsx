@@ -528,6 +528,21 @@ function NotificationsTab({ profile }: { profile: StaffProfile }) {
 }
 
 function PayrollTab({ profile }: { profile: StaffProfile }) {
+  // Withheld, not empty. The server drops `payroll` for anyone without
+  // `view_payroll` on someone else's record, and "—" in the cards below would
+  // read as "unpaid" rather than "not yours to see".
+  const payroll = profile.payroll;
+  if (!payroll) {
+    return (
+      <div className="text-muted-foreground rounded-md border border-dashed p-6 text-center text-sm">
+        Pay details are hidden.
+        <div className="mt-1 text-xs">
+          Requires the “View payroll” permission.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -535,8 +550,8 @@ function PayrollTab({ profile }: { profile: StaffProfile }) {
           icon={Wallet}
           label="Service commission"
           value={
-            profile.payroll.generalServiceCommission > 0
-              ? `${profile.payroll.generalServiceCommission}%`
+            payroll.generalServiceCommission > 0
+              ? `${payroll.generalServiceCommission}%`
               : "—"
           }
           sub="On collected service + add-on revenue"
@@ -544,30 +559,26 @@ function PayrollTab({ profile }: { profile: StaffProfile }) {
         <PayCard
           icon={Clock}
           label="Hourly rate"
-          value={
-            profile.payroll.hourlyRate > 0
-              ? `$${profile.payroll.hourlyRate}/hr`
-              : "—"
-          }
+          value={payroll.hourlyRate > 0 ? `$${payroll.hourlyRate}/hr` : "—"}
           sub="Calculated from clock in/out"
         />
         <PayCard
           icon={BadgeCheck}
           label="Tips"
           value={
-            profile.payroll.tipsRate > 0
-              ? `${profile.payroll.tipsRate}% retained`
+            payroll.tipsRate > 0
+              ? `${payroll.tipsRate}% retained`
               : "No tips collected"
           }
           sub="From assigned appointments"
         />
       </div>
 
-      {profile.payroll.overrides.length > 0 && (
+      {payroll.overrides.length > 0 && (
         <div>
           <div className="mb-2 text-sm font-semibold">Service overrides</div>
           <div className="space-y-1.5">
-            {profile.payroll.overrides.map((o) => (
+            {payroll.overrides.map((o) => (
               <div
                 key={o.serviceModule}
                 className="border-border/60 flex items-center justify-between rounded-md border px-3 py-2 text-sm"

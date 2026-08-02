@@ -36,7 +36,10 @@ export function StaffRolesTab({
   const grantedCount = Object.values(effective).filter(
     (v) => v !== false,
   ).length;
-  const overrideCount = Object.keys(draft.permissionOverrides).length;
+  // 0 when withheld, which reads as "no overrides mentioned" rather than a
+  // wrong count — the badge is hidden at 0. The Access tab is where the real
+  // "hidden" message lives.
+  const overrideCount = Object.keys(draft.permissionOverrides ?? {}).length;
 
   return (
     <div className="space-y-6">
