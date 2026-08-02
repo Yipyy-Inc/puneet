@@ -174,6 +174,34 @@ begin
       set membership_id = excluded.membership_id,
           primary_role  = excluded.primary_role;
   end loop;
+
+  -- Sensitive fields, so that "you always see your OWN record in full" is
+  -- something a test can actually observe.
+  --
+  -- These five rows were created bare, which made the self-exemption in
+  -- /api/staff untestable: a groomer reading back no payroll proves nothing
+  -- when there was no payroll to read. The figures are invented and belong to
+  -- invented people; the point is only that the fields are non-empty.
+  update public.staff
+     set details = coalesce(details, '{}'::jsonb) || jsonb_build_object(
+           'payroll', jsonb_build_object(
+             'generalServiceCommission', 10,
+             'hourlyRate', 21,
+             'tipsRate', 100,
+             'overrides', '[]'::jsonb
+           ),
+           'clockIn', jsonb_build_object(
+             'requireAccessCode', true,
+             'accessCode', '9001'
+           ),
+           'employment', jsonb_build_object(
+             'hireDate', '2025-03-01',
+             'employmentType', 'full_time',
+             'notes', 'Dev account. Seeded HR note — manage_staff only.'
+           )
+         )
+   where legacy_id like 'fs-dev-%'
+     and facility_id = v_fac_id;
 end $$;
 
 select s.legacy_id, s.email, s.primary_role, s.membership_id is not null as linked

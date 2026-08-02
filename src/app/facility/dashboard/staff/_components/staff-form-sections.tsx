@@ -248,17 +248,21 @@ export function ProfileSection({
         label="Internal notes"
         hint="Visible to managers and owners only."
       >
-        <Textarea
-          rows={3}
-          value={draft.employment.notes}
-          onChange={(e) =>
-            update("employment", {
-              ...draft.employment,
-              notes: e.target.value,
-            })
-          }
-          placeholder="e.g. Overnight shifts only, handles hand stripping."
-        />
+        {draft.employment.notes === undefined ? (
+          <WithheldNotice permission="Manage staff" />
+        ) : (
+          <Textarea
+            rows={3}
+            value={draft.employment.notes}
+            onChange={(e) =>
+              update("employment", {
+                ...draft.employment,
+                notes: e.target.value,
+              })
+            }
+            placeholder="e.g. Overnight shifts only, handles hand stripping."
+          />
+        )}
       </FieldRow>
     </div>
   );
@@ -581,6 +585,10 @@ export function AccessSection({
     key: PermissionKey,
     next: { granted: boolean; scope: AccessScope },
   ) {
+    // Withheld — the controls are hidden, but refuse here too. Writing back a
+    // map built from nothing would delete every override this caller was not
+    // allowed to see.
+    if (!draft.permissionOverrides) return;
     const overrides = { ...draft.permissionOverrides };
     const resolved = resolvePermission(
       { ...draft, permissionOverrides: {} },
@@ -668,19 +676,26 @@ export function AccessSection({
           {draft.clockIn.requireAccessCode && (
             <div className="mt-2">
               <FieldRow label="4-digit code">
-                <Input
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={draft.clockIn.accessCode ?? ""}
-                  onChange={(e) =>
-                    update("clockIn", {
-                      requireAccessCode: true,
-                      accessCode: e.target.value,
-                    })
-                  }
-                  placeholder="4421"
-                  className="max-w-[120px] font-mono"
-                />
+                {draft.clockIn.accessCode === undefined ? (
+                  // A code is required but was not sent — withheld, not blank.
+                  // An empty box would look like "no code set" and saving it
+                  // would replace this person's real code with nothing.
+                  <WithheldNotice permission="Manage staff" />
+                ) : (
+                  <Input
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={draft.clockIn.accessCode}
+                    onChange={(e) =>
+                      update("clockIn", {
+                        requireAccessCode: true,
+                        accessCode: e.target.value,
+                      })
+                    }
+                    placeholder="4421"
+                    className="max-w-[120px] font-mono"
+                  />
+                )}
               </FieldRow>
             </div>
           )}
@@ -694,7 +709,12 @@ export function AccessSection({
           title="Permission overrides"
           hint="Fine-grained per-permission. Scope controls when access is active."
         />
-        <div className="mt-2 space-y-4">
+        {!draft.permissionOverrides && (
+          <div className="mt-2">
+            <WithheldNotice permission="View staff permissions" />
+          </div>
+        )}
+        <div className="mt-2 space-y-4" hidden={!draft.permissionOverrides}>
           {groupedPerms.map((g) => (
             <div
               key={g.id}
@@ -745,7 +765,7 @@ export function AccessSection({
                             <SelectItem value="none">No access</SelectItem>
                           </SelectContent>
                         </Select>
-                        {draft.permissionOverrides[p.key] && (
+                        {draft.permissionOverrides?.[p.key] && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
                             <Sparkles className="size-3" />
                             override
@@ -859,6 +879,25 @@ export function PayrollSection({
   draft: StaffProfile;
   update: SectionUpdate;
 }) {
+  // No inputs at all when the figures were withheld.
+  //
+  // Rendering them with zeroes would be worse than useless: the draft is what
+  // Save writes back, so an editor without `view_payroll` would silently reset
+  // this person's real hourly rate and commission to nothing. Absent has to
+  // stay absent all the way through the form.
+  const payroll = draft.payroll;
+  if (!payroll) {
+    return (
+      <div className="space-y-5">
+        <SectionHeader
+          title="Compensation"
+          hint="Drives payroll reports and commission tracking."
+        />
+        <WithheldNotice permission="View payroll" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <SectionHeader
@@ -871,10 +910,10 @@ export function PayrollSection({
             type="number"
             min={0}
             max={100}
-            value={draft.payroll.generalServiceCommission}
+            value={payroll.generalServiceCommission}
             onChange={(e) =>
               update("payroll", {
-                ...draft.payroll,
+                ...payroll,
                 generalServiceCommission: Number(e.target.value),
               })
             }
@@ -884,10 +923,10 @@ export function PayrollSection({
           <Input
             type="number"
             min={0}
-            value={draft.payroll.hourlyRate}
+            value={payroll.hourlyRate}
             onChange={(e) =>
               update("payroll", {
-                ...draft.payroll,
+                ...payroll,
                 hourlyRate: Number(e.target.value),
               })
             }
@@ -898,10 +937,10 @@ export function PayrollSection({
             type="number"
             min={0}
             max={100}
-            value={draft.payroll.tipsRate}
+            value={payroll.tipsRate}
             onChange={(e) =>
               update("payroll", {
-                ...draft.payroll,
+                ...payroll,
                 tipsRate: Number(e.target.value),
               })
             }
@@ -923,6 +962,22 @@ export function PayrollSection({
 // ============================================================================
 // Shared field helpers
 // ============================================================================
+
+/**
+ * Stands in for a field the server did not send.
+ *
+ * Says WITHHELD rather than showing an empty control, because an empty control
+ * is both a lie ("there is nothing here") and a hazard — the draft is what
+ * Save writes back, so an editable blank would overwrite the real value with
+ * nothing.
+ */
+export function WithheldNotice({ permission }: { permission: string }) {
+  return (
+    <div className="text-muted-foreground border-border/60 rounded-lg border border-dashed px-3 py-2.5 text-xs">
+      Hidden — requires the “{permission}” permission.
+    </div>
+  );
+}
 
 export function SectionHeader({
   title,
