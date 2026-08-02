@@ -32,10 +32,14 @@ const REMOTE = process.env.E2E_BASE_URL?.trim();
 const BASE_URL = REMOTE || `http://localhost:${PORT}`;
 
 /**
- * Bun loads .env.local for `bun run dev`, so the SERVER sees AUTH_ENFORCED —
- * but Playwright's runner is node and does not, so specs could not tell which
- * regime they were testing. Reading it here means a spec that only applies
- * under enforcement can skip itself instead of failing with a puzzle.
+ * Bun loads .env.local for `bun run dev`, so the SERVER sees its contents — but
+ * Playwright's runner is node and does not. E2E_PASSWORD is what needs it now:
+ * rotate the dev accounts, put the new value in .env.local, and the suite picks
+ * it up without a code change.
+ *
+ * It was added for AUTH_ENFORCED, so specs that only applied under enforcement
+ * could skip themselves rather than fail with a puzzle. That flag is gone —
+ * every portal requires a session — and the specs that skipped now sign in.
  *
  * Deliberately minimal: KEY=value, no quoting or interpolation. If this ever
  * needs to grow, use a real dotenv rather than extending it.

@@ -24,11 +24,6 @@ import { PASSWORD } from "./_auth";
 const STAFF_PAGE = "/facility/dashboard/staff";
 const OWNER_ONLY = "Add new staff";
 
-const FACILITY_ENFORCED = (() => {
-  const raw = process.env.AUTH_ENFORCED?.trim();
-  return raw === "true" || (raw?.split(",") ?? []).includes("facility");
-})();
-
 async function signIn(page: Page, email: string) {
   await page.goto("/login");
   await page.fill("#email", email);
@@ -83,22 +78,13 @@ test.describe("server-rendered permissions", () => {
   // The raw-HTML checks above are the real observation: they read what the
   // server sent, which is the only place the mistake was ever visible.
 
-  test("signed out still renders the legacy fallback", async ({ page }) => {
-    // Most of the app is browsed signed-out until AUTH_ENFORCED flips, and
-    // blanking every guarded control would look like a bug rather than a
-    // policy. `null` permissions must keep the old client-side cascade.
-    //
-    // Only meaningful where the facility portal is OPEN. With enforcement on
-    // (this repo's .env.local) a signed-out request never reaches the staff
-    // page at all — it gets the redirect shell — so the check would fail while
-    // describing nothing.
-    test.skip(
-      FACILITY_ENFORCED,
-      "AUTH_ENFORCED includes 'facility' — signed-out never reaches this page.",
-    );
-
-    const res = await page.request.get(STAFF_PAGE);
-    expect(res.status()).toBe(200);
-    expect(await res.text()).toContain(OWNER_ONLY);
-  });
+  // A third test lived here: "signed out still renders the legacy fallback",
+  // asserting that a signed-out visitor got the staff page with its owner-only
+  // controls, because the client-side cascade stood in for the database.
+  //
+  // It is deleted rather than updated. The behaviour it described is gone — a
+  // signed-out request now gets the redirect shell — and there is nothing left
+  // to rename it to. "Signed out is turned away" is already owned by
+  // admin-portal-enforced.spec.ts and employee-identity.spec.ts, and a third
+  // copy would be duplication, not coverage.
 });

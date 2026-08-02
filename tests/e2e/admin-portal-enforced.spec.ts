@@ -29,24 +29,9 @@ async function signIn(page: Page, email: string) {
     .toBe(200);
 }
 
-/**
- * These describe behaviour that only exists under AUTH_ENFORCED. With the flag
- * off the portal admits everyone by design, and every check below would fail
- * while being entirely correct — so skip rather than lie about the result.
- */
-const ENFORCED = (() => {
-  const raw = process.env.AUTH_ENFORCED?.trim();
-  return raw === "true" || (raw?.split(",") ?? []).includes("admin");
-})();
-
 test.describe.configure({ mode: "serial" });
 
 test.describe("admin portal enforcement", () => {
-  test.skip(
-    !ENFORCED,
-    "AUTH_ENFORCED does not include 'admin' — the portal is open by design here.",
-  );
-
   test("a signed-out visitor is sent to sign in, not into the portal", async ({
     page,
   }) => {

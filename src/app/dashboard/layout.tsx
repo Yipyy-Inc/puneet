@@ -23,13 +23,12 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Until AUTH_ENFORCED is on this is the old rule verbatim: facility admins
-  // get sent to their own portal, everyone else is let through. After it, the
-  // only way in is the platform-admin flag on the profile.
+  // The only way in is the platform-admin flag on the profile. Until the auth
+  // cutover finished, this also honoured the old cookie rule — facility admins
+  // to their own portal, everyone else let through — which meant an anonymous
+  // visitor was admitted here.
   await guardPortal({
-    portal: "admin",
     allow: canAccessAdminPortal,
-    whenWrongPortal: "/facility/dashboard",
   });
 
   return (

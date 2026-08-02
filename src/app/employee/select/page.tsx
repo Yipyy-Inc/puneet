@@ -15,8 +15,9 @@ import { EmployeeSelectClient } from "./_client";
 //
 // So it is now for two callers only:
 //
-//   • someone with NO staff record — the mock-data case, and every visitor
-//     while AUTH_ENFORCED omits `staff`. Nothing changes for them.
+//   • someone SIGNED IN with no staff record — the mock-data case. (Signed out
+//     is not one of these: that is a sign-in, not a choice, and it is handled
+//     below rather than being offered a list of colleagues.)
 //   • a PLATFORM ADMIN, for whom reviewing a facility as one of its staff is
 //     what the tool is for.
 //
@@ -27,10 +28,15 @@ import { EmployeeSelectClient } from "./_client";
 // ============================================================================
 
 export default async function EmployeeSelectPage() {
-  const { mayPick } = await resolveEmployeeIdentity();
+  const { staffId, mayPick } = await resolveEmployeeIdentity();
 
   if (!mayPick) {
-    redirect("/employee");
+    // The two reasons for refusing the picker need different destinations. A
+    // session that already names you goes in; nobody at all signs in. Sending
+    // both to /employee worked only because the shell there bounced the
+    // signed-out case onward to /login — a second hop that existed purely
+    // because this page did not distinguish them.
+    redirect(staffId ? "/employee" : "/login");
   }
 
   return <EmployeeSelectClient />;

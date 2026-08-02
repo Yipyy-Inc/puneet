@@ -18,11 +18,11 @@ import type {
 // a mock staff array plus overrides in localStorage — editable from devtools,
 // and a second implementation of rules that already exist in SQL.
 //
-// WHEN SIGNED OUT, callers keep the legacy answer. That is deliberate:
-// switching hard would blank guarded UI for anyone browsing signed-out, which
-// is most of the app until AUTH_ENFORCED flips. Returning `null` rather than an
-// empty map is what makes "no session" distinguishable from "denied" — an empty
-// map would read as "you may do nothing" and hide every guarded control.
+// WHEN SIGNED OUT, callers keep the legacy answer. That mattered while most of
+// the app was browsed without a session; every portal requires one now, so the
+// case is unreachable from the UI. Returning `null` rather than an empty map is
+// still what makes "no session" distinguishable from "denied" — an empty map
+// would read as "you may do nothing" and hide every guarded control.
 //
 // None of this is enforcement. RLS refuses the row whatever the client thinks.
 // This only decides which controls are worth drawing.

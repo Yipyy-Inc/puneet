@@ -31,13 +31,10 @@ export default async function FacilityLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // One identity for the whole portal, from the signed JWT when there is a
-  // session. The gate still answers with the old cookie rule until
-  // AUTH_ENFORCED is switched on — see lib/auth/viewer.ts.
+  // One identity for the whole portal, from the signed JWT. There is no other
+  // source any more — see lib/auth/viewer.ts.
   const viewer = await guardPortal({
-    portal: "facility",
     allow: canAccessFacilityPortal,
-    whenWrongPortal: "/dashboard",
   });
 
   const canCreateCustomer = canManageCustomers(viewer);

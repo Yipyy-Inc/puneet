@@ -99,16 +99,17 @@ export function isPetAssignedTo(petId: number, staffId: string): boolean {
 //
 // The rows are real (see supabase/migrations/…_clients_pets_bookings.sql and
 // scripts/apply-operational-seed.ts), but RLS scopes them to the signed-in
-// caller. With AUTH_ENFORCED off, most of the app is still browsed signed-out,
-// and switching hard would turn every booking screen blank — indistinguishable
-// from a bug.
+// caller. This existed because most of the app was browsed signed-out during
+// the auth cutover, and switching hard would have turned every booking screen
+// blank — indistinguishable from a bug.
 //
 // So: ask the API, and fall back to the mocks on 401 only. Any OTHER failure
 // propagates, because a 500 or a broken shape must not be silently papered
 // over with fixtures that look plausible.
 //
-// This fallback dies with AUTH_ENFORCED. When every portal requires a session,
-// there is no signed-out case left to serve.
+// Every portal requires a session now, so the 401 branch is unreachable from
+// the UI. Kept only until the remaining mock-backed screens move to Postgres —
+// see the note in live-fetch.ts.
 // ============================================================================
 
 async function fetchBookings(params?: {

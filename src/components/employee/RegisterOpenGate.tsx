@@ -180,7 +180,16 @@ export function RegisterOpenGate({
             <Button
               size="lg"
               className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
-              disabled={floatTotal <= 0}
+              // Also blocked until the roster names the person counting.
+              //
+              // This gate renders before the heavy provider stack on purpose, so
+              // it is up while the staff query is still in flight — and the
+              // opening count is stored with `countedBy: ctx.staffName`, which
+              // is the string "Staff" until then. A drawer opened in that window
+              // was signed by nobody, and `opener_clock_out` (which matches the
+              // closer against the opener's NAME) then never prompted the person
+              // who actually opened it. Caught by register-gate.spec.ts.
+              disabled={floatTotal <= 0 || !viewerResolved}
               onClick={handleOpen}
             >
               <Sun className="size-4" />

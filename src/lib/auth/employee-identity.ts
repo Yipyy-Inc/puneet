@@ -21,10 +21,10 @@ import { legacyStaffIdForEmail } from "@/lib/auth/legacy-identity";
 // drawer under whoever the cookie last named. A rule that only one of four
 // callers applies is not a rule.
 //
-// THE RULE: your session names you. The cookie only chooses when the session
-// cannot answer — you have no staff record (the mock-data case, and every
-// visitor while AUTH_ENFORCED omits `staff`), or you are a platform admin, for
-// whom reviewing a facility as one of its staff is the point of the tool.
+// THE RULE: your session names you. The cookie only chooses when a SIGNED-IN
+// session cannot answer — you have no staff record (the mock-data case), or you
+// are a platform admin, for whom reviewing a facility as one of its staff is the
+// point of the tool. Signed out is neither: it is a sign-in.
 // ============================================================================
 
 export interface EmployeeIdentity {
@@ -41,6 +41,17 @@ export interface EmployeeIdentity {
 
 export async function resolveEmployeeIdentity(): Promise<EmployeeIdentity> {
   const viewer = await getViewer();
+
+  // Signed out is not "pick someone" — it is "sign in".
+  //
+  // Without this the shell redirected an anonymous visitor to /employee/select
+  // while the portal guard above it redirected the same request to /login, and
+  // which one the browser saw depended on which finished first: production sent
+  // people to /login, a local server sent them to the picker. Neither was a way
+  // in — /employee/select sits under the same guard — but an auth path whose
+  // destination depends on a race is one nobody can reason about.
+  if (viewer.source !== "session") return { staffId: null, mayPick: false };
+
   const sessionStaffId = await legacyStaffIdForEmail(viewer.email);
   const mayPick = sessionStaffId === null || viewer.isPlatformAdmin;
 

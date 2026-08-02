@@ -22,22 +22,17 @@ import { expect, type Page } from "@playwright/test";
 export const PASSWORD = process.env.E2E_PASSWORD ?? "YipyyDev!2026";
 
 /**
- * Whether the staff/employee portal requires a real session.
+ * The dev accounts, one per role.
  *
- * The employee specs act as MOCK staff (fs-mgr-01, fs-rec-01 …) by setting the
- * `employee_staff_id` cookie, which is how the picker works and is fine while
- * the portal is open. Under enforcement the shell resolves identity from the
- * SESSION instead, and a mock id has no account to sign in with — so those
- * specs describe a regime that no longer exists and skip rather than lie.
+ * A STAFF_ENFORCED helper used to live here, so employee specs could skip
+ * themselves while the staff portal was still open and they were acting as mock
+ * staff through the `employee_staff_id` cookie. Both are gone: every portal
+ * requires a session now, and those specs sign in as the accounts below.
  *
- * They come back when the mock roster is gone and every staff member is a real
- * account; until then this is the honest boundary.
+ * One login per role is a real constraint on what a test can express — there is
+ * no second groomer to use as a same-role control. staff-portal-nav.spec.ts says
+ * where that bites and what it does instead.
  */
-export const STAFF_ENFORCED = (() => {
-  const raw = process.env.AUTH_ENFORCED?.trim();
-  return raw === "true" || (raw?.split(",") ?? []).includes("staff");
-})();
-
 export const ACCOUNTS = {
   admin: "admin@yipyy.dev",
   owner: "owner@yipyy.dev",

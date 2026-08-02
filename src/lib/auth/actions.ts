@@ -247,8 +247,8 @@ export async function resendConfirmation(
  * Ends the session AND clears the legacy identity cookies.
  *
  * Both halves matter. `user_role`, `facility_role` and `employee_staff_id`
- * still steer parts of the app, and while AUTH_ENFORCED is off `user_role`
- * alone is enough to get into a portal. Dropping the Supabase session but
+ * still steer parts of the UI — they no longer grant ACCESS to anything, which
+ * is the part that changed. Dropping the Supabase session but
  * leaving those behind would produce the worst possible outcome on a shared
  * machine: a logout that reports success and leaves the next person holding
  * the previous person's access.

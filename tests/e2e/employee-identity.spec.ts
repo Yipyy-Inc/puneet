@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { ACCOUNTS, STAFF_ENFORCED, signIn } from "./_auth";
+import { ACCOUNTS, signIn } from "./_auth";
 
 // ============================================================================
 // The employee portal knows who you are, rather than who you picked.
@@ -27,11 +27,6 @@ import { ACCOUNTS, STAFF_ENFORCED, signIn } from "./_auth";
 test.describe.configure({ mode: "serial" });
 
 test.describe("employee portal identity", () => {
-  test.skip(
-    !STAFF_ENFORCED,
-    "AUTH_ENFORCED omits 'staff' — the picker is still how anyone gets in here.",
-  );
-
   test("a staff member is themselves, not whoever they picked", async ({
     page,
     context,

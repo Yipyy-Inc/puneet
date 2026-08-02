@@ -43,10 +43,14 @@ export default async function EmployeeShellLayout({
   // layout have to apply the same one — /employee and /employee/register each
   // used to re-read the cookie on their own and disagree with the shell around
   // them. See src/lib/auth/employee-identity.ts.
-  const { staffId } = await resolveEmployeeIdentity();
+  const { staffId, mayPick } = await resolveEmployeeIdentity();
 
   if (!staffId) {
-    redirect("/employee/select");
+    // Nobody to seat. Which of the two reasons decides where they go: a signed-in
+    // person with no staff record picks one, a signed-out one signs in. Sending
+    // both to the picker made the destination depend on whether this layout or
+    // the portal guard above it finished first.
+    redirect(mayPick ? "/employee/select" : "/login");
   }
 
   return (

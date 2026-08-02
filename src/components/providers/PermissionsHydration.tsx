@@ -26,8 +26,10 @@ import { permissionQueries } from "@/lib/api/permissions";
 //     agree by having the same data.
 //
 // Signed out seeds `null`, which is what /api/permissions would have returned
-// (401 -> null), so the legacy path still runs for the signed-out browsing that
-// is most of the app until AUTH_ENFORCED flips.
+// (401 -> null). Every portal requires a session now, so nothing signed-out
+// renders this — but seeding `null` rather than an empty map keeps "no session"
+// distinguishable from "denied", which is the distinction the consumers rely
+// on.
 //
 // A FRESH QueryClient PER REQUEST is not optional. Reuse one across requests
 // and one visitor's permission map is served to the next.

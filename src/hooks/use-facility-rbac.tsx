@@ -218,9 +218,10 @@ export function FacilityRbacProvider({
 
   // The two DB-backed layers of the cascade. `undefined` while loading and
   // `null` when signed out; in both cases the local state below is what the UI
-  // shows, for the same reason use-db-permissions falls back — most of the app
-  // is still browsed signed-out until AUTH_ENFORCED flips, and blanking the
-  // editor would look like a bug rather than a sign-in prompt.
+  // shows, for the same reason use-db-permissions falls back. The signed-out
+  // half of that no longer happens — every portal requires a session — but
+  // `undefined` while loading still does, and blanking the editor mid-load
+  // would look like a bug rather than a sign-in prompt.
   const { data: dbOverrides } = useQuery(roleQueries.overrides());
 
   const { mutate: createRoleMutate } = useCreateCustomRole();
@@ -693,9 +694,10 @@ export function useFacilityViewer() {
  * rules from a mock staff array and overrides held in localStorage, which is
  * both a second implementation and an editable one.
  *
- * The legacy path stays as the fallback while AUTH_ENFORCED is off, because
- * most of the app is still browsed signed-out and blanking every guarded
- * control would look like a bug rather than a policy.
+ * The legacy path survives as the fallback for the loading window only. It was
+ * also the signed-out answer, back when most of the app was browsed without a
+ * session; every portal requires one now, so that half is unreachable. It goes
+ * when the mock staff array does.
  */
 export function useEffectivePermissions(): EffectivePermissions {
   const { viewer, resolvePermissions } = useFacilityRbac();

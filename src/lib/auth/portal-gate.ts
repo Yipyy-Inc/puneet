@@ -3,13 +3,7 @@ import "server-only";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import {
-  getViewer,
-  isAuthEnforced,
-  landingPathFor,
-  type Portal,
-  type Viewer,
-} from "./viewer";
+import { getViewer, landingPathFor, type Viewer } from "./viewer";
 
 // ============================================================================
 // One gate, used by every portal layout.
@@ -40,18 +34,10 @@ async function currentPathname(): Promise<string> {
 }
 
 export async function guardPortal({
-  portal,
   allow,
   publicPrefixes = [],
-  whenWrongPortal,
 }: {
-  /**
-   * Which portal this is. Enforcement is per-portal, and a denial under
-   * enforcement is routed differently from a legacy one, so the gate has to
-   * know which regime it is in rather than asking about the whole app.
-   */
-  portal: Portal;
-  /** Gate for this portal, from viewer.ts — already flag-aware. */
+  /** Gate for this portal, from viewer.ts. */
   allow: (viewer: Viewer) => boolean;
   /**
    * Paths inside this portal that must stay reachable while signed out —
@@ -59,12 +45,6 @@ export async function guardPortal({
    * is a redirect loop rather than a login page.
    */
   publicPrefixes?: string[];
-  /**
-   * Legacy-only fallback for a denied viewer while AUTH_ENFORCED is off, where
-   * there are no claims to route by. Under enforcement the destination is
-   * computed from the viewer instead — see below.
-   */
-  whenWrongPortal?: string;
 }): Promise<Viewer> {
   const viewer = await getViewer();
   const pathname = await currentPathname();
@@ -77,27 +57,23 @@ export async function guardPortal({
 
   // Signed out and signed in as the wrong person are different problems: one
   // needs a login, the other needs somewhere else to go.
-  if (isAuthEnforced(portal)) {
-    if (viewer.source !== "session") {
-      const next = pathname ? `?next=${encodeURIComponent(pathname)}` : "";
-      redirect(`/login${next}`);
-    }
-
-    // Send them where they DO belong, computed from their own claims.
-    //
-    // This must not be a fixed path per portal. It was, briefly, and it
-    // produced a redirect loop: a customer hitting /facility/dashboard was
-    // sent to /dashboard, which denied them and sent them back. Every value
-    // landingPathFor can return is a portal its own gate admits — a
-    // membership implies the facility/staff portals, its absence implies the
-    // customer one — so routing by the viewer cannot ping-pong.
-    const home = landingPathFor(viewer);
-    redirect(home === pathname ? "/login" : home);
+  if (viewer.source !== "session") {
+    const next = pathname ? `?next=${encodeURIComponent(pathname)}` : "";
+    redirect(`/login${next}`);
   }
 
-  // Flag off: no claims to route by, so fall back to the portal's own guess.
-  // Safe from loops because the legacy rules are complementary — a
-  // facility_admin is admitted to /facility and refused /dashboard, and a
-  // super_admin is admitted to both.
-  redirect(whenWrongPortal ?? "/login");
+  // Send them where they DO belong, computed from their own claims.
+  //
+  // This must not be a fixed path per portal. It was, briefly, and it produced
+  // a redirect loop: a customer hitting /facility/dashboard was sent to
+  // /dashboard, which denied them and sent them back. Every value
+  // landingPathFor can return is a portal its own gate admits — a membership
+  // implies the facility/staff portals, its absence implies the customer one —
+  // so routing by the viewer cannot ping-pong.
+  //
+  // This replaced a per-portal `whenWrongPortal` fallback, which existed only
+  // because the unenforced regime had no claims to route by. There is no such
+  // regime now, so there is nothing to guess with.
+  const home = landingPathFor(viewer);
+  redirect(home === pathname ? "/login" : home);
 }

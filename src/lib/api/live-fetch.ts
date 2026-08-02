@@ -1,17 +1,22 @@
 // ============================================================================
 // Fetching real data with a signed-out fallback.
 //
-// The rows are real, but RLS scopes them to the signed-in caller. With
-// AUTH_ENFORCED off, most of the app is still browsed signed-out, and
-// switching hard would turn every list blank — indistinguishable from a bug.
+// The rows are real, but RLS scopes them to the signed-in caller. This existed
+// because most of the app was still browsed signed-out during the auth cutover,
+// and switching hard would have turned every list blank — indistinguishable
+// from a bug.
 //
 // So: ask the API, and fall back to the mocks on 401 ONLY. Any other failure
 // propagates, because a 500 or a broken shape must not be silently papered
 // over with fixtures that look plausible. That distinction is the whole point
 // of this helper existing rather than a try/catch per call site.
 //
-// This dies with AUTH_ENFORCED. When every portal requires a session, there is
-// no signed-out case left to serve.
+// THE 401 CASE IS NOW UNREACHABLE FROM THE UI. Every portal requires a session,
+// so nothing signed-out gets far enough to call this. The fallback is kept for
+// one reason only: the screens behind it still read mock data for tables that
+// have no Postgres equivalent yet, and removing the seam before those tables
+// land would just move the mock import back up into the components. It goes
+// when they do — it is dead weight, not a policy.
 // ============================================================================
 
 const warned = new Set<string>();

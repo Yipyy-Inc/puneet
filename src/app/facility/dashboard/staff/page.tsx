@@ -113,9 +113,10 @@ export default function FacilityStaffPage() {
   // is a worse failure than an error because it looks like it worked.
   //
   // `staffQueries.profiles()` serves real rows when there is a session and the
-  // same mock array when there is not, so signed-out browsing is unchanged
-  // while AUTH_ENFORCED is off. The writes below go to /api/staff, where the
-  // database decides what a caller may actually change.
+  // same mock array when there is not. Only the first case is reachable now —
+  // this page sits behind the facility gate — but the seam stays until the
+  // remaining mock-backed tables move. The writes below go to /api/staff, where
+  // the database decides what a caller may actually change.
   const { data: roster, isLoading } = useQuery(staffQueries.profiles());
   const staff = useMemo(() => roster ?? [], [roster]);
   const { mutateAsync: createStaff } = useCreateStaff();

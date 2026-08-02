@@ -1,43 +1,35 @@
 import "server-only";
 
-import { cookies } from "next/headers";
-
 import type { FacilityStaffRole } from "@/types/facility-staff";
 import { createServerClient } from "@/lib/supabase/server";
 
 // ============================================================================
 // Who is asking — the one place a Server Component should ask.
 //
-// This exists because the app currently answers that question three
-// incompatible ways, all of them client-writable: the `user_role` cookie
-// (portal gate), the `facility_role` cookie (finer facility role), and
-// `scheduling-current-user-role` in localStorage. Anyone can edit all three
-// from devtools.
+// The answer is the signed JWT, whose app_metadata carries active memberships
+// via private.custom_access_token_hook. There is no other answer.
 //
-// The replacement is the signed JWT, whose app_metadata carries active
-// memberships via private.custom_access_token_hook.
+// It used to have three, all client-writable from devtools: the `user_role`
+// cookie (portal gate), the `facility_role` cookie (finer facility role), and
+// `scheduling-current-user-role` in localStorage. An absent `user_role` meant
+// "allow", so an anonymous visitor was admitted to every portal.
 //
-// CUTOVER: today's gates let an unauthenticated visitor into every portal —
-// `undefined` role means "allow" (see facility/layout.tsx). Flipping that in one
-// commit would lock out the team, the client's demos, and the Playwright suite
-// at once. So:
+// The cutover ran behind AUTH_ENFORCED, a per-portal flag, because turning six
+// portals on at once is not a cutover but a coin flip. All four portals
+// (`admin`, `facility`, `customer`, `staff`) have been enforced in production
+// and verified there, so the flag and the legacy branch are gone: a portal now
+// requires a session, full stop, and there is no configuration that can put the
+// old behaviour back.
 //
-//   AUTH_ENFORCED unset/false  session if there is one, else fall back to the
-//                              legacy cookies — today's behaviour exactly
-//   AUTH_ENFORCED=true         a session is required everywhere
-//   AUTH_ENFORCED=admin        ...only for the platform portal
-//   AUTH_ENFORCED=admin,staff  ...for a chosen set
+// WHAT THIS FILE IS NOT. The gates below are routing — they decide which UI you
+// are sent to. They are not what keeps anyone out of the data; RLS does that, on
+// the database, from the same JWT. Both matter, and the second one is the reason
+// this deletion is safe rather than merely tidy.
 //
-// A name this file does not recognise raises rather than being ignored — see
-// enforcedPortals(). Flags that quietly do less than they say are how a portal
-// ends up open with correct-looking configuration.
-//
-// Per-portal because all-at-once is not a cutover, it is a coin flip. Six
-// portals with different audiences fail differently, and turning them on
-// together means debugging six unrelated problems in one sitting.
-//
-// Flip it per environment (preview first), then delete the legacy branch and
-// this flag once every portal has a working sign-in.
+// STILL TO GO: the `user_role` cookie itself survives, because portal switchers,
+// UserProfileSheet, OperationsCalendar and SchedulingSettings still steer UI by
+// it. Nothing about ACCESS depends on it any more, which is the part that
+// mattered. Removing the rest is UI work, not auth work.
 // ============================================================================
 
 export type ViewerMembership = {
@@ -47,87 +39,28 @@ export type ViewerMembership = {
 };
 
 export type Viewer = {
-  /** Where this identity came from — useful in logs while both paths exist. */
-  source: "session" | "legacy-cookie" | "anonymous";
+  /**
+   * Session or nothing.
+   *
+   * `source` is kept as a two-value field rather than collapsed into
+   * `userId !== null` because the gates read better asking "is this a real
+   * session" than "is there an id", and because it is what shows up in logs.
+   * The third value, "legacy-cookie", is gone.
+   */
+  source: "session" | "anonymous";
   userId: string | null;
   email: string | null;
   isPlatformAdmin: boolean;
   memberships: ViewerMembership[];
-  /**
-   * The `user_role` cookie, read on every path rather than only the legacy one.
-   * The portal gates below need it to reproduce today's behaviour *exactly*
-   * while AUTH_ENFORCED is off — including for someone who has signed in.
-   * Deleted along with the flag.
-   */
-  legacyRole: string | null;
 };
 
-const ANONYMOUS: Omit<Viewer, "legacyRole"> = {
+const ANONYMOUS: Viewer = {
   source: "anonymous",
   userId: null,
   email: null,
   isPlatformAdmin: false,
   memberships: [],
 };
-
-/** The gated surfaces. `staff` covers the groomer, staff and employee portals. */
-export type Portal = "admin" | "facility" | "customer" | "staff";
-
-const ALL_PORTALS: Portal[] = ["admin", "facility", "customer", "staff"];
-
-/**
- * AN UNRECOGNISED PORTAL NAME IS A CONFIGURATION ERROR, NOT A NO-OP.
- *
- * This used to `.filter()` names down to the ones it recognised, which meant a
- * single transposed letter — `admin,facilty,customer,staff` — silently left the
- * facility portal unauthenticated. No error, no log, and a value that still
- * reads as correct in the Vercel dashboard. For a flag whose entire job is
- * deciding who must prove who they are, quietly doing less than it says is the
- * worst available failure.
- *
- * So it throws. The consequence is real and intended: a typo takes the app down
- * on the first request after deploy instead of opening a portal. That is the
- * right trade for an auth switch — a visible outage gets fixed in minutes,
- * whereas an open portal looks exactly like a working one. Nothing here fails
- * open.
- *
- * Case and surrounding whitespace are forgiven (`Staff`, ` staff ` are fine)
- * because neither is ambiguous. Only a name this file cannot map to a portal is
- * refused.
- */
-function enforcedPortals(): Set<Portal> {
-  const raw = process.env.AUTH_ENFORCED?.trim().toLowerCase();
-  if (!raw || raw === "false") return new Set();
-  if (raw === "true") return new Set(ALL_PORTALS);
-
-  const named = raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const unknown = named.filter((s) => !(ALL_PORTALS as string[]).includes(s));
-  if (unknown.length > 0) {
-    throw new Error(
-      `AUTH_ENFORCED names unknown portal(s): ${unknown.join(", ")}. ` +
-        `Valid names are ${ALL_PORTALS.join(", ")} (comma-separated), ` +
-        `or "true" for all and "false"/unset for none. ` +
-        `Refusing to start rather than guess: an unrecognised name would ` +
-        `leave that portal unauthenticated while looking configured.`,
-    );
-  }
-
-  return new Set(named as Portal[]);
-}
-
-/**
- * With a portal: is that portal enforced? Without: is EVERY portal enforced —
- * which is the only condition under which the legacy identity fallback can be
- * dropped entirely.
- */
-export function isAuthEnforced(portal?: Portal): boolean {
-  const enforced = enforcedPortals();
-  return portal ? enforced.has(portal) : enforced.size === ALL_PORTALS.length;
-}
 
 /**
  * Claims are read from the verified JWT, not from the user record: the hook
@@ -164,12 +97,14 @@ function readMemberships(claims: unknown): ViewerMembership[] {
   });
 }
 
-async function viewerFromSession(): Promise<Omit<Viewer, "legacyRole"> | null> {
+async function viewerFromSession(): Promise<Viewer | null> {
   let supabase: Awaited<ReturnType<typeof createServerClient>>;
   try {
     supabase = await createServerClient();
   } catch {
-    // Supabase not configured in this environment — fall through to legacy.
+    // Supabase not configured in this environment. There is no longer a legacy
+    // path to fall through to, so this resolves to anonymous and every portal
+    // refuses — which is the correct answer to "we cannot verify anyone".
     return null;
   }
 
@@ -194,32 +129,8 @@ async function viewerFromSession(): Promise<Omit<Viewer, "legacyRole"> | null> {
   };
 }
 
-/**
- * The legacy path: today's `user_role` cookie, where an ABSENT value means
- * "allow everything" for local testing. Preserved verbatim so nothing changes
- * until AUTH_ENFORCED is switched on.
- */
-function viewerFromLegacyCookie(
-  legacyRole: string | null,
-): Omit<Viewer, "legacyRole"> {
-  return {
-    source: "legacy-cookie",
-    userId: null,
-    email: null,
-    // Absent cookie historically defaulted to super_admin on /dashboard.
-    isPlatformAdmin: legacyRole === null || legacyRole === "super_admin",
-    memberships: [],
-  };
-}
-
 export async function getViewer(): Promise<Viewer> {
-  const cookieStore = await cookies();
-  const legacyRole = cookieStore.get("user_role")?.value ?? null;
-
-  const fromSession = await viewerFromSession();
-  if (fromSession) return { ...fromSession, legacyRole };
-  if (isAuthEnforced()) return { ...ANONYMOUS, legacyRole };
-  return { ...viewerFromLegacyCookie(legacyRole), legacyRole };
+  return (await viewerFromSession()) ?? ANONYMOUS;
 }
 
 /** True when the viewer holds any active membership at `facilityId`. */
@@ -271,9 +182,8 @@ export function landingPathFor(viewer: Viewer): string {
 // One gate per portal, so the rule lives next to the identity rather than being
 // re-derived from cookies in each layout.
 //
-// Each has two arms. While AUTH_ENFORCED is off the answer is today's
-// cookie rule, verbatim — signing in must not be able to lock anyone out of a
-// portal mid-build. Once it is on, the answer comes from the signed token.
+// Each was two arms — the old cookie rule while AUTH_ENFORCED was off, the
+// signed token once it was on. Only the token arm is left.
 //
 // WHAT A DENIED GATE ACTUALLY DOES — measured, not assumed.
 // `redirect()` from these layouts is a SOFT redirect: because the layout
@@ -289,20 +199,12 @@ export function landingPathFor(viewer: Viewer): string {
 // let a future "just skip the gate for X" argument treat this as the last line
 // of defence; it is the first.
 
-const LEGACY_FACILITY_ROLES = ["facility_admin", "super_admin"];
-
 /**
  * Facility portal. Any active membership admits you; platform admins are let
  * through so they can review facility and HQ features without swapping
  * identity — which is what the old cookie rule allowed too.
  */
 export function canAccessFacilityPortal(viewer: Viewer): boolean {
-  if (!isAuthEnforced("facility")) {
-    return (
-      viewer.legacyRole === null ||
-      LEGACY_FACILITY_ROLES.includes(viewer.legacyRole)
-    );
-  }
   return (
     viewer.source === "session" &&
     (viewer.isPlatformAdmin || viewer.memberships.length > 0)
@@ -312,15 +214,14 @@ export function canAccessFacilityPortal(viewer: Viewer): boolean {
 /**
  * Platform super-admin portal. Nothing but the platform-admin flag.
  *
- * `source === "session"` is not belt-and-braces, it is load-bearing. While any
- * portal is still unenforced, getViewer keeps returning the legacy fallback for
- * a visitor with no session — and that fallback sets `isPlatformAdmin: true`
- * when the `user_role` cookie is ABSENT, because that is what the old rule did.
- * Checking the flag alone would therefore admit the exact anonymous visitor
- * this gate exists to stop.
+ * The `source === "session"` half is now redundant — `isPlatformAdmin` is only
+ * ever true on a session — and it is kept anyway. It was load-bearing until this
+ * commit: the legacy fallback set `isPlatformAdmin: true` when the `user_role`
+ * cookie was ABSENT, so checking the flag alone admitted the exact anonymous
+ * visitor this gate exists to stop. Keeping the check costs nothing and means
+ * the gate does not depend on a claim being unforgeable somewhere else.
  */
 export function canAccessAdminPortal(viewer: Viewer): boolean {
-  if (!isAuthEnforced("admin")) return viewer.legacyRole !== "facility_admin";
   return viewer.source === "session" && viewer.isPlatformAdmin;
 }
 
@@ -331,7 +232,6 @@ export function canAccessAdminPortal(viewer: Viewer): boolean {
  * bookings.
  */
 export function canAccessCustomerPortal(viewer: Viewer): boolean {
-  if (!isAuthEnforced("customer")) return true;
   return viewer.source === "session";
 }
 
@@ -341,7 +241,6 @@ export function canAccessCustomerPortal(viewer: Viewer): boolean {
  * you land on is decided by landingPathForClaims, not by who may enter.
  */
 export function canAccessStaffPortal(viewer: Viewer): boolean {
-  if (!isAuthEnforced("staff")) return true;
   return (
     viewer.source === "session" &&
     (viewer.isPlatformAdmin || viewer.memberships.length > 0)
@@ -361,8 +260,5 @@ export function canAccessStaffPortal(viewer: Viewer): boolean {
 const MANAGING_ROLES = new Set(["owner", "admin", "manager"]);
 
 export function canManageCustomers(viewer: Viewer): boolean {
-  if (!isAuthEnforced("facility")) {
-    return viewer.legacyRole === "facility_admin";
-  }
   return viewer.memberships.some((m) => MANAGING_ROLES.has(m.role));
 }

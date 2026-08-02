@@ -33,10 +33,10 @@ import type {
 //   roleQueries.customRoles()  facility_custom_roles + their permissions and
 //                              assignments
 //
-// @/lib/facility-roles-store (localStorage) survives as the SIGNED-OUT
-// fallback only. Most of the app is still browsed without a session until
-// AUTH_ENFORCED flips, and an editor that blanked itself would read as a bug
-// rather than a sign-in prompt.
+// @/lib/facility-roles-store (localStorage) survives as the SIGNED-OUT fallback
+// only, from when most of the app was browsed without a session and an editor
+// that blanked itself read as a bug rather than a sign-in prompt. Every portal
+// requires a session now, so that path no longer runs.
 
 export const roleKeys = {
   all: ["facility-roles"] as const,

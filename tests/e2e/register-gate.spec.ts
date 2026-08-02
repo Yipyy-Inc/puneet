@@ -1,59 +1,56 @@
 import { test, expect, type BrowserContext, type Page } from "@playwright/test";
-import { STAFF_ENFORCED } from "./_auth";
+import { ACCOUNTS, signIn } from "./_auth";
 import path from "node:path";
 
 // ============================================================================
 // Visual + behavioural check for the mandatory cash-register open/close gate.
 //
-// Same sign-in trick as staff-portal-nav.spec.ts: seed the `employee_staff_id`
-// cookie + the RBAC localStorage before app JS runs, then land in the employee
-// shell as that staff. Reception (fs-rec-01) holds `open_close_register` via its
-// preset, so the login open-gate must block the portal until the drawer is
-// counted open; a peer with the permission revoked must NOT be gated.
+// WHO THESE RUN AS, AND WHY IT CHANGED.
+//
+// They used to seed the `employee_staff_id` cookie + the RBAC localStorage and
+// land in the shell as a MOCK staff member (fs-rec-01, fs-groom-02). That
+// stopped working when the staff portal began requiring a session: the shell
+// takes identity from the session now, mock ids have no account, and — more to
+// the point — a signed-in viewer's permissions come from the DATABASE, so the
+// seeded localStorage overrides these relied on are ignored outright
+// (`fromDb ?? legacy` in use-facility-rbac).
+//
+// They were skipped while `staff` was still being rolled out. Deleting the
+// AUTH_ENFORCED flag would have made that skip permanent, which is a silent way
+// to lose four acceptance tests, so they now sign in for real.
+//
+// The permission split falls out of the shipped presets rather than being
+// arranged: reception holds `open_close_register` (operating_hours), a groomer
+// does not hold it at all. So the gated and un-gated cases are two real accounts
+// and no overrides — nothing to set up, and nothing to tear down.
+//
+// The HR config below is still seeded through localStorage. That is not a
+// permission; it is facility configuration, and it has no backend yet.
 // ============================================================================
 
-const STORAGE_KEY = "facility-rbac-state-v1";
 const HR_KEY = "yipyy-staff-onboarding-v2"; // StaffHrConfig persistence
 const SHOTS =
   process.env.PWV_SHOTS ??
   "C:/Users/merie/AppData/Local/Temp/claude/c--dev-puneet/972b865b-3d4c-498d-8480-5f5908c6c228/scratchpad";
 
-type Overrides = Record<string, { granted: boolean; scope: string }>;
 type HrConfig = Record<string, unknown>;
 
-async function signInAs(
+async function enterPortalAs(
   context: BrowserContext,
   page: Page,
-  staffId: string,
-  overrides: Overrides = {},
+  email: string,
   hrConfig: HrConfig = {},
 ) {
-  await context.addCookies([
-    { name: "employee_staff_id", value: staffId, url: "http://localhost:3000" },
-  ]);
-  await context.addInitScript(
-    ({ key, id, ov, hrKey, hr }) => {
-      window.localStorage.setItem(
-        key,
-        JSON.stringify({
-          viewerId: id,
-          presetOverrides: {},
-          staffOverrides: { [id]: ov },
-        }),
-      );
-      if (Object.keys(hr).length > 0) {
-        // Deep-merged into the default config on load (config.* keys).
+  if (Object.keys(hrConfig).length > 0) {
+    // Before any app JS runs. Deep-merged into the default config on load.
+    await context.addInitScript(
+      ({ hrKey, hr }) => {
         window.localStorage.setItem(hrKey, JSON.stringify({ config: hr }));
-      }
-    },
-    {
-      key: STORAGE_KEY,
-      id: staffId,
-      ov: overrides,
-      hrKey: HR_KEY,
-      hr: hrConfig,
-    },
-  );
+      },
+      { hrKey: HR_KEY, hr: hrConfig },
+    );
+  }
+  await signIn(page, email);
   await page.goto("/employee");
 }
 
@@ -61,18 +58,12 @@ const sidebar = (page: Page) =>
   page.locator('[data-slot="sidebar-inner"]').first();
 
 test.describe("Daily Register open/close gate", () => {
-  test.skip(
-    STAFF_ENFORCED,
-    "These act as MOCK staff via the employee_staff_id cookie; under " +
-      "AUTH_ENFORCED=…,staff the shell takes identity from the session and a " +
-      "mock id has no account to sign in with.",
-  );
-
   test("reception is forced to count the drawer open, then the portal unlocks", async ({
     page,
     context,
   }) => {
-    await signInAs(context, page, "fs-rec-01"); // reception — has open_close_register
+    // Reception holds open_close_register via its preset — no override needed.
+    await enterPortalAs(context, page, ACCOUNTS.reception);
 
     // The gate blocks the whole portal with a single opening-count panel.
     await expect(
@@ -100,15 +91,9 @@ test.describe("Daily Register open/close gate", () => {
     context,
   }) => {
     // Single-cashier mode: the person who opened is reminded on clock-out.
-    await signInAs(
-      context,
-      page,
-      "fs-rec-01",
-      {},
-      {
-        registerCloseReminder: "opener_clock_out",
-      },
-    );
+    await enterPortalAs(context, page, ACCOUNTS.reception, {
+      registerCloseReminder: "opener_clock_out",
+    });
 
     // Open the register through the gate (this staff is now the opener).
     await page.getByRole("spinbutton").first().fill("12");
@@ -136,15 +121,9 @@ test.describe("Daily Register open/close gate", () => {
     // the drawer open must NOT pop the close flow, so a morning cashier can
     // leave and an evening cashier closes later. (closing_time behaves the same
     // before the facility's closing time.)
-    await signInAs(
-      context,
-      page,
-      "fs-rec-01",
-      {},
-      {
-        registerCloseReminder: "manual",
-      },
-    );
+    await enterPortalAs(context, page, ACCOUNTS.reception, {
+      registerCloseReminder: "manual",
+    });
 
     await page.getByRole("spinbutton").first().fill("12");
     await page.getByRole("button", { name: /Open register/i }).click();
@@ -163,9 +142,9 @@ test.describe("Daily Register open/close gate", () => {
     page,
     context,
   }) => {
-    await signInAs(context, page, "fs-groom-02", {
-      open_close_register: { granted: false, scope: "none" },
-    });
+    // A groomer is not granted open_close_register by ANY preset, so this is
+    // the real un-gated case rather than one manufactured with an override.
+    await enterPortalAs(context, page, ACCOUNTS.groomer);
     await expect(sidebar(page)).toBeVisible();
     await expect(
       page.getByRole("heading", { name: /Start your day/i }),
