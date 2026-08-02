@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Vault, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { usePermission } from "@/hooks/use-facility-rbac";
+import { usePermission, useFacilityViewer } from "@/hooks/use-facility-rbac";
 import { useStaffHrConfig } from "@/data/staff-onboarding";
 import {
   requestRegisterClose,
@@ -24,7 +24,8 @@ import { isPastCloseTime, todayCloseTime } from "@/lib/register-hours";
 export function RegisterCloseWatcher({ staffId }: { staffId: string }) {
   const canOpenRegister = usePermission("open_close_register");
   const { registerCloseReminder } = useStaffHrConfig();
-  const ctx = resolveRegisterContext(staffId);
+  const { viewer, viewerResolved } = useFacilityViewer();
+  const ctx = resolveRegisterContext(viewerResolved ? viewer : null);
   const sessions = useRegisterSessions();
   const [dismissed, setDismissed] = useState(false);
   const [, setTick] = useState(0);

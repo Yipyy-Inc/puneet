@@ -14,7 +14,8 @@ import {
   MonitorSpeaker,
   UserCog,
 } from "lucide-react";
-import type { StaffProfile, FacilityStaffRole } from "@/types/facility-staff";
+import type { FacilityStaffRole } from "@/types/facility-staff";
+import { useFacilityViewer } from "@/hooks/use-facility-rbac";
 import { timeOfDayGreeting } from "./employee-dashboard-widgets";
 
 // The one genuinely employee-only touch above the shared facility dashboard: a
@@ -80,7 +81,20 @@ const RECENT_LOGIN_WINDOW_MS = 20_000;
 const VISIBLE_MS = 4_500; // a few seconds on screen
 const EXIT_MS = 500; // matches the transition duration below
 
-export function EmployeeGreetingHeader({ staff }: { staff: StaffProfile }) {
+export function EmployeeGreetingHeader() {
+  // The acting staff member, from the shell's RBAC boundary — the same viewer
+  // every permission decision in this tree resolves against.
+  //
+  // This used to arrive as a prop that the page resolved by reading the
+  // `employee_staff_id` cookie and falling back to `facilityStaff[0]`. Signed
+  // in with no cookie, the greeting therefore addressed a signed-in groomer by
+  // the first name in a mock array. Taking it from the provider is what makes
+  // "who is greeted" and "whose permissions apply" the same question.
+  //
+  // `viewerResolved` is false while the roster is still loading; the banner
+  // simply does not render until it can name someone, which is right for a
+  // one-time welcome — better absent than addressed to a stranger.
+  const { viewer: staff, viewerResolved } = useFacilityViewer();
   const role = staff.primaryRole;
   const RoleIcon = ROLE_ICON[role];
   // Read the clock once at mount (purity: no argless Date in the render body).
@@ -135,7 +149,7 @@ export function EmployeeGreetingHeader({ staff }: { staff: StaffProfile }) {
     };
   }, []);
 
-  if (!mounted) return null;
+  if (!mounted || !viewerResolved) return null;
 
   return (
     <div

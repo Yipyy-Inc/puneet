@@ -1,5 +1,5 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { resolveEmployeeIdentity } from "@/lib/auth/employee-identity";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { EmployeeRbacBoundary } from "@/components/employee/EmployeeRbacBoundary";
 import { PermissionsHydration } from "@/components/providers/PermissionsHydration";
@@ -23,8 +23,27 @@ export default async function EmployeeShellLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const staffId = cookieStore.get("employee_staff_id")?.value;
+  // WHO YOU ARE COMES FROM THE SESSION. The cookie only chooses when the
+  // session cannot answer.
+  //
+  // This shell used to take its acting staff member from `employee_staff_id`
+  // alone — a cookie written by /employee/select, which is a picker, not a
+  // proof. That was survivable while permissions were computed client-side
+  // from the same cookie: identity and authority were wrong together, so at
+  // least they agreed.
+  //
+  // They stopped agreeing when permissions moved to the session
+  // (PermissionsHydration). Picking a colleague then gave you THEIR name and
+  // YOUR permissions — no privilege gained, but every action attributed to
+  // someone who did not take it. Verified before writing this: signed in as
+  // the owner, acting as a groomer with the till permission revoked, the
+  // register gate appeared anyway, because the owner holds it.
+  //
+  // The rule lives in resolveEmployeeIdentity() because the pages INSIDE this
+  // layout have to apply the same one — /employee and /employee/register each
+  // used to re-read the cookie on their own and disagree with the shell around
+  // them. See src/lib/auth/employee-identity.ts.
+  const { staffId } = await resolveEmployeeIdentity();
 
   if (!staffId) {
     redirect("/employee/select");

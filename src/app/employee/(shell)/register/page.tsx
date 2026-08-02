@@ -1,16 +1,19 @@
-import { cookies } from "next/headers";
 import { Badge } from "@/components/ui/badge";
 import { Vault } from "lucide-react";
-import { DailyRegisterClient } from "@/components/billing/cash-drawer/DailyRegisterClient";
 import { resolveRegisterContext } from "@/lib/employee/register-context";
+import { EmployeeDailyRegister } from "./_client";
 
 // Employee-facing Daily Register — the same open/close/reconcile surface the
 // facility admin uses, scoped to the signed-in employee + their location. This
 // is where the login open-gate and the clock-out close reminder send staff.
-export default async function EmployeeRegisterPage() {
-  const cookieStore = await cookies();
-  const staffId = cookieStore.get("employee_staff_id")?.value;
-  const ctx = resolveRegisterContext(staffId);
+export default function EmployeeRegisterPage() {
+  // Location and currency only — they do not depend on who is acting.
+  //
+  // This page used to read the `employee_staff_id` cookie and resolve the
+  // counting staff member from it, which meant the till could be counted under
+  // whoever /employee/select last named. Who is counting now comes from the
+  // acting viewer, in the client half below.
+  const ctx = resolveRegisterContext(null);
 
   return (
     <div className="flex-1 space-y-5 p-4 pt-6">
@@ -37,14 +40,7 @@ export default async function EmployeeRegisterPage() {
         </Badge>
       </div>
 
-      <DailyRegisterClient
-        facilityId={ctx.facilityId}
-        locationId={ctx.locationId}
-        locationName={ctx.locationName}
-        currency={ctx.currency}
-        staffName={ctx.staffName}
-        isManager={ctx.isManager}
-      />
+      <EmployeeDailyRegister />
     </div>
   );
 }

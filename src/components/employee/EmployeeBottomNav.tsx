@@ -24,8 +24,7 @@ import {
   SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
-import { facilityStaff } from "@/data/facility-staff";
-import { useFacilityRbac } from "@/hooks/use-facility-rbac";
+import { useFacilityRbac, useFacilityViewer } from "@/hooks/use-facility-rbac";
 import { NAV_SECTIONS } from "@/lib/nav/facility-nav";
 import { toEmployeeRoute } from "@/lib/nav/employee-nav";
 import {
@@ -56,7 +55,11 @@ const ACCOUNT_LINKS: NavSlot[] = [
 export function EmployeeBottomNav({ staffId }: { staffId: string }) {
   const pathname = usePathname();
   const { resolvePermissions } = useFacilityRbac();
-  const staff = facilityStaff.find((s) => s.id === staffId);
+  // Same fix as the sidebar: the mobile profile sheet names the acting viewer,
+  // and looking that up in the mock array meant a session-derived id found
+  // nobody and the sheet fell back to a generic "My account".
+  const { viewer, viewerResolved } = useFacilityViewer();
+  const staff = viewerResolved ? viewer : null;
 
   // Role-contextual slot = the viewer's first permitted module in the shared
   // facility nav (mirrors the sidebar's permission-gated NAV_SECTIONS — never a

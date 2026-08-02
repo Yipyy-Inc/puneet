@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import {
   Link2,
   Paperclip,
 } from "lucide-react";
-import { getEmployeeStaffId } from "@/lib/role-utils";
+import { useFacilityViewer } from "@/hooks/use-facility-rbac";
 import {
   useWriteUps,
   acknowledgeWriteUp,
@@ -44,7 +44,15 @@ const needsAck = (w: {
 export function MyWriteUpsView() {
   // SECURITY: the view only ever reads the current staff member's own id — there
   // is no way to pass another staff member's id, so records stay private.
-  const [staffId] = useState<string | null>(() => getEmployeeStaffId());
+  //
+  // "The current staff member" used to mean the `employee_staff_id` cookie,
+  // which is a picker's note-to-self, not a proof: whoever last chose a name at
+  // /employee/select read that person's disciplinary record. It now means the
+  // acting viewer the shell seated from the session. `viewerResolved` keeps a
+  // still-loading roster from reading as "no records" on a page where an empty
+  // state is meaningful.
+  const { viewer, viewerResolved } = useFacilityViewer();
+  const staffId = viewerResolved ? viewer.id : null;
   const records = useWriteUps(staffId);
 
   const active = useMemo(

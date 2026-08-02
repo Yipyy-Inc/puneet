@@ -21,9 +21,8 @@ import {
 } from "@/data/scheduling";
 import type { EmployeeDocumentTemplate } from "@/types/scheduling";
 import { EmployeeDocumentSigningDialog } from "@/components/scheduling/EmployeeDocumentSigningDialog";
-import { getEmployeeStaffId } from "@/lib/role-utils";
-import { facilityStaff } from "@/data/facility-staff";
-import { ROLE_META } from "@/types/facility-staff";
+import { useFacilityViewer } from "@/hooks/use-facility-rbac";
+import { ROLE_META, type StaffProfile } from "@/types/facility-staff";
 import {
   fullNameOf,
   initialsOf,
@@ -40,13 +39,27 @@ const DOC_TYPE_LABEL: Record<string, string> = {
   other: "Other",
 };
 
+// "My documents" means MINE, so the id cannot come from a cookie and must not
+// fall back to anyone.
+//
+// This read `employee_staff_id` and then did `.find(...) ?? facilityStaff[0]`
+// against the mock array. A session-derived id matched nothing there, so the
+// fallback fired and this screen showed a COLLEAGUE'S HR file — contracts, tax
+// forms, health records — under the heading "My Documents". A miss must resolve
+// to nobody, never to somebody.
+//
+// The gate is a separate component rather than an early return because the body
+// seeds `useState` from `staff.id`: mounting it before the roster resolves would
+// freeze one person's signature list onto another's screen, and no later render
+// would correct it.
 export function MyDocumentsView() {
-  const [staffId] = useState<string | null>(() => getEmployeeStaffId());
+  const { viewer, viewerResolved } = useFacilityViewer();
+  if (!viewerResolved) return null;
+  return <MyDocumentsBody staff={viewer} />;
+}
+
+function MyDocumentsBody({ staff }: { staff: StaffProfile }) {
   const [today] = useState(() => new Date().toISOString().split("T")[0]);
-  const staff = useMemo(
-    () => facilityStaff.find((s) => s.id === staffId) ?? facilityStaff[0],
-    [staffId],
-  );
 
   // My HR documents — read-only, and only those the facility marked visible.
   const myDocs = useMemo(

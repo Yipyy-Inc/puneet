@@ -1,4 +1,5 @@
 import { test, expect, type BrowserContext, type Page } from "@playwright/test";
+import { STAFF_ENFORCED } from "./_auth";
 import path from "node:path";
 
 // ============================================================================
@@ -60,6 +61,13 @@ const sidebar = (page: Page) =>
   page.locator('[data-slot="sidebar-inner"]').first();
 
 test.describe("Daily Register open/close gate", () => {
+  test.skip(
+    STAFF_ENFORCED,
+    "These act as MOCK staff via the employee_staff_id cookie; under " +
+      "AUTH_ENFORCED=…,staff the shell takes identity from the session and a " +
+      "mock id has no account to sign in with.",
+  );
+
   test("reception is forced to count the drawer open, then the portal unlocks", async ({
     page,
     context,

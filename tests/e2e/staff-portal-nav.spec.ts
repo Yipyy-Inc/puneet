@@ -1,4 +1,5 @@
 import { test, expect, type BrowserContext, type Page } from "@playwright/test";
+import { STAFF_ENFORCED } from "./_auth";
 
 // ============================================================================
 // Staff-portal nav-parity — Z.1 acceptance smoke (feedback #1/#2/#3).
@@ -127,6 +128,13 @@ const BESPOKE = [
 // ---------------------------------------------------------------------------
 
 test.describe("Staff portal nav parity", () => {
+  test.skip(
+    STAFF_ENFORCED,
+    "These act as MOCK staff via the employee_staff_id cookie; under " +
+      "AUTH_ENFORCED=…,staff the shell takes identity from the session and a " +
+      "mock id has no account to sign in with.",
+  );
+
   // #1 — Manager Nathalie's sidebar mirrors the facility sidebar.
   test("#1 Manager sidebar mirrors the facility sidebar (sequence + no bespoke items)", async ({
     page,

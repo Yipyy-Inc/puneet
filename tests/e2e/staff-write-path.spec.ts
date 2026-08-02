@@ -34,6 +34,35 @@ interface StaffRow {
 test.describe.configure({ mode: "serial" });
 
 test.describe("staff write path", () => {
+  // Undo the promotion this file ATTEMPTS, however the run ends.
+  //
+  // "a groomer cannot promote themselves" asks the app to set primaryRole =
+  // owner and demands a 403. It got a 200 once — not because the trigger was
+  // wrong, but because an earlier spec had left the groomer role holding
+  // `manage_staff`, which makes the promotion legitimate. The groomer's staff
+  // row stayed `owner` afterwards, and every later spec then read an owner
+  // where it expected a groomer: five files red, none of them about their own
+  // subject.
+  //
+  // A test that asks for an escalation has to be able to undo one. Restoring
+  // unconditionally also means a genuine regression here shows up as this
+  // file's failure and nothing else's.
+  test.afterAll(async ({ browser }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    try {
+      await signIn(page, ACCOUNTS.owner);
+      await page.request.patch("/api/staff/fs-dev-groomer", {
+        data: { primaryRole: "groomer" },
+      });
+    } catch {
+      // Never fail a run in teardown; the assertion above already said what
+      // went wrong.
+    } finally {
+      await context.close();
+    }
+  });
+
   test("an owner's edit reports what was stored", async ({ page }) => {
     await signIn(page, ACCOUNTS.owner);
 

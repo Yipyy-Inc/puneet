@@ -13,9 +13,23 @@ import { PASSWORD } from "./_auth";
 // So each check below reads the OTHER person's resolved permission map after
 // the edit — the thing that has to move — rather than the editor's own state.
 //
-// Runs against the live Supabase project using the dev accounts. It writes
-// real override rows and removes them again; a failure mid-run can leave one
-// behind, which the first step clears.
+// Runs against the live Supabase project using the dev accounts. It writes real
+// override rows and removes them again.
+//
+// THE CLEANUP IS NOT OPTIONAL, AND IT IS NOT ENOUGH TO DO IT AT THE START.
+//
+// These tests grant a groomer `manage_staff = anytime` on purpose. When a run
+// died partway through — the dev server dropped, so the request that would have
+// cleared it never landed — that grant stayed in Postgres, and three specs that
+// sort after this one went red: server-permissions saw "Add new staff" in a
+// groomer's first paint, staff-field-exposure read a colleague's notes, and
+// staff-write-path's privilege-escalation check got a 200 where it demanded a
+// 403. All four failures were true reports about a database left elevated by a
+// test, and it cost a full suite run to work that out.
+//
+// The direction that matters is the other one: had the leftovers been a REVOKE
+// rather than a grant, those same specs would have gone quietly green while
+// proving nothing. So the teardown below runs regardless of outcome.
 // ============================================================================
 
 type PermissionMap = Record<string, string>;
@@ -50,18 +64,49 @@ const setOverride = (page: Page, body: unknown) =>
 test.describe.configure({ mode: "serial" });
 
 test.describe("role editor writes", () => {
+  // Put the facility back however this file exits — passed, failed, or aborted
+  // partway. A fresh context is used because the tests' own pages may be closed
+  // or signed out by the time this runs.
+  test.afterAll(async ({ browser }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    try {
+      await signIn(page, "owner@yipyy.dev");
+      for (const key of ["manage_staff", "view_bookings"]) {
+        await setOverride(page, {
+          kind: "facility-role",
+          role: "groomer",
+          key,
+          scope: null,
+        });
+      }
+    } catch {
+      // Teardown must not turn a green run red. If the server is already gone
+      // there is nothing to clean up through it — the next run's opening clear
+      // is the backstop, and the comment at the top of this file says what to
+      // look for if a later spec starts failing for no reason.
+    } finally {
+      await context.close();
+    }
+  });
+
   test("owner's edit to a role changes what a groomer may do", async ({
     page,
   }) => {
     await signIn(page, "owner@yipyy.dev");
 
-    // Clear anything a previous failed run left behind.
-    await setOverride(page, {
-      kind: "facility-role",
-      role: "groomer",
-      key: "manage_staff",
-      scope: null,
-    });
+    // Clear anything a previous failed run left behind. Both keys, not just
+    // manage_staff: this test also revokes view_bookings further down, and
+    // clearing only one of the two is how a stale revoke survives into the
+    // specs that sort after this file.
+    for (const key of ["manage_staff", "view_bookings"]) {
+      await setOverride(page, {
+        kind: "facility-role",
+        role: "groomer",
+        key,
+        scope: null,
+      });
+    }
 
     await signOut(page);
     await signIn(page, "groomer@yipyy.dev");

@@ -34,10 +34,9 @@ import {
   FileText,
   Phone,
 } from "lucide-react";
-import { facilityStaff } from "@/data/facility-staff";
 import { toast } from "sonner";
 import { setUserRole, clearEmployeeStaffId } from "@/lib/role-utils";
-import { usePermission } from "@/hooks/use-facility-rbac";
+import { usePermission, useFacilityViewer } from "@/hooks/use-facility-rbac";
 import {
   getTodaySession,
   requestRegisterClose,
@@ -101,7 +100,15 @@ const MY_WORKSPACE_LINKS = [
 ] as const;
 
 export function EmployeeHeader({ staffId }: { staffId: string }) {
-  const staff = facilityStaff.find((s) => s.id === staffId);
+  // The acting person comes from the shell's RBAC boundary — the same viewer
+  // every permission decision in this tree resolves against.
+  //
+  // This searched the mock array, which was fine while `staffId` also came
+  // from the mock world. The shell now derives it from the session — so for a
+  // genuine staff account the id had no match here and the header rendered a
+  // nameless "?" avatar. The portal knew who you were and could not say it.
+  const { viewer, viewerResolved } = useFacilityViewer();
+  const staff = viewerResolved ? viewer : undefined;
   const isWide = useMediaQuery("(min-width: 1280px)", true);
 
   // Header-control gates (resolved for the signed-in employee via the RBAC
@@ -132,7 +139,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
     // count-and-close flow first; logging out again after closing proceeds.
     // Mode-aware (spec: opener ≠ closer) so a mid-day handover isn't blocked.
     if (canOpenRegister) {
-      const ctx = resolveRegisterContext(staffId);
+      const ctx = resolveRegisterContext(staff);
       const session = getTodaySession(ctx.facilityId, ctx.locationId);
       if (
         session &&

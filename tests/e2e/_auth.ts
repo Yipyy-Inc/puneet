@@ -21,6 +21,23 @@ import { expect, type Page } from "@playwright/test";
 
 export const PASSWORD = process.env.E2E_PASSWORD ?? "YipyyDev!2026";
 
+/**
+ * Whether the staff/employee portal requires a real session.
+ *
+ * The employee specs act as MOCK staff (fs-mgr-01, fs-rec-01 …) by setting the
+ * `employee_staff_id` cookie, which is how the picker works and is fine while
+ * the portal is open. Under enforcement the shell resolves identity from the
+ * SESSION instead, and a mock id has no account to sign in with — so those
+ * specs describe a regime that no longer exists and skip rather than lie.
+ *
+ * They come back when the mock roster is gone and every staff member is a real
+ * account; until then this is the honest boundary.
+ */
+export const STAFF_ENFORCED = (() => {
+  const raw = process.env.AUTH_ENFORCED?.trim();
+  return raw === "true" || (raw?.split(",") ?? []).includes("staff");
+})();
+
 export const ACCOUNTS = {
   admin: "admin@yipyy.dev",
   owner: "owner@yipyy.dev",

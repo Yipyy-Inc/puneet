@@ -15,6 +15,7 @@ import {
   useRegisterSessions,
   usePendingRegisterCloseSessionId,
 } from "@/lib/cash-register-store";
+import { useFacilityViewer } from "@/hooks/use-facility-rbac";
 import { resolveRegisterContext } from "@/lib/employee/register-context";
 
 // ============================================================================
@@ -28,7 +29,8 @@ import { resolveRegisterContext } from "@/lib/employee/register-context";
 export function RegisterCloseReminder({ staffId }: { staffId: string }) {
   const pendingId = usePendingRegisterCloseSessionId();
   const sessions = useRegisterSessions();
-  const ctx = resolveRegisterContext(staffId);
+  const { viewer, viewerResolved } = useFacilityViewer();
+  const ctx = resolveRegisterContext(viewerResolved ? viewer : null);
 
   const session = pendingId
     ? sessions.find((s) => s.id === pendingId && s.status === "open")

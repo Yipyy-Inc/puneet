@@ -27,8 +27,7 @@ import {
   MonitorSpeaker,
   type LucideIcon,
 } from "lucide-react";
-import { facilityStaff } from "@/data/facility-staff";
-import { useFacilityRbac } from "@/hooks/use-facility-rbac";
+import { useFacilityRbac, useFacilityViewer } from "@/hooks/use-facility-rbac";
 import type { FacilityStaffRole } from "@/types/facility-staff";
 import { NAV_SECTIONS } from "@/lib/nav/facility-nav";
 import { toEmployeeRoute } from "@/lib/nav/employee-nav";
@@ -109,8 +108,17 @@ export function EmployeeSidebar({ staffId }: { staffId: string }) {
   const { resolvePermissions } = useFacilityRbac();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const staff = facilityStaff.find((s) => s.id === staffId);
-  const role = staff?.primaryRole ?? "reception";
+  // The acting viewer's role badge, from the real roster.
+  //
+  // This searched the mock array and fell back to "reception" on a miss, so a
+  // session-derived id — which has no match there — labelled EVERY signed-in
+  // employee Reception. A groomer was told she was on the front desk by the
+  // one part of the shell whose whole job is saying who you are.
+  //
+  // `viewerResolved` distinguishes "still loading the roster" from "found",
+  // so the badge shows nothing rather than guessing while the query lands.
+  const { viewer, viewerResolved } = useFacilityViewer();
+  const role = viewer.primaryRole;
   const Icon = ROLE_ICON[role];
 
   // Resolve THIS staff member's effective permissions and mirror the facility
@@ -160,21 +168,28 @@ export function EmployeeSidebar({ staffId }: { staffId: string }) {
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <div
-              className={`flex size-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br ${ROLE_COLOR[role]}`}
-            >
-              <Icon className="size-4 text-white" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">
-                {ROLE_LABEL[role]}
-              </p>
-              {staff && (
-                <p className="text-muted-foreground truncate text-xs">
-                  {staff.firstName} {staff.lastName}
-                </p>
-              )}
-            </div>
+            {/* Icon, colour, label and name are ALL the viewer's, so they
+                appear together or not at all — a role-coloured badge while the
+                roster loads is the same wrong answer as the wrong words. */}
+            {viewerResolved ? (
+              <>
+                <div
+                  className={`flex size-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br ${ROLE_COLOR[role]}`}
+                >
+                  <Icon className="size-4 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">
+                    {ROLE_LABEL[role]}
+                  </p>
+                  <p className="text-muted-foreground truncate text-xs">
+                    {viewer.firstName} {viewer.lastName}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="min-w-0 flex-1" />
+            )}
             <SidebarTrigger className="shrink-0" />
           </div>
         )}

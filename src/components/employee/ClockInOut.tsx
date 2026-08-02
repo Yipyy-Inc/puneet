@@ -11,7 +11,7 @@ import {
 } from "@/components/employee/ClockConfirm";
 import { useClock, clockIn, clockOut } from "@/lib/employee/clock-store";
 import { useStaffHrConfig } from "@/data/staff-onboarding";
-import { usePermission } from "@/hooks/use-facility-rbac";
+import { usePermission, useFacilityViewer } from "@/hooks/use-facility-rbac";
 import {
   getTodaySession,
   requestRegisterClose,
@@ -25,6 +25,9 @@ import { shouldPromptCloseOnExit } from "@/lib/register-hours";
 // safeguards live here (surface-specific): a post-action cooldown and an Undo
 // on the clock-out toast.
 export function ClockInOut({ staffId }: { staffId: string }) {
+  // The register context is resolved from the acting viewer, not a bare id —
+  // see src/lib/employee/register-context.ts.
+  const { viewer, viewerResolved } = useFacilityViewer();
   const { clockedIn, clockedInAt } = useClock(staffId);
   const {
     requireClockInConfirm,
@@ -67,7 +70,7 @@ export function ClockInOut({ staffId }: { staffId: string }) {
     // End-of-shift close reminder — mode-aware so a mid-day handover doesn't
     // force the morning opener to close (spec: opener ≠ closer).
     if (canOpenRegister) {
-      const ctx = resolveRegisterContext(staffId);
+      const ctx = resolveRegisterContext(viewerResolved ? viewer : null);
       const session = getTodaySession(ctx.facilityId, ctx.locationId);
       if (
         session &&

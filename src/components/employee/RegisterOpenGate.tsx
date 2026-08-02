@@ -13,7 +13,7 @@ import {
   USD_DENOMINATIONS,
   type DenominationCount,
 } from "@/data/cash-drawer";
-import { usePermission } from "@/hooks/use-facility-rbac";
+import { usePermission, useFacilityViewer } from "@/hooks/use-facility-rbac";
 import { useStaffHrConfig } from "@/data/staff-onboarding";
 import {
   getRegisterSessions,
@@ -39,7 +39,8 @@ export function RegisterOpenGate({
 }) {
   const canOpenRegister = usePermission("open_close_register");
   const { requireRegisterOpenOnLogin } = useStaffHrConfig();
-  const ctx = resolveRegisterContext(staffId);
+  const { viewer, viewerResolved } = useFacilityViewer();
+  const ctx = resolveRegisterContext(viewerResolved ? viewer : null);
   const openToday = useIsRegisterOpenToday(ctx.facilityId, ctx.locationId);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [note, setNote] = useState("");

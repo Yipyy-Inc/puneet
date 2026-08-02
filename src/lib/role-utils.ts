@@ -398,14 +398,15 @@ const EMPLOYEE_STAFF_ID_COOKIE = "employee_staff_id";
  *  show its one-time welcome banner right after a fresh sign-in / switch. */
 export const EMPLOYEE_WELCOME_TS_KEY = "yipyy-employee-welcome-ts";
 
-// Get/set which staff member is being impersonated in the employee portal
-export function getEmployeeStaffId(): string | null {
-  if (typeof document === "undefined") return null;
-  const cookies = document.cookie.split("; ");
-  const c = cookies.find((x) => x.startsWith(`${EMPLOYEE_STAFF_ID_COOKIE}=`));
-  return c ? c.split("=")[1] : null;
-}
-
+// Set/clear which staff member is being impersonated in the employee portal.
+//
+// There is deliberately no getter. `getEmployeeStaffId()` used to read this
+// cookie client-side, and two screens that show HR records — My Documents and
+// My HR Records — used it to decide whose records to open. A cookie a picker
+// wrote is not an answer to "who am I", and those screens now take the acting
+// viewer from the RBAC boundary, which the shell seats from the session
+// (src/lib/auth/employee-identity.ts). The getter is gone rather than merely
+// unused so the next screen that needs an identity cannot reach for it.
 export function setEmployeeStaffId(staffId: string): void {
   if (typeof document === "undefined") return;
   document.cookie = `${EMPLOYEE_STAFF_ID_COOKIE}=${staffId}; path=/; max-age=31536000`;

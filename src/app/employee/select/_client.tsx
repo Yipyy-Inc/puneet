@@ -1,6 +1,9 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+
 import { facilityStaff } from "@/data/facility-staff";
+import { staffQueries } from "@/lib/api/staff";
 import { setEmployeeStaffId } from "@/lib/role-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -123,10 +126,18 @@ function getInitials(firstName: string, lastName: string) {
 }
 
 export function EmployeeSelectClient() {
+  // The picker offers the REAL roster.
+  //
+  // It listed the mock array, so a platform admin reviewing a facility could
+  // only choose people who exist in mock data — and choosing one wrote an id
+  // the shell would then fail to seat. staffQueries.profiles() serves Postgres
+  // rows when there is a session and the same mock array when there is not, so
+  // whatever the list offers is something the shell can act as.
+  const { data: roster } = useQuery(staffQueries.profiles());
   const groups = ROLE_ORDER.map((role) => ({
     role,
     config: ROLE_CONFIG[role],
-    members: facilityStaff.filter(
+    members: (roster ?? facilityStaff).filter(
       (s) => s.primaryRole === role && s.status === "active",
     ),
   })).filter((g) => g.members.length > 0);
