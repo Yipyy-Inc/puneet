@@ -19,10 +19,43 @@ type StaffRow = Tables<"staff">;
 
 export type StaffProfileWithRowId = StaffProfile & { rowId: string };
 
+/**
+ * Defaults for the `details` fields StaffProfile declares as REQUIRED.
+ *
+ * `details` is a JSON blob, so the database cannot promise any of them, and
+ * the cast at the end of this function was promising all of them anyway. Rows
+ * seeded from the mock array happen to carry them; a row created through
+ * POST /api/staff, or the dev-account rows, do not.
+ *
+ * That gap is not theoretical — it crashed the staff directory the moment it
+ * started reading Postgres: `profile.assignedLocations.map(...)` on a row
+ * without the key. Guarding at each of the twenty-odd call sites would be
+ * whack-a-mole; the honest fix is to make the type's promise true HERE, once,
+ * where the promise is made.
+ *
+ * Note what is deliberately NOT in this list: `payroll` and
+ * `permissionOverrides`. Those are optional in the type because absent means
+ * WITHHELD, and defaulting them would turn a redaction into "$0/hr" and
+ * "no overrides".
+ */
+const DETAIL_DEFAULTS = {
+  assignedLocations: [] as string[],
+  calendarAccess: { mode: "all" } as StaffProfile["calendarAccess"],
+  clockIn: { requireAccessCode: false } as StaffProfile["clockIn"],
+  notifications: {} as StaffProfile["notifications"],
+  employment: {
+    hireDate: "",
+    employmentType: "",
+  } as StaffProfile["employment"],
+  upcomingAppointments: 0,
+  openTasks: 0,
+} satisfies Partial<StaffProfile>;
+
 export function rowToStaffProfile(row: StaffRow): StaffProfileWithRowId {
   const details = (row.details ?? {}) as Record<string, unknown>;
 
   return {
+    ...DETAIL_DEFAULTS,
     ...(details as Partial<StaffProfile>),
     rowId: row.id,
     id: row.legacy_id ?? row.id,
