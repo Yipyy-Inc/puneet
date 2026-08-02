@@ -11,11 +11,7 @@ import {
   Eye,
   ShieldAlert,
 } from "lucide-react";
-import {
-  FacilityRbacProvider,
-  useFacilityViewer,
-} from "@/hooks/use-facility-rbac";
-import { facilityStaff } from "@/data/facility-staff";
+import { useFacilityViewer } from "@/hooks/use-facility-rbac";
 import {
   Select,
   SelectContent,
@@ -54,7 +50,45 @@ const staffTabs = [
 ];
 
 function ViewingAsSwitcher() {
-  const { viewerId, setViewerId, viewer } = useFacilityViewer();
+  const {
+    viewerId,
+    setViewerId,
+    viewer,
+    canSwitchViewer,
+    viewerResolved,
+    staff,
+  } = useFacilityViewer();
+
+  // Until the roster arrives, `viewer` is a fallback — showing its name would
+  // briefly name a COLLEAGUE. Say nothing rather than something wrong.
+  if (!canSwitchViewer && !viewerResolved) {
+    return (
+      <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+        <Eye className="size-3" /> Signed in…
+      </div>
+    );
+  }
+
+  // Signed in as a real staff member, this control does nothing — the identity
+  // came from the session. Showing a dropdown that silently ignores clicks is
+  // worse than showing none, so it renders who you are instead.
+  if (!canSwitchViewer) {
+    return (
+      <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+        <Eye className="size-3" />
+        <span className="truncate">
+          Signed in as{" "}
+          <span className="text-foreground font-medium">
+            {viewer.firstName} {viewer.lastName}
+          </span>
+          <span className="ml-1.5">
+            · {ROLE_META[viewer.primaryRole].label}
+          </span>
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2">
       <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
@@ -72,7 +106,7 @@ function ViewingAsSwitcher() {
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {facilityStaff.map((s) => (
+          {staff.map((s) => (
             <SelectItem key={s.id} value={s.id} className="text-xs">
               <span className="font-medium">
                 {s.firstName} {s.lastName}
@@ -151,9 +185,7 @@ export default function StaffLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <FacilityRbacProvider>
-      <StaffLayoutShell>{children}</StaffLayoutShell>
-    </FacilityRbacProvider>
-  );
+  // No provider here any more — the facility layout mounts it with the
+  // session-resolved identity. A nested one would shadow that with a default.
+  return <StaffLayoutShell>{children}</StaffLayoutShell>;
 }

@@ -1,5 +1,7 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { canAccessFacilityPortal, canManageCustomers } from "@/lib/auth/viewer";
+import { guardPortal } from "@/lib/auth/portal-gate";
+import { legacyStaffIdForEmail } from "@/lib/auth/legacy-identity";
+import { FacilityRbacProvider } from "@/hooks/use-facility-rbac";
 import { FacilitySidebar } from "@/components/layout/facility-admin-sidebar";
 import {
   SidebarInset,
@@ -28,59 +30,81 @@ export default async function FacilityLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const userRole = cookieStore.get("user_role")?.value;
+  // One identity for the whole portal, from the signed JWT when there is a
+  // session. The gate still answers with the old cookie rule until
+  // AUTH_ENFORCED is switched on — see lib/auth/viewer.ts.
+  const viewer = await guardPortal({
+    portal: "facility",
+    allow: canAccessFacilityPortal,
+    whenWrongPortal: "/dashboard",
+  });
 
-  // Gate the facility portal to facility_admin. Super admins are also allowed
-  // through so they can review facility/HQ features without switching roles.
-  // No role set (undefined) defaults to facility_admin for testing.
-  const allowedRoles = ["facility_admin", "super_admin"];
-  if (userRole && !allowedRoles.includes(userRole)) {
-    redirect("/dashboard");
-  }
+  const canCreateCustomer = canManageCustomers(viewer);
+
+  // Who the portal thinks you are, resolved from your VERIFIED session email
+  // against the staff table — the same bridge the groomer and staff portals
+  // already use, which this portal never had.
+  //
+  // Without it the RBAC provider defaulted to the hardcoded "fs-owner-01" and
+  // let anyone change it from localStorage. Permissions stopped following that
+  // when they moved into Postgres, so the effect was subtler than a privilege
+  // hole and arguably worse: a signed-in groomer saw the OWNER's name, avatar
+  // and profile while holding a groomer's permissions.
+  //
+  // `null` when signed out or when the session has no staff record. That is the
+  // whole app today, and it keeps today's behaviour — a switchable viewer
+  // defaulting to the owner — rather than blanking the portal.
+  const staffId = await legacyStaffIdForEmail(viewer.email);
 
   return (
-    <LocationContextProviderWrapper>
-      <SettingsProviderWrapper>
-        <LoyaltyProgramProvider>
-          <BookingModalProviderWrapper>
-            <CallAvailabilityProvider>
-              <CallTagsProvider>
-                <ReputationProvider>
-                  <SidebarProvider className="min-h-[calc(100vh-64px)]">
-                    <FacilitySidebar />
-                    <SidebarInset className="flex min-h-[calc(100vh-64px)] min-w-0 flex-col overflow-x-clip">
-                      <header className="from-background to-muted/20 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-linear-to-r px-4 backdrop-blur-sm sm:px-6">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors md:hidden" />
-                          <GlobalSearchNext
-                            className="hidden w-[460px] max-w-[480px] min-w-0 sm:flex"
-                            canCreateCustomer={userRole === "facility_admin"}
-                          />
-                          <MobileSearch
-                            className="sm:hidden"
-                            canCreateCustomer={userRole === "facility_admin"}
-                          />
-                        </div>
-                        <FacilityHeaderActions facilityId={11} />
-                      </header>
-                      <main className="min-w-0 flex-1 overflow-x-clip">
-                        <ImpersonationBanner />
-                        <AnnouncementBanner facilityId={11} />
-                        <FacilityOnboardingBanner />
-                        {children}
-                      </main>
-                      <FacilityMobileBottomNav />
-                    </SidebarInset>
-                    <SupportFab />
-                    <SupportCenter />
-                  </SidebarProvider>
-                </ReputationProvider>
-              </CallTagsProvider>
-            </CallAvailabilityProvider>
-          </BookingModalProviderWrapper>
-        </LoyaltyProgramProvider>
-      </SettingsProviderWrapper>
-    </LocationContextProviderWrapper>
+    <FacilityRbacProvider
+      initialViewerId={staffId ?? undefined}
+      // Platform admins keep the switcher: reviewing a facility as one of its
+      // staff is what the tool is for. Anyone else is themselves.
+      allowViewerSwitch={staffId === null || viewer.isPlatformAdmin}
+    >
+      <LocationContextProviderWrapper>
+        <SettingsProviderWrapper>
+          <LoyaltyProgramProvider>
+            <BookingModalProviderWrapper>
+              <CallAvailabilityProvider>
+                <CallTagsProvider>
+                  <ReputationProvider>
+                    <SidebarProvider className="min-h-[calc(100vh-64px)]">
+                      <FacilitySidebar />
+                      <SidebarInset className="flex min-h-[calc(100vh-64px)] min-w-0 flex-col overflow-x-clip">
+                        <header className="from-background to-muted/20 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-linear-to-r px-4 backdrop-blur-sm sm:px-6">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors md:hidden" />
+                            <GlobalSearchNext
+                              className="hidden w-[460px] max-w-[480px] min-w-0 sm:flex"
+                              canCreateCustomer={canCreateCustomer}
+                            />
+                            <MobileSearch
+                              className="sm:hidden"
+                              canCreateCustomer={canCreateCustomer}
+                            />
+                          </div>
+                          <FacilityHeaderActions facilityId={11} />
+                        </header>
+                        <main className="min-w-0 flex-1 overflow-x-clip">
+                          <ImpersonationBanner />
+                          <AnnouncementBanner facilityId={11} />
+                          <FacilityOnboardingBanner />
+                          {children}
+                        </main>
+                        <FacilityMobileBottomNav />
+                      </SidebarInset>
+                      <SupportFab />
+                      <SupportCenter />
+                    </SidebarProvider>
+                  </ReputationProvider>
+                </CallTagsProvider>
+              </CallAvailabilityProvider>
+            </BookingModalProviderWrapper>
+          </LoyaltyProgramProvider>
+        </SettingsProviderWrapper>
+      </LocationContextProviderWrapper>
+    </FacilityRbacProvider>
   );
 }

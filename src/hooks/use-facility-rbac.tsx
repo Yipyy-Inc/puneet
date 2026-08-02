@@ -25,12 +25,16 @@ import {
   type StaffProfile,
 } from "@/types/facility-staff";
 import { facilityStaff } from "@/data/facility-staff";
+import { staffQueries } from "@/lib/api/staff";
 import { setFacilityRoleCookie } from "@/lib/facility-role";
+import { useDbPermissions } from "@/hooks/use-db-permissions";
 import {
   roleQueries,
   useCreateCustomRole,
   useDeleteCustomRole,
   useSetCustomRolePermission,
+  useSetFacilityRolePermission,
+  useSetStaffPermission,
   useUpdateCustomRole,
 } from "@/lib/api/roles";
 
@@ -54,6 +58,24 @@ interface RbacContextValue {
   viewer: StaffProfile;
   viewerId: string;
   setViewerId: (id: string) => void;
+  /**
+   * Whether `setViewerId` does anything. A switcher UI should hide itself when
+   * this is false rather than render a control that silently ignores clicks.
+   */
+  canSwitchViewer: boolean;
+  /**
+   * False for the moment between mount and the staff roster arriving, when
+   * `viewer` is a fallback rather than the person the session names. UI that
+   * shows WHO you are should draw a placeholder until this is true.
+   */
+  viewerResolved: boolean;
+  /**
+   * The roster identities resolve against: Postgres rows when there is a
+   * session, the mock array when there is not. Anything offering a choice of
+   * staff must read THIS, not the mock array — offering an id the provider
+   * cannot resolve silently selects somebody else.
+   */
+  staff: StaffProfile[];
   /** All custom roles, keyed by id. */
   customRoles: CustomRolesById;
   /** Preset permission overrides, keyed by role then permission. */
@@ -139,10 +161,25 @@ export function FacilityRbacProvider({
    * (the facility staff layout does) to keep the switchable, persisted viewer.
    */
   initialViewerId,
+  allowViewerSwitch,
   previewPermissions,
 }: {
   children: ReactNode;
   initialViewerId?: string;
+  /**
+   * Whether the "viewing as" switcher may change who the tree thinks you are.
+   *
+   * Defaults to `initialViewerId == null`, which reproduces the old behaviour
+   * exactly: the employee portal passed an id and got a fixed viewer, the
+   * facility staff section passed none and got a switchable one.
+   *
+   * The facility portal now passes it explicitly, because "switchable" there
+   * meant ANY visitor could type an id into localStorage and have the UI redraw
+   * as the owner. Permissions stopped following that in PR #99 — they come from
+   * the database now — but the identity did, and a groomer looking at the
+   * owner's name and profile is its own problem.
+   */
+  allowViewerSwitch?: boolean;
   /**
    * Section 7 — "Preview as employee". When set, EVERY permission decision in
    * the tree resolves from this map instead of a real staff profile, so the
@@ -151,6 +188,7 @@ export function FacilityRbacProvider({
    */
   previewPermissions?: EffectivePermissions | null;
 }) {
+  const canSwitch = allowViewerSwitch ?? initialViewerId == null;
   const [state, setState] = useState<RbacState>(
     initialViewerId
       ? { ...DEFAULT_STATE, viewerId: initialViewerId }
@@ -159,14 +197,39 @@ export function FacilityRbacProvider({
   const [hydrated, setHydrated] = useState(false);
 
   // Custom roles are read through the roles query layer; their writes go through
-  // the mutations below. viewerId + presetOverrides stay local to this provider.
+  // the mutations below. viewerId stays local to this provider.
   const { data: customRolesData } = useQuery(roleQueries.customRoles());
-  const customRoles = customRolesData ?? EMPTY_CUSTOM_ROLES;
+  const customRoles = customRolesData?.roles ?? EMPTY_CUSTOM_ROLES;
+  const customAssignments = customRolesData?.assignments;
+
+  // The roster this provider resolves identities against.
+  //
+  // It used to be the mock array, full stop, which quietly broke the moment an
+  // id came from anywhere real: `initialViewerId` resolved from a session finds
+  // no match in the mock array, and `.find() ?? facilityStaff[0]` then hands
+  // back SOMEBODY ELSE rather than failing. A staff member appearing as a
+  // colleague is worse than an error, because nothing looks wrong.
+  //
+  // staffQueries.profiles() serves Postgres rows when there is a session and
+  // the same mock array when there is not, so both ids resolve in their own
+  // world.
+  const { data: dbStaff } = useQuery(staffQueries.profiles());
+  const staffList = dbStaff ?? facilityStaff;
+
+  // The two DB-backed layers of the cascade. `undefined` while loading and
+  // `null` when signed out; in both cases the local state below is what the UI
+  // shows, for the same reason use-db-permissions falls back — most of the app
+  // is still browsed signed-out until AUTH_ENFORCED flips, and blanking the
+  // editor would look like a bug rather than a sign-in prompt.
+  const { data: dbOverrides } = useQuery(roleQueries.overrides());
 
   const { mutate: createRoleMutate } = useCreateCustomRole();
   const { mutate: updateRoleMutate } = useUpdateCustomRole();
   const { mutate: deleteRoleMutate } = useDeleteCustomRole();
   const { mutate: setRolePermissionMutate } = useSetCustomRolePermission();
+  const { mutate: setFacilityRolePermissionMutate } =
+    useSetFacilityRolePermission();
+  const { mutate: setStaffPermissionMutate } = useSetStaffPermission();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -177,9 +240,12 @@ export function FacilityRbacProvider({
         // the query store, so only pull the fields this provider still owns.
         const parsed = JSON.parse(raw) as Partial<RbacState>;
         setState((prev) => ({
-          // In fixed-viewer (employee) mode the identity comes from the session
-          // cookie — never let a stored "viewing as" id override it.
-          viewerId: initialViewerId ?? parsed.viewerId ?? prev.viewerId,
+          // A stored "viewing as" id is only allowed to win where switching is
+          // allowed. Everywhere else the identity came from a verified session
+          // and localStorage does not get a vote.
+          viewerId: canSwitch
+            ? (parsed.viewerId ?? initialViewerId ?? prev.viewerId)
+            : (initialViewerId ?? prev.viewerId),
           presetOverrides: parsed.presetOverrides ?? prev.presetOverrides,
           staffOverrides: parsed.staffOverrides ?? prev.staffOverrides,
         }));
@@ -188,25 +254,36 @@ export function FacilityRbacProvider({
       /* ignore */
     }
     setHydrated(true);
-  }, [initialViewerId]);
+  }, [initialViewerId, canSwitch]);
 
   useEffect(() => {
     if (!hydrated || typeof window === "undefined") return;
-    // Don't write the employee portal's cookie-driven viewer back into the
-    // shared key (it would bleed into the facility "viewing as" switcher).
-    if (initialViewerId) return;
+    // Don't write a session-derived viewer back into the shared key — it would
+    // bleed into the switcher and outlive the session that produced it.
+    if (!canSwitch) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
       /* ignore */
     }
-  }, [state, hydrated, initialViewerId]);
+  }, [state, hydrated, canSwitch]);
 
-  const viewer = useMemo<StaffProfile>(() => {
-    return (
-      facilityStaff.find((s) => s.id === state.viewerId) ?? facilityStaff[0]
-    );
-  }, [state.viewerId]);
+  // `staffList[0]` is a reasonable default for the SWITCHABLE case, where the
+  // viewer is a choice rather than a fact. It is a bad one for a
+  // session-derived identity that has not arrived yet: the roster loads
+  // asynchronously, so for the first paint "fs-dev-groomer" is absent and the
+  // fallback renders a COLLEAGUE'S name and role. Correct a moment later, wrong
+  // in the meantime, and wrong in the way nobody notices.
+  //
+  // `viewerResolved` is what lets a caller draw a placeholder instead. It does
+  // not change `viewer` itself, because every consumer needs a profile to read;
+  // it marks the one moment when that profile is not yet the right person.
+  const resolvedViewer = useMemo(
+    () => staffList.find((s) => s.id === state.viewerId),
+    [staffList, state.viewerId],
+  );
+  const viewer = resolvedViewer ?? staffList[0];
+  const viewerResolved = resolvedViewer != null;
 
   // Mirror the active viewer's role into a server-readable cookie so server-side
   // route guards (e.g. the owner-only Documents / Yipyy Agreements area) can
@@ -216,27 +293,43 @@ export function FacilityRbacProvider({
     setFacilityRoleCookie(viewer.primaryRole);
   }, [viewer.primaryRole, hydrated]);
 
-  // A staff member's effective override map: the provider's edited overrides if
-  // an entry exists, otherwise the profile's baked seed.
+  // What a role means at this facility. The database's answer wins when there
+  // is one, because that is what RLS will enforce; the local blob is only the
+  // signed-out fallback.
+  const presetOverrides = dbOverrides?.facilityRoles ?? state.presetOverrides;
+
+  // A staff member's effective override map, most authoritative first: the
+  // database, then this browser's edits, then the profile's baked seed.
   const staffOverridesFor = useCallback(
     (staffId: string): Partial<Record<PermissionKey, PermissionSetting>> => {
-      const edited = state.staffOverrides[staffId];
+      const stored = dbOverrides?.staff[staffId];
+      if (stored) return stored;
+      // Deliberately NOT consulted once the database has answered: a stale
+      // local edit that Postgres does not know about must not resurface as
+      // though it were in force.
+      const edited = dbOverrides ? undefined : state.staffOverrides[staffId];
       if (edited) return edited;
-      return (
-        facilityStaff.find((s) => s.id === staffId)?.permissionOverrides ?? {}
-      );
+      return staffList.find((s) => s.id === staffId)?.permissionOverrides ?? {};
     },
-    [state.staffOverrides],
+    [dbOverrides, staffList, state.staffOverrides],
   );
 
   // Overlay the provider's per-staff overrides onto the profile before resolving
   // so guards/sidebar/masks reflect per-staff edits, not just the baked seed.
+  //
+  // Custom-role assignments are overlaid the same way and for the same reason:
+  // once the database has answered, staff_custom_roles is who actually holds a
+  // role. The mock profile's own customRoleIds is a seed, and showing it while
+  // Postgres says otherwise is the bug this whole change is about.
   const withOverrides = useCallback(
     (staff: StaffProfile): StaffProfile => ({
       ...staff,
       permissionOverrides: staffOverridesFor(staff.id),
+      customRoleIds: customAssignments
+        ? (customAssignments[staff.id] ?? [])
+        : staff.customRoleIds,
     }),
-    [staffOverridesFor],
+    [staffOverridesFor, customAssignments],
   );
 
   const resolveFor = useCallback(
@@ -251,10 +344,10 @@ export function FacilityRbacProvider({
       }
       return resolvePermission(withOverrides(staff), key, {
         customRoles,
-        presetOverrides: state.presetOverrides,
+        presetOverrides,
       });
     },
-    [customRoles, state.presetOverrides, withOverrides, previewPermissions],
+    [customRoles, presetOverrides, withOverrides, previewPermissions],
   );
 
   const can = useCallback(
@@ -267,7 +360,7 @@ export function FacilityRbacProvider({
     (staffId: string): EffectivePermissions => {
       // Section 7: preview short-circuits — the whole tree sees the role's map.
       if (previewPermissions) return previewPermissions;
-      const staff = facilityStaff.find((s) => s.id === staffId);
+      const staff = staffList.find((s) => s.id === staffId);
       if (!staff) {
         return Object.fromEntries(
           ALL_PERMISSION_KEYS.map((k) => [k, false]),
@@ -275,10 +368,16 @@ export function FacilityRbacProvider({
       }
       return resolveAllPermissions(withOverrides(staff), {
         customRoles,
-        presetOverrides: state.presetOverrides,
+        presetOverrides,
       });
     },
-    [customRoles, state.presetOverrides, withOverrides, previewPermissions],
+    [
+      customRoles,
+      presetOverrides,
+      withOverrides,
+      previewPermissions,
+      staffList,
+    ],
   );
 
   const setStaffPermission = useCallback(
@@ -287,12 +386,17 @@ export function FacilityRbacProvider({
       key: PermissionKey,
       setting: PermissionSetting | null,
     ) => {
+      // Postgres is where this has to land — staff_permissions is layer 3 of
+      // the cascade RLS evaluates. The local edit below is what the editor
+      // shows while signed out.
+      setStaffPermissionMutate({ staffId, key, setting });
+
       setState((prev) => {
         // Seed a fresh entry from the profile's baked overrides so edits build
         // on top of any pre-existing seed rather than wiping it.
         const base =
           prev.staffOverrides[staffId] ??
-          facilityStaff.find((s) => s.id === staffId)?.permissionOverrides ??
+          staffList.find((s) => s.id === staffId)?.permissionOverrides ??
           {};
         const current = { ...base };
         if (setting === null) {
@@ -306,15 +410,25 @@ export function FacilityRbacProvider({
         };
       });
     },
-    [],
+    [setStaffPermissionMutate, staffList],
   );
 
-  const resetStaffOverrides = useCallback((staffId: string) => {
-    setState((prev) => ({
-      ...prev,
-      staffOverrides: { ...prev.staffOverrides, [staffId]: {} },
-    }));
-  }, []);
+  const resetStaffOverrides = useCallback(
+    (staffId: string) => {
+      // Only the keys the database actually holds — the baked mock seed has no
+      // row to delete, and issuing deletes for it would be noise.
+      for (const key of Object.keys(
+        dbOverrides?.staff[staffId] ?? {},
+      ) as PermissionKey[]) {
+        setStaffPermissionMutate({ staffId, key, setting: null });
+      }
+      setState((prev) => ({
+        ...prev,
+        staffOverrides: { ...prev.staffOverrides, [staffId]: {} },
+      }));
+    },
+    [dbOverrides, setStaffPermissionMutate],
+  );
 
   const createCustomRole = useCallback(
     (
@@ -363,6 +477,10 @@ export function FacilityRbacProvider({
       key: PermissionKey,
       scope: AccessScope | "revoked" | null,
     ) => {
+      // The edit that counts: facility_role_permissions is what
+      // private.resolve_permission reads. Everything below is presentation.
+      setFacilityRolePermissionMutate({ role, key, scope });
+
       setState((prev) => {
         const current = { ...(prev.presetOverrides[role] ?? {}) };
         if (scope === null) {
@@ -379,32 +497,63 @@ export function FacilityRbacProvider({
         return { ...prev, presetOverrides: nextOverrides };
       });
     },
-    [],
+    [setFacilityRolePermissionMutate],
   );
 
-  const resetPresetRole = useCallback((role: FacilityStaffRole) => {
-    setState((prev) => {
-      const next = { ...prev.presetOverrides };
-      delete next[role];
-      return { ...prev, presetOverrides: next };
-    });
-  }, []);
+  // Resetting is a delete per key rather than one call, because the override
+  // tables are keyed per permission. Clearing them only in local state would
+  // leave the row in Postgres still in force — the same lie this change exists
+  // to remove, just behind a different button.
+  const resetPresetRole = useCallback(
+    (role: FacilityStaffRole) => {
+      for (const key of Object.keys(
+        presetOverrides[role] ?? {},
+      ) as PermissionKey[]) {
+        setFacilityRolePermissionMutate({ role, key, scope: null });
+      }
+      setState((prev) => {
+        const next = { ...prev.presetOverrides };
+        delete next[role];
+        return { ...prev, presetOverrides: next };
+      });
+    },
+    [presetOverrides, setFacilityRolePermissionMutate],
+  );
 
   const resetAllPresets = useCallback(() => {
+    for (const [role, keys] of Object.entries(presetOverrides)) {
+      for (const key of Object.keys(keys) as PermissionKey[]) {
+        setFacilityRolePermissionMutate({
+          role: role as FacilityStaffRole,
+          key,
+          scope: null,
+        });
+      }
+    }
     setState((prev) => ({ ...prev, presetOverrides: {} }));
-  }, []);
+  }, [presetOverrides, setFacilityRolePermissionMutate]);
 
-  const setViewerId = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, viewerId: id }));
-  }, []);
+  const setViewerId = useCallback(
+    (id: string) => {
+      // A no-op rather than a throw: callers render a switcher that is simply
+      // absent where switching is not allowed, and a stray call from a stale
+      // component must not break the page.
+      if (!canSwitch) return;
+      setState((prev) => ({ ...prev, viewerId: id }));
+    },
+    [canSwitch],
+  );
 
   const value = useMemo<RbacContextValue>(
     () => ({
       viewer,
       viewerId: state.viewerId,
       setViewerId,
+      canSwitchViewer: canSwitch,
+      viewerResolved,
+      staff: staffList,
       customRoles,
-      presetOverrides: state.presetOverrides,
+      presetOverrides,
       can,
       resolveFor,
       resolvePermissions,
@@ -422,8 +571,11 @@ export function FacilityRbacProvider({
     [
       viewer,
       state.viewerId,
+      canSwitch,
+      viewerResolved,
+      staffList,
       customRoles,
-      state.presetOverrides,
+      presetOverrides,
       setViewerId,
       can,
       resolveFor,
@@ -459,6 +611,9 @@ export function useFacilityRbac(): RbacContextValue {
       viewer: owner,
       viewerId: owner.id,
       setViewerId: () => {},
+      canSwitchViewer: false,
+      viewerResolved: true,
+      staff: facilityStaff,
       customRoles: {},
       presetOverrides: {},
       can: () => true,
@@ -487,28 +642,60 @@ export function useFacilityRbac(): RbacContextValue {
 }
 
 export function useFacilityViewer() {
-  const { viewer, viewerId, setViewerId, can } = useFacilityRbac();
-  return { viewer, viewerId, setViewerId, can };
+  const {
+    viewer,
+    viewerId,
+    setViewerId,
+    canSwitchViewer,
+    viewerResolved,
+    staff,
+    can,
+  } = useFacilityRbac();
+  return {
+    viewer,
+    viewerId,
+    setViewerId,
+    canSwitchViewer,
+    viewerResolved,
+    staff,
+    can,
+  };
 }
 
 /**
  * The full effective permission map for the acting viewer. Guards, the dynamic
  * sidebar, and field-masking read from this single source of truth.
+ *
+ * The DATABASE is that source when there is a session — see
+ * use-db-permissions.ts. The client-side cascade below it computes the same
+ * rules from a mock staff array and overrides held in localStorage, which is
+ * both a second implementation and an editable one.
+ *
+ * The legacy path stays as the fallback while AUTH_ENFORCED is off, because
+ * most of the app is still browsed signed-out and blanking every guarded
+ * control would look like a bug rather than a policy.
  */
 export function useEffectivePermissions(): EffectivePermissions {
   const { viewer, resolvePermissions } = useFacilityRbac();
-  return useMemo(
+  const fromDb = useDbPermissions();
+
+  const legacy = useMemo(
     () => resolvePermissions(viewer.id),
     [resolvePermissions, viewer.id],
   );
+
+  return fromDb ?? legacy;
 }
 
 /**
  * Does the acting viewer have `key` (with any scope)? The ergonomic check every
- * guard/sidebar/mask should call. Delegates to the provider's single resolver.
+ * guard/sidebar/mask should call.
  */
 export function usePermission(key: PermissionKey): boolean {
   const { can } = useFacilityRbac();
+  const fromDb = useDbPermissions();
+
+  if (fromDb) return fromDb[key] !== false && fromDb[key] !== undefined;
   return can(key);
 }
 
@@ -519,6 +706,10 @@ export function usePermission(key: PermissionKey): boolean {
  */
 export function useCan(key: PermissionKey): AccessScope | false {
   const { viewer, resolveFor } = useFacilityRbac();
+  const fromDb = useDbPermissions();
+
+  if (fromDb) return fromDb[key] ?? false;
+
   const { granted, scope } = resolveFor(viewer, key);
   return granted ? scope : false;
 }

@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
-import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import { useSettings } from "@/hooks/use-settings";
 import { Button } from "@/components/ui/button";
@@ -25,7 +24,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import {
   getEnabledCustomerLanguageOptions,
   getCustomerLanguageLabel,
@@ -33,7 +31,8 @@ import {
   type AppLocale,
 } from "@/lib/language-settings";
 import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react";
-import { getErrorMessage } from "@/lib/errors";
+import { signUp } from "@/lib/auth/actions";
+import { AUTH_INITIAL_STATE } from "@/lib/auth/form-state";
 
 const SIGNUP_PREFERRED_LANGUAGE_STORAGE_KEY =
   "customer-signup-preferred-language-by-email";
@@ -131,6 +130,11 @@ export default function SignUpPage() {
     preferredLanguage: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Set when the account was created but a confirmation email must be opened
+  // before there is a session to redirect into.
+  const [pendingConfirmation, setPendingConfirmation] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     setHasHydrated(true);
@@ -155,28 +159,6 @@ export default function SignUpPage() {
     preferredLanguageEnabledByFacility,
   ]);
 
-  const validatePreferredLanguageSelection = () => {
-    if (!preferredLanguageEnabledByFacility) return true;
-
-    const selectedIsValid = customerLanguageOptions.some(
-      (option) => option.code === formData.preferredLanguage,
-    );
-
-    if (selectedIsValid) {
-      setErrors((current) => ({
-        ...current,
-        preferredLanguage: "",
-      }));
-      return true;
-    }
-
-    setErrors((current) => ({
-      ...current,
-      preferredLanguage: "Please choose a preferred language",
-    }));
-    return false;
-  };
-
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -192,8 +174,10 @@ export default function SignUpPage() {
 
     if (!formData.password) {
       newErrors.password = "Password is required";
-    } else if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters";
+    } else if (formData.password.length < 12) {
+      // Matches the server policy in lib/auth/actions. Checking a weaker rule
+      // here would just mean the server rejects what this page accepted.
+      newErrors.password = "Password must be at least 12 characters";
     }
 
     if (!formData.confirmPassword) {
@@ -225,210 +209,47 @@ export default function SignUpPage() {
 
     setIsLoading(true);
 
-    try {
-      // TODO: Replace with actual API call
-      // Check if customer exists with same email
-      const existingCustomer = await checkExistingCustomer(formData.email);
+    const language = preferredLanguageEnabledByFacility
+      ? formData.preferredLanguage
+      : undefined;
 
-      const redirectTo =
-        fromEstimate && estimateToken
-          ? `/customer/estimates/${estimateToken}`
-          : "/customer/dashboard";
+    const redirectTo =
+      fromEstimate && estimateToken
+        ? `/customer/estimates/${estimateToken}`
+        : "/customer/dashboard";
 
-      if (existingCustomer) {
-        await linkAccount(formData.email, formData.password);
-        savePreferredLanguageForEmail(
-          formData.email,
-          preferredLanguageEnabledByFacility
-            ? formData.preferredLanguage
-            : undefined,
-        );
-        applyAccountLocale(
-          preferredLanguageEnabledByFacility
-            ? formData.preferredLanguage
-            : undefined,
-        );
-        toast.success("Account connected successfully!");
-        router.push(redirectTo);
-      } else {
-        await createAccount(formData);
-        savePreferredLanguageForEmail(
-          formData.email,
-          preferredLanguageEnabledByFacility
-            ? formData.preferredLanguage
-            : undefined,
-        );
-        applyAccountLocale(
-          preferredLanguageEnabledByFacility
-            ? formData.preferredLanguage
-            : undefined,
-        );
-        toast.success("Account created successfully!");
-        router.push(redirectTo);
-      }
-    } catch (error: unknown) {
-      toast.error(
-        getErrorMessage(error) || "Something went wrong. Please try again.",
-      );
-    } finally {
+    // Real account creation. The action owns validation, the enumeration-safe
+    // messaging, and the confirmation email pointed at /auth/callback.
+    const payload = new FormData();
+    payload.set("fullName", formData.name);
+    payload.set("email", formData.email);
+    payload.set("password", formData.password);
+    payload.set("redirectTo", redirectTo);
+
+    const result = await signUp(AUTH_INITIAL_STATE, payload);
+
+    if (result.error) {
       setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSignUp = async () => {
-    if (!validatePreferredLanguageSelection()) {
+      toast.error(result.error);
       return;
     }
 
-    setIsLoading(true);
-    try {
-      // TODO: Replace with actual Google OAuth implementation
-      const googleUser = await signInWithGoogle();
+    // Language preference is a local display setting, not account data, so it
+    // is stored regardless of whether confirmation is still pending.
+    savePreferredLanguageForEmail(formData.email, language);
+    applyAccountLocale(language);
 
-      // Check if customer exists with same email
-      const existingCustomer = await checkExistingCustomer(googleUser.email);
+    setIsLoading(false);
 
-      if (existingCustomer) {
-        // Link Google account to existing customer
-        await linkGoogleAccount(googleUser);
-        savePreferredLanguageForEmail(
-          googleUser.email,
-          preferredLanguageEnabledByFacility
-            ? formData.preferredLanguage
-            : undefined,
-        );
-        applyAccountLocale(
-          preferredLanguageEnabledByFacility
-            ? formData.preferredLanguage
-            : undefined,
-        );
-        toast.success("Account connected successfully!");
-      } else {
-        // Create new account with Google
-        await createAccountWithGoogle(
-          googleUser,
-          preferredLanguageEnabledByFacility
-            ? formData.preferredLanguage
-            : undefined,
-        );
-        savePreferredLanguageForEmail(
-          googleUser.email,
-          preferredLanguageEnabledByFacility
-            ? formData.preferredLanguage
-            : undefined,
-        );
-        applyAccountLocale(
-          preferredLanguageEnabledByFacility
-            ? formData.preferredLanguage
-            : undefined,
-        );
-        toast.success("Account created successfully!");
-      }
-
-      router.push("/customer/dashboard");
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error) || "Failed to sign up with Google");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Placeholder functions - replace with actual API calls
-  const checkExistingCustomer = async (_email: string) => {
-    // TODO: API call to check if customer exists
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return false; // Mock: no existing customer
-  };
-
-  const linkAccount = async (_email: string, _password: string) => {
-    // TODO: API call to link account
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  };
-
-  const createAccount = async (data: typeof formData) => {
-    // TODO: API call to create account
-    const existingByEmail = clients.some(
-      (client) =>
-        client.email.trim().toLowerCase() === data.email.trim().toLowerCase(),
-    );
-
-    if (!existingByEmail) {
-      const maxId = clients.reduce(
-        (max, client) => Math.max(max, client.id),
-        0,
-      );
-
-      clients.push({
-        id: maxId + 1,
-        name: data.name.trim(),
-        email: data.email.trim(),
-        phone: "",
-        preferredLanguage: data.preferredLanguage,
-        status: "active",
-        facility: targetFacilityName ?? "Example Pet Care Facility",
-        address: {
-          street: "",
-          city: "",
-          state: "",
-          zip: "",
-          country: "",
-        },
-        additionalContacts: [],
-        pets: [],
-      });
+    if (result.success) {
+      // Confirmation is on: no session yet, so there is nowhere to send them.
+      setPendingConfirmation(result.success);
+      return;
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  };
-
-  const signInWithGoogle = async () => {
-    // TODO: Implement Google OAuth
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return { email: "user@example.com", name: "User Name" };
-  };
-
-  const linkGoogleAccount = async (_googleUser: unknown) => {
-    // TODO: API call to link Google account
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  };
-
-  const createAccountWithGoogle = async (
-    googleUser: { email: string; name: string },
-    preferredLanguage?: string,
-  ) => {
-    // TODO: API call to create account with Google
-    const existingByEmail = clients.some(
-      (client) =>
-        client.email.trim().toLowerCase() === googleUser.email.toLowerCase(),
-    );
-
-    if (!existingByEmail) {
-      const maxId = clients.reduce(
-        (max, client) => Math.max(max, client.id),
-        0,
-      );
-
-      clients.push({
-        id: maxId + 1,
-        name: googleUser.name,
-        email: googleUser.email,
-        phone: "",
-        preferredLanguage,
-        status: "active",
-        facility: targetFacilityName ?? "Example Pet Care Facility",
-        address: {
-          street: "",
-          city: "",
-          state: "",
-          zip: "",
-          country: "",
-        },
-        additionalContacts: [],
-        pets: [],
-      });
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Confirmation off — signUp redirected server-side and we never get here.
+    toast.success("Account created successfully!");
+    router.push(redirectTo);
   };
 
   return (
@@ -508,46 +329,22 @@ export default function SignUpPage() {
                 </div>
               )}
 
-              <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 w-full border-slate-300 bg-white shadow-xs hover:bg-slate-100"
-                  onClick={handleGoogleSignUp}
-                  disabled={isLoading}
-                >
-                  <svg className="mr-2 size-4" viewBox="0 0 24 24">
-                    <path
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      fill="#4285F4"
-                    />
-                    <path
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      fill="#34A853"
-                    />
-                    <path
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      fill="#FBBC05"
-                    />
-                    <path
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      fill="#EA4335"
-                    />
-                  </svg>
-                  Continue with Google
-                </Button>
+              {/*
+                "Continue with Google" was removed here, as on the login page.
+                It called a stub returning a hardcoded user@example.com and
+                created a local client record for that fake person. Turning it
+                on for real means enabling Google under Authentication >
+                Providers and calling signInWithOAuth against /auth/callback.
+              */}
 
-                <div className="relative py-0.5">
-                  <div className="absolute inset-0 flex items-center">
-                    <Separator />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="text-muted-foreground bg-slate-50/80 px-2">
-                      Or continue with email
-                    </span>
-                  </div>
-                </div>
-              </div>
+              {pendingConfirmation && (
+                <p
+                  role="status"
+                  className="rounded-md border border-emerald-600/40 bg-emerald-600/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-400"
+                >
+                  {pendingConfirmation}
+                </p>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">

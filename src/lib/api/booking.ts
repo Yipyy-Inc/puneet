@@ -3,6 +3,7 @@ import { BOOKING_REQUESTS } from "@/data/booking-requests";
 import { facilityStaff } from "@/data/facility-staff";
 import type { Booking, NewBooking } from "@/types/booking";
 import type { ServiceModule } from "@/types/facility-staff";
+import { liveFetch, liveWrite } from "./live-fetch";
 
 // ============================================================================
 // Section 8B — viewer scoping (assigned_only)
@@ -93,6 +94,37 @@ export function isPetAssignedTo(petId: number, staffId: string): boolean {
   return assignedPetIds(staffId).has(petId);
 }
 
+// ============================================================================
+// Reading bookings — Postgres when there is a session, mocks otherwise.
+//
+// The rows are real (see supabase/migrations/…_clients_pets_bookings.sql and
+// scripts/apply-operational-seed.ts), but RLS scopes them to the signed-in
+// caller. With AUTH_ENFORCED off, most of the app is still browsed signed-out,
+// and switching hard would turn every booking screen blank — indistinguishable
+// from a bug.
+//
+// So: ask the API, and fall back to the mocks on 401 only. Any OTHER failure
+// propagates, because a 500 or a broken shape must not be silently papered
+// over with fixtures that look plausible.
+//
+// This fallback dies with AUTH_ENFORCED. When every portal requires a session,
+// there is no signed-out case left to serve.
+// ============================================================================
+
+async function fetchBookings(params?: {
+  clientRef?: number;
+}): Promise<Booking[]> {
+  const search = params?.clientRef ? `?clientRef=${params.clientRef}` : "";
+  return liveFetch<Booking[]>(
+    `/api/bookings${search}`,
+    () =>
+      params?.clientRef
+        ? bookings.filter((b) => b.clientId === params.clientRef)
+        : bookings,
+    "bookings",
+  );
+}
+
 export const bookingQueries = {
   /**
    * All bookings, or — when `assignedStaffId` is passed (the viewer's id when
@@ -102,22 +134,26 @@ export const bookingQueries = {
    */
   all: (opts?: { assignedStaffId?: string }) => ({
     queryKey: ["bookings", opts?.assignedStaffId ?? "all"] as const,
-    queryFn: async () =>
-      opts?.assignedStaffId
-        ? scopeBookingsToStaff(bookings, opts.assignedStaffId)
-        : bookings,
+    queryFn: async () => {
+      const list = await fetchBookings();
+      return opts?.assignedStaffId
+        ? scopeBookingsToStaff(list, opts.assignedStaffId)
+        : list;
+    },
   }),
   detail: (id: number) => ({
     queryKey: ["bookings", id] as const,
-    queryFn: async () => bookings.find((b) => b.id === id),
+    queryFn: async () => (await fetchBookings()).find((b) => b.id === id),
   }),
   byClient: (clientId: number) => ({
     queryKey: ["bookings", "by-client", clientId] as const,
-    queryFn: async () => bookings.filter((b) => b.clientId === clientId),
+    queryFn: async () => fetchBookings({ clientRef: clientId }),
   }),
   byFacility: (facilityId: number) => ({
     queryKey: ["bookings", "by-facility", facilityId] as const,
-    queryFn: async () => bookings.filter((b) => b.facilityId === facilityId),
+    // No facility filter is sent: RLS already scopes rows to the caller's
+    // facility, and a client-supplied facility id is not a boundary anyway.
+    queryFn: async () => fetchBookings(),
   }),
   requests: () => ({
     queryKey: ["booking-requests"] as const,
@@ -126,19 +162,12 @@ export const bookingQueries = {
 };
 
 export const bookingMutations = {
-  create: async (data: NewBooking): Promise<Booking> => {
-    const newId = Math.max(...bookings.map((b) => b.id), 0) + 1;
-    const booking: Booking = { ...data, id: newId };
-    bookings.push(booking);
-    return booking;
-  },
+  create: async (data: NewBooking): Promise<Booking> =>
+    liveWrite<Booking>("/api/bookings", "POST", data),
+
   update: async (
     id: number,
     data: Partial<NewBooking>,
-  ): Promise<Booking | undefined> => {
-    const index = bookings.findIndex((b) => b.id === id);
-    if (index === -1) return undefined;
-    bookings[index] = { ...bookings[index], ...data };
-    return bookings[index];
-  },
+  ): Promise<Booking | undefined> =>
+    liveWrite<Booking>(`/api/bookings/${id}`, "PATCH", data),
 };

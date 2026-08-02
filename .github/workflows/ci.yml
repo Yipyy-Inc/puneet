@@ -1,10 +1,14 @@
 name: CI
 
+# `develop` is the integration branch and the default PR target; `main` is
+# release-only. Both are protected and require typecheck/lint/format/build, so
+# both must appear here — a protected branch whose required checks never run
+# blocks every merge into it, permanently and with no obvious cause.
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

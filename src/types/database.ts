@@ -25,6 +25,314 @@ export type Database = {
   };
   public: {
     Tables: {
+      booking_pets: {
+        Row: {
+          booking_id: string;
+          pet_id: string;
+        };
+        Insert: {
+          booking_id: string;
+          pet_id: string;
+        };
+        Update: {
+          booking_id?: string;
+          pet_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_pets_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_pets_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      bookings: {
+        Row: {
+          assigned_staff_id: string | null;
+          assigned_staff_name: string | null;
+          base_price: number;
+          client_id: string;
+          created_at: string;
+          details: Json;
+          discount: number;
+          end_at: string;
+          facility_id: string;
+          id: string;
+          location_id: string | null;
+          payment_status: string;
+          ref: number;
+          service: string;
+          service_type: string | null;
+          special_requests: string | null;
+          start_at: string;
+          status: Database["public"]["Enums"]["booking_status"];
+          tip_amount: number | null;
+          total_cost: number;
+          updated_at: string;
+        };
+        Insert: {
+          assigned_staff_id?: string | null;
+          assigned_staff_name?: string | null;
+          base_price?: number;
+          client_id: string;
+          created_at?: string;
+          details?: Json;
+          discount?: number;
+          end_at: string;
+          facility_id: string;
+          id?: string;
+          location_id?: string | null;
+          payment_status?: string;
+          ref?: number;
+          service: string;
+          service_type?: string | null;
+          special_requests?: string | null;
+          start_at: string;
+          status?: Database["public"]["Enums"]["booking_status"];
+          tip_amount?: number | null;
+          total_cost?: number;
+          updated_at?: string;
+        };
+        Update: {
+          assigned_staff_id?: string | null;
+          assigned_staff_name?: string | null;
+          base_price?: number;
+          client_id?: string;
+          created_at?: string;
+          details?: Json;
+          discount?: number;
+          end_at?: string;
+          facility_id?: string;
+          id?: string;
+          location_id?: string | null;
+          payment_status?: string;
+          ref?: number;
+          service?: string;
+          service_type?: string | null;
+          special_requests?: string | null;
+          start_at?: string;
+          status?: Database["public"]["Enums"]["booking_status"];
+          tip_amount?: number | null;
+          total_cost?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "bookings_assigned_staff_id_fkey";
+            columns: ["assigned_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bookings_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bookings_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bookings_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      clients: {
+        Row: {
+          address: Json | null;
+          blocked_at: string | null;
+          blocked_reason: string | null;
+          created_at: string;
+          details: Json;
+          email: string;
+          facility_id: string;
+          id: string;
+          image_url: string | null;
+          is_blocked: boolean;
+          last_visit_date: string | null;
+          name: string;
+          no_show_count: number;
+          outstanding_balance: number;
+          phone: string | null;
+          preferred_language: string | null;
+          profile_id: string | null;
+          ref: number;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          address?: Json | null;
+          blocked_at?: string | null;
+          blocked_reason?: string | null;
+          created_at?: string;
+          details?: Json;
+          email: string;
+          facility_id: string;
+          id?: string;
+          image_url?: string | null;
+          is_blocked?: boolean;
+          last_visit_date?: string | null;
+          name: string;
+          no_show_count?: number;
+          outstanding_balance?: number;
+          phone?: string | null;
+          preferred_language?: string | null;
+          profile_id?: string | null;
+          ref?: number;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          address?: Json | null;
+          blocked_at?: string | null;
+          blocked_reason?: string | null;
+          created_at?: string;
+          details?: Json;
+          email?: string;
+          facility_id?: string;
+          id?: string;
+          image_url?: string | null;
+          is_blocked?: boolean;
+          last_visit_date?: string | null;
+          name?: string;
+          no_show_count?: number;
+          outstanding_balance?: number;
+          phone?: string | null;
+          preferred_language?: string | null;
+          profile_id?: string | null;
+          ref?: number;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "clients_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "clients_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      pets: {
+        Row: {
+          age_years: number | null;
+          allergies: string | null;
+          breed: string | null;
+          client_id: string;
+          coat_type: string | null;
+          color: string | null;
+          created_at: string;
+          date_of_birth: string | null;
+          details: Json;
+          energy_level: string | null;
+          facility_id: string;
+          id: string;
+          image_url: string | null;
+          microchip: string | null;
+          name: string;
+          ref: number;
+          sex: string | null;
+          spayed_neutered: boolean | null;
+          special_needs: string | null;
+          species: string;
+          status: string;
+          updated_at: string;
+          weight: number | null;
+        };
+        Insert: {
+          age_years?: number | null;
+          allergies?: string | null;
+          breed?: string | null;
+          client_id: string;
+          coat_type?: string | null;
+          color?: string | null;
+          created_at?: string;
+          date_of_birth?: string | null;
+          details?: Json;
+          energy_level?: string | null;
+          facility_id: string;
+          id?: string;
+          image_url?: string | null;
+          microchip?: string | null;
+          name: string;
+          ref?: number;
+          sex?: string | null;
+          spayed_neutered?: boolean | null;
+          special_needs?: string | null;
+          species?: string;
+          status?: string;
+          updated_at?: string;
+          weight?: number | null;
+        };
+        Update: {
+          age_years?: number | null;
+          allergies?: string | null;
+          breed?: string | null;
+          client_id?: string;
+          coat_type?: string | null;
+          color?: string | null;
+          created_at?: string;
+          date_of_birth?: string | null;
+          details?: Json;
+          energy_level?: string | null;
+          facility_id?: string;
+          id?: string;
+          image_url?: string | null;
+          microchip?: string | null;
+          name?: string;
+          ref?: number;
+          sex?: string | null;
+          spayed_neutered?: boolean | null;
+          special_needs?: string | null;
+          species?: string;
+          status?: string;
+          updated_at?: string;
+          weight?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pets_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pets_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       facilities: {
         Row: {
           created_at: string;
@@ -163,6 +471,116 @@ export type Database = {
           },
         ];
       };
+      facility_custom_roles: {
+        Row: {
+          accent: string;
+          created_at: string;
+          description: string;
+          facility_id: string;
+          icon: string;
+          id: string;
+          label: string;
+          legacy_id: string | null;
+          ring: string;
+          updated_at: string;
+        };
+        Insert: {
+          accent?: string;
+          created_at?: string;
+          description?: string;
+          facility_id: string;
+          icon?: string;
+          id?: string;
+          label: string;
+          legacy_id?: string | null;
+          ring?: string;
+          updated_at?: string;
+        };
+        Update: {
+          accent?: string;
+          created_at?: string;
+          description?: string;
+          facility_id?: string;
+          icon?: string;
+          id?: string;
+          label?: string;
+          legacy_id?: string | null;
+          ring?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_custom_roles_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      facility_custom_role_permissions: {
+        Row: {
+          custom_role_id: string;
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+        };
+        Insert: {
+          custom_role_id: string;
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+        };
+        Update: {
+          custom_role_id?: string;
+          permission_key?: string;
+          scope?: Database["public"]["Enums"]["access_scope"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_custom_role_permissions_custom_role_id_fkey";
+            columns: ["custom_role_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_custom_roles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_custom_role_permissions_permission_key_fkey";
+            columns: ["permission_key"];
+            isOneToOne: false;
+            referencedRelation: "permissions";
+            referencedColumns: ["key"];
+          },
+        ];
+      };
+      staff_custom_roles: {
+        Row: {
+          custom_role_id: string;
+          staff_id: string;
+        };
+        Insert: {
+          custom_role_id: string;
+          staff_id: string;
+        };
+        Update: {
+          custom_role_id?: string;
+          staff_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_custom_roles_custom_role_id_fkey";
+            columns: ["custom_role_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_custom_roles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_custom_roles_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       locations: {
         Row: {
           created_at: string;
@@ -285,6 +703,135 @@ export type Database = {
         };
         Relationships: [];
       };
+      staff: {
+        Row: {
+          additional_roles: Database["public"]["Enums"]["facility_staff_role"][];
+          avatar_url: string | null;
+          color_hex: string | null;
+          created_at: string;
+          details: Json;
+          email: string;
+          facility_id: string;
+          first_name: string;
+          id: string;
+          job_title: string | null;
+          last_active: string | null;
+          last_name: string;
+          legacy_id: string | null;
+          membership_id: string | null;
+          phone: string | null;
+          primary_role: Database["public"]["Enums"]["facility_staff_role"];
+          service_assignments: Database["public"]["Enums"]["service_module"][];
+          show_on_calendar: boolean;
+          status: string;
+          status_changed_at: string | null;
+          status_note: string | null;
+          status_reason: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          additional_roles?: Database["public"]["Enums"]["facility_staff_role"][];
+          avatar_url?: string | null;
+          color_hex?: string | null;
+          created_at?: string;
+          details?: Json;
+          email: string;
+          facility_id: string;
+          first_name: string;
+          id?: string;
+          job_title?: string | null;
+          last_active?: string | null;
+          last_name: string;
+          legacy_id?: string | null;
+          membership_id?: string | null;
+          phone?: string | null;
+          primary_role: Database["public"]["Enums"]["facility_staff_role"];
+          service_assignments?: Database["public"]["Enums"]["service_module"][];
+          show_on_calendar?: boolean;
+          status?: string;
+          status_changed_at?: string | null;
+          status_note?: string | null;
+          status_reason?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          additional_roles?: Database["public"]["Enums"]["facility_staff_role"][];
+          avatar_url?: string | null;
+          color_hex?: string | null;
+          created_at?: string;
+          details?: Json;
+          email?: string;
+          facility_id?: string;
+          first_name?: string;
+          id?: string;
+          job_title?: string | null;
+          last_active?: string | null;
+          last_name?: string;
+          legacy_id?: string | null;
+          membership_id?: string | null;
+          phone?: string | null;
+          primary_role?: Database["public"]["Enums"]["facility_staff_role"];
+          service_assignments?: Database["public"]["Enums"]["service_module"][];
+          show_on_calendar?: boolean;
+          status?: string;
+          status_changed_at?: string | null;
+          status_note?: string | null;
+          status_reason?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_membership_id_fkey";
+            columns: ["membership_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_memberships";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      staff_permissions: {
+        Row: {
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+          staff_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+          staff_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          permission_key?: string;
+          scope?: Database["public"]["Enums"]["access_scope"];
+          staff_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_permissions_permission_key_fkey";
+            columns: ["permission_key"];
+            isOneToOne: false;
+            referencedRelation: "permissions";
+            referencedColumns: ["key"];
+          },
+          {
+            foreignKeyName: "staff_permissions_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           avatar_url: string | null;
@@ -346,10 +893,33 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      link_client_record: {
+        Args: Record<PropertyKey, never>;
+        Returns: string | null;
+      };
+      my_permissions: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+        }[];
+      };
     };
     Enums: {
       access_scope: "anytime" | "operating_hours" | "assigned_shifts" | "none";
+      booking_status:
+        | "pending"
+        | "estimate_sent"
+        | "request_submitted"
+        | "waitlisted"
+        | "confirmed"
+        | "checked_in"
+        | "in_progress"
+        | "ready"
+        | "completed"
+        | "no_show"
+        | "cancelled"
+        | "declined";
       facility_staff_role:
         | "owner"
         | "admin"
@@ -504,6 +1074,20 @@ export const Constants = {
   public: {
     Enums: {
       access_scope: ["anytime", "operating_hours", "assigned_shifts", "none"],
+      booking_status: [
+        "pending",
+        "estimate_sent",
+        "request_submitted",
+        "waitlisted",
+        "confirmed",
+        "checked_in",
+        "in_progress",
+        "ready",
+        "completed",
+        "no_show",
+        "cancelled",
+        "declined",
+      ],
       facility_staff_role: [
         "owner",
         "admin",

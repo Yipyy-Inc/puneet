@@ -5,21 +5,19 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Scissors } from "lucide-react";
 import { getCurrentUserId } from "@/lib/role-utils";
 import { stylists } from "@/data/grooming";
-import { useRouter } from "next/navigation";
+import { signOutEverywhere } from "@/lib/auth/sign-out-client";
 
 export function GroomerHeader() {
-  const router = useRouter();
   const userId = getCurrentUserId();
   const groomer = userId
     ? stylists.find((s) => s.id === userId)
     : stylists[0] || null;
 
+  // Was: clear a `current_user_id` cookie that nothing ever set, then route to
+  // the login page. No session was ended, and the key it cleared was not even
+  // the one in use (`facility_current_user_id`).
   const handleLogout = () => {
-    // Clear user ID
-    if (typeof document !== "undefined") {
-      document.cookie = "current_user_id=; path=/; max-age=0";
-    }
-    router.push("/groomer/auth/login");
+    void signOutEverywhere();
   };
 
   return (

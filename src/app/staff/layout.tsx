@@ -1,36 +1,31 @@
-"use client";
+import { canAccessStaffPortal } from "@/lib/auth/viewer";
+import { guardPortal } from "@/lib/auth/portal-gate";
+import { legacyStaffIdForEmail } from "@/lib/auth/legacy-identity";
+import { LegacyIdentityBridge } from "@/components/auth/LegacyIdentityBridge";
+import { StaffShell } from "./_shell";
 
-import { usePathname } from "next/navigation";
-import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigProviderWrapper";
-import { StaffHeader } from "@/components/staff/StaffHeader";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { StaffSidebar } from "@/components/staff/StaffSidebar";
+// ============================================================================
+// Staff portal. Previously ungated, beneath a login that never checked a
+// password and offered one-click sign-in as any staff member.
+// ============================================================================
 
-export default function StaffLayout({
+export default async function StaffLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const isAuthRoute = pathname?.startsWith("/staff/auth");
+  const viewer = await guardPortal({
+    portal: "staff",
+    allow: canAccessStaffPortal,
+    publicPrefixes: ["/staff/auth"],
+  });
 
   return (
-    <SettingsProviderWrapper>
-      {isAuthRoute ? (
-        <div className="flex min-h-screen flex-col">
-          <main className="flex-1">{children}</main>
-        </div>
-      ) : (
-        <SidebarProvider>
-          <>
-            <StaffSidebar />
-            <SidebarInset className="flex min-h-screen flex-col">
-              <StaffHeader />
-              <main className="flex-1 overflow-x-hidden">{children}</main>
-            </SidebarInset>
-          </>
-        </SidebarProvider>
-      )}
-    </SettingsProviderWrapper>
+    <>
+      <LegacyIdentityBridge
+        staffId={await legacyStaffIdForEmail(viewer.email)}
+      />
+      <StaffShell>{children}</StaffShell>
+    </>
   );
 }

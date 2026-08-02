@@ -8,6 +8,7 @@ import { Sparkles, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { insightMutations, insightQueries } from "@/lib/api/smart-insights";
+import { useHydrated } from "@/hooks/use-hydrated";
 import type { Insight } from "@/types/smart-insights";
 import { InsightCardCompact } from "@/components/smart-insights/InsightCardCompact";
 import { InsightActionDrawer } from "@/components/smart-insights/drawer/InsightActionDrawer";
@@ -23,6 +24,24 @@ const UNDO_WINDOW_MS = 10_000;
  */
 export function SmartInsightsWidget() {
   const [drawerInsight, setDrawerInsight] = useState<Insight | null>(null);
+
+  // Insight state is CLIENT-ONLY by construction: resolveAll() folds in
+  // dismissals, snoozes and settings from localStorage (lib/smart-insights/
+  // storage.ts), which the server cannot see and never will while that is
+  // where the state lives.
+  //
+  // So the server always renders "no insights, no badge" and the client
+  // renders whatever this browser knows — a hydration mismatch on every load
+  // of the facility dashboard by anyone whose browser has insight state.
+  // React then throws away and re-renders the whole subtree.
+  //
+  // It was invisible because it needs a session to reach this dashboard, and
+  // almost nobody signed in. Enforcement changes that.
+  //
+  // `useHydrated` is false during SSR *and* during the hydration render, and
+  // true only afterwards, so the two passes agree by construction. Prefetching
+  // on the server is not an alternative here — the data does not exist there.
+  const hydrated = useHydrated();
 
   const queryClient = useQueryClient();
   const top3Query = useQuery(insightQueries.dashboardTop3(FACILITY_ID));
@@ -68,8 +87,12 @@ export function SmartInsightsWidget() {
     );
   };
 
-  const insights = top3Query.data ?? [];
-  const highPriorityCount = highPriorityQuery.data ?? 0;
+  // Both derive from the same client-only source, so both wait for hydration.
+  // Gating only the badge would move the mismatch into the list below rather
+  // than remove it — React reports the first difference it finds, not all of
+  // them.
+  const insights = hydrated ? (top3Query.data ?? []) : [];
+  const highPriorityCount = hydrated ? (highPriorityQuery.data ?? 0) : 0;
 
   return (
     <Card className="space-y-4 p-5">
@@ -92,7 +115,7 @@ export function SmartInsightsWidget() {
         </Link>
       </div>
 
-      {top3Query.isLoading ? (
+      {!hydrated || top3Query.isLoading ? (
         <p className="text-muted-foreground py-4 text-center text-xs">
           Loading…
         </p>

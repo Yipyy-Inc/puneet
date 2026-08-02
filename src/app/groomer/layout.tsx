@@ -1,36 +1,31 @@
-"use client";
+import { canAccessStaffPortal } from "@/lib/auth/viewer";
+import { guardPortal } from "@/lib/auth/portal-gate";
+import { legacyStaffIdForEmail } from "@/lib/auth/legacy-identity";
+import { LegacyIdentityBridge } from "@/components/auth/LegacyIdentityBridge";
+import { GroomerShell } from "./_shell";
 
-import { usePathname } from "next/navigation";
-import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigProviderWrapper";
-import { GroomerHeader } from "@/components/groomer/GroomerHeader";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { GroomerSidebar } from "@/components/groomer/GroomerSidebar";
+// ============================================================================
+// Groomer portal. Previously ungated entirely — anyone who typed the URL was
+// in, and the login page beneath it accepted any password.
+// ============================================================================
 
-export default function GroomerLayout({
+export default async function GroomerLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const isAuthRoute = pathname?.startsWith("/groomer/auth");
+  const viewer = await guardPortal({
+    portal: "staff",
+    allow: canAccessStaffPortal,
+    publicPrefixes: ["/groomer/auth"],
+  });
 
   return (
-    <SettingsProviderWrapper>
-      {isAuthRoute ? (
-        <div className="flex min-h-screen flex-col">
-          <main className="flex-1">{children}</main>
-        </div>
-      ) : (
-        <SidebarProvider>
-          <>
-            <GroomerSidebar />
-            <SidebarInset className="flex min-h-screen flex-col">
-              <GroomerHeader />
-              <main className="flex-1 overflow-x-hidden">{children}</main>
-            </SidebarInset>
-          </>
-        </SidebarProvider>
-      )}
-    </SettingsProviderWrapper>
+    <>
+      <LegacyIdentityBridge
+        staffId={await legacyStaffIdForEmail(viewer.email)}
+      />
+      <GroomerShell>{children}</GroomerShell>
+    </>
   );
 }

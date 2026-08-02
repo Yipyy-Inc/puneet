@@ -17,7 +17,8 @@ import {
   ShieldAlert,
   Save,
 } from "lucide-react";
-import { FacilityRbacProvider, usePermission } from "@/hooks/use-facility-rbac";
+import { usePermission } from "@/hooks/use-facility-rbac";
+import { useSetStaffCustomRoles } from "@/lib/api/roles";
 import {
   ROLE_PRESETS,
   buildDefaultNotifications,
@@ -105,11 +106,10 @@ const STATUS_META: Record<
 };
 
 export function StaffProfileView({ staffId }: { staffId: string }) {
-  return (
-    <FacilityRbacProvider>
-      <StaffProfileInner staffId={staffId} />
-    </FacilityRbacProvider>
-  );
+  // The provider now lives at the facility layout, holding the identity
+  // resolved from the session. Mounting a second one here would shadow it with
+  // a fresh default — which is to say, with the owner.
+  return <StaffProfileInner staffId={staffId} />;
 }
 
 function StaffProfileInner({ staffId }: { staffId: string }) {
@@ -150,6 +150,8 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
   const [draft, setDraft] = useState<StaffProfile | null>(() =>
     staff ? { ...staff } : null,
   );
+
+  const { mutate: setStaffCustomRoles } = useSetStaffCustomRoles();
 
   // Onboarding review/activation (derived pending-review state).
   const onboardingInstance = useOnboardingInstance(staffId);
@@ -231,6 +233,14 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
   const saveProfile = () => {
     if (!draft) return;
     upsertFacilityStaff(draft);
+    // Custom-role assignments are the one part of this profile that the
+    // database already owns — they feed private.resolve_permission. Saving
+    // them only into the mock array would mean the roles shown here and the
+    // permissions actually enforced disagree.
+    setStaffCustomRoles({
+      staffId: draft.id,
+      roleIds: draft.customRoleIds ?? [],
+    });
     bumpProfile();
     toast.success(`${fullNameOf(draft)}'s profile updated`);
   };
