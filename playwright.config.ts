@@ -12,7 +12,24 @@ import { defineConfig, devices } from "@playwright/test";
  * route is slow — the generous timeouts below account for that.
  */
 const PORT = 3000;
-const BASE_URL = `http://localhost:${PORT}`;
+
+/**
+ * Point the whole suite somewhere else with E2E_BASE_URL, e.g.
+ *
+ *   E2E_BASE_URL=https://www.yipyy.com bun run test:e2e
+ *
+ * Added while verifying an AUTH_ENFORCED rollout, after running the
+ * enforcement specs "against production" and only afterwards noticing the URL
+ * was hardcoded — they had passed against localhost, which has the same flag
+ * set, so they proved nothing. A hardcoded base that silently ignores an
+ * override is a good way to believe you tested something you did not.
+ *
+ * REMOTE RUNS SKIP THE webServer BLOCK (below), since there is nothing local
+ * to start, and specs that WRITE run against real data — see the cleanup in
+ * booking-write-integrity.spec.ts before pointing this at production.
+ */
+const REMOTE = process.env.E2E_BASE_URL?.trim();
+const BASE_URL = REMOTE || `http://localhost:${PORT}`;
 
 /**
  * Bun loads .env.local for `bun run dev`, so the SERVER sees AUTH_ENFORCED —
@@ -49,12 +66,17 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: {
-    command: "bun run dev",
-    url: BASE_URL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 180_000,
-    stdout: "ignore",
-    stderr: "pipe",
-  },
+  // Nothing to start when pointing at a deployed URL — and starting a local
+  // dev server would be worse than pointless, since Playwright would wait for
+  // it and then test somewhere else entirely.
+  webServer: REMOTE
+    ? undefined
+    : {
+        command: "bun run dev",
+        url: BASE_URL,
+        reuseExistingServer: !process.env.CI,
+        timeout: 180_000,
+        stdout: "ignore",
+        stderr: "pipe",
+      },
 });
