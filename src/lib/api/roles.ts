@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { facilityRolesStore } from "@/lib/facility-roles-store";
 import { liveWriteOptional } from "@/lib/api/live-fetch";
-import { permissionQueries } from "@/hooks/use-db-permissions";
+import { permissionQueries } from "@/lib/api/permissions";
 import type {
   RoleOverrides,
   RoleOverrideWrite,
