@@ -28,6 +28,10 @@ import { createServerClient } from "@/lib/supabase/server";
 //   AUTH_ENFORCED=admin        ...only for the platform portal
 //   AUTH_ENFORCED=admin,staff  ...for a chosen set
 //
+// A name this file does not recognise raises rather than being ignored — see
+// enforcedPortals(). Flags that quietly do less than they say are how a portal
+// ends up open with correct-looking configuration.
+//
 // Per-portal because all-at-once is not a cutover, it is a coin flip. Six
 // portals with different audiences fail differently, and turning them on
 // together means debugging six unrelated problems in one sitting.
@@ -71,16 +75,48 @@ export type Portal = "admin" | "facility" | "customer" | "staff";
 
 const ALL_PORTALS: Portal[] = ["admin", "facility", "customer", "staff"];
 
+/**
+ * AN UNRECOGNISED PORTAL NAME IS A CONFIGURATION ERROR, NOT A NO-OP.
+ *
+ * This used to `.filter()` names down to the ones it recognised, which meant a
+ * single transposed letter — `admin,facilty,customer,staff` — silently left the
+ * facility portal unauthenticated. No error, no log, and a value that still
+ * reads as correct in the Vercel dashboard. For a flag whose entire job is
+ * deciding who must prove who they are, quietly doing less than it says is the
+ * worst available failure.
+ *
+ * So it throws. The consequence is real and intended: a typo takes the app down
+ * on the first request after deploy instead of opening a portal. That is the
+ * right trade for an auth switch — a visible outage gets fixed in minutes,
+ * whereas an open portal looks exactly like a working one. Nothing here fails
+ * open.
+ *
+ * Case and surrounding whitespace are forgiven (`Staff`, ` staff ` are fine)
+ * because neither is ambiguous. Only a name this file cannot map to a portal is
+ * refused.
+ */
 function enforcedPortals(): Set<Portal> {
-  const raw = process.env.AUTH_ENFORCED?.trim();
+  const raw = process.env.AUTH_ENFORCED?.trim().toLowerCase();
   if (!raw || raw === "false") return new Set();
   if (raw === "true") return new Set(ALL_PORTALS);
 
   const named = raw
     .split(",")
     .map((s) => s.trim())
-    .filter((s): s is Portal => (ALL_PORTALS as string[]).includes(s));
-  return new Set(named);
+    .filter(Boolean);
+
+  const unknown = named.filter((s) => !(ALL_PORTALS as string[]).includes(s));
+  if (unknown.length > 0) {
+    throw new Error(
+      `AUTH_ENFORCED names unknown portal(s): ${unknown.join(", ")}. ` +
+        `Valid names are ${ALL_PORTALS.join(", ")} (comma-separated), ` +
+        `or "true" for all and "false"/unset for none. ` +
+        `Refusing to start rather than guess: an unrecognised name would ` +
+        `leave that portal unauthenticated while looking configured.`,
+    );
+  }
+
+  return new Set(named as Portal[]);
 }
 
 /**
