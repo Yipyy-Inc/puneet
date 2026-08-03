@@ -15,14 +15,20 @@ import { CheckCircle2, MessageSquarePlus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import type { StaffProfile } from "@/types/facility-staff";
 import {
-  useOnboardingInstance,
-  useOnboardingTemplates,
+  // The MANAGER's per-hire checklist — a different thing from the instance, and
+  // still the only part of onboarding with no table behind it. Migrating it
+  // needs its own schema, so it stays on the store and is flagged here rather
+  // than quietly conflated with the hire's own submission below.
   useOnboarding,
-  requestOnboardingChangeByTask,
-  reviewActivate,
   EMPLOYEE_TASK_LABEL,
   type EmployeeOnboardingTask,
 } from "@/data/staff-onboarding";
+import {
+  useOnboardingInstance,
+  useRequestChange,
+  useReviewActivate,
+} from "@/lib/api/onboarding-instances";
+import { useOnboardingTemplates } from "@/lib/api/staff-onboarding";
 import { fullNameOf } from "./staff-shared";
 import { SubmittedData } from "./onboarding-submission-view";
 import { notifyStaffLifecycle } from "@/lib/staff-notifications";
@@ -41,6 +47,8 @@ export function ReviewActivateDialog({
   const instance = useOnboardingInstance(profile?.id);
   const templates = useOnboardingTemplates();
   const checklist = useOnboarding(profile?.id);
+  const { mutate: requestChange, isPending: requesting } = useRequestChange();
+  const { mutate: reviewActivate, isPending: activating } = useReviewActivate();
   const [changeFor, setChangeFor] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [confirmActivate, setConfirmActivate] = useState(false);
@@ -59,26 +67,47 @@ export function ReviewActivateDialog({
     (t) => t.requiresManager && !t.completedAt,
   );
 
+  // The notification and the "sent back" toast fire in onSuccess, not beside
+  // the call. Telling the hire their onboarding needs a fix, and then failing
+  // to record the request, is the one ordering worth avoiding here.
   const submitChange = (task: EmployeeOnboardingTask) => {
     if (!note.trim()) return;
-    requestOnboardingChangeByTask(profile.id, task.id, task.type, note.trim());
-    notifyStaffLifecycle("onboarding_change_requested", {
-      email: {
-        kind: "change",
+    const message = note.trim();
+    requestChange(
+      {
         staffId: profile.id,
-        staffName: fullNameOf(profile),
-        to: profile.email,
-        subject: "Action needed on your onboarding",
-        body: `${
-          task.type === "document_upload" || task.type === "document_sign"
-            ? task.documentName || EMPLOYEE_TASK_LABEL[task.type]
-            : EMPLOYEE_TASK_LABEL[task.type]
-        }: ${note.trim()}`,
+        taskId: task.id,
+        sectionType: task.type,
+        note: message,
       },
-    });
-    toast.success(`Change requested — sent back to ${profile.firstName}`);
-    setChangeFor(null);
-    setNote("");
+      {
+        onSuccess: () => {
+          notifyStaffLifecycle("onboarding_change_requested", {
+            email: {
+              kind: "change",
+              staffId: profile.id,
+              staffName: fullNameOf(profile),
+              to: profile.email,
+              subject: "Action needed on your onboarding",
+              body: `${
+                task.type === "document_upload" || task.type === "document_sign"
+                  ? task.documentName || EMPLOYEE_TASK_LABEL[task.type]
+                  : EMPLOYEE_TASK_LABEL[task.type]
+              }: ${message}`,
+            },
+          });
+          toast.success(`Change requested — sent back to ${profile.firstName}`);
+          setChangeFor(null);
+          setNote("");
+        },
+        onError: (error) =>
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Could not request that change.",
+          ),
+      },
+    );
   };
 
   const activate = () => {
@@ -86,20 +115,31 @@ export function ReviewActivateDialog({
       setConfirmActivate(true);
       return;
     }
-    reviewActivate(profile.id);
-    notifyStaffLifecycle("account_activated", {
-      email: {
-        kind: "activation",
-        staffId: profile.id,
-        staffName: fullNameOf(profile),
-        to: profile.email,
-        subject: "Your account is active!",
-        body: "Your account is active! You can now log in.",
+    reviewActivate(profile.id, {
+      onSuccess: () => {
+        notifyStaffLifecycle("account_activated", {
+          email: {
+            kind: "activation",
+            staffId: profile.id,
+            staffName: fullNameOf(profile),
+            to: profile.email,
+            subject: "Your account is active!",
+            body: "Your account is active! You can now log in.",
+          },
+        });
+        onActivated({ ...profile, status: "active" });
+        toast.success(
+          `Account activated — ${profile.firstName} can now log in`,
+        );
+        onOpenChange(false);
       },
+      onError: (error) =>
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Could not activate that account.",
+        ),
     });
-    onActivated({ ...profile, status: "active" });
-    toast.success(`Account activated — ${profile.firstName} can now log in`);
-    onOpenChange(false);
   };
 
   return (
@@ -196,10 +236,12 @@ export function ReviewActivateDialog({
                       </Button>
                       <Button
                         size="sm"
-                        disabled={!note.trim()}
+                        disabled={!note.trim() || requesting}
                         onClick={() => submitChange(task)}
                       >
-                        Send to {profile.firstName}
+                        {requesting
+                          ? "Sending…"
+                          : `Send to ${profile.firstName}`}
                       </Button>
                     </div>
                   </div>
@@ -227,12 +269,15 @@ export function ReviewActivateDialog({
           </Button>
           <Button
             className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+            disabled={activating}
             onClick={activate}
           >
             <CheckCircle2 className="size-4" />
-            {confirmActivate && incompleteMgr.length > 0
-              ? "Activate anyway"
-              : "Activate account"}
+            {activating
+              ? "Activating…"
+              : confirmActivate && incompleteMgr.length > 0
+                ? "Activate anyway"
+                : "Activate account"}
           </Button>
         </DialogFooter>
       </DialogContent>

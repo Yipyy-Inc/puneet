@@ -2,11 +2,9 @@
 
 import { FileText, ShieldCheck, GraduationCap, Lock } from "lucide-react";
 import type { StaffProfile } from "@/types/facility-staff";
-import {
-  useOnboardingInstance,
-  useOnboardingTemplates,
-  EMPLOYEE_TASK_LABEL,
-} from "@/data/staff-onboarding";
+import { EMPLOYEE_TASK_LABEL } from "@/data/staff-onboarding";
+import { useOnboardingInstance } from "@/lib/api/onboarding-instances";
+import { useOnboardingTemplates } from "@/lib/api/staff-onboarding";
 import { isOffboardingDoc, useStaffDocuments } from "@/lib/api/staff-documents";
 import { EmployeeFilesTab } from "./employee-files-tab";
 import { WriteUpsTab } from "./write-ups-tab";

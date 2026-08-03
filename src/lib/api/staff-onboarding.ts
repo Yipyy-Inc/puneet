@@ -180,6 +180,22 @@ export function useSaveStaffHrConfig() {
 export function useOnboardingTemplatesQuery() {
   return useQuery(staffOnboardingQueries.templates());
 }
+
+/**
+ * The template list with the MOCK'S SIGNATURE — an array, never undefined — for
+ * the screens that only ever `.find()` in it.
+ *
+ * An empty array while loading is honest for those call sites: they resolve a
+ * template for an instance and render a label from it, and "not found yet" and
+ * "not found" produce the same fallback. Screens that need to tell those apart
+ * use useOnboardingTemplatesQuery and read `isLoading` — the settings list does
+ * exactly that, because "this facility has built no templates" is a real state
+ * there and deserves its own empty state rather than a spinner that never ends.
+ */
+export function useOnboardingTemplates(): OnboardingTemplate[] {
+  const { data } = useQuery(staffOnboardingQueries.templates());
+  return data ?? [];
+}
 export function useOffboardingTemplatesQuery() {
   return useQuery(staffOnboardingQueries.offboardingTemplates());
 }

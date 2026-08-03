@@ -252,18 +252,78 @@ export function useSetAccountComplete(token: string) {
  * Section progress — the account step counts as one, plus every section.
  * Ported unchanged from onboardingProgress (staff-onboarding.ts:1477); it is a
  * pure function over the instance and needs nothing from the database.
+ *
+ * Accepts BOTH shapes: the manager's StoredOnboardingInstance (which nests the
+ * account step under `account.passwordSetAt`) and the hire's TokenView (which
+ * carries `accountPasswordSetAt` flat). They are two different payloads for two
+ * different audiences — see the header — and this is the one calculation both
+ * need, so it reads whichever field is present rather than forcing a converter
+ * at every call site.
  */
-export function onboardingProgress(view: {
-  sections: { status: string }[];
-  accountPasswordSetAt?: string | null;
-}): { done: number; total: number } {
+export function onboardingProgress(
+  view:
+    | {
+        sections: { status: string }[];
+        account?: { passwordSetAt: string } | undefined;
+        accountPasswordSetAt?: string | null;
+      }
+    | undefined,
+): { done: number; total: number } {
+  if (!view) return { done: 0, total: 0 };
   const done = view.sections.filter((s) => s.status === "complete").length;
+  const accountDone = Boolean(view.account ?? view.accountPasswordSetAt);
   return {
-    done: done + (view.accountPasswordSetAt ? 1 : 0),
+    done: done + (accountDone ? 1 : 0),
     total: view.sections.length + 1,
   };
 }
 
 export function useInstances() {
   return useQuery(instanceQueries.all());
+}
+
+/**
+ * One staff member's onboarding record, with the MOCK'S SIGNATURE — the value
+ * or undefined, no loading flag — so the staff screens swap over without
+ * restructuring. They already read `undefined` as "not invited yet", which is
+ * also the correct rendering while the request is in flight.
+ *
+ * Served from the LIST rather than a per-staff fetch. Every screen that calls
+ * this (the roster card, the resend dialog, the review dialog, the documents
+ * tab) is mounted inside a page that is already showing the roster, so the list
+ * is in cache; a detail query per card would be one request per staff member
+ * for data already on the client.
+ */
+export function useOnboardingInstance(
+  staffId: string | null | undefined,
+): StoredOnboardingInstance | undefined {
+  const { data } = useQuery({
+    ...instanceQueries.all(),
+    enabled: Boolean(staffId),
+  });
+  return data?.find((i) => i.staffId === staffId);
+}
+
+/** Ported unchanged from staff-onboarding.ts:1804. Pure over the instance. */
+export function isOnboardingStarted(inst: {
+  account?: { passwordSetAt: string } | undefined;
+  sections: { status: string }[];
+}): boolean {
+  return (
+    Boolean(inst.account) ||
+    inst.sections.some((s) => s.status !== "not_started")
+  );
+}
+
+/**
+ * Whole days elapsed since the invite was sent (0 if unknown). Ported unchanged
+ * from staff-onboarding.ts:1812.
+ */
+export function daysSinceInvite(
+  inst: { invitedAt?: string },
+  today = new Date(),
+): number {
+  if (!inst.invitedAt) return 0;
+  const ms = today.getTime() - new Date(inst.invitedAt).getTime();
+  return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
 }

@@ -42,19 +42,17 @@ import {
   type FacilityStaffRole,
   type StaffProfile,
 } from "@/types/facility-staff";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { staffQueries, useCreateStaff, useUpdateStaff } from "@/lib/api/staff";
 // `upsertFacilityStaff` still writes the mock directory, which the 46 files
 // that have not moved yet continue to read. Kept in step with the API write
 // until they do; it becomes dead the moment the last of them migrates.
 import { upsertFacilityStaff, FACILITY_LOCATIONS } from "@/data/facility-staff";
-import {
-  initOnboarding,
-  regenerateOnboardingToken,
-  createOnboardingInstance,
-  resolveTemplateForRole,
-  recordOnboardingEmail,
-} from "@/data/staff-onboarding";
+// The MANAGER's per-hire checklist, which is the one part of onboarding with no
+// table behind it yet — see the note in review-activate-dialog.tsx. Everything
+// the HIRE submits goes through @/lib/api/onboarding-instances.
+import { initOnboarding } from "@/data/staff-onboarding";
+import { instanceKeys } from "@/lib/api/onboarding-instances";
 import { toast } from "sonner";
 import { OnboardingProgressList } from "./_components/onboarding-progress-list";
 import { StaffCard } from "./_components/staff-card";
@@ -254,6 +252,7 @@ export default function FacilityStaffPage() {
   // Held HERE so it is warm long before the dialog opens — see the note on
   // StaffFormDialog's `templates` prop.
   const { data: onboardingTemplates = [] } = useOnboardingTemplatesQuery();
+  const queryClient = useQueryClient();
 
   function openEdit(profile: StaffProfile) {
     setViewing(null);
@@ -266,31 +265,61 @@ export default function FacilityStaffPage() {
     setFormOpen(true);
   }
 
-  // One-tap reminder — reissues the onboarding link and "sends" a mock reminder.
-  function handleRemind(p: StaffProfile) {
-    const inst =
-      regenerateOnboardingToken(p.id) ??
-      createOnboardingInstance(
-        p.id,
-        resolveTemplateForRole(p.primaryRole)?.id ?? "",
+  // One-tap reminder — reissues the onboarding link and sends it for real.
+  //
+  // This used to mint a token in the mock store and write the reminder into a
+  // mock outbox, so the "Reminder sent to …" toast was the only thing that
+  // happened. It now posts to the same endpoint the resend dialog uses, which
+  // reissues the token (invalidating the previous link, since only a hash is
+  // stored) and hands the email to the provider.
+  //
+  // The three outcomes are reported as three different things, exactly as in
+  // the dialog: a provider that is not configured is NOT a send, and saying so
+  // is the whole reason that branch exists.
+  async function handleRemind(p: StaffProfile) {
+    try {
+      const response = await fetch(`/api/staff/${p.id}/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const result = (await response.json().catch(() => null)) as {
+        sent?: boolean;
+        reason?: string;
+        message?: string;
+        onboardingUrl?: string;
+      } | null;
+
+      if (result?.sent) {
+        toast.success(`Reminder sent to ${p.email}`);
+      } else if (result?.reason === "not_configured") {
+        toast.warning(
+          result.message ?? "Email service not configured — link reissued.",
+          {
+            description: result.onboardingUrl
+              ? "Open the resend dialog to copy the new link."
+              : undefined,
+            duration: 8000,
+          },
+        );
+      } else {
+        toast.error(result?.message ?? "Could not send the reminder.");
+        return;
+      }
+
+      void queryClient.invalidateQueries({ queryKey: instanceKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ["staff"] });
+      logInvitationSent(
+        { subjectId: p.id, subjectName: fullNameOf(p) },
+        {
+          actorId: viewer.id,
+          actorName: fullNameOf(viewer),
+          actorRole: viewer.primaryRole,
+        },
       );
-    recordOnboardingEmail({
-      kind: "reminder",
-      staffId: p.id,
-      staffName: fullNameOf(p),
-      to: p.email,
-      subject: "Reminder: finish your onboarding",
-      body: `Hi ${p.firstName}, a friendly reminder to complete your onboarding. Your link: /onboard/${inst.token}`,
-    });
-    logInvitationSent(
-      { subjectId: p.id, subjectName: fullNameOf(p) },
-      {
-        actorId: viewer.id,
-        actorName: fullNameOf(viewer),
-        actorRole: viewer.primaryRole,
-      },
-    );
-    toast.success(`Reminder sent to ${p.email}`);
+    } catch {
+      toast.error("Could not reach the server. Nothing was sent.");
+    }
   }
 
   function handleStatusChange(

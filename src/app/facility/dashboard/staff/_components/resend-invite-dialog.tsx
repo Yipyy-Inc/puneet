@@ -13,13 +13,15 @@ import { useState } from "react";
 import { Copy, RefreshCw, Send } from "lucide-react";
 import { toast } from "sonner";
 import type { StaffProfile } from "@/types/facility-staff";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useOnboardingInstance,
+  instanceKeys,
+} from "@/lib/api/onboarding-instances";
+import {
   useOnboardingTemplates,
-  createOnboardingInstance,
-  regenerateOnboardingToken,
   resolveTemplateForRole,
-} from "@/data/staff-onboarding";
+} from "@/lib/api/staff-onboarding";
 import { OnboardingInviteEmail } from "@/components/facility/staff-hr/onboarding-invite-email";
 
 /**
@@ -38,8 +40,16 @@ import { OnboardingInviteEmail } from "@/components/facility/staff-hr/onboarding
  *   send_failed     the provider rejected it; the staff row was NOT left
  *                   claiming an invitation nobody received
  *
- * The local store is still updated alongside so the rest of the screen (which
- * reads the mock instance) stays consistent until it moves onto the API.
+ * THE LINK IS SHOWN ONCE, AND ONLY RIGHT AFTER SENDING. It used to render
+ * `/onboard/${instance.token}` from the stored instance, which the database
+ * cannot answer — only a sha256 hash of the token is kept, deliberately, so a
+ * leaked dump hands over no live onboarding links. The route returns
+ * `onboardingUrl` in the response that mints it and never again, so that is
+ * what this holds, in local state, for as long as the dialog is open.
+ *
+ * Reopening the dialog therefore shows no link, and offers to resend instead.
+ * That is the correct behaviour for a bearer credential rather than a gap: a
+ * manager who lost the link reissues it, which invalidates the old one.
  */
 export function ResendInviteDialog({
   profile,
@@ -56,18 +66,22 @@ export function ResendInviteDialog({
   // every render or they run wrong, and `if (!profile) return null` below is an
   // early return this must not sit after.
   const [sending, setSending] = useState(false);
+  // The freshly-minted link, held only for this dialog session. See the header.
+  const [issuedUrl, setIssuedUrl] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const templates = useOnboardingTemplates();
   const instance = useOnboardingInstance(profile?.id);
   const template = instance
     ? templates.find((t) => t.id === instance.templateId)
     : profile
-      ? resolveTemplateForRole(profile.primaryRole)
+      ? resolveTemplateForRole(templates, profile.primaryRole)
       : undefined;
 
   if (!profile) return null;
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const path = instance ? `/onboard/${instance.token}` : "";
+  // Relative or absolute depending on what the route returned; displayed as-is.
+  const path = issuedUrl ? issuedUrl.replace(origin, "") : "";
 
   const send = async () => {
     setSending(true);
@@ -82,6 +96,7 @@ export function ResendInviteDialog({
         reason?: string;
         message?: string;
         setupUrl?: string;
+        onboardingUrl?: string;
         error?: string;
       } | null;
 
@@ -104,13 +119,11 @@ export function ResendInviteDialog({
         return;
       }
 
-      // Keep the local store in step so the rest of the staff screen — which
-      // still reads the mock instance — shows the same state as the database.
-      if (instance) {
-        regenerateOnboardingToken(profile.id);
-      } else {
-        createOnboardingInstance(profile.id, template?.id ?? "");
-      }
+      // The route created or reissued the instance server-side, so the cached
+      // list is stale — invalidate rather than mirroring the write locally.
+      if (result.onboardingUrl) setIssuedUrl(result.onboardingUrl);
+      void queryClient.invalidateQueries({ queryKey: instanceKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ["staff"] });
       onSent?.(profile);
     } catch {
       toast.error("Could not reach the server. Nothing was sent.");
@@ -139,12 +152,12 @@ export function ResendInviteDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {instance ? (
+        {issuedUrl ? (
           <div className="space-y-3">
             <OnboardingInviteEmail
               staff={profile}
               template={template}
-              token={instance.token}
+              token={issuedUrl.split("/onboard/")[1]}
             />
             <div className="bg-muted/30 flex items-center gap-2 rounded-md border px-3 py-2">
               <code className="min-w-0 flex-1 truncate text-xs">{path}</code>
@@ -157,6 +170,23 @@ export function ResendInviteDialog({
                 <Copy className="size-3.5" /> Copy
               </Button>
             </div>
+            <p className="text-muted-foreground text-xs">
+              This link is shown once. Close this dialog and it cannot be
+              retrieved — only a hash of it is stored. Resend to issue a new
+              one.
+            </p>
+          </div>
+        ) : instance ? (
+          <div className="text-muted-foreground rounded-md border border-dashed px-4 py-6 text-center text-sm">
+            An invite is outstanding
+            {instance.invitedAt
+              ? `, sent ${new Date(instance.invitedAt).toLocaleDateString()}`
+              : ""}
+            {instance.tokenExpiresAt
+              ? `, expiring ${new Date(instance.tokenExpiresAt).toLocaleDateString()}`
+              : ""}
+            . The link itself is not stored and cannot be shown again — resend
+            to issue a new one, which invalidates the old.
           </div>
         ) : (
           <div className="text-muted-foreground rounded-md border border-dashed px-4 py-6 text-center text-sm">

@@ -15,8 +15,10 @@ import {
 import type { StaffProfile } from "@/types/facility-staff";
 import {
   useOnboardingInstance,
-  useOnboardingTemplates,
-  requestOnboardingChangeByTask,
+  useRequestChange,
+} from "@/lib/api/onboarding-instances";
+import { useOnboardingTemplates } from "@/lib/api/staff-onboarding";
+import {
   EMPLOYEE_TASK_LABEL,
   type EmployeeOnboardingTask,
 } from "@/data/staff-onboarding";
@@ -207,6 +209,7 @@ export function OnboardingSubmissionReview({
 }) {
   const instance = useOnboardingInstance(profile.id);
   const templates = useOnboardingTemplates();
+  const { mutate: requestChange } = useRequestChange();
   const [changeFor, setChangeFor] = useState<string | null>(null);
   const [note, setNote] = useState("");
 
@@ -229,26 +232,46 @@ export function OnboardingSubmissionReview({
   const openChange = (taskId: string) =>
     instance.changeRequests.find((c) => c.taskId === taskId && !c.resolvedAt);
 
+  // Notification after the write lands, not beside it — see the same note in
+  // review-activate-dialog.tsx.
   const submitChange = (task: EmployeeOnboardingTask) => {
     if (!note.trim()) return;
-    requestOnboardingChangeByTask(profile.id, task.id, task.type, note.trim());
-    notifyStaffLifecycle("onboarding_change_requested", {
-      email: {
-        kind: "change",
+    const message = note.trim();
+    requestChange(
+      {
         staffId: profile.id,
-        staffName: fullNameOf(profile),
-        to: profile.email,
-        subject: "Action needed on your onboarding",
-        body: `${
-          task.type === "document_upload" || task.type === "document_sign"
-            ? task.documentName || EMPLOYEE_TASK_LABEL[task.type]
-            : EMPLOYEE_TASK_LABEL[task.type]
-        }: ${note.trim()}`,
+        taskId: task.id,
+        sectionType: task.type,
+        note: message,
       },
-    });
-    toast.success(`Change requested — sent back to ${profile.firstName}`);
-    setChangeFor(null);
-    setNote("");
+      {
+        onSuccess: () => {
+          notifyStaffLifecycle("onboarding_change_requested", {
+            email: {
+              kind: "change",
+              staffId: profile.id,
+              staffName: fullNameOf(profile),
+              to: profile.email,
+              subject: "Action needed on your onboarding",
+              body: `${
+                task.type === "document_upload" || task.type === "document_sign"
+                  ? task.documentName || EMPLOYEE_TASK_LABEL[task.type]
+                  : EMPLOYEE_TASK_LABEL[task.type]
+              }: ${message}`,
+            },
+          });
+          toast.success(`Change requested — sent back to ${profile.firstName}`);
+          setChangeFor(null);
+          setNote("");
+        },
+        onError: (error) =>
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Could not request that change.",
+          ),
+      },
+    );
   };
 
   return (

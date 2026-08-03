@@ -44,10 +44,10 @@ import { useFacilityRbac, usePermission } from "@/hooks/use-facility-rbac";
 import {
   useOnboardingInstance,
   onboardingProgress,
-  useStaffHrConfig,
   isOnboardingStarted,
   daysSinceInvite,
-} from "@/data/staff-onboarding";
+} from "@/lib/api/onboarding-instances";
+import { useStaffHrConfig } from "@/lib/api/staff-onboarding";
 import {
   Popover,
   PopoverContent,
