@@ -246,6 +246,22 @@ Deliberately out of 20260806180000. An issue auto-creates an incident record and
 
 **Do instead:** migrate them with the incident system, not with intake.
 
+## Snapshot (2026-08-06, packages and the QuickBooks pass sync)
+
+### 🟡 `syncRedeemedPassToQuickBooks` no longer has a caller
+
+Removed deliberately, not overlooked. `applyPaymentResult` used to redeem the pass by mutating `mockCustomerPackages` and then hand the resulting redemption object to `syncRedeemedPassToQuickBooks`. The redemption now happens server-side inside `record_payment` (20260806300000), so there is no mock redemption object to pass, and the QuickBooks call went with it.
+
+**Why it was not kept:** feeding QuickBooks from a mock array while the real ledger lives in Postgres would mean the accounting system is told about redemptions that did not happen and not told about the ones that did. A sync with no caller is visibly incomplete; a sync fed from the wrong source is invisibly wrong.
+
+**Do instead:** hang the sync off the server's answer. `record_payment` returns `{payment_id, passes_remaining}` and the entry is in `package_pass_entries` with its booking, pet and service label — everything the document builder needs, from the row that is actually true. Do **not** restore the `mockCustomerPackages` path.
+
+### 🟢 `applyPaymentResult` returns `packagePassesLeft: undefined`
+
+The field stays on `PaymentActionSummary` because three call sites read it for a toast, but it can no longer be known at that point — the pass is spent by the database, and the count comes back through `useRecordPayment` as `passesRemaining`.
+
+**Do instead:** read the count from the mutation's response, not from the summary. The field comes off the summary when the last caller stops reading it.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

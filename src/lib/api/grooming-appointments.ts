@@ -356,7 +356,10 @@ export function useRecordPayment() {
       packagePassId?: string;
       receiptChannels: string[];
       creditNote: string;
-    }): Promise<{ id: string }> => {
+      customerPackageId?: string;
+      petName?: string;
+      serviceLabel?: string;
+    }): Promise<{ id: string; passesRemaining?: number }> => {
       const response = await fetch("/api/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -364,18 +367,25 @@ export function useRecordPayment() {
       });
       const parsed = (await response.json().catch(() => null)) as {
         id?: string;
+        passesRemaining?: number;
         error?: string;
       } | null;
       if (!response.ok) {
         throw new Error(parsed?.error ?? "Could not record that payment.");
       }
-      return { id: parsed?.id ?? "" };
+      return {
+        id: parsed?.id ?? "",
+        ...(parsed?.passesRemaining != null
+          ? { passesRemaining: parsed.passesRemaining }
+          : {}),
+      };
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["grooming", "appointments"],
       });
       void queryClient.invalidateQueries({ queryKey: ["store-credit"] });
+      void queryClient.invalidateQueries({ queryKey: ["customer-packages"] });
     },
   });
 }

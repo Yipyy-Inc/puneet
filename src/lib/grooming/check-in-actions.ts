@@ -6,11 +6,6 @@ import type { CheckInConfirmation } from "@/components/facility/grooming/check-i
 import type { MarkReadyConfirmation } from "@/components/facility/grooming/mark-ready-dialog";
 import type { PaymentResult } from "@/components/facility/grooming/payment-dialog";
 import { groomingAddOnsList } from "@/data/grooming-pricing-rules";
-import {
-  mockCustomerPackages,
-  redeemPackagePass,
-} from "@/data/customer-packages";
-import { syncRedeemedPassToQuickBooks } from "@/lib/quickbooks/document-sync";
 
 export interface CheckInActionDeps {
   clients: Client[];
@@ -481,6 +476,9 @@ export interface PaymentActionSummary {
     packagePassId?: string;
     receiptChannels: string[];
     creditNote: string;
+    customerPackageId?: string;
+    petName: string;
+    serviceLabel: string;
   };
 }
 
@@ -526,28 +524,22 @@ export function applyPaymentResult(
     ).appliedPackagePassId = result.appliedPackagePassId;
   }
 
-  // ── 2. Redeem package pass if applied ──────────────────────────────────
-  let packagePassesLeft: number | undefined;
-  if (result.appliedPackagePassId) {
-    const redemption = redeemPackagePass(result.appliedPackagePassId, {
-      petId: apt.petId,
-      petName: apt.petName,
-      serviceLabel: apt.packageName,
-    });
-    if (redemption.ok) {
-      packagePassesLeft = redemption.passesLeft;
-      const pkg = mockCustomerPackages.find(
-        (p) => p.id === result.appliedPackagePassId,
-      );
-      if (pkg) {
-        syncRedeemedPassToQuickBooks({ facilityId: "11" }, pkg, redemption, {
-          petName: apt.petName,
-          serviceName: apt.packageName,
-          customerName: apt.ownerName,
-        });
-      }
-    }
-  }
+  // ── 2. The package pass ────────────────────────────────────────────────
+  //
+  // NOT REDEEMED HERE ANY MORE. This used to call `redeemPackagePass`, which
+  // mutated a module-level array — three counters kept in step by hand, all of
+  // them gone on reload (20260806280000, Decision 1).
+  //
+  // The pass is now spent by `record_payment`, in the SAME transaction as the
+  // payment itself: a payment that names a pass and a pass that was never spent
+  // is the same class of bug as credit applied but never deducted. If the pass
+  // cannot be spent — exhausted, expired, another facility's — the whole
+  // payment is refused rather than recorded against a pass still sitting on the
+  // customer's account.
+  //
+  // `packagePassesLeft` therefore comes back from the server, through the
+  // caller, rather than being known at this point.
+  const packagePassesLeft: number | undefined = undefined;
 
   // ── 3. Decrement store credit on the client ────────────────────────────
   let storeCreditAfter: number | undefined;
@@ -632,6 +624,13 @@ export function applyPaymentResult(
         : {}),
       receiptChannels: result.receiptChannels,
       creditNote: `${apt.packageName} · ${apt.petName}`,
+      // The pass to spend, and what it was spent on. Resolved to a uuid by the
+      // route; redeemed by the same transaction that writes the payment.
+      ...(result.appliedPackagePassId
+        ? { customerPackageId: result.appliedPackagePassId }
+        : {}),
+      petName: apt.petName,
+      serviceLabel: apt.packageName,
     },
   };
 }

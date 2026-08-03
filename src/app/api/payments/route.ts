@@ -46,6 +46,9 @@ interface PaymentInput {
   packagePassId?: string;
   receiptChannels?: string[];
   creditNote?: string;
+  customerPackageId?: string;
+  petName?: string;
+  serviceLabel?: string;
 }
 
 const MONEY_FIELDS = [
@@ -116,6 +119,26 @@ export async function POST(request: NextRequest) {
     clientId = (booking.client_id as string | null) ?? null;
   }
 
+  // The screens address a customer package by its mock id ("cp-1"); the RPC
+  // needs the uuid. Resolved through a read the caller must be able to make,
+  // so a package they cannot see is "no such package" rather than an RLS error
+  // three statements deeper.
+  let customerPackageId: string | null = null;
+  if (body.customerPackageId) {
+    const { data: pkg } = await supabase
+      .from("customer_packages")
+      .select("id")
+      .eq("legacy_id", body.customerPackageId)
+      .maybeSingle();
+    if (!pkg) {
+      return NextResponse.json(
+        { error: "That package does not exist, or is not yours." },
+        { status: 404 },
+      );
+    }
+    customerPackageId = pkg.id as string;
+  }
+
   const { data, error } = await supabase.rpc("record_payment", {
     p_facility_id: context.facilityId,
     p_method: body.method,
@@ -134,6 +157,9 @@ export async function POST(request: NextRequest) {
     p_package_pass_id: body.packagePassId ?? null,
     p_receipt_channels: body.receiptChannels ?? [],
     p_credit_note: body.creditNote ?? "",
+    p_customer_package_id: customerPackageId,
+    p_pet_name: body.petName ?? null,
+    p_service_label: body.serviceLabel ?? "",
   } as never);
 
   if (error) {
@@ -143,5 +169,17 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  return NextResponse.json({ id: data }, { status: 201 });
+  // The RPC returns both facts it computed in that one transaction: the
+  // payment, and how many passes are left. A second round trip to learn the
+  // second one would read a number the same transaction already knew.
+  const out = data as { payment_id?: string; passes_remaining?: number } | null;
+  return NextResponse.json(
+    {
+      id: out?.payment_id ?? null,
+      ...(out?.passes_remaining != null
+        ? { passesRemaining: out.passes_remaining }
+        : {}),
+    },
+    { status: 201 },
+  );
 }
