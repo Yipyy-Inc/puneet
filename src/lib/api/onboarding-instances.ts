@@ -78,9 +78,29 @@ export interface TokenView {
   staffFirstName: string;
   staffLastName: string;
   templateId: string | null;
+  welcomeMessage: string | null;
   tokenExpiresAt: string;
   invitedAt: string;
   accountPasswordSetAt: string | null;
+  /**
+   * The form to fill in, carried in the SAME payload as the instance.
+   *
+   * Not fetched separately, because it cannot be: onboarding_employee_tasks is
+   * `to authenticated` and this caller has no session. Widening that policy to
+   * anon would recreate the queryable surface the token design exists to avoid,
+   * so the tasks ride along inside the RPC — see 20260804140000.
+   */
+  tasks: {
+    id: string;
+    type: EmployeeOnboardingTaskType;
+    name: string;
+    description: string | null;
+    required: boolean;
+    documentName: string | null;
+    documentRef: string | null;
+    fields: { key: string; label: string; kind: string; required?: boolean }[];
+    question?: { format: string; prompt: string; options?: string[] };
+  }[];
   sections: {
     taskId: string;
     type: EmployeeOnboardingTaskType;
