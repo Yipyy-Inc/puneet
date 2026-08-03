@@ -324,3 +324,58 @@ export function useSaveAppointmentIntake() {
     },
   });
 }
+
+/**
+ * Record a payment.
+ *
+ * ONE CALL, because it is one transaction. The route invokes
+ * `public.record_payment`, which writes the payment and — when store credit was
+ * applied — the ledger entry that spends it, atomically. Splitting them would
+ * allow a payment to exist claiming credit that was never deducted, and the
+ * balance is derived from that ledger, so the money would simply appear.
+ *
+ * Invalidates appointments (payment status shows on the card) and the client
+ * store-credit balance, which has just moved.
+ */
+export function useRecordPayment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      appointmentId?: string;
+      method: string;
+      subtotal: number;
+      tax: number;
+      tip: number;
+      storeCreditApplied: number;
+      packagePassApplied: number;
+      loyaltyDiscountApplied: number;
+      amountCharged: number;
+      grandTotal: number;
+      cashReceived?: number;
+      savedCardId?: string;
+      packagePassId?: string;
+      receiptChannels: string[];
+      creditNote: string;
+    }): Promise<{ id: string }> => {
+      const response = await fetch("/api/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const parsed = (await response.json().catch(() => null)) as {
+        id?: string;
+        error?: string;
+      } | null;
+      if (!response.ok) {
+        throw new Error(parsed?.error ?? "Could not record that payment.");
+      }
+      return { id: parsed?.id ?? "" };
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["grooming", "appointments"],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["store-credit"] });
+    },
+  });
+}

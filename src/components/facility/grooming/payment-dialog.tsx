@@ -54,6 +54,20 @@ export interface PaymentResult {
   amountCharged: number;
   /** Final ledger total = base + adjustments + tax + tip. */
   grandTotal: number;
+  /** Pre-tax subtotal (base + price adjustments). Carried rather than
+   *  re-derived: the dialog knows the breakdown and the ledger needs it, and
+   *  `grandTotal - tax - tip` would be a reconstruction that drifts the moment
+   *  another line is added. */
+  subtotal: number;
+  /** Tax charged on the pre-tax subtotal. */
+  tax: number;
+  /** Loyalty voucher value consumed. The third reduction, alongside the pass
+   *  and store credit — see 20260806240000. */
+  loyaltyDiscount: number;
+  /** Package-pass value consumed. Carried rather than derived from the other
+   *  five figures: a reduction the ledger has to record is a fact the dialog
+   *  already knows. */
+  packagePassDiscount: number;
   receiptChannels: ("sms" | "email")[];
 }
 
@@ -226,6 +240,10 @@ export function PaymentDialog({
       tipAmount,
       amountCharged,
       grandTotal,
+      subtotal: preTaxSubtotal,
+      tax: taxAmount,
+      loyaltyDiscount: loyaltyDiscountAmount,
+      packagePassDiscount,
       receiptChannels: channels,
     });
   }

@@ -8,6 +8,7 @@ import {
   useAddAppointmentNote,
   useRecordAppointmentHistory,
   useRemoveAppointmentAlert,
+  useRecordPayment,
   useSaveAppointmentIntake,
 } from "@/lib/api/grooming-appointments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -323,6 +324,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   const { mutate: removeAlertNote } = useRemoveAppointmentAlert();
   const { mutate: recordTrail } = useRecordAppointmentHistory();
   const { mutate: saveIntake } = useSaveAppointmentIntake();
+  const { mutate: recordPayment } = useRecordPayment();
 
   function autoMatchAndOffer(reason: "cancellation" | "no-show") {
     if (!apt) return;
@@ -700,6 +702,11 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       setStationStatus,
       notify: (title, detail) => toast.message(title, detail),
       facilityName: "Yipyy",
+    });
+    // The payment and, when credit was spent, its ledger entry — one
+    // transaction (record_payment). applyPaymentResult decided what it says.
+    recordPayment(summary.paymentRecord, {
+      onError: (error) => toast.error(error.message),
     });
     recordHistory(
       `Payment · ${result.method.replace(/-/g, " ")} · $${result.amountCharged.toFixed(2)}`,

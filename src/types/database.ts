@@ -2145,6 +2145,75 @@ export type Database = {
         };
         Relationships: [];
       };
+      payments: {
+        Row: {
+          amount_charged: number;
+          author_name: string;
+          booking_id: string | null;
+          cash_received: number | null;
+          client_id: string | null;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          grand_total: number;
+          id: string;
+          loyalty_discount_applied: number;
+          method: string;
+          package_pass_applied: number;
+          package_pass_id: string | null;
+          receipt_channels: string[];
+          saved_card_id: string | null;
+          store_credit_applied: number;
+          subtotal: number;
+          tax: number;
+          tip: number;
+        };
+        Insert: {
+          amount_charged: number;
+          author_name?: string;
+          booking_id?: string | null;
+          cash_received?: number | null;
+          client_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          grand_total: number;
+          id?: string;
+          loyalty_discount_applied?: number;
+          method: string;
+          package_pass_applied?: number;
+          package_pass_id?: string | null;
+          receipt_channels?: string[];
+          saved_card_id?: string | null;
+          store_credit_applied?: number;
+          subtotal: number;
+          tax?: number;
+          tip?: number;
+        };
+        Update: {
+          amount_charged?: number;
+          author_name?: string;
+          booking_id?: string | null;
+          cash_received?: number | null;
+          client_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          grand_total?: number;
+          id?: string;
+          loyalty_discount_applied?: number;
+          method?: string;
+          package_pass_applied?: number;
+          package_pass_id?: string | null;
+          receipt_channels?: string[];
+          saved_card_id?: string | null;
+          store_credit_applied?: number;
+          subtotal?: number;
+          tax?: number;
+          tip?: number;
+        };
+        Relationships: [];
+      };
       permissions: {
         Row: {
           category: string;
@@ -2685,9 +2754,60 @@ export type Database = {
           },
         ];
       };
+      store_credit_entries: {
+        Row: {
+          amount: number;
+          author_name: string;
+          booking_id: string | null;
+          client_id: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          id: string;
+          note: string;
+          payment_id: string | null;
+          reason: string;
+        };
+        Insert: {
+          amount: number;
+          author_name?: string;
+          booking_id?: string | null;
+          client_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          id?: string;
+          note?: string;
+          payment_id?: string | null;
+          reason: string;
+        };
+        Update: {
+          amount?: number;
+          author_name?: string;
+          booking_id?: string | null;
+          client_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          note?: string;
+          payment_id?: string | null;
+          reason?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
-      [_ in never]: never;
+      client_store_credit: {
+        Row: {
+          balance: number | null;
+          client_id: string | null;
+          entry_count: number | null;
+          facility_id: string | null;
+          last_activity_at: string | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       link_client_record: { Args: never; Returns: string };
@@ -2712,6 +2832,28 @@ export type Database = {
         Returns: Json;
       };
       onboarding_by_token: { Args: { p_token: string }; Returns: Json };
+      record_payment: {
+        Args: {
+          p_amount_charged: number;
+          p_booking_id?: string;
+          p_cash_received?: number;
+          p_client_id?: string;
+          p_credit_note?: string;
+          p_facility_id: string;
+          p_grand_total: number;
+          p_loyalty_discount_applied?: number;
+          p_method: string;
+          p_package_pass_applied?: number;
+          p_package_pass_id?: string;
+          p_receipt_channels?: string[];
+          p_saved_card_id?: string;
+          p_store_credit_applied?: number;
+          p_subtotal: number;
+          p_tax: number;
+          p_tip: number;
+        };
+        Returns: string;
+      };
       save_onboarding_section: {
         Args: {
           p_data: Json;

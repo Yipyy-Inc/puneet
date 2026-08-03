@@ -34,6 +34,7 @@ import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
 import { stylistIdForStaff } from "@/lib/api/grooming";
 import {
+  useRecordPayment,
   useSaveAppointmentIntake,
   useSetGroomingAppointmentStatus,
 } from "@/lib/api/grooming-appointments";
@@ -86,6 +87,7 @@ export function CheckInBoard() {
   const { setStationStatus } = useGroomingStations();
   const { mutate: setAppointmentStatus } = useSetGroomingAppointmentStatus();
   const { mutate: saveIntake } = useSaveAppointmentIntake();
+  const { mutate: recordPayment } = useRecordPayment();
   const { zipTaxRates } = useMobileGrooming();
   const { entriesForDate } = useGroomingWaitlist();
   const { recordEvent } = useLoyaltyEngine();
@@ -294,6 +296,11 @@ export function CheckInBoard() {
       setStationStatus,
       notify,
       facilityName: "Yipyy",
+    });
+    // The payment and, when credit was spent, its ledger entry — one
+    // transaction (record_payment). applyPaymentResult decided what it says.
+    recordPayment(summary.paymentRecord, {
+      onError: (error) => toast.error(error.message),
     });
     // applyPaymentResult already sets status = "completed".
     patch(next);

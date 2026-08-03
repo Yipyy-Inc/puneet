@@ -12,7 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { useSaveAppointmentIntake } from "@/lib/api/grooming-appointments";
+import {
+  useRecordPayment,
+  useSaveAppointmentIntake,
+} from "@/lib/api/grooming-appointments";
 import {
   Phone,
   Mail,
@@ -143,6 +146,7 @@ export function AppointmentPanel({
     groomingQueries.appointments(),
   );
   const { mutate: saveIntake } = useSaveAppointmentIntake();
+  const { mutate: recordPayment } = useRecordPayment();
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [markReadyOpen, setMarkReadyOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -884,6 +888,11 @@ export function AppointmentPanel({
                 setStationStatus,
                 notify: (title, detail) => toast.message(title, detail),
                 facilityName: "Yipyy",
+              });
+              // The payment and, when credit was spent, its ledger entry — one
+              // transaction (record_payment). applyPaymentResult decided what it says.
+              recordPayment(summary.paymentRecord, {
+                onError: (error) => toast.error(error.message),
               });
               toast.success(`${appointment.petName} — Completed`, {
                 description: `Receipt sent · $${summary.amountCharged.toFixed(2)} charged`,

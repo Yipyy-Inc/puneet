@@ -452,6 +452,36 @@ export interface PaymentActionSummary {
   packagePassesLeft?: number;
   /** Store-credit balance after this payment. */
   storeCreditAfter?: number;
+  /**
+   * The payment to record, ready for `useRecordPayment`.
+   *
+   * RETURNED RATHER THAN WRITTEN, for the same reason as `intakePatch`: this
+   * module is imported by three screens and is not a React component, so it
+   * cannot hold a mutation hook, and making it fetch would put a second network
+   * path beside the one the query cache knows about.
+   *
+   * The store-credit ledger entry is NOT in here. It is written by the same
+   * database transaction as the payment (`record_payment`, 20260806260000) —
+   * two calls could half-succeed, and the half that survives would be a payment
+   * claiming to have spent credit that was never deducted.
+   */
+  paymentRecord: {
+    appointmentId: string;
+    method: PaymentResult["method"];
+    subtotal: number;
+    tax: number;
+    tip: number;
+    storeCreditApplied: number;
+    packagePassApplied: number;
+    loyaltyDiscountApplied: number;
+    amountCharged: number;
+    grandTotal: number;
+    cashReceived?: number;
+    savedCardId?: string;
+    packagePassId?: string;
+    receiptChannels: string[];
+    creditNote: string;
+  };
 }
 
 /**
@@ -577,5 +607,31 @@ export function applyPaymentResult(
     grandTotal: result.grandTotal,
     packagePassesLeft,
     storeCreditAfter,
+    paymentRecord: {
+      appointmentId: apt.id,
+      method: result.method,
+      subtotal: result.subtotal,
+      tax: result.tax,
+      tip: result.tipAmount,
+      // APPLIED, not nominal. The dialog clamps each reduction at what was
+      // still owed (20260806240000), and the database refuses a sale that
+      // charges a negative amount — so sending the headline value of a voucher
+      // worth more than the ticket would be rejected rather than silently
+      // recorded as fully spent.
+      storeCreditApplied: result.appliedStoreCredit,
+      packagePassApplied: result.packagePassDiscount,
+      loyaltyDiscountApplied: result.loyaltyDiscount,
+      amountCharged: result.amountCharged,
+      grandTotal: result.grandTotal,
+      ...(result.cashReceived !== undefined
+        ? { cashReceived: result.cashReceived }
+        : {}),
+      ...(result.savedCardId ? { savedCardId: result.savedCardId } : {}),
+      ...(result.appliedPackagePassId
+        ? { packagePassId: result.appliedPackagePassId }
+        : {}),
+      receiptChannels: result.receiptChannels,
+      creditNote: `${apt.packageName} · ${apt.petName}`,
+    },
   };
 }
