@@ -497,6 +497,137 @@ export type Database = {
           },
         ];
       };
+      grooming_appointment_add_ons: {
+        Row: {
+          add_on_id: string | null;
+          auto_attached: boolean;
+          booking_id: string;
+          created_at: string;
+          duration_min: number;
+          facility_id: string;
+          id: string;
+          name: string;
+          price: number;
+        };
+        Insert: {
+          add_on_id?: string | null;
+          auto_attached?: boolean;
+          booking_id: string;
+          created_at?: string;
+          duration_min?: number;
+          facility_id: string;
+          id?: string;
+          name: string;
+          price?: number;
+        };
+        Update: {
+          add_on_id?: string | null;
+          auto_attached?: boolean;
+          booking_id?: string;
+          created_at?: string;
+          duration_min?: number;
+          facility_id?: string;
+          id?: string;
+          name?: string;
+          price?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_appointment_add_ons_add_on_id_fkey";
+            columns: ["add_on_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_add_ons";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grooming_appointment_add_ons_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_appointments";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "grooming_appointment_add_ons_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      grooming_appointments: {
+        Row: {
+          booking_id: string;
+          check_in_at: string | null;
+          check_out_at: string | null;
+          created_at: string;
+          estimated_ready_at: string | null;
+          facility_id: string;
+          groomer_notes: string;
+          owner_eta_notified_at: string | null;
+          service_duration_min: number;
+          service_id: string | null;
+          service_name: string;
+          service_price: number;
+          size_label: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          booking_id: string;
+          check_in_at?: string | null;
+          check_out_at?: string | null;
+          created_at?: string;
+          estimated_ready_at?: string | null;
+          facility_id: string;
+          groomer_notes?: string;
+          owner_eta_notified_at?: string | null;
+          service_duration_min: number;
+          service_id?: string | null;
+          service_name: string;
+          service_price?: number;
+          size_label?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          booking_id?: string;
+          check_in_at?: string | null;
+          check_out_at?: string | null;
+          created_at?: string;
+          estimated_ready_at?: string | null;
+          facility_id?: string;
+          groomer_notes?: string;
+          owner_eta_notified_at?: string | null;
+          service_duration_min?: number;
+          service_id?: string | null;
+          service_name?: string;
+          service_price?: number;
+          size_label?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_appointments_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grooming_appointments_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grooming_appointments_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_services";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       grooming_config: {
         Row: {
           created_at: string;
@@ -536,6 +667,54 @@ export type Database = {
             foreignKeyName: "grooming_config_facility_id_fkey";
             columns: ["facility_id"];
             isOneToOne: true;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      grooming_price_adjustments: {
+        Row: {
+          amount: number;
+          booking_id: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          id: string;
+          note: string;
+          reason: string;
+        };
+        Insert: {
+          amount: number;
+          booking_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          id?: string;
+          note?: string;
+          reason: string;
+        };
+        Update: {
+          amount?: number;
+          booking_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          note?: string;
+          reason?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_price_adjustments_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_appointments";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "grooming_price_adjustments_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
             referencedRelation: "facilities";
             referencedColumns: ["id"];
           },
